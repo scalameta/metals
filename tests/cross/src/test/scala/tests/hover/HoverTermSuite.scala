@@ -4,7 +4,6 @@ import tests.pc.BaseHoverSuite
 
 class HoverTermSuite extends BaseHoverSuite {
 
-  // note(@tgodzik) 0. compat sections show issues existing still with dotty hover
   check(
     "map",
     """object a {

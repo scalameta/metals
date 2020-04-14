@@ -542,6 +542,7 @@ lazy val mtest = project
     buildInfoKeys := Seq[BuildInfoKey](
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
+      "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scalaVersion" -> scalaVersion.value
     ),

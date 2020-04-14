@@ -73,20 +73,20 @@ abstract class BasePCSuite extends BaseSuite {
       .newInstance("", myclasspath.asJava, scalacOpts.asJava)
   }
 
-  def config: PresentationCompilerConfig =
+  protected def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
       snippetAutoIndent = false
     )
 
-  def extraDependencies(scalaVersion: String): Seq[Dependency] = Nil
+  protected def extraDependencies(scalaVersion: String): Seq[Dependency] = Nil
 
-  def scalacOptions(classpath: Seq[Path]): Seq[String] = Nil
+  protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Nil
 
-  def excludedScalaVersions: Set[String] = Set.empty
+  protected def excludedScalaVersions: Set[String] = Set.empty
 
-  def requiresJdkSources: Boolean = false
+  protected def requiresJdkSources: Boolean = false
 
-  def requiresScalaLibrarySources: Boolean = false
+  protected def requiresScalaLibrarySources: Boolean = false
 
   protected def isScala3Version(scalaVersion: String): Boolean = {
     scalaVersion.startsWith("0.") || scalaVersion.startsWith("3.")
@@ -109,9 +109,10 @@ abstract class BasePCSuite extends BaseSuite {
           "scala-library",
           // NOTE(gabro): we should ideally just use BuildoInfoVersions.scalaVersion
           // but using the 2.11 stdlib would cause a lot tests to break for little benefit.
-          // We can remove this switch once we drop support for 2.11
+          // Additionally, when using Scala 3 the 2.13 Scala library is used.
           scalaVersion match {
             case v if v.startsWith("2.13") => v
+            case v if isScala3Version(v) => BuildInfoVersions.scala213
             case v if v.startsWith("2.12") => v
             case _ => BuildInfoVersions.scala212
           }

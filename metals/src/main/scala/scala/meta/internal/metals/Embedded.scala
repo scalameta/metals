@@ -47,7 +47,7 @@ final class Embedded(
         Embedded.newMdocClassLoader(scalaVersion, scalaBinaryVersion)
       }
     )
-    Embedded.serviceLoader(
+    serviceLoader(
       classOf[Mdoc],
       "mdoc.internal.worksheets.Mdoc",
       classloader
@@ -61,18 +61,32 @@ final class Embedded(
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
       statusBar.trackSlowTask("Preparing presentation compiler") {
-        if (ScalaVersions.isScala3Version(info.getScalaVersion())) {
-          Embedded.newScala3PresentationCompilerClassLoader(info, scalac)
-        } else {
-          Embedded.newPresentationCompilerClassLoader(info, scalac)
-        }
+        Embedded.newPresentationCompilerClassLoader(info, scalac)
       }
     )
-    Embedded.serviceLoader(
+    serviceLoader(
       classOf[PresentationCompiler],
       classOf[ScalaPresentationCompiler].getName(),
       classloader
     )
+  }
+
+  private def serviceLoader[T](
+      cls: Class[T],
+      className: String,
+      classloader: URLClassLoader
+  ): T = {
+    val services = ServiceLoader.load(cls, classloader).iterator()
+    if (services.hasNext) services.next()
+    else {
+      // NOTE(olafur): ServiceLoader doesn't find the service on Appveyor for
+      // some reason, I'm unable to reproduce on my computer. Here below we
+      // fallback to manual classloading.
+      val cls = classloader.loadClass(className)
+      val ctor = cls.getDeclaredConstructor()
+      ctor.setAccessible(true)
+      ctor.newInstance().asInstanceOf[T]
+    }
   }
 
 }
@@ -105,9 +119,12 @@ object Embedded {
       dep: Dependency,
       scalaVersion: String
   ): Fetch = {
+
     val resolutionParams = ResolutionParams
       .create()
-      .forceVersions(
+
+    if (!ScalaVersions.isScala3Version(scalaVersion))
+      resolutionParams.forceVersions(
         List(
           Dependency.of("org.scala-lang", "scala-library", scalaVersion),
           Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
@@ -209,48 +226,4 @@ object Embedded {
     new URLClassLoader(allURLs, parent)
   }
 
-  def newScala3PresentationCompilerClassLoader(
-      info: ScalaBuildTarget,
-      scalac: ScalacOptionsItem
-  ): URLClassLoader = {
-    val pc = Dependency.of(
-      "org.scalameta",
-      s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
-      BuildInfo.metalsVersion
-    )
-    val settings = Fetch
-      .create()
-      .addRepositories(repositories: _*)
-      .withDependencies(pc)
-      .withMainArtifacts()
-    val jars = settings
-      .fetch()
-      .asScala
-      .map(_.toPath)
-    val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
-    val allJars = Iterator(jars, scalaJars).flatten
-    val allURLs = allJars.map(_.toUri.toURL).toArray
-    // Share classloader for a subset of types.
-    val parent =
-      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
-    new URLClassLoader(allURLs, parent)
-  }
-
-  def serviceLoader[T](
-      cls: Class[T],
-      className: String,
-      classloader: URLClassLoader
-  ): T = {
-    val services = ServiceLoader.load(cls, classloader).iterator()
-    if (services.hasNext) services.next()
-    else {
-      // NOTE(olafur): ServiceLoader doesn't find the service on Appveyor for
-      // some reason, I'm unable to reproduce on my computer. Here below we
-      // fallback to manual classloading.
-      val cls = classloader.loadClass(className)
-      val ctor = cls.getDeclaredConstructor()
-      ctor.setAccessible(true)
-      ctor.newInstance().asInstanceOf[T]
-    }
-  }
 }

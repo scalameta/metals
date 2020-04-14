@@ -58,7 +58,6 @@ import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.remotels.RemoteLanguageServer
-import scala.meta.internal.pc.EmptyCancelToken
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -66,7 +65,7 @@ class MetalsLanguageServer(
     redirectSystemOut: Boolean = true,
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
-    defaultConfig: MetalsServerConfig = MetalsServerConfig.default,
+    config: MetalsServerConfig = MetalsServerConfig.default,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
@@ -106,8 +105,6 @@ class MetalsLanguageServer(
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
-  private val metalsServerConfig = new AtomicReference(defaultConfig)
-  private def config = metalsServerConfig.get()
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
@@ -250,7 +247,6 @@ class MetalsLanguageServer(
       () => userConfig,
       config
     )
-    metalsServerConfig.getAndUpdate(config => config.fromInitParams(params))
     fileSystemSemanticdbs = new FileSystemSemanticdbs(
       buildTargets,
       charset,

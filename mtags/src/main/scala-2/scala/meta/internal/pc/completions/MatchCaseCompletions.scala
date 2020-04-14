@@ -31,7 +31,6 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       text: String,
       parent: Tree
   ) extends CompletionPosition {
-
     val context: Context = doLocateContext(pos)
     val parents: Parents = selector match {
       case EmptyTree =>

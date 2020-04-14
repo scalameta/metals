@@ -360,7 +360,8 @@ class Compilers(
         config.compilers.copy(
           _symbolPrefixes = userConfig().symbolPrefixes,
           isCompletionSnippetsEnabled =
-            initializeParams.supportsCompletionSnippets
+            initializeParams.supportsCompletionSnippets,
+          isFoldOnlyLines = initializeParams.foldOnlyLines
         )
       )
 

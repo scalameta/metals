@@ -14,7 +14,7 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.Position
 
-final class MultilineStringFormattingProvider() {
+object MultilineStringFormattingProvider {
 
   private val quote = '"'
   private val space = " "

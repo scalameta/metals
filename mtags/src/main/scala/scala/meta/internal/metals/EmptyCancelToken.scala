@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.metals
 
 import java.lang
 import java.util.concurrent.CompletableFuture

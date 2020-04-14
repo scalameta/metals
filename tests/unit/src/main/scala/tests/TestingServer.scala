@@ -120,7 +120,7 @@ final class TestingServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
-    defaultConfig = config,
+    config = config,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,

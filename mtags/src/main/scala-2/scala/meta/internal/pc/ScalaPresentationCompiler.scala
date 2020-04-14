@@ -37,6 +37,7 @@ import scala.meta.internal.metals.DocumentSymbolProvider
 import org.eclipse.lsp4j.{DocumentOnTypeFormattingParams, TextEdit}
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.meta.internal.metals.MultilineStringFormattingProvider
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.jdk.CollectionConverters._
 import java.net.URI
 
@@ -58,57 +59,9 @@ case class ScalaPresentationCompiler(
   val foldingRangeProvider =
     new FoldingRangeProvider(trees, config.isFoldOnlyLines())
   val documentSymbolProvider = new DocumentSymbolProvider(trees)
-  val multilineStringProvider = new MultilineStringFormattingProvider()
 
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
-
-  override def didChange(
-      params: VirtualFileParams
-  ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture {
-      trees.didChange(params.uri(), params.text()).asJava
-    }
-  }
-
-  def didClose(uri: URI): Unit = {
-    trees.didClose(uri)
-  }
-
-  def foldingRange(
-      params: VirtualFileParams
-  ): CompletableFuture[ju.List[FoldingRange]] = {
-    CompletableFuture.completedFuture {
-      val uri = params.uri()
-      foldingRangeProvider.getRangedFor(uri, params.text())
-    }
-  }
-
-  def documentSymbols(
-      params: VirtualFileParams
-  ): CompletableFuture[ju.List[DocumentSymbol]] = {
-    CompletableFuture.completedFuture(
-      documentSymbolProvider
-        .documentSymbols(params.uri(), params.text())
-    )
-  }
-
-  def onTypeFormatting(
-      params: DocumentOnTypeFormattingParams,
-      source: String
-  ): CompletableFuture[ju.List[TextEdit]] =
-    CompletableFuture.completedFuture(
-      multilineStringProvider.format(params, source).asJava
-    )
-
-  def rangeFormatting(
-      params: DocumentRangeFormattingParams,
-      source: String
-  ): CompletableFuture[ju.List[TextEdit]] = {
-    CompletableFuture.completedFuture(
-      multilineStringProvider.format(params, source).asJava
-    )
-  }
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -156,6 +109,57 @@ case class ScalaPresentationCompiler(
       options = options.asScala.toList
     )
   }
+
+  override def didChange(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[Diagnostic]] = {
+    CompletableFuture.supplyAsync(
+      () => trees.didChange(params.uri(), params.text()).asJava,
+      ec
+    )
+  }
+
+  def didClose(uri: URI): Unit = {
+    trees.didClose(uri)
+  }
+
+  def foldingRange(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[FoldingRange]] = {
+    CompletableFuture.supplyAsync(
+      () => foldingRangeProvider.getRangedFor(params.uri(), params.text()),
+      ec
+    )
+  }
+
+  def documentSymbols(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[DocumentSymbol]] = {
+    CompletableFuture.supplyAsync(
+      () =>
+        documentSymbolProvider
+          .documentSymbols(params.uri(), params.text()),
+      ec
+    )
+  }
+
+  def onTypeFormatting(
+      params: DocumentOnTypeFormattingParams,
+      source: String
+  ): CompletableFuture[ju.List[TextEdit]] =
+    CompletableFuture.supplyAsync(
+      () => MultilineStringFormattingProvider.format(params, source).asJava,
+      ec
+    )
+
+  def rangeFormatting(
+      params: DocumentRangeFormattingParams,
+      source: String
+  ): CompletableFuture[ju.List[TextEdit]] =
+    CompletableFuture.supplyAsync(
+      () => MultilineStringFormattingProvider.format(params, source).asJava,
+      ec
+    )
 
   override def complete(
       params: OffsetParams

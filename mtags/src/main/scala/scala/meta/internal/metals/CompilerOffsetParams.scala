@@ -5,7 +5,6 @@ import scala.meta.pc.OffsetParams
 import scala.meta.inputs.Position
 import meta.internal.inputs.XtensionInputSyntaxStructure
 import java.net.URI
-import scala.meta.internal.pc.EmptyCancelToken
 
 case class CompilerOffsetParams(
     uri: URI,

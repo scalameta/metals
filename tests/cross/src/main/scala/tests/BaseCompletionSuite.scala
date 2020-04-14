@@ -12,7 +12,7 @@ import scala.meta.internal.metals.TextEdits
 import munit.TestOptions
 import munit.Location
 import java.nio.file.Paths
-import scala.meta.internal.pc.EmptyCancelToken
+import scala.meta.internal.metals.EmptyCancelToken
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 

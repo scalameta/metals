@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
-import org.eclipse.lsp4j.InitializeParams
 
 /**
  * Configuration parameters for the Metals language server.
@@ -86,24 +85,6 @@ final case class MetalsServerConfig(
       s"statistics=$statistics",
       s"doctor-format=$doctorFormat"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
-
-  def fromInitParams(
-      params: InitializeParams
-  ): MetalsServerConfig = {
-    val settings = for {
-      capabilities <- Option(params.getCapabilities)
-      textDocument <- Option(capabilities.getTextDocument)
-      settings <- Option(textDocument.getFoldingRange)
-    } yield settings
-
-    val foldOnlyLines = settings
-      .map(_.getLineFoldingOnly)
-      .contains(true)
-
-    this.copy(
-      compilers = compilers.copy(isFoldOnlyLines = foldOnlyLines)
-    )
-  }
 }
 object MetalsServerConfig {
   def isTesting: Boolean = "true" == System.getProperty("metals.testing")

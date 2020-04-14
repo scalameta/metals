@@ -229,16 +229,6 @@ object MetalsEnrichments
     def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
 
     /**
-     * Reads file contents from editor buffer with fallback to disk.
-     */
-    def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
-      buffers.get(path) match {
-        case Some(text) => Input.VirtualFile(path.toString(), text)
-        case None => path.toInput
-      }
-    }
-
-    /**
      * Resolve each path segment individually to prevent FileSystem mismatch errors.
      */
     def resolveZipPath(zipPath: Path): AbsolutePath = {
@@ -299,6 +289,16 @@ object MetalsEnrichments
     def isJar: Boolean = {
       val filename = path.toNIO.getFileName.toString
       filename.endsWith(".jar")
+    }
+
+    /**
+     * Reads file contents from editor buffer with fallback to disk.
+     */
+    def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
+      buffers.get(path) match {
+        case Some(text) => Input.VirtualFile(path.toString(), text)
+        case None => path.toInput
+      }
     }
 
     def touch(): Unit = {
@@ -539,6 +539,16 @@ object MetalsEnrichments
         completionItem <- Option(completion.getCompletionItem)
         snippetSupport <- Option(completionItem.getSnippetSupport())
       } yield snippetSupport.booleanValue).getOrElse(false)
+
+    def foldOnlyLines: Boolean = {
+      (for {
+        params <- initializeParams
+        capabilities <- Option(params.getCapabilities)
+        textDocument <- Option(capabilities.getTextDocument)
+        settings <- Option(textDocument.getFoldingRange)
+        lineFoldingOnly <- Option(settings.getLineFoldingOnly)
+      } yield lineFoldingOnly.booleanValue()).getOrElse(false)
+    }
 
     def supportsCodeActionLiterals: Boolean =
       (for {

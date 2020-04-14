@@ -29,7 +29,6 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
            |}""".stripMargin
       )
       // fix the code to make it parse
-
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
         """|
            |object Outer {

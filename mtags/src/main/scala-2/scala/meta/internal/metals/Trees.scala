@@ -15,7 +15,7 @@ import java.net.URI
  *
  * - provides the latest good Scalameta tree for a given source file
  *   similar as `Buffers` provides the current text content.
- * - publishes diagnostics for syntax errors.
+ * - produces diagnostics for syntax errors.
  */
 final class Trees {
 

@@ -1,7 +1,7 @@
 package scala.meta.internal.pc
 
-import java.util.concurrent.CancellationException
 import java.nio.channels.ClosedByInterruptException
+import java.util.concurrent.CancellationException
 
 /**
  * Extractor for exceptions that are caused by `Thread.interrupt()`.

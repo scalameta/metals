@@ -11,7 +11,7 @@ import tests.BaseCompletionSuite
 import scala.meta.internal.pc.InterruptException
 import munit.Location
 import java.net.URI
-import scala.meta.internal.pc.EmptyCancelToken
+import scala.meta.internal.metals.EmptyCancelToken
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 

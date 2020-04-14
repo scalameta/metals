@@ -60,7 +60,7 @@ import dotty.tools.dotc.reporting.diagnostic.MessageContainer
 import dotty.tools.io.VirtualFile
 import dotty.tools.dotc.interfaces.{Diagnostic => DottyDiagnostic}
 import dotty.tools.dotc.ast.tpd
-import scala.meta.internal.pc.EmptyCancelToken
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.pc.VirtualFileParams

@@ -17,6 +17,8 @@ case class ScalaTarget(
 
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
 
+  def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared(scalaVersion)
+
   def id: BuildTargetIdentifier = info.getId()
 
   def baseDirectory: String = info.getBaseDirectory()
@@ -33,8 +35,6 @@ case class ScalaTarget(
       .filter(_.endsWith(".jar"))
       .map(_.toAbsolutePath)
   }
-
-  def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared(scalaVersion)
 
   def scalaVersion: String = scalaInfo.getScalaVersion()
 
