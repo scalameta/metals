@@ -71,7 +71,6 @@ object IntelliJ {
     "--",
     "${V.bloopVersion}"
   ],
-  "timestamp": "${System.currentTimeMillis()}",
   "pantsTargets": ${targetsJson.toString},
   "X-detectExternalProjectFiles": false
 }
