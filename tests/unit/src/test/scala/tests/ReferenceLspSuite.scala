@@ -108,6 +108,113 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     } yield ()
   }
 
+  /** References should be found correctly regardless of the whether or not
+   *  the declaring code and the refering share the same compilation unit.
+   *
+   *  This checks both cases by first placing them in the same file and then
+   *  spread across different files. The package stays the same - this is
+   *  actually necessary to test that references to synthetics can be found
+   *  even in the absence of an explicit `import`, which is often the case when
+   *  the referencing code shares with the declaring code the same package
+   *  (but possibly a different compilation unit)
+   */
+  def checkInSamePackage(
+      name: String,
+      code: String,
+      moreCode: String*
+  ): Unit = {
+    def input(chunks: Seq[String]): String =
+      chunks.zipWithIndex
+        .map {
+          case (chunk, i) =>
+            s"""|/a/src/main/scala/a/Chunk$i.scala
+                |package a
+                |$chunk
+                |""".stripMargin
+        }
+        .mkString("\n")
+    check(s"$name-together", input(Seq((code +: moreCode) mkString "\n")))
+    check(s"$name-split-up", input(code +: moreCode))
+  }
+
+  checkInSamePackage(
+    "simple-case-class",
+    """|case class <<Ma@@in>>(name: String)
+       |object F {
+       |  val ma = <<Main>>("a")
+       |}
+       |""".stripMargin,
+    """|object Other {
+       |  val mb = <<Main>>.apply("b")
+       |}
+       |""".stripMargin
+  )
+
+  checkInSamePackage( // FIXME: doesn't find the case class declaration
+    "simple-case-class-starting-elsewhere",
+    """|case class Main(name: String) // doesn't find this
+       |object F {
+       |  val ma = <<Main>>("a")
+       |}
+       |""".stripMargin,
+    """|object Other {
+       |  val mb = Main.<<ap@@ply>>("b")
+       |}
+       |""".stripMargin
+  )
+
+  checkInSamePackage(
+    "case-class-unapply",
+    """|sealed trait Stuff
+       |case class <<Fo@@o>>(n: Int) extends Stuff
+       |""".stripMargin,
+    """|object Main {
+       |   def n(stuff: Stuff): Option[Int] = stuff match {
+       |     case <<Foo>>(n) => Some(n)
+       |     case _ => None
+       |   }
+       |}
+       |""".stripMargin
+  )
+
+  checkInSamePackage( // FIXME: should, but doesn't find the class declaration
+    "case-class-unapply-starting-elsewhere",
+    """|sealed trait Stuff
+       |case class Foo(n: Int) extends Stuff // doesn't find this
+       |""".stripMargin,
+    """|
+       |object ByTheWay {
+       |  val <<Foo>>(one) =
+       |      <<Foo>>(1)
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |   def n(stuff: Stuff): Option[Int] = stuff match {
+       |     case <<Fo@@o>>(n) => Some(n)
+       |     case _ => None
+       |   }
+       |}
+       |""".stripMargin
+  )
+
+  checkInSamePackage( // FIXME: doesn't find the class declaration
+    "explicit-unapply",
+    """|sealed trait Stuff
+       |class Foo(val n: Int) extends Stuff // doesn't find this; but should it?
+       |object Foo {
+       |  def apply(n: Int): Foo = new Foo(n)
+       |  def <<un@@apply>>(foo: Foo): Option[Int] = Some(foo.n)
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |   def n(stuff: Stuff): Option[Int] = stuff match {
+       |     case <<Foo>>(n) => Some(n)
+       |     case _ => None
+       |   }
+       |}
+       |""".stripMargin
+  )
+
   test("edit-distance".flaky) {
     cleanWorkspace()
     for {
