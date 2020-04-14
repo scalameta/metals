@@ -52,12 +52,6 @@ final class MetalsHttpClient(
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
-  override def metalsInputBox(
-      params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult] = {
-    CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
-  }
-
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
