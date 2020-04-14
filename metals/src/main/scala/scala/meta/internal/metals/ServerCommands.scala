@@ -162,12 +162,10 @@ object ServerCommands {
        |
        |Note: document in json argument must be absolute path.
        |""".stripMargin,
-    """|```json
-       |{
+    """|{
        |  document: "file:///home/dev/foo/Bar.scala",
        |  position: {line: 5, character: 12}
        |}
-       |```
        |""".stripMargin
   )
 
@@ -182,12 +180,10 @@ object ServerCommands {
        |
        |Note: document in json argument must be absolute path.
        |""".stripMargin,
-    """|```json
-       |{
+    """|{
        |  document: "file:///home/dev/foo/Bar.scala",
        |  position: {line: 5, character: 12}
        |}
-       |```
        |""".stripMargin
   )
 
