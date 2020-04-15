@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semver.SemVer
+import ch.epfl.scala.bsp.endpoints.Build.initialize
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -25,11 +26,16 @@ final class Doctor(
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     messages: Messages,
-    clientExperimentalCapabilities: ClientExperimentalCapabilities
+    clientExperimentalCapabilities: ClientExperimentalCapabilities,
+    initializationOptions: InitializationOptions
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private var bspServerName: Option[String] = None
   private var bspServerVersion: Option[String] = None
+  private val doctorFormatIsJson =
+    config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson || initializationOptions.doctorFormatIsJson
+  private val executeClientCommandProvider =
+    config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommand
 
   def isUnsupportedBloopVersion(serverVersion: String): Boolean = {
     bspServerName.contains("Bloop") && !SemVer.isCompatibleVersion(
@@ -71,9 +77,9 @@ final class Doctor(
       clientCommand: Command,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    if (config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider) {
+    if (executeClientCommandProvider) {
       val output =
-        if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
+        if (doctorFormatIsJson)
           buildTargetsJson()
         else buildTargetsHtml()
       val params = new ExecuteCommandParams(
@@ -129,7 +135,7 @@ final class Doctor(
     def hint() =
       if (isMaven) {
         val website =
-          if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
+          if (doctorFormatIsJson)
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
           else
             "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"

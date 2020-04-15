@@ -46,6 +46,14 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     }
   }
 
+  def configure(initializationOptions: InitializationOptions): Unit = {
+    underlying match {
+      case client: ConfiguredLanguageClient =>
+        client.configure(initializationOptions)
+      case _ =>
+    }
+  }
+
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     underlying.metalsStatus(params)
   }

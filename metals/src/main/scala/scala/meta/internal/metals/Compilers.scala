@@ -352,7 +352,14 @@ class Compilers(
   private def configure(
       pc: PresentationCompiler,
       search: SymbolSearch
-  ): PresentationCompiler =
+  ): PresentationCompiler = {
+    val initializationOptions = initializeParams
+      .map(InitializationOptions.from(_))
+      .getOrElse(InitializationOptions.Default)
+
+    val isCompletionItemDetailEnabled =
+      config.compilers.isCompletionItemDetailEnabled || initializationOptions.isCompletionItemDetailEnabled
+
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
@@ -361,9 +368,11 @@ class Compilers(
           _symbolPrefixes = userConfig().symbolPrefixes,
           isCompletionSnippetsEnabled =
             initializeParams.supportsCompletionSnippets,
-          isFoldOnlyLines = initializeParams.foldOnlyLines
+          isFoldOnlyLines = initializeParams.foldOnlyLines,
+          isCompletionItemDetailEnabled = isCompletionItemDetailEnabled
         )
       )
+  }
 
   def newCompiler(
       scalac: ScalacOptionsItem,

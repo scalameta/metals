@@ -184,6 +184,8 @@ class MetalsLanguageServer(
   private var initializeParams: Option[InitializeParams] = None
   private var clientExperimentalCapabilities: ClientExperimentalCapabilities =
     ClientExperimentalCapabilities.Default
+  private var initializationOptions: InitializationOptions =
+    InitializationOptions.Default
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private val packageProvider: PackageProvider =
@@ -210,7 +212,8 @@ class MetalsLanguageServer(
       progressTicks,
       config.icons,
       config.statusBar,
-      clientExperimentalCapabilities
+      clientExperimentalCapabilities,
+      initializationOptions
     )
     embedded = register(
       new Embedded(
@@ -236,8 +239,11 @@ class MetalsLanguageServer(
     )
     clientExperimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
+    initializationOptions = InitializationOptions.from(params)
 
     languageClient.configure(clientExperimentalCapabilities)
+    languageClient.configure(initializationOptions)
+
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)
@@ -348,6 +354,7 @@ class MetalsLanguageServer(
       () => userConfig,
       languageClient,
       clientExperimentalCapabilities,
+      initializationOptions,
       statusBar,
       config.icons,
       Option(params.getWorkspaceFolders) match {
@@ -468,7 +475,8 @@ class MetalsLanguageServer(
       () => httpServer,
       tables,
       messages,
-      clientExperimentalCapabilities
+      clientExperimentalCapabilities,
+      initializationOptions
     )
     val worksheetPublisher =
       if (clientExperimentalCapabilities.decorationProvider)
@@ -674,7 +682,7 @@ class MetalsLanguageServer(
       } finally {
         promise.success(())
       }
-      if (config.isExitOnShutdown) {
+      if (config.isExitOnShutdown || initializationOptions.isExitOnShutdown) {
         System.exit(0)
       }
       promise.future.asJava

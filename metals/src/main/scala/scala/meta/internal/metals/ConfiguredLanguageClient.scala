@@ -25,9 +25,14 @@ final class ConfiguredLanguageClient(
     extends DelegatingLanguageClient(initial) {
 
   private var clientCapabilities = ClientExperimentalCapabilities.Default
+  private var initializationOptions = InitializationOptions.Default
 
   override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
     clientCapabilities = capabilities
+  }
+
+  override def configure(options: InitializationOptions): Unit = {
+    initializationOptions = options
   }
 
   override def shutdown(): Unit = {
@@ -35,12 +40,12 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (config.statusBar.isOn || clientCapabilities.statusBarIsOn) {
+    if (config.statusBar.isOn || clientCapabilities.statusBarIsOn || initializationOptions.statusBarIsOn) {
       underlying.metalsStatus(params)
     } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (config.statusBar.isShowMessage || clientCapabilities.statusBarIsShowMessage) {
+      if (config.statusBar.isShowMessage || clientCapabilities.statusBarIsShowMessage || initializationOptions.statusBarIsShowMessage) {
         underlying.showMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage) {
+      } else if (config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage || initializationOptions.statusBarIsLogMessage) {
         underlying.logMessage(new MessageParams(MessageType.Log, params.text))
       } else {
         ()
@@ -52,7 +57,7 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider) {
+    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider || initializationOptions.slowTask) {
       underlying.metalsSlowTask(params)
     } else {
       new CompletableFuture[MetalsSlowTaskResult]()
@@ -73,7 +78,9 @@ final class ConfiguredLanguageClient(
   }
 
   override def logMessage(message: MessageParams): Unit = {
-    if ((config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage) && message.getType == MessageType.Log) {
+    val statusBarIsLogMessage =
+      config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage || initializationOptions.statusBarIsLogMessage
+    if (statusBarIsLogMessage && message.getType == MessageType.Log) {
       // window/logMessage is reserved for the status bar so we don't publish
       // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
       ()
@@ -85,7 +92,7 @@ final class ConfiguredLanguageClient(
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
-    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider) {
+    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommand) {
       params.getCommand match {
         case ClientCommands.RefreshModel()
             if !clientCapabilities.debuggingProvider =>
@@ -99,7 +106,7 @@ final class ConfiguredLanguageClient(
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider) {
+    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider || initializationOptions.inputBox) {
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
@@ -109,7 +116,7 @@ final class ConfiguredLanguageClient(
   override def metalsQuickPick(
       params: MetalsQuickPickParams
   ): CompletableFuture[MetalsQuickPickResult] = {
-    if (clientCapabilities.quickPickProvider) {
+    if (clientCapabilities.quickPickProvider || initializationOptions.quickPick) {
       underlying.metalsQuickPick(params)
     } else {
       showMessageRequest(

@@ -34,9 +34,12 @@ final class StatusBar(
     progressTicks: ProgressTicks = ProgressTicks.braille,
     val icons: Icons,
     statusBar: StatusBarConfig,
-    clientCapabilities: ClientExperimentalCapabilities
+    clientCapabilities: ClientExperimentalCapabilities,
+    initializationOptions: InitializationOptions
 )(implicit ec: ExecutionContext)
     extends Cancelable {
+  private val statusBarIsOff =
+    statusBar.isOff && clientCapabilities.statusBarIsOff && initializationOptions.statusBarIsOff
 
   def trackBlockingTask[T](message: String)(thunk: => T): T = {
     val promise = Promise[Unit]()
@@ -49,7 +52,7 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (statusBar.isOff && clientCapabilities.statusBarIsOff)
+    if (statusBarIsOff)
       trackBlockingTask(message)(thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
@@ -67,7 +70,7 @@ final class StatusBar(
   }
 
   def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (statusBar.isOff && clientCapabilities.statusBarIsOff)
+    if (statusBarIsOff)
       trackFuture(message, thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
