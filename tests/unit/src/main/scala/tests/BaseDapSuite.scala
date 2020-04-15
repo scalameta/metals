@@ -13,6 +13,7 @@ import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.debug.DebugProtocol
 import scala.util.Failure
 import scala.util.Success
+import munit.GenericBeforeEach
 
 abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
 
@@ -21,13 +22,13 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
   private val dapServer =
     GlobalTrace.protocolTracePath(DebugProtocol.serverName)
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
+  override def beforeEach(context: GenericBeforeEach[Future[Any]]): Unit = {
+    super.beforeEach(context)
     dapClient.touch()
     dapServer.touch()
   }
 
-  protected def logDapTraces() = {
+  protected def logDapTraces(): Unit = {
     scribe.warn("The DAP test failed, printing the traces")
     scribe.warn(dapClient.toString() + ":")
     scribe.info(dapClient.readText)

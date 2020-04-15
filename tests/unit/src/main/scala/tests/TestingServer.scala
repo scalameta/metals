@@ -92,6 +92,8 @@ import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuic
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
+import com.google.gson.JsonElement
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -435,6 +437,8 @@ final class TestingServer(
       parameter: AnyRef,
       stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue
   ): Future[TestDebugger] = {
+
+    assertSystemExit(parameter)
     val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
       new b.DebugSessionParams(targets.asJava, kind, parameter.toJson)
@@ -445,9 +449,37 @@ final class TestingServer(
     }
   }
 
+  // note(@tgodzik) all test should have `System.exit(0)` added to avoid occasional issue due to:
+  // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
+  private def assertSystemExit(parameter: AnyRef) = {
+    def check() = {
+      val workspaceScalaFiles =
+        workspace.listRecursive.filter(_.isScala).toList
+      val usesSystemExit =
+        workspaceScalaFiles.exists(_.text.contains("System.exit(0)"))
+      if (!usesSystemExit)
+        throw new RuntimeException(
+          "All debug test for main classes should have `System.exit(0)`"
+        )
+    }
+
+    parameter match {
+      case _: b.ScalaMainClass =>
+        check()
+      case json: JsonElement =>
+        val mainParams = json.as[DebugUnresolvedMainClassParams]
+        val mainClass = mainParams.toOption
+          .flatMap(main => Option(main.mainClass))
+        if (mainClass.isDefined)
+          check()
+      case _ =>
+    }
+  }
+
   def startDebuggingUnresolved(
-      params: Object
+      params: AnyRef
   ): Future[TestDebugger] = {
+    assertSystemExit(params)
     executeCommand(ServerCommands.StartDebugAdapter.id, params).collect {
       case DebugSession(_, uri) =>
         TestDebugger(URI.create(uri), Stoppage.Handler.Continue)
