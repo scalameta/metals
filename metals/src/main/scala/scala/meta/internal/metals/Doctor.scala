@@ -10,7 +10,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semver.SemVer
-import ch.epfl.scala.bsp.endpoints.Build.initialize
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
