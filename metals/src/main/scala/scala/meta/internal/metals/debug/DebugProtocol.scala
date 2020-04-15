@@ -25,6 +25,9 @@ object DebugProtocol {
   import scala.meta.internal.metals.JsonParser._
   val FirstMessageId = 1
 
+  val serverName = "dap-server"
+  val clientName = "dap-client"
+
   def copy(original: Source): Source = {
     val source = new Source
     source.setAdapterData(original.getAdapterData)

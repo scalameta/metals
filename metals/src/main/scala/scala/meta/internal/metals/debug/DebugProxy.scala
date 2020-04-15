@@ -138,12 +138,12 @@ private[debug] object DebugProxy {
     for {
       server <- connectToServer()
         .map(new SocketEndpoint(_))
-        .map(endpoint => withLogger(endpoint, "dap-server"))
+        .map(endpoint => withLogger(endpoint, DebugProtocol.serverName))
         .map(new MessageIdAdapter(_))
         .map(new ServerAdapter(_))
       client <- awaitClient()
         .map(new SocketEndpoint(_))
-        .map(endpoint => withLogger(endpoint, "dap-client"))
+        .map(endpoint => withLogger(endpoint, DebugProtocol.clientName))
         .map(new MessageIdAdapter(_))
     } yield new DebugProxy(name, sourcePathProvider, client, server)
   }
