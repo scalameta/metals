@@ -9,6 +9,8 @@ import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.MetalsInputBoxParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import munit.TestOptions
+import java.nio.file.FileAlreadyExistsException
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def experimentalCapabilities
@@ -100,15 +102,37 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                        |""".stripMargin
   )
 
+  check("existing-file")(
+    Some("a/src/main/scala/foo"),
+    "class",
+    Some("Other"),
+    "a/src/main/scala/foo/Other.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Other {
+                          | val withContent = true
+                          |}
+                          |""".stripMargin,
+    existingFiles = s"""|/a/src/main/scala/foo/Other.scala
+                        |package foo
+                        |
+                        |class Other {
+                        | val withContent = true
+                        |}
+                        |""".stripMargin,
+    expectedException = List(classOf[FileAlreadyExistsException])
+  )
+
   private def indent = "  "
 
-  private def check(testName: String)(
+  private def check(testName: TestOptions)(
       directory: Option[String],
       pickedKind: String,
       name: Option[String],
       expectedFilePath: String,
       expectedContent: String,
-      existingFiles: String = ""
+      existingFiles: String = "",
+      expectedException: List[Class[_]] = Nil
   ): Unit = test(testName) {
     val directoryUri = directory.fold(null.asInstanceOf[String])(
       workspace.resolve(_).toURI.toString()
@@ -144,7 +168,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
         "\n" + NewScalaFile.enterNameMessage(pickedKind)
       )
 
-    for {
+    val futureToRecover = for {
       _ <- server.initialize(s"""
                                 |/metals.json
                                 |{
@@ -152,10 +176,11 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |}
                                 |$existingFiles
                                 |""".stripMargin)
-      _ <- server.executeCommand(
-        ServerCommands.NewScalaFile.id,
-        directoryUri
-      )
+      _ <- server
+        .executeCommand(
+          ServerCommands.NewScalaFile.id,
+          directoryUri
+        )
       _ = {
         assertNoDiff(
           client.workspaceMessageRequests,
@@ -168,6 +193,17 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
         )
       }
     } yield ()
+
+    futureToRecover
+      .recover {
+        case e if expectedException.contains(e.getClass()) =>
+          assertNoDiff(
+            expectedFilePathAbsolute.readText,
+            expectedContent
+          )
+        case other =>
+          throw other
+      }
   }
 
   private def isSelectTheKindOfFile(params: ShowMessageRequestParams): Boolean =
