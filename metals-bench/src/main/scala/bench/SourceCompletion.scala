@@ -8,6 +8,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 import scala.util.Random
+import java.nio.file.Paths
 
 /**
  * A helper to create a benchmark for completions given a source file and offset.
@@ -16,7 +17,13 @@ case class SourceCompletion(filename: String, code: String, offset: Int) {
   def complete(pc: PresentationCompiler): CompletionList = {
     // Trigger re-typechecking
     val randomSuffix = s"\n/* ${Random.nextInt()} */\n"
-    pc.complete(CompilerOffsetParams(filename, code + randomSuffix, offset))
+    pc.complete(
+        CompilerOffsetParams(
+          Paths.get(filename).toUri(),
+          code + randomSuffix,
+          offset
+        )
+      )
       .get()
   }
 }

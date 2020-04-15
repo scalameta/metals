@@ -1,6 +1,6 @@
 package scala.meta.internal.pc
 
-import java.util.Collections
+import java.{util => ju}
 import scala.annotation.tailrec
 
 object CompilerThrowable {
@@ -10,7 +10,7 @@ object CompilerThrowable {
    * @param e
    */
   def trimStackTrace(e: Throwable): e.type = {
-    val isVisited = Collections.newSetFromMap(
+    val isVisited = ju.Collections.newSetFromMap(
       new java.util.IdentityHashMap[Throwable, java.lang.Boolean]
     )
     @tailrec def loop(ex: Throwable): Unit = {

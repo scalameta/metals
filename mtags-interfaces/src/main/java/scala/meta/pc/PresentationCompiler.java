@@ -7,9 +7,18 @@ import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DocumentSymbol;
+import org.eclipse.lsp4j.DocumentRangeFormattingParams;
+import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
+import org.eclipse.lsp4j.FoldingRange;
+
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -74,6 +83,36 @@ public abstract class PresentationCompiler {
      */
     public abstract CompletableFuture<List<TextEdit>> implementAbstractMembers(OffsetParams params);
 
+    /**
+     * The text contents of the fiven file changed.
+     */
+    public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
+
+    /**
+     * File was closed.
+     */
+    public abstract void didClose(URI uri);
+
+    /**
+     * Ranges where the document can be collapsed.
+     */
+    public abstract CompletableFuture<List<FoldingRange>> foldingRange(VirtualFileParams params);
+
+    /**
+     * Formatting changes after pressing specified keys
+     */
+    public abstract CompletableFuture<List<TextEdit>> onTypeFormatting(DocumentOnTypeFormattingParams params, String source);
+    
+    /**
+     * Formatting changes after pasting a part of a file
+     */
+    public abstract CompletableFuture<List<TextEdit>> rangeFormatting(DocumentRangeFormattingParams params, String source);
+
+    /**
+     * All symbols inside a text document
+     */
+    public abstract CompletableFuture<List<DocumentSymbol>> documentSymbols(VirtualFileParams params);
+    
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
@@ -161,4 +200,5 @@ public abstract class PresentationCompiler {
      * detail that the compiler is `null` when it has been reset.
      */
     public abstract boolean isLoaded();
+
 }

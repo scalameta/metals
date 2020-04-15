@@ -190,12 +190,17 @@ object PackageIndex {
       if !Testing.isEnabled || !entry.toNIO.endsWith("jfr.jar")
     } yield entry
 
-  def scalaLibrary: Seq[Path] = {
+  private def findJar(name: String) = {
     ClasspathLoader
       .getURLs(this.getClass.getClassLoader)
       .iterator
-      .filter(_.getPath.contains("scala-library"))
+      .filter(_.getPath.contains(name))
       .map(url => Paths.get(url.toURI))
       .toSeq
   }
+
+  def scalaLibrary: Seq[Path] = findJar("scala-library")
+
+  def dottyLibrary: Seq[Path] = findJar("dotty-library")
+
 }

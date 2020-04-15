@@ -3,8 +3,8 @@ package scala.meta.internal.pc
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.AutoImportsResult
 import scala.collection.mutable
-import scala.collection.JavaConverters._
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.internal.jdk.CollectionConverters._
 
 final class AutoImportsProvider(
     val compiler: MetalsGlobal,
@@ -16,7 +16,7 @@ final class AutoImportsProvider(
   def autoImports(): List[AutoImportsResult] = {
     val unit = addCompilationUnit(
       code = params.text(),
-      filename = params.filename(),
+      filename = params.uri().toString(),
       cursor = Some(params.offset())
     )
     val pos = unit.position(params.offset)

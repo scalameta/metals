@@ -1,13 +1,17 @@
 package tests.pc
 
 import tests.BaseSignatureHelpSuite
+import tests.BuildInfoVersions
 
 class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-    indexScalaLibrary()
-  }
+  override def requiresJdkSources: Boolean = true
+
+  override def requiresScalaLibrarySources: Boolean = true
+
+  // @tgodzik docs not yet supported for Scala 3
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   val foldLatestDocs: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s

@@ -3,8 +3,12 @@ package tests.pc
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionCaseSuite extends BaseCompletionSuite {
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   def paramHint: Option[String] = Some("param-hint")
 
@@ -14,7 +18,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     )
 
   override val compatProcess: Map[String, String => String] = Map(
-    "2.11" -> { s: String =>
+    "2.11" -> { (s: String) =>
       // The standard library renamed fields of Some/Left/Right for 2.12.0.
       s.replaceAllLiterally("Some(value)", "Some(x)")
         .replaceAllLiterally("Left(value)", "Left(a)")
@@ -422,44 +426,42 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   // Apparently, known-direct subclasses does not work so well in 2.11.
-  if (!isScala211) {
-    checkEditLine(
-      "infix-custom",
-      """package pkg
-        |object Outer {
-        |  sealed trait ADT
-        |  case class :+:(a: Int, b: String) extends ADT
-        |}
-        |object Main {
-        |  val l: pkg.Outer.ADT = ???
-        |  import pkg.Outer.:+:
-        |  l match {
-        |    ___
-        |  }
-        |}
-        |""".stripMargin,
-      "cas@@",
-      "case a :+: b => $0"
-    )
+  checkEditLine(
+    "infix-custom".tag(IgnoreScalaVersion("2.11.12")),
+    """package pkg
+      |object Outer {
+      |  sealed trait ADT
+      |  case class :+:(a: Int, b: String) extends ADT
+      |}
+      |object Main {
+      |  val l: pkg.Outer.ADT = ???
+      |  import pkg.Outer.:+:
+      |  l match {
+      |    ___
+      |  }
+      |}
+      |""".stripMargin,
+    "cas@@",
+    "case a :+: b => $0"
+  )
 
-    checkEditLine(
-      "infix-conflict",
-      """
-        |object Outer {
-        |  sealed trait List
-        |  case class ::(a: Int, b: String) extends List
-        |}
-        |object Main {
-        |  val l: Outer.List = ???
-        |  l match {
-        |    ___
-        |  }
-        |}
-        |""".stripMargin,
-      "cas@@",
-      // Assert we don't use infix syntax because `::` resolves to conflicting symbol in scope.
-      "case Outer.::(a, b) => $0"
-    )
-  }
+  checkEditLine(
+    "infix-conflict".tag(IgnoreScalaVersion("2.11.12")),
+    """
+      |object Outer {
+      |  sealed trait List
+      |  case class ::(a: Int, b: String) extends List
+      |}
+      |object Main {
+      |  val l: Outer.List = ???
+      |  l match {
+      |    ___
+      |  }
+      |}
+      |""".stripMargin,
+    "cas@@",
+    // Assert we don't use infix syntax because `::` resolves to conflicting symbol in scope.
+    "case Outer.::(a, b) => $0"
+  )
 
 }

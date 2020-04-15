@@ -15,9 +15,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.pc.HoverMarkup
 import scala.meta.internal.worksheets.MdocEnrichments.truncatify
+import org.eclipse.lsp4j.Hover
 import WorkspaceEditWorksheetPublisher._
 
 class WorkspaceEditWorksheetPublisher(buffers: Buffers)
@@ -37,10 +37,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   override def hover(path: AbsolutePath, position: Position): Option[Hover] = {
     for {
       messages <- hoverMessages.get(path)
-      distance = TokenEditDistance.fromBuffer(
+      distance = buffers.tokenEditDistance(
         path,
-        messages.textSnapshot,
-        buffers
+        messages.textSnapshot
       )
       snapshotPosition <- distance
         .toOriginal(position.getLine(), position.getCharacter())

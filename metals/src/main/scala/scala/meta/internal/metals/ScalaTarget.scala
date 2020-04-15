@@ -14,9 +14,10 @@ case class ScalaTarget(
     scalaInfo: ScalaBuildTarget,
     scalac: ScalacOptionsItem
 ) {
-  def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled
 
-  def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared
+  def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
+
+  def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared(scalaVersion)
 
   def id: BuildTargetIdentifier = info.getId()
 
@@ -36,6 +37,8 @@ case class ScalaTarget(
   }
 
   def scalaVersion: String = scalaInfo.getScalaVersion()
+
+  def classDirectory: String = scalac.getClassDirectory()
 
   def displayName: String = info.getDisplayName()
 

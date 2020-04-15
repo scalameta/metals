@@ -4,20 +4,17 @@ import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
-import scala.meta.tokens.Token.{Constant, Interpolation}
+import scala.meta.tokens.Token.Constant
+import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.Position
 
-final class MultilineStringFormattingProvider(
-    buffer: Buffers
-)(implicit ec: ExecutionContext) {
+object MultilineStringFormattingProvider {
 
   private val quote = '"'
   private val space = " "
@@ -143,26 +140,25 @@ final class MultilineStringFormattingProvider(
 
   private def withToken(
       textId: TextDocumentIdentifier,
+      sourceText: String,
       range: Range,
       newlineAdded: Boolean
-  )(fn: (String, meta.Position) => List[TextEdit]): Future[List[TextEdit]] =
-    Future {
-      val source = textId.getUri.toAbsolutePath
-      if (source.exists) {
-        val sourceText = buffer.get(source).getOrElse("")
-        val virtualFile = Input.VirtualFile(source.toString(), sourceText)
-        val startPos = range.getStart.toMeta(virtualFile)
-        val endPos = range.getEnd.toMeta(virtualFile)
-        if (pipeInScope(startPos, endPos, sourceText, newlineAdded)) {
-          val tokens =
-            virtualFile.tokenize.toOption
-          tokens
-            .filter(multilineStringInTokens(_, startPos, endPos, sourceText))
-            .map(_ => fn(sourceText, startPos))
-            .getOrElse(Nil)
-        } else Nil
+  )(fn: (String, meta.Position) => List[TextEdit]): List[TextEdit] = {
+    val source = textId.getUri.toAbsolutePath
+    if (source.exists) {
+      val virtualFile = Input.VirtualFile(source.toString(), sourceText)
+      val startPos = range.getStart.toMeta(virtualFile)
+      val endPos = range.getEnd.toMeta(virtualFile)
+      if (pipeInScope(startPos, endPos, sourceText, newlineAdded)) {
+        val tokens =
+          virtualFile.tokenize.toOption
+        tokens
+          .filter(multilineStringInTokens(_, startPos, endPos, sourceText))
+          .map(_ => fn(sourceText, startPos))
+          .getOrElse(Nil)
       } else Nil
-    }
+    } else Nil
+  }
 
   private def formatPipeLine(
       line: Int,
@@ -202,29 +198,37 @@ final class MultilineStringFormattingProvider(
     }
   }
 
-  def format(params: DocumentOnTypeFormattingParams): Future[List[TextEdit]] = {
+  def format(
+      params: DocumentOnTypeFormattingParams,
+      sourceText: String
+  ): List[TextEdit] = {
     val range = new Range(params.getPosition, params.getPosition)
     val doc = params.getTextDocument()
     val newlineAdded = params.getCh() == "\n"
-    withToken(doc, range, newlineAdded) { (sourceText, position) =>
+    withToken(doc, sourceText, range, newlineAdded) { (sourceText, position) =>
       List(indent(sourceText, params.getPosition))
     }
   }
 
-  def format(params: DocumentRangeFormattingParams): Future[List[TextEdit]] = {
+  def format(
+      params: DocumentRangeFormattingParams,
+      sourceText: String
+  ): List[TextEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val range = params.getRange()
     val doc = params.getTextDocument()
-    withToken(doc, range, newlineAdded = false) { (sourceText, position) =>
-      val splitLines = sourceText.split('\n')
-      // position.startLine since we want to check current line on rangeFormatting
-      val defaultIndent = determineDefaultIndent(splitLines, position.startLine)
-      val linesToFormat =
-        range.getStart().getLine().to(range.getEnd().getLine())
+    withToken(doc, sourceText, range, newlineAdded = false) {
+      (sourceText, position) =>
+        val splitLines = sourceText.split('\n')
+        // position.startLine since we want to check current line on rangeFormatting
+        val defaultIndent =
+          determineDefaultIndent(splitLines, position.startLine)
+        val linesToFormat =
+          range.getStart().getLine().to(range.getEnd().getLine())
 
-      linesToFormat
-        .flatMap(line => formatPipeLine(line, splitLines, defaultIndent))
-        .toList
+        linesToFormat
+          .flatMap(line => formatPipeLine(line, splitLines, defaultIndent))
+          .toList
     }
   }
 

@@ -51,7 +51,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|def empty[T]: Option[T]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "0." -> "def empty[T] => Option[T]".hover
+    )
   )
 
   check(
@@ -63,7 +66,10 @@ class HoverDefnSuite extends BaseHoverSuite {
     """
       |Option[T]
       |def empty[T: Ordering]: Option[T]
-      |""".stripMargin.hover
+      |""".stripMargin.hover,
+    compat = Map(
+      "0." -> "def empty[T](implicit evidence$1: Ordering[T]): Option[T]".hover
+    )
   )
 
   check(
@@ -99,7 +105,10 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |def this(x: Int): a
        |```
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "def <init>(x: Int): ctor.a".hover
+    )
   )
 
   check(
@@ -142,21 +151,30 @@ class HoverDefnSuite extends BaseHoverSuite {
     "object",
     """object M@@yObject
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "0." -> "object MyObject$: object.MyObject$".hover
+    )
   )
 
   check(
     "trait",
     """trait M@@yTrait
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "0." -> "trait MyTrait: trait.MyTrait".hover
+    )
   )
 
   check(
     "class",
     """trait M@@yClass
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "0." -> "trait MyClass: class.MyClass".hover
+    )
   )
 
   check(
@@ -168,7 +186,11 @@ class HoverDefnSuite extends BaseHoverSuite {
       |package b.pkg
       |```
       |""".stripMargin,
-    automaticPackage = false
+    automaticPackage = false,
+    compat = Map(
+      // TODO hover doesn't show information on package
+      "0." -> "".hover
+    )
   )
 
   check(
@@ -180,10 +202,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  }
       |}
       |""".stripMargin,
-    """```scala
-      |head: Int
-      |```
-      |""".stripMargin
+    "head: Int".hover,
+    compat = Map(
+      "0." -> "val head: Int".hover
+    )
   )
 
   check(
@@ -195,10 +217,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  }
       |}
       |""".stripMargin,
-    """```scala
-      |value: Int
-      |```
-      |""".stripMargin
+    "value: Int".hover,
+    compat = Map(
+      "0." -> "val value: Int".hover
+    )
   )
 
 }

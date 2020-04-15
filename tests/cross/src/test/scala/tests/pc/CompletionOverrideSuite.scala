@@ -1,12 +1,14 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionOverrideSuite extends BaseCompletionSuite {
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-  }
+  override def requiresJdkSources: Boolean = true
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   checkEdit(
     "basic",

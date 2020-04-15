@@ -42,7 +42,7 @@ class CompletionProvider(
   def completions(): CompletionList = {
     val unit = addCompilationUnit(
       code = params.text,
-      filename = params.filename,
+      filename = params.uri().toString(),
       cursor = Some(params.offset),
       cursorName = cursorName
     )
@@ -466,7 +466,7 @@ class CompletionProvider(
   def implementAll(): ju.List[l.TextEdit] = {
     val unit = addCompilationUnit(
       code = params.text,
-      filename = params.filename,
+      filename = params.uri().toString(),
       cursor = None
     )
     val pos = unit.position(params.offset)

@@ -254,11 +254,14 @@ class WorksheetProvider(
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
-        isSupported = ScalaVersions.isSupportedScalaVersion(scalaVersion)
+        isSupported = ScalaVersions
+          .isSupportedScalaVersion(scalaVersion) && !ScalaVersions
+          .isScala3Version(scalaVersion)
         _ = {
           if (!isSupported) {
             scribe.warn(
-              s"worksheet: unsupported Scala version '${scalaVersion}', to fix this problem use Scala version '${BuildInfo.scala212}' instead."
+              s"worksheet: unsupported Scala version '${scalaVersion}', using Scala version '${BuildInfo.scala212}' without classpath instead.\n" +
+                s"worksheet: to fix this problem use Scala version '${BuildInfo.scala212}'."
             )
           }
         }

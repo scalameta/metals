@@ -1,14 +1,14 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
+  override def requiresScalaLibrarySources: Boolean = true
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-    indexScalaLibrary()
-  }
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   check(
     "java",

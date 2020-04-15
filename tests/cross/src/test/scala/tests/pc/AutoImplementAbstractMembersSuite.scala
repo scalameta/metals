@@ -6,8 +6,13 @@ import tests.BaseCodeActionSuite
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.jdk.CollectionConverters._
+import java.net.URI
+import tests.BuildInfoVersions
 
 class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   checkEdit(
     "classdef",
@@ -674,9 +679,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       filename: String = "A.scala"
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
-    val result = pc
+    val result = presentationCompiler
       .implementAbstractMembers(
-        CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
+        CompilerOffsetParams(URI.create(filename), code, offset, cancelToken)
       )
       .get()
     result.asScala.toList

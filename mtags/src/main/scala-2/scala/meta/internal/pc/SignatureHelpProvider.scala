@@ -15,7 +15,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
   ): SignatureHelp = {
     val unit = addCompilationUnit(
       code = params.text(),
-      filename = params.filename(),
+      filename = params.uri().toString(),
       cursor = cursor(params.offset(), params.text())
     )
     val pos = unit.position(params.offset())

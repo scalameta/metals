@@ -1,8 +1,6 @@
 package tests
 
 import scala.concurrent.duration.Duration
-import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
 import munit.Flaky
@@ -15,11 +13,6 @@ class BaseSuite extends munit.FunSuite with Assertions {
 
   def isJava8: Boolean =
     !Properties.isJavaAtLeast("9")
-
-  def isScala211: Boolean =
-    mtags.BuildInfo.scalaCompilerVersion.startsWith("2.11")
-
-  def hasJdkSources: Boolean = JdkSources().isDefined
 
   def isWindows: Boolean =
     Properties.isWin
@@ -46,9 +39,6 @@ class BaseSuite extends munit.FunSuite with Assertions {
       munitFlakyTransform
     )
 
-  private def scalaVersion: String =
-    Properties.versionNumberString
-
   private def scalaBinary(scalaVersion: String): String =
     scalaVersion.split("\\.").take(2).mkString(".")
 
@@ -58,16 +48,17 @@ class BaseSuite extends munit.FunSuite with Assertions {
   def getExpected(
       default: String,
       compat: Map[String, String],
-      scalaVersion: String = this.scalaVersion
+      scalaVersion: String
   ): String = {
     val postProcess = compatProcess
-      .get(scalaBinary(scalaVersion))
-      .orElse(compatProcess.get(scalaVersion))
+      .collectFirst {
+        case (ver, process) if scalaVersion.startsWith(ver) => process
+      }
       .getOrElse(identity[String] _)
 
     val result = compat
-      .get(scalaBinary(scalaVersion))
-      .orElse(compat.get(scalaVersion))
+      .collect { case (ver, code) if scalaVersion.startsWith(ver) => code }
+      .headOption
       .getOrElse(default)
 
     postProcess(result)

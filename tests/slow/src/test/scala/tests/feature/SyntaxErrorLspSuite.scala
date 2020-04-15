@@ -1,7 +1,9 @@
-package tests
+package tests.feature
 
 import scala.concurrent.Future
 import munit.Location
+import scala.meta.internal.metals.{BuildInfo => V}
+import tests.BaseLspSuite
 
 class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
@@ -318,7 +320,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ <- server.initialize(
         s"""
            |/metals.json
-           |{"a": { "scalaVersion": "2.13.0" }}
+           |{"a": { "scalaVersion": "${V.scala213}" }}
            |/a/src/main/scala/A.scala
            |object A {
            |  val x: Option["literal"] = Some("literal")

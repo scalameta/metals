@@ -13,7 +13,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|`type`: Int
        |""".stripMargin,
-    filterText = "type"
+    filterText = "type",
+    compat = Map(
+      "0." -> "type: Int"
+    )
   )
 
   check(
@@ -25,7 +28,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|`hello world`: Int
        |""".stripMargin,
-    filterText = "hello world"
+    filterText = "hello world",
+    compat = Map(
+      "0." -> "hello world: Int"
+    )
   )
 
   check(
@@ -37,37 +43,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|`///`: Int
        |""".stripMargin,
-    filterText = "///"
-  )
-
-  checkEdit(
-    "interpolator",
-    """|object Main {
-       |  val `type` = 42
-       |  "Hello $type@@"
-       |}
-       |""".stripMargin,
-    """|object Main {
-       |  val `type` = 42
-       |  s"Hello ${`type`$0}"
-       |}
-       |""".stripMargin,
-    filterText = "\"Hello $type"
-  )
-
-  checkEdit(
-    "interpolator2",
-    """|object Main {
-       |  val `hello world` = 42
-       |  "Hello $hello@@"
-       |}
-       |""".stripMargin,
-    """|object Main {
-       |  val `hello world` = 42
-       |  s"Hello ${`hello world`$0}"
-       |}
-       |""".stripMargin,
-    filterText = "\"Hello $hello world"
+    filterText = "///",
+    compat = Map(
+      "0." -> "///: Int"
+    )
   )
 
   check(
@@ -79,7 +58,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """`type` = : Int
       |""".stripMargin,
-    filterText = "type"
+    filterText = "type",
+    compat = Map(
+      "0." -> ""
+    )
   )
 
   check(
@@ -105,7 +87,8 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     // NOTE(olafur) expected output is empty because the source does not tokenize due to unclosed identifier.
     // It would be nice to fix this limitation down the road.
-    ""
+    "",
+    filter = _.contains("`type`")
   )
 
 }

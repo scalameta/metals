@@ -6,13 +6,15 @@ import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.meta.Token
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import java.util.logging.Logger
 
 /** Helper to map between position between two similar strings. */
 final class TokenEditDistance private (
     matching: Array[MatchingToken],
     empty: Option[EmptyResult]
 ) {
+  val logger: Logger = Logger.getLogger(classOf[TokenEditDistance].getName)
   private val isUnchanged: Boolean =
     empty.contains(EmptyResult.Unchanged)
   private val isNoMatch: Boolean =
@@ -125,7 +127,7 @@ final class TokenEditDistance private (
             }
           Some(revised.toLSP)
         case (start, end) =>
-          scribe.warn(s"stale range: $start $end")
+          logger.warning(s"stale range: $start $end")
           None
       }
     }
@@ -289,16 +291,6 @@ object TokenEditDistance {
       }
       result.getOrElse(noMatch)
     }
-  }
-
-  def fromBuffer(
-      source: AbsolutePath,
-      snapshot: String,
-      buffers: Buffers
-  ): TokenEditDistance = {
-    val bufferInput = source.toInputFromBuffers(buffers)
-    val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot)
-    TokenEditDistance(snapshotInput, bufferInput)
   }
 
   /** Compare tokens only by their text and token category. */

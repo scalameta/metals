@@ -5,8 +5,10 @@ import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.{lsp4j => l}
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.transversers.SimpleTraverser
+import scala.meta.internal.jdk.CollectionConverters._
+import java.net.URI
 
 /**
  *  Retrieves all the symbols defined in a document
@@ -17,13 +19,14 @@ import scala.meta.transversers.SimpleTraverser
 class DocumentSymbolProvider(trees: Trees) {
 
   def documentSymbols(
-      path: AbsolutePath
+      path: URI,
+      code: String
   ): util.List[DocumentSymbol] = {
-    trees.get(path) match {
+    trees.get(path, code) match {
       case Some(tree) =>
         new SymbolTraverser().symbols(tree)
       case None =>
-        List().asJava
+        List.empty[DocumentSymbol].asJava
     }
   }
 

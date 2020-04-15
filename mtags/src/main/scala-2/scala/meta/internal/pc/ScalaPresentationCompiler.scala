@@ -12,10 +12,8 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -29,6 +27,19 @@ import scala.meta.pc.DefinitionResult
 import scala.collection.Seq
 import java.{util => ju}
 import scala.meta.pc.AutoImportsResult
+import org.eclipse.lsp4j.Diagnostic
+import scala.meta.pc.VirtualFileParams
+import org.eclipse.lsp4j.FoldingRange
+import scala.meta.internal.metals.FoldingRangeProvider
+import scala.meta.internal.metals.Trees
+import org.eclipse.lsp4j.DocumentSymbol
+import scala.meta.internal.metals.DocumentSymbolProvider
+import org.eclipse.lsp4j.{DocumentOnTypeFormattingParams, TextEdit}
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import scala.meta.internal.metals.MultilineStringFormattingProvider
+import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.jdk.CollectionConverters._
+import java.net.URI
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -39,14 +50,24 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
 ) extends PresentationCompiler {
+  implicit val executionContext: ExecutionContextExecutor = ec
+
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+
+  val trees = new Trees
+  val foldingRangeProvider =
+    new FoldingRangeProvider(trees, config.isFoldOnlyLines())
+  val documentSymbolProvider = new DocumentSymbolProvider(trees)
+
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
+
   override def withExecutorService(
       executorService: ExecutorService
   ): PresentationCompiler =
     copy(ec = ExecutionContext.fromExecutorService(executorService))
+
   override def withScheduledExecutorService(
       sh: ScheduledExecutorService
   ): PresentationCompiler =
@@ -58,16 +79,24 @@ case class ScalaPresentationCompiler(
     copy(config = config)
   def this() = this(buildTargetIdentifier = "")
 
-  val access = new CompilerAccess(config, sh, () => newCompiler())(ec)
+  val compilerAccess =
+    new ScalaCompilerAccess(
+      config,
+      sh,
+      () => new ScalaCompilerWrapper(newCompiler())
+    )(
+      ec
+    )
+
   override def shutdown(): Unit = {
-    access.shutdown()
+    compilerAccess.shutdown()
   }
 
   override def restart(): Unit = {
-    access.shutdownCurrentCompiler()
+    compilerAccess.shutdownCurrentCompiler()
   }
 
-  def isLoaded(): Boolean = access.isLoaded()
+  def isLoaded(): Boolean = compilerAccess.isLoaded()
 
   override def newInstance(
       buildTargetIdentifier: String,
@@ -81,25 +110,71 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  def emptyCompletion: CompletionList = {
-    val items = new CompletionList(Nil.asJava)
-    items.setIsIncomplete(true)
-    items
+  override def didChange(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[Diagnostic]] = {
+    CompletableFuture.supplyAsync(
+      () => trees.didChange(params.uri(), params.text()).asJava,
+      ec
+    )
   }
+
+  def didClose(uri: URI): Unit = {
+    trees.didClose(uri)
+  }
+
+  def foldingRange(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[FoldingRange]] = {
+    CompletableFuture.supplyAsync(
+      () => foldingRangeProvider.getRangedFor(params.uri(), params.text()),
+      ec
+    )
+  }
+
+  def documentSymbols(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[DocumentSymbol]] = {
+    CompletableFuture.supplyAsync(
+      () =>
+        documentSymbolProvider
+          .documentSymbols(params.uri(), params.text()),
+      ec
+    )
+  }
+
+  def onTypeFormatting(
+      params: DocumentOnTypeFormattingParams,
+      source: String
+  ): CompletableFuture[ju.List[TextEdit]] =
+    CompletableFuture.supplyAsync(
+      () => MultilineStringFormattingProvider.format(params, source).asJava,
+      ec
+    )
+
+  def rangeFormatting(
+      params: DocumentRangeFormattingParams,
+      source: String
+  ): CompletableFuture[ju.List[TextEdit]] =
+    CompletableFuture.supplyAsync(
+      () => MultilineStringFormattingProvider.format(params, source).asJava,
+      ec
+    )
 
   override def complete(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
-    access.withInterruptableCompiler(emptyCompletion, params.token) { global =>
-      new CompletionProvider(global, params).completions()
-    }
+    compilerAccess.withInterruptableCompiler(
+      EmptyCompletionList(),
+      params.token
+    ) { pc => new CompletionProvider(pc.compiler, params).completions() }
 
   override def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    access.withInterruptableCompiler(empty, params.token) { global =>
-      new CompletionProvider(global, params).implementAll()
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      new CompletionProvider(pc.compiler, params).implementAll()
     }
   }
 
@@ -107,11 +182,11 @@ case class ScalaPresentationCompiler(
       name: String,
       params: OffsetParams
   ): CompletableFuture[ju.List[AutoImportsResult]] =
-    access.withInterruptableCompiler(
+    compilerAccess.withInterruptableCompiler(
       List.empty[AutoImportsResult].asJava,
       params.token
-    ) { global =>
-      new AutoImportsProvider(global, name, params).autoImports().asJava
+    ) { pc =>
+      new AutoImportsProvider(pc.compiler, name, params).autoImports().asJava
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because
@@ -122,45 +197,45 @@ case class ScalaPresentationCompiler(
       item: CompletionItem,
       symbol: String
   ): CompletableFuture[CompletionItem] = CompletableFuture.completedFuture {
-    access.withSharedCompiler(item) { global =>
-      new CompletionItemResolver(global).resolve(item, symbol)
+    compilerAccess.withSharedCompiler(item) { pc =>
+      new CompletionItemResolver(pc.compiler).resolve(item, symbol)
     }
   }
 
   override def signatureHelp(
       params: OffsetParams
   ): CompletableFuture[SignatureHelp] =
-    access.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(
       new SignatureHelp(),
       params.token
-    ) { global => new SignatureHelpProvider(global).signatureHelp(params) }
+    ) { pc => new SignatureHelpProvider(pc.compiler).signatureHelp(params) }
 
   override def hover(
       params: OffsetParams
   ): CompletableFuture[Optional[Hover]] =
-    access.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(
       Optional.empty[Hover](),
       params.token
-    ) { global =>
-      Optional.ofNullable(new HoverProvider(global, params).hover().orNull)
+    ) { pc =>
+      Optional.ofNullable(new HoverProvider(pc.compiler, params).hover().orNull)
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
-    access.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
-    ) { global => new PcDefinitionProvider(global, params).definition() }
+    ) { pc => new PcDefinitionProvider(pc.compiler, params).definition() }
   }
 
   override def semanticdbTextDocument(
       filename: String,
       code: String
   ): CompletableFuture[Array[Byte]] = {
-    access.withInterruptableCompiler(
+    compilerAccess.withInterruptableCompiler(
       Array.emptyByteArray,
       EmptyCancelToken
-    ) { global =>
-      new SemanticdbTextDocumentProvider(global)
+    ) { pc =>
+      new SemanticdbTextDocumentProvider(pc.compiler)
         .textDocument(filename, code)
         .toByteArray
     }
@@ -203,10 +278,7 @@ case class ScalaPresentationCompiler(
   // ================
 
   override def diagnosticsForDebuggingPurposes(): util.List[String] = {
-    access.reporter
-      .asInstanceOf[StoreReporter]
-      .infos
-      .iterator
+    compilerAccess.reporter.infos.iterator
       .map { info =>
         new StringBuilder()
           .append(info.pos.source.file.path)

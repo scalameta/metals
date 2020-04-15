@@ -6,8 +6,13 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
 import munit.Location
+import java.nio.file.Paths
+import tests.BuildInfoVersions
 
 class AutoImportsSuite extends BaseCodeActionSuite {
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   check(
     "basic",
@@ -111,7 +116,10 @@ class AutoImportsSuite extends BaseCodeActionSuite {
     test(name) {
       val imports = getAutoImports(original)
       val obtained = imports.map(_.packageName()).mkString("\n")
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
     }
 
   def checkEdit(name: String, original: String, expected: String)(
@@ -131,10 +139,15 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       filename: String = "A.scala"
   ): List[AutoImportsResult] = {
     val (code, symbol, offset) = params(original)
-    val result = pc
+    val result = presentationCompiler
       .autoImports(
         symbol,
-        CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
+        CompilerOffsetParams(
+          Paths.get(filename).toUri(),
+          code,
+          offset,
+          cancelToken
+        )
       )
       .get()
     result.asScala.toList

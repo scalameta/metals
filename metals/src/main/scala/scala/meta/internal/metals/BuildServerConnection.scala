@@ -235,8 +235,9 @@ object BuildServerConnection {
   ): InitializeBuildResult = {
     val extraParams = BloopExtraBuildParams(
       BuildInfo.scalametaVersion,
-      BuildInfo.supportedScalaVersions.asJava
+      BuildInfo.supportedScala2Versions.asJava
     )
+
     val initializeResult = server.buildInitialize {
       val params = new InitializeBuildParams(
         "Metals",

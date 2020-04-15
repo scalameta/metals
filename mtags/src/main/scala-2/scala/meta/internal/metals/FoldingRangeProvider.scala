@@ -3,23 +3,25 @@ package scala.meta.internal.metals
 import java.util
 import java.util.Collections
 import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.InitializeParams
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.FoldingRangeProvider._
-import scala.meta.io.AbsolutePath
+import scala.meta.inputs.Input
+import java.net.URI
+import java.nio.file.Paths
 
 final class FoldingRangeProvider(
     val trees: Trees,
-    val buffers: Buffers,
     foldOnlyLines: Boolean
 ) {
 
-  def getRangedFor(path: AbsolutePath): util.List[FoldingRange] = {
+  def getRangedFor(fileUri: URI, code: String): util.List[FoldingRange] = {
+    val filePath = Paths.get(fileUri).toString()
     trees
-      .get(path)
+      .get(fileUri, code)
       .map(tree => {
-        val distance =
-          TokenEditDistance.fromBuffer(path, tree.pos.input.text, buffers)
+        val revised = Input.VirtualFile(filePath, code)
+        val fromTree = Input.VirtualFile(filePath, tree.pos.input.text)
+        val distance = TokenEditDistance(fromTree, revised)
         val extractor = new FoldingRangeExtractor(distance, foldOnlyLines)
         extractor.extract(tree)
       })
@@ -29,24 +31,6 @@ final class FoldingRangeProvider(
 
 object FoldingRangeProvider {
   val foldingThreshold = 2
-
-  def apply(
-      trees: Trees,
-      buffers: Buffers,
-      params: InitializeParams
-  ): FoldingRangeProvider = {
-    val settings = for {
-      capabilities <- Option(params.getCapabilities)
-      textDocument <- Option(capabilities.getTextDocument)
-      settings <- Option(textDocument.getFoldingRange)
-    } yield settings
-
-    val foldOnlyLines = settings
-      .map(_.getLineFoldingOnly)
-      .contains(true)
-
-    new FoldingRangeProvider(trees, buffers, foldOnlyLines)
-  }
 }
 
 final class FoldingRanges(foldOnlyLines: Boolean) {

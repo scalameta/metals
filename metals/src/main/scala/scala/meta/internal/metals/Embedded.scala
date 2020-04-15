@@ -87,8 +87,8 @@ final class Embedded(
       ctor.setAccessible(true)
       ctor.newInstance().asInstanceOf[T]
     }
-
   }
+
 }
 
 object Embedded {
@@ -119,9 +119,12 @@ object Embedded {
       dep: Dependency,
       scalaVersion: String
   ): Fetch = {
+
     val resolutionParams = ResolutionParams
       .create()
-      .forceVersions(
+
+    if (!ScalaVersions.isScala3Version(scalaVersion))
+      resolutionParams.forceVersions(
         List(
           Dependency.of("org.scala-lang", "scala-library", scalaVersion),
           Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
@@ -214,7 +217,6 @@ object Embedded {
       .fetch()
       .asScala
       .map(_.toPath)
-
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
     val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
@@ -223,4 +225,5 @@ object Embedded {
       new PresentationCompilerClassLoader(this.getClass.getClassLoader)
     new URLClassLoader(allURLs, parent)
   }
+
 }

@@ -3,15 +3,16 @@ package tests
 import java.util.Collections
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.CancelToken
 import scala.collection.Seq
 import scala.meta.internal.metals.TextEdits
 import munit.TestOptions
 import munit.Location
+import java.nio.file.Paths
+import scala.meta.internal.metals.EmptyCancelToken
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 
@@ -20,10 +21,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   private def resolvedCompletions(
       params: CompilerOffsetParams
   ): CompletionList = {
-    val result = pc.complete(params).get()
+    val result = presentationCompiler.complete(params).get()
     val newItems = result.getItems.asScala.map { item =>
-      val symbol = item.data.get.symbol
-      pc.completionItemResolve(item, symbol).get()
+      item.data
+        .map { data =>
+          presentationCompiler.completionItemResolve(item, data.symbol).get()
+        }
+        .getOrElse(item)
     }
     result.setItems(newItems.asJava)
     result
@@ -35,9 +39,16 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   ): Seq[CompletionItem] = {
     val (code, offset) = params(original)
     val result = resolvedCompletions(
-      CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
+      CompilerOffsetParams(
+        Paths.get(filename).toUri(),
+        code,
+        offset,
+        cancelToken
+      )
     )
-    result.getItems.asScala.sortBy(_.getSortText)
+    result.getItems.asScala.sortBy(item =>
+      Option(item.getSortText).getOrElse(item.getLabel())
+    )
   }
 
   def checkItems(
@@ -45,9 +56,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       fn: Seq[CompletionItem] => Unit
   )(implicit loc: Location): Unit = {
-    test(name) {
-      fn(getItems(original))
-    }
+    test(name) { fn(getItems(original)) }
   }
 
   def checkEditLine(
@@ -58,8 +67,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filterText: String = "",
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
-      command: Option[String] = None
+      command: Option[String] = None,
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
+    val compatTemplate = compat.map {
+      case (key, value) =>
+        key -> template.replaceAllLiterally("___", value)
+    }
     checkEdit(
       name = name,
       original = template.replaceAllLiterally("___", original),
@@ -67,7 +81,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filterText = filterText,
       assertSingleItem = assertSingleItem,
       filter = filter,
-      command = command
+      command = command,
+      compat = compatTemplate
     )
   }
 
@@ -92,7 +107,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val item = items.head
       val (code, _) = params(original)
       val obtained = TextEdits.applyEdits(code, item)
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
       if (filterText.nonEmpty) {
         assertNoDiff(item.getFilterText, filterText, "Invalid filter text")
       }
@@ -105,7 +123,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def checkSnippet(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty
@@ -116,10 +134,14 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         .map { item =>
           Option(item.getTextEdit)
             .map(_.getNewText)
+            .orElse(Option(item.getInsertText()))
             .getOrElse(item.getLabel)
         }
         .mkString("\n")
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
     }
   }
 
@@ -166,13 +188,15 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         }
         out
           .append(label)
-          .append(
-            if (includeDetail && !item.getLabel.contains(item.getDetail)) {
+          .append({
+            val detailIsDefined = Option(item.getDetail).isDefined
+            if (includeDetail && detailIsDefined && !item.getLabel
+                .contains(item.getDetail)) {
               item.getDetail
             } else {
               ""
             }
-          )
+          })
           .append(commitCharacter)
           .append("\n")
       }
@@ -181,7 +205,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           stableOrder,
           postProcessObtained(trimTrailingSpace(out.toString()))
         ),
-        sortLines(stableOrder, getExpected(expected, compat))
+        sortLines(
+          stableOrder,
+          getExpected(expected, compat, scalaVersion)
+        )
       )
       postAssert()
       if (filterText.nonEmpty) {

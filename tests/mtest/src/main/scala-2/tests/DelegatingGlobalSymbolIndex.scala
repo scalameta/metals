@@ -3,12 +3,14 @@ package tests
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 /** Symbol index that delegates all methods to an underlying implementation */
-class DelegatingGlobalSymbolIndex(var underlying: GlobalSymbolIndex)
-    extends GlobalSymbolIndex {
-  def definition(symbol: Symbol): Option[SymbolDefinition] = {
+class DelegatingGlobalSymbolIndex(
+    var underlying: GlobalSymbolIndex = OnDemandSymbolIndex()
+) extends GlobalSymbolIndex {
+  def definition(symbol: mtags.Symbol): Option[SymbolDefinition] = {
     underlying.definition(symbol)
   }
   def addSourceFile(
