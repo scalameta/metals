@@ -324,12 +324,12 @@ final class ImplementationProvider(
         implPath,
         implDocument
       )
-      filteredImplSymbol <- Some(implSymbol).filterNot(
-        isTypeAlias(_, symbolSearch)
+      if !findSymbol(implDocument, implSymbol).exists(
+        _.kind == SymbolInformation.Kind.TYPE
       )
       implOccurrence <- findDefOccurrence(
         implDocument,
-        filteredImplSymbol,
+        implSymbol,
         source
       )
       range <- implOccurrence.range
@@ -467,12 +467,6 @@ object ImplementationProvider {
     semanticDb.symbols
       .find(sym => sym.symbol == symbol)
   }
-
-  def isTypeAlias(
-      symbol: String,
-      findSymbol: String => Option[SymbolInformation]
-  ): Boolean =
-    findSymbol(symbol).exists(_.kind == SymbolInformation.Kind.TYPE)
 
   def parentsFromSignature(
       symbol: String,
