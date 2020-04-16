@@ -320,10 +320,6 @@ final class ImplementationProvider(
         classContext,
         implReal
       )
-      symbolSearch = defaultSymbolSearch(
-        implPath,
-        implDocument
-      )
       if !findSymbol(implDocument, implSymbol).exists(
         _.kind == SymbolInformation.Kind.TYPE
       )
