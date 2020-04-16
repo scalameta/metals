@@ -1,8 +1,13 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionIssueSuite extends BaseCompletionSuite {
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
+
   check(
     "mutate",
     """package a

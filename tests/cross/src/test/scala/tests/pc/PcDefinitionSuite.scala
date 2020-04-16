@@ -2,10 +2,9 @@ package tests.pc
 
 class PcDefinitionSuite extends BasePcDefinitionSuite {
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-    indexScalaLibrary()
-  }
+  override def requiresJdkSources: Boolean = true
+
+  override def requiresScalaLibrarySources: Boolean = true
 
   check(
     "basic",
@@ -14,7 +13,16 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  val <<>>abc = 42
        |  println(a@@bc)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." ->
+        """|
+           |object Main {
+           |  val <<abc>> = 42
+           |  println(abc)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -75,7 +83,16 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  val <<>>increment: Int => Int = _ + 2
        |  incre@@ment(1)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." ->
+        """|
+           |object Main {
+           |  val <<increment>>: Int => Int = _ + 2
+           |  increment(1)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -128,7 +145,14 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main ex@@tends java.io.Serializable {
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." ->
+        """|
+           |object <<Main>> extends java.io.Serializable {
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -166,7 +190,17 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |
        |  foo(a@@rg = 42)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." ->
+        """|
+           |object Main {
+           |  def foo(<<arg>>: Int): Unit = ()
+           |
+           |  foo(arg = 42)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -195,7 +229,15 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val number@@: Int = 1
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." ->
+        """|
+           |object Main {
+           |  val <<number>>: Int = 1
+           |}
+           |""".stripMargin
+    )
   )
 
   check(

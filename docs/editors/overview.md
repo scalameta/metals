@@ -25,7 +25,7 @@ functionality.
     <td align="center">Single click</td>
     <td align="center">Single click</td>
     <td align="center">Single click</td>
-    <td align="center">Few steps</td>
+    <td align="center">Single click</td>
     <td align="center">Few steps</td>
     <td align="center">Few steps</td>
   </tr>
@@ -188,7 +188,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">Status bar</td>
     <td align="center">Status bar</td>
-    <td align="center"></td>
+    <td align="center">Status bar</td>
     <td align="center">Status bar</td>
     <td align="center">Status bar, Slow task</td>
   </tr>

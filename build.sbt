@@ -1,12 +1,29 @@
-def localSnapshotVersion = "0.8.4-SNAPSHOT"
+import scala.collection.mutable
+
+def localSnapshotVersion = "0.8.5-SNAPSHOT"
 def isCI = System.getenv("CI") != null
+
+def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
+def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
+def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
+def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
+def isScala3(v: Option[(Long, Long)]): Boolean =
+  v.exists(_._1 == 0) || v.exists(_._1 == 3)
+
 def crossSetting[A](
     scalaVersion: String,
-    if211: List[A],
+    if211: List[A] = Nil,
+    if2: List[A] = Nil,
+    if3: List[A] = Nil,
     otherwise: List[A] = Nil
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((2, 11)) => if211
+    case partialVersion
+        if isScala211(partialVersion) && isScala2(partialVersion) =>
+      if211 ::: if2
+    case partialVersion if isScala211(partialVersion) => if211
+    case partialVersion if isScala2(partialVersion) => if2
+    case partialVersion if isScala3(partialVersion) => if3
     case _ => otherwise
   }
 
@@ -27,10 +44,6 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused:imports"
     ),
-    addCompilerPlugin(
-      "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
-    ),
-    scalacOptions += s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -145,10 +158,11 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val scala212 = "2.12.11"
   val scala213 = "2.13.1"
-  val scalameta = "4.3.7"
+  val scalameta = "4.3.8"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-194-8301db94-20200411-1746"
+  val scala3 = "0.23.0-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -164,17 +178,58 @@ lazy val V = new {
       .collect { case Some((a, b)) => s"$a.$b" }
       .toList
       .distinct
-  def supportedScalaVersions =
-    nonDeprecatedScalaVersions ++ deprecatedScalaVersions
-  def deprecatedScalaVersions =
+
+  // Scala 2
+  def deprecatedScala2Versions =
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
-  def nonDeprecatedScalaVersions = Seq(scala213, scala212, "2.12.10")
-  def guava = "com.google.guava" % "guava" % "28.2-jre"
+  def nonDeprecatedScala2Versions = Seq(scala213, scala212, "2.12.10")
+  def scala2Versions =
+    nonDeprecatedScala2Versions ++ deprecatedScala2Versions
+
+  // Scala 3
+  def nonDeprecatedScala3Versions = Seq(scala3)
+  def deprecatedScala3Versions = Seq()
+  def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
+
+  def supportedScalaVersions = scala2Versions ++ scala3Versions
+  def nonDeprecatedScalaVersions =
+    nonDeprecatedScala2Versions ++ nonDeprecatedScala3Versions
+  def deprecatedScalaVersions =
+    deprecatedScala2Versions ++ deprecatedScala3Versions
+
+  def guava = "com.google.guava" % "guava" % "29.0-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-11"
+  val coursierInterfaces = "0.0.21"
 }
+
+val genyVersion = Def.setting {
+  if (scalaVersion.value.startsWith("2.11")) "0.1.6"
+  else "0.4.2"
+}
+
+val sharedSettings = List(
+  libraryDependencies ++= crossSetting(
+    scalaVersion.value,
+    if2 = List(
+      compilerPlugin(
+        "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
+      )
+    )
+  ),
+  scalacOptions ++= crossSetting(
+    scalaVersion.value,
+    if3 = List("-language:implicitConversions"),
+    if211 = List("-Xexperimental", "-Ywarn-unused-import")
+  ),
+  scalacOptions --= crossSetting(
+    scalaVersion.value,
+    if3 = List("-Yrangepos", "-Ywarn-unused:imports"),
+    if211 = List("-Ywarn-unused:imports")
+  )
+)
 
 skip.in(publish) := true
 
@@ -183,6 +238,7 @@ lazy val interfaces = project
   .settings(
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
+    crossPaths := false,
     libraryDependencies ++= List(
       V.lsp4j
     ),
@@ -193,53 +249,104 @@ lazy val interfaces = project
     )
   )
 
-val genyVersion = Def.setting {
-  if (scalaVersion.value.startsWith("2.11")) "0.1.6"
-  else "0.4.2"
+def multiScalaDirectories(root: File, scalaVersion: String) = {
+  val base = root / "src" / "main"
+  val result = mutable.ListBuffer.empty[File]
+  val partialVersion = CrossVersion.partialVersion(scalaVersion)
+  if (isScala211(partialVersion)) {
+    result += base / "scala-2.11"
+  }
+  if (isScala212(partialVersion)) {
+    result += base / "scala-2.12"
+  }
+  if (isScala213(partialVersion)) {
+    result += base / "scala-2.13"
+  }
+  if (isScala2(partialVersion)) {
+    result += base / "scala-2"
+  }
+  if (isScala3(partialVersion)) {
+    result += base / "scala-3"
+  }
+  result.toList
 }
 
-lazy val mtags = project
-  .settings(
-    moduleName := "mtags",
-    crossVersion := CrossVersion.full,
-    crossScalaVersions := V.supportedScalaVersions,
-    scalacOptions ++= crossSetting(
-      scalaVersion.value,
-      if211 = List("-Xexperimental", "-Ywarn-unused-import")
-    ),
-    scalacOptions --= crossSetting(
-      scalaVersion.value,
-      if211 = List("-Ywarn-unused:imports")
-    ),
-    libraryDependencies ++= List(
+val mtagsSettings = List(
+  crossScalaVersions := V.supportedScalaVersions,
+  crossTarget := target.value / s"scala-${scalaVersion.value}",
+  crossVersion := CrossVersion.full,
+  unmanagedSourceDirectories.in(Compile) ++= multiScalaDirectories(
+    baseDirectory.in(ThisBuild).value / "mtags",
+    scalaVersion.value
+  ),
+  libraryDependencies ++= crossSetting(
+    scalaVersion.value,
+    if2 = List(
+      // for token edit-distance used by goto definition
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
       "org.jsoup" % "jsoup" % "1.13.1", // for extracting HTML from javadocs
-      "org.lz4" % "lz4-java" % "1.7.1", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
-    libraryDependencies ++= {
-      if (isCI) Nil
-      // NOTE(olafur) pprint is indispensable for me while developing, I can't
-      // use println anymore for debugging because pprint.log is 100 times better.
-      else
-        crossSetting(
-          scalaVersion.value,
-          if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.9")
-        )
-    },
-    buildInfoPackage := "scala.meta.internal.mtags",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "scalaCompilerVersion" -> scalaVersion.value
+    if3 = List(
+      "ch.epfl.lamp" %% "dotty-compiler" % V.scala3,
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
+      ("org.scalameta" %% "scalameta" % V.scalameta)
+        .withDottyCompat(scalaVersion.value),
+      ("com.lihaoyi" %% "geny" % genyVersion.value)
+        .withDottyCompat(scalaVersion.value)
     )
+  ),
+  libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.7.1"),
+  libraryDependencies ++= {
+    if (isCI) Nil
+    // NOTE(olafur) pprint is indispensable for me while developing, I can't
+    // use println anymore for debugging because pprint.log is 100 times better.
+    else
+      crossSetting(
+        scalaVersion.value,
+        if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
+        otherwise = List("com.lihaoyi" %% "pprint" % "0.5.9")
+      )
+  },
+  buildInfoPackage := "scala.meta.internal.mtags",
+  buildInfoKeys := Seq[BuildInfoKey](
+    "scalaCompilerVersion" -> scalaVersion.value
+  )
+)
+
+lazy val mtags3 = project
+  .in(file(".mtags"))
+  .settings(
+    sharedSettings,
+    mtagsSettings,
+    unmanagedSourceDirectories.in(Compile) += baseDirectory
+      .in(ThisBuild)
+      .value / "mtags" / "src" / "main" / "scala",
+    moduleName := "mtags3",
+    scalaVersion := V.scala3,
+    target := baseDirectory
+      .in(ThisBuild)
+      .value / "mtags" / "target" / "target3",
+    skip.in(publish) := true
+  )
+  .dependsOn(interfaces)
+  .disablePlugins(ScalafixPlugin)
+
+lazy val mtags = project
+  .settings(
+    sharedSettings,
+    mtagsSettings,
+    moduleName := "mtags"
   )
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val metals = project
   .settings(
+    sharedSettings,
     fork.in(Compile, run) := true,
     mainClass.in(Compile) := Some("scala.meta.metals.Main"),
     // As a general rule of thumb, we try to keep Scala dependencies to a minimum.
@@ -249,7 +356,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.9",
+      "com.geirsson" %% "metaconfig-core" % "0.9.10",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.10",
       // for file watching
@@ -258,16 +365,14 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.0.30.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.3.2",
+      "org.flywaydb" % "flyway-core" % "6.3.3",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.0",
       "net.java.dev.jna" % "jna" % "4.5.2",
       "net.java.dev.jna" % "jna-platform" % "4.5.2",
-      // for token edit-distance used by goto definition
-      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.1",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-launcher" % V.bloopNightly,
       // for LSP
@@ -286,7 +391,7 @@ lazy val metals = project
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "io.get-coursier" % "interface" % "0.0.21",
+      "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
       "com.outr" %% "scribe" % "2.7.12",
       "com.outr" %% "scribe-slf4j" % "2.7.12", // needed for flyway database migrations
@@ -317,11 +422,14 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "supportedScalaVersions" -> V.supportedScalaVersions,
+      "supportedScala2Versions" -> V.scala2Versions,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
+      "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
-      "scala213" -> V.scala213
+      "scala213" -> V.scala213,
+      "scala3" -> V.scala3
     ),
     mainClass in GraalVMNativeImage := Some(
       "scala.meta.internal.pantsbuild.BloopPants"
@@ -352,6 +460,7 @@ lazy val metals = project
 lazy val input = project
   .in(file("tests/input"))
   .settings(
+    sharedSettings,
     skip.in(publish) := true,
     scalacOptions ++= List(
       "-P:semanticdb:synthetics:on"
@@ -383,29 +492,63 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   }
 )
 
+def crossPublishLocal(scalaV: String) = Def.task[Unit] {
+  // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
+  val newState = Project
+    .extract(state.value)
+    .appendWithSession(
+      List(
+        scalaVersion.in(mtags) := scalaV,
+        useSuperShell.in(ThisBuild) := false
+      ),
+      state.value
+    )
+  val (s, _) = Project
+    .extract(newState)
+    .runTask(publishLocal.in(mtags), newState)
+}
+
+def publishAllMtags(
+    all: List[String]
+): sbt.Def.Initialize[sbt.Task[Unit]] = {
+  all match {
+    case Nil =>
+      throw new Exception("The Scala versions list cannot be empty")
+    case head :: Nil =>
+      crossPublishLocal(head)
+    case head :: tl =>
+      crossPublishLocal(head).dependsOn(publishAllMtags(tl))
+  }
+}
+
+def publishBinaryMtags =
+  publishLocal
+    .in(interfaces)
+    .dependsOn(
+      publishAllMtags(List(V.scala211, V.scala212, V.scala213, V.scala3))
+    )
+
 lazy val mtest = project
   .in(file("tests/mtest"))
   .settings(
-    skip.in(publish) := true,
-    crossScalaVersions := V.supportedScalaVersions,
+    testSettings,
+    sharedSettings,
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % V.coursier,
-      "org.scalameta" %% "munit" % V.munit
-    ),
-    scalacOptions ++= crossSetting(
-      scalaVersion.value,
-      if211 = List("-Xexperimental", "-Ywarn-unused-import")
-    ),
-    scalacOptions --= crossSetting(
-      scalaVersion.value,
-      if211 = List("-Ywarn-unused:imports")
+      "org.scalameta" %% "munit" % V.munit,
+      "io.get-coursier" % "interface" % V.coursierInterfaces
     ),
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
+      "scala213" -> V.scala213,
+      "scala3" -> V.scala3,
       "scalaVersion" -> scalaVersion.value
+    ),
+    unmanagedSourceDirectories.in(Compile) ++= multiScalaDirectories(
+      baseDirectory.in(ThisBuild).value / "tests" / "mtest",
+      scalaVersion.value
     )
   )
   .dependsOn(mtags)
@@ -415,26 +558,8 @@ lazy val cross = project
   .in(file("tests/cross"))
   .settings(
     testSettings,
-    libraryDependencies ++= List(
-      "com.chuusai" %% "shapeless" % "2.3.3",
-      "org.typelevel" %% "cats-core" % "2.1.1",
-      "org.typelevel" %% "simulacrum" % "1.0.0",
-      "com.olegpy" %% "better-monadic-for" % "0.3.1",
-      "org.typelevel" %% "kind-projector" % "0.10.3"
-    ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, major)) if major <= 12 =>
-        List("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-      case _ => Nil
-    }),
-    crossScalaVersions := V.nonDeprecatedScalaVersions,
-    scalacOptions ++= crossSetting(
-      scalaVersion.value,
-      if211 = List("-Xexperimental", "-Ywarn-unused-import")
-    ),
-    scalacOptions --= crossSetting(
-      scalaVersion.value,
-      if211 = List("-Ywarn-unused:imports")
-    )
+    sharedSettings,
+    crossScalaVersions := V.nonDeprecatedScalaVersions
   )
   .dependsOn(mtest, mtags)
 
@@ -442,6 +567,7 @@ lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
+    sharedSettings,
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
@@ -461,35 +587,14 @@ lazy val unit = project
   .dependsOn(mtest, metals)
   .enablePlugins(BuildInfoPlugin)
 
-def crossPublishLocal(scalaV: String) = Def.task[Unit] {
-  // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
-  val newState = Project
-    .extract(state.value)
-    .appendWithSession(
-      List(
-        scalaVersion.in(mtags) := scalaV,
-        useSuperShell.in(ThisBuild) := false
-      ),
-      state.value
-    )
-  val (s, _) = Project
-    .extract(newState)
-    .runTask(publishLocal.in(mtags), newState)
-}
-
-def publishMtags =
-  publishLocal
-    .in(interfaces)
-    .dependsOn(
-      crossPublishLocal(V.scala211)
-        .dependsOn(crossPublishLocal(V.scala213))
-    )
 lazy val slow = project
   .in(file("tests/slow"))
   .settings(
     testSettings,
-    testOnly.in(Test) := testOnly.in(Test).dependsOn(publishMtags).evaluated,
-    test.in(Test) := test.in(Test).dependsOn(publishMtags).value
+    sharedSettings,
+    testOnly
+      .in(Test) := testOnly.in(Test).dependsOn(publishBinaryMtags).evaluated,
+    test.in(Test) := test.in(Test).dependsOn(publishBinaryMtags).value
   )
   .dependsOn(unit)
 
@@ -497,6 +602,7 @@ lazy val bench = project
   .in(file("metals-bench"))
   .enablePlugins(BuildInfoPlugin)
   .settings(
+    sharedSettings,
     fork.in(run) := true,
     skip.in(publish) := true,
     moduleName := "metals-bench",
@@ -513,6 +619,7 @@ lazy val bench = project
 lazy val docs = project
   .in(file("metals-docs"))
   .settings(
+    sharedSettings,
     skip.in(publish) := true,
     moduleName := "metals-docs",
     mdoc := run.in(Compile).evaluated,

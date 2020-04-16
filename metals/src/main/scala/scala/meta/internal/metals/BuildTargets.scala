@@ -224,6 +224,12 @@ final class BuildTargets() {
         val isJVM = scalacOptions(t).exists(_.isJVM)
         if (isJVM) score <<= 1
 
+        // note(@tgodzik) once the support for Scala 3 is on par with Scala 2 this can be removed
+        val isScala2 = scalaInfo(t).exists(info =>
+          !ScalaVersions.isScala3Version(info.getScalaVersion())
+        )
+        if (isScala2) score <<= 1
+
         score
       })
     }
@@ -354,9 +360,19 @@ final class BuildTargets() {
   ): Boolean = {
     BuildTargets.isInverseDependency(query, roots, inverseDependencies.get)
   }
-  def inverseDependencies(
+  def inverseDependencyLeaves(
       target: BuildTargetIdentifier
   ): collection.Set[BuildTargetIdentifier] = {
+    computeInverseDependencies(target).leaves
+  }
+  def allInverseDependencies(
+      target: BuildTargetIdentifier
+  ): collection.Set[BuildTargetIdentifier] = {
+    computeInverseDependencies(target).visited
+  }
+  private def computeInverseDependencies(
+      target: BuildTargetIdentifier
+  ): BuildTargets.InverseDependencies = {
     BuildTargets.inverseDependencies(List(target), inverseDependencies.get)
   }
 
@@ -428,9 +444,9 @@ object BuildTargets {
   def inverseDependencies(
       root: List[BuildTargetIdentifier],
       inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
-  ): collection.Set[BuildTargetIdentifier] = {
+  ): InverseDependencies = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
-    val result = mutable.Set.empty[BuildTargetIdentifier]
+    val leaves = mutable.Set.empty[BuildTargetIdentifier]
     def loop(toVisit: List[BuildTargetIdentifier]): Unit = toVisit match {
       case Nil => ()
       case head :: tail =>
@@ -443,13 +459,18 @@ object BuildTargets {
               // Only add leaves of the tree to the result to minimize the number
               // of targets that we compile. If `B` depends on `A`, it's faster
               // in Bloop to compile only `B` than `A+B`.
-              result += head
+              leaves += head
           }
           loop(tail)
         }
     }
     loop(root)
-    result
+    InverseDependencies(isVisited, leaves)
   }
+
+  case class InverseDependencies(
+      visited: collection.Set[BuildTargetIdentifier],
+      leaves: collection.Set[BuildTargetIdentifier]
+  )
 
 }

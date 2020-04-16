@@ -25,12 +25,18 @@ import scala.{meta => m}
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import com.google.gson.Gson
+import scala.meta.io.AbsolutePath
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments
  *  but only for tests
  */
 object MetalsTestEnrichments {
+
+  implicit class XtensionTestAbsolutePath(path: AbsolutePath) {
+    def text: String = Files.readAllLines(path.toNIO).asScala.mkString("\n")
+  }
+
   implicit class XtensionTestClasspath(classpath: Classpath) {
     def bytesSize: String = {
       val bytes = classpath.entries.foldLeft(0L) {

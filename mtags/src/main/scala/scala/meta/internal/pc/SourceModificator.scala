@@ -61,7 +61,7 @@ object SourceModificator {
 
       private def transformPos(pos: OffsetParams): OffsetParams = {
         CompilerOffsetParams(
-          pos.filename(),
+          pos.uri,
           appendStr + pos.text(),
           appendSize + pos.offset(),
           pos.token()

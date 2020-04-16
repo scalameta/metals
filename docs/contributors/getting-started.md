@@ -11,16 +11,19 @@ Whenever you are stuck or unsure, please open an issue or
 
 You will need the following applications installed:
 
-- Java 11 or 8 - Make sure `JAVA_HOME` points to a Java 11 or 8 installation. Metals will need to build and run on _both_.
+- Java 11 or 8 - Make sure `JAVA_HOME` points to a Java 11 or 8 installation.
+  Metals will need to build and run on _both_.
 - `git`
 - `sbt` (for building a local version of the server)
 
 ## Project structure
 
 - `metals` the main project with sources of the Metals language server.
-- `mtags` source file indexer for Java and Scala, it's a dependency of the
-  `metals` project but kept in a separate module so it can be used by other
-  projects like [Metabrowse](https://github.com/scalameta/metabrowse).
+- `mtags` Scala version specific module used to interact with the Scala
+  presentation compiler. It's a dependency of the `metals` project and can
+  additionally be used by via `mtags-interfaces` to support multiple Scala
+  versions inside the Metals server. It's also used by other projects like
+  [Metabrowse](https://github.com/scalameta/metabrowse).
 - `mtags-interfaces` - java interfaces for the presentation compiler.
 - `tests/cross` - tests targeting cross builds for common features such as
   hover, completions, signatures etc.
@@ -29,16 +32,18 @@ You will need the following applications installed:
 - `tests/slow` slow integration tests.
 - `test-workspace` demo project for manually testing Metals through an editor.
 - `docs` documentation markdown for the Metals website.
-- `metals-docs` methods used for generating documentation across multiple pages in `docs`.
-- `website` holds the static site configuraton, style and blogs posts for the Metals website.
+- `metals-docs` methods used for generating documentation across multiple pages
+  in `docs`.
+- `website` holds the static site configuraton, style and blogs posts for the
+  Metals website.
 
 ## Git hooks
 
 This git repository has a pre-push hook to run Scalafmt.
 
 The CI also uses Scalafix to assert that there a no unused imports. To
-automatically remove unused imports run `sbt scalafixAll`. We don't run
-Scalafix as a pre-push git hook since starting sbt takes a long time.
+automatically remove unused imports run `sbt scalafixAll`. We don't run Scalafix
+as a pre-push git hook since starting sbt takes a long time.
 
 ## Related projects
 
@@ -47,8 +52,15 @@ repository:
 
 - [scalameta/metals-vscode](https://github.com/scalameta/metals-vscode/): the
   Visual Studio Code extension for Metals.
+- [scalameta/coc-metals](https://github.com/scalameta/coc-metals/): the
+  [coc.nvim](https://github.com/neoclide/coc.nvim) Vim/Nvim extension for
+  Metals.
+- [scalameta/metals-eclipse](https://github.com/scalameta/metals-eclipse/): the
+  Eclipse extension for Metals.
 - [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
   parsing, tokenization.
+- [scalameta/munit](https://github.com/scalameta/munit/): Test framework used in
+  the main Metals repository
 - [scalacenter/bloop](https://github.com/scalacenter/bloop/): build server for
   compilation.
 - [scala/scala](https://github.com/scala/scala/): presentation compiler.
@@ -63,11 +75,17 @@ To run the unit tests open an sbt shell and run `unit/test`
 ```sh
 sbt
 # (recommended) run a specific test suite, great for edit/test/debug workflows.
-> metals/testOnly -- tests.DefinitionSuite
+> metals/testOnly tests.DefinitionSuite
+# run a specific test case inside the suite.
+> metals/testOnly tests.DefinitionSuite -- *exact-test-name*
 # run unit tests, moderately fast but still a bit too slow for edit/test/debug workflows.
 > unit/test
 # run slow integration tests, takes several minutes.
 > slow/test
+# run slow presentation compiler tests
+> cross/test
+# run slow presentation compiler tests for all Scala versions
+> +cross/test
 # (not recommended) run all tests, slow. It's better to target individual projects.
 > test
 ```
@@ -75,8 +93,8 @@ sbt
 ### Manually testing a `LspSuite`
 
 Every test suite that extends `LspSuite` generates a workspace directory under
-`tests/unit/target/e2e/$suitename/$testname`. To debug why a `LspSuite` might
-be failing, run the test once and then open it directly in your editor. For
+`tests/unit/target/e2e/$suitename/$testname`. To debug why a `LspSuite` might be
+failing, run the test once and then open it directly in your editor. For
 example, for the test case `"deprecated-scala"` in `WarningsLspSuite` run the
 following command:
 
@@ -109,6 +127,11 @@ When you make changes in the Metals Scala codebase
 - run `sbt publishLocal`
 - execute the "Metals: Restart server" command in Visual Studio Code (via
   command palette)
+
+It's important to note that `sbt publishLocal` will create artifacts only for
+the Scala version currently used in Metals and trying to use the snapshot
+version with any other Scala version will not work. In that case you need to run
+a full cross publish with `sbt +publishLocal`.
 
 ### Vim
 
@@ -155,9 +178,14 @@ build server, create empty files in your machine cache directory.
 # macOS
 touch -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json # text editor
 touch -f ~/Library/Caches/org.scalameta.metals/bsp.trace.json # build server
+touch ~/Library/Caches/org.scalameta.metals/dap-server.trace.json # debug adapter
+touch ~/Library/Caches/org.scalameta.metals/dap-client.trace.json # debug adapter
+
 # Linux
 touch ~/.cache/metals/lsp.trace.json # text editor
 touch ~/.cache/metals/bsp.trace.json # build server
+touch ~/.cache/metals/dap-server.trace.json # debug adapter
+touch ~/.cache/metals/dap-client.trace.json # debug adapter
 ```
 
 Next when you start Metals, watch the logs with `tail -f`.
@@ -174,9 +202,13 @@ not interested in debugging the JSON communication.
 
 ### JVM Debugging
 
-To debug the JVM with the Metals server, add a property to your `Server Properties` with the usual Java debugging flags, making sure you have the `quiet` option on.
-It's important to remember about the flag, as the server uses standard input/output to communicate with the client, and the default output of the debuggee interferes with that.
+To debug the JVM with the Metals server, add a property to your
+`Server Properties` with the usual Java debugging flags, making sure you have
+the `quiet` option on. It's important to remember about the flag, as the server
+uses standard input/output to communicate with the client, and the default
+output of the debuggee interferes with that.
 
-This property will make your server run in debug mode on port 5005 without waiting for the debugger to connect:
+This property will make your server run in debug mode on port 5005 without
+waiting for the debugger to connect:
 
 `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y`

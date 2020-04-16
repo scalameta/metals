@@ -22,10 +22,18 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.concurrent.Future
-import java.{util => ju}
 import scala.meta.pc.AutoImportsResult
 import org.eclipse.lsp4j.TextEdit
 import scala.util.Try
+import org.eclipse.lsp4j.FoldingRange
+import java.{util => ju}
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.DocumentSymbol
+import java.nio.file.Paths
 import scala.meta.internal.pc.EmptySymbolSearch
 
 /**
@@ -44,7 +52,8 @@ class Compilers(
     embedded: Embedded,
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
-    initializeParams: Option[InitializeParams]
+    initializeParams: Option[InitializeParams],
+    diagnostics: Diagnostics
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -77,6 +86,8 @@ class Compilers(
   }
   var ramboCancelable = Cancelable.empty
 
+  def loadedPresentationCompilerCount(): Int = cache.values.count(_.isLoaded())
+
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
@@ -94,14 +105,11 @@ class Compilers(
     if (Testing.isEnabled) Future.successful(())
     else {
       Future {
-        val targets = paths
-          .flatMap(path => buildTargets.inverseSources(path).toList)
-          .distinct
-        targets.foreach { target =>
-          loadCompiler(target).foreach { pc =>
-            pc.hover(
+        paths.foreach { path =>
+          findTarget(path, None).foreach {t => 
+            loadCompiler(t).hover(
               CompilerOffsetParams(
-                "Main.scala",
+                Paths.get("Main.scala").toUri(),
                 "object Ma\n",
                 "object Ma".length()
               )
@@ -111,6 +119,71 @@ class Compilers(
       }
     }
 
+  def foldingRange(
+      params: FoldingRangeRequestParams,
+      token: CancelToken
+  ): Future[ju.List[FoldingRange]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.foldingRange(
+        CompilerVirtualFileParams(path.toNIO.toUri, input.value)
+      )
+      .asScala
+  }
+
+  def onTypeFormatting(
+      params: DocumentOnTypeFormattingParams
+  ): Future[ju.List[TextEdit]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.onTypeFormatting(params, input.value).asScala
+  }
+
+  def rangeFormatting(
+      params: DocumentRangeFormattingParams
+  ): Future[ju.List[TextEdit]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.rangeFormatting(params, input.value).asScala
+  }
+
+  def documentSymbol(
+      params: DocumentSymbolParams
+  ): Future[ju.List[DocumentSymbol]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.documentSymbols(
+        CompilerVirtualFileParams(path.toNIO.toUri, input.value)
+      )
+      .asScala
+  }
+
+  def didClose(path: AbsolutePath): Unit = {
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    pc.didClose(path.toNIO.toUri())
+  }
+
+  def didChange(path: AbsolutePath): Future[Unit] = {
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    for {
+      ds <- pc
+        .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
+        .asScala
+    } yield {
+      ds.asScala.headOption match {
+        case None =>
+          diagnostics.onNoSyntaxError(path)
+        case Some(diagnostic) =>
+          diagnostics.onSyntaxError(path, diagnostic)
+      }
+    }
+  }
+
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {
       cache.get(report.getTarget).foreach(_.restart())
@@ -118,7 +191,7 @@ class Compilers(
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
       for {
-        target <- buildTargets.inverseDependencies(report.getTarget)
+        target <- buildTargets.allInverseDependencies(report.getTarget)
         compiler <- cache.get(target)
       } {
         compiler.restart()
@@ -216,6 +289,12 @@ class Compilers(
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def loadCompiler(
+      path: AbsolutePath,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs] = None
+  ): Option[PresentationCompiler] =
+    findTarget(path, interactiveSemanticdbs).map(t => loadCompiler(t))
+
+  def loadCompiler(
       target: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
     for {
@@ -240,6 +319,17 @@ class Compilers(
     }
   }
 
+  private def loadCompiler(st: ScalaTarget): PresentationCompiler =
+    jcache.computeIfAbsent(
+      st.info.getId, { _ =>
+        statusBar.trackBlockingTask(
+          s"${statusBar.icons.sync}Loading presentation compiler"
+        ) {
+          newCompiler(st)
+        }
+      }
+    )
+
   private def withPC[T](
       params: TextDocumentPositionParams,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
@@ -247,17 +337,6 @@ class Compilers(
 
     def isSupported(st: ScalaTarget): Boolean =
       ScalaVersions.isSupportedScalaVersion(st.scalaVersion)
-
-    def loadCompiler(st: ScalaTarget): PresentationCompiler =
-      jcache.computeIfAbsent(
-        st.info.getId, { _ =>
-          statusBar.trackBlockingTask(
-            s"${statusBar.icons.sync}Loading presentation compiler"
-          ) {
-            newCompiler(st)
-          }
-        }
-      )
 
     val path = params.getTextDocument.getUri.toAbsolutePath
 
@@ -314,6 +393,7 @@ class Compilers(
           _symbolPrefixes = userConfig().symbolPrefixes,
           isCompletionSnippetsEnabled =
             initializeParams.supportsCompletionSnippets,
+          isFoldOnlyLines = initializeParams.foldOnlyLines,
           _autoImports = autoImports
         )
       )

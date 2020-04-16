@@ -29,9 +29,9 @@ class CompilerJobQueueSuite extends BaseSuite {
     jobs.submit(cancelled, () => {
       Thread.sleep(50)
     })
-    jobs.executor.shutdown()
+    jobs.executor().shutdown()
     // Assert that cancelled task never execute.
-    jobs.executor.awaitTermination(10, TimeUnit.MILLISECONDS)
+    jobs.executor().awaitTermination(10, TimeUnit.MILLISECONDS)
   }
 
   test("order") {

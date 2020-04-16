@@ -3,6 +3,9 @@ package tests
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import munit.Location
+import java.nio.file.Paths
+import scala.meta.XtensionSyntax
+import munit.TestOptions
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(
@@ -14,7 +17,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
     check(name, code, expected, includeDocs = true, compat = compat)
   }
   def check(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
       includeDocs: Boolean = false,
@@ -22,10 +25,14 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       stableOrder: Boolean = true
   )(implicit loc: Location): Unit = {
     test(name) {
-      val pkg = scala.meta.Term.Name(name).syntax
+      val pkg = scala.meta.Term.Name(name.name).syntax
       val (code, offset) = params(s"package $pkg\n" + original)
       val result =
-        pc.signatureHelp(CompilerOffsetParams("A.scala", code, offset)).get()
+        presentationCompiler
+          .signatureHelp(
+            CompilerOffsetParams(Paths.get("A.scala").toUri(), code, offset)
+          )
+          .get()
       val out = new StringBuilder()
       if (result != null) {
         result.getSignatures.asScala.zipWithIndex.foreach {
@@ -39,7 +46,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
             out
               .append(signature.getLabel)
               .append("\n")
-            if (result.getActiveSignature == i && result.getActiveParameter != null) {
+            if (result.getActiveSignature == i && result.getActiveParameter != null && signature.getParameters
+                .size() > 0) {
               val param = signature.getParameters.get(result.getActiveParameter)
               val column = signature.getLabel.indexOf(param.getLabel.getLeft())
               if (column < 0) {
@@ -72,7 +80,10 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       }
       assertNoDiff(
         sortLines(stableOrder, out.toString()),
-        sortLines(stableOrder, getExpected(expected, compat))
+        sortLines(
+          stableOrder,
+          getExpected(expected, compat, scalaVersion)
+        )
       )
     }
   }

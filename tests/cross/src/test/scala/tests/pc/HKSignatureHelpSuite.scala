@@ -1,16 +1,21 @@
 package tests.pc
 
-import java.nio.file.Path
-import java.nio.file.Paths
 import tests.BaseSignatureHelpSuite
-import scala.meta.internal.mtags.ClasspathLoader
+import coursierapi._
+import tests.BuildInfoVersions
 
 class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
-  override def extraClasspath: List[Path] =
-    ClasspathLoader
-      .getURLs(this.getClass.getClassLoader)
-      .map(url => Paths.get(url.toURI))
-      .toList
+
+  override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
+    val binaryVersion = createBinaryVersion(scalaVersion)
+    if (isScala3Version(scalaVersion)) { Seq.empty }
+    else {
+      Seq(Dependency.of("org.typelevel", s"cats-core_$binaryVersion", "2.0.0"))
+    }
+  }
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   check(
     "foldmap",

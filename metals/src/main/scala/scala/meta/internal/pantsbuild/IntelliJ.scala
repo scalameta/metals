@@ -71,8 +71,8 @@ object IntelliJ {
     "--",
     "${V.bloopVersion}"
   ],
-  "timestamp": "${System.currentTimeMillis()}",
-  "pantsTargets": ${targetsJson.toString}
+  "pantsTargets": ${targetsJson.toString},
+  "X-detectExternalProjectFiles": false
 }
 """
     Files.write(

@@ -582,10 +582,27 @@ final class TestingServer(
       query: String,
       expected: String,
       paste: String,
-      root: AbsolutePath = workspace
+      root: AbsolutePath
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
       (_, params) <- rangeFormattingParams(filename, query, paste, root)
+      multiline <- server.rangeFormatting(params).asScala
+      format = TextEdits.applyEdits(
+        textContents(filename),
+        multiline.asScala.toList
+      )
+    } yield {
+      Assertions.assertNoDiff(format, expected)
+    }
+  }
+  def rangeFormatting(
+      filename: String,
+      query: String,
+      expected: String,
+      root: AbsolutePath = workspace
+  )(implicit loc: munit.Location): Future[Unit] = {
+    for {
+      (_, params) <- rangeFormattingParams(filename, query, root)
       multiline <- server.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -649,8 +666,10 @@ final class TestingServer(
       .filter(item => filter(item.getLabel()))
       .map { item =>
         val label = TestCompletions.getFullyQualifiedLabel(item)
+        val shouldIncludeDetail = item.getDetail != null && includeDetail
         val detail =
-          if (includeDetail && !label.contains(item.getDetail)) item.getDetail
+          if (shouldIncludeDetail && !label.contains(item.getDetail))
+            item.getDetail
           else ""
         label + detail
       }
@@ -776,6 +795,20 @@ final class TestingServer(
         val range = new l.Range(start, end)
         val params = new DocumentRangeFormattingParams()
         params.setRange(range)
+        params.setTextDocument(textId)
+        (text, params)
+    }
+  }
+
+  private def rangeFormattingParams(
+      filename: String,
+      original: String,
+      root: AbsolutePath
+  ): Future[(String, DocumentRangeFormattingParams)] = {
+    rangeFromString(filename, original, root) {
+      case (text, textId, rangeSelection) =>
+        val params = new DocumentRangeFormattingParams()
+        params.setRange(rangeSelection)
         params.setTextDocument(textId)
         (text, params)
     }
@@ -1136,20 +1169,23 @@ final class TestingServer(
       .mkString("\n")
   }
 
-  def documentSymbols(uri: String): String = {
+  def documentSymbols(uri: String): Future[String] = {
     val path = toPath(uri)
     val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
     val params = new DocumentSymbolParams(identifier)
-    val documentSymbols = server.documentSymbolResult(params).asScala
-    val symbols = documentSymbols.toSymbolInformation(uri)
-    val textDocument = s.TextDocument(
-      schema = s.Schema.SEMANTICDB4,
-      language = s.Language.SCALA,
-      text = input.text,
-      occurrences = symbols.map(_.toSymbolOccurrence)
-    )
-    Semanticdbs.printTextDocument(textDocument)
+    for {
+      documentSymbols <- server.documentSymbolResult(params)
+    } yield {
+      val symbols = documentSymbols.asScala.toSymbolInformation(uri)
+      val textDocument = s.TextDocument(
+        schema = s.Schema.SEMANTICDB4,
+        language = s.Language.SCALA,
+        text = input.text,
+        occurrences = symbols.map(_.toSymbolOccurrence)
+      )
+      Semanticdbs.printTextDocument(textDocument)
+    }
   }
 
   def buildTarget(displayName: String): String = {

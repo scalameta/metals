@@ -60,6 +60,12 @@ public interface PresentationCompilerConfig {
      */
     boolean isHoverDocumentationEnabled();
 
+
+    /**
+     * Returns true if the result from <code>textDocument/foldingRange</code> should only use lines for folding.
+     */
+    boolean isFoldOnlyLines();
+    
     /**
      * True if the client defaults to adding the identation of the reference
      * line that the operation started on (relevant for multiline textEdits)

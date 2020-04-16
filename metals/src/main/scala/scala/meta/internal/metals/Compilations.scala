@@ -54,7 +54,7 @@ final class Compilations(
 
   def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
     val targets =
-      expand(paths).flatMap(buildTargets.inverseDependencies).distinct
+      expand(paths).flatMap(buildTargets.inverseDependencyLeaves).distinct
     for {
       result <- cascadeBatch(targets)
       _ <- compileWorksheets(paths)

@@ -5,8 +5,8 @@ import scala.util.control.NonFatal
 import ujson.Obj
 import java.nio.file.Paths
 import java.nio.file.Path
+import scala.meta.internal.zipkin.ZipkinProperties
 import ujson.Str
-import scala.meta.internal.zipkin.ZipkinUrls
 
 object BloopGlobalSettings {
   def update(newHome: Option[Path]): Boolean = {
@@ -24,12 +24,9 @@ object BloopGlobalSettings {
         .get("javaOptions")
         .map(_.arr.map(_.str).toList)
         .getOrElse(Nil)
-      val newOptions: List[String] = ZipkinUrls.url match {
-        case None => oldOptions
-        case Some(url) =>
-          val otherOptions =
-            oldOptions.filterNot(_.startsWith("-Dzipkin.server.url")).toList
-          s"-Dzipkin.server.url=$url" :: otherOptions
+
+      val newOptions: List[String] = ZipkinProperties.All.foldLeft(oldOptions) {
+        (options, prop) => prop.updateOptions(options)
       }
       val isHomeChanged = newHome.isDefined && newHome != oldHome
       val isOptionsChanged = newOptions != oldOptions

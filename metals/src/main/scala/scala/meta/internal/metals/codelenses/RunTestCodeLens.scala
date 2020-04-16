@@ -33,8 +33,7 @@ final class RunTestCodeLens(
   ): Seq[l.CodeLens] = {
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    val distance =
-      TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
+    val distance = buffers.tokenEditDistance(path, textDocument.text)
 
     buildTargets
       .inverseSources(path)

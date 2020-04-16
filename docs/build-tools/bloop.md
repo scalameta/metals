@@ -14,6 +14,8 @@ To manually tell Metals to connect with Bloop, run the "Connect to build server"
 
 ![Import connect to build server command](https://i.imgur.com/mIR0WTe.png)
 
+In case of any issues, it's also possible to restart a running Bloop server using the `Restart Bloop server` command (id: `build-restart`).
+
 ## Installing Bloop CLI
 
 To compile, test and run from your terminal install the `bloop` command-line

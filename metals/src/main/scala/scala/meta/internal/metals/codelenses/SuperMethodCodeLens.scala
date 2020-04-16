@@ -10,7 +10,6 @@ import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -36,8 +35,7 @@ final class SuperMethodCodeLens(
     val search = implementationProvider.defaultSymbolSearch(
       textDocumentWithPath
     )
-    val distance =
-      TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
+    val distance = buffers.tokenEditDistance(path, textDocument.text)
 
     for {
       occurrence <- textDocument.occurrences

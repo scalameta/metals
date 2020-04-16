@@ -1,12 +1,21 @@
 package tests.hover
 
 import tests.pc.BaseHoverSuite
+import tests.BuildInfoVersions
 
 class HoverNegativeSuite extends BaseHoverSuite {
 
+  // @tgodzik Dotty seems to show the most enclosing symbol even if we hover on empty content
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
+
   // Negative results should have an empty output.
-  def checkNegative(name: String, original: String): Unit =
-    check(name, original, expected = "")
+  def checkNegative(
+      name: String,
+      original: String,
+      compat: Map[String, String] = Map.empty
+  ): Unit =
+    check(name, original, expected = "", compat = compat)
 
   checkNegative(
     "block",

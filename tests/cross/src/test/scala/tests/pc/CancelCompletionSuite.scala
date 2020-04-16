@@ -6,11 +6,12 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.CancelToken
 import tests.BaseCompletionSuite
 import scala.meta.internal.pc.InterruptException
 import munit.Location
+import java.net.URI
+import scala.meta.internal.metals.EmptyCancelToken
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 
@@ -33,13 +34,23 @@ class CancelCompletionSuite extends BaseCompletionSuite {
   def checkCancelled(
       name: String,
       query: String,
-      expected: String
+      expected: String,
+      compat: Map[String, String]
   )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = params(query)
       val token = new AlwaysCancelToken
       try {
-        pc.complete(CompilerOffsetParams("A.scala", code, offset, token)).get()
+        presentationCompiler
+          .complete(
+            CompilerOffsetParams(
+              URI.create("file:///A.scala"),
+              code,
+              offset,
+              token
+            )
+          )
+          .get()
         fail("Expected completion request to be interrupted")
       } catch {
         case InterruptException() =>
@@ -47,15 +58,22 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       }
 
       // assert that regular completion works as expected.
-      val completion = pc
+      val completion = presentationCompiler
         .complete(
-          CompilerOffsetParams("A.scala", code, offset, EmptyCancelToken)
+          CompilerOffsetParams(
+            URI.create("file:///A.scala"),
+            code,
+            offset,
+            EmptyCancelToken
+          )
         )
         .get()
+      val expectedCompat =
+        getExpected(expected, compat, scalaVersion)
       val obtained = completion.getItems.asScala
         .map(_.getLabel)
         .mkString("\n")
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, expectedCompat)
     }
   }
 
@@ -68,7 +86,13 @@ class CancelCompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|assert(assertion: Boolean): Unit
        |assert(assertion: Boolean, message: => Any): Unit
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." ->
+        """|assert(assertion: => Boolean @InlineParam): Unit
+           |assertFail(message: => Any): Nothing
+           |""".stripMargin
+    )
   )
 
 }

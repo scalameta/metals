@@ -130,8 +130,7 @@ final class DefinitionProvider(
       snapshot: TextDocument
   ): ResolvedSymbolOccurrence = {
     // Convert dirty buffer position to snapshot position in "source"
-    val sourceDistance =
-      TokenEditDistance.fromBuffer(source, snapshot.text, buffers)
+    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
       dirtyPosition.getCharacter

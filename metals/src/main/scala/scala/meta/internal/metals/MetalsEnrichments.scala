@@ -17,29 +17,25 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
-import scala.collection.convert.DecorateAsJava
-import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.Promise
-import scala.meta.Tree
 import scala.meta.inputs.Input
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.tokens.Token
 import scala.util.Properties
 import scala.{meta => m}
 import java.nio.file.StandardOpenOption
 import scala.util.control.NonFatal
 import scala.util.Try
+import scala.collection.convert.DecorateAsJava
+import scala.collection.convert.DecorateAsScala
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -206,18 +202,6 @@ object MetalsEnrichments
     }
   }
 
-  implicit class XtensionPositionLspInverse(pos: l.Position) {
-    def toMeta(input: m.Input): m.Position = {
-      m.Position.Range(
-        input,
-        pos.getLine,
-        pos.getCharacter,
-        pos.getLine,
-        pos.getCharacter
-      )
-    }
-  }
-
   implicit class XtensionDocumentSymbol(symbol: Seq[l.DocumentSymbol]) {
 
     def toSymbolInformation(uri: String): List[l.SymbolInformation] = {
@@ -318,10 +302,6 @@ object MetalsEnrichments
       new TextDocumentIdentifier(path.toURI.toString)
     }
 
-    def readText: String = {
-      FileIO.slurp(path, StandardCharsets.UTF_8)
-    }
-
     def isJar: Boolean = {
       val filename = path.toNIO.getFileName.toString
       filename.endsWith(".jar")
@@ -330,20 +310,10 @@ object MetalsEnrichments
     /**
      * Reads file contents from editor buffer with fallback to disk.
      */
-    def toInputFromBuffers(buffers: Buffers): Input.VirtualFile = {
+    def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
       buffers.get(path) match {
         case Some(text) => Input.VirtualFile(path.toString(), text)
         case None => path.toInput
-      }
-    }
-
-    // Using [[Files.isSymbolicLink]] is not enough.
-    // It will be false when one of the parents is a symlink (e.g. /dir/link/file.txt)
-    def dealias: AbsolutePath = {
-      if (path.exists) { // cannot dealias non-existing path
-        AbsolutePath(path.toNIO.toRealPath())
-      } else {
-        path
       }
     }
 
@@ -355,11 +325,11 @@ object MetalsEnrichments
     }
 
     def createDirectories(): AbsolutePath = {
-      AbsolutePath(Files.createDirectories(dealias.toNIO))
+      AbsolutePath(Files.createDirectories(path.dealias.toNIO))
     }
 
     def delete(): Unit = {
-      Files.delete(dealias.toNIO)
+      Files.delete(path.dealias.toNIO)
     }
 
     def writeText(text: String): Unit = {
@@ -418,14 +388,15 @@ object MetalsEnrichments
 
     def lastIndexBetween(
         char: Char,
-        lowerBound: Int = 0,
-        upperBound: Int = value.size
+        lowerBound: Int,
+        upperBound: Int
     ): Int = {
+      val safeLowerBound = Math.max(0, lowerBound)
       var index = upperBound
-      while (index >= lowerBound && value(index) != char) {
+      while (index >= safeLowerBound && value(index) != char) {
         index -= 1
       }
-      index
+      if (index < safeLowerBound) -1 else index
     }
 
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
@@ -524,14 +495,26 @@ object MetalsEnrichments
         .map(AbsolutePath(_))
         .getOrElse(item.getClassDirectory.toAbsolutePath)
     }
-    def isSemanticdbEnabled: Boolean =
-      item.getOptions.asScala.exists { opt =>
-        opt.startsWith("-Xplugin:") && opt
-          .contains("semanticdb-scalac")
+
+    def isSemanticdbEnabled(scalaVersion: String): Boolean = {
+      if (ScalaVersions.isScala3Version(scalaVersion)) {
+        item.getOptions.asScala.exists { opt => opt == "-Ysemanticdb" }
+      } else {
+        item.getOptions.asScala.exists { opt =>
+          opt.startsWith("-Xplugin:") && opt
+            .contains("semanticdb-scalac")
+        }
       }
-    def isSourcerootDeclared: Boolean = {
+    }
+
+    def isSourcerootDeclared(scalaVersion: String): Boolean = {
+      val soughtOption = if (ScalaVersions.isScala3Version(scalaVersion)) {
+        "-sourceroot"
+      } else {
+        "-P:semanticdb:sourceroot"
+      }
       item.getOptions.asScala.exists { option =>
-        option.startsWith("-P:semanticdb:sourceroot")
+        option.startsWith(soughtOption)
       }
     }
     def isJVM: Boolean = {
@@ -573,6 +556,16 @@ object MetalsEnrichments
         snippetSupport <- Option(completionItem.getSnippetSupport())
       } yield snippetSupport.booleanValue).getOrElse(false)
 
+    def foldOnlyLines: Boolean = {
+      (for {
+        params <- initializeParams
+        capabilities <- Option(params.getCapabilities)
+        textDocument <- Option(capabilities.getTextDocument)
+        settings <- Option(textDocument.getFoldingRange)
+        lineFoldingOnly <- Option(settings.getLineFoldingOnly)
+      } yield lineFoldingOnly.booleanValue()).getOrElse(false)
+    }
+
     def supportsCodeActionLiterals: Boolean =
       (for {
         params <- initializeParams
@@ -587,38 +580,6 @@ object MetalsEnrichments
   implicit class XtensionPromise[T](promise: Promise[T]) {
     def cancel(): Unit =
       promise.tryFailure(new CancellationException())
-  }
-
-  implicit class XtensionToken(token: Token) {
-    def isWhiteSpaceOrComment: Boolean = token match {
-      case _: Token.Space | _: Token.Tab | _: Token.CR | _: Token.LF |
-          _: Token.LFLF | _: Token.FF | _: Token.Comment | _: Token.BOF |
-          _: Token.EOF =>
-        true
-      case _ => false
-    }
-  }
-
-  implicit class XtensionTreeTokenStream(tree: Tree) {
-    def leadingTokens: Iterator[Token] = tree.origin match {
-      case Origin.Parsed(input, _, pos) =>
-        val tokens = input.tokenize.get
-        tokens.slice(0, pos.start - 1).reverseIterator
-      case _ => Iterator.empty
-    }
-
-    def trailingTokens: Iterator[Token] = tree.origin match {
-      case Origin.Parsed(input, _, pos) =>
-        val tokens = input.tokenize.get
-        tokens.slice(pos.end + 1, tokens.length).iterator
-      case _ => Iterator.empty
-    }
-
-    def findFirstLeading(predicate: Token => Boolean): Option[Token] =
-      leadingTokens.find(predicate)
-
-    def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
-      trailingTokens.find(predicate)
   }
 
   implicit class OptionFutureTransformer[A](state: Future[Option[A]]) {

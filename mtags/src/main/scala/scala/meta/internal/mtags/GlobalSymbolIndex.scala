@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags
 
 /**
  * An index to lookup the definition of global symbols.
@@ -30,7 +31,7 @@ trait GlobalSymbolIndex {
    *  }}}
    * @return the definition of the symbol, if any.
    */
-  def definition(symbol: Symbol): Option[SymbolDefinition]
+  def definition(symbol: mtags.Symbol): Option[SymbolDefinition]
 
   /**
    * Add an individual Java or Scala source file to the index.

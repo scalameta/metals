@@ -130,4 +130,11 @@ class ScalaVersionsSuite extends BaseSuite {
       !SemVer.isCompatibleVersion("2.12.11", "2.11.12")
     )
   }
+
+  test("recommended-3") {
+    assert(
+      ScalaVersions.recommendedVersion("0.21.0") ==
+        V.scala3
+    )
+  }
 }

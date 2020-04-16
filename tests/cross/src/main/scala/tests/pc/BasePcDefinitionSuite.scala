@@ -4,10 +4,11 @@ import tests.BasePCSuite
 import scala.meta.internal.metals.CompilerOffsetParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
 import munit.Location
+import java.net.URI
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(
@@ -19,12 +20,15 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       val noRange = original
         .replaceAllLiterally("<<", "")
         .replaceAllLiterally(">>", "")
-      val uri = "A.scala"
-      val (code, offset) = params(noRange, uri)
+      val filename = "A.scala"
+      val uri = s"file:///$filename"
+      val (code, offset) = params(noRange, filename)
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
       val offsetRange = Position.Range(Input.String(code), offset, offset).toLSP
-      val defn = pc.definition(CompilerOffsetParams(uri, code, offset)).get()
+      val defn = presentationCompiler
+        .definition(CompilerOffsetParams(URI.create(uri), code, offset))
+        .get()
       val edits = defn.locations().asScala.toList.flatMap { location =>
         if (location.getUri() == uri) {
           List(
@@ -55,7 +59,10 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       }
       val obtained = TextEdits.applyEdits(code, edits)
       val expected = original.replaceAllLiterally("@@", "")
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
     }
   }
 }
