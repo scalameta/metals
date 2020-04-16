@@ -318,7 +318,14 @@ final class ImplementationProvider(
         classContext,
         implReal
       )
-      implOccurrence <- findDefOccurrence(implDocument, implSymbol, source)
+      if !findSymbol(implDocument, implSymbol).exists(
+        _.kind == SymbolInformation.Kind.TYPE
+      )
+      implOccurrence <- findDefOccurrence(
+        implDocument,
+        implSymbol,
+        source
+      )
       range <- implOccurrence.range
       revised <- distance.toRevised(range.toLSP)
     } { allLocations.add(new Location(file.toUri.toString, revised)) }
@@ -485,7 +492,7 @@ object ImplementationProvider {
           Seq(
             tr.symbol -> ClassLocation(
               symbol,
-              None,
+              filePath.map(_.toNIO),
               tr,
               typeSig.typeParameters
             )

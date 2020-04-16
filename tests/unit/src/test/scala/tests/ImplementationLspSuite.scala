@@ -518,6 +518,20 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "type-local",
+    """|/a/src/main/scala/a/Main.scala
+       |object Test {
+       |  def main {
+       |    class @@A
+       |    class <<B>> extends A
+       |    type C = A
+       |    class <<D>> extends C
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   override def assertCheck(
       filename: String,
       edit: String,
