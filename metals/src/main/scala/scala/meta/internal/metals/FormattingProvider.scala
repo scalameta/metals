@@ -141,7 +141,7 @@ final class FormattingProvider(
 
   private def askScalafmtVersion(): Future[Option[String]] = {
     val isInputBoxEnabled =
-      serverConfig.isInputBoxEnabled || clientExperimentalCapabilities.inputBoxProvider || initializationOptions.inputBox
+      serverConfig.isInputBoxEnabled || clientExperimentalCapabilities.inputBoxProvider || initializationOptions.inputBoxProvider
     if (isInputBoxEnabled) {
       client
         .metalsInputBox(MissingScalafmtVersion.inputBox())

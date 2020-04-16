@@ -1,23 +1,25 @@
 package scala.meta.internal.metals
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.pc.CompilerInitializationOptions
 
 final case class InitializationOptions(
-    statusBar: String = "off",
-    didFocus: java.lang.Boolean = false,
-    slowTask: java.lang.Boolean = false,
-    inputBox: java.lang.Boolean = false,
-    quickPick: java.lang.Boolean = false,
-    executeClientCommand: java.lang.Boolean = false,
-    doctorFormat: String = "html",
-    isCompletionItemDetailEnabled: java.lang.Boolean = false,
-    isExitOnShutdown: java.lang.Boolean = false
+    statusBarProvider: String = "off",
+    didFocusProvider: java.lang.Boolean = false,
+    slowTaskProvider: java.lang.Boolean = false,
+    inputBoxProvider: java.lang.Boolean = false,
+    quickPickProvider: java.lang.Boolean = false,
+    executeClientCommandProvider: java.lang.Boolean = false,
+    doctorFormatProvider: String = "html",
+    isExitOnShutdown: java.lang.Boolean = false,
+    compilerOptions: CompilerInitializationOptions =
+      CompilerInitializationOptions()
 ) {
-  def doctorFormatIsJson: Boolean = doctorFormat == "json"
-  def statusBarIsOn: Boolean = statusBar == "on"
-  def statusBarIsOff: Boolean = statusBar == "off"
-  def statusBarIsShowMessage: Boolean = statusBar == "show-message"
-  def statusBarIsLogMessage: Boolean = statusBar == "log-message"
+  def doctorFormatIsJson: Boolean = doctorFormatProvider == "json"
+  def statusBarIsOn: Boolean = statusBarProvider == "on"
+  def statusBarIsOff: Boolean = statusBarProvider == "off"
+  def statusBarIsShowMessage: Boolean = statusBarProvider == "show-message"
+  def statusBarIsLogMessage: Boolean = statusBarProvider == "log-message"
 }
 
 object InitializationOptions {

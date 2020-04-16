@@ -57,7 +57,7 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider || initializationOptions.slowTask) {
+    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider || initializationOptions.slowTaskProvider) {
       underlying.metalsSlowTask(params)
     } else {
       new CompletableFuture[MetalsSlowTaskResult]()
@@ -92,7 +92,7 @@ final class ConfiguredLanguageClient(
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
-    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommand) {
+    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommandProvider) {
       params.getCommand match {
         case ClientCommands.RefreshModel()
             if !clientCapabilities.debuggingProvider =>
@@ -106,7 +106,7 @@ final class ConfiguredLanguageClient(
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider || initializationOptions.inputBox) {
+    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider || initializationOptions.inputBoxProvider) {
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
@@ -116,7 +116,7 @@ final class ConfiguredLanguageClient(
   override def metalsQuickPick(
       params: MetalsQuickPickParams
   ): CompletableFuture[MetalsQuickPickResult] = {
-    if (clientCapabilities.quickPickProvider || initializationOptions.quickPick) {
+    if (clientCapabilities.quickPickProvider || initializationOptions.quickPickProvider) {
       underlying.metalsQuickPick(params)
     } else {
       showMessageRequest(

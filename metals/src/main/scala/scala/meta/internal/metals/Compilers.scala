@@ -357,20 +357,22 @@ class Compilers(
       .map(InitializationOptions.from(_))
       .getOrElse(InitializationOptions.Default)
 
-    val isCompletionItemDetailEnabled =
-      config.compilers.isCompletionItemDetailEnabled || initializationOptions.isCompletionItemDetailEnabled
-
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
       .withConfiguration(
-        config.compilers.copy(
-          _symbolPrefixes = userConfig().symbolPrefixes,
-          isCompletionSnippetsEnabled =
-            initializeParams.supportsCompletionSnippets,
-          isFoldOnlyLines = initializeParams.foldOnlyLines,
-          isCompletionItemDetailEnabled = isCompletionItemDetailEnabled
-        )
+        initializeParams
+          .map(p => {
+            val options = InitializationOptions.from(p).compilerOptions
+            config.compilers.update(options)
+          })
+          .getOrElse(config.compilers)
+          .copy(
+            _symbolPrefixes = userConfig().symbolPrefixes,
+            isCompletionSnippetsEnabled =
+              initializeParams.supportsCompletionSnippets,
+            isFoldOnlyLines = initializeParams.foldOnlyLines
+          )
       )
   }
 
