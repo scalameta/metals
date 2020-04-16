@@ -320,7 +320,18 @@ final class ImplementationProvider(
         classContext,
         implReal
       )
-      implOccurrence <- findDefOccurrence(implDocument, implSymbol, source)
+      symbolSearch = defaultSymbolSearch(
+        implPath,
+        implDocument
+      )
+      filteredImplSymbol <- Some(implSymbol).filterNot(
+        isTypeAlias(_, symbolSearch)
+      )
+      implOccurrence <- findDefOccurrence(
+        implDocument,
+        filteredImplSymbol,
+        source
+      )
       range <- implOccurrence.range
       revised <- distance.toRevised(range.toLSP)
     } { allLocations.add(new Location(file.toUri.toString, revised)) }
@@ -338,29 +349,17 @@ final class ImplementationProvider(
       file: Path
   ): Map[Path, Set[ClassLocation]] = {
 
-    def isTypeAlias(symbol: String) =
-      classContext
-        .findSymbol(symbol)
-        .exists(_.kind == SymbolInformation.Kind.TYPE)
-
     def loop(symbol: String, currentPath: Option[Path]): Set[ClassLocation] = {
       val directImplementations = classContext.getLocations(symbol).filterNot {
         loc =>
-          // we keep type aliases
-          !isTypeAlias(loc.symbol) &&
-          (
-            // we are not interested in local symbols from outside the workspace
-            (loc.symbol.isLocal && loc.file.isEmpty) ||
-            // local symbols inheritance should only be picked up in the same file
-            (loc.symbol.isLocal && loc.file != currentPath)
-          )
+          // we are not interested in local symbols from outside the workspace
+          (loc.symbol.isLocal && loc.file.isEmpty) ||
+          // local symbols inheritance should only be picked up in the same file
+          (loc.symbol.isLocal && loc.file != currentPath)
       }
       directImplementations ++ directImplementations
         .flatMap { loc =>
-          val allPossible = loop(
-            loc.symbol,
-            loc.file.orElse(Some(file).filter(_ => isTypeAlias(loc.symbol)))
-          )
+          val allPossible = loop(loc.symbol, loc.file)
           allPossible.map(_.translateAsSeenFrom(loc))
 
         }
@@ -469,6 +468,12 @@ object ImplementationProvider {
       .find(sym => sym.symbol == symbol)
   }
 
+  def isTypeAlias(
+      symbol: String,
+      findSymbol: String => Option[SymbolInformation]
+  ): Boolean =
+    findSymbol(symbol).exists(_.kind == SymbolInformation.Kind.TYPE)
+
   def parentsFromSignature(
       symbol: String,
       signature: Signature,
@@ -499,7 +504,7 @@ object ImplementationProvider {
           Seq(
             tr.symbol -> ClassLocation(
               symbol,
-              None,
+              filePath.map(_.toNIO),
               tr,
               typeSig.typeParameters
             )
