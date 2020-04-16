@@ -60,6 +60,7 @@ jobs:
         type:
           [
             gradle-mac,
+            mill-windows,
             sbt,
             maven,
             gradle,
@@ -72,6 +73,10 @@ jobs:
           ]
         include:
           - type: gradle-mac
+            command: bin/test.sh 'slow/testOnly -- tests.mill.*'
+            name: Mill Windows integration
+            os: windows-latest
+          - type: mill-windows
             command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
             name: Gradle MacOS integration
             os: macOS-latest
