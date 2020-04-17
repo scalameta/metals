@@ -353,10 +353,6 @@ class Compilers(
       pc: PresentationCompiler,
       search: SymbolSearch
   ): PresentationCompiler = {
-    val initializationOptions = initializeParams
-      .map(InitializationOptions.from(_))
-      .getOrElse(InitializationOptions.Default)
-
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
