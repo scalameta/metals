@@ -1,9 +1,6 @@
 package tests
-import scala.concurrent.Future
-import munit.Location
-import munit.TestOptions
 
-class CodeLensLspSuite extends BaseLspSuite("codeLenses") {
+class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   check("empty-package")(
     """|<<run>><<debug>>
        |object Main {
@@ -37,7 +34,7 @@ class CodeLensLspSuite extends BaseLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
+  check("test-suite-class", library = Some("org.scalatest::scalatest:3.0.5"))(
     """|package foo.bar
        |<<test>><<debug test>>
        |class Foo extends org.scalatest.FunSuite {
@@ -46,7 +43,7 @@ class CodeLensLspSuite extends BaseLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-object", library = "com.lihaoyi::utest:0.7.3")(
+  check("test-suite-object", library = Some("com.lihaoyi::utest:0.7.3"))(
     """|package foo.bar
        |<<test>><<debug test>>
        |object Foo extends utest.TestSuite {
@@ -246,64 +243,4 @@ class CodeLensLspSuite extends BaseLspSuite("codeLenses") {
     """.stripMargin
   )
 
-  def check(name: TestOptions, library: String = "")(
-      expected: String
-  )(implicit loc: Location): Unit = {
-    test(name) {
-      cleanWorkspace()
-      val original = expected.replaceAll("<<.*>>\\W+", "")
-
-      val sourceFile = {
-        val file = """package (.*).*""".r
-          .findFirstMatchIn(original)
-          .map(_.group(1))
-          .map(packageName => packageName.replaceAll("\\.", "/"))
-          .map(packageDir => s"$packageDir/Foo.scala")
-          .getOrElse("Foo.scala")
-
-        s"a/src/main/scala/$file"
-      }
-
-      val dependencies =
-        if (library.isEmpty) ""
-        else s""""libraryDependencies": [ "$library" ]"""
-
-      for {
-        _ <- server.initialize(
-          s"""|/metals.json
-              |{
-              |  "a": { $dependencies }
-              |}
-              |
-              |/$sourceFile
-              |$original
-              |""".stripMargin
-        )
-        _ <- assertCodeLenses(sourceFile, expected)
-      } yield ()
-    }
-  }
-
-  private def assertCodeLenses(
-      relativeFile: String,
-      expected: String,
-      maxRetries: Int = 4
-  )(implicit loc: Location): Future[Unit] = {
-    val obtained = server.codeLenses(relativeFile)(maxRetries).recover {
-      case _: NoSuchElementException =>
-        server.textContents(relativeFile)
-    }
-
-    obtained.map(assertNoDiff(_, expected))
-  }
-
-  private def assertNoCodeLenses(
-      relativeFile: String,
-      maxRetries: Int = 4
-  ): Future[Unit] = {
-    server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
-      case _: NoSuchElementException => Future.unit
-      case e => Future.failed(e)
-    }
-  }
 }

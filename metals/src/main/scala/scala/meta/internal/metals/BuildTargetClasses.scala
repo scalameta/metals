@@ -13,7 +13,8 @@ import scala.meta.internal.semanticdb.Scala.Symbols
  * In-memory index of main class symbols grouped by their enclosing build target
  */
 final class BuildTargetClasses(
-    buildServer: () => Option[BuildServerConnection]
+    buildServer: () => Option[BuildServerConnection],
+    buildTargets: BuildTargets
 )(implicit val ec: ExecutionContext) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
@@ -87,8 +88,17 @@ final class BuildTargetClasses(
     for {
       item <- result.getItems.asScala
       target = item.getTarget
+      buildTarget <- buildTargets.scalaTarget(target)
       aClass <- item.getClasses.asScala
-      symbol <- createSymbols(aClass.getClassName, List(Descriptor.Term))
+      descriptors = {
+        if (ScalaVersions.isScala3Version(buildTarget.scalaVersion))
+          List(Descriptor.Term, Descriptor.Type)
+        else List(Descriptor.Term)
+      }
+      symbol <- createSymbols(
+        aClass.getClassName,
+        descriptors
+      )
     } {
       classes(target).mainClasses.put(symbol, aClass)
     }
