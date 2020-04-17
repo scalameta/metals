@@ -34,8 +34,12 @@ import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.{lsp4j => l}
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.interactive.Interactive.Include
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Symbols._
@@ -52,6 +56,7 @@ import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.ast.untpd.NameTree
 import dotty.tools.dotc.parsing.Parsers.Parser
 import dotty.tools.dotc.printing.PlainPrinter
 import dotty.tools.dotc.reporting.diagnostic.Message
@@ -69,6 +74,8 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.metals.DocumentSymbolProvider
 
 case class ScalaPresentationCompiler(
     classpath: Seq[Path] = Nil,
@@ -92,6 +99,8 @@ case class ScalaPresentationCompiler(
       ec
     )
   }
+
+  val documentSymbolProvider = new DocumentSymbolProvider()
 
   def newDriver: InteractiveDriver = {
     val defaultFlags = List("-color:never")
@@ -186,13 +195,17 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  // TODO NOT IMPLEMENTED
   def documentSymbols(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[DocumentSymbol]] = {
-    CompletableFuture.completedFuture(
-      List.empty[DocumentSymbol].asJava
-    )
+    compilerAccess.withInterruptableCompiler(
+      List.empty[DocumentSymbol].asJava,
+      params.token
+    ) { access =>
+      val driver = access.compiler()
+      driver.run(params.uri, params.text)
+      documentSymbolProvider.documentSymbols()(driver.currentCtx)
+    }
   }
 
   // TODO NOT IMPLEMENTED
@@ -323,8 +336,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      val uri = params.uri
-      val sourceFile = toSource(uri, params.text)
+      val sourceFile = toSource(params)
       // we need to have a separate reporter otherwise errors are not cleared
       val parsingReporter = new StoreReporter(null)
       val freshContext = driver.currentCtx.fresh.setReporter(parsingReporter)
@@ -526,15 +538,12 @@ case class ScalaPresentationCompiler(
       )
     }
 
+  private def toSource(params: VirtualFileParams): SourceFile =
+    toSource(params.uri, params.text)
+
   private def toSource(uri: URI, sourceCode: String): SourceFile = {
     val path = Paths.get(uri)
-    val virtualFile = new VirtualFile(path.getFileName.toString, path.toString)
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(virtualFile.output, "UTF-8")
-    )
-    writer.write(sourceCode)
-    writer.close()
-    new SourceFile(virtualFile, Codec.UTF8)
+    SourceFile.virtual(path.getFileName().toString, sourceCode)
   }
 
   override def isLoaded() = compilerAccess.isLoaded()
