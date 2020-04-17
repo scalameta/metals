@@ -352,7 +352,7 @@ class Compilers(
   private def configure(
       pc: PresentationCompiler,
       search: SymbolSearch
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
@@ -370,7 +370,6 @@ class Compilers(
             isFoldOnlyLines = initializeParams.foldOnlyLines
           )
       )
-  }
 
   def newCompiler(
       scalac: ScalacOptionsItem,
