@@ -2,6 +2,7 @@ package tests
 import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
+import scala.meta.internal.metals.{BuildInfo => V}
 
 class RenameLspSuite extends BaseLspSuite("rename") {
 
@@ -586,6 +587,22 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     newName = "name"
   )
 
+  renamed(
+    "dotty-outer",
+    """|/a/src/main/scala/a/Main.scala
+       |
+       |@main def main() = {
+       |  <<hello>>("Mark")
+       |  <<hello>>("Anne")
+       |}
+       |def <<hel@@lo>>(name : String) : Unit = {
+       |  println(s"Hello $name")
+       |}
+       |""".stripMargin,
+    newName = "greeting",
+    scalaVersion = Some(V.scala3)
+  )
+
   // tests currently not working correctly due to issues in SemanticDB
   // https://github.com/scalameta/metals/issues/1086 - most likely due to scalameta bug
   renamed(
@@ -621,7 +638,8 @@ class RenameLspSuite extends BaseLspSuite("rename") {
       newName: String,
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
-      fileRenames: Map[String, String] = Map.empty
+      fileRenames: Map[String, String] = Map.empty,
+      scalaVersion: Option[String] = None
   )(implicit loc: Location): Unit =
     check(
       name,
@@ -630,7 +648,8 @@ class RenameLspSuite extends BaseLspSuite("rename") {
       notRenamed = false,
       nonOpened = nonOpened,
       breakingChange,
-      fileRenames
+      fileRenames,
+      scalaVersion
     )
 
   def same(
@@ -651,7 +670,8 @@ class RenameLspSuite extends BaseLspSuite("rename") {
       notRenamed: Boolean = false,
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
-      fileRenames: Map[String, String] = Map.empty
+      fileRenames: Map[String, String] = Map.empty,
+      scalaVersion: Option[String] = None
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
@@ -681,11 +701,13 @@ class RenameLspSuite extends BaseLspSuite("rename") {
 
       val openedFiles = files.keySet.diff(nonOpened)
       val fullInput = input.replaceAll(allMarkersRegex, "")
+      val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
       for {
         _ <- server.initialize(
           s"""/metals.json
              |{
              |  "a" : {
+             |    "scalaVersion": "$actualScalaVersion",
              |    "compilerPlugins": [
              |      "org.scalamacros:::paradise:2.1.1"
              |    ],
@@ -695,7 +717,8 @@ class RenameLspSuite extends BaseLspSuite("rename") {
              |    ]
              |  },
              |  "b" : {
-             |    dependsOn: [ "a" ]
+             |    "scalaVersion": "$actualScalaVersion",
+             |    "dependsOn": [ "a" ]
              |  }
              |}
              |$fullInput""".stripMargin

@@ -12,9 +12,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ReferenceContext
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.Location
 import scala.meta.internal.metals.MetalsLanguageClient
@@ -35,138 +33,152 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.pc.CancelToken
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider,
     definitionProvider: DefinitionProvider,
-    index: GlobalSymbolIndex,
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     buffers: Buffers,
     compilations: Compilations,
     metalsConfig: MetalsServerConfig,
     clientExperimentalCapabilities: ClientExperimentalCapabilities
-) {
+)(implicit executionContext: ExecutionContext) {
 
   private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
 
-  def prepareRename(params: TextDocumentPositionParams): Option[LSPRange] = {
+  def prepareRename(
+      params: TextDocumentPositionParams,
+      token: CancelToken
+  ): Future[Option[LSPRange]] = {
     if (!compilations.currentlyCompiling.isEmpty) {
       client.showMessage(isCompiling)
-      None
+      Future.successful(None)
     } else {
       val source = params.getTextDocument.getUri.toAbsolutePath
-      val symbolOccurence =
-        definitionProvider.symbolOccurrence(source, params.getPosition)
-      for {
-        (occurence, semanticDb) <- symbolOccurence
-        if canRenameSymbol(occurence.symbol, None)
-        range <- occurence.range
-      } yield range.toLSP
+      definitionProvider.definition(source, params, token).map { definition =>
+        val symbolOccurence =
+          definitionProvider.symbolOccurrence(source, params.getPosition)
+        for {
+          (occurence, _) <- symbolOccurence
+          definitionLocation <- definition.locations.asScala.headOption
+          definitionPath = definitionLocation.getUri().toAbsolutePath
+          if canRenameSymbol(occurence.symbol, None, definitionPath)
+          range <- occurence.range
+        } yield range.toLSP
+      }
     }
   }
 
-  def rename(params: RenameParams): WorkspaceEdit = {
+  def rename(
+      params: RenameParams,
+      token: CancelToken
+  ): Future[WorkspaceEdit] = {
     if (!compilations.currentlyCompiling.isEmpty) {
       client.showMessage(isCompiling)
-      new WorkspaceEdit()
+      Future.successful(new WorkspaceEdit())
     } else {
       val source = params.getTextDocument.getUri.toAbsolutePath
-      val textParams = new TextDocumentPositionParams(
-        params.getTextDocument(),
-        params.getPosition()
-      )
-
-      val symbolOccurence =
-        definitionProvider.symbolOccurrence(source, textParams.getPosition)
-
-      val suggestedName = params.getNewName()
-      val newName =
-        if (suggestedName.charAt(0) == '`')
-          suggestedName.substring(1, suggestedName.length() - 1)
-        else suggestedName
-
-      def includeSynthetic(syn: Synthetic) = {
-        syn.tree match {
-          case SelectTree(_, id) =>
-            id.exists(_.symbol.desc.name.toString == "apply")
-          case _ => false
-        }
-      }
-
-      val allReferences = for {
-        (occurence, semanticDb) <- symbolOccurence.toIterable
-        if canRenameSymbol(occurence.symbol, Option(newName))
-        parentSymbols = implementationProvider
-          .topMethodParents(occurence.symbol, semanticDb)
-        txtParams <- {
-          if (parentSymbols.isEmpty) List(textParams)
-          else parentSymbols.map(toTextParams)
-        }
-        isLocal = occurence.symbol.isLocal
-        currentReferences = referenceProvider
-          .references(
-            // we can't get definition by name for local symbols
-            toReferenceParams(txtParams, includeDeclaration = isLocal),
-            canSkipExactMatchCheck = false,
-            includeSynthetics = includeSynthetic
-          )
-          .locations
-        definitionLocation = {
-          if (parentSymbols.isEmpty)
-            definitionProvider
-              .fromSymbol(occurence.symbol)
-              .asScala
-              .filter(_.getUri().isScalaFilename)
-          else parentSymbols
-        }
-        companionRefs = companionReferences(occurence.symbol)
-        implReferences = implementations(
-          txtParams,
-          !occurence.symbol.desc.isType
+      definitionProvider.definition(source, params, token).map { definition =>
+        val textParams = new TextDocumentPositionParams(
+          params.getTextDocument(),
+          params.getPosition()
         )
-        loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
-      } yield loc
 
-      def isOccurence(fn: String => Boolean): Boolean = {
-        symbolOccurence.exists {
-          case (occ, _) => fn(occ.symbol)
-        }
-      }
+        val symbolOccurence =
+          definitionProvider.symbolOccurrence(source, textParams.getPosition)
 
-      val allChanges = for {
-        (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
-      } yield {
-        val textEdits = for (loc <- locs) yield {
-          textEdit(isOccurence, loc, newName)
-        }
-        Seq(uri.toAbsolutePath -> textEdits.toList)
-      }
-      val fileChanges = allChanges.flatten.toMap
-      val openFilesOnRenameProvider =
-        metalsConfig.openFilesOnRenames || clientExperimentalCapabilities.openFilesOnRenameProvider
-      val shouldRenameInBackground =
-        !openFilesOnRenameProvider || fileChanges.keySet.size >= metalsConfig.renameFileThreshold
-      val (openedEdits, closedEdits) =
-        if (shouldRenameInBackground) {
-          if (openFilesOnRenameProvider) {
-            client.showMessage(fileThreshold(fileChanges.keySet.size))
+        val suggestedName = params.getNewName()
+        val newName =
+          if (suggestedName.charAt(0) == '`')
+            suggestedName.substring(1, suggestedName.length() - 1)
+          else suggestedName
+
+        def includeSynthetic(syn: Synthetic) = {
+          syn.tree match {
+            case SelectTree(_, id) =>
+              id.exists(_.symbol.desc.name.toString == "apply")
+            case _ => false
           }
-          fileChanges.partition {
-            case (path, _) =>
-              buffers.contains(path)
-          }
-        } else {
-          (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
         }
 
-      awaitingSave.add(() => changeClosedFiles(closedEdits))
+        val allReferences = for {
+          (occurence, semanticDb) <- symbolOccurence.toIterable
+          definitionLoc <- definition.locations.asScala
+          definitionPath = definitionLoc.getUri().toAbsolutePath
+          if canRenameSymbol(occurence.symbol, Option(newName), definitionPath)
+          parentSymbols = implementationProvider
+            .topMethodParents(occurence.symbol, semanticDb)
+          txtParams <- {
+            if (parentSymbols.isEmpty) List(textParams)
+            else parentSymbols.map(toTextParams)
+          }
+          isLocal = occurence.symbol.isLocal
+          currentReferences = referenceProvider
+            .references(
+              // we can't get definition by name for local symbols
+              toReferenceParams(txtParams, includeDeclaration = isLocal),
+              canSkipExactMatchCheck = false,
+              includeSynthetics = includeSynthetic
+            )
+            .locations
+          definitionLocation = {
+            if (parentSymbols.isEmpty)
+              definition.locations.asScala
+                .filter(_.getUri().isScalaFilename)
+            else parentSymbols
+          }
+          companionRefs = companionReferences(occurence.symbol)
+          implReferences = implementations(
+            txtParams,
+            !occurence.symbol.desc.isType
+          )
+          loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
+        } yield loc
 
-      val edits = documentEdits(openedEdits)
-      val renames =
-        fileRenames(isOccurence, fileChanges.keySet, newName)
-      new WorkspaceEdit((edits ++ renames).asJava)
+        def isOccurence(fn: String => Boolean): Boolean = {
+          symbolOccurence.exists {
+            case (occ, _) => fn(occ.symbol)
+          }
+        }
+
+        val allChanges = for {
+          (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
+        } yield {
+          val textEdits = for (loc <- locs) yield {
+            textEdit(isOccurence, loc, newName)
+          }
+          Seq(uri.toAbsolutePath -> textEdits.toList)
+        }
+        val fileChanges = allChanges.flatten.toMap
+        val openFilesOnRenameProvider =
+          metalsConfig.openFilesOnRenames || clientExperimentalCapabilities.openFilesOnRenameProvider
+        val shouldRenameInBackground =
+          !openFilesOnRenameProvider || fileChanges.keySet.size >= metalsConfig.renameFileThreshold
+        val (openedEdits, closedEdits) =
+          if (shouldRenameInBackground) {
+            if (openFilesOnRenameProvider) {
+              client.showMessage(fileThreshold(fileChanges.keySet.size))
+            }
+            fileChanges.partition {
+              case (path, _) =>
+                buffers.contains(path)
+            }
+          } else {
+            (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+          }
+
+        awaitingSave.add(() => changeClosedFiles(closedEdits))
+
+        val edits = documentEdits(openedEdits)
+        val renames =
+          fileRenames(isOccurence, fileChanges.keySet, newName)
+        new WorkspaceEdit((edits ++ renames).asJava)
+      }
     }
   }
 
@@ -267,7 +279,11 @@ final class RenameProvider(
     }
   }
 
-  private def canRenameSymbol(symbol: String, newName: Option[String]) = {
+  private def canRenameSymbol(
+      symbol: String,
+      newName: Option[String],
+      definitionPath: AbsolutePath
+  ) = {
     val forbiddenMethods = Set("equals", "hashCode", "unapply", "unary_!", "!")
     val desc = symbol.desc
     val name = desc.name.value
@@ -279,21 +295,21 @@ final class RenameProvider(
     if (colonNotAllowed) {
       client.showMessage(forbiddenColonRename(name, newName))
     }
-    symbolIsLocal(symbol) && (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+    symbolIsLocal(symbol, definitionPath) && (!desc.isMethod || (!colonNotAllowed && !isForbidden))
   }
 
-  private def symbolIsLocal(symbol: String): Boolean = {
+  private def symbolIsLocal(
+      symbol: String,
+      definitionPath: AbsolutePath
+  ): Boolean = {
 
-    def isFromWorkspace =
-      index
-        .definition(MSymbol(symbol))
-        .exists { definition =>
-          val isLocal = definition.path.isWorkspaceSource(workspace)
-          if (isLocal && definition.path.isJava) {
-            client.showMessage(javaSymbol(symbol.desc.name.value))
-          }
-          isLocal
-        }
+    def isFromWorkspace = {
+      val isLocal = definitionPath.isWorkspaceSource(workspace)
+      if (isLocal && definitionPath.isJava) {
+        client.showMessage(javaSymbol(symbol.desc.name.value))
+      }
+      isLocal
+    }
 
     symbol.startsWith("local") || isFromWorkspace
   }
