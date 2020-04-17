@@ -308,8 +308,20 @@ object MetalsEnrichments
       }
     }
 
-    def createDirectories(): AbsolutePath = {
+    def createDirectories(): AbsolutePath =
       AbsolutePath(Files.createDirectories(path.dealias.toNIO))
+
+    def createAndGetDirectories(): Seq[AbsolutePath] = {
+      def createDirectoriesRec(
+          absolutePath: AbsolutePath,
+          toCreate: Seq[AbsolutePath]
+      ): Seq[AbsolutePath] = {
+        if (absolutePath.exists)
+          toCreate.map(path => AbsolutePath(Files.createDirectory(path.toNIO)))
+        else
+          createDirectoriesRec(absolutePath.parent, absolutePath +: toCreate)
+      }
+      createDirectoriesRec(path, Nil)
     }
 
     def delete(): Unit = {

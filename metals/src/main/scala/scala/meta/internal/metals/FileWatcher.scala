@@ -67,11 +67,13 @@ final class FileWatcher(
         } else {
           path
         }
-        pathToCreate.createDirectories()
+        val createdPaths = pathToCreate.createAndGetDirectories()
         // this is a workaround for MacOS, it will continue watching
         // directories even if they are removed, however it doesn't
         // work on some other systems like Linux
-        if (isSource) createdSourceDirectories.add(pathToCreate)
+        if (isSource) {
+          createdPaths.foreach(createdSourceDirectories.add)
+        }
       }
       if (buildTargets.isInsideSourceRoot(path)) {
         () // Do nothing, already covered by a source root
@@ -95,7 +97,8 @@ final class FileWatcher(
       }
     }
     startWatching(new ju.ArrayList(sourceDirectoriesToWatch))
-    createdSourceDirectories.asScala.foreach { dir =>
+    // reverse sorting here is necessary to delete parent paths at the end
+    createdSourceDirectories.asScala.sortBy(_.toNIO).reverse.foreach { dir =>
       if (dir.isEmptyDirectory) {
         dir.delete()
       }
