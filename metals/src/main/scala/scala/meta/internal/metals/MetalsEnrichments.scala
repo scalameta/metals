@@ -308,7 +308,10 @@ object MetalsEnrichments
       }
     }
 
-    def createDirectories(): Seq[AbsolutePath] = {
+    def createDirectories(): AbsolutePath =
+      AbsolutePath(Files.createDirectories(path.dealias.toNIO))
+
+    def createAndGetDirectories(): Seq[AbsolutePath] = {
       def createDirectoriesRec(
           absolutePath: AbsolutePath,
           toCreate: Seq[AbsolutePath]
