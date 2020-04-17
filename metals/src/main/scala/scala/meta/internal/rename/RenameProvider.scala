@@ -61,13 +61,14 @@ final class RenameProvider(
     } else {
       val source = params.getTextDocument.getUri.toAbsolutePath
       definitionProvider.definition(source, params, token).map { definition =>
-        val symbolOccurence =
+        val symbolOccurrence =
           definitionProvider.symbolOccurrence(source, params.getPosition)
         for {
-          (occurence, _) <- symbolOccurence
+          (occurence, _) <- symbolOccurrence
           definitionLocation <- definition.locations.asScala.headOption
           definitionPath = definitionLocation.getUri().toAbsolutePath
-          if canRenameSymbol(occurence.symbol, None, definitionPath)
+          if canRenameSymbol(occurence.symbol, None) &&
+            isWorkspaceSymbol(occurence.symbol, definitionPath)
           range <- occurence.range
         } yield range.toLSP
       }
@@ -89,7 +90,7 @@ final class RenameProvider(
           params.getPosition()
         )
 
-        val symbolOccurence =
+        val symbolOccurrence =
           definitionProvider.symbolOccurrence(source, textParams.getPosition)
 
         val suggestedName = params.getNewName()
@@ -107,10 +108,11 @@ final class RenameProvider(
         }
 
         val allReferences = for {
-          (occurence, semanticDb) <- symbolOccurence.toIterable
-          definitionLoc <- definition.locations.asScala
+          (occurence, semanticDb) <- symbolOccurrence.toIterable
+          definitionLoc <- definition.locations.asScala.headOption.toIterable
           definitionPath = definitionLoc.getUri().toAbsolutePath
-          if canRenameSymbol(occurence.symbol, Option(newName), definitionPath)
+          if canRenameSymbol(occurence.symbol, Option(newName)) &&
+            isWorkspaceSymbol(occurence.symbol, definitionPath)
           parentSymbols = implementationProvider
             .topMethodParents(occurence.symbol, semanticDb)
           txtParams <- {
@@ -140,8 +142,8 @@ final class RenameProvider(
           loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
         } yield loc
 
-        def isOccurence(fn: String => Boolean): Boolean = {
-          symbolOccurence.exists {
+        def isOccurrence(fn: String => Boolean): Boolean = {
+          symbolOccurrence.exists {
             case (occ, _) => fn(occ.symbol)
           }
         }
@@ -150,7 +152,7 @@ final class RenameProvider(
           (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
         } yield {
           val textEdits = for (loc <- locs) yield {
-            textEdit(isOccurence, loc, newName)
+            textEdit(isOccurrence, loc, newName)
           }
           Seq(uri.toAbsolutePath -> textEdits.toList)
         }
@@ -176,7 +178,7 @@ final class RenameProvider(
 
         val edits = documentEdits(openedEdits)
         val renames =
-          fileRenames(isOccurence, fileChanges.keySet, newName)
+          fileRenames(isOccurrence, fileChanges.keySet, newName)
         new WorkspaceEdit((edits ++ renames).asJava)
       }
     }
@@ -199,13 +201,13 @@ final class RenameProvider(
   }
 
   private def fileRenames(
-      isOccurence: (String => Boolean) => Boolean,
+      isOccurrence: (String => Boolean) => Boolean,
       fileChanges: Set[AbsolutePath],
       newName: String
   ): Option[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     fileChanges
       .find { file =>
-        isOccurence { str =>
+        isOccurrence { str =>
           str.owner.isPackage &&
           (str.desc.isType || str.desc.isTerm) &&
           file.toURI.toString.endsWith(s"/${str.desc.name.value}.scala")
@@ -281,8 +283,7 @@ final class RenameProvider(
 
   private def canRenameSymbol(
       symbol: String,
-      newName: Option[String],
-      definitionPath: AbsolutePath
+      newName: Option[String]
   ) = {
     val forbiddenMethods = Set("equals", "hashCode", "unapply", "unary_!", "!")
     val desc = symbol.desc
@@ -295,31 +296,31 @@ final class RenameProvider(
     if (colonNotAllowed) {
       client.showMessage(forbiddenColonRename(name, newName))
     }
-    symbolIsLocal(symbol, definitionPath) && (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+    (!desc.isMethod || (!colonNotAllowed && !isForbidden))
   }
 
-  private def symbolIsLocal(
+  private def isWorkspaceSymbol(
       symbol: String,
       definitionPath: AbsolutePath
   ): Boolean = {
 
     def isFromWorkspace = {
-      val isLocal = definitionPath.isWorkspaceSource(workspace)
-      if (isLocal && definitionPath.isJava) {
+      val isInWorkspace = definitionPath.isWorkspaceSource(workspace)
+      if (isInWorkspace && definitionPath.isJava) {
         client.showMessage(javaSymbol(symbol.desc.name.value))
       }
-      isLocal
+      isInWorkspace
     }
 
-    symbol.startsWith("local") || isFromWorkspace
+    symbol.isLocal || isFromWorkspace
   }
 
   private def textEdit(
-      isOccurence: (String => Boolean) => Boolean,
+      isOccurrence: (String => Boolean) => Boolean,
       loc: Location,
       newName: String
   ): TextEdit = {
-    val isApply = isOccurence(str => str.desc.name.value == "apply")
+    val isApply = isOccurrence(str => str.desc.name.value == "apply")
     lazy val default = new TextEdit(
       loc.getRange(),
       newName
