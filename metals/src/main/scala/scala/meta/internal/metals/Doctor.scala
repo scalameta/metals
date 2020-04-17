@@ -34,7 +34,7 @@ final class Doctor(
   private val doctorFormatIsJson =
     config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson || initializationOptions.doctorFormatIsJson
   private val executeClientCommandProvider =
-    config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommand
+    config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommandProvider
 
   def isUnsupportedBloopVersion(serverVersion: String): Boolean = {
     bspServerName.contains("Bloop") && !SemVer.isCompatibleVersion(
