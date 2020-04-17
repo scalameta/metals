@@ -44,6 +44,8 @@ case class PresentationCompilerConfigImpl(
         isHoverDocumentationEnabled || options.isHoverDocumentationEnabled,
       snippetAutoIndent = snippetAutoIndent || options.snippetAutoIndent,
       isSignatureHelpDocumentationEnabled =
-        isSignatureHelpDocumentationEnabled || options.isSignatureHelpDocumentationEnabled
+        isSignatureHelpDocumentationEnabled || options.isSignatureHelpDocumentationEnabled,
+      isCompletionItemResolve =
+        isCompletionItemResolve || options.isCompletionItemResolve
     )
 }

@@ -38,9 +38,6 @@ final class StatusBar(
     initializationOptions: InitializationOptions
 )(implicit ec: ExecutionContext)
     extends Cancelable {
-  private val statusBarIsOff =
-    statusBar.isOff && clientCapabilities.statusBarIsOff && initializationOptions.statusBarIsOff
-
   def trackBlockingTask[T](message: String)(thunk: => T): T = {
     val promise = Promise[Unit]()
     trackFuture(message, promise.future)
@@ -52,7 +49,7 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (statusBarIsOff)
+    if (statusBar.isOff && clientCapabilities.statusBarIsOff && initializationOptions.statusBarIsOff)
       trackBlockingTask(message)(thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
@@ -70,7 +67,7 @@ final class StatusBar(
   }
 
   def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (statusBarIsOff)
+    if (statusBar.isOff && clientCapabilities.statusBarIsOff && initializationOptions.statusBarIsOff)
       trackFuture(message, thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))

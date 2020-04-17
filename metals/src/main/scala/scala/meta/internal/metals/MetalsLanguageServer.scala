@@ -598,7 +598,7 @@ class MetalsLanguageServer(
   }
 
   private def startHttpServer(): Unit = {
-    if (config.isHttpEnabled) {
+    if (config.isHttpEnabled || initializationOptions.isHttpEnabled) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"

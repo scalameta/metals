@@ -12,6 +12,7 @@ final case class InitializationOptions(
     executeClientCommandProvider: java.lang.Boolean = false,
     doctorFormatProvider: String = "html",
     isExitOnShutdown: java.lang.Boolean = false,
+    isHttpEnabled: java.lang.Boolean = false,
     compilerOptions: CompilerInitializationOptions =
       CompilerInitializationOptions()
 ) {

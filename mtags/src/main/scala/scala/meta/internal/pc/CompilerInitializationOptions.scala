@@ -5,5 +5,6 @@ case class CompilerInitializationOptions(
     isCompletionItemDocumentationEnabled: java.lang.Boolean = true,
     isHoverDocumentationEnabled: Boolean = true,
     snippetAutoIndent: Boolean = true,
-    isSignatureHelpDocumentationEnabled: Boolean = true
+    isSignatureHelpDocumentationEnabled: Boolean = true,
+    isCompletionItemResolve: Boolean = true
 )
