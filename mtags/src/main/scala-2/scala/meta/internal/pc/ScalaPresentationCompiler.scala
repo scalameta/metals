@@ -60,7 +60,7 @@ case class ScalaPresentationCompiler(
       if (config.autoImports().isPresent()) Some(config.autoImports().get())
       else None
     autoImports match {
-      case Some(v) => SourceModificator.appendAutoImports(v.asScala)
+      case Some(v) => SourceModificator.appendAutoImports(v.asScala.toSeq)
       case None => SourceModificator.NoModification
     }
   }
@@ -235,7 +235,7 @@ case class ScalaPresentationCompiler(
       })
       Optional.ofNullable(out.orNull)
     }
-  
+
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,

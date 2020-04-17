@@ -106,7 +106,7 @@ class Compilers(
     else {
       Future {
         paths.foreach { path =>
-          findTarget(path, None).foreach {t => 
+          findTarget(path, None).foreach { t =>
             loadCompiler(t).hover(
               CompilerOffsetParams(
                 Paths.get("Main.scala").toUri(),
