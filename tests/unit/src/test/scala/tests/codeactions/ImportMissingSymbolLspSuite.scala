@@ -51,7 +51,7 @@ class ImportMissingSymbolLspSuite
   )
 
   check(
-    "multi-same-line",
+    "multi-same-line-ambiguous",
     """|package a
        |
        |object A {
@@ -78,7 +78,7 @@ class ImportMissingSymbolLspSuite
   )
 
   check(
-    "multi-across-lines",
+    "multi-across-lines-non-ambiguous",
     """|package a
        |
        |object A {
@@ -86,7 +86,8 @@ class ImportMissingSymbolLspSuite
        |  val b = ListBuffer.newBuilder[Int]>>
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Instant", "java.time")}
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Instant", "java.time")}
         |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
         |${CreateNewSymbol.title("Instant")}
         |${CreateNewSymbol.title("ListBuffer")}
@@ -94,6 +95,7 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |import java.time.Instant
+       |import scala.collection.mutable
        |
        |object A {
        |  val f = Future.successful(Instant.now)

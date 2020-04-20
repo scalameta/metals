@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.Future
-import scala.collection.mutable
+import scala.collection.mutable.Buffer
 import scala.meta.pc.CancelToken
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
@@ -21,18 +21,17 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         diagnostic: l.Diagnostic,
         name: String
     ): Future[Seq[l.CodeAction]] = {
-
       val textDocumentPositionParams = new l.TextDocumentPositionParams(
         params.getTextDocument(),
         diagnostic.getRange.getEnd()
       )
-
       compilers
         .autoImports(textDocumentPositionParams, name, token)
         .map { imports =>
           imports.asScala.map { i =>
             val uri = params.getTextDocument().getUri()
             val edit = new l.WorkspaceEdit(Map(uri -> i.edits).asJava)
+
             val codeAction = new l.CodeAction()
 
             codeAction.setTitle(ImportMissingSymbol.title(name, i.packageName))
@@ -46,22 +45,26 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
     }
 
     def importAllMissingSymbol(
-        codeActions: mutable.Buffer[l.CodeAction]
+        codeActions: Buffer[l.CodeAction]
     ): Seq[l.CodeAction] = {
-
-      if (codeActions.length > 1) {
+      pprint.log(codeActions)
+      val uniqueCodeActions =
+        codeActions.distinctBy(_.getDiagnostics()).toBuffer
+      pprint.log(uniqueCodeActions)
+      if (uniqueCodeActions.length > 1) {
         val allSymbols: l.CodeAction = new l.CodeAction()
+
         val uri = params.getTextDocument().getUri()
-        val diags = codeActions.flatMap(_.getDiagnostics().asScala)
+        val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
         val edits =
-          codeActions.flatMap(_.getEdit().getChanges().get(uri).asScala)
+          uniqueCodeActions.flatMap(_.getEdit().getChanges().get(uri).asScala)
 
         allSymbols.setTitle(ImportMissingSymbol.allSymbolsTitle)
         allSymbols.setKind(l.CodeActionKind.QuickFix)
         allSymbols.setDiagnostics(diags.asJava)
         allSymbols.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
 
-        codeActions += allSymbols
+        uniqueCodeActions += allSymbols
       }
       codeActions
     }
@@ -84,4 +87,5 @@ object ImportMissingSymbol {
 
   def allSymbolsTitle: String =
     s"Import all missing symbols that are unambiguous"
+
 }
