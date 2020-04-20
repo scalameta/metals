@@ -44,13 +44,16 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         }
     }
 
-    def importAllMissingSymbol(
+    def addImportAllMissingSymbol(
         codeActions: Buffer[l.CodeAction]
     ): Seq[l.CodeAction] = {
-      pprint.log(codeActions)
-      val uniqueCodeActions =
-        codeActions.distinctBy(_.getDiagnostics()).toBuffer
-      pprint.log(uniqueCodeActions)
+      val uniqueCodeActions = codeActions
+        .groupBy(_.getDiagnostics())
+        .values
+        .filter(_.length <= 1)
+        .flatten
+        .toBuffer
+
       if (uniqueCodeActions.length > 1) {
         val allSymbols: l.CodeAction = new l.CodeAction()
 
@@ -64,7 +67,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         allSymbols.setDiagnostics(diags.asJava)
         allSymbols.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
 
-        uniqueCodeActions += allSymbols
+        allSymbols +=: codeActions
       }
       codeActions
     }
@@ -75,7 +78,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
             if params.getRange().overlapsWith(d.getRange()) =>
           importMissingSymbol(d, name)
       })
-      .map(actions => importAllMissingSymbol(actions.flatten))
+      .map(actions => addImportAllMissingSymbol(actions.flatten))
   }
 
 }
@@ -87,5 +90,4 @@ object ImportMissingSymbol {
 
   def allSymbolsTitle: String =
     s"Import all missing symbols that are unambiguous"
-
 }

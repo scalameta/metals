@@ -81,6 +81,8 @@ class ImportMissingSymbolLspSuite
     "multi-across-lines-non-ambiguous",
     """|package a
        |
+       |import scala.concurrent.Future
+       |
        |object A {
        |  val f = Future.successful(<<Instant.now)
        |  val b = ListBuffer.newBuilder[Int]>>
@@ -94,12 +96,13 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     """|package a
        |
+       |import scala.concurrent.Future
        |import java.time.Instant
        |import scala.collection.mutable
        |
        |object A {
        |  val f = Future.successful(Instant.now)
-       |  val b = ListBuffer.newBuilder[Int]
+       |  val b = mutable.ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
     expectNoDiagnostics = false
