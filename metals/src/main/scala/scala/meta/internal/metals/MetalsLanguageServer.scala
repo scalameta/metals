@@ -115,13 +115,14 @@ class MetalsLanguageServer(
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer: Option[BuildServerConnection] =
     Option.empty[BuildServerConnection]
-  private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
+  private val buildTargetClasses =
+    new BuildTargetClasses(() => buildServer, buildTargets)
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
