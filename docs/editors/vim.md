@@ -17,8 +17,7 @@ which will provide the most complete implementation of LSP and Metals-specific h
 
 The coc.nvim plugin requires either **Vim >= 8.1** or **Neovim >= 0.3.1**. Make
 sure you have the correct version installed. While it works with both Vim and Neovim,
-we recommend using Neovim since it provides a smoother experience with some of the features such
-as code actions and general performance.
+we recommend using Neovim since it provides a smoother experience with some of the features.
 
 ```sh
 # If using Vim
@@ -44,13 +43,9 @@ curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 
 ## Installing coc.nvim
 
-Once the requirements are satisfied, we can now proceed to install the following
-plugins:
-
-- [`neoclide/coc.nvim`](https://github.com/neoclide/coc.nvim/): Language Server
-  Protocol client to communicate with the Metals language server.
-- [`derekwyatt/vim-scala`](https://github.com/derekwyatt/vim-scala): for syntax
-  highlighting Scala and sbt source files.
+Once the requirements are satisfied, we can now proceed to install [`neoclide/coc.nvim`]
+(https://github.com/neoclide/coc.nvim/), which provides Language Server Protocol
+support to Vim/Nvim  to communicate with the Metals language server.
 
 Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used (another
 plugin manager like vundle works too), update your `~/.vimrc` to include the
@@ -60,7 +55,6 @@ following settings.
 " ~/.vimrc
 
 " Configuration for vim-plug
-Plug 'derekwyatt/vim-scala'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Configuration for vim-scala
@@ -89,14 +83,12 @@ Here's a recommended configuration:
 " ~/.vimrc
 " Configuration for coc.nvim
 
+" If hidden is not set, TextEdit might fail.
 set hidden
 
 " Some servers have issues with backup files
 set nobackup
 set nowritebackup
-
-" Better display for messages
-set cmdheight=2
 
 " You will have a bad experience with diagnostic messages with the default 4000.
 set updatetime=300
@@ -128,9 +120,9 @@ inoremap <silent><expr> <c-space> coc#refresh()
 " Coc only does snippet and additional edit on confirm.
 inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
 
-" Use `[c` and `]c` to navigate diagnostics
-nmap <silent> [c <Plug>(coc-diagnostic-prev)
-nmap <silent> ]c <Plug>(coc-diagnostic-next)
+" Use `[g` and `]g` to navigate diagnostics
+nmap <silent> [g <Plug>(coc-diagnostic-prev)
+nmap <silent> ]g <Plug>(coc-diagnostic-next)
 
 " Remap keys for gotos
 nmap <silent> gd <Plug>(coc-definition)
@@ -185,8 +177,9 @@ command! -nargs=0 Format :call CocAction('format')
 " Use `:Fold` to fold current buffer
 command! -nargs=? Fold :call     CocAction('fold', <f-args>)
 
-" Add status line support, for integration with other plugin, checkout `:h coc-status`
-set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}
+" Trigger for code actions
+" Make sure `"codeLens.enable": true` is set in your coc config
+nnoremap <leader>cl :<C-u>call CocActionAsync('codeLensAction')<CR>
 
 " Show all diagnostics
 nnoremap <silent> <space>a  :<C-u>CocList diagnostics<cr>
@@ -222,22 +215,22 @@ nnoremap <silent> <space>tf :<C-u>CocCommand metals.revealInTreeView metalsBuild
 
 ### Installing coc-metals
 
-Once you have `coc.nvim` installed, you can then install Metals a few different ways. The easiest is
-by running:
+Once you have `coc.nvim` installed, you can then install Metals a few different
+ways. The easiest is by running:
 
 ```vim
 :CocInstall coc-metals
 ```
 
-If you'd like to use the latest changes on master, you can also use the url of the repo in the
-command like so:
+If you'd like to use the latest changes on master, you can also just build from
+source by using `:CocInstall` with the repository url.
 
 ```vim
 :CocInstall https://github.com/scalameta/coc-metals
 ```
-If you'd like to use the latest changes on master, but would prefer managing the plugin using a plugin
-manager to download the extension, make sure you run the below snippet to uninstall the old version
-first.
+If you'd like to use the latest changes on master, but would prefer managing the
+plugin using a plugin manager to download the extension, make sure you run the
+below snippet to uninstall the old version first.
 
 ```vim
 :CocUninstall coc-metals
@@ -249,9 +242,10 @@ for example, enter the following into where you manage your plugins:
 ```vim
 Plug 'scalameta/coc-metals', {'do': 'yarn install --frozen-lockfile'}
 ```
-Then, issue a `:PlugInstall` to install the extension, and regularly a `:PlugUpdate` to update it
-and pull in the latest changes. If you're relying on `coc.nvim` to install the extension, it will
-automatically pull in the latest versions when published.
+Then, issue a `:PlugInstall` to install the extension, and regularly a
+`:PlugUpdate` to update it and pull in the latest changes. If you're relying on
+`coc.nvim` to install the extension, it will automatically pull in the latest
+versions when published.
 
 ```scala mdoc:editor:vim
 Update the `metals.sbtScript` setting to use a custom `sbt` script instead of the
@@ -262,11 +256,16 @@ variables.
 ```
 
 ## Configure Java version
-The `coc-metals` extension uses by default the `JAVA_HOME` environment variable (via [`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate the `java` executable.
+The `coc-metals` extension uses by default the `JAVA_HOME` environment variable
+(via [`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate
+the `java` executable.
 
 ![No Java Home](https://i.imgur.com/clDfPMk.png)
 
-If no `JAVA_HOME` is detected you can then Open Settings by following the instructions or do it at a later time by using `:CocConfig` or `:CocConfigLocal` which will open up your configuration where you can manually enter your JAVA_HOME location.
+If no `JAVA_HOME` is detected you can then Open Settings by following the
+instructions or do it at a later time by using `:CocConfig` or `:CocConfigLocal`
+which will open up your configuration where you can manually enter your
+JAVA_HOME location.
 
 ![Enter Java Home](https://i.imgur.com/wK07Vju.png)
 
@@ -302,11 +301,14 @@ open buffer.
 
 ## Worksheets
 
-Metals allows users to create a `*.worksheet.sc` file and see evaluations right in the file. In Vim,
-this is done using comments that are inserted which will allow you to hover on them to expand. In
-Neovim, this is done using Neovim's [virtual text](https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text())
-to implement Metal's [Decoration Protocol](https://scalameta.org/metals/docs/editors/decoration-protocol.html).
-If using Neovim, make sure to have the following line in included in your `.vimrc` along with your `coc.nvim` mappings.
+Metals allows users to create a `*.worksheet.sc` file and see evaluations right
+in the file. In Vim, this is done using comments that are inserted which will
+allow you to hover on them to expand. In Neovim, this is done using Neovim's
+[virtual text](https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text())
+to implement Metal's [Decoration
+Protocol](https://scalameta.org/metals/docs/editors/decoration-protocol.html).
+If using Neovim, make sure to have the following line in included in your
+`.vimrc` along with your `coc.nvim` mappings.
 
 ```vim
 nmap <Leader>ws <Plug>(coc-metals-expand-decoration)
@@ -358,6 +360,27 @@ members, and methods are all color coded.
 `metals.treeviews.executeCommandAndOpenSplit`   | Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default `s`)
 `metals.treeviews.executeCommandAndOpenVSplit`  | Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default `v`)
 
+## Goto Super Method
+
+Depending on whether you're using Vim or Neovim, you'll have a slightly
+different behavior with this feature. If you're using Neovim, you'll want to
+ensure that you have `codeLens.enable` set to `true` in your Coc Config since
+you'll be able to quickly see via code lenses which members are overridden.
+Then, you'll be able to simply trigger a code lens action on the line of the
+member that is overridden. The default mapping for this is `<leader> cl`.
+
+If you're using Vim, you'll still have access to this functionality, but you'll
+have to infer which members are overridden and utilize the
+`metals.go-to-super-method` command.
+
+There is also a `metals.super-method-hierarchy` command which will show you the
+entire hierarchy of the overridden method.
+
+![Goto super method](https://i.imgur.com/TkjolXq.png)
+
+If you don't utilize this feature you can disable it by setting
+`metals.superMethodLensesEnabled` to `false`.
+
 ## Run doctor
 
 To troubleshoot problems with your build workspace, open your coc commands by either
@@ -376,11 +399,15 @@ having multiple windows, you can use `<C-w> + w` to jump into it.
   - `metals.restartServer`
   - `metals.build-import`
   - `metals.build-connect`
+  - `metals.build-restart`
   - `metals.sources-scan`
   - `metals.compile-cascade`
   - `metals.compile-cancel`
   - `metals.doctor-run`
   - `metals.logs-toggle`
+  - `metals.new-scala-file`
+  - `metals.go-to-super-method`
+  - `metals.super-method-hierarchy`
 
 ## Show document symbols
 
@@ -391,8 +418,11 @@ default mapping `<space> o`.
 
 ## Available Configuration Options
 
-The following configuration options are currently available. The easiest way to set these configurations is to enter `:CocConfig` or `:CocLocalConfig` to set your global or local configuration settings respectively.
-If you'd like to get autocompletion help for the configuration values you can install [coc-json](https://github.com/neoclide/coc-json).
+The following configuration options are currently available. The easiest way to
+set these configurations is to enter `:CocConfig` or `:CocLocalConfig` to set
+your global or local configuration settings respectively.
+If you'd like to get autocompletion help for the configuration values you can
+install [coc-json](https://github.com/neoclide/coc-json).
 
 ```scala mdoc:user-config:lsp-config-coc
 ```
