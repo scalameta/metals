@@ -59,10 +59,9 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
         val uri = params.getTextDocument().getUri()
         val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
-        val edits =
-          uniqueCodeActions
-            .flatMap(_.getEdit().getChanges().get(uri).asScala)
-            .distinct
+        val edits = uniqueCodeActions
+          .flatMap(_.getEdit().getChanges().get(uri).asScala)
+          .distinct
 
         allSymbols.setTitle(ImportMissingSymbol.allSymbolsTitle)
         allSymbols.setKind(l.CodeActionKind.QuickFix)
