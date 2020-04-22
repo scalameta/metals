@@ -1,7 +1,6 @@
 package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.Future
-import scala.collection.mutable.Buffer
 import scala.meta.pc.CancelToken
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
@@ -44,17 +43,17 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         }
     }
 
-    def addImportAllMissingSymbol(
-        codeActions: Buffer[l.CodeAction]
+    def importMissingSymbols(
+        codeActions: Seq[l.CodeAction]
     ): Seq[l.CodeAction] = {
       val uniqueCodeActions = codeActions
         .groupBy(_.getDiagnostics())
         .values
-        .filter(_.length <= 1)
+        .filter(_.length == 1)
         .flatten
-        .toBuffer
+        .toSeq
 
-      if (uniqueCodeActions.length > 1) {
+      val allCodeActions = if (uniqueCodeActions.length > 1) {
         val allSymbols: l.CodeAction = new l.CodeAction()
 
         val uri = params.getTextDocument().getUri()
@@ -68,9 +67,9 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         allSymbols.setDiagnostics(diags.asJava)
         allSymbols.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
 
-        allSymbols +=: codeActions
-      }
-      codeActions
+        allSymbols +: codeActions
+      } else { codeActions }
+      allCodeActions
     }
 
     Future
@@ -79,7 +78,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
             if params.getRange().overlapsWith(d.getRange()) =>
           importMissingSymbol(d, name)
       })
-      .map(actions => addImportAllMissingSymbol(actions.flatten))
+      .map(actions => importMissingSymbols(actions.flatten.toSeq))
   }
 
 }

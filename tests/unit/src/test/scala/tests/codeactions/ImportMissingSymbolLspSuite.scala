@@ -173,7 +173,7 @@ class ImportMissingSymbolLspSuite
        |object A {
        |  val f = Future.successful(Instant.now)
        |  val b = mutable.ListBuffer.newBuilder[Int]
-       |  val t = Future.successful(ListBuffer.empty)
+       |  val t = Future.successful(mutable.ListBuffer.empty)
        |}
        |""".stripMargin,
     expectNoDiagnostics = false
