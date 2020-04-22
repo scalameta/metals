@@ -1,8 +1,10 @@
 package scala.meta.internal.zipkin
 import java.nio.file.Files
 import java.util.Properties
-import scala.meta.io.AbsolutePath
+
 import scala.util.Try
+
+import scala.meta.io.AbsolutePath
 
 case class Property private (metalsProperty: String) {
 

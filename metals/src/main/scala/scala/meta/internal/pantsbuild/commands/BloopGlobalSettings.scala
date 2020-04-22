@@ -1,11 +1,11 @@
 package scala.meta.internal.pantsbuild.commands
 
 import java.nio.file.Path
-import scala.meta.internal.zipkin.Property
 import java.nio.file.Paths
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.zipkin.Property
 import scala.meta.internal.zipkin.ZipkinProperties
 import scala.meta.io.AbsolutePath
 
