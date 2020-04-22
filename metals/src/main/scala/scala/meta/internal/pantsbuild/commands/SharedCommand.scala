@@ -74,7 +74,7 @@ object SharedCommand {
           )
           symlinkProjectViewRoots(export.project)
           if (export.export.canBloopExit) {
-            restartBloopIfNewSettings()
+            restartBloopIfNewSettings(AbsolutePath(workspace))
           }
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
@@ -89,9 +89,9 @@ object SharedCommand {
     }
   }
 
-  def restartBloopIfNewSettings(): Unit = {
+  def restartBloopIfNewSettings(workspace: AbsolutePath): Unit = {
     val isUpdatedBloopSettings =
-      BloopGlobalSettings.update(JdkSources.defaultJavaHomePath)
+      BloopGlobalSettings.update(workspace, JdkSources.defaultJavaHomePath)
     if (isUpdatedBloopSettings) {
       restartBloopServer()
     } else {

@@ -1,15 +1,20 @@
 package scala.meta.internal.zipkin
+import java.nio.file.Files
 import java.util.Properties
+import scala.meta.io.AbsolutePath
+import scala.util.Try
 
-case class Property(metalsProperty: String) {
+case class Property private (metalsProperty: String) {
 
   val bloopProperty: String = metalsProperty.stripPrefix("metals.")
 
-  def value: Option[String] =
-    Property.definitions.map(_.getProperty(metalsProperty))
+  def value(properties: Option[Properties]): Option[String] =
+    properties.map(_.getProperty(metalsProperty))
 
-  def updateOptions(options: List[String]): List[String] = {
-    value match {
+  def updateOptions(
+      properties: Option[Properties]
+  )(options: List[String]): List[String] = {
+    value(properties) match {
       case Some(newValue) =>
         val oldValue = readValue(options)
         if (!oldValue.contains(newValue)) {
@@ -34,13 +39,15 @@ case class Property(metalsProperty: String) {
 }
 object Property {
 
-  val definitions: Option[Properties] = {
-    Option(
-      getClass.getResourceAsStream("/fastpass.properties")
+  def fromFile(workspace: AbsolutePath): Option[Properties] = {
+    Try(
+      Files.newInputStream(
+        workspace.resolve("fastpass").resolve("fastpass.properties").toNIO
+      )
     ).map { in =>
       val prop = new Properties
       prop.load(in)
       prop
-    }
+    }.toOption
   }
 }
