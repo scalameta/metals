@@ -78,8 +78,7 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="installing-vim"></a><a href="#installing-vim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing Vim</h2>
 <p>The coc.nvim plugin requires either <strong>Vim &gt;= 8.1</strong> or <strong>Neovim &gt;= 0.3.1</strong>. Make
 sure you have the correct version installed. While it works with both Vim and Neovim,
-we recommend using Neovim since it provides a smoother experience with some of the features such
-as code actions and general performance.</p>
+we recommend using Neovim since it provides a smoother experience with some of the features.</p>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># If using Vim</span>
 vim --version | head
 VIM - Vi IMproved 8.2
@@ -97,21 +96,15 @@ extensions but you could opt-out of it and use <code>vim-plug</code> instead.</p
 curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="installing-cocnvim"></a><a href="#installing-cocnvim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing coc.nvim</h2>
-<p>Once the requirements are satisfied, we can now proceed to install the following
-plugins:</p>
-<ul>
-<li><a href="https://github.com/neoclide/coc.nvim/"><code>neoclide/coc.nvim</code></a>: Language Server
-Protocol client to communicate with the Metals language server.</li>
-<li><a href="https://github.com/derekwyatt/vim-scala"><code>derekwyatt/vim-scala</code></a>: for syntax
-highlighting Scala and sbt source files.</li>
-</ul>
+<p>Once the requirements are satisfied, we can now proceed to install [<code>neoclide/coc.nvim</code>]
+(<a href="https://github.com/neoclide/coc.nvim/">https://github.com/neoclide/coc.nvim/</a>), which provides Language Server Protocol
+support to Vim/Nvim  to communicate with the Metals language server.</p>
 <p>Assuming <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a> is used (another
 plugin manager like vundle works too), update your <code>~/.vimrc</code> to include the
 following settings.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
 
 <span class="hljs-comment">" Configuration for vim-plug</span>
-Plug <span class="hljs-string">'derekwyatt/vim-scala'</span>
 Plug <span class="hljs-string">'neoclide/coc.nvim'</span>, {<span class="hljs-string">'branch'</span>: <span class="hljs-string">'release'</span>}
 
 <span class="hljs-comment">" Configuration for vim-scala</span>
@@ -131,14 +124,12 @@ configure it yourself.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
 <span class="hljs-comment">" Configuration for coc.nvim</span>
 
+<span class="hljs-comment">" If hidden is not set, TextEdit might fail.</span>
 <span class="hljs-keyword">set</span> hidden
 
 <span class="hljs-comment">" Some servers have issues with backup files</span>
 <span class="hljs-keyword">set</span> nobackup
 <span class="hljs-keyword">set</span> nowritebackup
-
-<span class="hljs-comment">" Better display for messages</span>
-<span class="hljs-keyword">set</span> cmdheight=<span class="hljs-number">2</span>
 
 <span class="hljs-comment">" You will have a bad experience with diagnostic messages with the default 4000.</span>
 <span class="hljs-keyword">set</span> updatetime=<span class="hljs-number">300</span>
@@ -170,9 +161,9 @@ configure it yourself.</p>
 <span class="hljs-comment">" Coc only does snippet and additional edit on confirm.</span>
 <span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;cr&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-y&gt;"</span> : <span class="hljs-string">"\&lt;C-g&gt;u\&lt;CR&gt;"</span>
 
-<span class="hljs-comment">" Use `[c` and `]c` to navigate diagnostics</span>
-<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> [<span class="hljs-keyword">c</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">prev</span>)
-<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> ]<span class="hljs-keyword">c</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">next</span>)
+<span class="hljs-comment">" Use `[g` and `]g` to navigate diagnostics</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> [g <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">prev</span>)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> ]g <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">next</span>)
 
 <span class="hljs-comment">" Remap keys for gotos</span>
 <span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> gd <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-definition)
@@ -227,8 +218,9 @@ command! -nargs=<span class="hljs-number">0</span> Format :<span class="hljs-key
 <span class="hljs-comment">" Use `:Fold` to fold current buffer</span>
 command! -nargs=? Fold :<span class="hljs-keyword">call</span>     CocAction(<span class="hljs-string">'fold'</span>, <span class="hljs-symbol">&lt;f-args&gt;</span>)
 
-<span class="hljs-comment">" Add status line support, for integration with other plugin, checkout `:h coc-status`</span>
-<span class="hljs-keyword">set</span> statusline^=%{coc#status()}%{<span class="hljs-built_in">get</span>(<span class="hljs-variable">b:</span>,<span class="hljs-string">'coc_current_function'</span>,<span class="hljs-string">''</span>)}
+<span class="hljs-comment">" Trigger for code actions</span>
+<span class="hljs-string">" Make sure `"</span>codeLens.enable<span class="hljs-comment">": true` is set in your coc config</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cl</span> :<span class="hljs-symbol">&lt;C-u&gt;</span><span class="hljs-keyword">call</span> CocActionAsync(<span class="hljs-string">'codeLensAction'</span>)<span class="hljs-symbol">&lt;CR&gt;</span>
 
 <span class="hljs-comment">" Show all diagnostics</span>
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">a</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList diagnostics<span class="hljs-symbol">&lt;cr&gt;</span>
@@ -262,26 +254,27 @@ command! -nargs=? Fold :<span class="hljs-keyword">call</span>     CocAction(<sp
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">tf</span> :<span class="hljs-symbol">&lt;C-u&gt;</span>CocCommand metals.revealInTreeView metalsBuild<span class="hljs-symbol">&lt;CR&gt;</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="installing-coc-metals"></a><a href="#installing-coc-metals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing coc-metals</h3>
-<p>Once you have <code>coc.nvim</code> installed, you can then install Metals a few different ways. The easiest is
-by running:</p>
+<p>Once you have <code>coc.nvim</code> installed, you can then install Metals a few different
+ways. The easiest is by running:</p>
 <pre><code class="hljs css language-vim">:CocInstall coc-metals
 </code></pre>
-<p>If you'd like to use the latest changes on master, you can also use the url of the repo in the
-command like so:</p>
+<p>If you'd like to use the latest changes on master, you can also just build from
+source by using <code>:CocInstall</code> with the repository url.</p>
 <pre><code class="hljs css language-vim">:CocInstall http<span class="hljs-variable">s:</span>//github.<span class="hljs-keyword">com</span>/scalameta/coc-metals
 </code></pre>
-<p>If you'd like to use the latest changes on master, but would prefer managing the plugin using a plugin
-manager to download the extension, make sure you run the below snippet to uninstall the old version
-first.</p>
+<p>If you'd like to use the latest changes on master, but would prefer managing the
+plugin using a plugin manager to download the extension, make sure you run the
+below snippet to uninstall the old version first.</p>
 <pre><code class="hljs css language-vim">:CocUninstall coc-metals
 </code></pre>
 <p>Then, if you are using <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a>
 for example, enter the following into where you manage your plugins:</p>
 <pre><code class="hljs css language-vim">Plug <span class="hljs-string">'scalameta/coc-metals'</span>, {<span class="hljs-string">'do'</span>: <span class="hljs-string">'yarn install --frozen-lockfile'</span>}
 </code></pre>
-<p>Then, issue a <code>:PlugInstall</code> to install the extension, and regularly a <code>:PlugUpdate</code> to update it
-and pull in the latest changes. If you're relying on <code>coc.nvim</code> to install the extension, it will
-automatically pull in the latest versions when published.</p>
+<p>Then, issue a <code>:PlugInstall</code> to install the extension, and regularly a
+<code>:PlugUpdate</code> to update it and pull in the latest changes. If you're relying on
+<code>coc.nvim</code> to install the extension, it will automatically pull in the latest
+versions when published.</p>
 <h2><a class="anchor" aria-hidden="true" id="importing-a-build"></a><a href="#importing-a-build" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Importing a build</h2>
 <p>The first time you open Metals in a new workspace it prompts you to import the build.
 Click &quot;Import build&quot; to start the installation step.</p>
@@ -318,9 +311,14 @@ to learn how to speed up build import.</p>
 re-import the build.</p>
 <p><img src="https://i.imgur.com/iocTVb6.png" alt="Import sbt changes"></p>
 <h2><a class="anchor" aria-hidden="true" id="configure-java-version"></a><a href="#configure-java-version" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configure Java version</h2>
-<p>The <code>coc-metals</code> extension uses by default the <code>JAVA_HOME</code> environment variable (via <a href="https://www.npmjs.com/package/find-java-home"><code>find-java-home</code></a>) to locate the <code>java</code> executable.</p>
+<p>The <code>coc-metals</code> extension uses by default the <code>JAVA_HOME</code> environment variable
+(via <a href="https://www.npmjs.com/package/find-java-home"><code>find-java-home</code></a>) to locate
+the <code>java</code> executable.</p>
 <p><img src="https://i.imgur.com/clDfPMk.png" alt="No Java Home"></p>
-<p>If no <code>JAVA_HOME</code> is detected you can then Open Settings by following the instructions or do it at a later time by using <code>:CocConfig</code> or <code>:CocConfigLocal</code> which will open up your configuration where you can manually enter your JAVA_HOME location.</p>
+<p>If no <code>JAVA_HOME</code> is detected you can then Open Settings by following the
+instructions or do it at a later time by using <code>:CocConfig</code> or <code>:CocConfigLocal</code>
+which will open up your configuration where you can manually enter your
+JAVA_HOME location.</p>
 <p><img src="https://i.imgur.com/wK07Vju.png" alt="Enter Java Home"></p>
 <h2><a class="anchor" aria-hidden="true" id="using-latest-metals-snapshot"></a><a href="#using-latest-metals-snapshot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using latest Metals SNAPSHOT</h2>
 <p>Update the &quot;Server Version&quot; setting to try out the latest pending Metals
@@ -336,8 +334,8 @@ features.</p>
           <td>10 Apr 2020 14:52</td>
         </tr>
         <tr>
-          <td>0.8.4+64-be7022b8-SNAPSHOT</td>
-          <td>22 Apr 2020 09:53</td>
+          <td>0.8.4+66-55426d25-SNAPSHOT</td>
+          <td>22 Apr 2020 12:17</td>
         </tr>
       </tbody>
     </table>
@@ -354,11 +352,14 @@ command.</p>
 open buffer.</p>
 <p><img src="https://i.imgur.com/cer22HW.png" alt="Diagnostics"></p>
 <h2><a class="anchor" aria-hidden="true" id="worksheets"></a><a href="#worksheets" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Worksheets</h2>
-<p>Metals allows users to create a <code>*.worksheet.sc</code> file and see evaluations right in the file. In Vim,
-this is done using comments that are inserted which will allow you to hover on them to expand. In
-Neovim, this is done using Neovim's <a href="https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text()">virtual text</a>
-to implement Metal's <a href="https://scalameta.org/metals/docs/editors/decoration-protocol.html">Decoration Protocol</a>.
-If using Neovim, make sure to have the following line in included in your <code>.vimrc</code> along with your <code>coc.nvim</code> mappings.</p>
+<p>Metals allows users to create a <code>*.worksheet.sc</code> file and see evaluations right
+in the file. In Vim, this is done using comments that are inserted which will
+allow you to hover on them to expand. In Neovim, this is done using Neovim's
+<a href="https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text()">virtual text</a>
+to implement Metal's <a href="https://scalameta.org/metals/docs/editors/decoration-protocol.html">Decoration
+Protocol</a>.
+If using Neovim, make sure to have the following line in included in your
+<code>.vimrc</code> along with your <code>coc.nvim</code> mappings.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;Leader&gt;</span><span class="hljs-keyword">ws</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-metals-<span class="hljs-built_in">expand</span>-decoration)
 </code></pre>
 <p>Then, when on the line that you'd like to expand the decoration to get the hover information, execute a
@@ -403,6 +404,21 @@ members, and methods are all color coded.</p>
 <tr><td><code>metals.treeviews.executeCommandAndOpenVSplit</code></td><td>Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default <code>v</code>)</td></tr>
 </tbody>
 </table>
+<h2><a class="anchor" aria-hidden="true" id="goto-super-method"></a><a href="#goto-super-method" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goto Super Method</h2>
+<p>Depending on whether you're using Vim or Neovim, you'll have a slightly
+different behavior with this feature. If you're using Neovim, you'll want to
+ensure that you have <code>codeLens.enable</code> set to <code>true</code> in your Coc Config since
+you'll be able to quickly see via code lenses which members are overridden.
+Then, you'll be able to simply trigger a code lens action on the line of the
+member that is overridden. The default mapping for this is <code>&lt;leader&gt; cl</code>.</p>
+<p>If you're using Vim, you'll still have access to this functionality, but you'll
+have to infer which members are overridden and utilize the
+<code>metals.go-to-super-method</code> command.</p>
+<p>There is also a <code>metals.super-method-hierarchy</code> command which will show you the
+entire hierarchy of the overridden method.</p>
+<p><img src="https://i.imgur.com/TkjolXq.png" alt="Goto super method"></p>
+<p>If you don't utilize this feature you can disable it by setting
+<code>metals.superMethodLensesEnabled</code> to <code>false</code>.</p>
 <h2><a class="anchor" aria-hidden="true" id="run-doctor"></a><a href="#run-doctor" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Run doctor</h2>
 <p>To troubleshoot problems with your build workspace, open your coc commands by either
 using <code>:CocCommand</code> or the recommend mapping <code>&lt;space&gt; c</code>. This will open your command
@@ -416,19 +432,26 @@ having multiple windows, you can use <code>&lt;C-w&gt; + w</code> to jump into i
 <li><code>metals.restartServer</code></li>
 <li><code>metals.build-import</code></li>
 <li><code>metals.build-connect</code></li>
+<li><code>metals.build-restart</code></li>
 <li><code>metals.sources-scan</code></li>
 <li><code>metals.compile-cascade</code></li>
 <li><code>metals.compile-cancel</code></li>
 <li><code>metals.doctor-run</code></li>
 <li><code>metals.logs-toggle</code></li>
+<li><code>metals.new-scala-file</code></li>
+<li><code>metals.go-to-super-method</code></li>
+<li><code>metals.super-method-hierarchy</code></li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="show-document-symbols"></a><a href="#show-document-symbols" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show document symbols</h2>
 <p>Run <code>:CocList outline</code> to show a symbol outline for the current file or use the
 default mapping <code>&lt;space&gt; o</code>.</p>
 <p><img src="https://i.imgur.com/gEhAXV4.png" alt="Document Symbols"></p>
 <h2><a class="anchor" aria-hidden="true" id="available-configuration-options"></a><a href="#available-configuration-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Available Configuration Options</h2>
-<p>The following configuration options are currently available. The easiest way to set these configurations is to enter <code>:CocConfig</code> or <code>:CocLocalConfig</code> to set your global or local configuration settings respectively.
-If you'd like to get autocompletion help for the configuration values you can install <a href="https://github.com/neoclide/coc-json">coc-json</a>.</p>
+<p>The following configuration options are currently available. The easiest way to
+set these configurations is to enter <code>:CocConfig</code> or <code>:CocLocalConfig</code> to set
+your global or local configuration settings respectively.
+If you'd like to get autocompletion help for the configuration values you can
+install <a href="https://github.com/neoclide/coc-json">coc-json</a>.</p>
 <h3><a class="anchor" aria-hidden="true" id="java-home-directory"></a><a href="#java-home-directory" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Java Home directory</h3>
 <p>The Java Home directory used for indexing JDK sources and locating the <code>java</code> binary.</p>
 <p><strong>Default</strong>: <code>JAVA_HOME</code> environment variable with fallback to <code>user.home</code> system property.</p>
@@ -624,8 +647,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.8.4+64-be7022b8-SNAPSHOT</td>
-          <td>22 Apr 2020 09:53</td>
+          <td>0.8.4+66-55426d25-SNAPSHOT</td>
+          <td>22 Apr 2020 12:17</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -647,7 +670,7 @@ chmod +x coursier
 if you are behind an HTTP proxy.</p>
 <p>The <code>-Dmetals.client=vim-lsc</code> flag is important since it configures Metals for
 usage with the <code>vim-lsc</code> client.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/atom.html"><span class="arrow-prev">← </span><span>Atom</span></a><a class="docs-next button" href="/metals/docs/editors/sublime.html"><span>Sublime Text</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-vim">Installing Vim</a></li><li><a href="#installing-yarn">Installing yarn</a></li><li><a href="#installing-cocnvim">Installing coc.nvim</a><ul class="toc-headings"><li><a href="#recommended-cocnvim-mappings">Recommended coc.nvim mappings</a></li><li><a href="#installing-coc-metals">Installing coc-metals</a></li></ul></li><li><a href="#importing-a-build">Importing a build</a><ul class="toc-headings"><li><a href="#custom-sbt-launcher">Custom sbt launcher</a></li><li><a href="#speeding-up-import">Speeding up import</a></li><li><a href="#importing-changes">Importing changes</a></li></ul></li><li><a href="#configure-java-version">Configure Java version</a></li><li><a href="#using-latest-metals-snapshot">Using latest Metals SNAPSHOT</a></li><li><a href="#list-all-workspace-compile-errors">List all workspace compile errors</a></li><li><a href="#worksheets">Worksheets</a></li><li><a href="#tree-view-protocol">Tree View Protocol</a><ul class="toc-headings"><li><a href="#tree-view-protocol-configuration-options">Tree View Protocol configuration options</a></li></ul></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#other-available-command">Other Available Command</a></li><li><a href="#show-document-symbols">Show document symbols</a></li><li><a href="#available-configuration-options">Available Configuration Options</a><ul class="toc-headings"><li><a href="#java-home-directory">Java Home directory</a></li><li><a href="#sbt-script">sbt script</a></li><li><a href="#gradle-script">gradle script</a></li><li><a href="#maven-script">maven script</a></li><li><a href="#mill-script">mill script</a></li><li><a href="#scalafmt-config-path">Scalafmt config path</a></li><li><a href="#pants-targets">Pants targets</a></li><li><a href="#dont-generate-bloop-plugin-file-for-sbt">Don't generate Bloop plugin file for sbt</a></li><li><a href="#version-of-bloop">Version of Bloop</a></li><li><a href="#should-display-lenses-with-links-to-super-methods">Should display lenses with links to super methods</a></li><li><a href="#remote-language-server">Remote language server</a></li></ul></li><li><a href="#enable-on-type-formatting-for-multiline-string-formatting">Enable on type formatting for multiline string formatting</a></li><li><a href="#close-buffer-without-exiting">Close buffer without exiting</a></li><li><a href="#shut-down-the-language-server">Shut down the language server</a></li><li><a href="#statusline-integration">Statusline integration</a></li><li><a href="#formatting-on-save">Formatting on save</a></li><li><a href="#gitignore-projectmetalssbt-metals-and-bloop">Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></a></li><li><a href="#using-an-alternative-lsp-client">Using an alternative LSP Client</a><ul class="toc-headings"><li><a href="#generating-metals-binary">Generating metals binary</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/atom.html"><span class="arrow-prev">← </span><span>Atom</span></a><a class="docs-next button" href="/metals/docs/editors/sublime.html"><span>Sublime Text</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-vim">Installing Vim</a></li><li><a href="#installing-yarn">Installing yarn</a></li><li><a href="#installing-cocnvim">Installing coc.nvim</a><ul class="toc-headings"><li><a href="#recommended-cocnvim-mappings">Recommended coc.nvim mappings</a></li><li><a href="#installing-coc-metals">Installing coc-metals</a></li></ul></li><li><a href="#importing-a-build">Importing a build</a><ul class="toc-headings"><li><a href="#custom-sbt-launcher">Custom sbt launcher</a></li><li><a href="#speeding-up-import">Speeding up import</a></li><li><a href="#importing-changes">Importing changes</a></li></ul></li><li><a href="#configure-java-version">Configure Java version</a></li><li><a href="#using-latest-metals-snapshot">Using latest Metals SNAPSHOT</a></li><li><a href="#list-all-workspace-compile-errors">List all workspace compile errors</a></li><li><a href="#worksheets">Worksheets</a></li><li><a href="#tree-view-protocol">Tree View Protocol</a><ul class="toc-headings"><li><a href="#tree-view-protocol-configuration-options">Tree View Protocol configuration options</a></li></ul></li><li><a href="#goto-super-method">Goto Super Method</a></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#other-available-command">Other Available Command</a></li><li><a href="#show-document-symbols">Show document symbols</a></li><li><a href="#available-configuration-options">Available Configuration Options</a><ul class="toc-headings"><li><a href="#java-home-directory">Java Home directory</a></li><li><a href="#sbt-script">sbt script</a></li><li><a href="#gradle-script">gradle script</a></li><li><a href="#maven-script">maven script</a></li><li><a href="#mill-script">mill script</a></li><li><a href="#scalafmt-config-path">Scalafmt config path</a></li><li><a href="#pants-targets">Pants targets</a></li><li><a href="#dont-generate-bloop-plugin-file-for-sbt">Don't generate Bloop plugin file for sbt</a></li><li><a href="#version-of-bloop">Version of Bloop</a></li><li><a href="#should-display-lenses-with-links-to-super-methods">Should display lenses with links to super methods</a></li><li><a href="#remote-language-server">Remote language server</a></li></ul></li><li><a href="#enable-on-type-formatting-for-multiline-string-formatting">Enable on type formatting for multiline string formatting</a></li><li><a href="#close-buffer-without-exiting">Close buffer without exiting</a></li><li><a href="#shut-down-the-language-server">Shut down the language server</a></li><li><a href="#statusline-integration">Statusline integration</a></li><li><a href="#formatting-on-save">Formatting on save</a></li><li><a href="#gitignore-projectmetalssbt-metals-and-bloop">Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></a></li><li><a href="#using-an-alternative-lsp-client">Using an alternative LSP Client</a><ul class="toc-headings"><li><a href="#generating-metals-binary">Generating metals binary</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
