@@ -67,7 +67,9 @@ final class Trees {
     Option(PathIO.extension(Paths.get(fileUri))).collect {
       case "scala" => dialects.Scala
       case "sbt" => dialects.Sbt
-      case "sc" => dialects.Sbt
+      case "sc" =>
+        dialects.Scala213
+          .copy(allowToplevelTerms = true, toplevelSeparator = "")
     }
   }
 }
