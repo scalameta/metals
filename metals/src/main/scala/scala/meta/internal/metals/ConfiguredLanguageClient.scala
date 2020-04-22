@@ -40,7 +40,11 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (config.statusBar.isOn || clientCapabilities.statusBarIsOn || initializationOptions.statusBarIsOn) {
+    val statusBarIsOn = config.statusBar.isOn ||
+      clientCapabilities.statusBarIsOn ||
+      initializationOptions.statusBarIsOn
+
+    if (statusBarIsOn) {
       underlying.metalsStatus(params)
     } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
       if (config.statusBar.isShowMessage || clientCapabilities.statusBarIsShowMessage || initializationOptions.statusBarIsShowMessage) {
@@ -57,7 +61,11 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider || initializationOptions.slowTaskProvider) {
+    val slowTaskIsOn = config.slowTask.isOn ||
+      clientCapabilities.slowTaskProvider ||
+      initializationOptions.slowTaskProvider
+
+    if (slowTaskIsOn) {
       underlying.metalsSlowTask(params)
     } else {
       new CompletableFuture[MetalsSlowTaskResult]()
@@ -78,8 +86,10 @@ final class ConfiguredLanguageClient(
   }
 
   override def logMessage(message: MessageParams): Unit = {
-    val statusBarIsLogMessage =
-      config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage || initializationOptions.statusBarIsLogMessage
+    val statusBarIsLogMessage = config.statusBar.isLogMessage ||
+      clientCapabilities.statusBarIsLogMessage ||
+      initializationOptions.statusBarIsLogMessage
+
     if (statusBarIsLogMessage && message.getType == MessageType.Log) {
       // window/logMessage is reserved for the status bar so we don't publish
       // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
@@ -92,7 +102,11 @@ final class ConfiguredLanguageClient(
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
-    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommandProvider) {
+    val executeClientCommandProvider = config.executeClientCommand.isOn ||
+      clientCapabilities.executeClientCommandProvider ||
+      initializationOptions.executeClientCommandProvider
+
+    if (executeClientCommandProvider) {
       params.getCommand match {
         case ClientCommands.RefreshModel()
             if !clientCapabilities.debuggingProvider =>
@@ -106,7 +120,11 @@ final class ConfiguredLanguageClient(
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider || initializationOptions.inputBoxProvider) {
+    val isInputBoxEnabled = config.isInputBoxEnabled ||
+      clientCapabilities.inputBoxProvider ||
+      initializationOptions.inputBoxProvider
+
+    if (isInputBoxEnabled) {
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))

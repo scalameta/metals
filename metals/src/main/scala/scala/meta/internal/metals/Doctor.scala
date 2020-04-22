@@ -31,10 +31,6 @@ final class Doctor(
   private val hasProblems = new AtomicBoolean(false)
   private var bspServerName: Option[String] = None
   private var bspServerVersion: Option[String] = None
-  private val doctorFormatIsJson =
-    config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson || initializationOptions.doctorFormatIsJson
-  private val executeClientCommandProvider =
-    config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider || initializationOptions.executeClientCommandProvider
 
   def isUnsupportedBloopVersion(serverVersion: String): Boolean = {
     bspServerName.contains("Bloop") && !SemVer.isCompatibleVersion(
@@ -76,7 +72,13 @@ final class Doctor(
       clientCommand: Command,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
+    val executeClientCommandProvider = config.executeClientCommand.isOn ||
+      clientExperimentalCapabilities.executeClientCommandProvider ||
+      initializationOptions.executeClientCommandProvider
+
     if (executeClientCommandProvider) {
+      val doctorFormatIsJson =
+        config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson || initializationOptions.doctorFormatIsJson
       val output =
         if (doctorFormatIsJson)
           buildTargetsJson()
@@ -133,6 +135,10 @@ final class Doctor(
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
       if (isMaven) {
+        val doctorFormatIsJson = config.doctorFormat.isJson ||
+          clientExperimentalCapabilities.doctorFormatIsJson ||
+          initializationOptions.doctorFormatIsJson
+
         val website =
           if (doctorFormatIsJson)
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"

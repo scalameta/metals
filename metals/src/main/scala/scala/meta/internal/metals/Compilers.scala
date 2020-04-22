@@ -358,8 +358,8 @@ class Compilers(
       .withScheduledExecutorService(sh)
       .withConfiguration(
         initializeParams
-          .map(p => {
-            val options = InitializationOptions.from(p).compilerOptions
+          .map(params => {
+            val options = InitializationOptions.from(params).compilerOptions
             config.compilers.update(options)
           })
           .getOrElse(config.compilers)
