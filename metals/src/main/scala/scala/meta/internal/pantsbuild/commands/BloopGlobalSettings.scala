@@ -5,11 +5,12 @@ import scala.util.control.NonFatal
 import ujson.Obj
 import java.nio.file.Paths
 import java.nio.file.Path
+import scala.meta.internal.zipkin.Property
 import scala.meta.internal.zipkin.ZipkinProperties
 import ujson.Str
 
 object BloopGlobalSettings {
-  def update(newHome: Option[Path]): Boolean = {
+  def update(workspace: AbsolutePath, newHome: Option[Path]): Boolean = {
     import scala.meta.internal.metals.MetalsEnrichments._
     val homedir = AbsolutePath(System.getProperty("user.home"))
     val file = homedir.resolve(".bloop").resolve("bloop.json")
@@ -25,8 +26,9 @@ object BloopGlobalSettings {
         .map(_.arr.map(_.str).toList)
         .getOrElse(Nil)
 
+      val properties = Property.fromFile(workspace)
       val newOptions: List[String] = ZipkinProperties.All.foldLeft(oldOptions) {
-        (options, prop) => prop.updateOptions(options)
+        (options, prop) => prop.updateOptions(properties)(options)
       }
       val isHomeChanged = newHome.isDefined && newHome != oldHome
       val isOptionsChanged = newOptions != oldOptions
