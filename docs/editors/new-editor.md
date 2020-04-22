@@ -284,6 +284,9 @@ Possible values:
 - `off`: the client does not add any indentation when receiving a multi-line
   textEdit
 
+*Usage of `doctorProvider` in `InitializationOptions.compilerOptions.snippetAutoIndent` is preferable.*
+
+
 ### `-Dmetals.doctor-format`
 
 Format that you'd like Doctor to return information in.
