@@ -49,7 +49,11 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (statusBar.isOff && clientCapabilities.statusBarIsOff && initializationOptions.statusBarIsOff)
+    val statusBarIsOff = statusBar.isOff &&
+      clientCapabilities.statusBarIsOff &&
+      initializationOptions.statusBarIsOff
+
+    if (statusBarIsOff)
       trackBlockingTask(message)(thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
@@ -67,7 +71,11 @@ final class StatusBar(
   }
 
   def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (statusBar.isOff && clientCapabilities.statusBarIsOff && initializationOptions.statusBarIsOff)
+    val statusBarIsOff = statusBar.isOff &&
+      clientCapabilities.statusBarIsOff &&
+      initializationOptions.statusBarIsOff
+
+    if (statusBarIsOff)
       trackFuture(message, thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
