@@ -677,11 +677,11 @@ The currently available settings for `InitializationOptions` are listed below.
       "isExitOnShutdown" : boolean,
       "isHttpEnabled": boolean,
       "compilerOptions":{
-        "isCompletionItemDetailEnabled": boolean
-        "isCompletionItemDocumentationEnabled": boolean
-        "isHoverDocumentationEnabled": boolean
-        "snippetAutoIndent": boolean
-        "isSignatureHelpDocumentationEnabled": boolean
+        "isCompletionItemDetailEnabled": boolean,
+        "isCompletionItemDocumentationEnabled": boolean,
+        "isHoverDocumentationEnabled": boolean,
+        "snippetAutoIndent": boolean,
+        "isSignatureHelpDocumentationEnabled": boolean,
         "isCompletionItemResolve": boolean
       }
     }
