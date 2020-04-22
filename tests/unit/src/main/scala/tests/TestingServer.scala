@@ -558,6 +558,14 @@ final class TestingServer(
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
+  def assertFolded(filename: String, expected: String)(
+      implicit loc: munit.Location
+  ): Future[Unit] =
+    for {
+      folded <- foldingRange(filename)
+      _ = Assertions.assertNoDiff(folded, expected)
+    } yield ()
+
   def onTypeFormatting(
       filename: String,
       query: String,

@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.net.URLClassLoader
-import java.nio.file.Paths
 import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -202,23 +201,13 @@ object Embedded {
   ): URLClassLoader = {
     val scalaVersion = ScalaVersions
       .dropVendorSuffix(info.getScalaVersion)
-    val pc = mtagsDependency(scalaVersion)
-    val semanticdbJars = scalac.getOptions.asScala.collect {
-      case opt
-          if opt.startsWith("-Xplugin:") &&
-            opt.contains("semanticdb-scalac") &&
-            opt.contains(BuildInfo.semanticdbVersion) =>
-        Paths.get(opt.stripPrefix("-Xplugin:"))
-    }
-    val dep =
-      if (semanticdbJars.isEmpty) pc
-      else pc.withTransitive(false)
+    val dep = mtagsDependency(scalaVersion)
     val jars = fetchSettings(dep, info.getScalaVersion())
       .fetch()
       .asScala
       .map(_.toPath)
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
-    val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
+    val allJars = Iterator(jars, scalaJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =

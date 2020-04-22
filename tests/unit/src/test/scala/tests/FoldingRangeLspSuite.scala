@@ -1,8 +1,5 @@
 package tests
 
-import scala.concurrent.Future
-import munit.Location
-
 class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
   test("parse-error") {
     for {
@@ -25,7 +22,7 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ <- assertFolded(
+      _ <- server.assertFolded(
         "a/src/main/scala/a/Main.scala",
         """object Main >>region>>{
           |  def foo = >>region>>{
@@ -40,7 +37,7 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
         "__" + "\n\n" + text
       }
-      _ <- assertFolded(
+      _ <- server.assertFolded(
         "a/src/main/scala/a/Main.scala",
         """__
           |
@@ -56,12 +53,4 @@ class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
       )
     } yield ()
   }
-
-  private def assertFolded(filename: String, expected: String)(
-      implicit loc: Location
-  ): Future[Unit] =
-    for {
-      folded <- server.foldingRange(filename)
-      _ = assertNoDiff(folded, expected)
-    } yield ()
 }
