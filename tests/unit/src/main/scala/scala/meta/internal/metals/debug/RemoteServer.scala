@@ -23,11 +23,9 @@ import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug._
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
-import org.eclipse.lsp4j.jsonrpc.debug.messages.{DebugRequestMessage => Request}
-import org.eclipse.lsp4j.jsonrpc.debug.messages.{
-  DebugResponseMessage => Response
-}
-import org.eclipse.lsp4j.jsonrpc.messages.{NotificationMessage => Notification}
+import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugRequestMessage
+import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 
 private[debug] final class RemoteServer(
     socket: Socket,
@@ -37,7 +35,7 @@ private[debug] final class RemoteServer(
     with Cancelable {
 
   private val remote = new SocketEndpoint(socket)
-  private val ongoing = new TrieMap[String, Response => Unit]()
+  private val ongoing = new TrieMap[String, DebugResponseMessage => Unit]()
   private val id = new AtomicInteger(FirstMessageId)
   lazy val listening: Future[Unit] = Future(listen())
 
@@ -115,14 +113,14 @@ private[debug] final class RemoteServer(
 
   private def listen(): Unit = {
     remote.listen {
-      case response: Response =>
+      case response: DebugResponseMessage =>
         ongoing.remove(response.getId) match {
           case Some(callback) =>
             callback(response)
           case None =>
             scribe.error(s"Response to invalid message: [$response]")
         }
-      case notification: Notification =>
+      case notification: NotificationMessage =>
         notification.getMethod match {
           case "output" =>
             notify(notification, listener.onOutput)
@@ -138,7 +136,10 @@ private[debug] final class RemoteServer(
     }
   }
 
-  private def notify[A: ClassTag](msg: Notification, f: A => Unit): Unit = {
+  private def notify[A: ClassTag](
+      msg: NotificationMessage,
+      f: A => Unit
+  ): Unit = {
     msg.getParams match {
       case json: JsonElement =>
         json.as[A].map(f).recover {
@@ -153,12 +154,12 @@ private[debug] final class RemoteServer(
       endpoint: String,
       arg: A
   ): CompletableFuture[B] = {
-    val request = new Request()
+    val request = new DebugRequestMessage()
     request.setId(id.getAndIncrement())
     request.setMethod(endpoint)
     request.setParams(arg)
 
-    val promise = Promise[Response]()
+    val promise = Promise[DebugResponseMessage]()
     ongoing.put(request.getId, response => promise.success(response))
     remote.consume(request)
 
