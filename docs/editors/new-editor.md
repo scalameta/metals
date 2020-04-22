@@ -78,7 +78,7 @@ example, in vim-lsc the `window/logMessage` notification is always displayed in
 the UI so `-Dmetals.status-bar=log-message` can be configured to direct
 higher-priority messages to the logs. However, whenever possible, if the client
 supports the ability to add in `experimental` items to the `ClientCapabilities`
-interface, this is preferable.
+interface and/or to `InitializationOptions`, this is preferable.
 
 ### `-Dmetals.verbose`
 
@@ -119,7 +119,7 @@ Possible values:
   `window/showMessage` notifications. Used by coc.nvim and sublime at the
   moment.
 
-*Usage of `statusBarProvider` in `ClientCapabilities.experimental` is
+*Usage of `statusBarProvider` in `InitializationOptions` is
 preferable.*
 
 ### `-Dmetals.slow-task`
@@ -131,6 +131,9 @@ Possible values:
 - `status-bar`: the `metals/slowTask` request is not supported, but send updates
   about slow tasks via `metals/status`.
 
+*Usage of `slowTaskProvider` in `InitializationOptions` is
+preferable.*
+
 ### `-Dmetals.input-box`
 
 Possible values:
@@ -139,7 +142,7 @@ Possible values:
   Metals tries to fallback to `window/showMessageRequest` when possible.
 - `on`: the `metals/inputBox` request is fully supported.
 
-*Usage of `inputBoxProvider` in `ClientCapabilities.experimental` is preferable.*
+*Usage of `inputBoxProvider` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.execute-client-command`
 
@@ -151,8 +154,7 @@ Possible values:
 - `on`: the `metals/executeClientCommand` notification is supported and all
   [Metals client commands](#metals-client-commands) are handled.
 
-*Usage of `executeClientCommandProvider` in `ClientCapabilities.experimental` is
-preferable.*
+*Usage of `executeClientCommandProvider` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.http`
 
@@ -162,6 +164,8 @@ Possible values:
 - `on`: start a server with the [Metals HTTP client] to interact with the server
   through a basic web UI. This option is needed for editor clients that don't
   support necessary requests such as `window/showMessageRequest`.
+
+*Usage of `isHttpEnabled` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.icons`
 
@@ -188,6 +192,8 @@ Possible values:
   It's not possible for Sublime Text packages to register a callback when the
   editor is quit. See [LSP#410](https://github.com/tomv564/LSP/issues/410) for
   more details.
+
+  *Usage of `isExitOnShutdown` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.bloop-protocol`
 
@@ -288,7 +294,7 @@ Possible values:
   the browser or web view
 - `json`: json representation of the information returned by Doctor
 
-*Usage of `doctorProvider` in `ClientCapabilities.experimental` is preferable.*
+*Usage of `doctorProvider` in `InitializationOptions` is preferable.*
 
 ### `-Dbloop.embedded.version`
 
@@ -643,30 +649,48 @@ specification.
 - `didChangeWatchedFiles` client capability is used to determine whether to
   register file watchers.
 
-#### `experimental`
+#### `InitializationOptions` and `experimental`
 
-During the `initialize` we also have the ability to pass in `experimental`
-capabilities. In Metals we have a few different "providers". Some are also LSP
+During the `initialize` we also have the ability to pass in `InitializationOptions` and `experimental` capabilities. 
+In Metals we have a few different "providers". Some are also LSP
 extensions, such as `metals/inputBox` which you read about above, and others
-used to be server properties that have been migrated to `clientCapabilities`.
+used to be server properties that have been migrated to `clientCapabilities` and `InitializationOptions`.
 Whenever possible, instead of introducing a new server property, try to
 introduce it here. The main reason for this is that it allows clients to
 initialize and define their "support" for certain things solely through LSP
-rather then using server properties. The currently available settings for
-`experimental` are listed below.
+rather then using server properties. 
+
+The currently available settings for `InitializationOptions` are listed below.
+
+```js
+    "InitializationOptions": {
+      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
+      "didFocusProvider": boolean,
+      "slowTaskProvider": boolean,
+      "inputBoxProvider": boolean,
+      "quickPickProvider": boolean,
+      "executeClientCommandProvider": boolean,
+      "doctorProvider": "json" | "html",
+      "isExitOnShutdown" : boolean,
+      "isHttpEnabled": boolean,
+      "compilerOptions":{
+        "isCompletionItemDetailEnabled": boolean
+        "isCompletionItemDocumentationEnabled": boolean
+        "isHoverDocumentationEnabled": boolean
+        "snippetAutoIndent": boolean
+        "isSignatureHelpDocumentationEnabled": boolean
+        "isCompletionItemResolve": boolean
+      }
+    }
+```
+
+The currently available settings for `experimental` are listed below.
 
 ```js
     "experimental": {
       "treeViewProvider": boolean,
       "debuggingProvider": boolean,
-      "decorationProvider": boolean,
-      "inputBoxProvider": boolean,
-      "quickPickProvider": boolean,
-      "didFocusProvider": boolean,
-      "slowTaskProvider": boolean,
-      "executeClientCommandProvider": boolean,
-      "doctorProvider": "json" | "html",
-      "statusBarProvider": "on" | "off" | "show-message" | "log-message"
+      "decorationProvider": boolean
     }
 ```
 

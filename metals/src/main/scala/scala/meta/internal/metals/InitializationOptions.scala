@@ -10,13 +10,13 @@ final case class InitializationOptions(
     inputBoxProvider: java.lang.Boolean = false,
     quickPickProvider: java.lang.Boolean = false,
     executeClientCommandProvider: java.lang.Boolean = false,
-    doctorFormatProvider: String = "html",
+    doctorProvider: String = "html",
     isExitOnShutdown: java.lang.Boolean = false,
     isHttpEnabled: java.lang.Boolean = false,
     compilerOptions: CompilerInitializationOptions =
       CompilerInitializationOptions()
 ) {
-  def doctorFormatIsJson: Boolean = doctorFormatProvider == "json"
+  def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"
   def statusBarIsOff: Boolean = statusBarProvider == "off"
   def statusBarIsShowMessage: Boolean = statusBarProvider == "show-message"
