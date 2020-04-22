@@ -1,8 +1,10 @@
 package tests.feature
 
-import tests.BaseCompletionLspSuite
-import scala.meta.internal.metals.BuildInfo
 import scala.concurrent.Future
+
+import scala.meta.internal.metals.BuildInfo
+
+import tests.BaseCompletionLspSuite
 
 class DefinitionCrossLspSuite
     extends BaseCompletionLspSuite("definition-cross") {

@@ -2,6 +2,7 @@ package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Properties
+
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 

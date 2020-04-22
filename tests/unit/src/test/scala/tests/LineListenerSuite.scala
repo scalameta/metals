@@ -1,7 +1,9 @@
 package tests
 
-import scala.meta.internal.ansi.LineListener
 import scala.collection.mutable
+
+import scala.meta.internal.ansi.LineListener
+
 import munit.Location
 
 class LineListenerSuite extends BaseSuite {

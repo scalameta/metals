@@ -2,11 +2,14 @@ package docs
 
 import java.time._
 import java.time.format.DateTimeFormatter
-import org.jsoup.Jsoup
+
+import scala.util.Try
+import scala.util.control.NonFatal
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BuildInfo
-import scala.util.control.NonFatal
-import scala.util.Try
+
+import org.jsoup.Jsoup
 
 case class Snapshot(version: String, lastModified: LocalDateTime) {
   def date: String = Snapshot.snapshotOutputFormatter.format(lastModified)

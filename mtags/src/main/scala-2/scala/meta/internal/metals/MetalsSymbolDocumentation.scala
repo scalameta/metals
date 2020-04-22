@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.SymbolDocumentation
 

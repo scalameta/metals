@@ -1,8 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.pc.CrossTestEnrichments._
 import tests.BuildInfoVersions
+import tests.pc.CrossTestEnrichments._
 
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
 

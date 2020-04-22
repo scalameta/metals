@@ -1,8 +1,9 @@
 package scala.meta.internal.pantsbuild
 
 import java.nio.file.Path
-import ujson.Obj
 import java.nio.file.Paths
+
+import ujson.Obj
 
 case class PantsRoots(
     sourceRoots: List[Path]

@@ -1,13 +1,16 @@
 package tests
 
 import java.util.Collections.emptyList
-import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
-import ch.epfl.scala.bsp4j.ScalaMainClass
-import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
+
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 
 abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
   def debugMain(

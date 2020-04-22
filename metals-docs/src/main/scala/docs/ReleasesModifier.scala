@@ -1,8 +1,9 @@
 package docs
 
+import scala.meta.inputs.Input
+
 import mdoc.Reporter
 import mdoc.StringModifier
-import scala.meta.inputs.Input
 
 class ReleasesModifier extends StringModifier {
   override val name: String = "releases"

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.{meta => m}
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 /**

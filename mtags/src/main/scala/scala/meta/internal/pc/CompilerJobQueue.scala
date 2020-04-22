@@ -1,12 +1,12 @@
 package scala.meta.internal.pc
 
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.PriorityBlockingQueue
-import java.{util => ju}
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.{util => ju}
 
 /**
  * A thread pool executor to execute jobs on a single thread in a last-in-first-out order.

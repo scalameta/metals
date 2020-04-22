@@ -1,7 +1,8 @@
 package tests.pantsbuild
 
-import tests.BaseSuite
 import scala.meta.internal.pantsbuild.PantsConfiguration
+
+import tests.BaseSuite
 
 class PantsProjectNameSuite extends BaseSuite {
   def checkTargetsName(

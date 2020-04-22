@@ -2,29 +2,32 @@ package scala.meta.internal.metals.debug
 
 import java.net.Socket
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import com.google.gson.JsonElement
-import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
-import org.eclipse.lsp4j.debug.Capabilities
-import org.eclipse.lsp4j.debug._
-import org.eclipse.lsp4j.debug.OutputEventArguments
-import org.eclipse.lsp4j.jsonrpc.debug.messages.{
-  DebugResponseMessage => Response
-}
-import org.eclipse.lsp4j.jsonrpc.debug.messages.{DebugRequestMessage => Request}
-import scala.meta.internal.metals.MetalsEnrichments._
-import org.eclipse.lsp4j.jsonrpc.messages.{NotificationMessage => Notification}
+import java.util.concurrent.atomic.AtomicInteger
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.meta.internal.metals.Cancelable
 import scala.reflect.ClassTag
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.reflect.classTag
+
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
+
+import com.google.gson.JsonElement
+import org.eclipse.lsp4j.debug.Capabilities
+import org.eclipse.lsp4j.debug.OutputEventArguments
+import org.eclipse.lsp4j.debug._
+import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
+import org.eclipse.lsp4j.jsonrpc.debug.messages.{DebugRequestMessage => Request}
+import org.eclipse.lsp4j.jsonrpc.debug.messages.{
+  DebugResponseMessage => Response
+}
+import org.eclipse.lsp4j.jsonrpc.messages.{NotificationMessage => Notification}
 
 private[debug] final class RemoteServer(
     socket: Socket,

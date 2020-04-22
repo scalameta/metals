@@ -1,14 +1,16 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.Command
-import metaconfig.cli.CliApp
-import org.typelevel.paiges.Doc
-import metaconfig.cli.Messages
 import java.nio.file.Files
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+
+import metaconfig.cli.CliApp
+import metaconfig.cli.Command
+import metaconfig.cli.Messages
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
+import org.typelevel.paiges.Doc
 
 object SwitchCommand extends Command[SwitchOptions]("switch") {
   override def options: Doc = Messages.options(SwitchOptions())

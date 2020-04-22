@@ -1,6 +1,7 @@
 package tests
 
 import java.nio.file.Files
+
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete

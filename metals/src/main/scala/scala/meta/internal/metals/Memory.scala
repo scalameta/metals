@@ -1,10 +1,13 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.BloomFilter
 import java.text.DecimalFormat
-import org.openjdk.jol.info.GraphLayout
+
 import scala.collection.concurrent.TrieMap
+
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+
+import com.google.common.hash.BloomFilter
+import org.openjdk.jol.info.GraphLayout
 
 object Memory {
   // Adapted from https://github.com/non/clouseau

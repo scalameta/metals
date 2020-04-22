@@ -1,9 +1,10 @@
 package tests
+import scala.meta.inputs.Position
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
-import scala.meta.inputs.Position
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
 
 object DapTestEnrichments {
   implicit class DapXtensionAbsolutePath(path: AbsolutePath) {

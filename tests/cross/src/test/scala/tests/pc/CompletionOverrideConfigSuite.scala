@@ -3,6 +3,7 @@ package tests.pc
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+
 import tests.BaseCompletionSuite
 import tests.BuildInfoVersions
 

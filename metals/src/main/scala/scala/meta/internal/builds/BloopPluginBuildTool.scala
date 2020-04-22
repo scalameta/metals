@@ -1,8 +1,9 @@
 package scala.meta.internal.builds
-import scala.meta.io.AbsolutePath
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.BloopInstallResult
 import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.io.AbsolutePath
 
 /** Helper class file build tools that have a Bloop plugin */
 abstract class BloopPluginBuildTool extends BuildTool {

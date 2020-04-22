@@ -1,20 +1,22 @@
 package tests.pc
 
-import java.util.concurrent.CompletableFuture
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.async.CompletableCancelToken
-import tests.DelegatingGlobalSymbolIndex
-import tests.BasePCSuite
-import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.internal.mtags.Symbol
-import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.OffsetParams
-import java.util.concurrent.atomic.AtomicReference
-import munit.Location
 import java.net.URI
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+
+import scala.meta.internal.async.CompletableCancelToken
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.SymbolDefinition
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.PresentationCompiler
+
+import munit.Location
+import tests.BasePCSuite
 import tests.BuildInfoVersions
+import tests.DelegatingGlobalSymbolIndex
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex extends DelegatingGlobalSymbolIndex() {

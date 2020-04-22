@@ -1,27 +1,30 @@
 package scala.meta.internal.metals
 
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+
+import scala.meta._
+import scala.meta.internal.metals.Messages.MissingScalafmtConf
+import scala.meta.internal.metals.Messages.MissingScalafmtVersion
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import org.scalafmt.interfaces.PositionException
 import org.scalafmt.interfaces.Scalafmt
 import org.scalafmt.interfaces.ScalafmtReporter
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.meta._
-import scala.meta.internal.metals.Messages.MissingScalafmtConf
-import scala.meta.internal.metals.Messages.MissingScalafmtVersion
-import scala.meta.internal.metals.MetalsEnrichments._
-import java.io.OutputStream
-import java.io.OutputStreamWriter
 
 /**
  * Implement text formatting using Scalafmt

@@ -1,32 +1,35 @@
 package scala.meta.internal.pantsbuild.commands
 
-import scala.sys.process._
-import scala.util.Try
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.concurrent.Promise
+import scala.sys.process._
 import scala.util.Failure
 import scala.util.Success
-import scala.meta.internal.pantsbuild.Export
+import scala.util.Try
+import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
 import scala.meta.internal.pantsbuild.BloopPants
-import scala.meta.internal.pantsbuild.MessageOnlyException
+import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.IntelliJ
-import metaconfig.cli.CliApp
-import metaconfig.internal.Levenshtein
+import scala.meta.internal.pantsbuild.MessageOnlyException
+import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.internal.pc.LogMessages
+import scala.meta.io.AbsolutePath
+
+import bloop.bloopgun.core.Shell
+import bloop.launcher.LauncherMain
+import metaconfig.cli.CliApp
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
-import bloop.launcher.LauncherMain
-import java.nio.charset.StandardCharsets
-import bloop.bloopgun.core.Shell
-import scala.concurrent.Promise
-import scala.meta.internal.metals.BuildInfo
-import java.nio.file.Files
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.pantsbuild.PantsConfiguration
-import scala.meta.internal.metals.JdkSources
-import scala.util.control.NonFatal
+import metaconfig.internal.Levenshtein
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {

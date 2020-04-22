@@ -1,9 +1,10 @@
 package scala.meta.internal.metals
 
 import java.sql.Connection
-import JdbcEnrichments._
 import java.sql.Timestamp
 import java.util.concurrent.TimeUnit
+
+import scala.meta.internal.metals.JdbcEnrichments._
 
 final class DismissedNotifications(conn: () => Connection, time: Time) {
 

@@ -1,9 +1,10 @@
 package scala.meta.internal.decorations
 
 import javax.annotation.Nullable
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 
 trait DecorationClient {
   @JsonNotification("metals/publishDecorations")

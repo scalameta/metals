@@ -3,8 +3,9 @@ package scala.meta.internal.metals
 import java.awt.Desktop
 import java.awt.Desktop.Action.BROWSE
 import java.net.URI
-import scala.util.Properties
+
 import scala.sys.process._
+import scala.util.Properties
 import scala.util.control.NonFatal
 
 object Urls {

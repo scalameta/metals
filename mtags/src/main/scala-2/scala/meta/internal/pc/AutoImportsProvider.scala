@@ -1,10 +1,12 @@
 package scala.meta.internal.pc
 
-import scala.meta.pc.OffsetParams
-import scala.meta.pc.AutoImportsResult
 import scala.collection.mutable
-import org.eclipse.lsp4j.TextEdit
+
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.OffsetParams
+
+import org.eclipse.lsp4j.TextEdit
 
 final class AutoImportsProvider(
     val compiler: MetalsGlobal,

@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
-import net.jpountz.xxhash.XXHashFactory
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
+import net.jpountz.xxhash.XXHashFactory
 
 /**
  * A wrapper around a bloom filter that is optimized for fast insertions of

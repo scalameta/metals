@@ -3,8 +3,9 @@ package tests
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
-import tests.MetalsTestEnrichments._
+
 import munit.Location
+import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath

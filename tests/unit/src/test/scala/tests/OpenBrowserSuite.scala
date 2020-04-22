@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.Urls
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.Urls
 
 class OpenBrowserSuite extends BaseSuite {
   val scalaLang = "https://www.scala-lang.org/"

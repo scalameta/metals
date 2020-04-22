@@ -1,10 +1,9 @@
 package tests.sbt
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import java.util.concurrent.TimeUnit
-import tests.BaseImportSuite
+
 import scala.concurrent.Future
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.ClientCommands
@@ -13,6 +12,10 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
+
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import tests.BaseImportSuite
 
 class SbtLspSuite extends BaseImportSuite("sbt-import") {
 

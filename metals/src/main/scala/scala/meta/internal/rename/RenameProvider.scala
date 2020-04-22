@@ -1,40 +1,42 @@
 package scala.meta.internal.rename
 
-import scala.meta.internal.metals.ReferenceProvider
-import org.eclipse.lsp4j.RenameParams
-import org.eclipse.lsp4j.WorkspaceEdit
+import java.util.concurrent.ConcurrentLinkedQueue
+
+import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
-import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.lsp4j.ReferenceParams
-import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j.TextEdit
-import scala.meta.internal.metals.MetalsEnrichments._
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.ReferenceContext
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ReferenceProvider
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.semanticdb.SelectTree
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.Location
-import scala.meta.internal.metals.MetalsLanguageClient
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.{Range => LSPRange}
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.metals.Compilations
-import org.eclipse.lsp4j.TextDocumentEdit
-import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
-import org.eclipse.lsp4j.ResourceOperation
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
-import java.util.concurrent.ConcurrentLinkedQueue
-import scala.meta.internal.async.ConcurrentQueue
-import scala.meta.internal.semanticdb.Synthetic
-import scala.meta.internal.semanticdb.SelectTree
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.ClientExperimentalCapabilities
+import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.ResourceOperation
+import org.eclipse.lsp4j.TextDocumentEdit
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
+import org.eclipse.lsp4j.{Range => LSPRange}
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,

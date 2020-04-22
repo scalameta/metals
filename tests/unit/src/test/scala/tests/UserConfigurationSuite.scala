@@ -1,7 +1,9 @@
 package tests
 
 import java.util.Properties
+
 import scala.meta.internal.metals.UserConfiguration
+
 import munit.Location
 
 class UserConfigurationSuite extends BaseSuite {

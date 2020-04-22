@@ -1,9 +1,9 @@
 package tests
 
-import org.eclipse.lsp4j.Range
-
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments._
+
+import org.eclipse.lsp4j.Range
 
 trait RangeReplace {
 

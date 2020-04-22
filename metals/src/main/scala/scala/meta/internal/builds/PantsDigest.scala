@@ -1,10 +1,11 @@
 package scala.meta.internal.builds
 
-import scala.meta.io.AbsolutePath
 import java.security.MessageDigest
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.pantsbuild.PantsConfiguration
+import scala.meta.io.AbsolutePath
 
 class PantsDigest(userConfig: () => UserConfiguration) extends Digestable {
   override protected def digestWorkspace(

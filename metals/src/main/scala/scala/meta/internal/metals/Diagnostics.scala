@@ -1,22 +1,25 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import java.{util => ju}
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
+import java.{util => ju}
+
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+import scala.{meta => m}
+
+import scala.meta.inputs.Input
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
-import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
-import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.io.AbsolutePath
-import scala.{meta => m}
 
 /**
  * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.

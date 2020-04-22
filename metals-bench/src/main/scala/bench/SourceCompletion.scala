@@ -1,14 +1,17 @@
 package bench
 
 import java.nio.charset.StandardCharsets
-import org.eclipse.lsp4j.CompletionList
+import java.nio.file.Paths
+
+import scala.util.Random
+
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
-import scala.util.Random
-import java.nio.file.Paths
+
+import org.eclipse.lsp4j.CompletionList
 
 /**
  * A helper to create a benchmark for completions given a source file and offset.

@@ -1,14 +1,17 @@
 package scala.meta.internal.metals
 
+import java.net.URI
+import java.nio.file.Paths
+
 import scala.collection.concurrent.TrieMap
+
 import scala.meta._
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.parsers.Parsed
+
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
-import java.nio.file.Paths
-import java.net.URI
 
 /**
  * Manages parsing of Scala source files into Scalameta syntax trees.

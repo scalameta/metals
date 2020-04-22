@@ -1,11 +1,13 @@
 package scala.meta.internal.metals.debug
 
 import java.nio.file.Paths
+
+import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.{
   InitializeRequestArgumentsPathFormat => PathFormat
 }
-import scala.meta.io.AbsolutePath
 
 final class MetalsDebugAdapters {
   private var lineAdapter: Long => Long = identity

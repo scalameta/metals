@@ -1,10 +1,12 @@
 package tests.worksheets
 
-import tests.BaseLspSuite
-import scala.meta.internal.metals.MetalsEnrichments._
-import tests.TestHovers
 import scala.concurrent.Future
+
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import munit.Location
+import tests.BaseLspSuite
+import tests.TestHovers
 
 class WorksheetNoDecorationsLspSuite
     extends BaseLspSuite("worksheet-no-decorations")

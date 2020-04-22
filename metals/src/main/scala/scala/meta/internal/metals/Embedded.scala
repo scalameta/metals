@@ -1,22 +1,25 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.net.URLClassLoader
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.ServiceLoader
+
 import scala.collection.concurrent.TrieMap
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.pc.PresentationCompiler
+
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import coursierapi.Dependency
 import coursierapi.Fetch
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import coursierapi.ResolutionParams
-import scala.meta.internal.worksheets.MdocClassLoader
 import mdoc.interfaces.Mdoc
-import java.nio.file.Path
 
 /**
  * Wrapper around software that is embedded with Metals.

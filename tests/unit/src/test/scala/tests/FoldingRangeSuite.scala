@@ -2,12 +2,14 @@ package tests
 
 import java.nio.file.Paths
 import java.util.UUID
+
+import scala.meta.internal.metals.FoldingRangeProvider
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.Trees
+import scala.meta.io.AbsolutePath
+
 import org.eclipse.{lsp4j => l}
 import tests.BuildInfo.testResourceDirectory
-import scala.meta.internal.metals.FoldingRangeProvider
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.Trees
-import scala.meta.internal.metals.TextEdits
 
 class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
   private val trees = new Trees()

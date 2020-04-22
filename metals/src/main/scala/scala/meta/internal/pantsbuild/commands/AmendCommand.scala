@@ -1,18 +1,21 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.Command
-import metaconfig.cli.CliApp
-import org.typelevel.paiges.Doc
-import java.nio.file.Files
-import java.nio.charset.StandardCharsets
-import scala.meta.internal.pantsbuild.IntelliJ
-import metaconfig.cli.Messages
 import java.io.PrintWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
-import scala.util.control.NonFatal
+
 import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
+
+import scala.meta.internal.pantsbuild.IntelliJ
+
+import metaconfig.cli.CliApp
+import metaconfig.cli.Command
+import metaconfig.cli.Messages
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
+import org.typelevel.paiges.Doc
 
 object AmendCommand extends Command[AmendOptions]("amend") {
   override def description: Doc =

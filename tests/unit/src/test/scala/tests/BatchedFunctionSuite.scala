@@ -1,9 +1,10 @@
 package tests
 
-import scala.concurrent.Future
-import scala.meta.internal.metals.BatchedFunction
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Success
+
+import scala.meta.internal.metals.BatchedFunction
 
 class BatchedFunctionSuite extends BaseSuite {
   test("batch") {

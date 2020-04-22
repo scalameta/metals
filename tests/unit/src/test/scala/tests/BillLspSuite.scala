@@ -1,13 +1,15 @@
 package tests
 
-import bill._
 import scala.concurrent.Future
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.ServerCommands
+
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.io.AbsolutePath
+
+import bill._
 
 class BillLspSuite extends BaseLspSuite("bill") {
 

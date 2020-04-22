@@ -1,13 +1,15 @@
 package tests
 
-import coursierapi.Dependency
-import coursierapi.Fetch
+import scala.collection.JavaConverters._
+
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.collection.JavaConverters._
+
+import coursierapi.Dependency
+import coursierapi.Fetch
 
 case class Library(
     name: String,

@@ -1,8 +1,8 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.generic
-import metaconfig.annotation._
 import metaconfig.ConfCodec
+import metaconfig.annotation._
+import metaconfig.generic
 
 case class InfoOptions(
     @Description("The name of the project to print out information about.")

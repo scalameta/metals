@@ -1,6 +1,7 @@
 package tests
 
 import scala.concurrent.Future
+
 import munit.Location
 
 class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {

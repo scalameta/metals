@@ -1,10 +1,12 @@
 package scala.meta.internal.builds
 import java.nio.file.Files
 import java.nio.file.Path
+
+import scala.util.Properties
+
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
-import scala.util.Properties
 
 case class GradleBuildTool(userConfig: () => UserConfiguration)
     extends BloopPluginBuildTool {

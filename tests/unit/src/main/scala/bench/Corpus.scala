@@ -2,7 +2,9 @@ package bench
 
 import java.net.URL
 import java.nio.file.Files
+
 import scala.meta.io.AbsolutePath
+
 import tests.BuildInfo
 
 object Corpus {

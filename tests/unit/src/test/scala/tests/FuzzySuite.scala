@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+
 import munit.Location
 
 class FuzzySuite extends BaseSuite {

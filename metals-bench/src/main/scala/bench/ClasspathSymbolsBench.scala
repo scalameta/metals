@@ -1,6 +1,10 @@
 package bench
 
 import java.util.concurrent.TimeUnit
+
+import scala.meta.internal.tvp.ClasspathSymbols
+import scala.meta.io.AbsolutePath
+
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -9,8 +13,6 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
-import scala.meta.internal.tvp.ClasspathSymbols
-import scala.meta.io.AbsolutePath
 import tests.Library
 
 @State(Scope.Benchmark)

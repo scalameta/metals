@@ -1,7 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.ServerCommands
 import scala.concurrent.Future
+
+import scala.meta.internal.metals.ServerCommands
 
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
 

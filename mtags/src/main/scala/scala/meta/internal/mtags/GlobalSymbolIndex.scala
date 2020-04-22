@@ -1,7 +1,7 @@
 package scala.meta.internal.mtags
 
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags
+import scala.meta.io.AbsolutePath
 
 /**
  * An index to lookup the definition of global symbols.

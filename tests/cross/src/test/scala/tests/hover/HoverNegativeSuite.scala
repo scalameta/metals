@@ -1,7 +1,7 @@
 package tests.hover
 
-import tests.pc.BaseHoverSuite
 import tests.BuildInfoVersions
+import tests.pc.BaseHoverSuite
 
 class HoverNegativeSuite extends BaseHoverSuite {
 

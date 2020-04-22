@@ -1,24 +1,25 @@
 package scala.meta.internal.builds
 
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.pantsbuild.BloopPants
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.BloopInstallResult
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.FutureCancelToken
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.FutureCancelToken
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.pantsbuild.BloopPants
 import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.PantsConfiguration
-import scala.meta.internal.pantsbuild.commands.SharedOptions
 import scala.meta.internal.pantsbuild.commands.OpenOptions
 import scala.meta.internal.pantsbuild.commands.Project
 import scala.meta.internal.pantsbuild.commands.SharedCommand
+import scala.meta.internal.pantsbuild.commands.SharedOptions
+import scala.meta.io.AbsolutePath
 
 case class PantsBuildTool(
     userConfig: () => UserConfiguration

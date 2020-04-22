@@ -1,14 +1,17 @@
 package tests.pants
 
-import scala.meta.internal.builds.{PantsBuildTool, PantsDigest}
+import scala.sys.process._
+import scala.util.control.NonFatal
+
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.PantsBuildTool
+import scala.meta.internal.builds.PantsDigest
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+
 import tests.BaseImportSuite
-import scala.meta.internal.builds.BuildTool
 import tests.FileLayout
-import scala.meta.internal.metals.BuildInfo
-import scala.util.control.NonFatal
-import scala.sys.process._
 
 class PantsLspSuite extends BaseImportSuite("pants") {
 

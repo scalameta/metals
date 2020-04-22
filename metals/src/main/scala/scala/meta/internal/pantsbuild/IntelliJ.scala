@@ -1,19 +1,23 @@
 package scala.meta.internal.pantsbuild
 
+import java.net.URL
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.Files
-import scala.sys.process._
-import java.nio.charset.StandardCharsets
-import scala.meta.internal.metals.{BuildInfo => V}
-import java.net.URL
-import com.google.gson.JsonArray
-import scala.meta.internal.pantsbuild.commands.OpenOptions
-import scala.meta.internal.pantsbuild.commands.{Project, RefreshCommand}
 import java.nio.file.StandardOpenOption
+
+import scala.sys.process._
+
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.pantsbuild.commands.OpenOptions
+import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.internal.pantsbuild.commands.RefreshCommand
+
 import bloop.data.WorkspaceSettings
 import bloop.io.AbsolutePath
 import bloop.logging.NoopLogger
+import com.google.gson.JsonArray
 
 object IntelliJ {
   def launch(project: Project, open: OpenOptions): Unit = {

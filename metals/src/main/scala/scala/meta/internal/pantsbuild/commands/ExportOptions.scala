@@ -1,9 +1,10 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.generic
-import metaconfig.annotation._
-import metaconfig.ConfCodec
 import java.nio.file.Path
+
+import metaconfig.ConfCodec
+import metaconfig.annotation._
+import metaconfig.generic
 
 case class ExportOptions(
     @Description(

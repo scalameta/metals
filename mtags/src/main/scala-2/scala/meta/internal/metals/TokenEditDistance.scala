@@ -1,13 +1,16 @@
 package scala.meta.internal.metals
 
-import difflib._
-import difflib.myers.Equalizer
-import org.eclipse.{lsp4j => l}
+import java.util.logging.Logger
+
 import scala.annotation.tailrec
+
 import scala.meta.Token
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
-import java.util.logging.Logger
+
+import difflib._
+import difflib.myers.Equalizer
+import org.eclipse.{lsp4j => l}
 
 /** Helper to map between position between two similar strings. */
 final class TokenEditDistance private (

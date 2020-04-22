@@ -1,9 +1,9 @@
 package tests
 
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.inputs._
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 
 class WorkspaceSymbolExpectSuite

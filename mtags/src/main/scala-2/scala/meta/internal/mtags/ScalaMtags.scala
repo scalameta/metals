@@ -3,9 +3,9 @@ package scala.meta.internal.mtags
 import scala.meta._
 import scala.meta.inputs.Input
 import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.transversers.SimpleTraverser
 
 object ScalaMtags {

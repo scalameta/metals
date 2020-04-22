@@ -1,12 +1,14 @@
 package scala.meta.metals
 
-import scala.meta.internal.metals.Embedded
-import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.FormattingProvider
 import java.nio.file.Files
-import bloop.launcher.Launcher
+
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.Embedded
+import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.ScalaVersions
+
+import bloop.launcher.Launcher
 
 object DownloadDependencies {
 

@@ -1,17 +1,19 @@
 package scala.meta.internal.metals
 
-import io.methvin.watcher.DirectoryChangeEvent
-import io.methvin.watcher.DirectoryChangeListener
-import io.methvin.watcher.DirectoryWatcher
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.{util => ju}
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import java.{util => ju}
+
+import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
+import io.methvin.watcher.DirectoryChangeListener
+import io.methvin.watcher.DirectoryWatcher
 
 /**
  * Handles file watching of interesting files in this build.

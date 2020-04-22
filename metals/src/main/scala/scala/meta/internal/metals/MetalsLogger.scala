@@ -3,8 +3,10 @@ package scala.meta.internal.metals
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+
 import scribe._
 import scribe.format._
 import scribe.modify.LogModifier

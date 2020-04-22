@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.meta.internal.async.ConcurrentQueue
 
 /** Open collection of cancelables that should cancel together */

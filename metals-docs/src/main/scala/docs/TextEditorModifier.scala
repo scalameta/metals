@@ -1,8 +1,9 @@
 package docs
 
+import scala.meta.inputs.Input
+
 import mdoc.Reporter
 import mdoc.StringModifier
-import scala.meta.inputs.Input
 
 class TextEditorModifier extends StringModifier {
   val name = "editor"

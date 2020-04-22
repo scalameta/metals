@@ -1,10 +1,8 @@
 package scala.meta.internal.implementation
 
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.Position
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
 import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
@@ -17,6 +15,10 @@ import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
 
 class Supermethods(
     client: MetalsLanguageClient,

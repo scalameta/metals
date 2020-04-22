@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Md5Fingerprints

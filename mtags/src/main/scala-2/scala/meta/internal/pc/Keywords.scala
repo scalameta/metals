@@ -1,7 +1,8 @@
 package scala.meta.internal.pc
 
-import org.eclipse.{lsp4j => l}
 import scala.tools.nsc.reporters.StoreReporter
+
+import org.eclipse.{lsp4j => l}
 
 trait Keywords { this: MetalsGlobal =>
 

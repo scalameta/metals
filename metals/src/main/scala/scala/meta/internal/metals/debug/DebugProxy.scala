@@ -2,12 +2,11 @@ package scala.meta.internal.metals.debug
 
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.debug.SetBreakpointsResponse
-import org.eclipse.lsp4j.jsonrpc.MessageConsumer
-import org.eclipse.lsp4j.jsonrpc.messages.Message
-import scala.concurrent.Promise
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
+
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
@@ -16,6 +15,10 @@ import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
+
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.messages.Message
 
 private[debug] final class DebugProxy(
     sessionName: String,

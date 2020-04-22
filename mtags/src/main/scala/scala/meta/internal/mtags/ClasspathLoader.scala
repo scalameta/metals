@@ -1,13 +1,17 @@
 package scala.meta.internal.mtags
 
-import java.net.{URL, URLClassLoader}
+import java.net.URL
+import java.net.URLClassLoader
 import java.util
+
+import scala.collection.Seq
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
+
 import sun.misc.Unsafe
-import scala.collection.Seq
 
 object ClasspathLoader {
 

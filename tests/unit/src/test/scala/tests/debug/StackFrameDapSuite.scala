@@ -1,12 +1,13 @@
 package tests.debug
 
-import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.StackFrameCollector
 import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
+
 import munit.Location
+import tests.BaseDapSuite
 
 class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   assertStackFrame("foreach")(

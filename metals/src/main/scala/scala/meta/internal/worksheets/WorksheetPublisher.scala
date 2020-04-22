@@ -1,10 +1,11 @@
 package scala.meta.internal.worksheets
 
-import mdoc.interfaces.EvaluatedWorksheet
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
-import org.eclipse.lsp4j.Position
+
+import mdoc.interfaces.EvaluatedWorksheet
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Position
 
 trait WorksheetPublisher {
 

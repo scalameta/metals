@@ -1,10 +1,11 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Path
 import java.nio.file.Paths
+
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
-import scala.meta.internal.mtags.MtagsEnrichments._
-import java.nio.file.Path
 
 /**
  * Locates zip file on disk that contains the source code for the JDK.

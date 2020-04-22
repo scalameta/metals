@@ -1,13 +1,16 @@
 package scala.meta.internal.pantsbuild
 
-import scala.meta.io.AbsolutePath
-import scala.collection.mutable
 import java.net.URI
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import com.google.gson.JsonElement
-import com.google.gson.JsonArray
+
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+
 import scala.meta.internal.mtags.MD5
+import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 
 object PantsConfiguration {
 

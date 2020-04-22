@@ -1,11 +1,12 @@
 package tests
 
-import scala.meta.internal.builds.Digest
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.Digest
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.SlowTaskConfig
+import scala.meta.io.AbsolutePath
+
 import munit.Location
 
 abstract class BaseImportSuite(suiteName: String)

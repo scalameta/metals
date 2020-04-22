@@ -1,12 +1,14 @@
 package scala.meta.internal.pc
 
+import scala.reflect.internal.{Flags => gf}
+import scala.util.control.NonFatal
+
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.pc.OffsetParams
+
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.pc.OffsetParams
-import scala.reflect.internal.{Flags => gf}
-import scala.util.control.NonFatal
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._

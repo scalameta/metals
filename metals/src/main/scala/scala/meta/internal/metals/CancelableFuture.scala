@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 case class CancelableFuture[T](
     future: Future[T],

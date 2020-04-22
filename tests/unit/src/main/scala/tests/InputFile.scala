@@ -1,12 +1,13 @@
 package tests
 
 import java.nio.charset.StandardCharsets
+
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
-import scala.meta.internal.mtags.MtagsEnrichments._
 
 case class InputFile(
     file: AbsolutePath,

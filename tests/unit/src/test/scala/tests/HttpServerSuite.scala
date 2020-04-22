@@ -2,6 +2,7 @@ package tests
 
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.MetalsHttpServer
 

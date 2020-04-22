@@ -1,7 +1,7 @@
 package scala.meta.internal.pantsbuild
 
-import ujson.Value
 import bloop.config.{Config => C}
+import ujson.Value
 
 case class Graph(
     export: Value,

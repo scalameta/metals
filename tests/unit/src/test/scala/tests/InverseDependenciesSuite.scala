@@ -1,9 +1,11 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+
 import scala.meta.internal.metals.BuildTargets
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import munit.Location
 
 class InverseDependenciesSuite extends BaseSuite {

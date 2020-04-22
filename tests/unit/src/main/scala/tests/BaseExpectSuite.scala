@@ -1,8 +1,8 @@
 package tests
 
+import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.io.Classpath
 
 /** Base class for all expect tests.

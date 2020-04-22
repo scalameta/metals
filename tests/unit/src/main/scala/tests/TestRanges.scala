@@ -1,10 +1,11 @@
 package tests
 
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TextEdits
+
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.TextEdits
 
 object TestRanges extends RangeReplace {
 

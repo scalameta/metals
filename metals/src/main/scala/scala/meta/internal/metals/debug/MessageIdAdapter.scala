@@ -1,12 +1,15 @@
 package scala.meta.internal.metals.debug
 
 import java.util.concurrent.atomic.AtomicInteger
+
+import scala.collection.mutable
+
+import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
+
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugRequestMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
-import scala.collection.mutable
-import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 
 /**
  * Assigns an id to synthetic messages and fixes the id of

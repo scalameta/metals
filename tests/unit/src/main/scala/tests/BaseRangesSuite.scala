@@ -1,7 +1,8 @@
 package tests
 
-import munit.Location
 import scala.concurrent.Future
+
+import munit.Location
 
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 

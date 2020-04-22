@@ -1,19 +1,22 @@
 package scala.meta.internal.tvp
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import scala.meta.io.AbsolutePath
 import java.util.concurrent.ScheduledExecutorService
-import scala.collection.concurrent.TrieMap
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import scala.meta.internal.metals._
+import java.util.concurrent.atomic.AtomicBoolean
+
+import scala.collection.concurrent.TrieMap
+
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
-import org.eclipse.{lsp4j => l}
-import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.{lsp4j => l}
 
 class MetalsTreeViewProvider(
     workspace: () => AbsolutePath,

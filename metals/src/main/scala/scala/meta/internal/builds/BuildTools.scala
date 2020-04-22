@@ -2,12 +2,14 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.util.Properties
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.io.PathIO
+
 import scala.concurrent.ExecutionContext
+
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.io.AbsolutePath
 
 /**
  * Detects what build tool is used in this workspace.

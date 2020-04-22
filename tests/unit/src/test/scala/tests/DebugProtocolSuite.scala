@@ -2,11 +2,13 @@ package tests
 
 import java.util.Collections.emptyList
 import java.util.Collections.singletonList
-import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
-import ch.epfl.scala.bsp4j.ScalaMainClass
+
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
+
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
 
 class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
 

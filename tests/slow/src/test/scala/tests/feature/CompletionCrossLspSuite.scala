@@ -1,6 +1,7 @@
 package tests.feature
 
 import scala.meta.internal.metals.{BuildInfo => V}
+
 import tests.BaseCompletionLspSuite
 
 class CompletionCrossLspSuite

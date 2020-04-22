@@ -1,6 +1,9 @@
 package bench
 
 import java.util.concurrent.TimeUnit
+
+import scala.meta.internal.metals.WorkspaceSymbolProvider
+
 import org.eclipse.lsp4j.SymbolInformation
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -10,7 +13,6 @@ import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
-import scala.meta.internal.metals.WorkspaceSymbolProvider
 import tests.MetalsTestEnrichments._
 import tests.TestingWorkspaceSymbolProvider
 

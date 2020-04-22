@@ -3,10 +3,12 @@ package scala.meta.internal.metals
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
+
 import scala.meta.internal.async.ConcurrentQueue
 
 /**

@@ -1,12 +1,14 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
+
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.meta.pc.CancelToken
 import scala.util.Failure
 import scala.util.Success
+
+import scala.meta.pc.CancelToken
 
 /**
  * Constructs an async `CancelToken`.

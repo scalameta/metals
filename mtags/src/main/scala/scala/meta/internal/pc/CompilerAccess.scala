@@ -1,15 +1,17 @@
 package scala.meta.internal.pc
 
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.Level
 import java.util.logging.Logger
+
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
+
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
-import java.util.concurrent.CompletableFuture
-import scala.concurrent.ExecutionContextExecutor
 
 /**
  * Manages the lifecycle and multi-threaded access to the presentation compiler.

@@ -1,7 +1,9 @@
 package tests
 
 import java.nio.file.Paths
+
 import scala.collection.mutable
+
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSymbolQuery

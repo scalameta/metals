@@ -1,11 +1,12 @@
 package tests.debug
-import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
+
 import munit.Location
 import munit.TestOptions
+import tests.BaseDapSuite
 
 class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 

@@ -1,6 +1,7 @@
 package tests
 
 import java.util.concurrent.TimeUnit
+
 import scala.meta.internal.metals.Time
 
 class FakeTime extends Time {

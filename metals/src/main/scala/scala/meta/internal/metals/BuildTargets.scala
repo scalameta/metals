@@ -1,27 +1,30 @@
 package scala.meta.internal.metals
 
-import java.util
-import java.{util => ju}
 import java.lang.{Iterable => JIterable}
-import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
+import java.net.URLClassLoader
+import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.Symbol
 import scala.util.Try
-import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.io.PathIO
-import java.net.URLClassLoader
 import scala.util.control.NonFatal
+
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.Symbol
+import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 
 /**
  * In-memory cache for looking up build server metadata.
