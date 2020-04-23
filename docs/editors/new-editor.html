@@ -76,7 +76,7 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="starting-the-server"></a><a href="#starting-the-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting the server</h2>
 <p>Use <a href="https://github.com/coursier/coursier">Coursier</a> to obtain the JVM classpath
 of Metals:</p>
-<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.8.4+70-ef79aced-SNAPSHOT -o metals -f
+<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.8.4+85-3399fd4d-SNAPSHOT -o metals -f
 </code></pre>
 <p>(optional) It is recommended to enable JVM string de-duplication and provide
 generous stack size and memory options.</p>
@@ -85,7 +85,7 @@ generous stack size and memory options.</p>
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms100m \
-  org.scalameta:metals_2.12:0.8.4+70-ef79aced-SNAPSHOT -o metals -f
+  org.scalameta:metals_2.12:0.8.4+85-3399fd4d-SNAPSHOT -o metals -f
 </code></pre>
 <p>See <a href="#metals-server-properties">Metals server properties</a> for additional system
 properties that are supported by the server.</p>
@@ -125,7 +125,7 @@ example, in vim-lsc the <code>window/logMessage</code> notification is always di
 the UI so <code>-Dmetals.status-bar=log-message</code> can be configured to direct
 higher-priority messages to the logs. However, whenever possible, if the client
 supports the ability to add in <code>experimental</code> items to the <code>ClientCapabilities</code>
-interface, this is preferable.</p>
+interface or to <code>InitializationOptions</code>, this is preferable.</p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsverbose"></a><a href="#-dmetalsverbose" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.verbose</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -159,7 +159,7 @@ notifications. Used by vim-lsc at the moment.</li>
 <code>window/showMessage</code> notifications. Used by coc.nvim and sublime at the
 moment.</li>
 </ul>
-<p><em>Usage of <code>statusBarProvider</code> in <code>ClientCapabilities.experimental</code> is
+<p><em>Usage of <code>statusBarProvider</code> in <code>InitializationOptions</code> is
 preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsslow-task"></a><a href="#-dmetalsslow-task" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.slow-task</code></h3>
 <p>Possible values:</p>
@@ -169,6 +169,8 @@ preferable.</em></p>
 <li><code>status-bar</code>: the <code>metals/slowTask</code> request is not supported, but send updates
 about slow tasks via <code>metals/status</code>.</li>
 </ul>
+<p><em>Usage of <code>slowTaskProvider</code> in <code>InitializationOptions</code> is
+preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsinput-box"></a><a href="#-dmetalsinput-box" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.input-box</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -176,7 +178,7 @@ about slow tasks via <code>metals/status</code>.</li>
 Metals tries to fallback to <code>window/showMessageRequest</code> when possible.</li>
 <li><code>on</code>: the <code>metals/inputBox</code> request is fully supported.</li>
 </ul>
-<p><em>Usage of <code>inputBoxProvider</code> in <code>ClientCapabilities.experimental</code> is preferable.</em></p>
+<p><em>Usage of <code>inputBoxProvider</code> in <code>InitializationOptions</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsexecute-client-command"></a><a href="#-dmetalsexecute-client-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.execute-client-command</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -186,8 +188,7 @@ supported. Client commands can still be handled by enabling
 <li><code>on</code>: the <code>metals/executeClientCommand</code> notification is supported and all
 <a href="#metals-client-commands">Metals client commands</a> are handled.</li>
 </ul>
-<p><em>Usage of <code>executeClientCommandProvider</code> in <code>ClientCapabilities.experimental</code> is
-preferable.</em></p>
+<p><em>Usage of <code>executeClientCommandProvider</code> in <code>InitializationOptions</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalshttp"></a><a href="#-dmetalshttp" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.http</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -196,6 +197,7 @@ preferable.</em></p>
 through a basic web UI. This option is needed for editor clients that don't
 support necessary requests such as <code>window/showMessageRequest</code>.</li>
 </ul>
+<p><em>Usage of <code>isHttpEnabled</code> in <code>InitializationOptions</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsicons"></a><a href="#-dmetalsicons" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.icons</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -211,14 +213,15 @@ by the Atom status bar.</li>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsexit-on-shutdown"></a><a href="#-dmetalsexit-on-shutdown" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.exit-on-shutdown</code></h3>
 <p>Possible values:</p>
 <ul>
-<li><code>off</code> (default): run <code>System.exit</code> only on the <code>exit</code> notification, as
-required by the LSP specification.</li>
-<li><code>on</code>: run <code>System.exit</code> after the <code>shutdown</code> request, going against the LSP
+<li><p><code>off</code> (default): run <code>System.exit</code> only on the <code>exit</code> notification, as
+required by the LSP specification.</p></li>
+<li><p><code>on</code>: run <code>System.exit</code> after the <code>shutdown</code> request, going against the LSP
 specification. This option is enabled by default for Sublime Text to prevent
 the Metals process from staying alive after Sublime Text is quit with <code>Cmd+Q</code>.
 It's not possible for Sublime Text packages to register a callback when the
 editor is quit. See <a href="https://github.com/tomv564/LSP/issues/410">LSP#410</a> for
-more details.</li>
+more details.</p>
+<p><em>Usage of <code>isExitOnShutdown</code> in <code>InitializationOptions</code> is preferable.</em></p></li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsbloop-protocol"></a><a href="#-dmetalsbloop-protocol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.bloop-protocol</code></h3>
 <p>Possible values:</p>
@@ -355,6 +358,7 @@ case for VS Code, Atom, Sublime, and coc.nvim.</li>
 <li><code>off</code>: the client does not add any indentation when receiving a multi-line
 textEdit</li>
 </ul>
+<p><em>Usage of <code>doctorProvider</code> in <code>InitializationOptions.compilerOptions.snippetAutoIndent</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsdoctor-format"></a><a href="#-dmetalsdoctor-format" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.doctor-format</code></h3>
 <p>Format that you'd like Doctor to return information in.</p>
 <p>Possible values:</p>
@@ -363,7 +367,7 @@ textEdit</li>
 the browser or web view</li>
 <li><code>json</code>: json representation of the information returned by Doctor</li>
 </ul>
-<p><em>Usage of <code>doctorProvider</code> in <code>ClientCapabilities.experimental</code> is preferable.</em></p>
+<p><em>Usage of <code>doctorProvider</code> in <code>InitializationOptions</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dbloopembeddedversion"></a><a href="#-dbloopembeddedversion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dbloop.embedded.version</code></h3>
 <p>Version number of the embedded Bloop server. Default value is
 <code>-Dbloop.embedded.version=1.4.0-RC1-192-72a856b6</code>.</p>
@@ -928,27 +932,41 @@ will be able to use incremental text synchronization.</li>
 <li><code>didChangeWatchedFiles</code> client capability is used to determine whether to
 register file watchers.</li>
 </ul>
-<h4><a class="anchor" aria-hidden="true" id="experimental"></a><a href="#experimental" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>experimental</code></h4>
-<p>During the <code>initialize</code> we also have the ability to pass in <code>experimental</code>
-capabilities. In Metals we have a few different &quot;providers&quot;. Some are also LSP
+<h4><a class="anchor" aria-hidden="true" id="initializationoptions-and-experimental"></a><a href="#initializationoptions-and-experimental" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>InitializationOptions</code> and <code>experimental</code></h4>
+<p>During the <code>initialize</code> we also have the ability to pass in <code>InitializationOptions</code> and <code>experimental</code> capabilities.
+In Metals we have a few different &quot;providers&quot;. Some are also LSP
 extensions, such as <code>metals/inputBox</code> which you read about above, and others
-used to be server properties that have been migrated to <code>clientCapabilities</code>.
+used to be server properties that have been migrated to <code>clientCapabilities</code> and <code>InitializationOptions</code>.
 Whenever possible, instead of introducing a new server property, try to
 introduce it here. The main reason for this is that it allows clients to
 initialize and define their &quot;support&quot; for certain things solely through LSP
-rather then using server properties. The currently available settings for
-<code>experimental</code> are listed below.</p>
+rather then using server properties.</p>
+<p>The currently available settings for <code>InitializationOptions</code> are listed below.</p>
+<pre><code class="hljs css language-js">    <span class="hljs-string">"InitializationOptions"</span>: {
+      <span class="hljs-string">"statusBarProvider"</span>: <span class="hljs-string">"on"</span> | <span class="hljs-string">"off"</span> | <span class="hljs-string">"show-message"</span> | <span class="hljs-string">"log-message"</span>,
+      <span class="hljs-string">"didFocusProvider"</span>: boolean,
+      <span class="hljs-string">"slowTaskProvider"</span>: boolean,
+      <span class="hljs-string">"inputBoxProvider"</span>: boolean,
+      <span class="hljs-string">"quickPickProvider"</span>: boolean,
+      <span class="hljs-string">"executeClientCommandProvider"</span>: boolean,
+      <span class="hljs-string">"doctorProvider"</span>: <span class="hljs-string">"json"</span> | <span class="hljs-string">"html"</span>,
+      <span class="hljs-string">"isExitOnShutdown"</span> : boolean,
+      <span class="hljs-string">"isHttpEnabled"</span>: boolean,
+      <span class="hljs-string">"compilerOptions"</span>:{
+        <span class="hljs-string">"isCompletionItemDetailEnabled"</span>: boolean,
+        <span class="hljs-string">"isCompletionItemDocumentationEnabled"</span>: boolean,
+        <span class="hljs-string">"isHoverDocumentationEnabled"</span>: boolean,
+        <span class="hljs-string">"snippetAutoIndent"</span>: boolean,
+        <span class="hljs-string">"isSignatureHelpDocumentationEnabled"</span>: boolean,
+        <span class="hljs-string">"isCompletionItemResolve"</span>: boolean
+      }
+    }
+</code></pre>
+<p>The currently available settings for <code>experimental</code> are listed below.</p>
 <pre><code class="hljs css language-js">    <span class="hljs-string">"experimental"</span>: {
       <span class="hljs-string">"treeViewProvider"</span>: boolean,
       <span class="hljs-string">"debuggingProvider"</span>: boolean,
-      <span class="hljs-string">"decorationProvider"</span>: boolean,
-      <span class="hljs-string">"inputBoxProvider"</span>: boolean,
-      <span class="hljs-string">"quickPickProvider"</span>: boolean,
-      <span class="hljs-string">"didFocusProvider"</span>: boolean,
-      <span class="hljs-string">"slowTaskProvider"</span>: boolean,
-      <span class="hljs-string">"executeClientCommandProvider"</span>: boolean,
-      <span class="hljs-string">"doctorProvider"</span>: <span class="hljs-string">"json"</span> | <span class="hljs-string">"html"</span>,
-      <span class="hljs-string">"statusBarProvider"</span>: <span class="hljs-string">"on"</span> | <span class="hljs-string">"off"</span> | <span class="hljs-string">"show-message"</span> | <span class="hljs-string">"log-message"</span>
+      <span class="hljs-string">"decorationProvider"</span>: boolean
     }
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="initialized"></a><a href="#initialized" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>initialized</code></h3>
