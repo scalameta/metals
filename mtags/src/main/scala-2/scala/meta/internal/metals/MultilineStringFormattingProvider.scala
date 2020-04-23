@@ -53,10 +53,9 @@ object MultilineStringFormattingProvider {
   }
 
   private def indent(
-      sourceText: String,
+      splitLines: Array[String],
       position: Position
   ): TextEdit = {
-    val splitLines = sourceText.split('\n')
     // position line -1 since we are checking the line before when doing onType
     val defaultIndent = determineDefaultIndent(splitLines, position.getLine - 1)
     val existingSpaces = position.getCharacter()
@@ -112,40 +111,49 @@ object MultilineStringFormattingProvider {
 
   private def multilineStringInTokens(
       tokens: Tokens,
-      startPos: meta.Position,
-      endPos: meta.Position,
+      startPos: StartPosition,
+      endPos: EndPosition,
       sourceText: String,
       newlineAdded: Boolean
   ): Boolean = {
     if (pipeInScope(startPos, endPos, sourceText, newlineAdded)) {
-      def shouldFormatMultiString: PartialFunction[(Token, Int), Boolean] = {
-        case (token: Constant.String, index: Int) =>
-          isMultilineString(sourceText, token) && hasStripMarginSuffix(
-            index,
-            tokens
-          ) && inToken(startPos, endPos, token)
-      }
-
-      def shouldFormatInterpolationString
-          : PartialFunction[(Token, Int), Boolean] = {
-        case (token: Interpolation.Start, index: Int)
-            if token.start < startPos.start => {
-          var endIndex = index + 1
-          while (!tokens(endIndex)
-              .isInstanceOf[Interpolation.End]) endIndex += 1
-          isMultilineString(sourceText, token) && hasStripMarginSuffix(
-            endIndex,
-            tokens
-          )
-        }
-      }
       tokens.zipWithIndex
         .exists(
-          shouldFormatMultiString orElse shouldFormatInterpolationString orElse {
+          shouldFormatMultiString(sourceText, tokens, startPos, endPos) orElse
+            shouldFormatInterpolationString(sourceText, tokens, startPos) orElse {
             case _ => false
           }
         )
     } else false
+  }
+
+  private def shouldFormatMultiString(
+      sourceText: String,
+      tokens: Tokens,
+      start: StartPosition,
+      end: EndPosition
+  ): PartialFunction[(Token, Int), Boolean] = {
+    case (token: Constant.String, index: Int) =>
+      isMultilineString(sourceText, token) && hasStripMarginSuffix(
+        index,
+        tokens
+      ) && inToken(start, end, token)
+  }
+  private def shouldFormatInterpolationString(
+      sourceText: String,
+      tokens: Tokens,
+      start: StartPosition
+  ): PartialFunction[(Token, Int), Boolean] = {
+    case (token: Interpolation.Start, index: Int)
+        if token.start < start.start => {
+      var endIndex = index + 1
+      while (!tokens(endIndex)
+          .isInstanceOf[Interpolation.End]) endIndex += 1
+      isMultilineString(sourceText, token) && hasStripMarginSuffix(
+        endIndex,
+        tokens
+      )
+    }
   }
 
   private def withToken(
@@ -170,23 +178,34 @@ object MultilineStringFormattingProvider {
   }
 
   private def doubleQuoteNotClosed(
-      lineBefore: String
-  ): Boolean = lineBefore.count(_ == '"') % 2 != 0
+      splitLines: Array[String],
+      position: Position
+  ): Boolean = {
+    val lineBefore = splitLines(position.getLine - 1)
+    lineBefore.count(_ == '"') % 2 != 0
+  }
 
   private def fixStringNewline(
-      newlineAdded: Boolean,
       position: Position,
-      lineBefore: String
+      splitLines: Array[String]
   ): List[TextEdit] = {
     val precedentLine = position.getLine - 1
-    val lastChar = lineBefore.size
-    val endPrecedentLine = new Position(precedentLine, lastChar)
+    val lastCharOfLineBefore = splitLines(precedentLine).size
+    val endPrecedentLine = new Position(precedentLine, lastCharOfLineBefore)
     val textEditPrecedentLine = new TextEdit(
       new Range(endPrecedentLine, endPrecedentLine),
       "\"" + " " + "+"
     )
+    val isPrecedentLineFirstLineOfString =
+      if (precedentLine > 1)
+        !splitLines(precedentLine - 1).trim.lastOption.contains('+')
+      else true
+    val defaultIndent = splitLines(precedentLine).takeWhile(_ == ' ').size
+    val indent =
+      if (isPrecedentLineFirstLineOfString) defaultIndent + 2 else defaultIndent
+    val zeroPos = new Position(position.getLine, 0)
     val textEditcurrentLine =
-      new TextEdit(new Range(position, position), "  " + "\"")
+      new TextEdit(new Range(zeroPos, position), " " * indent + "\"")
     List(textEditPrecedentLine, textEditcurrentLine)
   }
 
@@ -235,7 +254,8 @@ object MultilineStringFormattingProvider {
     val range = new Range(params.getPosition, params.getPosition)
     val doc = params.getTextDocument()
     val newlineAdded = params.getCh() == "\n"
-
+    val splitLines = sourceText.split('\n')
+    val position = params.getPosition
     withToken(doc, sourceText, range) {
       (startPos, endPos, sourceText, tokens) =>
         tokens match {
@@ -247,14 +267,11 @@ object MultilineStringFormattingProvider {
                 sourceText,
                 newlineAdded
               )) {
-              List(indent(sourceText, params.getPosition))
+              List(indent(splitLines, position))
             } else Nil
           case None =>
-            val position = params.getPosition
-            val splitLines = sourceText.split('\n')
-            val lineBefore = splitLines(position.getLine - 1)
-            if (newlineAdded && doubleQuoteNotClosed(lineBefore))
-              fixStringNewline(newlineAdded, position, lineBefore)
+            if (newlineAdded && doubleQuoteNotClosed(splitLines, position))
+              fixStringNewline(position, splitLines)
             else Nil
         }
     }
@@ -279,7 +296,7 @@ object MultilineStringFormattingProvider {
                 startPos,
                 endPos,
                 sourceText,
-                false
+                newlineAdded = false
               )) {
               val linesToFormat =
                 range.getStart().getLine().to(range.getEnd().getLine())
