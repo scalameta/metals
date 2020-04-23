@@ -11,7 +11,12 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   override def requiresScalaLibrarySources: Boolean = true
 
   override def definitions(offsetParams: CompilerOffsetParams): List[Location] =
-    pc.definition(offsetParams).get().locations().asScala.toList
+    presentationCompiler
+      .definition(offsetParams)
+      .get()
+      .locations()
+      .asScala
+      .toList
 
   check(
     "basic",

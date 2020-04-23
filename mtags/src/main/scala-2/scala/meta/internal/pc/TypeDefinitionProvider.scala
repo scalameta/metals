@@ -32,10 +32,10 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
           case sel: Select
               if sel.symbol.isMethod && sel.symbol.asMethod.returnType.typeSymbol.isTypeParameter =>
             //todo remove it; is this case possible at all?
-            pprint.log(
+            /*pprint.log(
               sel.symbol,
               "select is method. ok, it really works sometimes"
-            )
+            )*/
             Some(sel.tpe.typeSymbol)
           case app @ Apply(fun, args)
               if !fun.pos.includes(pos) && args.nonEmpty =>
@@ -54,8 +54,8 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
             Some(tree.children.head.tpe.typeSymbol)
           case t @ ValDef(_, _, _, rhs) if rhs.isTyped =>
             //todo: remove t
-            pprint.log(t.tpe)
-            pprint.log(rhs.tpe)
+            /*pprint.log(t.tpe)
+            pprint.log(rhs.tpe)*/
             Some(rhs.tpe.typeSymbol)
           case tree =>
             val expTree = expandRangeToEnclosingApply(tree.pos)

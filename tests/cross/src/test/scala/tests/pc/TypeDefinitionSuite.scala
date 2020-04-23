@@ -11,7 +11,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
   override def requiresScalaLibrarySources: Boolean = true
 
   override def definitions(offsetParams: CompilerOffsetParams): List[Location] =
-    pc.typeDefinition(offsetParams).get().asScala.toList
+    presentationCompiler.typeDefinition(offsetParams).get().asScala.toList
 
   check(
     "val",
@@ -132,10 +132,5 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
       |}
       |""".stripMargin
   )
-
-  override def beforeAll(): Unit = {
-    indexJDK()
-    indexScalaLibrary()
-  }
 
 }

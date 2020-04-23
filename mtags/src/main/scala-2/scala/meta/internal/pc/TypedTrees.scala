@@ -2,7 +2,7 @@ package scala.meta.internal.pc
 
 import scala.meta.pc.OffsetParams
 
-trait Trees { this: MetalsGlobal =>
+trait TypedTrees { this: MetalsGlobal =>
 
   lazy val isForName: Set[Name] = Set[Name](
     nme.map,
@@ -16,7 +16,7 @@ trait Trees { this: MetalsGlobal =>
   ): (RichCompilationUnit, Position, Tree) = {
     val unit = addCompilationUnit(
       code = params.text(),
-      filename = params.filename(),
+      filename = params.uri().toString(),
       cursor = None
     )
     val pos = unit.position(params.offset())

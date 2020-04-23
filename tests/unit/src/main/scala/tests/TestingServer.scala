@@ -1044,107 +1044,6 @@ final class TestingServer(
       referenceLocations.asScala.toList
     }
   }
-  
-  def assertTypeDefinition(
-      filenameStr: String = "",
-      queryStr: String,
-      expectedLocs: List[l.Location] = Nil,
-      root: AbsolutePath,
-      isJava8: Boolean = true
-  ): Future[Unit] = {
-
-    val fMap =
-      FileLayout.mapFromString(queryStr).filter(_._1.endsWith(".scala"))
-
-    val (filename, query, uri) = if (filenameStr.isEmpty) {
-      val uriRegex = """^[^/]*/\*([^*]+)\*/[^/]*$""".r
-
-      fMap.find(_._2.contains("@@")) match {
-        case Some(file) =>
-          val (filename, content) = file
-          (
-            filename,
-            content.replaceAll("""/\*[^\*]*\*/""", ""),
-            content.split("\n").find(_.contains("@@")).collect {
-              case uriRegex(uri) => uri
-            }
-          )
-        case _ => (filenameStr, queryStr, None)
-      }
-    } else (filenameStr, queryStr, None)
-
-    val extractedExp = if (expectedLocs.isEmpty) {
-      fMap
-        .filter(_._2.split("\n").exists(l => l.matches(".*<<[^>]+>>.*")))
-        .map(t => {
-          val (filename, content) = t
-
-          val lines = content.split("\n").toList
-          val range = lines.indices.find(lines(_).contains("<<")) match {
-            case Some(startLine) =>
-              val startStr: String = lines(startLine)
-              val startChar: Int = startStr.indexOf("<<")
-              val startPos = new l.Position(startLine, startChar)
-              val endPos =
-                if (!startStr.contains(">>"))
-                  lines.indices.find(lines(_).contains(">>")) match {
-                    case Some(endLine) =>
-                      val endStr = lines(endLine)
-                      val endChar = endStr.indexOf(">>")
-                      new l.Position(endLine, endChar)
-                    case _ => new l.Position()
-                  }
-                else new l.Position(startLine, startStr.indexOf(">>") - 2)
-              new l.Range(startPos, endPos)
-            case _ => new l.Range()
-          }
-          new l.Location(filename, range)
-        })
-        .toList
-    } else Nil
-
-    for {
-      typeDefinitions <- typeDefinition(
-        filename,
-        TestingUtils.prepareDefinition(query)
-      )
-    } yield {
-      uri.map(TestingUtils.uriToRelative(_, root).stripPrefix("/")) match {
-        case Some(uriStr) =>
-          TestingUtils
-            .compatJDK(typeDefinitions, isJava8)
-            .map(o =>
-              TestingUtils.uriToRelative(o.getUri, root).stripPrefix("/")
-            )
-            .map(o => Assertions.assertNoDiff(o, uriStr))
-        case None =>
-          val obtained = TestingUtils
-            .compatJDK(typeDefinitions, isJava8)
-            .map(TestingUtils.locationToString(_, root).stripPrefix("/"))
-            .sorted
-            .mkString("\n")
-          val expected = (expectedLocs ++ extractedExp)
-            .map(TestingUtils.locationToString(_, root).stripPrefix("/"))
-            .sorted
-            .mkString("\n")
-          Assertions.assertNoDiff(obtained, expected)
-      }
-
-    }
-  }
-
-  def typeDefinition(
-      filename: String,
-      query: String
-  ): Future[List[l.Location]] = {
-    for {
-      (_, params) <- offsetParams(filename, query, workspace)
-      definitions <- server.typeDefinition(params).asScala
-
-    } yield {
-      definitions.asScala.toList
-    }
-  }
 
   def references(
       filename: String,
@@ -1214,19 +1113,12 @@ final class TestingServer(
     }
   }
 
-  private def workspaceDefinitions(
-      getDocumentMarkedWithDefinitions: AbsolutePath => s.TextDocument
-  ): String = {
-    buffers.open.toSeq
-      .sortBy(_.toURI.toString)
-      .map { path =>
-        val textDocument = getDocumentMarkedWithDefinitions(path)
-        val relpath =
-          path.toRelative(workspace).toURI(isDirectory = false).toString
-        val printedTextDocument = Semanticdbs.printTextDocument(textDocument)
-        s"/$relpath\n$printedTextDocument"
-      }
-      .mkString("\n")
+  def workspaceDefinitions: String = {
+    workspaceDefinitions(toSemanticdbTextDocument)
+  }
+
+  def workspaceTypeDefinitions: String = {
+    workspaceDefinitions(toTypeDefinitionsTextDocument)
   }
 
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {
@@ -1305,12 +1197,19 @@ final class TestingServer(
     )
   }
 
-  def workspaceDefinitions: String = {
-    workspaceDefinitions(toSemanticdbTextDocument)
-  }
-
-  def workspaceTypeDefinitions: String = {
-    workspaceDefinitions(toTypeDefinitionsTextDocument)
+  private def workspaceDefinitions(
+      getDocumentMarkedWithDefinitions: AbsolutePath => s.TextDocument
+  ): String = {
+    buffers.open.toSeq
+      .sortBy(_.toURI.toString)
+      .map { path =>
+        val textDocument = getDocumentMarkedWithDefinitions(path)
+        val relpath =
+          path.toRelative(workspace).toURI(isDirectory = false).toString
+        val printedTextDocument = Semanticdbs.printTextDocument(textDocument)
+        s"/$relpath\n$printedTextDocument"
+      }
+      .mkString("\n")
   }
 
   def documentSymbols(uri: String): Future[String] = {

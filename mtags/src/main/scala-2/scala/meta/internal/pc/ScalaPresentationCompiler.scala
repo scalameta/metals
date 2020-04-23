@@ -214,11 +214,11 @@ case class ScalaPresentationCompiler(
   override def typeDefinition(
       params: OffsetParams
   ): CompletableFuture[java.util.List[Location]] = {
-    access.withNonInterruptableCompiler(
+    compilerAccess.withNonInterruptableCompiler(
       List[Location]().asJava,
       params.token
-    ) { global =>
-      new TypeDefinitionProvider(global).typeDefinition(params).asJava
+    ) { pc =>
+      new TypeDefinitionProvider(pc.compiler).typeDefinition(params).asJava
     }
   }
 

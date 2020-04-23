@@ -99,10 +99,14 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
 
   implicit class XtensionOffsetParams(params: OffsetParams) {
     def isDelimiter: Boolean = {
-      params.offset() < 0 ||
-      params.offset() >= params.text().length ||
-      (params.text().charAt(params.offset()) match {
-        case '(' | ')' | '{' | '}' | '[' | ']' | ',' | '=' | '.' => true
+      val offset = params.offset()
+      val text = params.text()
+      offset < 0 ||
+      offset >= text.length ||
+      (text.charAt(offset) match {
+        case '=' =>
+          !(offset + 1 < params.text.length && text.charAt(offset + 1) == '=')
+        case '(' | ')' | '{' | '}' | '[' | ']' | ',' | '.' => true
         case _ => false
       })
     }

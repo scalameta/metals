@@ -147,6 +147,14 @@ case class ScalaPresentationCompiler(
     }
   }
 
+  //TODO NOT IMPLEMENTED
+  def typeDefinition(
+      params: OffsetParams
+  ): CompletableFuture[java.util.List[Location]] =
+    CompletableFuture.completedFuture(
+      null
+    )
+
   def shutdown(): Unit = {
     compilerAccess.shutdown()
   }

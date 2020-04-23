@@ -1,10 +1,11 @@
 package tests.pc
 
 import tests.BasePCSuite
-import munit.Location
-import org.eclipse.{lsp4j => l}
 import scala.meta.internal.metals.CompilerOffsetParams
+import org.eclipse.{lsp4j => l}
 import scala.meta.internal.metals.TextEdits
+import munit.Location
+import java.net.URI
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
 
@@ -18,12 +19,14 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
     test(name) {
-      val uri = "A.scala"
-      val (code, offset) = codeAndRequestOffset(original, uri)
-      val locations = definitions(CompilerOffsetParams(uri, code, offset))
+      val filename = "A.scala"
+      val uri = s"file:///$filename"
+      val (code, offset) = codeAndRequestOffset(original, filename)
+      val locations =
+        definitions(CompilerOffsetParams(URI.create(uri), code, offset))
       val obtained = codeWithLocations(code, uri, offset, locations)
       val expected = original.replaceAllLiterally("@@", "")
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
   }
 

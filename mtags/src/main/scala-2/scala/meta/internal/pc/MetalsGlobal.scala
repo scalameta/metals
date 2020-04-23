@@ -44,7 +44,7 @@ class MetalsGlobal(
     with GlobalProxy
     with AutoImports
     with Keywords
-    with Trees
+    with TypedTrees
     with WorkspaceSymbolSearch { compiler =>
   hijackPresentationCompilerThread()
 
