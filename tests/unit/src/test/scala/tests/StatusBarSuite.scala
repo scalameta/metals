@@ -7,7 +7,10 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.{
+  ClientExperimentalCapabilities,
+  InitializationOptions
+}
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
@@ -19,7 +22,8 @@ class StatusBarSuite extends BaseSuite {
     ProgressTicks.dots,
     Icons.default,
     StatusBarConfig.default,
-    ClientExperimentalCapabilities.Default
+    ClientExperimentalCapabilities.Default,
+    InitializationOptions.Default
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()

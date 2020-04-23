@@ -357,12 +357,18 @@ class Compilers(
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
       .withConfiguration(
-        config.compilers.copy(
-          _symbolPrefixes = userConfig().symbolPrefixes,
-          isCompletionSnippetsEnabled =
-            initializeParams.supportsCompletionSnippets,
-          isFoldOnlyLines = initializeParams.foldOnlyLines
-        )
+        initializeParams
+          .map(params => {
+            val options = InitializationOptions.from(params).compilerOptions
+            config.compilers.update(options)
+          })
+          .getOrElse(config.compilers)
+          .copy(
+            _symbolPrefixes = userConfig().symbolPrefixes,
+            isCompletionSnippetsEnabled =
+              initializeParams.supportsCompletionSnippets,
+            isFoldOnlyLines = initializeParams.foldOnlyLines
+          )
       )
 
   def newCompiler(

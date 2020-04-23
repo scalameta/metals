@@ -31,4 +31,21 @@ case class PresentationCompilerConfigImpl(
     Optional.ofNullable(_parameterHintsCommand.orNull)
   override def completionCommand: Optional[String] =
     Optional.ofNullable(_completionCommand.orNull)
+
+  def update(
+      options: CompilerInitializationOptions
+  ): PresentationCompilerConfigImpl =
+    copy(
+      isCompletionItemDetailEnabled =
+        isCompletionItemDetailEnabled || options.isCompletionItemDetailEnabled,
+      isCompletionItemDocumentationEnabled =
+        isCompletionItemDocumentationEnabled || options.isCompletionItemDocumentationEnabled,
+      isHoverDocumentationEnabled =
+        isHoverDocumentationEnabled || options.isHoverDocumentationEnabled,
+      snippetAutoIndent = snippetAutoIndent || options.snippetAutoIndent,
+      isSignatureHelpDocumentationEnabled =
+        isSignatureHelpDocumentationEnabled || options.isSignatureHelpDocumentationEnabled,
+      isCompletionItemResolve =
+        isCompletionItemResolve || options.isCompletionItemResolve
+    )
 }

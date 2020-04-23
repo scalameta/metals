@@ -25,7 +25,8 @@ final class Doctor(
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     messages: Messages,
-    clientExperimentalCapabilities: ClientExperimentalCapabilities
+    clientExperimentalCapabilities: ClientExperimentalCapabilities,
+    initializationOptions: InitializationOptions
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private var bspServerName: Option[String] = None
@@ -71,9 +72,15 @@ final class Doctor(
       clientCommand: Command,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    if (config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider) {
+    val executeClientCommandProvider = config.executeClientCommand.isOn ||
+      clientExperimentalCapabilities.executeClientCommandProvider ||
+      initializationOptions.executeClientCommandProvider
+
+    if (executeClientCommandProvider) {
+      val doctorFormatIsJson =
+        config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson || initializationOptions.doctorFormatIsJson
       val output =
-        if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
+        if (doctorFormatIsJson)
           buildTargetsJson()
         else buildTargetsHtml()
       val params = new ExecuteCommandParams(
@@ -128,8 +135,12 @@ final class Doctor(
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
       if (isMaven) {
+        val doctorFormatIsJson = config.doctorFormat.isJson ||
+          clientExperimentalCapabilities.doctorFormatIsJson ||
+          initializationOptions.doctorFormatIsJson
+
         val website =
-          if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
+          if (doctorFormatIsJson)
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
           else
             "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
