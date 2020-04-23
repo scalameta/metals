@@ -16,7 +16,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     if (params.isWhitespace) {
       None
     } else {
-      val (unit, pos, tree) = createCompilationUnit(params)
+      val (_, pos, tree) = createCompilationUnit(params)
       tree match {
         case i @ Import(_, selectors) =>
           for {

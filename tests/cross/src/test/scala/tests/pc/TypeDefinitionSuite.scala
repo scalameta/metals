@@ -51,7 +51,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
       |object Main {
       |  def tst(par1: Int, par2: String): Unit = {}
       |
-      |  tst(par1 = 1, p/*java/lang/String# String.java*/@@ar2 = "foo")
+      |  tst(p/*java/lang/String# String.java*/@@ar2 = "foo", par1 = 1)
       |}""".stripMargin
   )
 
@@ -82,11 +82,14 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
       |""".stripMargin
   )
 
-  check("literal", """
-                     |object Main {
-                     | val x = 4@@2
-                     |}
-                     |""".stripMargin)
+  check(
+    "literal",
+    """
+      |object Main {
+      | val x = 4/*scala/Int# Int.scala*/@@2
+      |}
+      |""".stripMargin
+  )
 
   check(
     "if",
@@ -114,6 +117,18 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """
       |object Main {
       | def foo[<<T>>](param: T): T = para@@m
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "method-generic-result",
+    """
+      |object A {
+      | def foo[T](param: T): T = param
+      }
+      |object Main {
+      | println(A.fo/*scala/Int# Int.scala*/@@o(2))
       |}
       |""".stripMargin
   )

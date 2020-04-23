@@ -14,90 +14,56 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
     "var"
   )
 
-  def tree(params: OffsetParams): Option[Tree] =
-    if (params.isWhitespace)
-      None
-    else {
-      val (_, _, tree) = createCompilationUnit(params)
-      Some(tree)
-    }
-
-  def lineAndCharacterToOffset(
-      pos: compiler.Position,
-      line: Int,
-      char: Int
-  ): Int =
-    pos.source.lineToOffset(line) + char
-
-  def typeSymbol(params: OffsetParams): Option[Symbol] = {
-    tree(params)
-      .flatMap {
-        case vd: ValDef =>
-          val (rStart, rEnd) = (vd.pos.start, vd.pos.end)
-          val tokens = vd.pos.source.content
-            .slice(rStart, rEnd)
-            .mkString
-            .tokenize
-            .get
-            .tokens
-          val curToken = tokens
-            .dropWhile(_.pos.end < params.offset() - vd.pos.start)
-            .head
-
-          if (ignoredTags.contains(curToken.text))
-            None
-          else
-            Some(vd)
-        case t: Tree => Some(t)
-      }
-      .flatMap {
-        case sel: Select
-            if sel.symbol.asMethod.returnType.typeSymbol.isTypeParameter =>
-          Some(sel.tpe.typeSymbol)
-        case app @ Apply(fun, args) if args.nonEmpty =>
-          val (rStart, rEnd) = (fun.pos.start, args.last.pos.end)
-
-          val txt = app.pos.source.content
-            .slice(rStart, rEnd)
-            .mkString
-          txt.tokenize.get.tokens.toList
-            .find(t => {
-              val (pStart, pEnd) =
-                (app.pos.start + t.pos.start, app.pos.start + t.pos.end)
-              pStart <= params.offset && pEnd >= params.offset
-            }) match {
-            case Some(t) =>
-              app.symbol.asMethod.paramLists.flatten
-                .find(_.nameString.trim == t.text)
-                .map(_.tpe.typeSymbol)
-            case _ => None
-          }
-        case tree: Tree if tree.symbol.isMethod =>
-          Some(tree.symbol.asMethod.returnType.typeSymbol)
-        case tree: Tree if tree.symbol.isTypeSymbol =>
-          Some(tree.symbol)
-        case tree: Tree if tree.tpe.isDefined =>
-          Some(tree.tpe.typeSymbol)
-        case tree: Tree if tree.children.nonEmpty =>
-          Some(tree.children.head.tpe.typeSymbol)
-        case vd: compiler.ValDef if vd.rhs.isTyped =>
-          Some(vd.rhs.tpe.typeSymbol)
-        case tree: Tree =>
-          val expTree = expandRangeToEnclosingApply(tree.pos)
-          if (expTree.tpe != null && expTree.tpe.isDefined)
-            Some(expTree.tpe.typeSymbol)
-          else None
-        case _ => None
-      }
-  }
-
   def typeDefinition(params: OffsetParams): List[l.Location] = {
     typeSymbol(params)
-      .collect {
-        case sym => getSymbolDefinition(sym)
-      }
-      .toList
-      .flatten
+      .fold[List[l.Location]](Nil)(
+        getSymbolDefinition
+      )
+  }
+
+  private def typeSymbol(params: OffsetParams): Option[Symbol] = {
+    if (params.isWhitespace | params.isDelimiter)
+      None
+    else {
+      val (_, pos, tree) = createCompilationUnit(params)
+      Some(tree)
+        .filterNot(pointsToIgnored(params))
+        .flatMap {
+          case sel: Select
+              if sel.symbol.isMethod && sel.symbol.asMethod.returnType.typeSymbol.isTypeParameter =>
+            //todo remove it; is this case possible at all?
+            pprint.log(
+              sel.symbol,
+              "select is method. ok, it really works sometimes"
+            )
+            Some(sel.tpe.typeSymbol)
+          case app @ Apply(fun, args)
+              if !fun.pos.includes(pos) && args.nonEmpty =>
+            //most probably, named parameter
+            //and if not - those are cases of no interest
+            getNamedParameter(app, pos.start)
+              .map(_.tpe.typeSymbol)
+          case tree if tree.symbol.isDefined && tree.symbol.isMethod =>
+            Some(tree.symbol.asMethod.returnType.typeSymbol)
+          case tree if tree.symbol.isDefined && tree.symbol.isTypeSymbol =>
+            Some(tree.symbol)
+          case tree if tree.tpe.isDefined =>
+            Some(tree.tpe.typeSymbol)
+          case tree
+              if tree.children.nonEmpty && tree.children.head.tpe.isDefined =>
+            Some(tree.children.head.tpe.typeSymbol)
+          case t @ ValDef(_, _, _, rhs) if rhs.isTyped =>
+            //todo: remove t
+            pprint.log(t.tpe)
+            pprint.log(rhs.tpe)
+            Some(rhs.tpe.typeSymbol)
+          case tree =>
+            val expTree = expandRangeToEnclosingApply(tree.pos)
+            if (expTree.tpe.isDefined)
+              Some(expTree.tpe.typeSymbol)
+            else None
+        }
+    }
   }
 
   private def getSymbolDefinition(sym: Symbol): List[l.Location] = {
@@ -119,10 +85,47 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
   }
 
   private def fallbackToSemanticDB(sym: Symbol): List[l.Location] = {
-    if (sym == null) Nil
-    else {
-      val typeSym = semanticdbSymbol(sym)
-      search.definition(typeSym).asScala.toList
+    val typeSym = semanticdbSymbol(sym)
+    search.definition(typeSym).asScala.toList
+  }
+
+  private def pointsToIgnored(params: OffsetParams)(t: Tree): Boolean =
+    t match {
+      //this case is an optimization hack, knowing ignored tags are only valdef keywords
+      case vd @ ValDef(_, _, _, _) =>
+        val tokens = vd.pos.source.content
+          .slice(vd.pos.start, vd.pos.end)
+          .mkString
+          .tokenize
+          .get
+          .tokens
+        val curToken = tokens
+          .dropWhile(_.pos.end < params.offset() - vd.pos.start)
+          .head
+
+        ignoredTags.contains(curToken.text)
+      case _ => false
+    }
+
+  private def getNamedParameter(app: Apply, offset: Int): Option[Symbol] = {
+    val rStart = app.fun.pos.start
+    val rEnd = app.args.last.pos.end
+    val txt = app.pos.source.content
+      .slice(rStart, rEnd)
+      .mkString
+
+    val tokens = txt.tokenize.get.tokens.toList
+    tokens
+      .find(t => {
+        val tokenStart = app.pos.start + t.pos.start
+        val tokenEnd = app.pos.start + t.pos.end
+        tokenStart <= offset && tokenEnd > offset
+      }) match {
+      case Some(t) =>
+        app.symbol.asMethod.paramLists.flatten
+          .find(_.nameString.trim == t.text)
+      case _ =>
+        None
     }
   }
 }

@@ -73,11 +73,11 @@ class TypeDefinitionLspSuite extends BaseLspSuite("typeDefinition") {
            |package a
            |import java.util.concurrent.Future // unused
            |import scala.util.Failure // unused
-           |case class CClass/*L3*/(str/*String.java*/: String)
+           |case class CClass/*L3*/(str/*String.java*/: String/*Predef.scala*/)
            |object Extractor {
            | def unapply/*Option.scala*/(c/*L3*/: CClass/*L3*/): Option/*Option.scala*/[Int] = Some/*Option.scala*/(1)
            |}
-           |object Main extends App {
+           |object Main extends App/*App.scala*/ {
            |  val message/*String.java*/ = Message/*Message.java:1*/.message/*String.java*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Unit.scala*/(message/*String.java*/)

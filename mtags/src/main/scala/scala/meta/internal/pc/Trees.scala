@@ -20,7 +20,7 @@ trait Trees { this: MetalsGlobal =>
       cursor = None
     )
     val pos = unit.position(params.offset())
-    val tree = typedHoverTreeAt(pos)
+    val tree = focusedTypedTreeAt(pos)
     (unit, pos, tree)
   }
 
@@ -69,7 +69,7 @@ trait Trees { this: MetalsGlobal =>
     }
   }
 
-  def typedHoverTreeAt(pos: Position): Tree = {
+  def focusedTypedTreeAt(pos: Position): Tree = {
     val treeWithType = typedTreeAt(pos)
     treeWithType match {
       case Import(qual, se) if qual.pos.includes(pos) =>
