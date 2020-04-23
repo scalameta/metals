@@ -44,12 +44,20 @@ final class ConfiguredLanguageClient(
       clientCapabilities.statusBarIsOn ||
       initializationOptions.statusBarIsOn
 
+    val statusBarIsShow = config.statusBar.isShowMessage ||
+      clientCapabilities.statusBarIsShowMessage ||
+      initializationOptions.statusBarIsShowMessage
+
+    val statusBarIsLog = config.statusBar.isLogMessage ||
+      clientCapabilities.statusBarIsLogMessage ||
+      initializationOptions.statusBarIsLogMessage
+
     if (statusBarIsOn) {
       underlying.metalsStatus(params)
     } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (config.statusBar.isShowMessage || clientCapabilities.statusBarIsShowMessage || initializationOptions.statusBarIsShowMessage) {
+      if (statusBarIsShow) {
         underlying.showMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage || initializationOptions.statusBarIsLogMessage) {
+      } else if (statusBarIsLog) {
         underlying.logMessage(new MessageParams(MessageType.Log, params.text))
       } else {
         ()
