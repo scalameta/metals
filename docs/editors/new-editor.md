@@ -78,7 +78,7 @@ example, in vim-lsc the `window/logMessage` notification is always displayed in
 the UI so `-Dmetals.status-bar=log-message` can be configured to direct
 higher-priority messages to the logs. However, whenever possible, if the client
 supports the ability to add in `experimental` items to the `ClientCapabilities`
-interface and/or to `InitializationOptions`, this is preferable.
+interface or to `InitializationOptions`, this is preferable.
 
 ### `-Dmetals.verbose`
 
