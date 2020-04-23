@@ -385,10 +385,20 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/Main.worksheet.sc:1:1: warning: there was one feature warning; re-run with -feature for details
-           |type Structural = {
-           |^
-           |""".stripMargin
+        getExpected(
+          """|a/src/main/scala/Main.worksheet.sc:1:1: warning: there was one feature warning; re-run with -feature for details
+             |type Structural = {
+             |^
+             |""".stripMargin,
+          compat = Map(
+            "2.13.2" ->
+              """|a/src/main/scala/Main.worksheet.sc:1:1: warning: 1 feature warning; re-run with -feature for details
+                 |type Structural = {
+                 |^
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }

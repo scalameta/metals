@@ -656,12 +656,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |until(end: Long): NumericRange.Exclusive[Long]
            |until(end: Long, step: Long): NumericRange.Exclusive[Long]
            |""".stripMargin,
-      "2.12.4" ->
-        """|until(end: Double): Range.Partial[Double,NumericRange[Double]]
-           |until(end: Double, step: Double): NumericRange.Exclusive[Double]
-           |until(end: Long): NumericRange.Exclusive[Long]
-           |until(end: Long, step: Long): NumericRange.Exclusive[Long]
-        """.stripMargin,
       "2.11" ->
         """|until(end: Double): Range.Partial[Double,NumericRange[Double]]
            |until(end: Double, step: Double): NumericRange.Exclusive[Double]

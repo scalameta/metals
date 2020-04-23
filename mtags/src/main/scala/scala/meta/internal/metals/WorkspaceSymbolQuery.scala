@@ -42,7 +42,7 @@ object WorkspaceSymbolQuery {
   def fromTextQuery(query: String): WorkspaceSymbolQuery = {
     val isTrailingDot = query.endsWith(".")
     val isClasspath = query.contains(";")
-    val actualQuery = query.stripSuffix(".").replaceAllLiterally(";", "")
+    val actualQuery = query.stripSuffix(".").replace(";", "")
     WorkspaceSymbolQuery(
       actualQuery,
       AlternativeQuery.all(actualQuery),
