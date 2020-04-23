@@ -76,7 +76,7 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="starting-the-server"></a><a href="#starting-the-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting the server</h2>
 <p>Use <a href="https://github.com/coursier/coursier">Coursier</a> to obtain the JVM classpath
 of Metals:</p>
-<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.8.4+85-3399fd4d-SNAPSHOT -o metals -f
+<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.8.4+89-1a75a6e6-SNAPSHOT -o metals -f
 </code></pre>
 <p>(optional) It is recommended to enable JVM string de-duplication and provide
 generous stack size and memory options.</p>
@@ -85,7 +85,7 @@ generous stack size and memory options.</p>
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms100m \
-  org.scalameta:metals_2.12:0.8.4+85-3399fd4d-SNAPSHOT -o metals -f
+  org.scalameta:metals_2.12:0.8.4+89-1a75a6e6-SNAPSHOT -o metals -f
 </code></pre>
 <p>See <a href="#metals-server-properties">Metals server properties</a> for additional system
 properties that are supported by the server.</p>
@@ -595,45 +595,44 @@ Example:</p>
 <p>Start debug adapter</p>
 <h3><a class="anchor" aria-hidden="true" id="goto-location"></a><a href="#goto-location" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goto location</h3>
 <p><strong>Command</strong>: <code>&quot;goto&quot;</code></p>
-<p><strong>Arguments</strong>: <code>null</code></p>
+<p><strong>Arguments</strong>: [string], where the string is a SemanticDB symbol.</p>
 <p>Move the cursor to the definition of the argument symbol.</p>
-<p>Arguments: [string], where the string is a SemanticDB symbol.</p>
 <h3><a class="anchor" aria-hidden="true" id="create-new-scala-file"></a><a href="#create-new-scala-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create new scala file</h3>
 <p><strong>Command</strong>: <code>&quot;new-scala-file&quot;</code></p>
-<p><strong>Arguments</strong>: <code>null</code></p>
+<p><strong>Arguments</strong>: [string], where the string is a directory location for the new file.</p>
 <p>Create and open new file with either scala class, object, trait, package object or worksheet.</p>
-<p>Arguments: [string], where the string is a directory location for the new file.</p>
 <p>Note: requires 'metals/inputBox' capability from language client.</p>
 <h3><a class="anchor" aria-hidden="true" id="go-to-super-methodfield-definition"></a><a href="#go-to-super-methodfield-definition" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Go to super method/field definition</h3>
 <p><strong>Command</strong>: <code>&quot;goto-super-method&quot;</code></p>
-<p><strong>Arguments</strong>: <code>null</code></p>
+<p><strong>Arguments</strong>:
+Object with <code>document</code> and <code>position</code></p>
+<p>Example:</p>
+<pre><code class="hljs css language-json">{
+  document: "file:///home/dev/foo/Bar.scala",
+  position: {line: 5, character: 12}
+}
+</code></pre>
 <p>Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
 When A {override def x()} &lt;:&lt; B &lt;:&lt; C {def x()} and on method 'A.x' it will jump directly to 'C.x'
 as method x() is not overridden in B.
 If symbol is a reference of a method it will jump to a definition.
 If symbol under cursor is invalid or does not override anything then command is ignored.</p>
 <p>Note: document in json argument must be absolute path.</p>
-<p>Arguments:</p>
+<h3><a class="anchor" aria-hidden="true" id="go-to-super-methodfield-definition-in-hierarchy"></a><a href="#go-to-super-methodfield-definition-in-hierarchy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Go to super method/field definition in hierarchy</h3>
+<p><strong>Command</strong>: <code>&quot;super-method-hierarchy&quot;</code></p>
+<p><strong>Arguments</strong>: Object with <code>document</code> and <code>position</code></p>
+<p>Example:</p>
 <pre><code class="hljs css language-json">{
   document: "file:///home/dev/foo/Bar.scala",
   position: {line: 5, character: 12}
 }
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="go-to-super-methodfield-definition-in-hierarchy"></a><a href="#go-to-super-methodfield-definition-in-hierarchy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Go to super method/field definition in hierarchy</h3>
-<p><strong>Command</strong>: <code>&quot;super-method-hierarchy&quot;</code></p>
-<p><strong>Arguments</strong>: <code>null</code></p>
 <p>When user executes this command it will calculate inheritance hierarchy of a class that contains given method.
 Then it will filter out classes not overriding given method and a list using 'metalsQuickPick' will be
 displayed to which super method user would like to go to.
 Command has no effect on other symbols than method definition.
 QuickPick will show up only if more than one result is found.</p>
 <p>Note: document in json argument must be absolute path.</p>
-<p>Arguments:</p>
-<pre><code class="hljs css language-json">{
-  document: "file:///home/dev/foo/Bar.scala",
-  position: {line: 5, character: 12}
-}
-</code></pre>
 <h2><a class="anchor" aria-hidden="true" id="metals-client-commands"></a><a href="#metals-client-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metals client commands</h2>
 <p>The Metals server can send one of the following client commands if the client
 supports the <code>metals/executeClientCommand</code> notification,</p>
