@@ -31,33 +31,47 @@ object AmendCommand extends Command[AmendOptions]("amend") {
       amend.common,
       app
     ) { project =>
-      Option(System.getenv("EDITOR")) match {
-        case None =>
-          app.error(
-            "the $EDITOR environment variable is undefined. " +
-              "To fix this problem, run `export EDITOR=vim` " +
-              "(or `export EDITOR='code -w'` for VS Code) " +
-              "and try again"
-          )
-          1
-        case Some(editor) =>
-          runAmend(amend, app, editor, project)
+      amend.targetsToAmend match {
+        case Some(value) => {
+          runAmend(amend, app, project, value)
+        }
+        case None => {
+          Option(System.getenv("EDITOR")) match {
+            case None =>
+              app.error(
+                "the $EDITOR environment variable is undefined. " +
+                  "To fix this problem, run `export EDITOR=vim` " +
+                  "(or `export EDITOR='code -w'` for VS Code) " +
+                  "and try again"
+              )
+              1
+            case Some(editor) =>
+              val list = getTargetsListViaEditor(
+                amend,
+                app,
+                editor,
+                project
+              )
+              list.map(runAmend(amend, app, project, _)).getOrElse(1)
+          }
+        }
       }
+
     }
 
   }
 
-  private def runAmend(
+  private def getTargetsListViaEditor(
       amend: AmendOptions,
       app: CliApp,
       editor: String,
       project: Project
-  ): Int = {
+  ): Option[List[String]] = {
     val tmp = newTemporaryAmendFile(project)
     val exit = editFile(editor, tmp, app)
     if (exit != 0 && !Files.isRegularFile(tmp)) {
       app.error(s"failed to amend '${project.name}'")
-      exit
+      None
     } else {
       val newTargets = Files
         .readAllLines(tmp)
@@ -68,32 +82,41 @@ object AmendCommand extends Command[AmendOptions]("amend") {
         }
         .toList
       Files.deleteIfExists(tmp)
-      if (newTargets.isEmpty) {
+      Some(newTargets)
+    }
+  }
+
+  private def runAmend(
+      amend: AmendOptions,
+      app: CliApp,
+      project: Project,
+      newTargets: Seq[String]
+  ): Int = {
+    if (newTargets.isEmpty) {
+      app.error(
+        "aborting amend operation because the new target list is empty." +
+          s"\n\tTo delete the project run: fastpass remove ${project.name}"
+      )
+      1
+    } else {
+      val newProject = project.copy(targets = newTargets.toList)
+      if (newTargets != project.targets) {
+        IntelliJ.writeBsp(newProject)
+        RefreshCommand.run(
+          RefreshOptions(
+            projects = amend.projects,
+            export = amend.export,
+            open = amend.open
+          ).withCommon(amend.common),
+          app
+        )
+        0
+      } else {
         app.error(
-          "aborting amend operating because the new target list is empty." +
-            s"\n\tTo delete the project run: fastpass remove ${project.name}"
+          "aborting amend operation because the target list is unchanged." +
+            s"\n\tTo refresh the project run: fastpass refresh ${project.name}"
         )
         1
-      } else {
-        val newProject = project.copy(targets = newTargets)
-        if (newTargets != project.targets) {
-          IntelliJ.writeBsp(newProject)
-          RefreshCommand.run(
-            RefreshOptions(
-              projects = amend.projects,
-              export = amend.export,
-              open = amend.open
-            ).withCommon(amend.common),
-            app
-          )
-          0
-        } else {
-          app.error(
-            "aborting amend operation because the target list is unchanged." +
-              s"\n\tTo refresh the project run: fastpass refresh ${project.name}"
-          )
-          1
-        }
       }
     }
   }
