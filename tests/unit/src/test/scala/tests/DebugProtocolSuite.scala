@@ -7,6 +7,8 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.debug.WorkspaceErrorsException
+import scala.meta.internal.metals.Messages
 
 class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
 
@@ -144,6 +146,96 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
     } yield assertNoDiff(output, "Foo")
   }
 
+  test("run-unrelated-error") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {},
+           |  "c": {"dependsOn": ["a"]}
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print(args(0))
+           |  }
+           |}
+           |/c/src/main/scala/c/Other.scala
+           |package c
+           |object Other {
+           |  val a : Int = ""
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("c/src/main/scala/c/Other.scala")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedMainClassParams(
+          "a.Main",
+          "a",
+          singletonList("Foo")
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "Foo")
+  }
+
+  test("abort-run-broken-workspace") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {"dependsOn": ["c"]},
+           |  "c": {}
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print(args(0))
+           |  }
+           |}
+           |/c/src/main/scala/c/Other.scala
+           |package c
+           |object Other {
+           |  val a : Int = 1
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didSave("a/src/main/scala/a/Main.scala") { _ =>
+        """|package c
+           |object Other {
+           |  val a : Int = ""
+           |}}""".stripMargin
+      }
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugUnresolvedMainClassParams(
+            "a.Main",
+            "a",
+            singletonList("Foo")
+          ).toJson
+        )
+        .recover {
+          case WorkspaceErrorsException =>
+            server.statusBarHistory
+        }
+    } yield assertContains(
+      result.toString(),
+      Messages.DebugErrorsPresent.text
+    )
+  }
+
   test("test-unresolved-params") {
     cleanCompileCache("a")
     cleanWorkspace()
@@ -173,5 +265,48 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assert(output.contains("All tests in a.Foo passed"))
+  }
+
+  test("abort-test-broken-workspace") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |class Foo extends org.scalatest.FunSuite {
+           |  test("foo") {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      _ <- server.didSave("a/src/main/scala/a/Foo.scala") { _ =>
+        """|package a
+           |class Foo extends org.scalatest.FunSuite {
+           |  test("foo") {
+           |    val a : Int = ""
+           |  }
+           |}""".stripMargin
+      }
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugUnresolvedTestClassParams(
+            "a.Foo"
+          ).toJson
+        )
+        .recover {
+          case WorkspaceErrorsException =>
+            server.statusBarHistory
+        }
+    } yield assertContains(
+      result.toString(),
+      Messages.DebugErrorsPresent.text
+    )
   }
 }

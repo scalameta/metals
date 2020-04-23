@@ -33,6 +33,12 @@ import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
+import scala.meta.internal.metals.MetalsBuildClient
+import org.eclipse.lsp4j.ExecuteCommandParams
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.BuildTargetNotFoundException
 
 class DebugProvider(
     definitionProvider: DefinitionProvider,
@@ -40,7 +46,10 @@ class DebugProvider(
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
     compilations: Compilations,
-    languageClient: MetalsLanguageClient
+    languageClient: MetalsLanguageClient,
+    buildClient: MetalsBuildClient,
+    messages: Messages,
+    statusBar: StatusBar
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -97,13 +106,16 @@ class DebugProvider(
   def resolveMainClassParams(
       params: DebugUnresolvedMainClassParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    withRebuildRetry(() =>
+    val result = withRebuildRetry(() =>
       buildTargetClassesFinder
         .findMainClassAndItsBuildTarget(
           params.mainClass,
           Option(params.buildTarget)
         )
-    ).map {
+    ).flatMap {
+      case (clazz, target) :: others
+          if buildClient.buildHasErrors(target.getId()) =>
+        Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
         if (others.nonEmpty) {
           reportOtherBuildTargets(
@@ -117,27 +129,34 @@ class DebugProvider(
         clazz.setJvmOptions(
           Option(params.jvmOptions).getOrElse(List().asJava)
         )
-        new b.DebugSessionParams(
-          singletonList(target.getId()),
-          b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-          clazz.toJson
+        Future.successful(
+          new b.DebugSessionParams(
+            singletonList(target.getId()),
+            b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+            clazz.toJson
+          )
         )
       //should not really happen due to
       //`findMainClassAndItsBuildTarget` succeeding with non-empty list
-      case Nil => throw new ju.NoSuchElementException(params.mainClass)
+      case Nil => Future.failed(new ju.NoSuchElementException(params.mainClass))
     }
+    result.failed.foreach(reportErrors)
+    result
   }
 
   def resolveTestClassParams(
       params: DebugUnresolvedTestClassParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    withRebuildRetry(() => {
+    val result = withRebuildRetry(() => {
       buildTargetClassesFinder
         .findTestClassAndItsBuildTarget(
           params.testClass,
           Option(params.buildTarget)
         )
-    }).map {
+    }).flatMap {
+      case (clazz, target) :: others
+          if buildClient.buildHasErrors(target.getId()) =>
+        Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
         if (others.nonEmpty) {
           reportOtherBuildTargets(
@@ -147,15 +166,45 @@ class DebugProvider(
             "test"
           )
         }
-        new b.DebugSessionParams(
-          singletonList(target.getId()),
-          b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-          singletonList(clazz).toJson
+        Future.successful(
+          new b.DebugSessionParams(
+            singletonList(target.getId()),
+            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+            singletonList(clazz).toJson
+          )
         )
       //should not really happen due to
       //`findMainClassAndItsBuildTarget` succeeding with non-empty list
-      case Nil => throw new ju.NoSuchElementException(params.testClass)
+      case Nil => Future.failed(new ju.NoSuchElementException(params.testClass))
     }
+    result.failed.foreach(reportErrors)
+    result
+  }
+
+  private val reportErrors: PartialFunction[Throwable, Unit] = {
+    case t if buildClient.buildHasErrors =>
+      statusBar.addMessage(messages.DebugErrorsPresent)
+      languageClient.metalsExecuteClientCommand(
+        new ExecuteCommandParams(
+          ClientCommands.FocusDiagnostics.id,
+          Nil.asJava
+        )
+      )
+    case t: ClassNotFoundException =>
+      languageClient.showMessage(
+        messages.DebugClassNotFound.invalidClass(t.getMessage())
+      )
+    case t @ ClassNotFoundInBuildTargetException(cls, buildTarget) =>
+      languageClient.showMessage(
+        messages.DebugClassNotFound
+          .invalidTargetClass(cls, buildTarget.getDisplayName())
+      )
+    case t @ BuildTargetNotFoundException(target) =>
+      languageClient.showMessage(
+        messages.DebugClassNotFound
+          .invalidTarget(target)
+      )
+
   }
 
   private def parseSessionName(
@@ -239,3 +288,8 @@ object DebugParametersJsonParsers {
   lazy val testClassParamsParser =
     new JsonParser.Of[DebugUnresolvedTestClassParams]
 }
+
+case object WorkspaceErrorsException
+    extends Exception(
+      s"Cannot run class, since the workspace has errors."
+    )
