@@ -129,7 +129,6 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |import java.time.Instant
-       |
        |import scala.collection.mutable
        |
        |object A {
@@ -167,7 +166,6 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |import java.time.Instant
-       |
        |import scala.collection.mutable
        |
        |object A {

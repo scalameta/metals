@@ -53,7 +53,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         .flatten
         .toSeq
 
-      val allCodeActions = if (uniqueCodeActions.length > 1) {
+      if (uniqueCodeActions.length > 1) {
         val allSymbols: l.CodeAction = new l.CodeAction()
 
         val uri = params.getTextDocument().getUri()
@@ -61,6 +61,13 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         val edits = uniqueCodeActions
           .flatMap(_.getEdit().getChanges().get(uri).asScala)
           .distinct
+          .groupBy(_.getRange())
+          .values
+          .map(_.sortBy(_.getNewText()).reduceLeft { (l, r) =>
+            l.setNewText(l.getNewText() + r.getNewText() replace ("\n\n", "\n"))
+            l
+          })
+          .toSeq
 
         allSymbols.setTitle(ImportMissingSymbol.allSymbolsTitle)
         allSymbols.setKind(l.CodeActionKind.QuickFix)
@@ -68,8 +75,9 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         allSymbols.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
 
         allSymbols +: codeActions
-      } else { codeActions }
-      allCodeActions
+      } else {
+        codeActions
+      }
     }
 
     Future
