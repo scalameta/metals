@@ -3,8 +3,12 @@ package tests.pc
 import org.eclipse.lsp4j.Location
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.jdk.CollectionConverters._
+import tests.BuildInfoVersions
 
 class TypeDefinitionSuite extends BasePcDefinitionSuite {
+
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   override def requiresJdkSources: Boolean = true
 
