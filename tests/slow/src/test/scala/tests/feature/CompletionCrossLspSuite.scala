@@ -58,15 +58,15 @@ class CompletionCrossLspSuite
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """/metals.json
-          |{
-          |  "a": { "scalaVersion": "2.13.1" }
-          |}
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |trait Serializable
-          |object Main // @@
-          |""".stripMargin
+        s"""/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.scala213}" }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |trait Serializable
+           |object Main // @@
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()

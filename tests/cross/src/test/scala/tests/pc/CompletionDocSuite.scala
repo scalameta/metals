@@ -492,7 +492,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" ->
+      "2.13.1" ->
         """|> ### class Vector
            |Vector is a general-purpose, immutable data structure.  It provides random access and updates
            | in effectively constant time, as well as very fast append and prepend.  Because vectors strike
@@ -509,6 +509,33 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-immutable-collection-classes.html#vectors)
            | section on `Vectors` for more information.
 
+           |### object Vector
+           |$factoryInfo
+           |Vector scala.collection.immutable
+           |""".stripMargin,
+      "2.13.2" ->
+        """|> ### class Vector
+           |Vector is a general-purpose, immutable data structure.  It provides random access and updates
+           |in O(log n) time, as well as very fast append/prepend/tail/init (amortized O(1), worst case O(log n)).
+           |Because vectors strike a good balance between fast random selections and fast random functional updates,
+           |they are currently the default implementation of immutable indexed sequences.
+           |
+           |Vectors are implemented by radix-balanced finger trees of width 32. There is a separate subclass
+           |for each level (0 to 6, with 0 being the empty vector and 6 a tree with a maximum width of 64 at the
+           |top level).
+           |
+           |Tree balancing:
+           |- Only the first dimension of an array may have a size < WIDTH
+           |- In a `data` (central) array the first dimension may be up to WIDTH-2 long, in `prefix1` and `suffix1` up
+           |  to WIDTH, and in other `prefix` and `suffix` arrays up to WIDTH-1
+           |- `prefix1` and `suffix1` are never empty
+           |- Balancing does not cross the main data array (i.e. prepending never touches the suffix and appending never touches
+           |  the prefix). The level is increased/decreased when the affected side plus main data is already full/empty
+           |- All arrays are left-aligned and truncated
+           |
+           |In addition to the data slices (`prefix1`, `prefix2`, ..., `dataN`, ..., `suffix2`, `suffix1`) we store a running
+           |count of elements after each prefix for more efficient indexing without having to dereference all prefix arrays.
+           |
            |### object Vector
            |$factoryInfo
            |Vector scala.collection.immutable
@@ -632,7 +659,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.12.8" -> isDefinedOlderDocs,
-      "2.12.7" -> isDefinedOlderDocs,
       "2.13" -> isDefinedLatestDocs
     )
   )

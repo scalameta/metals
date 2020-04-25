@@ -14,17 +14,13 @@ def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
     if2: List[A] = Nil,
-    if3: List[A] = Nil,
-    otherwise: List[A] = Nil
+    if3: List[A] = Nil
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case partialVersion
-        if isScala211(partialVersion) && isScala2(partialVersion) =>
-      if211 ::: if2
-    case partialVersion if isScala211(partialVersion) => if211
+    case partialVersion if isScala211(partialVersion) => if211 ::: if2
     case partialVersion if isScala2(partialVersion) => if2
     case partialVersion if isScala3(partialVersion) => if3
-    case _ => otherwise
+    case _ => Nil
   }
 
 val MUnitFramework = new TestFramework("munit.Framework")
@@ -157,11 +153,11 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.11"
-  val scala213 = "2.13.1"
-  val scalameta = "4.3.8"
+  val scala213 = "2.13.2"
+  val scalameta = "4.3.10"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloop = "1.4.0-RC1-192-72a856b6"
+  val bloop = "1.4.0-RC1-219-a3514983"
   val scala3 = "0.23.0-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -180,11 +176,9 @@ lazy val V = new {
       .distinct
 
   // Scala 2
-  def deprecatedScala2Versions =
-    Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
-  def nonDeprecatedScala2Versions = Seq(scala213, scala212, "2.12.10")
-  def scala2Versions =
-    nonDeprecatedScala2Versions ++ deprecatedScala2Versions
+  def deprecatedScala2Versions = Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
+  def nonDeprecatedScala2Versions = Seq(scala213, scala212, "2.12.10", "2.13.1")
+  def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
   def nonDeprecatedScala3Versions = Seq(scala3)
@@ -308,7 +302,11 @@ val mtagsSettings = List(
       crossSetting(
         scalaVersion.value,
         if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-        otherwise = List("com.lihaoyi" %% "pprint" % "0.5.9")
+        if2 = List("com.lihaoyi" %% "pprint" % "0.5.9"),
+        if3 = List(
+          ("com.lihaoyi" %% "pprint" % "0.5.9")
+            .withDottyCompat(scalaVersion.value)
+        )
       )
   },
   buildInfoPackage := "scala.meta.internal.mtags",
@@ -546,6 +544,7 @@ lazy val mtest = project
       "scala3" -> V.scala3,
       "scalaVersion" -> scalaVersion.value
     ),
+    crossScalaVersions := V.nonDeprecatedScalaVersions,
     unmanagedSourceDirectories.in(Compile) ++= multiScalaDirectories(
       baseDirectory.in(ThisBuild).value / "tests" / "mtest",
       scalaVersion.value

@@ -34,7 +34,7 @@ import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.internal.metals.Trees
 import org.eclipse.lsp4j.DocumentSymbol
 import scala.meta.internal.metals.DocumentSymbolProvider
-import org.eclipse.lsp4j.{DocumentOnTypeFormattingParams, TextEdit}
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.meta.internal.metals.MultilineStringFormattingProvider
 import scala.meta.internal.metals.EmptyCancelToken

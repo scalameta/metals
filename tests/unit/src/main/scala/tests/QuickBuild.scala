@@ -236,7 +236,8 @@ case class QuickBuild(
       java = Some(C.Java(Nil)),
       sbt = None,
       test = testFrameworks,
-      platform = Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None)),
+      platform =
+        Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None, None, None)),
       resolution = Some(C.Resolution(resolution)),
       resources = None,
       tags = Some(tags)

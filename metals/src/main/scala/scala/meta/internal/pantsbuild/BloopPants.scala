@@ -483,6 +483,8 @@ private class BloopPants(
               s"-Duser.dir=$workspace"
             ) ++ extraJvmOptions
           ),
+          None,
+          None,
           None
         )
       ),
