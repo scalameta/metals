@@ -43,14 +43,50 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
         }
     }
 
+    def importMissingSymbols(
+        codeActions: Seq[l.CodeAction]
+    ): Seq[l.CodeAction] = {
+      val uniqueCodeActions = codeActions
+        .groupBy(_.getDiagnostics())
+        .values
+        .filter(_.length == 1)
+        .flatten
+        .toSeq
+
+      if (uniqueCodeActions.length > 1) {
+        val allSymbols: l.CodeAction = new l.CodeAction()
+
+        val uri = params.getTextDocument().getUri()
+        val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
+        val edits = uniqueCodeActions
+          .flatMap(_.getEdit().getChanges().get(uri).asScala)
+          .distinct
+          .groupBy(_.getRange())
+          .values
+          .map(_.sortBy(_.getNewText()).reduceLeft { (l, r) =>
+            l.setNewText(l.getNewText() + r.getNewText() replace ("\n\n", "\n"))
+            l
+          })
+          .toSeq
+
+        allSymbols.setTitle(ImportMissingSymbol.allSymbolsTitle)
+        allSymbols.setKind(l.CodeActionKind.QuickFix)
+        allSymbols.setDiagnostics(diags.asJava)
+        allSymbols.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
+
+        allSymbols +: codeActions
+      } else {
+        codeActions
+      }
+    }
+
     Future
       .sequence(params.getContext().getDiagnostics().asScala.collect {
         case d @ ScalacDiagnostic.SymbolNotFound(name)
             if params.getRange().overlapsWith(d.getRange()) =>
           importMissingSymbol(d, name)
       })
-      .map(_.flatten)
-
+      .map(actions => importMissingSymbols(actions.flatten.toSeq))
   }
 
 }
@@ -60,4 +96,6 @@ object ImportMissingSymbol {
   def title(name: String, packageName: String): String =
     s"Import '$name' from package '$packageName'"
 
+  def allSymbolsTitle: String =
+    s"Import all missing symbols that are unambiguous"
 }
