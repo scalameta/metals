@@ -319,6 +319,38 @@ class Messages(icons: Icons) {
     }
   }
 
+  val DebugErrorsPresent: MetalsStatusParams = new MetalsStatusParams(
+    "$(error) Errors in workspace",
+    tooltip = "Cannot run or debug due to existing errors in the workspace. " +
+      "Please fix the errors and retry.",
+    command = ClientCommands.FocusDiagnostics.id,
+    show = true
+  )
+
+  object DebugClassNotFound {
+
+    def invalidTargetClass(cls: String, target: String): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        s"Class '$cls' not found in build target '$target'."
+      )
+    }
+
+    def invalidTarget(target: String): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        s"Target '$target' not found."
+      )
+    }
+
+    def invalidClass(cls: String): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        s"Class '$cls' not found."
+      )
+    }
+  }
+
   object MissingScalafmtConf {
     def tryAgain(isAgain: Boolean): String =
       if (isAgain) ", try formatting again"

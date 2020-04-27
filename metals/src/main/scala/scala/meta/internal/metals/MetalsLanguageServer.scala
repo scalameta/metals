@@ -377,7 +377,10 @@ class MetalsLanguageServer(
       buildTargets,
       buildTargetClasses,
       compilations,
-      languageClient
+      languageClient,
+      buildClient,
+      messages,
+      statusBar
     )
     referencesProvider = new ReferenceProvider(
       workspace,

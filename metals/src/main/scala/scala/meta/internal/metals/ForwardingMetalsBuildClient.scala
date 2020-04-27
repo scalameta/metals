@@ -52,6 +52,14 @@ final class ForwardingMetalsBuildClient(
   val updatedTreeViews: ju.Set[BuildTargetIdentifier] =
     ConcurrentHashSet.empty[BuildTargetIdentifier]
 
+  def buildHasErrors(buildTargetId: BuildTargetIdentifier): Boolean = {
+    buildTargets
+      .buildTargetTransitiveDependencies(buildTargetId)
+      .exists(hasReportedError.contains(_))
+  }
+
+  override def buildHasErrors: Boolean = !hasReportedError.isEmpty()
+
   def reset(): Unit = {
     cancel()
     updatedTreeViews.clear()

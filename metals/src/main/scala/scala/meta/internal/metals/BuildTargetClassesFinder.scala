@@ -89,7 +89,7 @@ class BuildTargetClassesFinder(
 
 }
 
-class BuildTargetNotFoundException(buildTargetName: String)
+case class BuildTargetNotFoundException(buildTargetName: String)
     extends Exception(s"Build target not found: $buildTargetName")
 
 case class ClassNotFoundInBuildTargetException(

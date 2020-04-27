@@ -32,4 +32,7 @@ trait MetalsBuildClient {
 
   def ongoingCompilations(): TreeViewCompilations
 
+  def buildHasErrors(buildTargetId: b.BuildTargetIdentifier): Boolean
+
+  def buildHasErrors: Boolean
 }
