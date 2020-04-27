@@ -2,6 +2,7 @@ package scala.meta.internal.docstrings
 
 import scala.meta._
 import scala.collection.Seq
+import scala.meta.internal.metals.Trees
 
 /**
  * Generates markdown from the docstring
@@ -16,7 +17,7 @@ object MarkdownGenerator {
    * @return a sequence of markdown strings - one per docstring comment in the code
    */
   def toMarkdown(code: String): Seq[String] =
-    code.tokenize.get.collect {
+    Trees.defaultDialect(code).tokenize.get.collect {
       case c: Token.Comment if c.syntax.startsWith("/**") =>
         fromDocstring(c.syntax, Map.empty)
     }

@@ -195,7 +195,8 @@ object MultilineStringFormattingProvider {
       val virtualFile = Input.VirtualFile(source.toString(), sourceText)
       val startPos = range.getStart.toMeta(virtualFile)
       val endPos = range.getEnd.toMeta(virtualFile)
-      fn(startPos, endPos, sourceText, virtualFile.tokenize.toOption)
+      val tokens = Trees.defaultDialect(virtualFile).tokenize.toOption
+      fn(startPos, endPos, sourceText, tokens)
     } else Nil
   }
 

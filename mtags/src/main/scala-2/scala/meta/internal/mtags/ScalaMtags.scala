@@ -1,12 +1,27 @@
 package scala.meta.internal.mtags
 
-import scala.meta._
+import scala.meta.Parsed
+import scala.meta.Source
+import scala.meta.Tree
+import scala.meta.Term
+import scala.meta.Type
+import scala.meta.Template
+import scala.meta.Member
+import scala.meta.Name
+import scala.meta.Ctor
+import scala.meta.Defn
+import scala.meta.Pkg
+import scala.meta.Decl
+import scala.meta.Mod
+import scala.meta.quasiquotes._
 import scala.meta.inputs.Input
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.transversers.SimpleTraverser
+import scala.meta.Pat
+import scala.meta.internal.metals.Trees
 
 object ScalaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
@@ -16,7 +31,9 @@ object ScalaMtags {
 class ScalaMtags(val input: Input.VirtualFile)
     extends SimpleTraverser
     with MtagsIndexer {
-  private val root: Parsed[Source] = input.parse[Source]
+
+  private val root: Parsed[Source] = Trees.defaultDialect(input).parse[Source]
+
   def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {

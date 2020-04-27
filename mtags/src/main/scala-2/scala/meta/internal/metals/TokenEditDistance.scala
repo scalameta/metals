@@ -5,7 +5,9 @@ import difflib.myers.Equalizer
 import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.meta.Token
-import scala.meta._
+import scala.meta.Input
+import scala.meta.Position
+import scala.meta.Tokens
 import scala.meta.internal.mtags.MtagsEnrichments._
 import java.util.logging.Logger
 
@@ -280,10 +282,10 @@ object TokenEditDistance {
       unchanged
     } else {
       val result = for {
-        revised <- revisedInput.tokenize.toOption
+        revised <- Trees.defaultDialect(revisedInput).tokenize.toOption
         original <- {
           if (originalInput == revisedInput) Some(revised)
-          else originalInput.tokenize.toOption
+          else Trees.defaultDialect(originalInput).tokenize.toOption
         }
       } yield {
         if (doNothingWhenUnchanged && revised == original) unchanged
