@@ -423,7 +423,6 @@ class MetalsLanguageServer(
       referencesProvider,
       implementationProvider,
       definitionProvider,
-      definitionIndex,
       workspace,
       languageClient,
       buffers,
@@ -1068,13 +1067,15 @@ class MetalsLanguageServer(
   def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
-    CancelTokens { _ => renameProvider.prepareRename(params).orNull }
+    CancelTokens.future { token =>
+      renameProvider.prepareRename(params, token).map(_.orNull)
+    }
 
   @JsonRequest("textDocument/rename")
   def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
-    CancelTokens { _ => renameProvider.rename(params) }
+    CancelTokens.future { token => renameProvider.rename(params, token) }
 
   @JsonRequest("textDocument/references")
   def references(
