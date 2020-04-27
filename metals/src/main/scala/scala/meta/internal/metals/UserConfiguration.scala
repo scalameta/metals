@@ -33,7 +33,7 @@ case class UserConfiguration(
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
     pantsTargets: Option[List[String]] = None,
-    superMethodLensesEnabled: Boolean = true,
+    superMethodLensesEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None
 ) {
 
@@ -133,7 +133,7 @@ object UserConfiguration {
     ),
     UserConfigurationOption(
       "super-method-lenses-enabled",
-      "true",
+      "false",
       "false",
       "Should display lenses with links to super methods",
       """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
@@ -267,7 +267,7 @@ object UserConfiguration {
     val bloopVersion =
       getStringKey("bloop-version")
     val superMethodLensesEnabled =
-      getBooleanKey("super-method-lenses-enabled").getOrElse(true)
+      getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     val remoteLanguageServer =
       getStringKey("remote-language-server")
     if (errors.isEmpty) {

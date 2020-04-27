@@ -1,6 +1,12 @@
 package tests
 
+import scala.meta.internal.metals.UserConfiguration
+
 class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(superMethodLensesEnabled = true)
+
   check("empty-package")(
     """|<<run>><<debug>>
        |object Main {
