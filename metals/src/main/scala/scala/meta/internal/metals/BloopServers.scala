@@ -29,7 +29,8 @@ final class BloopServers(
     workspace: AbsolutePath,
     client: MetalsBuildClient,
     languageClient: LanguageClient,
-    tables: Tables
+    tables: Tables,
+    config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
   def shutdownServer(): Boolean = {
@@ -61,7 +62,8 @@ final class BloopServers(
         client,
         languageClient,
         () => connectToLauncher(bloopVersion),
-        tables
+        tables,
+        config
       )
       .map(Option(_))
   }
@@ -96,6 +98,7 @@ final class BloopServers(
         serverStarted
       )
 
+    val finished = Promise[Unit]()
     val job = ec.submit(new Runnable {
       override def run(): Unit = {
         launcher.runLauncher(
@@ -103,6 +106,7 @@ final class BloopServers(
           skipBspConnection = false,
           Nil
         )
+        finished.success(())
       }
     })
 
@@ -117,7 +121,8 @@ final class BloopServers(
             clientOut.close()
           },
           Cancelable(() => job.cancel(true))
-        )
+        ),
+        finished
       )
     }
   }

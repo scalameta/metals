@@ -1273,7 +1273,7 @@ final class TestingServer(
       uri: String,
       expected: String
   )(implicit loc: munit.Location): Unit = {
-    val viewId: String = TreeViewProvider.Build
+    val viewId: String = TreeViewProvider.Project
     val result =
       server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes
     val obtained = result

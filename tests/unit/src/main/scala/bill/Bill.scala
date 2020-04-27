@@ -41,6 +41,7 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
+import scala.util.Try
 
 /**
  * Bill is a basic build tool that implements BSP server discovery for testing purposes.
@@ -76,6 +77,27 @@ object Bill {
     // Returns true if we're tracing shutdown requests, used for testing purposes.
     def isShutdownTrace(): Boolean = {
       Files.isRegularFile(workspace.resolve("shutdown-trace"))
+    }
+
+    def firstShutdownTimeout(): Option[Long] = {
+      val fileName = "first-shutdown-timeout"
+      val shouldShutdown =
+        Files.isRegularFile(workspace.resolve(fileName))
+      if (shouldShutdown) {
+        val timeout = Try {
+          Files
+            .readAllLines(workspace.resolve(fileName))
+            .asScala
+            .headOption
+            .mkString
+            .trim()
+            .toLong
+        }.toOption
+        Files.delete(workspace.resolve(fileName))
+        timeout
+      } else {
+        None
+      }
     }
     def src: Path = workspace.resolve("src")
     def scalaJars: util.List[String] =
@@ -379,6 +401,12 @@ object Bill {
         .create()
       server.client = launcher.getRemoteProxy
       val listening = launcher.startListening()
+      server.firstShutdownTimeout().foreach { timeout =>
+        Future {
+          Thread.sleep(timeout)
+          System.exit(1)
+        }
+      }
       listening.get()
     } catch {
       case NonFatal(e) =>

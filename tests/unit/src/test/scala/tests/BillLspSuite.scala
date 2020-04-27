@@ -87,6 +87,58 @@ class BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
+  test("automatic-reconnect") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace.toNIO)
+    for {
+      _ <- server.initialize(
+        """
+          |/src/com/App.scala
+          |object App {
+          |  val x: Int = ""
+          |}
+          |/first-shutdown-timeout
+          |2000
+          |/shutdown-trace
+          |true
+        """.stripMargin
+      )
+      _ <- Future { Thread.sleep(3000) }
+      _ <- server.didOpen("src/com/App.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """
+          |src/com/App.scala:2:16: error: type mismatch;
+          | found   : String("")
+          | required: Int
+          |  val x: Int = ""
+          |               ^^
+        """.stripMargin
+      )
+      _ <- server.didSave("src/com/App.scala")(_ => "object App")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        ""
+      )
+      _ = {
+        val logs = workspace
+          .resolve(Directories.log)
+          .readText
+          .linesIterator
+          .filter(_.startsWith("trace:"))
+          .mkString("\n")
+        assertNoDiff(
+          logs,
+          // Assert that "Connect to build server" waits for the shutdown
+          // response from the build server before sending "initialize".
+          """|trace: initialize
+             |trace: initialize
+             |""".stripMargin
+        )
+      }
+    } yield ()
+  }
+
   test("global") {
     RecursivelyDelete(globalBsp)
     cleanWorkspace()

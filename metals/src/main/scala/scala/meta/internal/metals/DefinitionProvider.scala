@@ -78,7 +78,7 @@ final class DefinitionProvider(
       if (result.isEmpty) {
         compilers().definition(params, token)
       } else {
-        if (result.isEmpty && fromSemanticdb.isEmpty) {
+        if (fromSemanticdb.isEmpty) {
           warnings.noSemanticdb(path)
         }
         Future.successful(result)
