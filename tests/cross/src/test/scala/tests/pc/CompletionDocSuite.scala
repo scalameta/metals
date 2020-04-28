@@ -8,7 +8,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresScalaLibrarySources: Boolean = true
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "java",

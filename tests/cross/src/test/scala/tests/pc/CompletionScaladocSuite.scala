@@ -6,8 +6,7 @@ import tests.BuildInfoVersions
 class CompletionScaladocSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
-
+    BuildInfoVersions.scala3Versions.toSet
   check(
     "methoddef-label",
     """

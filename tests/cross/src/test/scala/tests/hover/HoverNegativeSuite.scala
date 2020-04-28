@@ -7,7 +7,7 @@ class HoverNegativeSuite extends BaseHoverSuite {
 
   // @tgodzik Dotty seems to show the most enclosing symbol even if we hover on empty content
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   // Negative results should have an empty output.
   def checkNegative(

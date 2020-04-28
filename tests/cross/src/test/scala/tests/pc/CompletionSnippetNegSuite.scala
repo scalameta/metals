@@ -70,7 +70,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
+    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
     s"""|object Main {
         |  val x: scala.IndexedSe@@
         |}

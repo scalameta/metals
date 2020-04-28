@@ -6,7 +6,7 @@ import tests.BuildInfoVersions
 class CompletionIssueSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "mutate",

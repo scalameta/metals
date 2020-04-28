@@ -8,7 +8,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   checkEdit(
     "basic",

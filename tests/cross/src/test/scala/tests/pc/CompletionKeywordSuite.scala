@@ -6,7 +6,7 @@ import tests.BuildInfoVersions
 class CompletionKeywordSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "super-template",

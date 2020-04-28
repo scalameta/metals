@@ -12,7 +12,7 @@ import tests.BuildInfoVersions
 class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   checkEdit(
     "classdef",

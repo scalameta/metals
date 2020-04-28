@@ -182,7 +182,11 @@ abstract class BasePCSuite extends BaseSuite {
       extends Tag("NoScalaVersion")
 
   object IgnoreScalaVersion {
-    def apply(versions: String*): IgnoreScalaVersion =
+    def apply(versions: Seq[String]): IgnoreScalaVersion =
       IgnoreScalaVersion(versions.toSet)
+
+    def apply(version: String): IgnoreScalaVersion = {
+      IgnoreScalaVersion(Set(version))
+    }
   }
 }

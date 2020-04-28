@@ -8,7 +8,7 @@ import tests.BuildInfoVersions
 class CompletionCaseSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   def paramHint: Option[String] = Some("param-hint")
 
