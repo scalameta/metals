@@ -17,15 +17,15 @@ object Main {
     val tracePrinter = GlobalTrace.setup("LSP")
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
-    val config = MetalsServerConfig.default
+    val initialConfig = MetalsServerConfig.default
     val server = new MetalsLanguageServer(
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
-      config = config
+      initialConfig = initialConfig
     )
     try {
-      scribe.info(s"Starting Metals server with configuration: $config")
+      scribe.info(s"Starting Metals server with configuration: $initialConfig")
       val launcher = new Launcher.Builder[MetalsLanguageClient]()
         .traceMessages(tracePrinter)
         .setExecutorService(exec)

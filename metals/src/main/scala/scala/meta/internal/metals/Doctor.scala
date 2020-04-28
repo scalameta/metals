@@ -24,7 +24,6 @@ final class Doctor(
     languageClient: MetalsLanguageClient,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
-    messages: Messages,
     clientExperimentalCapabilities: ClientExperimentalCapabilities,
     initializationOptions: InitializationOptions
 )(implicit ec: ExecutionContext) {
@@ -215,11 +214,11 @@ final class Doctor(
 
     message(
       ScalaVersions.isFutureVersion,
-      messages.FutureScalaVersion.message
+      Messages.FutureScalaVersion.message
     ).orElse {
         message(
           ver => !ScalaVersions.isSupportedScalaVersion(ver),
-          messages.UnsupportedScalaVersion.message
+          Messages.UnsupportedScalaVersion.message
         )
       }
       .orElse {
@@ -228,7 +227,7 @@ final class Doctor(
       .orElse {
         message(
           ScalaVersions.isDeprecatedScalaVersion,
-          messages.DeprecatedScalaVersion.message
+          Messages.DeprecatedScalaVersion.message
         )
       }
   }
