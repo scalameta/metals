@@ -47,7 +47,7 @@ trait AutoImports { this: MetalsGlobal =>
     findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
-        val enclosingPackage = lastVisitedParentTrees.collectFirst {
+        val enclosingPackage = lastVisitedParentTrees.reverse.collectFirst {
           case pkg: PackageDef => pkg
         }
         enclosingPackage match {
