@@ -4,6 +4,10 @@ object ZipkinProperties {
 
   val zipkinServerUrl: Property = Property("metals.zipkin.server.url")
 
+  val debug: Property = Property("metals.bloop.trace.debug")
+
+  val verbose: Property = Property("metals.bloop.trace.verbose")
+
   val localServiceName: Property = Property(
     "metals.bloop.trace.localServiceName"
   )
@@ -18,6 +22,8 @@ object ZipkinProperties {
 
   val All: List[Property] = List(
     zipkinServerUrl,
+    debug,
+    verbose,
     localServiceName,
     traceStartAnnotation,
     traceEndAnnotation
