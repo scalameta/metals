@@ -3,18 +3,23 @@ import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 
 final case class ClientExperimentalCapabilities(
-    debuggingProvider: java.lang.Boolean = false,
-    treeViewProvider: java.lang.Boolean = false,
-    decorationProvider: java.lang.Boolean = false,
-    inputBoxProvider: java.lang.Boolean = false,
-    quickPickProvider: java.lang.Boolean = false,
-    didFocusProvider: java.lang.Boolean = false,
-    slowTaskProvider: java.lang.Boolean = false,
-    executeClientCommandProvider: java.lang.Boolean = false,
-    openFilesOnRenameProvider: java.lang.Boolean = false,
-    doctorProvider: String = "html",
-    statusBarProvider: String = "off"
+    debuggingProvider: Boolean,
+    decorationProvider: Boolean,
+    didFocusProvider: Boolean,
+    doctorProvider: String,
+    executeClientCommandProvider: Boolean,
+    inputBoxProvider: Boolean,
+    openFilesOnRenameProvider: Boolean,
+    quickPickProvider: Boolean,
+    slowTaskProvider: Boolean,
+    statusBarProvider: String,
+    treeViewProvider: Boolean
 ) {
+  def this() =
+    this(
+      false, false, false, "html", false, false, false, false, false, "off",
+      false
+    )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"
   def statusBarIsOff: Boolean = statusBarProvider == "off"

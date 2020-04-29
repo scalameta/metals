@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientExperimentalCapabilities
-import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
@@ -19,6 +18,8 @@ import scala.meta.internal.metals.SlowTaskConfig
 import scala.util.control.NonFatal
 import munit.Ignore
 import munit.Location
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.InitializationOptions
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -60,19 +61,29 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     workspace = createWorkspace(workspaceName)
     val buffers = Buffers()
     val config = serverConfig.copy(
-      executeClientCommand = ExecuteClientCommandConfig.on,
       icons = this.icons
     )
+    val clientConfig = new ClientConfiguration(
+      config,
+      ClientExperimentalCapabilities.Default.copy(
+        debuggingProvider = true,
+        treeViewProvider = true,
+        slowTaskProvider = true
+      ),
+      InitializationOptions.Default.copy(
+        executeClientCommandProvider = true
+      )
+    )
+
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
       workspace,
       client,
       buffers,
-      config,
+      clientConfig,
       bspGlobalDirectories,
       sh,
-      time,
-      experimentalCapabilities
+      time
     )(ex)
     server.server.userConfig = this.userConfig
   }

@@ -356,20 +356,23 @@ class Compilers(
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
-      .withConfiguration(
-        initializeParams
-          .map(params => {
-            val options = InitializationOptions.from(params).compilerOptions
-            config.compilers.update(options)
-          })
-          .getOrElse(config.compilers)
-          .copy(
-            _symbolPrefixes = userConfig().symbolPrefixes,
-            isCompletionSnippetsEnabled =
-              initializeParams.supportsCompletionSnippets,
-            isFoldOnlyLines = initializeParams.foldOnlyLines
-          )
-      )
+  // pc.withSearch(search)
+  //   .withExecutorService(ec)
+  //   .withScheduledExecutorService(sh)
+  //   .withConfiguration(
+  //     initializeParams
+  //       .map(params => {
+  //         val options = InitializationOptions.from(params).compilerOptions
+  //         config.compilers.update(options)
+  //       })
+  //       .getOrElse(config.compilers)
+  //       .copy(
+  //         _symbolPrefixes = userConfig().symbolPrefixes,
+  //         isCompletionSnippetsEnabled =
+  //           initializeParams.supportsCompletionSnippets,
+  //         isFoldOnlyLines = initializeParams.foldOnlyLines
+  //       )
+  //   )
 
   def newCompiler(
       scalac: ScalacOptionsItem,

@@ -12,12 +12,7 @@ class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
 
   override val experimentalCapabilities: Some[ClientExperimentalCapabilities] =
-    Some(
-      new ClientExperimentalCapabilities(
-        debuggingProvider = false,
-        treeViewProvider = false
-      )
-    )
+    Some(ClientExperimentalCapabilities.Default)
 
   test("no-code-lenses") {
     for {

@@ -60,7 +60,6 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.Time
@@ -76,7 +75,6 @@ import scala.{meta => m}
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.concurrent.Promise
-import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
@@ -92,6 +90,7 @@ import org.eclipse.lsp4j.CodeActionContext
 import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -109,18 +108,17 @@ final class TestingServer(
     workspace: AbsolutePath,
     client: TestingClient,
     buffers: Buffers,
-    initialConfig: MetalsServerConfig,
+    clientConfig: ClientConfiguration,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time,
-    experimentalCapabilities: Option[ClientExperimentalCapabilities]
+    time: Time
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
-    initialConfig = initialConfig,
+    initialConfig = clientConfig.initialConfig,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
@@ -382,18 +380,11 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
-    val experimental = experimentalCapabilities.getOrElse(
-      ClientExperimentalCapabilities.Default.copy(
-        debuggingProvider = true,
-        treeViewProvider = true,
-        slowTaskProvider = true
-      )
-    )
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        experimental.toJson
+        clientConfig.experimentalCapabilities.toJson
       )
     )
     params.setWorkspaceFolders(

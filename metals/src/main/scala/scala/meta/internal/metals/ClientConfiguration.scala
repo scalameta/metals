@@ -10,102 +10,82 @@ package scala.meta.internal.metals
  * @param initializationOptions initializationOptions
  */
 class ClientConfiguration(
-    var initalConfig: MetalsServerConfig,
+    var initialConfig: MetalsServerConfig,
     var experimentalCapabilities: ClientExperimentalCapabilities,
     var initializationOptions: InitializationOptions
 ) {
-  private def choose[T](a: T, b: T, default: T): T =
-    Option(a).orElse(Option(b)).getOrElse(default)
-
-  private def ensureAll(a: Boolean, b: Boolean, c: Boolean): Boolean = {
-    val ensuredA: Boolean = Option(a).getOrElse(true)
-    val ensuredB: Boolean = Option(b).getOrElse(true)
-
-    ensuredA && ensuredB && c
-  }
 
   def statusBarIsOn(): Boolean =
-    choose(
-      initializationOptions.statusBarIsOn,
-      experimentalCapabilities.statusBarIsOn,
-      initalConfig.statusBar.isOn
-    )
+    initializationOptions.statusBarIsOn ||
+      experimentalCapabilities.statusBarIsOn ||
+      initialConfig.statusBar.isOn
 
   def statusBarIsShow(): Boolean =
-    choose(
-      initializationOptions.statusBarIsShowMessage,
-      experimentalCapabilities.statusBarIsShowMessage,
-      initalConfig.statusBar.isShowMessage
-    )
+    initializationOptions.statusBarIsShowMessage ||
+      experimentalCapabilities.statusBarIsShowMessage ||
+      initialConfig.statusBar.isShowMessage
 
   def statusBarIsLog(): Boolean =
-    choose(
-      initializationOptions.statusBarIsLogMessage,
-      experimentalCapabilities.statusBarIsLogMessage,
-      initalConfig.statusBar.isLogMessage
-    )
+    initializationOptions.statusBarIsLogMessage ||
+      experimentalCapabilities.statusBarIsLogMessage ||
+      initialConfig.statusBar.isLogMessage
 
   def statusBarIsOff(): Boolean =
-    ensureAll(
-      initializationOptions.statusBarIsOff,
-      experimentalCapabilities.statusBarIsOff,
-      initalConfig.statusBar.isOff
-    )
+    initializationOptions.statusBarIsOff &&
+      experimentalCapabilities.statusBarIsOff &&
+      initialConfig.statusBar.isOff
 
   def slowTaskIsOn(): Boolean =
-    choose(
-      initializationOptions.slowTaskProvider,
-      experimentalCapabilities.slowTaskProvider,
-      initalConfig.slowTask.isOn
-    )
+    initializationOptions.slowTaskProvider ||
+      experimentalCapabilities.slowTaskProvider ||
+      initialConfig.slowTask.isOn
 
   def isExecuteClientCommandProvider(): Boolean =
-    choose(
-      initializationOptions.executeClientCommandProvider,
-      experimentalCapabilities.executeClientCommandProvider,
-      initalConfig.executeClientCommand.isOn
-    )
+    initializationOptions.executeClientCommandProvider ||
+      experimentalCapabilities.executeClientCommandProvider ||
+      initialConfig.executeClientCommand.isOn
 
   def isInputBoxEnabled(): Boolean =
-    choose(
-      initializationOptions.inputBoxProvider,
-      experimentalCapabilities.inputBoxProvider,
-      initalConfig.isInputBoxEnabled
-    )
+    initializationOptions.inputBoxProvider ||
+      experimentalCapabilities.inputBoxProvider ||
+      initialConfig.isInputBoxEnabled
 
   def isQuickPickProvider(): Boolean =
-    choose(
-      initializationOptions.quickPickProvider,
-      experimentalCapabilities.quickPickProvider,
-      false
-    )
+    initializationOptions.quickPickProvider ||
+      experimentalCapabilities.quickPickProvider
 
   def isOpenFilesOnRenameProvider(): Boolean =
-    choose(
-      experimentalCapabilities.openFilesOnRenameProvider,
-      initalConfig.openFilesOnRenames,
-      false
-    )
+    experimentalCapabilities.openFilesOnRenameProvider ||
+      initialConfig.openFilesOnRenames
 
   def doctorFormatIsJson(): Boolean =
-    choose(
-      initializationOptions.doctorFormatIsJson,
-      experimentalCapabilities.doctorFormatIsJson,
-      initalConfig.doctorFormat.isJson
-    )
+    initializationOptions.doctorFormatIsJson ||
+      experimentalCapabilities.doctorFormatIsJson ||
+      initialConfig.doctorFormat.isJson
 
   def isHttpEnabled(): Boolean =
-    choose(
-      initializationOptions.isHttpEnabled,
-      initalConfig.isHttpEnabled,
-      false
-    )
+    initializationOptions.isHttpEnabled ||
+      initialConfig.isHttpEnabled
 
   def isExitOnShutdown(): Boolean =
-    choose(
-      initializationOptions.isExitOnShutdown,
-      initalConfig.isExitOnShutdown,
-      false
-    )
+    initializationOptions.isExitOnShutdown ||
+      initialConfig.isExitOnShutdown
+
+  def isCompletionItemResolve(): Boolean =
+    initializationOptions.compilerOptions.isCompletionItemResolve &&
+      initialConfig.compilers.isCompletionItemResolve
+
+  def isDebuggingProvider(): Boolean =
+    experimentalCapabilities.debuggingProvider
+
+  def isDecorationProvider(): Boolean =
+    experimentalCapabilities.decorationProvider
+
+  def isTreeViewProvider(): Boolean =
+    experimentalCapabilities.treeViewProvider
+
+  def isDidFocusProvider(): Boolean =
+    initializationOptions.didFocusProvider ||
+      experimentalCapabilities.didFocusProvider
 
 }

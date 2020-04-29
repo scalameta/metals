@@ -2,14 +2,18 @@ package tests
 
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.concurrent.Promise
+import scala.meta.internal.metals.MetalsSlowTaskResult
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
     extends BaseLspSuite("worksheet") {
   override def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] =
-    Some(ClientExperimentalCapabilities(decorationProvider = true))
+    Some(
+      ClientExperimentalCapabilities.Default.copy(
+        debuggingProvider = true
+      )
+    )
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
 

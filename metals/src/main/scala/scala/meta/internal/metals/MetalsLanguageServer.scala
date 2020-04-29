@@ -182,12 +182,6 @@ class MetalsLanguageServer(
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
-  private val clientConfig: ClientConfiguration =
-    new ClientConfiguration(
-      initialConfig,
-      ClientExperimentalCapabilities.Default,
-      InitializationOptions.Default
-    )
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private val packageProvider: PackageProvider =
@@ -206,6 +200,13 @@ class MetalsLanguageServer(
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
 
+  private val clientConfig: ClientConfiguration =
+    new ClientConfiguration(
+      initialConfig,
+      ClientExperimentalCapabilities.Default,
+      InitializationOptions.Default
+    )
+
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying =
       new ConfiguredLanguageClient(client, clientConfig)(ec)
@@ -217,7 +218,7 @@ class MetalsLanguageServer(
     )
     embedded = register(
       new Embedded(
-        clientConfig.initalConfig.icons,
+        clientConfig.initialConfig.icons,
         statusBar,
         () => userConfig
       )
@@ -244,13 +245,13 @@ class MetalsLanguageServer(
     languageClient.configure(InitializationOptions.from(params))
 
     buildTargets.setWorkspaceDirectory(workspace)
-    tables = register(new Tables(workspace, time, initialConfig))
+    tables = register(new Tables(workspace, time, clientConfig.initialConfig))
     buildTargets.setTables(tables)
     buildTools = new BuildTools(
       workspace,
       bspGlobalDirectories,
       () => userConfig,
-      initialConfig
+      clientConfig.initialConfig
     )
     fileSystemSemanticdbs = new FileSystemSemanticdbs(
       buildTargets,
@@ -267,14 +268,14 @@ class MetalsLanguageServer(
         tables,
         statusBar,
         () => compilers,
-        initialConfig
+        clientConfig.initialConfig
       )
     )
     warnings = new Warnings(
       workspace,
       buildTargets,
       statusBar,
-      initialConfig.icons,
+      clientConfig.initialConfig.icons,
       buildTools,
       compilations.isCurrentlyCompiling
     )
@@ -282,7 +283,7 @@ class MetalsLanguageServer(
       buildTargets,
       buffers,
       languageClient,
-      initialConfig.statistics,
+      clientConfig.initialConfig.statistics,
       () => userConfig
     )
     buildClient = new ForwardingMetalsBuildClient(
@@ -290,7 +291,7 @@ class MetalsLanguageServer(
       diagnostics,
       buildTargets,
       buildTargetClasses,
-      initialConfig,
+      clientConfig.initialConfig,
       statusBar,
       time,
       report => {
@@ -308,7 +309,6 @@ class MetalsLanguageServer(
         buildTools,
         time,
         tables,
-        initialConfig,
         embedded,
         statusBar,
         () => userConfig
@@ -347,12 +347,12 @@ class MetalsLanguageServer(
     formattingProvider = new FormattingProvider(
       workspace,
       buffers,
-      initialConfig,
+      clientConfig.initialConfig,
       () => userConfig,
       languageClient,
       clientConfig,
       statusBar,
-      clientConfig.initalConfig.icons,
+      clientConfig.initialConfig.icons,
       Option(params.getWorkspaceFolders) match {
         case Some(folders) =>
           folders.asScala.map(_.getUri.toAbsolutePath).toList
@@ -410,7 +410,7 @@ class MetalsLanguageServer(
       implementationProvider,
       buffers,
       () => userConfig,
-      initialConfig
+      clientConfig.initialConfig
     )
     codeLensProvider = new CodeLensProvider(
       List(runTestLensProvider, goSuperLensProvider),
@@ -437,7 +437,7 @@ class MetalsLanguageServer(
     )
     workspaceSymbols = new WorkspaceSymbolProvider(
       workspace,
-      initialConfig.statistics,
+      clientConfig.initialConfig.statistics,
       buildTargets,
       definitionIndex,
       interactiveSemanticdbs.toFileOnDisk
@@ -450,7 +450,7 @@ class MetalsLanguageServer(
     compilers = register(
       new Compilers(
         workspace,
-        initialConfig,
+        clientConfig.initialConfig,
         () => userConfig,
         buildTargets,
         buffers,
@@ -472,7 +472,7 @@ class MetalsLanguageServer(
       clientConfig
     )
     val worksheetPublisher =
-      if (clientConfig.experimentalCapabilities.decorationProvider)
+      if (clientConfig.isDecorationProvider)
         new DecorationWorksheetPublisher()
       else
         new WorkspaceEditWorksheetPublisher(buffers)
@@ -489,14 +489,14 @@ class MetalsLanguageServer(
         worksheetPublisher
       )
     )
-    if (clientConfig.experimentalCapabilities.treeViewProvider) {
+    if (clientConfig.isTreeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
         languageClient,
         buildTargets,
         () => buildClient.ongoingCompilations(),
         definitionIndex,
-        initialConfig.statistics,
+        clientConfig.initialConfig.statistics,
         id => compilations.compileTargets(List(id)),
         sh
       )
@@ -546,7 +546,7 @@ class MetalsLanguageServer(
       )
       capabilities.setCompletionProvider(
         new CompletionOptions(
-          initialConfig.compilers.isCompletionItemResolve,
+          clientConfig.isCompletionItemResolve,
           List(".", "*").asJava
         )
       )
@@ -582,7 +582,9 @@ class MetalsLanguageServer(
             new Registration(
               "1",
               "workspace/didChangeWatchedFiles",
-              initialConfig.globSyntax.registrationOptions(this.workspace)
+              clientConfig.initialConfig.globSyntax.registrationOptions(
+                this.workspace
+              )
             )
           ).asJava
         )
@@ -614,10 +616,10 @@ class MetalsLanguageServer(
         languageClient.underlying,
         () => server.reload(),
         charset,
-        initialConfig.icons,
+        clientConfig.initialConfig.icons,
         time,
         sh,
-        initialConfig
+        clientConfig.initialConfig
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)
@@ -1118,7 +1120,8 @@ class MetalsLanguageServer(
             val message =
               s"Found new symbol references for '$name', try running again."
             scribe.info(message)
-            statusBar.addMessage(initialConfig.icons.info + message)
+            statusBar
+              .addMessage(clientConfig.initialConfig.icons.info + message)
           }
       }
     }
@@ -1126,7 +1129,7 @@ class MetalsLanguageServer(
   def referencesResult(params: ReferenceParams): ReferencesResult = {
     val timer = new Timer(time)
     val result = referencesProvider.references(params)
-    if (initialConfig.statistics.isReferences) {
+    if (clientConfig.initialConfig.statistics.isReferences) {
       if (result.symbol.isEmpty) {
         scribe.info(s"time: found 0 references in $timer")
       } else {
@@ -1149,7 +1152,7 @@ class MetalsLanguageServer(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { token =>
-      if (initialConfig.compilers.isCompletionItemResolve) {
+      if (clientConfig.isCompletionItemResolve) {
         compilers.completionItemResolve(item, token)
       } else {
         Future.successful(item)
@@ -1196,7 +1199,7 @@ class MetalsLanguageServer(
       indexingPromise.future.map { _ =>
         val timer = new Timer(time)
         val result = workspaceSymbols.search(params.getQuery, token).asJava
-        if (initialConfig.statistics.isWorkspaceSymbol) {
+        if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
           scribe.info(
             s"time: found ${result.size()} results for query '${params.getQuery}' in $timer"
           )
@@ -1668,8 +1671,10 @@ class MetalsLanguageServer(
       }
     )
     tracked.foreach { _ =>
-      statusBar.addMessage(s"${initialConfig.icons.rocket}Indexing complete!")
-      if (initialConfig.statistics.isMemory) {
+      statusBar.addMessage(
+        s"${clientConfig.initialConfig.icons.rocket}Indexing complete!"
+      )
+      if (clientConfig.initialConfig.statistics.isMemory) {
         logMemory(
           "definition index",
           definitionIndex
@@ -1701,7 +1706,10 @@ class MetalsLanguageServer(
   }
 
   private def indexWorkspace(i: ImportedBuild): Unit = {
-    timedThunk("updated build targets", initialConfig.statistics.isIndex) {
+    timedThunk(
+      "updated build targets",
+      clientConfig.initialConfig.statistics.isIndex
+    ) {
       buildTargets.reset()
       interactiveSemanticdbs.reset()
       buildClient.reset()
@@ -1723,30 +1731,33 @@ class MetalsLanguageServer(
         .loadSupported()
         .foreach(_.onBuildTargets(workspace, buildTargets))
     }
-    timedThunk("started file watcher", initialConfig.statistics.isIndex) {
+    timedThunk(
+      "started file watcher",
+      clientConfig.initialConfig.statistics.isIndex
+    ) {
       fileWatcher.restart()
     }
     timedThunk(
       "indexed library classpath",
-      initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex
     ) {
       workspaceSymbols.indexClasspath()
     }
     timedThunk(
       "indexed workspace SemanticDBs",
-      initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex
     ) {
       semanticDBIndexer.onScalacOptions(i.scalacOptions)
     }
     timedThunk(
       "indexed workspace sources",
-      initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex
     ) {
       indexWorkspaceSources()
     }
     timedThunk(
       "indexed library sources",
-      initialConfig.statistics.isIndex
+      clientConfig.initialConfig.statistics.isIndex
     ) {
       indexDependencySources(i.dependencySources)
     }
@@ -1870,7 +1881,7 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.experimentalCapabilities.didFocusProvider || focusedDocument.isDefined) {
+        if (clientConfig.isDidFocusProvider || focusedDocument.isDefined) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {
@@ -1970,7 +1981,10 @@ class MetalsLanguageServer(
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename) {
       val result =
-        timedThunk("definition", initialConfig.statistics.isDefinition)(
+        timedThunk(
+          "definition",
+          clientConfig.initialConfig.statistics.isDefinition
+        )(
           definitionProvider.definition(source, position, token)
         )
       result.onComplete {

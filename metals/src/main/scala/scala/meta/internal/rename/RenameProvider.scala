@@ -156,7 +156,7 @@ final class RenameProvider(
         }
         val fileChanges = allChanges.flatten.toMap
         val shouldRenameInBackground =
-          !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.initalConfig.renameFileThreshold
+          !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.initialConfig.renameFileThreshold
         val (openedEdits, closedEdits) =
           if (shouldRenameInBackground) {
             if (clientConfig.isOpenFilesOnRenameProvider) {

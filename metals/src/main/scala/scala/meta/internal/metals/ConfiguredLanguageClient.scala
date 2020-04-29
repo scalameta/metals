@@ -90,7 +90,7 @@ final class ConfiguredLanguageClient(
     if (clientConfig.isExecuteClientCommandProvider) {
       params.getCommand match {
         case ClientCommands.RefreshModel()
-            if !clientConfig.experimentalCapabilities.debuggingProvider =>
+            if !clientConfig.isDebuggingProvider =>
           () // ignore
         case _ =>
           underlying.metalsExecuteClientCommand(params)
@@ -125,7 +125,7 @@ final class ConfiguredLanguageClient(
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
-    if (clientConfig.experimentalCapabilities.decorationProvider) {
+    if (clientConfig.isDecorationProvider) {
       underlying.metalsPublishDecorations(params)
     }
   }

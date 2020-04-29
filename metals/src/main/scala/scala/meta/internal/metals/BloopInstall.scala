@@ -30,7 +30,6 @@ final class BloopInstall(
     buildTools: BuildTools,
     time: Time,
     tables: Tables,
-    config: MetalsServerConfig,
     embedded: Embedded,
     statusBar: StatusBar,
     userConfig: () => UserConfiguration

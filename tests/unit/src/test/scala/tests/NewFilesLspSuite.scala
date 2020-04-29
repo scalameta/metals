@@ -15,7 +15,7 @@ import java.nio.file.FileAlreadyExistsException
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] =
-    Some(ClientExperimentalCapabilities(inputBoxProvider = true))
+    Some(ClientExperimentalCapabilities.Default.copy(inputBoxProvider = true))
 
   check("new-worksheet")(
     Some("a/src/main/scala/"),

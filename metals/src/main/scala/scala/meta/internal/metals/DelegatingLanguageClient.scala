@@ -49,6 +49,7 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
   def configure(initializationOptions: InitializationOptions): Unit = {
     underlying match {
       case client: ConfiguredLanguageClient =>
+        pprint.log(initializationOptions)
         client.configure(initializationOptions)
       case _ =>
     }
