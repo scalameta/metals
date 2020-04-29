@@ -182,10 +182,12 @@ class MetalsLanguageServer(
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
-  private var clientExperimentalCapabilities: ClientExperimentalCapabilities =
-    ClientExperimentalCapabilities.Default
-  private var initializationOptions: InitializationOptions =
-    InitializationOptions.Default
+  private val clientConfig: ClientConfiguration =
+    new ClientConfiguration(
+      initialConfig,
+      ClientExperimentalCapabilities.Default,
+      InitializationOptions.Default
+    )
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private val packageProvider: PackageProvider =
@@ -206,19 +208,16 @@ class MetalsLanguageServer(
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying =
-      new ConfiguredLanguageClient(client, initialConfig)(ec)
+      new ConfiguredLanguageClient(client, clientConfig)(ec)
     statusBar = new StatusBar(
       () => languageClient,
       time,
       progressTicks,
-      initialConfig.icons,
-      initialConfig.statusBar,
-      clientExperimentalCapabilities,
-      initializationOptions
+      clientConfig
     )
     embedded = register(
       new Embedded(
-        initialConfig.icons,
+        clientConfig.initalConfig.icons,
         statusBar,
         () => userConfig
       )
@@ -238,12 +237,11 @@ class MetalsLanguageServer(
     scribe.info(
       s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace'"
     )
-    clientExperimentalCapabilities =
-      ClientExperimentalCapabilities.from(params.getCapabilities)
-    initializationOptions = InitializationOptions.from(params)
 
-    languageClient.configure(clientExperimentalCapabilities)
-    languageClient.configure(initializationOptions)
+    languageClient.configure(
+      ClientExperimentalCapabilities.from(params.getCapabilities)
+    )
+    languageClient.configure(InitializationOptions.from(params))
 
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, initialConfig))
@@ -352,10 +350,9 @@ class MetalsLanguageServer(
       initialConfig,
       () => userConfig,
       languageClient,
-      clientExperimentalCapabilities,
-      initializationOptions,
+      clientConfig,
       statusBar,
-      initialConfig.icons,
+      clientConfig.initalConfig.icons,
       Option(params.getWorkspaceFolders) match {
         case Some(folders) =>
           folders.asScala.map(_.getUri.toAbsolutePath).toList
@@ -406,7 +403,7 @@ class MetalsLanguageServer(
         buildTargetClasses,
         buffers,
         buildTargets,
-        clientExperimentalCapabilities
+        clientConfig.experimentalCapabilities
       )
 
     val goSuperLensProvider = new SuperMethodCodeLens(
@@ -427,8 +424,7 @@ class MetalsLanguageServer(
       languageClient,
       buffers,
       compilations,
-      initialConfig,
-      clientExperimentalCapabilities
+      clientConfig
     )
     semanticDBIndexer = new SemanticdbIndexer(
       referencesProvider,
@@ -470,15 +466,13 @@ class MetalsLanguageServer(
     doctor = new Doctor(
       workspace,
       buildTargets,
-      initialConfig,
       languageClient,
       () => httpServer,
       tables,
-      clientExperimentalCapabilities,
-      initializationOptions
+      clientConfig
     )
     val worksheetPublisher =
-      if (clientExperimentalCapabilities.decorationProvider)
+      if (clientConfig.experimentalCapabilities.decorationProvider)
         new DecorationWorksheetPublisher()
       else
         new WorkspaceEditWorksheetPublisher(buffers)
@@ -495,7 +489,7 @@ class MetalsLanguageServer(
         worksheetPublisher
       )
     )
-    if (clientExperimentalCapabilities.treeViewProvider) {
+    if (clientConfig.experimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
         languageClient,
@@ -597,7 +591,7 @@ class MetalsLanguageServer(
   }
 
   private def startHttpServer(): Unit = {
-    if (initialConfig.isHttpEnabled || initializationOptions.isHttpEnabled) {
+    if (clientConfig.isHttpEnabled) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -681,7 +675,7 @@ class MetalsLanguageServer(
       } finally {
         promise.success(())
       }
-      if (initialConfig.isExitOnShutdown || initializationOptions.isExitOnShutdown) {
+      if (clientConfig.isExitOnShutdown) {
         System.exit(0)
       }
       promise.future.asJava
@@ -1876,7 +1870,7 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientExperimentalCapabilities.didFocusProvider || focusedDocument.isDefined) {
+        if (clientConfig.experimentalCapabilities.didFocusProvider || focusedDocument.isDefined) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {

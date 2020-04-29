@@ -20,15 +20,9 @@ import scala.meta.internal.decorations.PublishDecorationsParams
  */
 final class ConfiguredLanguageClient(
     initial: MetalsLanguageClient,
-    config: MetalsServerConfig
+    clientConfig: ClientConfiguration
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
-
-  val clientConfig = new ClientConfiguration(
-    config,
-    ClientExperimentalCapabilities.Default,
-    InitializationOptions.Default
-  )
 
   override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
     clientConfig.experimentalCapabilities = capabilities

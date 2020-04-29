@@ -32,8 +32,7 @@ final class FormattingProvider(
     serverConfig: MetalsServerConfig,
     userConfig: () => UserConfiguration,
     client: MetalsLanguageClient,
-    clientExperimentalCapabilities: ClientExperimentalCapabilities,
-    initializationOptions: InitializationOptions,
+    clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     icons: Icons,
     workspaceFolders: List[AbsolutePath]
@@ -140,9 +139,7 @@ final class FormattingProvider(
   }
 
   private def askScalafmtVersion(): Future[Option[String]] = {
-    val isInputBoxEnabled =
-      serverConfig.isInputBoxEnabled || clientExperimentalCapabilities.inputBoxProvider || initializationOptions.inputBoxProvider
-    if (isInputBoxEnabled) {
+    if (clientConfig.isInputBoxEnabled) {
       client
         .metalsInputBox(MissingScalafmtVersion.inputBox())
         .asScala

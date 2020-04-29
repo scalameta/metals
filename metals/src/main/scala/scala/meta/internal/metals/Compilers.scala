@@ -325,7 +325,7 @@ class Compilers(
       jcache.computeIfAbsent(
         target, { _ =>
           statusBar.trackBlockingTask(
-            s"${statusBar.icons.sync}Loading presentation compiler"
+            s"${config.icons.sync}Loading presentation compiler"
           ) {
             newCompiler(scalac, info.scalaInfo)
           }

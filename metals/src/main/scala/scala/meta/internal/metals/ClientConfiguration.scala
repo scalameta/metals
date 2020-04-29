@@ -14,8 +14,15 @@ class ClientConfiguration(
     var experimentalCapabilities: ClientExperimentalCapabilities,
     var initializationOptions: InitializationOptions
 ) {
-  private def choose[T](a: T, b: T, default: T) =
+  private def choose[T](a: T, b: T, default: T): T =
     Option(a).orElse(Option(b)).getOrElse(default)
+
+  private def ensureAll(a: Boolean, b: Boolean, c: Boolean): Boolean = {
+    val ensuredA: Boolean = Option(a).getOrElse(true)
+    val ensuredB: Boolean = Option(b).getOrElse(true)
+
+    ensuredA && ensuredB && c
+  }
 
   def statusBarIsOn(): Boolean =
     choose(
@@ -36,6 +43,13 @@ class ClientConfiguration(
       initializationOptions.statusBarIsLogMessage,
       experimentalCapabilities.statusBarIsLogMessage,
       initalConfig.statusBar.isLogMessage
+    )
+
+  def statusBarIsOff(): Boolean =
+    ensureAll(
+      initializationOptions.statusBarIsOff,
+      experimentalCapabilities.statusBarIsOff,
+      initalConfig.statusBar.isOff
     )
 
   def slowTaskIsOn(): Boolean =
@@ -63,6 +77,34 @@ class ClientConfiguration(
     choose(
       initializationOptions.quickPickProvider,
       experimentalCapabilities.quickPickProvider,
+      false
+    )
+
+  def isOpenFilesOnRenameProvider(): Boolean =
+    choose(
+      experimentalCapabilities.openFilesOnRenameProvider,
+      initalConfig.openFilesOnRenames,
+      false
+    )
+
+  def doctorFormatIsJson(): Boolean =
+    choose(
+      initializationOptions.doctorFormatIsJson,
+      experimentalCapabilities.doctorFormatIsJson,
+      initalConfig.doctorFormat.isJson
+    )
+
+  def isHttpEnabled(): Boolean =
+    choose(
+      initializationOptions.isHttpEnabled,
+      initalConfig.isHttpEnabled,
+      false
+    )
+
+  def isExitOnShutdown(): Boolean =
+    choose(
+      initializationOptions.isExitOnShutdown,
+      initalConfig.isExitOnShutdown,
       false
     )
 
