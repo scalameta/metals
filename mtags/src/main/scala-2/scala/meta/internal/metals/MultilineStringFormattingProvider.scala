@@ -52,6 +52,28 @@ object MultilineStringFormattingProvider {
     space * index
   }
 
+  private def getIndexOfLastQuote(line: String): Option[(Int, Boolean)] = {
+    var lastQuote = -1
+    var escaped = false
+    var quoteClosed = true
+    for (i <- 0 until line.size) {
+      val char = line(i)
+      if (char == '"') {
+        if (!escaped) {
+          lastQuote = i
+          quoteClosed = !quoteClosed
+        } else {
+          escaped = !escaped
+        }
+      } else if (char == '\\') {
+        escaped = !escaped
+      } else {
+        escaped = false
+      }
+    }
+    if (lastQuote != -1) Some((lastQuote, quoteClosed)) else None
+  }
+
   private def indent(
       splitLines: Array[String],
       position: Position
@@ -182,30 +204,43 @@ object MultilineStringFormattingProvider {
       position: Position
   ): Boolean = {
     val lineBefore = splitLines(position.getLine - 1)
-    lineBefore.count(_ == '"') % 2 != 0
+    getIndexOfLastQuote(lineBefore).exists {
+      case (_, quoteClosed) => !quoteClosed
+    }
   }
 
   private def fixStringNewline(
       position: Position,
       splitLines: Array[String]
   ): List[TextEdit] = {
-    val precedentLine = position.getLine - 1
-    val lastCharOfLineBefore = splitLines(precedentLine).size
-    val endPrecedentLine = new Position(precedentLine, lastCharOfLineBefore)
+    val previousLineNumber = position.getLine - 1
+    val previousLine = splitLines(previousLineNumber)
+    val previousLinePosition =
+      new Position(previousLineNumber, previousLine.length)
     val textEditPrecedentLine = new TextEdit(
-      new Range(endPrecedentLine, endPrecedentLine),
+      new Range(previousLinePosition, previousLinePosition),
       "\"" + " " + "+"
     )
-    val isPrecedentLineFirstLineOfString =
-      if (precedentLine > 1)
-        !splitLines(precedentLine - 1).trim.lastOption.contains('+')
-      else true
-    val defaultIndent = splitLines(precedentLine).takeWhile(_ == ' ').size
+    val defaultIndent = previousLine.prefixLength(_ == ' ')
     val indent =
-      if (isPrecedentLineFirstLineOfString) defaultIndent + 2 else defaultIndent
+      if (previousLineNumber > 1 && !splitLines(previousLineNumber - 1).trim.lastOption
+          .contains('+'))
+        defaultIndent + 2
+      else defaultIndent
+    val interpolationString = getIndexOfLastQuote(previousLine)
+      .map {
+        case (lastQuoteIndex, _) =>
+          if (lastQuoteIndex > 0 && previousLine(lastQuoteIndex - 1) == 's') "s"
+          else ""
+      }
+      .getOrElse("")
+
     val zeroPos = new Position(position.getLine, 0)
     val textEditcurrentLine =
-      new TextEdit(new Range(zeroPos, position), " " * indent + "\"")
+      new TextEdit(
+        new Range(zeroPos, position),
+        " " * indent + interpolationString + "\""
+      )
     List(textEditPrecedentLine, textEditcurrentLine)
   }
 

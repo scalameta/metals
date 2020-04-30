@@ -4,6 +4,8 @@ import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   private val indent = "  "
+  private val escapedNewline = "\\n"
+  private val escapedQuote = "\""
 
   // Ensures that entering a newline at the beginning of a file doesn't
   // throw an exception
@@ -121,7 +123,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
-    "interpolated-single-quotes",
+    "interpolated-single-quotes1",
     s"""
        |object Main {
        |  val number = 102
@@ -131,7 +133,52 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val number = 102
        |  val str = s"|" +
-       |    "$$number".stripMargin
+       |    s"$$number".stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes2",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + "2@@3$escapedNewline".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + "2" +
+       |    "3$escapedNewline".stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes3",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2@@\\3".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2" +
+       |    s"\\3".stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes4",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2@@$escapedQuote".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2" +
+       |    s"$escapedQuote".stripMargin
        |}""".stripMargin
   )
 
