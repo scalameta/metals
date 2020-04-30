@@ -156,7 +156,7 @@ object BloopPants {
       s"--export-dep-as-jar-output-file=$outputFile",
       s"export-dep-as-jar"
     ) ++ args.targets
-    val shortName = "pants export-classpath export"
+    val shortName = "pants export-dep-as-jar"
     val bloopSymlink = args.workspace.resolve(".bloop")
     val bloopSymlinkTarget =
       if (Files.isSymbolicLink(bloopSymlink)) {
