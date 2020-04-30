@@ -58,6 +58,7 @@ import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.concurrent.duration._
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1187,8 +1188,10 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
+      timedThunk("code lens generation", thresholdMillis = 1.second.toMillis) {
       val path = params.getTextDocument.getUri.toAbsolutePath
       codeLensProvider.findLenses(path).toList.asJava
+      }
     }
 
   @JsonRequest("textDocument/foldingRange")
@@ -1640,10 +1643,10 @@ class MetalsLanguageServer(
     }
   }
 
-  def timedThunk[T](didWhat: String, onlyIf: Boolean = true)(thunk: => T): T = {
+  def timedThunk[T](didWhat: String, onlyIf: Boolean = true, thresholdMillis: Long = 0)(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk
-    if (onlyIf) {
+    if (onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)) {
       scribe.info(s"time: $didWhat in $elapsed")
     }
     result

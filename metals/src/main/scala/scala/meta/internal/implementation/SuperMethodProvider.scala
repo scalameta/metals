@@ -197,6 +197,7 @@ object SuperMethodProvider {
         documentWithPath.textDocument,
         findSymbol
       )
+    val methodName = msi.symbol.desc.name.value
     val result = for {
       classSymbolInformation <- classSymbolInformationOption.toIterable
       bottomClassSig = classSymbolInformation.signature
@@ -210,6 +211,7 @@ object SuperMethodProvider {
         case cs: ClassSignature => cs
       }
       methodSymbolLink <- classSig.getDeclarations.symlinks
+      if msi.isLocal || methodSymbolLink.contains(methodName)
       mSymbolInformation <- findSymbol(methodSymbolLink).toIterable
       methodSignature <- Option(mSymbolInformation.signature).collect {
         case m: MethodSignature => m

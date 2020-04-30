@@ -88,6 +88,24 @@ final class ImplementationProvider(
       textDocumentWithPath.textDocument
     )
 
+  def defaultSymbolSearchMemoize(
+      anyWorkspacePath: AbsolutePath,
+      textDocument: TextDocument
+  ): String => Option[SymbolInformation] = {
+    lazy val global =
+      new GlobalClassTable(buildTargets).globalSymbolTableFor(anyWorkspacePath)
+    val textSymbolsMap = textDocument.symbols.map(s => s.symbol -> s).toMap
+    val memoized: mutable.Map[String, SymbolInformation] = mutable.Map.empty
+    symbol => {
+      val result = memoized.get(symbol)
+        .orElse(textSymbolsMap.get(symbol))
+        .orElse(findSymbolInformation(symbol))
+        .orElse(global.flatMap(_.safeInfo(symbol)))
+      result.foreach(r => memoized.put(symbol, r))
+      result
+    }
+  }
+
   def defaultSymbolSearch(
       anyWorkspacePath: AbsolutePath,
       textDocument: TextDocument
@@ -95,8 +113,7 @@ final class ImplementationProvider(
     lazy val global =
       new GlobalClassTable(buildTargets).globalSymbolTableFor(anyWorkspacePath)
     symbol => {
-      textDocument.symbols
-        .find(_.symbol == symbol)
+      textDocument.symbols.find(_.symbol == symbol)
         .orElse(findSymbolInformation(symbol))
         .orElse(global.flatMap(_.safeInfo(symbol)))
     }
