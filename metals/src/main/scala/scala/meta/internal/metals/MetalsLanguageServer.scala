@@ -1189,8 +1189,8 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
       timedThunk("code lens generation", thresholdMillis = 1.second.toMillis) {
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      codeLensProvider.findLenses(path).toList.asJava
+        val path = params.getTextDocument.getUri.toAbsolutePath
+        codeLensProvider.findLenses(path).toList.asJava
       }
     }
 
@@ -1643,7 +1643,11 @@ class MetalsLanguageServer(
     }
   }
 
-  def timedThunk[T](didWhat: String, onlyIf: Boolean = true, thresholdMillis: Long = 0)(thunk: => T): T = {
+  def timedThunk[T](
+      didWhat: String,
+      onlyIf: Boolean = true,
+      thresholdMillis: Long = 0
+  )(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk
     if (onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)) {
