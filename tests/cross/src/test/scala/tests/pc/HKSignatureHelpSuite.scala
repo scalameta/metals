@@ -15,7 +15,7 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
   }
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "foldmap",

@@ -7,7 +7,7 @@ import tests.BuildInfoVersions
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   checkEdit(
     "string",

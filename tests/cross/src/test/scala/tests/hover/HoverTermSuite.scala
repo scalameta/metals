@@ -87,7 +87,8 @@ class HoverTermSuite extends BaseHoverSuite {
         """|String
            |def s(args: Any*): String = macro
            |""".stripMargin.hover,
-      "0." -> "def s: String".hover
+      "0.23" -> "def s: String".hover,
+      "0.24" -> "def s(args: Any*): String".hover
     )
   )
 
@@ -126,7 +127,8 @@ class HoverTermSuite extends BaseHoverSuite {
        |def apply[T](a: T)(implicit ev: Int): T
        |""".stripMargin.hover,
     compat = Map(
-      "0." -> "def apply(implicit ev: Int): Int".hover
+      "0.23" -> "def apply(implicit ev: Int): Int".hover,
+      "0.24" -> "def apply: Int".hover
     )
   )
 
@@ -148,7 +150,9 @@ class HoverTermSuite extends BaseHoverSuite {
        |def unapply(a: Int): Option[Int]
        |""".stripMargin.hover,
     compat = Map(
-      "0." -> "def unapply: Int".hover
+      "0.23" -> "def unapply: Int".hover,
+      // https://github.com/lampepfl/dotty/issues/8835
+      "0.24" -> "object num$: interpolator-unapply.a.Xtension#num$".hover
     )
   )
 

@@ -7,7 +7,7 @@ import tests.BuildInfoVersions
 class PrettyPrintSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   def checkSignature(
       name: String,

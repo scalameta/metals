@@ -6,6 +6,8 @@ def isCI = System.getenv("CI") != null
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
 def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
+def isScala023(v: Option[(Long, Long)]): Boolean = v.contains((0, 23))
+def isScala024(v: Option[(Long, Long)]): Boolean = v.contains((0, 24))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean =
   v.exists(_._1 == 0) || v.exists(_._1 == 3)
@@ -14,11 +16,13 @@ def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
     if2: List[A] = Nil,
+    ifLaterThan211: List[A] = Nil,
     if3: List[A] = Nil
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
-    case partialVersion if isScala2(partialVersion) => if2
+    case partialVersion if isScala212(partialVersion) => ifLaterThan211 ::: if2
+    case partialVersion if isScala213(partialVersion) => ifLaterThan211 ::: if2
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -158,14 +162,14 @@ lazy val V = new {
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-219-a3514983"
-  val scala3 = "0.23.0-RC1"
+  val scala3 = "0.24.0-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.1.5"
   val scalafmt = "2.4.2"
-  val munit = "0.7.1"
+  val munit = "0.7.4"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
@@ -181,7 +185,7 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(scala3)
+  def nonDeprecatedScala3Versions = Seq(scala3, "0.23.0")
   def deprecatedScala3Versions = Seq()
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
@@ -256,6 +260,12 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   if (isScala213(partialVersion)) {
     result += base / "scala-2.13"
   }
+  if (isScala023(partialVersion)) {
+    result += base / "scala-0.23"
+  }
+  if (isScala024(partialVersion)) {
+    result += base / "scala-0.24"
+  }
   if (isScala2(partialVersion)) {
     result += base / "scala-2"
   }
@@ -285,7 +295,7 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "ch.epfl.lamp" %% "dotty-compiler" % V.scala3,
+      "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value),
@@ -302,7 +312,7 @@ val mtagsSettings = List(
       crossSetting(
         scalaVersion.value,
         if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-        if2 = List("com.lihaoyi" %% "pprint" % "0.5.9"),
+        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.5.9"),
         if3 = List(
           ("com.lihaoyi" %% "pprint" % "0.5.9")
             .withDottyCompat(scalaVersion.value)
@@ -542,6 +552,7 @@ lazy val mtest = project
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "scala3Versions" -> V.scala3Versions,
       "scalaVersion" -> scalaVersion.value
     ),
     crossScalaVersions := V.nonDeprecatedScalaVersions,

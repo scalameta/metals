@@ -6,7 +6,7 @@ import tests.BuildInfoVersions
 class CompletionOverrideAllSuite extends BaseCompletionSuite {
 
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   override def requiresJdkSources: Boolean = true
 

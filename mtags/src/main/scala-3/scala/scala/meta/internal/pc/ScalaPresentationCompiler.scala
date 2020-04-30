@@ -52,13 +52,9 @@ import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.parsing.Parsers.Parser
 import dotty.tools.dotc.printing.PlainPrinter
-import dotty.tools.dotc.reporting.diagnostic.Message
-import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.reporting.diagnostic.MessageContainer
 import dotty.tools.io.VirtualFile
-import dotty.tools.dotc.interfaces.{Diagnostic => DottyDiagnostic}
+import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.ast.tpd
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.pc.DefinitionResultImpl
@@ -307,6 +303,7 @@ case class ScalaPresentationCompiler(
 
       val (paramN, callableN, alternatives) =
         Signatures.callInfo(path, pos.span)
+
       val signatureInfos = alternatives.flatMap(Signatures.toSignature)
       new SignatureHelp(
         signatureInfos.map(signatureToSignatureInformation).asJava,
@@ -324,14 +321,7 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      val sourceFile = toSource(uri, params.text)
-      // we need to have a separate reporter otherwise errors are not cleared
-      val parsingReporter = new StoreReporter(null)
-      val freshContext = driver.currentCtx.fresh.setReporter(parsingReporter)
-      val parser = new Parser(sourceFile)(freshContext)
-      parser.parse()
-      val diags = parsingReporter.allErrors
-      diags.flatMap(diagnostic).asJava
+      CompilerInterfaces.parseErrors(driver, uri, params.text)
     }
   }
 
@@ -497,44 +487,6 @@ case class ScalaPresentationCompiler(
     val info = new ParameterInformation(param.show)
     documentation.foreach(info.setDocumentation(_))
     info
-  }
-
-  private def diagnostic(mc: MessageContainer): Option[Diagnostic] =
-    if (!mc.pos.exists)
-      None // diagnostics without positions are not supported: https://github.com/Microsoft/language-server-protocol/issues/249
-    else {
-      def severity(level: Int): DiagnosticSeverity = {
-        level match {
-          case DottyDiagnostic.INFO =>
-            DiagnosticSeverity.Information
-          case DottyDiagnostic.WARNING =>
-            DiagnosticSeverity.Warning
-          case DottyDiagnostic.ERROR =>
-            DiagnosticSeverity.Error
-        }
-      }
-      val message = mc.contained
-      val code = message.errorId.errorNumber.toString
-      range(mc.pos).map(r =>
-        new Diagnostic(
-          r,
-          mc.message,
-          severity(mc.level),
-          /*source =*/ "",
-          code
-        )
-      )
-    }
-
-  private def toSource(uri: URI, sourceCode: String): SourceFile = {
-    val path = Paths.get(uri)
-    val virtualFile = new VirtualFile(path.getFileName.toString, path.toString)
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(virtualFile.output, "UTF-8")
-    )
-    writer.write(sourceCode)
-    writer.close()
-    new SourceFile(virtualFile, Codec.UTF8)
   }
 
   override def isLoaded() = compilerAccess.isLoaded()

@@ -7,7 +7,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
 
   // @tgodzik docs not yet supported for Scala 3
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "case",

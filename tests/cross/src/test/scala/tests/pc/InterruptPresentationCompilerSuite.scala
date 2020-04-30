@@ -33,7 +33,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
 
   // @tgodzik currently not handled for Dotty
   override def excludedScalaVersions: Set[String] =
-    Set(BuildInfoVersions.scala3)
+    BuildInfoVersions.scala3Versions.toSet
 
   override def beforeEach(context: BeforeEach): Unit = {
     index.asInstanceOf[InterruptSymbolIndex].reset()
