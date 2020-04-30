@@ -93,7 +93,7 @@ final class ImplementationProvider(
       textDocument: TextDocument
   ): String => Option[SymbolInformation] = {
     lazy val global =
-      new GlobalClassTable(buildTargets).globalSymbolTableFor(anyWorkspacePath)
+      globalTable.globalSymbolTableFor(anyWorkspacePath)
     val textSymbolsMap = textDocument.symbols.map(s => s.symbol -> s).toMap
     val memoized: mutable.Map[String, SymbolInformation] = mutable.Map.empty
     symbol => {
@@ -112,7 +112,7 @@ final class ImplementationProvider(
       textDocument: TextDocument
   ): String => Option[SymbolInformation] = {
     lazy val global =
-      new GlobalClassTable(buildTargets).globalSymbolTableFor(anyWorkspacePath)
+      globalTable.globalSymbolTableFor(anyWorkspacePath)
     symbol => {
       textDocument.symbols
         .find(_.symbol == symbol)

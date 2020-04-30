@@ -197,7 +197,7 @@ object SuperMethodProvider {
         documentWithPath.textDocument,
         findSymbol
       )
-    val methodName = msi.symbol.desc.name.value
+    val methodName = msi.displayName
     val result = for {
       classSymbolInformation <- classSymbolInformationOption.toIterable
       bottomClassSig = classSymbolInformation.signature
