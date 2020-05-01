@@ -2,7 +2,6 @@ package tests
 
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.MetalsServerConfig
 import munit.Location
 
 class SbtVersionSuite extends BaseSuite {
@@ -14,8 +13,7 @@ class SbtVersionSuite extends BaseSuite {
       val root = FileLayout.fromString(layout)
       val obtained = SbtBuildTool(
         root,
-        () => UserConfiguration(),
-        MetalsServerConfig.default
+        () => UserConfiguration()
       ).version
       assertNoDiff(obtained, expected)
     }

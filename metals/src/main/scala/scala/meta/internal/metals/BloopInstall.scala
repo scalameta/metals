@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.process.ProcessHandler
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.metals.Messages._
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
@@ -29,14 +30,11 @@ final class BloopInstall(
     buildTools: BuildTools,
     time: Time,
     tables: Tables,
-    messages: Messages,
-    config: MetalsServerConfig,
     embedded: Embedded,
     statusBar: StatusBar,
     userConfig: () => UserConfiguration
 )(implicit ec: ExecutionContext)
     extends Cancelable {
-  import messages._
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = {
     cancelables.cancel()

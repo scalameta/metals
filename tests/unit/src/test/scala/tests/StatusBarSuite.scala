@@ -3,27 +3,19 @@ package tests
 import scala.concurrent.Promise
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.meta.internal.metals.{
-  ClientExperimentalCapabilities,
-  InitializationOptions
-}
+import scala.meta.internal.metals.ClientConfiguration
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
   val client = new TestingClient(PathIO.workingDirectory, Buffers())
-  import scala.meta.internal.metals.StatusBarConfig
   var status = new StatusBar(
     () => client,
     time,
     ProgressTicks.dots,
-    Icons.default,
-    StatusBarConfig.default,
-    ClientExperimentalCapabilities.Default,
-    InitializationOptions.Default
+    ClientConfiguration.Default
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()

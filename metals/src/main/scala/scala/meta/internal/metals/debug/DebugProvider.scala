@@ -35,10 +35,10 @@ import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
 import org.eclipse.lsp4j.ExecuteCommandParams
-import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.BuildTargetNotFoundException
+import scala.meta.internal.metals.Messages
 
 class DebugProvider(
     definitionProvider: DefinitionProvider,
@@ -48,7 +48,6 @@ class DebugProvider(
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
-    messages: Messages,
     statusBar: StatusBar
 ) {
 
@@ -183,7 +182,7 @@ class DebugProvider(
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case t if buildClient.buildHasErrors =>
-      statusBar.addMessage(messages.DebugErrorsPresent)
+      statusBar.addMessage(Messages.DebugErrorsPresent)
       languageClient.metalsExecuteClientCommand(
         new ExecuteCommandParams(
           ClientCommands.FocusDiagnostics.id,
@@ -192,16 +191,16 @@ class DebugProvider(
       )
     case t: ClassNotFoundException =>
       languageClient.showMessage(
-        messages.DebugClassNotFound.invalidClass(t.getMessage())
+        Messages.DebugClassNotFound.invalidClass(t.getMessage())
       )
     case t @ ClassNotFoundInBuildTargetException(cls, buildTarget) =>
       languageClient.showMessage(
-        messages.DebugClassNotFound
+        Messages.DebugClassNotFound
           .invalidTargetClass(cls, buildTarget.getDisplayName())
       )
     case t @ BuildTargetNotFoundException(target) =>
       languageClient.showMessage(
-        messages.DebugClassNotFound
+        Messages.DebugClassNotFound
           .invalidTarget(target)
       )
 

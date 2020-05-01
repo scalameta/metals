@@ -20,13 +20,10 @@ import scala.meta.internal.semver.SemVer
 final class Doctor(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-    config: MetalsServerConfig,
     languageClient: MetalsLanguageClient,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
-    messages: Messages,
-    clientExperimentalCapabilities: ClientExperimentalCapabilities,
-    initializationOptions: InitializationOptions
+    clientConfig: ClientConfiguration
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private var bspServerName: Option[String] = None
@@ -72,15 +69,9 @@ final class Doctor(
       clientCommand: Command,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    val executeClientCommandProvider = config.executeClientCommand.isOn ||
-      clientExperimentalCapabilities.executeClientCommandProvider ||
-      initializationOptions.executeClientCommandProvider
-
-    if (executeClientCommandProvider) {
-      val doctorFormatIsJson =
-        config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson || initializationOptions.doctorFormatIsJson
+    if (clientConfig.isExecuteClientCommandProvider) {
       val output =
-        if (doctorFormatIsJson)
+        if (clientConfig.doctorFormatIsJson)
           buildTargetsJson()
         else buildTargetsHtml()
       val params = new ExecuteCommandParams(
@@ -135,12 +126,8 @@ final class Doctor(
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
       if (isMaven) {
-        val doctorFormatIsJson = config.doctorFormat.isJson ||
-          clientExperimentalCapabilities.doctorFormatIsJson ||
-          initializationOptions.doctorFormatIsJson
-
         val website =
-          if (doctorFormatIsJson)
+          if (clientConfig.doctorFormatIsJson)
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
           else
             "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
@@ -215,11 +202,11 @@ final class Doctor(
 
     message(
       ScalaVersions.isFutureVersion,
-      messages.FutureScalaVersion.message
+      Messages.FutureScalaVersion.message
     ).orElse {
         message(
           ver => !ScalaVersions.isSupportedScalaVersion(ver),
-          messages.UnsupportedScalaVersion.message
+          Messages.UnsupportedScalaVersion.message
         )
       }
       .orElse {
@@ -228,7 +215,7 @@ final class Doctor(
       .orElse {
         message(
           ScalaVersions.isDeprecatedScalaVersion,
-          messages.DeprecatedScalaVersion.message
+          Messages.DeprecatedScalaVersion.message
         )
       }
   }

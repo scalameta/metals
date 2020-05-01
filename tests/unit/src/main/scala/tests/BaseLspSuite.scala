@@ -63,6 +63,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       executeClientCommand = ExecuteClientCommandConfig.on,
       icons = this.icons
     )
+
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
       workspace,

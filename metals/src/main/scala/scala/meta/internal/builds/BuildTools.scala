@@ -5,7 +5,6 @@ import java.util.Properties
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.io.PathIO
 import scala.concurrent.ExecutionContext
 
@@ -24,8 +23,7 @@ import scala.concurrent.ExecutionContext
 final class BuildTools(
     workspace: AbsolutePath,
     bspGlobalDirectories: List[AbsolutePath],
-    userConfig: () => UserConfiguration,
-    config: MetalsServerConfig
+    userConfig: () => UserConfiguration
 )(implicit ec: ExecutionContext) {
   def isAutoConnectable: Boolean =
     isBloop || isBsp
@@ -64,7 +62,7 @@ final class BuildTools(
 
   def allAvailable: List[BuildTool] = {
     List(
-      SbtBuildTool(version = "", userConfig, config),
+      SbtBuildTool(version = "", userConfig),
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
       MillBuildTool(userConfig),
@@ -87,7 +85,7 @@ final class BuildTools(
     all.isEmpty
   }
   def loadSupported(): Option[BuildTool] = {
-    if (isSbt) Some(SbtBuildTool(workspace, userConfig, config))
+    if (isSbt) Some(SbtBuildTool(workspace, userConfig))
     else if (isGradle) Some(GradleBuildTool(userConfig))
     else if (isMaven) Some(MavenBuildTool(userConfig))
     else if (isMill) Some(MillBuildTool(userConfig))
@@ -115,7 +113,6 @@ object BuildTools {
     new BuildTools(
       workspace,
       Nil,
-      () => UserConfiguration(),
-      MetalsServerConfig.default
+      () => UserConfiguration()
     )(ExecutionContext.global)
 }

@@ -14,19 +14,19 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.BuildTargetClasses
-import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.ClientConfiguration
 
 final class RunTestCodeLens(
     buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
     buildTargets: BuildTargets,
-    clientExperimentalCapabilities: ClientExperimentalCapabilities
+    clientConfig: ClientConfiguration
 ) extends CodeLens {
 
   override def isEnabled: Boolean =
-    clientExperimentalCapabilities.debuggingProvider
+    clientConfig.isDebuggingProvider
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath

@@ -1,20 +1,35 @@
 package scala.meta.internal.metals
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
+import com.google.gson.JsonNull
 
 final case class ClientExperimentalCapabilities(
-    debuggingProvider: java.lang.Boolean = false,
-    treeViewProvider: java.lang.Boolean = false,
-    decorationProvider: java.lang.Boolean = false,
-    inputBoxProvider: java.lang.Boolean = false,
-    quickPickProvider: java.lang.Boolean = false,
-    didFocusProvider: java.lang.Boolean = false,
-    slowTaskProvider: java.lang.Boolean = false,
-    executeClientCommandProvider: java.lang.Boolean = false,
-    openFilesOnRenameProvider: java.lang.Boolean = false,
-    doctorProvider: String = "html",
-    statusBarProvider: String = "off"
+    debuggingProvider: Boolean,
+    decorationProvider: Boolean,
+    didFocusProvider: Boolean,
+    doctorProvider: String,
+    executeClientCommandProvider: Boolean,
+    inputBoxProvider: Boolean,
+    openFilesOnRenameProvider: Boolean,
+    quickPickProvider: Boolean,
+    slowTaskProvider: Boolean,
+    statusBarProvider: String,
+    treeViewProvider: Boolean
 ) {
+  def this() =
+    this(
+      debuggingProvider = false,
+      decorationProvider = false,
+      didFocusProvider = false,
+      doctorProvider = "html",
+      executeClientCommandProvider = false,
+      inputBoxProvider = false,
+      openFilesOnRenameProvider = false,
+      quickPickProvider = false,
+      slowTaskProvider = false,
+      statusBarProvider = "off",
+      treeViewProvider = false
+    )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"
   def statusBarIsOff: Boolean = statusBarProvider == "off"
@@ -30,6 +45,10 @@ object ClientExperimentalCapabilities {
   ): ClientExperimentalCapabilities = {
     import scala.meta.internal.metals.JsonParser._
     capabilities.getExperimental match {
+      // NOTE: (ckipp01) For some reason when some editors (emacs) leave out the
+      // `InitializationOptions` key, it is parsed as a `JsonNull` while others
+      // that leave it out it's parsed as a normal `null`. Why? I have no idea.
+      case _: JsonNull => Default
       case json: JsonElement =>
         json.as[ClientExperimentalCapabilities].getOrElse(Default)
       case _ =>

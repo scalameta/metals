@@ -14,9 +14,7 @@ import scala.meta.internal.semver.SemVer
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
  */
-object Messages extends Messages(Icons.vscode)
-
-class Messages(icons: Icons) {
+object Messages {
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"

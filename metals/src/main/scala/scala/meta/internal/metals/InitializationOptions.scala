@@ -2,20 +2,33 @@ package scala.meta.internal.metals
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.pc.CompilerInitializationOptions
+import com.google.gson.JsonNull
 
 final case class InitializationOptions(
-    statusBarProvider: String = "off",
-    didFocusProvider: java.lang.Boolean = false,
-    slowTaskProvider: java.lang.Boolean = false,
-    inputBoxProvider: java.lang.Boolean = false,
-    quickPickProvider: java.lang.Boolean = false,
-    executeClientCommandProvider: java.lang.Boolean = false,
-    doctorProvider: String = "html",
-    isExitOnShutdown: java.lang.Boolean = false,
-    isHttpEnabled: java.lang.Boolean = false,
-    compilerOptions: CompilerInitializationOptions =
-      CompilerInitializationOptions()
+    compilerOptions: CompilerInitializationOptions,
+    didFocusProvider: Boolean,
+    doctorProvider: String,
+    executeClientCommandProvider: Boolean,
+    inputBoxProvider: Boolean,
+    isExitOnShutdown: Boolean,
+    isHttpEnabled: Boolean,
+    quickPickProvider: Boolean,
+    slowTaskProvider: Boolean,
+    statusBarProvider: String
 ) {
+  def this() =
+    this(
+      compilerOptions = new CompilerInitializationOptions(),
+      didFocusProvider = false,
+      doctorProvider = "html",
+      executeClientCommandProvider = false,
+      inputBoxProvider = false,
+      isExitOnShutdown = false,
+      isHttpEnabled = false,
+      quickPickProvider = false,
+      slowTaskProvider = false,
+      statusBarProvider = "off"
+    )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"
   def statusBarIsOff: Boolean = statusBarProvider == "off"
@@ -31,6 +44,11 @@ object InitializationOptions {
   ): InitializationOptions = {
     import scala.meta.internal.metals.JsonParser._
     initializeParams.getInitializationOptions() match {
+      // NOTE: (ckipp01) For some reason when some editors (emacs) leave out the
+      // `InitializationOptions` key, it is parsed as a `JsonNull` while others
+      // that leave it out it's parsed as a normal `null`. Why? I have no idea.
+      case _: JsonNull =>
+        Default
       case json: JsonElement =>
         json.as[InitializationOptions].getOrElse(Default)
       case _ =>

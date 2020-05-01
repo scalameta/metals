@@ -18,6 +18,7 @@ import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.Messages._
 
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.
@@ -34,14 +35,12 @@ final class InteractiveSemanticdbs(
     charset: Charset,
     client: MetalsLanguageClient,
     tables: Tables,
-    messages: Messages,
     statusBar: StatusBar,
     compilers: () => Compilers,
-    config: MetalsServerConfig
+    clientConfig: ClientConfiguration
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with Semanticdbs {
-  import messages._
   private val activeDocument = new AtomicReference[Option[String]](None)
   private val textDocumentCache = Collections.synchronizedMap(
     new java.util.HashMap[AbsolutePath, s.TextDocument]()
@@ -142,7 +141,10 @@ final class InteractiveSemanticdbs(
       // which requires more effort than it's worth.
       val bytes = pc
         .semanticdbTextDocument(uri, text)
-        .get(config.compilers.timeoutDelay, config.compilers.timeoutUnit)
+        .get(
+          clientConfig.initialConfig.compilers.timeoutDelay,
+          clientConfig.initialConfig.compilers.timeoutUnit
+        )
       val textDocument = TextDocument.parseFrom(bytes)
       textDocument
     }

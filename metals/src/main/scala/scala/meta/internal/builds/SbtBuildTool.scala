@@ -7,8 +7,7 @@ import scala.meta.io.AbsolutePath
 
 case class SbtBuildTool(
     version: String,
-    userConfig: () => UserConfiguration,
-    config: MetalsServerConfig
+    userConfig: () => UserConfiguration
 ) extends BloopPluginBuildTool {
 
   /**
@@ -51,7 +50,7 @@ case class SbtBuildTool(
         ).flatten
     }
     removeLegacyGlobalPlugin()
-    writeSbtMetalsPlugin(workspace, config)
+    writeSbtMetalsPlugin(workspace)
     allArgs
   }
 
@@ -79,8 +78,7 @@ case class SbtBuildTool(
   }
 
   private def writeSbtMetalsPlugin(
-      workspace: AbsolutePath,
-      config: MetalsServerConfig
+      workspace: AbsolutePath
   ): Unit = {
     if (userConfig().bloopSbtAlreadyInstalled) return
     val versionToUse = userConfig().currentBloopVersion
@@ -138,8 +136,7 @@ object SbtBuildTool {
 
   def apply(
       workspace: AbsolutePath,
-      userConfig: () => UserConfiguration,
-      config: MetalsServerConfig
+      userConfig: () => UserConfiguration
   ): SbtBuildTool = {
     val props = new Properties()
     val buildproperties =
@@ -152,7 +149,7 @@ object SbtBuildTool {
         finally in.close()
         Option(props.getProperty("sbt.version"))
       }
-    SbtBuildTool(version.getOrElse(unknown), userConfig, config)
+    SbtBuildTool(version.getOrElse(unknown), userConfig)
   }
 
   private def unknown = "<unknown>"
