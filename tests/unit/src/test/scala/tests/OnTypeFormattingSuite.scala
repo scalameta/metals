@@ -3,6 +3,9 @@ package tests
 import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
+  private val indent = "  "
+  private val escapedNewline = "\\n"
+  private val escapedQuote = "\""
 
   // Ensures that entering a newline at the beginning of a file doesn't
   // throw an exception
@@ -120,7 +123,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
-    "interpolated-single-quotes",
+    "interpolated-single-quotes1",
     s"""
        |object Main {
        |  val number = 102
@@ -129,8 +132,53 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val number = 102
-       |  val str = s"|
-       |  $$number".stripMargin
+       |  val str = s"|" +
+       |    s"$$number".stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes2",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + "2@@3$escapedNewline".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + "2" +
+       |    "3$escapedNewline".stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes3",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2@@\\3".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2" +
+       |    s"\\3".stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes4",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2@@$escapedQuote".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"|$$number" + s"2" +
+       |    s"$escapedQuote".stripMargin
        |}""".stripMargin
   )
 
@@ -168,7 +216,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  | a multiline
        |  | string
        |  '''.stripMargin
-       |  
+       |$indent
        |}""".stripMargin
   )
 
@@ -247,17 +295,44 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''
-       |  |word this is a `|` @@sign
+       |  |word this is a `|`@@sign
        |  '''.stripMargin
        |}@@""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
-       |  |word this is a `|` 
+       |  |word this is a `|`
        |  |sign
        |  '''.stripMargin
        |}
        |""".stripMargin
+  )
+  check(
+    "string-two-lines",
+    s"""
+       |object Main {
+       |  val str = "test1@@ test2"
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = "test1" +
+       |    " test2"
+       |}""".stripMargin
+  )
+
+  check(
+    "string-tree-lines",
+    s"""
+       |object Main {
+       |  val str = "test1" +
+       |    "test@@2"
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = "test1" +
+       |    "test" +
+       |    "2"
+       |}""".stripMargin
   )
 
   def check(
