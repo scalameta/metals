@@ -13,7 +13,7 @@ import scala.meta.internal.pc.InterruptException
 final class Tables(
     workspace: AbsolutePath,
     time: Time,
-    config: MetalsServerConfig
+    clientConfig: ClientConfiguration
 ) extends Cancelable {
   val jarSymbols = new JarTopLevels(() => connection)
   val digests =
@@ -27,7 +27,7 @@ final class Tables(
 
   def connect(): Unit = {
     this._connection =
-      if (config.isAutoServer) tryAutoServer()
+      if (clientConfig.initialConfig.isAutoServer) tryAutoServer()
       else tryAutoServer()
   }
   def cancel(): Unit = connection.close()

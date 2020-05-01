@@ -245,13 +245,12 @@ class MetalsLanguageServer(
     languageClient.configure(InitializationOptions.from(params))
 
     buildTargets.setWorkspaceDirectory(workspace)
-    tables = register(new Tables(workspace, time, clientConfig.initialConfig))
+    tables = register(new Tables(workspace, time, clientConfig))
     buildTargets.setTables(tables)
     buildTools = new BuildTools(
       workspace,
       bspGlobalDirectories,
-      () => userConfig,
-      clientConfig.initialConfig
+      () => userConfig
     )
     fileSystemSemanticdbs = new FileSystemSemanticdbs(
       buildTargets,
@@ -268,7 +267,7 @@ class MetalsLanguageServer(
         tables,
         statusBar,
         () => compilers,
-        clientConfig.initialConfig
+        clientConfig
       )
     )
     warnings = new Warnings(
@@ -291,7 +290,7 @@ class MetalsLanguageServer(
       diagnostics,
       buildTargets,
       buildTargetClasses,
-      clientConfig.initialConfig,
+      clientConfig,
       statusBar,
       time,
       report => {
@@ -347,7 +346,6 @@ class MetalsLanguageServer(
     formattingProvider = new FormattingProvider(
       workspace,
       buffers,
-      clientConfig.initialConfig,
       () => userConfig,
       languageClient,
       clientConfig,
@@ -403,14 +401,14 @@ class MetalsLanguageServer(
         buildTargetClasses,
         buffers,
         buildTargets,
-        clientConfig.experimentalCapabilities
+        clientConfig
       )
 
     val goSuperLensProvider = new SuperMethodCodeLens(
       implementationProvider,
       buffers,
       () => userConfig,
-      clientConfig.initialConfig
+      clientConfig
     )
     codeLensProvider = new CodeLensProvider(
       List(runTestLensProvider, goSuperLensProvider),

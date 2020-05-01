@@ -6,17 +6,16 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.MetalsInputBoxParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import munit.TestOptions
 import java.nio.file.FileAlreadyExistsException
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] =
     Some(ClientExperimentalCapabilities.Default.copy(inputBoxProvider = true))
-
   check("new-worksheet")(
     Some("a/src/main/scala/"),
     "worksheet",

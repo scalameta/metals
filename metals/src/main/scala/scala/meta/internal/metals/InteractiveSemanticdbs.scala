@@ -37,7 +37,7 @@ final class InteractiveSemanticdbs(
     tables: Tables,
     statusBar: StatusBar,
     compilers: () => Compilers,
-    config: MetalsServerConfig
+    clientConfig: ClientConfiguration
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with Semanticdbs {
@@ -141,7 +141,10 @@ final class InteractiveSemanticdbs(
       // which requires more effort than it's worth.
       val bytes = pc
         .semanticdbTextDocument(uri, text)
-        .get(config.compilers.timeoutDelay, config.compilers.timeoutUnit)
+        .get(
+          clientConfig.initialConfig.compilers.timeoutDelay,
+          clientConfig.initialConfig.compilers.timeoutUnit
+        )
       val textDocument = TextDocument.parseFrom(bytes)
       textDocument
     }

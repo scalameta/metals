@@ -17,16 +17,16 @@ final case class InitializationOptions(
 ) {
   def this() =
     this(
-      CompilerInitializationOptions(),
-      false,
-      "html",
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      "off"
+      compilerOptions = CompilerInitializationOptions(),
+      didFocusProvider = false,
+      doctorProvider = "html",
+      executeClientCommandProvider = false,
+      inputBoxProvider = false,
+      isExitOnShutdown = false,
+      isHttpEnabled = false,
+      quickPickProvider = false,
+      slowTaskProvider = false,
+      statusBarProvider = "off"
     )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"

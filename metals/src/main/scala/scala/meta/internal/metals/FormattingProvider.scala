@@ -29,7 +29,6 @@ import java.io.OutputStreamWriter
 final class FormattingProvider(
     workspace: AbsolutePath,
     buffers: Buffers,
-    serverConfig: MetalsServerConfig,
     userConfig: () => UserConfiguration,
     client: MetalsLanguageClient,
     clientConfig: ClientConfiguration,

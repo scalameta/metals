@@ -90,7 +90,8 @@ import org.eclipse.lsp4j.CodeActionContext
 import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -108,17 +109,18 @@ final class TestingServer(
     workspace: AbsolutePath,
     client: TestingClient,
     buffers: Buffers,
-    clientConfig: ClientConfiguration,
+    config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time
+    time: Time,
+    experimentalCapabilities: Option[ClientExperimentalCapabilities]
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
-    initialConfig = clientConfig.initialConfig,
+    initialConfig = config,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
@@ -380,11 +382,18 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
+    val experimental = experimentalCapabilities.getOrElse(
+      ClientExperimentalCapabilities.Default.copy(
+        debuggingProvider = true,
+        treeViewProvider = true,
+        slowTaskProvider = true
+      )
+    )
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        clientConfig.experimentalCapabilities.toJson
+        experimental.toJson
       )
     )
     params.setWorkspaceFolders(

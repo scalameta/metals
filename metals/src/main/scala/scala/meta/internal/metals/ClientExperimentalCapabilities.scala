@@ -17,8 +17,17 @@ final case class ClientExperimentalCapabilities(
 ) {
   def this() =
     this(
-      false, false, false, "html", false, false, false, false, false, "off",
-      false
+      debuggingProvider = false,
+      decorationProvider = false,
+      didFocusProvider = false,
+      doctorProvider = "html",
+      executeClientCommandProvider = false,
+      inputBoxProvider = false,
+      openFilesOnRenameProvider = false,
+      quickPickProvider = false,
+      slowTaskProvider = false,
+      statusBarProvider = "off",
+      treeViewProvider = false
     )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"

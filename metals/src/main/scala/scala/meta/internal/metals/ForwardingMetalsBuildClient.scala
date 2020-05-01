@@ -25,7 +25,7 @@ final class ForwardingMetalsBuildClient(
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
-    config: MetalsServerConfig,
+    clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     time: Time,
     didCompile: CompileReport => Unit,
@@ -149,7 +149,9 @@ final class ForwardingMetalsBuildClient(
             case None => report.getTarget.getUri
           }
           val isSuccess = report.getErrors == 0
-          val icon = if (isSuccess) config.icons.check else config.icons.alert
+          val icon =
+            if (isSuccess) clientConfig.initialConfig.icons.check
+            else clientConfig.initialConfig.icons.alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
           if (!compilation.isNoOp) {
             scribe.info(s"time: compiled $name in ${compilation.timer}")
