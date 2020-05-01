@@ -24,14 +24,6 @@ final class ConfiguredLanguageClient(
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
-  override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
-    clientConfig.experimentalCapabilities = capabilities
-  }
-
-  override def configure(options: InitializationOptions): Unit = {
-    clientConfig.initializationOptions = options
-  }
-
   override def shutdown(): Unit = {
     underlying = NoopLanguageClient
   }

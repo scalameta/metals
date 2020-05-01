@@ -1,11 +1,11 @@
 package scala.meta.internal.metals
 
+import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 import scala.util.Try
-import com.google.gson.Gson
 
 object JsonParser {
   private val gson = new Gson()

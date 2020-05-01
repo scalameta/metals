@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.pc.CompilerInitializationOptions
+import com.google.gson.JsonNull
 
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -17,7 +18,7 @@ final case class InitializationOptions(
 ) {
   def this() =
     this(
-      compilerOptions = CompilerInitializationOptions(),
+      compilerOptions = new CompilerInitializationOptions(),
       didFocusProvider = false,
       doctorProvider = "html",
       executeClientCommandProvider = false,
@@ -43,6 +44,11 @@ object InitializationOptions {
   ): InitializationOptions = {
     import scala.meta.internal.metals.JsonParser._
     initializeParams.getInitializationOptions() match {
+      // NOTE: (ckipp01) For some reason when some editors (emacs) leave out the
+      // `InitializationOptions` key, it is parsed as a `JsonNull` while others
+      // that leave it out it's parsed as a normal `null`. Why? I have no idea.
+      case _: JsonNull =>
+        Default
       case json: JsonElement =>
         json.as[InitializationOptions].getOrElse(Default)
       case _ =>

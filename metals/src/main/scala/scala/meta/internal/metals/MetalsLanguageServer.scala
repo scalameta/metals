@@ -239,10 +239,9 @@ class MetalsLanguageServer(
       s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace'"
     )
 
-    languageClient.configure(
+    clientConfig.experimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
-    )
-    languageClient.configure(InitializationOptions.from(params))
+    clientConfig.initializationOptions = InitializationOptions.from(params)
 
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, clientConfig))

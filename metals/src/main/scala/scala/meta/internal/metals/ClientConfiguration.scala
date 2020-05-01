@@ -89,3 +89,11 @@ class ClientConfiguration(
       experimentalCapabilities.didFocusProvider
 
 }
+
+object ClientConfiguration {
+  def Default() = new ClientConfiguration(
+    MetalsServerConfig(),
+    ClientExperimentalCapabilities.Default,
+    InitializationOptions.Default
+  )
+}

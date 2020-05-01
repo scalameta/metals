@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
@@ -18,7 +19,6 @@ import scala.meta.internal.metals.SlowTaskConfig
 import scala.util.control.NonFatal
 import munit.Ignore
 import munit.Location
-import scala.meta.internal.metals.ExecuteClientCommandConfig
 
 /**
  * Full end to end integration tests against a full metals language server.
