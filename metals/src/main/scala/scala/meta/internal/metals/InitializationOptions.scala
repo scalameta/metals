@@ -6,28 +6,36 @@ import com.google.gson.JsonNull
 
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
+    debuggingProvider: Boolean,
+    decorationProvider: Boolean,
     didFocusProvider: Boolean,
     doctorProvider: String,
     executeClientCommandProvider: Boolean,
     inputBoxProvider: Boolean,
     isExitOnShutdown: Boolean,
     isHttpEnabled: Boolean,
+    openFilesOnRenameProvider: Boolean,
     quickPickProvider: Boolean,
     slowTaskProvider: Boolean,
-    statusBarProvider: String
+    statusBarProvider: String,
+    treeViewProvider: Boolean
 ) {
   def this() =
     this(
       compilerOptions = new CompilerInitializationOptions(),
+      debuggingProvider = false,
+      decorationProvider = false,
       didFocusProvider = false,
       doctorProvider = "html",
       executeClientCommandProvider = false,
       inputBoxProvider = false,
       isExitOnShutdown = false,
       isHttpEnabled = false,
+      openFilesOnRenameProvider = false,
       quickPickProvider = false,
       slowTaskProvider = false,
-      statusBarProvider = "off"
+      statusBarProvider = "off",
+      treeViewProvider = false
     )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"
