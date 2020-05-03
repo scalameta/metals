@@ -310,7 +310,8 @@ object Messages {
       params.setActions(
         List(
           changeVersion,
-          notNow
+          notNow,
+          dontShowAgain
         ).asJava
       )
       params
@@ -371,7 +372,8 @@ object Messages {
       params.setActions(
         List(
           createFile,
-          notNow
+          notNow,
+          dontShowAgain
         ).asJava
       )
       params
