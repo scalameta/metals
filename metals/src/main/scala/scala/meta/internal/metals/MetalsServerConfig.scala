@@ -66,6 +66,10 @@ final case class MetalsServerConfig(
       "bloop.embedded.version",
       BuildInfo.bloopVersion
     ),
+    askToReconnect: Boolean = MetalsServerConfig.binaryOption(
+      "metals.ask-to-reconnect",
+      default = false
+    ),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default,
     compilers: PresentationCompilerConfigImpl = CompilersConfig()
@@ -81,6 +85,7 @@ final case class MetalsServerConfig(
       s"compilers=$compilers",
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
+      s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
       s"statistics=$statistics",
       s"doctor-format=$doctorFormat"

@@ -24,20 +24,24 @@ case class TreeViewNode(
 }
 
 object TreeViewNode {
-  def fromCommand(command: Command): TreeViewNode =
+  def fromCommand(
+      command: Command,
+      icon: String = TreeViewNode.command
+  ): TreeViewNode =
     TreeViewNode(
       viewId = "commands",
       nodeUri = s"metals://command/${command.id}",
       label = command.title,
       command = MetalsCommand(
         command.title,
-        command.id,
+        "metals." + command.id,
         command.description
       ),
       tooltip = command.description,
-      icon = TreeViewNode.command
+      icon = icon
     )
-  def command: String = "command"
+  def command: String = "debug-start"
+  def empty(viewId: String): TreeViewNode = TreeViewNode(viewId, null, viewId)
   def sortAlphabetically(
       result: Array[TreeViewNode],
       custom: (TreeViewNode, TreeViewNode) => Int = (_, _) => 0

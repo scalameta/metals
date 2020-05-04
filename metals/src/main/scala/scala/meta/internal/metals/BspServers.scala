@@ -14,6 +14,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import scala.concurrent.Promise
 
 /**
  * Implements BSP server discovery, named "BSP Connection Protocol" in the spec.
@@ -26,7 +27,8 @@ final class BspServers(
     client: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
     tables: Tables,
-    bspGlobalInstallDirectories: List[AbsolutePath]
+    bspGlobalInstallDirectories: List[AbsolutePath],
+    config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
   def newServer(): Future[Option[BuildServerConnection]] = {
@@ -70,6 +72,12 @@ final class BspServers(
         s"${details.getName} input stream"
       )
 
+      val finished = Promise[Unit]()
+      Future {
+        process.waitFor()
+        finished.success(())
+      }
+
       Future.successful {
         SocketConnection(
           details.getName(),
@@ -77,7 +85,8 @@ final class BspServers(
           input,
           List(
             Cancelable(() => process.destroy())
-          )
+          ),
+          finished
         )
       }
 
@@ -88,7 +97,8 @@ final class BspServers(
       buildClient,
       client,
       newConnection,
-      tables
+      tables,
+      config
     )
   }
 

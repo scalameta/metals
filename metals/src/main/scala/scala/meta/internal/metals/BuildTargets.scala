@@ -72,6 +72,8 @@ final class BuildTargets() {
   def scalacOptions: Iterable[ScalacOptionsItem] =
     scalacTargetInfo.values
 
+  def allBuildTargetIds: Seq[BuildTargetIdentifier] =
+    all.toSeq.map(_.info.getId())
   def all: Iterator[ScalaTarget] =
     for {
       (id, target) <- buildTargetInfo.iterator

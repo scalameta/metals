@@ -80,7 +80,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
                                |""".stripMargin)
       _ = assertNoDiff(
         client.workspaceTreeViewChanges,
-        s"""|${TreeViewProvider.Build} <root>
+        s"""|${TreeViewProvider.Project} <root>
+            |${TreeViewProvider.Build} <root>
             |${TreeViewProvider.Compile} <root>
             |""".stripMargin
       )
@@ -196,8 +197,6 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             }
           ),
           s"""|root
-              |  Import build command
-              |  Connect to build server command
               |  Projects (0)
               |  Libraries (${expectedLibrariesCount})
               |  Libraries (${expectedLibrariesCount})
@@ -251,8 +250,6 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             }
           ),
           s"""|root
-              |  Import build command
-              |  Connect to build server command
               |  Projects (0)
               |  Libraries (${expectedLibrariesCount})
               |  Libraries (${expectedLibrariesCount})

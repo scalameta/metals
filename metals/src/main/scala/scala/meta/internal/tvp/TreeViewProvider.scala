@@ -5,9 +5,10 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.{lsp4j => l}
 
 trait TreeViewProvider {
+  val Project = TreeViewProvider.Project
   val Build = TreeViewProvider.Build
-  val Compile = TreeViewProvider.Compile
   val Help = TreeViewProvider.Help
+  val Compile = TreeViewProvider.Compile
   def init(): Unit = ()
   def reset(): Unit = ()
   def children(
@@ -32,6 +33,7 @@ trait TreeViewProvider {
 }
 
 object TreeViewProvider {
+  val Project = "metalsPackages"
   val Build = "metalsBuild"
   val Compile = "metalsCompile"
   val Help = "metalsHelp"

@@ -37,7 +37,7 @@ object ServerCommands {
 
   val RestartBuildServer = new Command(
     "build-restart",
-    "Restart the build server",
+    "Restart build server",
     """Unconditionally stop the current running Bloop server and start a new one using Bloop launcher"""
   )
 
@@ -73,6 +73,16 @@ object ServerCommands {
        |Run the cascade compile task to additionally compile the inverse dependencies of the current build target.
        |For example, if you change the API in main sources and run cascade compile then it will also compile the
        |test sources that depend on main.
+       |""".stripMargin
+  )
+
+  val CleanCompile = new Command(
+    "compile-clean",
+    "Clean compile workspace",
+    """|Recompile all build targets in this workspace.
+       |
+       |By default, Metals compiles the files incrementally. In case of any compile artifacts corruption 
+       |this command might be run to make sure everything is recompiled correctly.
        |""".stripMargin
   )
 

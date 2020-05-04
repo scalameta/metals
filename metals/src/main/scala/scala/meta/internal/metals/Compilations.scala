@@ -66,6 +66,26 @@ final class Compilations(
     cascadeBatch.cancelCurrentRequest()
   }
 
+  def recompileAll(): Future[Unit] = {
+    cancel()
+    val allTargetIds = buildTargets.allBuildTargetIds
+    val clean = for {
+      connection <- buildServer()
+      params = new b.CleanCacheParams(allTargetIds.asJava)
+    } yield connection.clean(params).asScala
+
+    // if we don't have a connection that will show up later
+    val cleaned = clean.getOrElse {
+      Future.successful(new b.CleanCacheResult("", false))
+    }
+
+    for {
+      cleanResult <- cleaned
+      if cleanResult.getCleaned() == true
+      compiled <- compile(allTargetIds).future
+    } yield ()
+  }
+
   private def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] = {
     def isCompilable(path: AbsolutePath): Boolean =
       path.isScalaOrJava && !path.isDependencySource(workspace())

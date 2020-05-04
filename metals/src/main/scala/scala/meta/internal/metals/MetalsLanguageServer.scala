@@ -317,7 +317,8 @@ class MetalsLanguageServer(
       workspace,
       buildClient,
       languageClient,
-      tables
+      tables,
+      clientConfig.initialConfig
     )
     bspServers = new BspServers(
       workspace,
@@ -325,7 +326,8 @@ class MetalsLanguageServer(
       languageClient,
       buildClient,
       tables,
-      bspGlobalDirectories
+      bspGlobalDirectories,
+      clientConfig.initialConfig
     )
     semanticdbs = AggregateSemanticdbs(
       List(
@@ -1250,6 +1252,8 @@ class MetalsLanguageServer(
         compilations
           .cascadeCompileFiles(buffers.open.toSeq)
           .asJavaObject
+      case ServerCommands.CleanCompile() =>
+        compilations.recompileAll().asJavaObject
       case ServerCommands.CancelCompile() =>
         Future {
           compilations.cancel()
@@ -1477,33 +1481,56 @@ class MetalsLanguageServer(
   }
 
   private def autoConnectToBuildServer(): Future[BuildChange] = {
-    for {
-      _ <- disconnectOldBuildServer()
-      maybeBuild <- timed("connected to build server") {
-        if (buildTools.isBloop) bloopServers.newServer(userConfig)
-        else bspServers.newServer()
+    def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
+      case change if !change.isFailed =>
+        Future
+          .sequence[Unit, List](
+            compilations
+              .cascadeCompileFiles(buffers.open.toSeq)
+              .ignoreValue ::
+              compilers.load(buffers.open.toSeq) ::
+              Nil
+          )
+          .map(_ => change)
+      case other => Future.successful(other)
+    }
+
+    {
+      for {
+        _ <- disconnectOldBuildServer()
+        maybeBuild <- timed("connected to build server") {
+          if (buildTools.isBloop) bloopServers.newServer(userConfig)
+          else bspServers.newServer()
+        }
+        result <- maybeBuild match {
+          case Some(build) =>
+            val result = connectToNewBuildServer(build)
+            build.onReconnection { reconnected =>
+              connectToNewBuildServer(reconnected)
+                .flatMap(compileAllOpenFiles)
+                .ignoreValue
+            }
+            result
+          case None =>
+            Future.successful(BuildChange.None)
+        }
+        _ = {
+          treeView.init()
+        }
+      } yield result
+    }.recover {
+        case NonFatal(e) =>
+          disconnectOldBuildServer()
+          val message =
+            "Failed to connect with build server, no functionality will work."
+          val details = " See logs for more details."
+          languageClient.showMessage(
+            new MessageParams(MessageType.Error, message + details)
+          )
+          scribe.error(message, e)
+          BuildChange.Failed
       }
-      result <- maybeBuild match {
-        case Some(build) =>
-          connectToNewBuildServer(build)
-        case None =>
-          Future.successful(BuildChange.None)
-      }
-      _ = {
-        treeView.init()
-      }
-    } yield result
-  }.recover {
-    case NonFatal(e) =>
-      disconnectOldBuildServer()
-      val message =
-        "Failed to connect with build server, no functionality will work."
-      val details = " See logs for more details."
-      languageClient.showMessage(
-        new MessageParams(MessageType.Error, message + details)
-      )
-      scribe.error(message, e)
-      BuildChange.Failed
+      .flatMap(compileAllOpenFiles)
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
@@ -1553,13 +1580,6 @@ class MetalsLanguageServer(
         () => indexingPromise.trySuccess(())
       )
       _ = checkRunningBloopVersion(i.bspServerVersion)
-      _ <- Future.sequence[Unit, List](
-        compilations
-          .cascadeCompileFiles(buffers.open.toSeq)
-          .ignoreValue ::
-          compilers.load(buffers.open.toSeq) ::
-          Nil
-      )
     } yield {
       BuildChange.Reconnected
     }
