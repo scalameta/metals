@@ -19,8 +19,8 @@ of Metals:
 coursier bootstrap org.scalameta:metals_2.12:@VERSION@ -o metals -f
 ```
 
-(optional) It is recommended to enable JVM string de-duplication and provide
-generous stack size and memory options.
+(optional) It's recommended to enable JVM string de-duplication and provide
+a generous stack size and memory options.
 
 ```sh
 coursier bootstrap \
@@ -63,8 +63,8 @@ Metals supports two kinds of JSON-RPC endpoints:
 
 ## Metals server properties
 
-The Metals language server is configured through JVM system properties. A system
-property is passed to the server like this:
+The Metals language server is able to be configured through JVM system
+properties. A system property is passed to the server like this:
 
 ```sh
 # with `java` binary
@@ -77,8 +77,8 @@ The system properties control how Metals handles certain LSP endpoints. For
 example, in vim-lsc the `window/logMessage` notification is always displayed in
 the UI so `-Dmetals.status-bar=log-message` can be configured to direct
 higher-priority messages to the logs. However, whenever possible, if the client
-supports the ability to add in `experimental` items to the `ClientCapabilities`
-interface or to `InitializationOptions`, this is preferable.
+supports the ability to add in `InitializationOptions`, this is preferable as it
+doesn't require any properties to be passed into the server.
 
 ### `-Dmetals.verbose`
 
@@ -188,10 +188,10 @@ Possible values:
   required by the LSP specification.
 - `on`: run `System.exit` after the `shutdown` request, going against the LSP
   specification. This option is enabled by default for Sublime Text to prevent
-  the Metals process from staying alive after Sublime Text is quit with `Cmd+Q`.
-  It's not possible for Sublime Text packages to register a callback when the
-  editor is quit. See [LSP#410](https://github.com/tomv564/LSP/issues/410) for
-  more details.
+  the Metals process from staying alive after Sublime Text has quit with
+  `Cmd+Q`.  It's not possible for Sublime Text packages to register a callback
+  when the editor has quit. See
+  [LSP#410](https://github.com/tomv564/LSP/issues/410) for more details.
 
   *Usage of `isExitOnShutdown` in `InitializationOptions` is preferable.*
 
@@ -654,28 +654,19 @@ specification.
 
 #### `InitializationOptions` and `experimental`
 
-During the `initialize` we also have the ability to pass in `InitializationOptions` and `experimental` capabilities. 
-In Metals we have a few different "providers". Some are also LSP
-extensions, such as `metals/inputBox` which you read about above, and others
-used to be server properties that have been migrated to `clientCapabilities` and `InitializationOptions`.
-Whenever possible, instead of introducing a new server property, try to
-introduce it here. The main reason for this is that it allows clients to
-initialize and define their "support" for certain things solely through LSP
-rather then using server properties. 
+During `initialize` we also have the ability to pass in `InitializationOptions`
+and `experimental` capabilities.  In Metals we have a few different "providers".
+Some are also LSP extensions, such as `metals/inputBox` which you read about
+above, and others used to be server properties that have been migrated to
+`clientCapabilities` and `InitializationOptions`.  Whenever possible, instead of
+introducing a new server property, try to introduce it here. The main reason for
+this is that it allows clients to initialize and define their "support" for
+certain things solely through LSP rather then using server properties.
 
 The currently available settings for `InitializationOptions` are listed below.
 
 ```js
     "InitializationOptions": {
-      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
-      "didFocusProvider": boolean,
-      "slowTaskProvider": boolean,
-      "inputBoxProvider": boolean,
-      "quickPickProvider": boolean,
-      "executeClientCommandProvider": boolean,
-      "doctorProvider": "json" | "html",
-      "isExitOnShutdown" : boolean,
-      "isHttpEnabled": boolean,
       "compilerOptions":{
         "isCompletionItemDetailEnabled": boolean,
         "isCompletionItemDocumentationEnabled": boolean,
@@ -684,16 +675,39 @@ The currently available settings for `InitializationOptions` are listed below.
         "isSignatureHelpDocumentationEnabled": boolean,
         "isCompletionItemResolve": boolean
       }
+      "debuggingProvider": boolean,
+      "decorationProvider": boolean,
+      "didFocusProvider": boolean,
+      "doctorProvider": "json" | "html",
+      "executeClientCommandProvider": boolean,
+      "inputBoxProvider": boolean,
+      "isExitOnShutdown" : boolean,
+      "isHttpEnabled": boolean,
+      "openFilesOnRenameProvider": boolean,
+      "quickPickProvider": boolean,
+      "slowTaskProvider": boolean,
+      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
+      "treeViewProvider": boolean
     }
 ```
 
 The currently available settings for `experimental` are listed below.
+While these will work to correctly configure the server, they are all available
+to be set via `InitializationOptions`, which is preferable.
 
 ```js
     "experimental": {
-      "treeViewProvider": boolean,
       "debuggingProvider": boolean,
-      "decorationProvider": boolean
+      "decorationProvider": boolean,
+      "didFocusProvider": boolean,
+      "doctorProvider": boolean,
+      "executeClientCommandProvider": boolean,
+      "inputBoxProvider": boolean,
+      "openFilesOnRenameProvider": boolean,
+      "quickPickProvider": boolean,
+      "slowTaskProvider": boolean,
+      "statusBarProvider": boolean,
+      "treeViewProvider": boolean
     }
 ```
 
