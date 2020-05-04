@@ -55,7 +55,8 @@ class ClientConfiguration(
       experimentalCapabilities.quickPickProvider
 
   def isOpenFilesOnRenameProvider(): Boolean =
-    experimentalCapabilities.openFilesOnRenameProvider ||
+    initializationOptions.openFilesOnRenameProvider ||
+      experimentalCapabilities.openFilesOnRenameProvider ||
       initialConfig.openFilesOnRenames
 
   def doctorFormatIsJson(): Boolean =
@@ -76,13 +77,16 @@ class ClientConfiguration(
       initialConfig.compilers.isCompletionItemResolve
 
   def isDebuggingProvider(): Boolean =
-    experimentalCapabilities.debuggingProvider
+    initializationOptions.debuggingProvider ||
+      experimentalCapabilities.debuggingProvider
 
   def isDecorationProvider(): Boolean =
-    experimentalCapabilities.decorationProvider
+    initializationOptions.decorationProvider ||
+      experimentalCapabilities.decorationProvider
 
   def isTreeViewProvider(): Boolean =
-    experimentalCapabilities.treeViewProvider
+    initializationOptions.treeViewProvider ||
+      experimentalCapabilities.treeViewProvider
 
   def isDidFocusProvider(): Boolean =
     initializationOptions.didFocusProvider ||
