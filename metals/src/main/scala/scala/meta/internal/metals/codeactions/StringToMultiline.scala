@@ -1,14 +1,14 @@
 package scala.meta.internal.metals.codeactions
 
 import scala.meta.internal.metals.CodeAction
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.meta.pc.CancelToken
-import scala.meta.internal.metals.Compilers
 import scala.meta.tokens.Token
 
-class StringToMultiline(compilers: Compilers) extends CodeAction {
+class StringToMultiline(buffers: Buffers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
@@ -23,7 +23,7 @@ class StringToMultiline(compilers: Compilers) extends CodeAction {
 
     Future
       .successful {
-        path.toInput.tokenize.toOption match {
+        path.toInputFromBuffers(buffers).tokenize.toOption match {
           case Some(tokens) =>
             tokens
               .filter(_.pos.startLine == position.getLine)
@@ -55,6 +55,7 @@ class StringToMultiline(compilers: Compilers) extends CodeAction {
   }
 
   def quotify(str: String) = str.replace("'", """"""")
+
   def toStripMargin(str: String) = {
     str.replaceFirst(""""""", "'''|").replace(""""""", "'''.stripMargin")
   }

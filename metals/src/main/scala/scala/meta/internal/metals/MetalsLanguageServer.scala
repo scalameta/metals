@@ -463,7 +463,10 @@ class MetalsLanguageServer(
         diagnostics
       )
     )
-    codeActionProvider = new CodeActionProvider(compilers)
+    codeActionProvider = new CodeActionProvider(
+      compilers,
+      buffers
+    )
     doctor = new Doctor(
       workspace,
       buildTargets,
