@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.reflect.internal.FatalError
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 trait AutoImports { this: MetalsGlobal =>
 
@@ -47,7 +48,7 @@ trait AutoImports { this: MetalsGlobal =>
     findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
-        val enclosingPackage = lastVisitedParentTrees.collectFirst {
+        val enclosingPackage = lastVisitedParentTrees.collectLast {
           case pkg: PackageDef => pkg
         }
         enclosingPackage match {

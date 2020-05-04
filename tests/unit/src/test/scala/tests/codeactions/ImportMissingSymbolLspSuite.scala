@@ -177,4 +177,32 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false
   )
 
+  check(
+    "multi-package-object",
+    """|package a
+       |
+       |package object b {
+       | object A {
+       |    val f = Future.successful(<<Instant.now)>>
+       |    val b = ListBuffer.newBuilder[Int]
+       | }
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Instant", "java.time")}
+        |${CreateNewSymbol.title("Instant")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.time.Instant
+       |
+       |package object b {
+       | object A {
+       |    val f = Future.successful(Instant.now)
+       |    val b = ListBuffer.newBuilder[Int]
+       | }
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false
+  )
+
 }

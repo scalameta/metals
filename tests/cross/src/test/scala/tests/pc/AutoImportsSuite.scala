@@ -107,6 +107,24 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "import-inside-package-object",
+    """|package a
+       |
+       |package object b {
+       |  val l = s"${<<ListBuffer>>(2)}"
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable
+       |
+       |package object b {
+       |  val l = s"${mutable.ListBuffer(2)}"
+       |}
+       |""".stripMargin
+  )
+
   def check(
       name: String,
       original: String,

@@ -187,6 +187,19 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
     }
   }
 
+  implicit class XtensionList[T](list: List[T]) {
+    def collectLast[R](fun: PartialFunction[T, R]): Option[R] = {
+      def loop(current: List[T]): Option[R] = {
+        current match {
+          case Nil => None
+          case head :: tl =>
+            loop(tl).orElse(fun.lift(head))
+        }
+      }
+      loop(list)
+    }
+  }
+
   implicit class XtensionTreeTokenStream(tree: m.Tree) {
     def leadingTokens: Iterator[m.Token] = tree.origin match {
       case Origin.Parsed(input, _, pos) =>
