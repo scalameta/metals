@@ -5,41 +5,87 @@ import scala.meta.internal.metals.codeactions.StringActions
 class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
 
   check(
-    "empty-string",
+    "empty-string-0",
     """|package a
        |
        |object A {
        |  val str = <<"">>
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
     """|package a
        |
        |object A {
        |  val str = '''|'''.stripMargin
        |}
-       |""".stripMargin.replace("'", "\"")
+       |""".stripMargin.replace("'", "\""),
+    selectedActionIndex = 0
   )
 
   check(
-    "multi-strings-one-line",
+    "empty-string-1",
+    """|package a
+       |
+       |object A {
+       |  val str = <<"">>
+       |}
+       |""".stripMargin,
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val str = s""
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
+  )
+
+  check(
+    "multi-strings-one-line-0",
     """|package a
        |
        |object A {
        |  val str = <<"">> + ""
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
     """|package a
        |
        |object A {
        |  val str = '''|'''.stripMargin + ""
        |}
-       |""".stripMargin.replace("'", "\"")
+       |""".stripMargin.replace("'", "\""),
+    selectedActionIndex = 0
   )
 
   check(
-    "multi-strings",
+    "multi-strings-one-line-1",
+    """|package a
+       |
+       |object A {
+       |  val str = <<"">> + ""
+       |}
+       |""".stripMargin,
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val str = s"" + ""
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
+  )
+
+  check(
+    "multi-strings-0",
     """|package a
        |
        |object A {
@@ -48,7 +94,9 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val d = "hello"
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
     """|package a
        |
        |object A {
@@ -56,7 +104,32 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val c = '''|this is a string'''.stripMargin
        |  val d = "hello"
        |}
-       |""".stripMargin.replace("'", "\"")
+       |""".stripMargin.replace("'", "\""),
+    selectedActionIndex = 0
+  )
+
+  check(
+    "multi-strings-1",
+    """|package a
+       |
+       |object A {
+       |  val e = "hello"
+       |  val c = "this <<is>> a string"
+       |  val d = "hello"
+       |}
+       |""".stripMargin,
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val e = "hello"
+       |  val c = s"this is a string"
+       |  val d = "hello"
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
   )
 
   check(
@@ -85,7 +158,7 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val str = s"this <<is>> an ${other} string"
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"${StringActions.multilineTitle}",
     """|package a
        |
        |object A {
@@ -96,20 +169,43 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
-    "mix-strings-one-line",
+    "mix-strings-one-line-0",
     """|package a
        |
        |object A {
        |  val str = s"Hello " + " the <<cursor>> is actually here "
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
     """|package a
        |
        |object A {
        |  val str = s"Hello " + '''| the cursor is actually here '''.stripMargin
        |}
-       |""".stripMargin.replace("'", "\"")
+       |""".stripMargin.replace("'", "\""),
+    selectedActionIndex = 0
+  )
+
+  check(
+    "mix-strings-one-line-1",
+    """|package a
+       |
+       |object A {
+       |  val str = s"Hello " + "the <<cursor>> is actually here "
+       |}
+       |""".stripMargin,
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val str = s"Hello " + s"the cursor is actually here "
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
   )
 
   check(
@@ -120,7 +216,7 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val str = "Hello" + s" the <<cursor>> is actually here "
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"${StringActions.multilineTitle}",
     """|package a
        |
        |object A {
@@ -130,7 +226,7 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
-    "mix-strings",
+    "mix-strings-0",
     """|package a
        |
        |object A {
@@ -139,7 +235,9 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val d = s"hello ${} "
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
     """|package a
        |
        |object A {
@@ -147,7 +245,32 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val c = '''|this is a string'''.stripMargin
        |  val d = s"hello ${} "
        |}
-       |""".stripMargin.replace("'", "\"")
+       |""".stripMargin.replace("'", "\""),
+    selectedActionIndex = 0
+  )
+
+  check(
+    "mix-strings-1",
+    """|package a
+       |
+       |object A {
+       |  val e = s"hello ${} "
+       |  val c = "this <<is>> a string"
+       |  val d = s"hello ${} "
+       |}
+       |""".stripMargin,
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val e = s"hello ${} "
+       |  val c = s"this is a string"
+       |  val d = s"hello ${} "
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
   )
 
   check(
@@ -160,7 +283,7 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |  val d = s"hello ${} "
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    s"${StringActions.multilineTitle}",
     """|package a
        |
        |object A {
@@ -172,18 +295,18 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
-    "triple-quotes-no-codeAction",
+    "triple-quotes",
     """|package a
        |
        |object A {
        |  val str = <<'''>>'''
        |}
        |""".stripMargin.replace("'", "\""),
-    "",
+    s"${StringActions.interpolationTitle}",
     """|package a
        |
        |object A {
-       |  val str = ''''''
+       |  val str = s''''''
        |}
        |""".stripMargin.replace("'", "\"")
   )
@@ -206,18 +329,18 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
-    "mix-triple-quotes-no-codeAction",
+    "mix-triple-quotes",
     """|package a
        |
        |object A {
        |  val str = s'''|multiline'''.stripMargin + '''an <<other>> multiline'''
        |}
        |""".stripMargin.replace("'", "\""),
-    "",
+    s"${StringActions.interpolationTitle}",
     """|package a
        |
        |object A {
-       |  val str = s'''|multiline'''.stripMargin + '''an other multiline'''
+       |  val str = s'''|multiline'''.stripMargin + s'''an other multiline'''
        |}
        |""".stripMargin.replace("'", "\"")
   )

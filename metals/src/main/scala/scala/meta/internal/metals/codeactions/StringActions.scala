@@ -34,64 +34,78 @@ class StringActions(buffers: Buffers) extends CodeAction {
               )
               .collect {
                 case token: Token.Constant.String
-                    if (token.pos.toLSP.overlapsWith(range)
-                      && isNotTripleQuote(token)) =>
+                    if (token.pos.toLSP.overlapsWith(range)) =>
                   token
                 case start: Token.Interpolation.Start
-                    if (start.pos.toLSP.getStart.getCharacter <= range.getStart.getCharacter
-                      && isNotTripleQuote(start)) =>
+                    if (start.pos.toLSP.getStart.getCharacter <= range.getStart.getCharacter) =>
                   start
                 case end: Token.Interpolation.End
-                    if (end.pos.toLSP.getEnd.getCharacter >= range.getEnd.getCharacter
-                      && isNotTripleQuote(end)) =>
+                    if (end.pos.toLSP.getEnd.getCharacter >= range.getEnd.getCharacter) =>
                   end
               }
               .toList match {
               case (t: Token.Constant.String) :: _ =>
-                List(stripMarginAction(uri, t.pos.toLSP))
+                if (isNotTripleQuote(t))
+                  multilineAction(uri, t.pos.toLSP) ::
+                    List(interpolationAction(uri, t.pos.toLSP))
+                else List(interpolationAction(uri, t.pos.toLSP))
               case _ :: (t: Token.Constant.String) :: _ =>
-                List(stripMarginAction(uri, t.pos.toLSP))
-              case (s: Token.Interpolation.Start) :: (e: Token.Interpolation.End) :: _ =>
-                List(
-                  stripMarginAction(
-                    uri,
-                    new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
-                  )
-                )
-              case _ =>
-                Nil
+                if (isNotTripleQuote(t))
+                  multilineAction(uri, t.pos.toLSP) ::
+                    List(interpolationAction(uri, t.pos.toLSP))
+                else List(interpolationAction(uri, t.pos.toLSP))
+              case (s: Token.Interpolation.Start) :: (e: Token.Interpolation.End) :: _
+                  if (isNotTripleQuote(s) && isNotTripleQuote(e)) =>
+                val r = new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
+                List(multilineAction(uri, r))
+              case _ => Nil
             }
-
           case None => Nil
         }
       }
   }
 
-  def stripMarginAction(
+  def interpolationAction(
       uri: String,
       range: l.Range
   ): l.CodeAction = {
-    range.getStart.setCharacter(range.getStart.getCharacter + 1)
-    val startRange = new l.Range(range.getStart, range.getStart)
-
-    val endRange = new l.Range(range.getEnd, range.getEnd)
-
-    val edits = List(
-      new l.TextEdit(startRange, quotify("''|")),
-      new l.TextEdit(endRange, quotify("''.stripMargin"))
-    )
-
     val codeAction = new l.CodeAction()
-    codeAction.setTitle(StringActions.title)
+
+    codeAction.setTitle(StringActions.interpolationTitle)
     codeAction.setKind(l.CodeActionKind.Refactor)
-    codeAction.setEdit(
-      new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
-    )
+
+    val startRange = new l.Range(range.getStart, range.getStart)
+    val edits = List(new l.TextEdit(startRange, "s"))
+
+    codeAction.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
 
     codeAction
   }
 
-  def quotify(str: String): String = str.replace("'", "\"")
+  def multilineAction(
+      uri: String,
+      range: l.Range
+  ): l.CodeAction = {
+    val codeAction = new l.CodeAction()
+
+    codeAction.setTitle(StringActions.multilineTitle)
+    codeAction.setKind(l.CodeActionKind.Refactor)
+
+    val startToRight = new l.Position(
+      range.getStart.getLine,
+      range.getStart.getCharacter + 1
+    )
+    val startRange = new l.Range(startToRight, startToRight)
+    val endRange = new l.Range(range.getEnd, range.getEnd)
+
+    val edits = List(
+      new l.TextEdit(startRange, "\"\"|"),
+      new l.TextEdit(endRange, "\"\".stripMargin")
+    )
+    codeAction.setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
+
+    codeAction
+  }
 
   def isNotTripleQuote(token: Token): Boolean =
     !(token.text.length > 2 && token.text(2) == '"')
@@ -99,5 +113,6 @@ class StringActions(buffers: Buffers) extends CodeAction {
 }
 
 object StringActions {
-  def title: String = "Convert to multiline string"
+  def multilineTitle: String = "Convert to multiline string"
+  def interpolationTitle: String = "Convert to interpolation string"
 }
