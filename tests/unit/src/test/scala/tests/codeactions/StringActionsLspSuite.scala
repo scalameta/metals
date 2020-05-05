@@ -1,6 +1,6 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.StringToMultiline
+import scala.meta.internal.metals.codeactions.StringActions
 
 class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
 
@@ -12,7 +12,7 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
        |  val str = "<<>>"
        |}
        |""".stripMargin,
-    s"${StringToMultiline.title}",
+    s"${StringActions.title}",
     """|package a
        |
        |object A {
@@ -29,7 +29,7 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
        |  val str = <<"this is a string">>
        |}
        |""".stripMargin,
-    s"${StringToMultiline.title}",
+    s"${StringActions.title}",
     """|package a
        |
        |object A {
@@ -46,11 +46,30 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
        |  val str = "this i<<s >>a string"
        |}
        |""".stripMargin,
-    s"${StringToMultiline.title}",
+    s"${StringActions.title}",
     """|package a
        |
        |object A {
        |  val str = '''|this is a string'''.stripMargin
+       |}
+       |""".stripMargin.replace("'", """"""")
+  )
+
+  check(
+    "interpolation-string",
+    """|package a
+       |
+       |object A {
+       |  val text = "text"
+       |  val str = s"<<this>> is an interpolation ${text}"
+       |}
+       |""".stripMargin,
+    s"${StringActions.title}",
+    """|package a
+       |
+       |object A {
+       |  val text = "text"
+       |  val str = s'''|this is an interpolation ${text}'''.stripMargin
        |}
        |""".stripMargin.replace("'", """"""")
   )

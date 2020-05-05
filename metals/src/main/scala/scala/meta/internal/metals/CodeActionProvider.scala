@@ -15,7 +15,7 @@ final class CodeActionProvider(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol(),
-    new StringToMultiline(buffers)
+    new StringActions(buffers)
   )
 
   def codeActions(
