@@ -2,12 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-04-10T06:00:00.000Z</updated>
+    <updated>2020-05-04T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.9.0 - Lithium]]></title>
+        <id>http://scalameta.org/metals/blog/2020/05/04/lithium.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/05/04/lithium.html"/>
+        <updated>2020-05-04T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.9.0, codename &quot;Lithium&quot;, which main focus is introducing support for Scala 3 starting with versions 0.23.0 and 0.24.0-RC1. We also added support for Scala 2.13.2 and a number of other useful...</p>]]></summary>
+        <author>
+            <name>Tomasz Godzik</name>
+            <email/>
+            <uri>https://twitter.com/TomekGodzik</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.4 - Cobalt]]></title>
         <id>http://scalameta.org/metals/blog/2020/04/10/cobalt.html</id>

@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Fri, 10 Apr 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 04 May 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.9.0 - Lithium]]></title>
+            <link>http://scalameta.org/metals/blog/2020/05/04/lithium.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/05/04/lithium.html</guid>
+            <pubDate>Mon, 04 May 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We are happy to announce the release of Metals v0.9.0, codename &quot;Lithium&quot;, which main focus is introducing support for Scala 3 starting with versions 0.23.0 and 0.24.0-RC1. We also added support for Scala 2.13.2 and a number of other useful...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.8.4 - Cobalt]]></title>
             <link>http://scalameta.org/metals/blog/2020/04/10/cobalt.html</link>
