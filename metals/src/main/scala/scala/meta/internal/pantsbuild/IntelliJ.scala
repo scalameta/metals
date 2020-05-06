@@ -103,7 +103,7 @@ object IntelliJ {
     if (!configDir.exists) configDir.createDirectories
     val currentSettings = WorkspaceSettings
       .readFromFile(configDir, NoopLogger)
-      .getOrElse(WorkspaceSettings(None, None, None))
+      .getOrElse(WorkspaceSettings(None, None, None, None))
     val settings =
       currentSettings.copy(refreshProjectsCommand = Some(refreshCommand))
     WorkspaceSettings.writeToFile(configDir, settings, NoopLogger)
