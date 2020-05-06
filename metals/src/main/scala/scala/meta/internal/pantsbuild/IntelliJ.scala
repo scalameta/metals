@@ -1,5 +1,6 @@
 package scala.meta.internal.pantsbuild
 
+import bloop.data.TraceSettings
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
@@ -14,6 +15,8 @@ import java.nio.file.StandardOpenOption
 import bloop.data.WorkspaceSettings
 import bloop.io.AbsolutePath
 import bloop.logging.NoopLogger
+import scala.meta.internal.zipkin.Property
+import scala.meta.internal.zipkin.ZipkinProperties
 
 object IntelliJ {
   def launch(project: Project, open: OpenOptions): Unit = {
@@ -99,13 +102,29 @@ object IntelliJ {
       "--no-bloop-exit",
       project.name
     )
+
+    val workspace = scala.meta.io.AbsolutePath(project.common.workspace)
+    val props = Property.fromFile(workspace)
+
+    val traceSettings = TraceSettings(
+      ZipkinProperties.zipkinServerUrl.value(props),
+      Property.booleanValue(ZipkinProperties.debugTracing, props),
+      Property.booleanValue(ZipkinProperties.verbose, props),
+      ZipkinProperties.localServiceName.value(props),
+      ZipkinProperties.traceStartAnnotation.value(props),
+      ZipkinProperties.traceEndAnnotation.value(props)
+    )
+
     val configDir = AbsolutePath(project.root.bloopRoot.toNIO)
     if (!configDir.exists) configDir.createDirectories
     val currentSettings = WorkspaceSettings
       .readFromFile(configDir, NoopLogger)
       .getOrElse(WorkspaceSettings(None, None, None, None))
     val settings =
-      currentSettings.copy(refreshProjectsCommand = Some(refreshCommand))
+      currentSettings.copy(
+        refreshProjectsCommand = Some(refreshCommand),
+        traceSettings = Some(traceSettings)
+      )
     WorkspaceSettings.writeToFile(configDir, settings, NoopLogger)
   }
 
