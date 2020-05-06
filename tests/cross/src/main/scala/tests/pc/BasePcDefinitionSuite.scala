@@ -18,8 +18,8 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
   )(implicit loc: Location): Unit = {
     test(name) {
       val noRange = original
-        .replaceAllLiterally("<<", "")
-        .replaceAllLiterally(">>", "")
+        .replace("<<", "")
+        .replace(">>", "")
       val filename = "A.scala"
       val uri = s"file:///$filename"
       val (code, offset) = params(noRange, filename)
@@ -58,7 +58,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
         }
       }
       val obtained = TextEdits.applyEdits(code, edits)
-      val expected = original.replaceAllLiterally("@@", "")
+      val expected = original.replace("@@", "")
       assertNoDiff(
         obtained,
         getExpected(expected, compat, scalaVersion)

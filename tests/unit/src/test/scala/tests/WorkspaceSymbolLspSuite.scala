@@ -45,7 +45,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         "a.b.PazQux"
       )
       _ <- server.didSave("a/src/main/scala/a/B.scala")(
-        _.replaceAllLiterally("class B", "  class HaddockBax")
+        _.replace("class B", "  class HaddockBax")
       )
       _ = assertNoDiff(
         server.workspaceSymbol("Had"),

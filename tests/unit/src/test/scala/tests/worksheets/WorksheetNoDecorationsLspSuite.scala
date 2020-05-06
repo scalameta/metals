@@ -95,8 +95,8 @@ class WorksheetNoDecorationsLspSuite
       "@@".r
         .findAllMatchIn(query)
         .map { m =>
-          val before = query.substring(0, m.start).replaceAllLiterally("@@", "")
-          val after = query.substring(m.end).replaceAllLiterally("@@", "")
+          val before = query.substring(0, m.start).replace("@@", "")
+          val after = query.substring(m.end).replace("@@", "")
           before + "@@" + after
         }
         .toList

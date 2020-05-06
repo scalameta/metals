@@ -72,12 +72,12 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   )(implicit loc: Location): Unit = {
     val compatTemplate = compat.map {
       case (key, value) =>
-        key -> template.replaceAllLiterally("___", value)
+        key -> template.replace("___", value)
     }
     checkEdit(
       name = name,
-      original = template.replaceAllLiterally("___", original),
-      expected = template.replaceAllLiterally("___", expected),
+      original = template.replace("___", original),
+      expected = template.replace("___", expected),
       filterText = filterText,
       assertSingleItem = assertSingleItem,
       filter = filter,
@@ -231,8 +231,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
 
   override val compatProcess: Map[String, String => String] = Map(
     "2.13" -> { s =>
-      s.replaceAllLiterally("equals(obj: Any)", "equals(obj: Object)")
-        .replaceAllLiterally(
+      s.replace("equals(obj: Any)", "equals(obj: Object)")
+        .replace(
           "singletonList[T](o: T)",
           "singletonList[T <: Object](o: T)"
         )

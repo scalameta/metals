@@ -27,7 +27,7 @@ class BuildServerConnectionLspSuite
       _ = assertNoDiagnostics()
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("val n = 42", "val n: String = 42")
+        _.replace("val n = 42", "val n: String = 42")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,

@@ -1,16 +1,27 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.printing.PlainPrinter
+import dotty.tools.dotc.printing.RefinedPrinter
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.core.Flags
 import scala.language.implicitConversions
 
-class SymbolPrinter(implicit ctx: Context) extends PlainPrinter(ctx) {
+class SymbolPrinter(implicit ctx: Context) extends RefinedPrinter(ctx) {
 
-  def fullDefinition(sym: Symbol, tpe: Type) = {
+  private val defaultWidth = 1000
+
+  override def nameString(name: Name): String = {
+    name.stripModuleClassSuffix.toString()
+  }
+
+  def typeString(tpw: Type): String = {
+    toText(tpw).mkString(defaultWidth, false)
+  }
+
+  def fullDefinition(sym: Symbol, tpe: Type): String = {
 
     def isNullary = tpe match {
       case tpe: (MethodType | PolyType) =>
@@ -20,7 +31,7 @@ class SymbolPrinter(implicit ctx: Context) extends PlainPrinter(ctx) {
     }
 
     val isImplicit = sym.is(Flags.Implicit)
-    val name = sym.name
+    val name = nameString(sym)
     val implicitKeyword = if (isImplicit) "implicit " else ""
     keyString(sym) match {
       case key @ ("var" | "val") =>

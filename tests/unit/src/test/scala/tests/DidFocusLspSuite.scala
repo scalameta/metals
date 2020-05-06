@@ -48,7 +48,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
       _ = assert(didCompile == AlreadyCompiled)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("val x = 1", "val x = \"string\"")
+        _.replace("val x = 1", "val x = \"string\"")
       )
       _ = fakeTime.elapseSeconds(10)
       _ = assertNoDiagnostics()
@@ -105,21 +105,21 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       }
       _ = fakeTime.elapseSeconds(10)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("1", "\"\"")
+        _.replace("1", "\"\"")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch
       )
       _ <- server.didSave("b/src/main/scala/b/B.scala")(
-        _.replaceAllLiterally("2", "\"\"")
+        _.replace("2", "\"\"")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch
       )
       didSaveA = server.didSave("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("Int", "String")
+        _.replace("Int", "String")
       )
       // Focus before compilation of A.scala is complete.
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")

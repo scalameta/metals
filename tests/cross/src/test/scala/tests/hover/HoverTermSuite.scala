@@ -56,7 +56,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def apply(name: String): Person
        |""".stripMargin.hover,
     compat = Map(
-      "0." -> "class Person: case-apply.Person$".hover
+      "0." -> "case class Person: case-apply.Person".hover
     )
   )
 
@@ -152,7 +152,7 @@ class HoverTermSuite extends BaseHoverSuite {
     compat = Map(
       "0.23" -> "def unapply: Int".hover,
       // https://github.com/lampepfl/dotty/issues/8835
-      "0.24" -> "object num$: interpolator-unapply.a.Xtension#num$".hover
+      "0.24" -> "object num: interpolator-unapply.a.Xtension#num".hover
     )
   )
 
@@ -340,7 +340,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "0." -> "object FileVisitResult$: java.nio.file.FileVisitResult$".hover
+      "0." -> "object FileVisitResult: java.nio.file.FileVisitResult".hover
     )
   )
 
@@ -363,7 +363,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin,
     automaticPackage = false,
     compat = Map(
-      "0." -> "object Foo$: app.Outer.Foo$".hover
+      "0." -> "object Foo: app.Outer.Foo".hover
     )
   )
 
@@ -417,7 +417,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|class java.nio.file.Files
        |""".stripMargin.hover,
     compat = Map(
-      "0." -> "object Files$: ImportType(Select(Select(Ident(java),nio),file))".hover
+      "0." -> "object Files: java.nio.file.Files".hover
     )
   )
 
@@ -429,7 +429,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|class java.nio.file.Paths
        |""".stripMargin.hover,
     compat = Map(
-      "0." -> "object Paths$: ImportType(Select(Select(Ident(java),nio),file))".hover
+      "0." -> "object Paths: java.nio.file.Paths".hover
     )
   )
 

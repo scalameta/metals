@@ -13,7 +13,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
       .textContentsOnDisk(filename)
-      .replaceAllLiterally("// @@", query.replaceAllLiterally("@@", ""))
+      .replace("// @@", query.replace("@@", ""))
     for {
       _ <- server.didChange(filename)(_ => text)
       completion <- server.completionList(filename, query)
@@ -46,7 +46,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
       .textContentsOnDisk(filename)
-      .replaceAllLiterally("// @@", query.replaceAllLiterally("@@", ""))
+      .replace("// @@", query.replace("@@", ""))
     for {
       _ <- server.didChange(filename)(_ => text)
       completion <- server.completionList(filename, query)

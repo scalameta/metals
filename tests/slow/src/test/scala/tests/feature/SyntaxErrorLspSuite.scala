@@ -137,13 +137,13 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didChange("a/src/main/scala/Main.scala")(
-        _.replaceAllLiterally("val b", "val\n  val b")
+        _.replace("val b", "val\n  val b")
       )
       _ <- server.didChange("a/src/main/scala/Main.scala")(
-        _.replaceAllLiterally("val\n", "val \n")
+        _.replace("val\n", "val \n")
       )
       _ <- server.didChange("a/src/main/scala/Main.scala")(
-        _.replaceAllLiterally("val \n", "")
+        _.replace("val \n", "")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
@@ -200,7 +200,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       }
       _ = assertNoDiff(client.workspaceDiagnostics, typeMismatch)
       _ <- server.didChange("a/src/main/scala/A.scala")(
-        _.replaceAllLiterally("\"\"", "\"")
+        _.replace("\"\"", "\"")
       )
       // assert that a tokenization error results in a single diagnostic, hides type errors.
       _ = assertNoDiff(
@@ -211,7 +211,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
            |""".stripMargin
       )
       _ <- server.didChange("a/src/main/scala/A.scala")(
-        _.replaceAllLiterally("\"", "\"\"\n  // close")
+        _.replace("\"", "\"\"\n  // close")
       )
       // assert that once the tokenization error is fixed, the type error reappears.
       _ = assertNoDiff(client.workspaceDiagnostics, typeMismatch)
@@ -225,7 +225,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
        |}
        |""".stripMargin,
     Assert(
-      _.replaceAllLiterally("\"1\".substring(0)", ""),
+      _.replace("\"1\".substring(0)", ""),
       """|a/src/main/scala/A.scala:2:19: error: type mismatch;
          | found   : String
          | required: Int
@@ -234,7 +234,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          |""".stripMargin
     ),
     Assert(
-      _.replaceAllLiterally(".lengthCompare()", "."),
+      _.replace(".lengthCompare()", "."),
       """|a/src/main/scala/A.scala:2:5: error: type mismatch;
          | found   : String
          | required: Int
@@ -254,7 +254,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
        |}
        |""".stripMargin,
     Assert(
-      _.replaceAllLiterally("object A", "object B"),
+      _.replace("object A", "object B"),
       """|a/src/main/scala/A.scala:2:3: error: not enough arguments for method lengthCompare: (len: Int)Int.
          |Unspecified value parameter len.
          |  "".lengthCompare()
@@ -270,7 +270,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
        |}
        |""".stripMargin,
     Assert(
-      _.replaceAllLiterally("\"\"", "\"a\" // comment"),
+      _.replace("\"\"", "\"a\" // comment"),
       """|a/src/main/scala/A.scala:2:29: error: type mismatch;
          | found   : String("")
          | required: Int
@@ -287,7 +287,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
        |}
        |""".stripMargin,
     Assert(
-      _.replaceAllLiterally("\"b\"", "\"c\""),
+      _.replace("\"b\"", "\"c\""),
       """|a/src/main/scala/A.scala:2:16: error: type mismatch;
          | found   : String("ab")
          | required: Int
@@ -304,7 +304,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
        |}
        |""".stripMargin,
     Assert(
-      _.replaceAllLiterally("t = \"a\" + \"b\"", ""),
+      _.replace("t = \"a\" + \"b\"", ""),
       """|a/src/main/scala/A.scala:2:11: error: type mismatch;
          | found   : String("ab")
          | required: Int

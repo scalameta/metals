@@ -254,20 +254,29 @@ case class ScalaPresentationCompiler(
           case Nil =>
             ju.Optional.empty()
           case symbols =>
+            val printer = SymbolPrinter()
             val docComments = symbols.flatMap(ParsedComment.docOf)
-
             val keywordName = symbols.headOption.map { symbol =>
-              SymbolPrinter().fullDefinition(
+              printer.fullDefinition(
                 symbol,
                 tpw
               )
             }
+            val typeString = symbols.headOption.map { symbol =>
+              tpw match {
+                // https://github.com/lampepfl/dotty/issues/8891
+                case _: ImportType =>
+                  printer.typeString(symbol.typeRef)
+                case _ =>
+                  printer.typeString(tpw)
+              }
+            }
             val content = hoverContent(
               keywordName,
-              Some(tpw.show),
+              typeString,
               docComments
             )
-            ju.Optional.of(new Hover(content, null))
+            ju.Optional.of(new Hover(content))
         }
       }
     }

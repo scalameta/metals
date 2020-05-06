@@ -15,7 +15,7 @@ class PrettyPrintSuite extends BaseCompletionSuite {
       expected: String,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    val signature = original.replaceAllLiterally("@@", "")
+    val signature = original.replace("@@", "")
     val completion = original.replaceFirst("@@.*", "@@")
     val suffix = " = ${0:???}"
     val compatWithSuffix = compat.map {

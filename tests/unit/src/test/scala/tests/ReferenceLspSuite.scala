@@ -135,10 +135,10 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
       // Assert that goto definition and reference are still bijective after buffer changes
       // in both the definition source and reference sources.
       _ <- server.didChange("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("a: Int", "\n")
+        _.replace("a: Int", "\n")
       )
       _ <- server.didChange("b/src/main/scala/b/B.scala")(
-        _.replaceAllLiterally("val b", "\n  val number")
+        _.replace("val b", "\n  val number")
       )
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
       _ = server.assertReferenceDefinitionDiff(

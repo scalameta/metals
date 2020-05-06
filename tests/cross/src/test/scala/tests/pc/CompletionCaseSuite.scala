@@ -20,9 +20,9 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   override val compatProcess: Map[String, String => String] = Map(
     "2.11" -> { (s: String) =>
       // The standard library renamed fields of Some/Left/Right for 2.12.0.
-      s.replaceAllLiterally("Some(value)", "Some(x)")
-        .replaceAllLiterally("Left(value)", "Left(a)")
-        .replaceAllLiterally("Right(value)", "Right(b)")
+      s.replace("Some(value)", "Some(x)")
+        .replace("Left(value)", "Left(a)")
+        .replace("Right(value)", "Right(b)")
     }
   )
 

@@ -44,7 +44,7 @@ object SourceCompletion {
     fromPath(path, readResource(path), query)
   }
   def fromPath(path: String, text: String, query: String): SourceCompletion = {
-    val queryIndex = text.indexOf(query.replaceAllLiterally("@@", ""))
+    val queryIndex = text.indexOf(query.replace("@@", ""))
     if (queryIndex < 0) throw new IllegalArgumentException(query)
     val offset = query.indexOf("@@")
     if (offset < 0) throw new IllegalArgumentException(query)
