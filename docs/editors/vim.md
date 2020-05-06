@@ -205,12 +205,14 @@ inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
 
 " Toggle panel with Tree Views
 nnoremap <silent> <space>t :<C-u>CocCommand metals.tvp<CR>
-" Toggle Tree View 'metalsBuild'
-nnoremap <silent> <space>tb :<C-u>CocCommand metals.tvp metalsBuild<CR>
+" Toggle Tree View 'metalsPackages'
+nnoremap <silent> <space>tp :<C-u>CocCommand metals.tvp metalsPackages<CR>
 " Toggle Tree View 'metalsCompile'
 nnoremap <silent> <space>tc :<C-u>CocCommand metals.tvp metalsCompile<CR>
-" Reveal current current class (trait or object) in Tree View 'metalsBuild'
-nnoremap <silent> <space>tf :<C-u>CocCommand metals.revealInTreeView metalsBuild<CR>
+" Toggle Tree View 'metalsBuild'
+nnoremap <silent> <space>tb :<C-u>CocCommand metals.tvp metalsBuild<CR>
+" Reveal current current class (trait or object) in Tree View 'metalsPackages'
+nnoremap <silent> <space>tf :<C-u>CocCommand metals.revealInTreeView metalsPackages<CR>
 ```
 
 ### Installing coc-metals
@@ -320,27 +322,22 @@ Then, when on the line that you'd like to expand the decoration to get the hover
 
 ## Tree View Protocol
 
-![Tree View Protocol](https://i.imgur.com/ryUPx3l.png)
+![Tree View Protocol](https://i.imgur.com/GvcU9Mu.gif)
 
-coc-metals has a built-in implementation of the [Tree View Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html).
-If you have the [recommended mappings](#recommended-cocnvim-mappings) copied, you'll notice
+coc-metals has a built-in implementation of the [Tree View
+Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html).
+If you have the [recommended mappings](coc-mappings.vim) copied, you'll notice
 that in the bottom you'll have some TVP related settings. You can start by
 opening the TVP panel by using the default `<space> t`. Once open, you'll see
-there are two parts to the panel. The first being the `MetalsCompile` where you
-can see the status of ongoing compilations for your modules and also options to
-compile.
+there are three parts to the panel. The first being the `MetalsCompile` window
+where you can see ongoing compilations, the second is the `MetalsPackages`
+window where you are able to see a tree view of all your packages, and finally
+the `metalsBuild` window where you have build related commands.
 
-![MetalsCompile](https://i.imgur.com/QBPHNQo.gif)
-
-You are able to trigger the compiles while being on top of the option you are
+You are able to trigger the commands while being on top of the option you are
 attempting to trigger and pressing `r`. You can change this default in the
-settings. You can find all the relevant TVP settings below in the [Tree View Protocol configuration options](#tree-view-protocol-configuration-options).
-
-The second part of the TVP panel is a view of your project and external dependencies.
-You can navigate through them by jumping to the next or previous nodes, the last
-or first nodes, or jumping to parent or first child nodes. There are shortcuts
-to all of these found below. You will see the traits, classes, objects,
-members, and methods are all color coded.
+settings. You can find all the relevant TVP settings below in the [Available
+Configuration Options](#tree-view-protocol-configuration-options).
 
 ### Tree View Protocol configuration options
 
@@ -348,7 +345,7 @@ members, and methods are all color coded.
 ----------------------------                    |---------------------------
 `metals.treeviews.toggleNode`                   | Expand / Collapse tree node (default `<CR>`)
 `metals.treeviews.initialWidth`                 | Initial Tree Views panels (default `40`)
-`metals.treeviews.initialViews`                 | Initial views that the Tree View Panel displays. Done mess with this unless you know what you're doing.
+`metals.treeviews.initialViews`                 | Initial views that the Tree View Panel displays. Don't mess with this unless you know what you're doing.
 `metals.treeviews.gotoLastChild`                | Go to the last child Node (defalt `J`)
 `metals.treeviews.gotoParentNode`               | Go to parent Node (default `p`)
 `metals.treeviews.gotoFirstChild`               | Go to first child Node (default `K`)
