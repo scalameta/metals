@@ -62,7 +62,7 @@ final class BuildTools(
 
   def allAvailable: List[BuildTool] = {
     List(
-      SbtBuildTool(version = "", userConfig),
+      SbtBuildTool(workspaceVersion = None, userConfig),
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
       MillBuildTool(userConfig),

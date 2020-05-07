@@ -6,7 +6,7 @@ import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
 case class SbtBuildTool(
-    version: String,
+    workspaceVersion: Option[String],
     userConfig: () => UserConfiguration
 ) extends BloopPluginBuildTool {
 
@@ -22,6 +22,7 @@ case class SbtBuildTool(
     AbsolutePath(out)
   }
 
+  override def version: String = workspaceVersion.getOrElse(recommendedVersion)
   override def args(workspace: AbsolutePath): List[String] = {
     val sbtArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
@@ -57,7 +58,7 @@ case class SbtBuildTool(
   override def digest(workspace: AbsolutePath): Option[String] =
     SbtDigest.current(workspace)
   override val minimumVersion: String = "0.13.17"
-  override val recommendedVersion: String = "1.2.8"
+  override val recommendedVersion: String = BuildInfo.sbtVersion
 
   // We remove legacy metals.sbt file that was located in
   // global sbt plugins and which adds the plugin to each projects
@@ -149,7 +150,7 @@ object SbtBuildTool {
         finally in.close()
         Option(props.getProperty("sbt.version"))
       }
-    SbtBuildTool(version.getOrElse(unknown), userConfig)
+    SbtBuildTool(version, userConfig)
   }
 
   private def unknown = "<unknown>"
