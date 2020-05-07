@@ -143,7 +143,7 @@ class RangeFormattingWhenSelectingSuite
 
     val testCode = unmangle(testCase)
     val base =
-      testCode.replaceAllLiterally("<<", "").replaceAllLiterally(">>", "")
+      testCode.replace("<<", "").replace(">>", "")
     val expected = unmangle(expectedCase)
     test(name) {
       for {

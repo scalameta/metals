@@ -24,7 +24,7 @@ case class PantsGlobs(
         // NOTE(olafur) Pants globs interpret "**/*.scala" as "zero or more
         // directories" while Bloop uses `java.nio.file.PathMatcher`, which
         // interprets it as "one or more directories".
-        .replaceAllLiterally("**/*", "**")
+        .replace("**/*", "**")
       s"glob:$pattern"
     }
     val includeGlobs = include.map(relativizeGlob)

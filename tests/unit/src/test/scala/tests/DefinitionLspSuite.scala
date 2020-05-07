@@ -202,7 +202,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
         """.stripMargin
       )
       _ <- server.didSave("a/src/main/scala/a/Main.scala")(
-        _.replaceAllLiterally("max(1, 2)", "max")
+        _.replace("max(1, 2)", "max")
       )
       _ = assertNoDiff(
         server.workspaceDefinitions,
@@ -279,7 +279,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didChange("a/src/main/scala/a/Main.scala")(
-        _.replaceAllLiterally("// ", "")
+        _.replace("// ", "")
       )
       _ = assertNoDiff(
         server.workspaceDefinitions,

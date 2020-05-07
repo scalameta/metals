@@ -647,7 +647,7 @@ class CompletionSuite extends BaseCompletionSuite {
     // NOTE(olafur) The compiler produces non-deterministic results for this
     // test case, sometime it uses Double and sometimes it uses Float depending
     // other whether its a clean compiler or reused one.
-    postProcessObtained = _.replaceAllLiterally("Float", "Double"),
+    postProcessObtained = _.replace("Float", "Double"),
     stableOrder = false,
     compat = Map(
       "2.13" ->

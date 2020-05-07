@@ -26,8 +26,8 @@ abstract class BaseHoverSuite
       val filename = "Hover.scala"
       val pkg = scala.meta.Term.Name(name).syntax
       val noRange = original
-        .replaceAllLiterally("<<", "")
-        .replaceAllLiterally(">>", "")
+        .replace("<<", "")
+        .replace(">>", "")
       val packagePrefix =
         if (automaticPackage) s"package $pkg\n"
         else ""
@@ -47,11 +47,11 @@ abstract class BaseHoverSuite
         h <- hover.asScala
         range <- Option(h.getRange)
       } {
-        val base = codeOriginal.replaceAllLiterally("@@", "")
+        val base = codeOriginal.replace("@@", "")
         val withRange = replaceInRange(base, range)
         assertNoDiff(
           withRange,
-          packagePrefix + original.replaceAllLiterally("@@", ""),
+          packagePrefix + original.replace("@@", ""),
           "Invalid range"
         )
       }
@@ -60,7 +60,7 @@ abstract class BaseHoverSuite
 
   override val compatProcess: Map[String, String => String] = Map(
     "2.13" -> { s =>
-      s.replaceAllLiterally(
+      s.replace(
         "def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That",
         "def map[B](f: Int => B): List[B]"
       )

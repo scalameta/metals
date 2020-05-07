@@ -23,8 +23,8 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
                                   |{"a":{}}
                                   |/$path
                                   |${input
-                                    .replaceAllLiterally("<<", "")
-                                    .replaceAllLiterally(">>", "")}
+                                    .replace("<<", "")
+                                    .replace(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)

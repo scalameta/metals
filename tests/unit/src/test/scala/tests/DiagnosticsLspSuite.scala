@@ -108,7 +108,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didSave("a/src/main/scala/Main.scala")(
-        _.replaceAllLiterally("val a = 2", "val a = 1\n  val a = 2")
+        _.replace("val a = 2", "val a = 1\n  val a = 2")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
@@ -122,7 +122,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |""".stripMargin
       )
       _ <- server.didSave("a/src/main/scala/Main.scala")(
-        _.replaceAllLiterally("val a = 1\n  ", "")
+        _.replace("val a = 1\n  ", "")
       )
       // FIXME: https://github.com/scalacenter/bloop/issues/785
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -255,7 +255,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
       _ = assertNoDiagnostics()
       _ <- server.didSave("a/src/main/scala/a/B.scala")(
-        _.replaceAllLiterally("String", "Int")
+        _.replace("String", "Int")
       )
       _ <- server.didClose("a/src/main/scala/a/B.scala")
       _ <- server.didOpen("a/src/main/scala/a/A.scala")

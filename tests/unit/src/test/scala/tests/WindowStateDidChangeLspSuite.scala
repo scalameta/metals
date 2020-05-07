@@ -21,7 +21,7 @@ class WindowStateDidChangeLspSuite
       _ = server.windowStateDidChange(focused = false)
       _ = assert(server.server.pauseables.isPaused.get())
       didChange = server.didChange("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("= 42", "=")
+        _.replace("= 42", "=")
       )
       _ = Thread.sleep(10) // give the parser a moment to complete.
       // Assert didChange is still running because parsing is paused.

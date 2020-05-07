@@ -148,7 +148,7 @@ abstract class BasePCSuite extends BaseSuite {
     )
 
   def params(code: String, filename: String = "test.scala"): (String, Int) = {
-    val code2 = code.replaceAllLiterally("@@", "")
+    val code2 = code.replace("@@", "")
     val offset = code.indexOf("@@")
     if (offset < 0) {
       fail("missing @@")

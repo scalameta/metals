@@ -192,7 +192,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
 
   override val compatProcess: Map[String, String => String] = Map(
     "2.13" -> { s =>
-      s.replaceAllLiterally(
+      s.replace(
         "::[B >: Int](x: B): List[B]",
         "::[B >: Int](elem: B): List[B]"
       )

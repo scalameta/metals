@@ -10,7 +10,7 @@ object FileLayout {
 
   def mapFromString(layout: String): Map[String, String] = {
     if (!layout.trim.isEmpty) {
-      val lines = layout.replaceAllLiterally("\r\n", "\n")
+      val lines = layout.replace("\r\n", "\n")
       lines
         .split("(?=\n/)")
         .map { row =>

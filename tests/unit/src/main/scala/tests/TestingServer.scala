@@ -538,7 +538,7 @@ final class TestingServer(
     val input = path.toInputFromBuffers(buffers)
     val offset = query.indexOf("@@")
     if (offset < 0) sys.error("missing @@")
-    val start = input.text.indexOf(query.replaceAllLiterally("@@", ""))
+    val start = input.text.indexOf(query.replace("@@", ""))
     if (start < 0)
       sys.error(s"missing query '$query' from text:\n${input.text}")
     val point = start + offset
@@ -694,7 +694,7 @@ final class TestingServer(
   ): Future[T] = {
     val offset = original.indexOf("@@")
     if (offset < 0) sys.error(s"missing @@\n$original")
-    val text = original.replaceAllLiterally("@@", replaceWith)
+    val text = original.replace("@@", replaceWith)
     val input = m.Input.String(text)
     val path = root.resolve(filename)
     path.touch()
@@ -726,8 +726,8 @@ final class TestingServer(
       sys.error(s"invalid range, >> must come after <<\n$original")
     val text =
       original
-        .replaceAllLiterally("<<", replaceWith)
-        .replaceAllLiterally(">>", replaceWith)
+        .replace("<<", replaceWith)
+        .replace(">>", replaceWith)
     val input = m.Input.String(text)
     val path = root.resolve(filename)
     path.touch()

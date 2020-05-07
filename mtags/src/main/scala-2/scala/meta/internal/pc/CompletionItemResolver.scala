@@ -66,7 +66,7 @@ class CompletionItemResolver(
     out.toString
   }
 
-  // NOTE(olafur): it's hacky to use `String.replaceAllLiterally("x$1", paramName)`, ideally we would use the
+  // NOTE(olafur): it's hacky to use `String.replace("x$1", paramName)`, ideally we would use the
   // signature printer to pretty-print the signature from scratch with parameter names. However, that approach
   // is tricky because it would require us to JSON serialize/deserialize Scala compiler types. The reason
   // we don't print Java parameter names in `textDocument/completions` is because that requires parsing the
@@ -83,7 +83,7 @@ class CompletionItemResolver(
       .zipWithIndex
       .foldLeft(detail) {
         case (accum, (param, i)) =>
-          accum.replaceAllLiterally(
+          accum.replace(
             s"x$$${i + 1}",
             param.displayName()
           )

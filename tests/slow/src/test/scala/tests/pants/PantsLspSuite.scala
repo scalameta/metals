@@ -154,7 +154,7 @@ class PantsLspSuite extends BaseImportSuite("pants") {
       _ = assertNoDiagnostics() // "core" was compiled during import
       _ <- server.didOpen("core/Lib.scala")
       _ <- server.didSave("core/Lib.scala")(
-        _.replaceAllLiterally("greeting", "greeting: Int")
+        _.replace("greeting", "greeting: Int")
       )
       _ = assertNoDiagnostics() // no errors because "core" is not exported.
     } yield ()

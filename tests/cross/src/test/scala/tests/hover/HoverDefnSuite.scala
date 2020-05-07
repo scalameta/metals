@@ -153,7 +153,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "0." -> "object MyObject$: object.MyObject$".hover
+      "0." -> "object MyObject: object.MyObject".hover
     )
   )
 

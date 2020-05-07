@@ -89,8 +89,8 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
                                   |{"a":{}}
                                   |/$path
                                   |${input
-                                    .replaceAllLiterally("<<", "")
-                                    .replaceAllLiterally(">>", "")}
+                                    .replace("<<", "")
+                                    .replace(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)
