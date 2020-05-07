@@ -19,22 +19,40 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
-    val position = params.getRange.getStart
+    val range = params.getRange
 
     Future
       .successful {
         path.toInputFromBuffers(buffers).tokenize.toOption match {
           case Some(tokens) =>
-            val lineStringTokens = tokens
-              .filter(_.pos.startLine == position.getLine)
-              .collect {
-                case t: Token.Constant.String => t
-                case s: Token.Interpolation.Start => s
-                case e: Token.Interpolation.End => e
-              }
-              .toList
-            if (lineStringTokens.isEmpty) Nil
-            else List(stripMarginAction(uri, lineStringTokens))
+            val stringActions = tokens.collect {
+              case token: Token.Constant.String
+                  if (token.pos.toLSP.overlapsWith(range) && isNotTripleQuote(
+                    token
+                  )) =>
+                stripMarginAction(uri, token.pos.toLSP)
+            }.toList
+
+            val interpolatedStringTokens = tokens.collect {
+              case start: Token.Interpolation.Start
+                  if (start.pos.toLSP.getStart.getCharacter <= range.getStart.getCharacter
+                    && isNotTripleQuote(start)) =>
+                start
+              case end: Token.Interpolation.End
+                  if (end.pos.toLSP.getEnd.getCharacter >= range.getEnd.getCharacter
+                    && isNotTripleQuote(end)) =>
+                end
+            }.toList
+
+            interpolatedStringTokens match {
+              case (s: Token.Interpolation.Start) :: (e: Token.Interpolation.End) :: Nil =>
+                stripMarginAction(
+                  uri,
+                  new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
+                ) :: stringActions
+              case _ => stringActions
+            }
+
           case None => Nil
         }
       }
@@ -42,24 +60,22 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
   def stripMarginAction(
       uri: String,
-      tokens: List[Token]
+      range: l.Range
   ): l.CodeAction = {
-    val head = tokens.head
+    val start = range.getStart
+    range.getStart.setCharacter(range.getStart.getCharacter + 1)
+    val startRange = new l.Range(start, range.getStart)
 
-    val edits: List[l.TextEdit] =
-      if (head.name == "interpolation start") {
-        val next = tokens(1)
-        val editStart =
-          new l.TextEdit(head.pos.toLSP, toStripMarginStart(head.text))
-        val editEnd =
-          new l.TextEdit(next.pos.toLSP, toStripMarginEnd(next.text))
-        editStart :: List(editEnd)
-      } else {
-        List(new l.TextEdit(head.pos.toLSP, toStripMargin(head.text)))
-      }
+    val end = range.getEnd
+    range.getEnd.setCharacter(range.getEnd.getCharacter + 1)
+    val endRange = new l.Range(end, range.getEnd)
+
+    val edits = List(
+      new l.TextEdit(startRange, quotify("''|")),
+      new l.TextEdit(endRange, quotify("''.stripMargin"))
+    )
 
     val codeAction = new l.CodeAction()
-
     codeAction.setTitle(StringActions.title)
     codeAction.setKind(l.CodeActionKind.Refactor)
     codeAction.setEdit(
@@ -69,24 +85,13 @@ class StringActions(buffers: Buffers) extends CodeAction {
     codeAction
   }
 
-  def quotify(str: String): String = str.replace("'", """"""")
+  def quotify(str: String): String = str.replace("'", "\"")
 
-  def toStripMargin(str: String): String = {
-    quotify(
-      str.replaceFirst(""""""", "'''|").replace(""""""", "'''.stripMargin")
-    )
-  }
-
-  def toStripMarginStart(str: String): String = {
-    quotify(str.replace(""""""", "'''|"))
-  }
-
-  def toStripMarginEnd(str: String): String = {
-    quotify(str.replace(""""""", "'''.stripMargin"))
-  }
+  def isNotTripleQuote(token: Token): Boolean =
+    !(token.text.length > 2 && token.text(2) == '"')
 
 }
 
 object StringActions {
-  def title: String = "Convert to stripMargin"
+  def title: String = "Convert to multiline string"
 }

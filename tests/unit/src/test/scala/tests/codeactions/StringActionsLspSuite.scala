@@ -2,14 +2,14 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.StringActions
 
-class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
+class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
 
   check(
     "empty-string",
     """|package a
        |
        |object A {
-       |  val str = "<<>>"
+       |  val str = <<"">>
        |}
        |""".stripMargin,
     s"${StringActions.title}",
@@ -18,7 +18,7 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
        |object A {
        |  val str = '''|'''.stripMargin
        |}
-       |""".stripMargin.replace("'", """"""")
+       |""".stripMargin.replace("'", "\"")
   )
 
   check(
@@ -26,7 +26,7 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
     """|package a
        |
        |object A {
-       |  val str = <<"this is a string">>
+       |  val str = "this <<is>> a string"
        |}
        |""".stripMargin,
     s"${StringActions.title}",
@@ -35,24 +35,24 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
        |object A {
        |  val str = '''|this is a string'''.stripMargin
        |}
-       |""".stripMargin.replace("'", """"""")
+       |""".stripMargin.replace("'", "\"")
   )
 
   check(
-    "narrow-selection",
+    "out-selection-no-codeAction",
     """|package a
        |
        |object A {
-       |  val str = "this i<<s >>a string"
+       |  val <<str>> = "this is a string"
        |}
        |""".stripMargin,
-    s"${StringActions.title}",
+    "",
     """|package a
        |
        |object A {
-       |  val str = '''|this is a string'''.stripMargin
+       |  val str = "this is a string"
        |}
-       |""".stripMargin.replace("'", """"""")
+       |""".stripMargin
   )
 
   check(
@@ -60,18 +60,69 @@ class MultlineStringLspSuite extends BaseCodeActionLspSuite("multilineString") {
     """|package a
        |
        |object A {
-       |  val text = "text"
-       |  val str = s"<<this>> is an interpolation ${text}"
+       |  val other = "text"
+       |  val str = s"this <<is>> an ${other} string"
        |}
        |""".stripMargin,
     s"${StringActions.title}",
     """|package a
        |
        |object A {
-       |  val text = "text"
-       |  val str = s'''|this is an interpolation ${text}'''.stripMargin
+       |  val other = "text"
+       |  val str = s'''|this is an ${other} string'''.stripMargin
        |}
-       |""".stripMargin.replace("'", """"""")
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "composite-string",
+    """|package a
+       |
+       |object A {
+       |  val str = s"Hello " + " the <<cursor>> is actually here "
+       |}
+       |""".stripMargin,
+    s"${StringActions.title}",
+    """|package a
+       |
+       |object A {
+       |  val str = s"Hello " + '''| the cursor is actually here '''.stripMargin
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "triple-quotes-no-codeAction",
+    """|package a
+       |
+       |object A {
+       |  val str = <<'''>>'''
+       |}
+       |""".stripMargin.replace("'", "\""),
+    "",
+    """|package a
+       |
+       |object A {
+       |  val str = ''''''
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "triple-quotes-interpolation-no-codeAction",
+    """|package a
+       |
+       |object A {
+       |  val str = s'''this <<is a>> string'''
+       |}
+       |""".stripMargin.replace("'", "\""),
+    "",
+    """|package a
+       |
+       |object A {
+       |  val str = s'''this is a string'''
+       |}
+       |""".stripMargin.replace("'", "\"")
   )
 
 }
