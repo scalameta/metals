@@ -16,8 +16,8 @@ import scala.meta.io.AbsolutePath
 
 class SbtLspSuite extends BaseImportSuite("sbt-import") {
 
-  val sbtVersion = "1.3.7"
-  val buildTool: SbtBuildTool = SbtBuildTool("", () => userConfig)
+  val sbtVersion = V.sbtVersion
+  val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -63,6 +63,18 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
         ).mkString("\n")
       )
     }
+  }
+
+  test("no-sbt-version") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/build.sbt
+            |scalaVersion := "${V.scala212}"
+            |""".stripMargin
+      )
+      _ = assertStatus(_.isInstalled)
+    } yield ()
   }
 
   test("force-command") {
@@ -395,7 +407,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         client.workspaceShowMessages,
         IncompatibleBuildToolVersion
-          .params(SbtBuildTool("0.13.15", () => userConfig))
+          .params(SbtBuildTool(Some("0.13.15"), () => userConfig))
           .getMessage
       )
     } yield ()

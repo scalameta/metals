@@ -421,6 +421,7 @@ lazy val metals = project
       "metalsVersion" -> version.value,
       "mdocVersion" -> V.mdoc,
       "bspVersion" -> V.bsp,
+      "sbtVersion" -> sbtVersion.value,
       "bloopVersion" -> V.bloop,
       "bloopNightlyVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
