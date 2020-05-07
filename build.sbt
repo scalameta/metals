@@ -431,6 +431,7 @@ lazy val metals = project
       "scalafmtVersion" -> V.scalafmt,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
+      "supportedScala3Versions" -> V.scala3Versions,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,

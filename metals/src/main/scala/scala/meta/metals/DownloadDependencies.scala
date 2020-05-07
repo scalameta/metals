@@ -34,14 +34,18 @@ object DownloadDependencies {
 
   def downloadScala(): Unit = {
     scribe.info("Downloading scala library and sources")
-    BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
+    BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
       Embedded.downloadScalaSources(scalaVersion)
+    }
+
+    BuildInfo.supportedScala3Versions.foreach { scalaVersion =>
+      Embedded.downloadDottySources(scalaVersion)
     }
   }
 
   def downloadMdoc(): Unit = {
     scribe.info("Downloading mdoc")
-    BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
+    BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
       Embedded.downloadMdoc(
         scalaVersion,
         ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
@@ -68,7 +72,7 @@ object DownloadDependencies {
 
   def downloadSemanticDB(): Unit = {
     scribe.info("Downloading semanticdb-scalac")
-    BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
+    BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
       Embedded.downloadSemanticdbScalac(scalaVersion)
     }
   }
