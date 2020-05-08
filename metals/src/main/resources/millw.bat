@@ -21,6 +21,7 @@ if [%~1%]==[--mill-version] (
     rem shift command doesn't work within parentheses
     if not [%~2%]==[] (
         set MILL_VERSION=%~2%
+        set "STRIP_VERSION_PARAMS=true"
     ) else (
         echo You specified --mill-version without a version.
         echo Please provide a version that matches one provided on
@@ -80,4 +81,15 @@ if not exist "%MILL%" (
 set MILL_DOWNLOAD_PATH=
 set MILL_VERSION=
 
-"%MILL%" %*
+set MILL_PARAMS=%*
+
+if defined STRIP_VERSION_PARAMS (
+    for /f "tokens=1-2*" %%a in ("%*") do (
+        rem strip %%a - It's the "--mill-version" option.
+        rem strip %%b - it's the version number that comes after the option.
+        rem keep  %%c - It's the remaining options.
+        set MILL_PARAMS=%%c
+    )
+)
+
+"%MILL%" %MILL_PARAMS%

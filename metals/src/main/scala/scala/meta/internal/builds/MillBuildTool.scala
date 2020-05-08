@@ -35,6 +35,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
       version
     }
     val cmd = List(
+      "-i", // In some environments (such as WSL or cygwin), mill must be run using interactive mode (-i)
       "--predef",
       predefScriptPath(millVersion).toString,
       "mill.contrib.Bloop/install"
