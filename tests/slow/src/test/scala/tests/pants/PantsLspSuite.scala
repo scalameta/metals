@@ -68,7 +68,7 @@ class PantsLspSuite extends BaseImportSuite("pants") {
           |
           |/pants.ini
           |[GLOBAL]
-          |pants_version: 1.24.0rc1
+          |pants_version: 1.26.0rc2
           |[scala]
           |version: custom
           |suffix_version: 2.12
