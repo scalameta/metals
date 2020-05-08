@@ -541,7 +541,9 @@ class MetalsLanguageServer(
       capabilities.setDocumentOnTypeFormattingProvider(
         new DocumentOnTypeFormattingOptions("\n")
       )
-      capabilities.setDocumentRangeFormattingProvider(true)
+      capabilities.setDocumentRangeFormattingProvider(
+        clientConfig.initializationOptions.provideRangeFormatting
+      )
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
