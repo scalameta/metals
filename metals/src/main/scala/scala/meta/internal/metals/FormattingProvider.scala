@@ -157,11 +157,11 @@ final class FormattingProvider(
               tables.dismissedNotifications.ChangeScalafmtVersion
                 .dismiss(24, TimeUnit.HOURS)
               None
-            } else {
+            } else if (item == Messages.dontShowAgain) {
               tables.dismissedNotifications.ChangeScalafmtVersion
                 .dismissForever()
               None
-            }
+            } else None
           }
       }
     } else Future.successful(None)
@@ -183,11 +183,11 @@ final class FormattingProvider(
           tables.dismissedNotifications.CreateScalafmtFile
             .dismiss(24, TimeUnit.HOURS)
           false
-        } else {
+        } else if (item == Messages.dontShowAgain) {
           tables.dismissedNotifications.CreateScalafmtFile
             .dismissForever()
           false
-        }
+        } else false
       }
     } else Future.successful(false)
   }
