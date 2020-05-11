@@ -87,32 +87,39 @@ final class Ammonite(
       lastImportedBuild0.targetUris.contains(uri)
     }
 
+  def importBuild(): Future[Unit] =
+    buildServer0 match {
+      case None =>
+        Future.failed(new Exception("No Ammonite build server running"))
+      case Some(buildServer) =>
+        compilers.cancel()
+        for {
+          build0 <- statusBar.trackFuture(
+            "Importing Ammonite scripts",
+            MetalsLanguageServer.importedBuild(buildServer)
+          )
+          _ = {
+            lastImportedBuild0 = build0
+          }
+          _ <- indexWorkspace()
+          toCompile = buffers.open.toSeq.filter(_.isAmmoniteScript)
+          _ <- Future.sequence[Unit, List](
+            compilations
+              .cascadeCompileFiles(toCompile) ::
+              compilers.load(toCompile) ::
+              Nil
+          )
+        } yield ()
+    }
+
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
     scribe.info(s"Connected to Ammonite Build server v${build.version}")
     cancelables.add(build)
-    compilers.cancel()
     buildServer0 = Some(build)
-    val importedBuild0 = // FIXME timed("imported ammonite build") {
-      MetalsLanguageServer.importedBuild(build)
     for {
-      build0 <- statusBar.trackFuture(
-        "Importing Ammonite scripts",
-        importedBuild0
-      )
-      _ = {
-        lastImportedBuild0 = build0
-      }
-      _ <- indexWorkspace()
-      // _ = checkRunningBloopVersion(build.version)
-      toCompile = buffers.open.toSeq.filter(_.isAmmoniteScript)
-      _ <- Future.sequence[Unit, List](
-        compilations
-          .cascadeCompileFiles(toCompile) ::
-          compilers.load(toCompile) ::
-          Nil
-      )
+      _ <- importBuild()
     } yield BuildChange.Reconnected
   }
 

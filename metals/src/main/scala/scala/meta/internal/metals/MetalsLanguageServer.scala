@@ -306,7 +306,8 @@ class MetalsLanguageServer(
         compilers.didCompile(report)
       },
       () => treeView,
-      () => worksheetProvider
+      () => worksheetProvider,
+      () => ammonite
     )
     bloopInstall = register(
       new BloopInstall(
