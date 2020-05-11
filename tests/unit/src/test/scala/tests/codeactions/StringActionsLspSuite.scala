@@ -22,18 +22,39 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
-    "string-selection",
+    "multi-strings-one-line",
     """|package a
        |
        |object A {
-       |  val str = "this <<is>> a string"
+       |  val str = <<"">> + ""
        |}
        |""".stripMargin,
     s"${StringActions.title}",
     """|package a
        |
        |object A {
-       |  val str = '''|this is a string'''.stripMargin
+       |  val str = '''|'''.stripMargin + ""
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "multi-strings",
+    """|package a
+       |
+       |object A {
+       |  val e = "hello"
+       |  val c = "this <<is>> a string"
+       |  val d = "hello"
+       |}
+       |""".stripMargin,
+    s"${StringActions.title}",
+    """|package a
+       |
+       |object A {
+       |  val e = "hello"
+       |  val c = '''|this is a string'''.stripMargin
+       |  val d = "hello"
        |}
        |""".stripMargin.replace("'", "\"")
   )
@@ -75,7 +96,7 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
   )
 
   check(
-    "composite-string",
+    "mix-strings-one-line",
     """|package a
        |
        |object A {
@@ -87,6 +108,65 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |
        |object A {
        |  val str = s"Hello " + '''| the cursor is actually here '''.stripMargin
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "remix-strings-one-line",
+    """|package a
+       |
+       |object A {
+       |  val str = "Hello" + s" the <<cursor>> is actually here "
+       |}
+       |""".stripMargin,
+    s"${StringActions.title}",
+    """|package a
+       |
+       |object A {
+       |  val str = "Hello" + s'''| the cursor is actually here '''.stripMargin
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "mix-strings",
+    """|package a
+       |
+       |object A {
+       |  val e = s"hello ${} "
+       |  val c = "this <<is>> a string"
+       |  val d = s"hello ${} "
+       |}
+       |""".stripMargin,
+    s"${StringActions.title}",
+    """|package a
+       |
+       |object A {
+       |  val e = s"hello ${} "
+       |  val c = '''|this is a string'''.stripMargin
+       |  val d = s"hello ${} "
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "remix-strings",
+    """|package a
+       |
+       |object A {
+       |  val c = "this is a string"
+       |  val e = s"he<<llo>> ${} "
+       |  val d = s"hello ${} "
+       |}
+       |""".stripMargin,
+    s"${StringActions.title}",
+    """|package a
+       |
+       |object A {
+       |  val c = "this is a string"
+       |  val e = s'''|hello ${} '''.stripMargin
+       |  val d = s"hello ${} "
        |}
        |""".stripMargin.replace("'", "\"")
   )
@@ -121,6 +201,23 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |
        |object A {
        |  val str = s'''this is a string'''
+       |}
+       |""".stripMargin.replace("'", "\"")
+  )
+
+  check(
+    "mix-triple-quotes-no-codeAction",
+    """|package a
+       |
+       |object A {
+       |  val str = s'''|multiline'''.stripMargin + '''an <<other>> multiline'''
+       |}
+       |""".stripMargin.replace("'", "\""),
+    "",
+    """|package a
+       |
+       |object A {
+       |  val str = s'''|multiline'''.stripMargin + '''an other multiline'''
        |}
        |""".stripMargin.replace("'", "\"")
   )

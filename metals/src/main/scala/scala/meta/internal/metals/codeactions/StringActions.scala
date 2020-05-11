@@ -25,32 +25,39 @@ class StringActions(buffers: Buffers) extends CodeAction {
       .successful {
         path.toInputFromBuffers(buffers).tokenize.toOption match {
           case Some(tokens) =>
-            val stringActions = tokens.collect {
-              case token: Token.Constant.String
-                  if (token.pos.toLSP.overlapsWith(range) && isNotTripleQuote(
-                    token
-                  )) =>
-                stripMarginAction(uri, token.pos.toLSP)
-            }.toList
-
-            val interpolatedStringTokens = tokens.collect {
-              case start: Token.Interpolation.Start
-                  if (start.pos.toLSP.getStart.getCharacter <= range.getStart.getCharacter
-                    && isNotTripleQuote(start)) =>
-                start
-              case end: Token.Interpolation.End
-                  if (end.pos.toLSP.getEnd.getCharacter >= range.getEnd.getCharacter
-                    && isNotTripleQuote(end)) =>
-                end
-            }.toList
-
-            interpolatedStringTokens match {
-              case (s: Token.Interpolation.Start) :: (e: Token.Interpolation.End) :: Nil =>
-                stripMarginAction(
-                  uri,
-                  new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
-                ) :: stringActions
-              case _ => stringActions
+            tokens
+              .filter(t =>
+                t.pos.startLine == range.getStart.getLine
+                  && t.pos.endLine == range.getEnd.getLine
+              )
+              .collect {
+                case token: Token.Constant.String
+                    if (token.pos.toLSP.overlapsWith(range)
+                      && isNotTripleQuote(token)) =>
+                  token
+                case start: Token.Interpolation.Start
+                    if (start.pos.toLSP.getStart.getCharacter <= range.getStart.getCharacter
+                      && isNotTripleQuote(start)) =>
+                  start
+                case end: Token.Interpolation.End
+                    if (end.pos.toLSP.getEnd.getCharacter >= range.getEnd.getCharacter
+                      && isNotTripleQuote(end)) =>
+                  end
+              }
+              .toList match {
+              case (t: Token.Constant.String) :: _ =>
+                List(stripMarginAction(uri, t.pos.toLSP))
+              case _ :: (t: Token.Constant.String) :: _ =>
+                List(stripMarginAction(uri, t.pos.toLSP))
+              case (s: Token.Interpolation.Start) :: (e: Token.Interpolation.End) :: _ =>
+                List(
+                  stripMarginAction(
+                    uri,
+                    new l.Range(s.pos.toLSP.getStart, e.pos.toLSP.getEnd)
+                  )
+                )
+              case _ =>
+                Nil
             }
 
           case None => Nil
@@ -62,13 +69,10 @@ class StringActions(buffers: Buffers) extends CodeAction {
       uri: String,
       range: l.Range
   ): l.CodeAction = {
-    val start = range.getStart
     range.getStart.setCharacter(range.getStart.getCharacter + 1)
-    val startRange = new l.Range(start, range.getStart)
+    val startRange = new l.Range(range.getStart, range.getStart)
 
-    val end = range.getEnd
-    range.getEnd.setCharacter(range.getEnd.getCharacter + 1)
-    val endRange = new l.Range(end, range.getEnd)
+    val endRange = new l.Range(range.getEnd, range.getEnd)
 
     val edits = List(
       new l.TextEdit(startRange, quotify("''|")),
