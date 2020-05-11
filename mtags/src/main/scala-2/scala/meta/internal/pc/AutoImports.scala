@@ -1,7 +1,6 @@
 package scala.meta.internal.pc
 
 import scala.reflect.internal.FatalError
-import scala.meta.internal.mtags.MtagsEnrichments._
 
 trait AutoImports { this: MetalsGlobal =>
 
@@ -41,6 +40,11 @@ trait AutoImports { this: MetalsGlobal =>
   def isImportPosition(pos: Position): Boolean =
     findLastVisitedParentTree(pos).exists(_.isInstanceOf[Import])
 
+  def notPackageObject(pkg: PackageDef): Boolean = pkg.stats.exists {
+    case ModuleDef(_, name, _) => name.toString != "package"
+    case _ => true
+  }
+
   def autoImportPosition(
       pos: Position,
       text: String
@@ -48,8 +52,8 @@ trait AutoImports { this: MetalsGlobal =>
     findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
-        val enclosingPackage = lastVisitedParentTrees.collectLast {
-          case pkg: PackageDef => pkg
+        val enclosingPackage = lastVisitedParentTrees.collectFirst {
+          case pkg: PackageDef if notPackageObject(pkg) => pkg
         }
         enclosingPackage match {
           case Some(pkg)

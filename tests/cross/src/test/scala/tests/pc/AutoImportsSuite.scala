@@ -125,6 +125,53 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "multiple-packages",
+    """|package a
+       |package b
+       |package c
+       |
+       |object A {
+       |  val l = s"${<<ListBuffer>>(2)}"
+       |}
+       |""".stripMargin,
+    """|package a
+       |package b
+       |package c
+       |
+       |import scala.collection.mutable
+       |
+       |object A {
+       |  val l = s"${mutable.ListBuffer(2)}"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "multiple-packages-existing-imports",
+    """|package a
+       |package b
+       |package c
+       |
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  val l = s"${<<ListBuffer>>(2)}"
+       |}
+       |""".stripMargin,
+    """|package a
+       |package b
+       |package c
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable
+       |
+       |object A {
+       |  val l = s"${mutable.ListBuffer(2)}"
+       |}
+       |""".stripMargin
+  )
+
   def check(
       name: String,
       original: String,
