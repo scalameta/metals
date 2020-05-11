@@ -75,8 +75,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: MetalsInputBoxParams => None
   }
 
-  private var refreshedOnIndex = false
-  var refreshModelHandler: () => Unit = () => {}
+  private val refreshCount = new AtomicInteger
+  var refreshModelHandler: Int => Unit = count => ()
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
@@ -84,11 +84,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     clientCommands.addLast(params)
     params.getCommand match {
       case ClientCommands.RefreshModel.id =>
-        if (refreshedOnIndex) {
-          refreshModelHandler()
-        } else {
-          refreshedOnIndex = true
-        }
+        refreshModelHandler(refreshCount.getAndIncrement())
       case _ =>
     }
   }
