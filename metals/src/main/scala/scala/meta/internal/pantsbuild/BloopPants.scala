@@ -153,6 +153,7 @@ object BloopPants {
       "--concurrent",
       s"--no-quiet",
       s"--${noSources}export-dep-as-jar-sources",
+      s"--${noSources}export-dep-as-jar-libraries-sources",
       s"--export-dep-as-jar-output-file=$outputFile",
       s"export-dep-as-jar",
       "--respect-strict-deps"
