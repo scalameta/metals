@@ -175,26 +175,41 @@ final class Ammonite(
 
   def maybeImport(path: AbsolutePath): Future[Unit] =
     if (path.isAmmoniteScript && !isMillBuildSc(path) && !loaded(path)) {
-      val futureResp = languageClient
-        .showMessageRequest(Messages.ImportAmmoniteScript.params())
-        .asScala
-      futureResp.onComplete {
-        case Failure(e) => scribe.warn("Error requesting Ammonite import", e)
-        case Success(resp) =>
-          resp.getTitle match {
-            case Messages.ImportAmmoniteScript.doImport =>
-              start(Some(path)).onComplete {
-                case Failure(e) =>
-                  languageClient.showMessage(
-                    Messages.ImportAmmoniteScript.ImportFailed(path.toString)
-                  )
-                  scribe.warn(s"Error importing Ammonite script $path", e)
-                case Success(_) =>
-              }
-            case _ =>
-          }
+
+      def doImport(): Unit =
+        start(Some(path)).onComplete {
+          case Failure(e) =>
+            languageClient.showMessage(
+              Messages.ImportAmmoniteScript.ImportFailed(path.toString)
+            )
+            scribe.warn(s"Error importing Ammonite script $path", e)
+          case Success(_) =>
+        }
+
+      val autoImport =
+        tables().dismissedNotifications.AmmoniteImportAuto.isDismissed
+      if (autoImport) {
+        doImport()
+        Future.unit
+      } else {
+        val futureResp = languageClient
+          .showMessageRequest(Messages.ImportAmmoniteScript.params())
+          .asScala
+        futureResp.onComplete {
+          case Failure(e) => scribe.warn("Error requesting Ammonite import", e)
+          case Success(resp) =>
+            resp.getTitle match {
+              case Messages.ImportAmmoniteScript.importAll =>
+                tables().dismissedNotifications.AmmoniteImportAuto
+                  .dismissForever()
+                doImport()
+              case Messages.ImportAmmoniteScript.doImport =>
+                doImport()
+              case _ =>
+            }
+        }
+        futureResp.ignoreValue
       }
-      futureResp.ignoreValue
     } else
       Future.unit
 
@@ -206,23 +221,17 @@ final class Ammonite(
       case Success(()) =>
     }
 
-    // TODO Look at buffers.open rather than focusedDocument?
-    val commandScriptOpt = doc.orElse(focusedDocument()) match {
-      case None =>
-        val msg = "No Ammonite script is opened"
-        scribe.error(msg)
-        Future.failed(new Exception(msg))
-      case Some(path) if path.isAmmoniteScript =>
-        Future.fromTry(command(path).toTry)
-      case Some(path) =>
+    val docs = (doc.toSeq ++ focusedDocument().toSeq ++ buffers.open.toSeq)
+    val commandScriptOpt = docs
+      .find(_.isAmmoniteScript)
+      .map { ammScript => Future.fromTry(command(ammScript).toTry) }
+      .getOrElse {
         val msg =
-          if (path.toNIO.getFileName.toString.endsWith(".worksheet.sc"))
-            "Current document is a worksheet, not an Ammonite script"
-          else
-            "Current document is not an Ammonite script"
+          if (docs.isEmpty) "No Ammonite script is opened"
+          else "No open document is not an Ammonite script"
         scribe.error(msg)
         Future.failed(new Exception(msg))
-    }
+      }
 
     commandScriptOpt.flatMap {
       case (command, script) =>

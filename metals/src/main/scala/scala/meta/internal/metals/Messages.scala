@@ -482,11 +482,12 @@ object Messages {
 
   object ImportAmmoniteScript {
     val message: String = "Ammonite script detected."
+    val importAll: String = "Import scripts automatically"
     val doImport: String = "Import"
     val dismiss: String = "Dismiss"
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams(
-        List(doImport, dismiss)
+        List(importAll, doImport, dismiss)
           .map(new MessageActionItem(_))
           .asJava
       )
