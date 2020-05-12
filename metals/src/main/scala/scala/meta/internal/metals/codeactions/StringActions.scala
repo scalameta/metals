@@ -7,6 +7,7 @@ import org.eclipse.{lsp4j => l}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
+import scala.meta.internal.metals.Trees
 
 class StringActions(buffers: Buffers) extends CodeAction {
 
@@ -23,7 +24,8 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
     Future
       .successful {
-        path.toInputFromBuffers(buffers).tokenize.toOption match {
+        val input = path.toInputFromBuffers(buffers)
+        Trees.defaultDialect(input).tokenize.toOption match {
           case Some(tokens) =>
             tokens
               .filter(t =>
