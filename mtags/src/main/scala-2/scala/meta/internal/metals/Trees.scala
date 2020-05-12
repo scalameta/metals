@@ -73,3 +73,9 @@ final class Trees {
     }
   }
 }
+
+object Trees {
+
+  implicit val defaultDialect: Dialect = scala.meta.dialects.Scala213
+
+}

@@ -10,6 +10,7 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.xml.Node
+import scala.meta.internal.metals.Trees
 
 case class Digest(
     md5: String,
@@ -153,7 +154,7 @@ object Digest {
   ): Boolean = {
     try {
       val input = file.toInput
-      val tokens = input.tokenize.get
+      val tokens = Trees.defaultDialect(input).tokenize.get
       tokens.foreach {
         case token if token.isWhiteSpaceOrComment => // Do nothing
         case token =>

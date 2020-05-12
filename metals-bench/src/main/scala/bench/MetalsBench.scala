@@ -21,6 +21,7 @@ import scala.reflect.io.VirtualFile
 import tests.InputProperties
 import tests.Library
 import scala.tools.nsc.interactive.Global
+import scala.meta.internal.metals.Trees
 
 @State(Scope.Benchmark)
 class MetalsBench {
@@ -106,7 +107,7 @@ class MetalsBench {
   def scalametaParse(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       import scala.meta._
-      val tree = input.parse[Source].get
+      val tree = Trees.defaultDialect(input).parse[Source].get
     }
   }
 

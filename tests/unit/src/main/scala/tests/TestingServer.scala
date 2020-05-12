@@ -94,6 +94,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import com.google.gson.JsonElement
+import scala.meta.internal.metals.Trees
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -333,7 +334,7 @@ final class TestingServer(
       source <- workspaceSources()
       input = source.toInputFromBuffers(buffers)
       identifier = source.toTextDocumentIdentifier
-      token <- input.tokenize.get
+      token <- Trees.defaultDialect(input).tokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server.definitionResult(params).asJava.get()
@@ -1150,7 +1151,7 @@ final class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    input.tokenize.get.foreach { token =>
+    Trees.defaultDialect(input).tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
       val definition = server
         .definitionOrReferences(params, definitionOnly = true)

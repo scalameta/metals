@@ -19,6 +19,36 @@ class DefinitionCrossLspSuite
     }
   }
 
+  test("underscore") {
+    cleanDatabase()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${BuildInfo.scala213}"
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |object Main {
+           |  println("hello!")
+           |  val tests = new Test
+           |  tests.dummy()
+           |}
+           |/a/src/main/scala/a/Test.scala
+           |class Test{
+           |  val x = 100_000
+           |  def dummy() = x
+           |}
+           |""".stripMargin
+      )
+      _ = server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = server.didOpen("a/src/main/scala/a/Test.scala")
+      _ = server.assertReferenceDefinitionBijection()
+    } yield ()
+  }
+
   def basicDefinitionTest(scalaVersion: String): Future[Unit] = {
     cleanDatabase()
     for {

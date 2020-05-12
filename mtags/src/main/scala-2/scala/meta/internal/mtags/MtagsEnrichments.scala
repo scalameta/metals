@@ -17,9 +17,11 @@ import scala.meta.io.AbsolutePath
 import scala.{meta => m}
 import java.net.URI
 import scala.meta.XtensionTokenizeInputLike
+import scala.meta.internal.metals.Trees
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments extends CommonMtagsEnrichments {
+  import Trees.defaultDialect
 
   implicit class XtensionInputOffset(input: Input) {
     def toLanguage: Language = input match {
