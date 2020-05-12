@@ -18,8 +18,7 @@ final case class InitializationOptions(
     quickPickProvider: Boolean,
     slowTaskProvider: Boolean,
     statusBarProvider: String,
-    treeViewProvider: Boolean,
-    provideRangeFormatting: Boolean
+    treeViewProvider: Boolean
 ) {
   def this() =
     this(
@@ -36,8 +35,7 @@ final case class InitializationOptions(
       quickPickProvider = false,
       slowTaskProvider = false,
       statusBarProvider = "off",
-      treeViewProvider = false,
-      provideRangeFormatting = false
+      treeViewProvider = false
     )
   def doctorFormatIsJson: Boolean = doctorProvider == "json"
   def statusBarIsOn: Boolean = statusBarProvider == "on"
