@@ -1,109 +1,111 @@
 package scala.meta.internal.builds
 
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.MetalsQuickPickItem
-import scala.concurrent.Future
-import scala.meta.internal.metals.MetalsQuickPickParams
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsInputBoxParams
-import org.eclipse.lsp4j.ExecuteCommandParams
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.ClientCommands
-import java.net.URI
+import scala.concurrent.Future
 import scala.util.Try
-import scala.meta.internal.metals.StatusBar
-import coursierapi._
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsOpenWindowParams
-import scala.meta.internal.metals.JsonParser._
+
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsOpenWindowParams
+import scala.meta.internal.metals.MetalsQuickPickItem
+import scala.meta.internal.metals.MetalsQuickPickParams
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.Time
+import scala.meta.io.AbsolutePath
+
+import coursierapi._
+import org.eclipse.lsp4j.ExecuteCommandParams
 
 class NewProjectProvider(
     buildTools: BuildTools,
     client: MetalsLanguageClient,
     statusBar: StatusBar,
-    userConfig: () => UserConfiguration,
+    config: ClientConfiguration,
     time: Time,
     shell: ShellRunner,
-    icons: Icons
+    icons: Icons,
+    workspace: AbsolutePath
 )(implicit context: ExecutionContext) {
 
   private val templatesUrl =
     "https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
-  private val gitterDependency = Dependency
+  private val giterDependency = Dependency
     .of("org.foundweekends.giter8", "giter8_2.12", "0.12.0")
   // equal to cmd's: g8 playframework/play-scala-seed.g8 --name=../<<name>>
-  private val gitterMain = "giter8.Giter8"
+  private val giterMain = "giter8.Giter8"
 
-  lazy val allTemplatesFromWeb: Seq[MetalsQuickPickItem] = {
-    statusBar.trackBlockingTask("Fetching template information from Github") {
-      // Matches:
-      // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
-      //(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
-      val pattern = """\[(.+)\]\s*\(.+\)\s*\((.+)\)""".r
-      val all = for {
-        result <- Try(requests.get(templatesUrl)).toOption.toIterable
-        if result.statusCode == 200
-      } yield {
-        pattern.findAllIn(result.text).matchData.toList.collect {
-          case matching if matching.groupCount == 2 =>
-            MetalsQuickPickItem(
-              id = matching.group(1),
-              label = s"${icons.github} " + matching.group(1),
-              description = matching.group(2)
+  private val allTemplates = mutable.MutableList.empty[MetalsQuickPickItem]
+
+  def allTemplatesFromWeb: Seq[MetalsQuickPickItem] = synchronized {
+    if (allTemplates.nonEmpty) {
+      allTemplates.toSeq
+    } else {
+      statusBar.trackBlockingTask("Fetching template information from Github") {
+        // Matches:
+        // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
+        //(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
+        val pattern = """\[(.+)\]\s*\(.+\)\s*\((.+)\)""".r
+        val all = for {
+          result <- Try(requests.get(templatesUrl)).toOption.toIterable
+          _ = if (result.statusCode != 200)
+            client.showMessage(
+              NewScalaProject.templateDownloadFailed(result.statusMessage)
             )
+          if result.statusCode == 200
+        } yield {
+          pattern.findAllIn(result.text).matchData.toList.collect {
+            case matching if matching.groupCount == 2 =>
+              MetalsQuickPickItem(
+                id = matching.group(1),
+                label = s"${icons.github} " + matching.group(1),
+                description = matching.group(2)
+              )
+          }
         }
+        allTemplates ++= all.flatten
       }
-      NewProjectProvider.back +: all.flatten.toSeq
     }
+    NewProjectProvider.back +: allTemplates.toSeq
   }
 
-  def checkNew(existingDirectory: Option[AbsolutePath]): Future[Boolean] = {
-    val base = AbsolutePath(System.getProperty("user.home"))
+  def createNewProjectFromTemplate(): Future[Unit] = {
+    val base = workspace.parent
     val withTemplate = askForTemplate(
-      NewProjectProvider.defaultTemplates(icons)
+      NewProjectProvider.curatedTemplates(icons)
     )
-    val fullySpecified = if (existingDirectory.isDefined) {
-      withTemplate.mapOption { template =>
-        val Some(directory) = existingDirectory
-        Future.successful(
-          (template, directory.parent, Some(directory.filename))
-        )
+    withTemplate
+      .flatMapOption { template =>
+        askForPath(base).mapOptionInside { path => (template, path) }
       }
-    } else {
-      withTemplate
-        .flatMapOption { template =>
-          constructPath(base).mapOptionInside { path => (template, path) }
-        }
-        .flatMapOption {
-          case (template, path) =>
-            askForName(nameFromPath(template.id), NewScalaProject.enterName)
-              .map { name => Some((template, path, name)) }
-        }
-    }
-
-    fullySpecified.flatMap {
-      case Some((template, inputPath, Some(projectName))) =>
-        createNewProject(
-          inputPath,
-          template.label.replace(s"${icons.github} ", ""),
-          projectName,
-          existingDirectory.isDefined
-        )
-      // It's fine to just return if the user resigned
-      case _ => Future.successful(false)
-    }
+      .flatMapOption {
+        case (template, path) =>
+          askForName(nameFromPath(template.id), NewScalaProject.enterName)
+            .map { name => Some((template, path, name)) }
+      }
+      .flatMap {
+        case Some((template, inputPath, Some(projectName))) =>
+          createNewProject(
+            inputPath,
+            template.label.replace(s"${icons.github} ", ""),
+            projectName
+          )
+        // It's fine to just return if the user resigned
+        case _ => Future.successful(())
+      }
   }
 
   private def createNewProject(
       inputPath: AbsolutePath,
       template: String,
-      projectName: String,
-      createdLocally: Boolean
-  ): Future[Boolean] = {
+      projectName: String
+  ): Future[Unit] = {
     val projectPath = inputPath.resolve(projectName)
     val parent = projectPath.parent
     projectPath.createDirectories()
@@ -113,33 +115,28 @@ class NewProjectProvider(
     )
     shell
       .runJava(
-        gitterDependency,
-        gitterMain,
+        giterDependency,
+        giterMain,
         parent,
         command
       )
       .flatMap {
         case result if result == 0 =>
-          if (!createdLocally) {
-            askForWindow(projectPath.toURI).map(_ => false)
-          } else {
-            Future.successful(true)
-          }
+          askForWindow(projectPath)
         case _ =>
           Future.successful {
             client.showMessage(
               NewScalaProject
                 .creationFailed(template, parent.toString())
             )
-            false
           }
       }
   }
 
-  private def askForWindow(uri: URI): Future[Unit] = {
+  private def askForWindow(projectPath: AbsolutePath): Future[Unit] = {
     def openWindow(newWindow: Boolean) = {
       val params = MetalsOpenWindowParams(
-        uri.toString(),
+        projectPath.toURI.toString(),
         new java.lang.Boolean(newWindow)
       )
       val command = new ExecuteCommandParams(
@@ -150,16 +147,23 @@ class NewProjectProvider(
       )
       client.metalsExecuteClientCommand(command)
     }
-    client
-      .showMessageRequest(NewScalaProject.askForNewWindowParams())
-      .asScala
-      .map {
-        case msg if msg == NewScalaProject.no =>
-          openWindow(newWindow = true)
-        case msg if msg == NewScalaProject.yes =>
-          openWindow(newWindow = false)
-        case _ =>
+
+    if (config.isOpenNewWindowProvider()) {
+      client
+        .showMessageRequest(NewScalaProject.askForNewWindowParams())
+        .asScala
+        .map {
+          case msg if msg == NewScalaProject.no =>
+            openWindow(newWindow = false)
+          case msg if msg == NewScalaProject.yes =>
+            openWindow(newWindow = true)
+          case _ =>
+        }
+    } else {
+      Future.successful {
+        client.showMessage(NewScalaProject.newProjectCreated(projectPath))
       }
+    }
   }
 
   private def askForTemplate(
@@ -177,7 +181,7 @@ class NewProjectProvider(
         case kind if kind.itemId == NewProjectProvider.more.id =>
           askForTemplate(allTemplatesFromWeb)
         case kind if kind.itemId == NewProjectProvider.back.id =>
-          askForTemplate(NewProjectProvider.defaultTemplates(icons))
+          askForTemplate(NewProjectProvider.curatedTemplates(icons))
         case kind if kind.itemId == NewProjectProvider.custom.id =>
           askForName("", NewScalaProject.enterG8Template)
             .mapOptionInside { g8Path =>
@@ -200,24 +204,29 @@ class NewProjectProvider(
       default: String,
       prompt: String
   ): Future[Option[String]] = {
-    client
-      .metalsInputBox(
-        MetalsInputBoxParams(
-          prompt = prompt,
-          value = default
+    if (config.isInputBoxEnabled()) {
+      client
+        .metalsInputBox(
+          MetalsInputBoxParams(
+            prompt = prompt,
+            value = default
+          )
         )
-      )
-      .asScala
-      .flatMap {
-        case name if !name.cancelled && name.value.nonEmpty =>
-          Future.successful(Some(name.value))
-        case name if name.cancelled => Future.successful(None)
-        // reask if empty
-        case _ => askForName(default, prompt)
-      }
+        .asScala
+        .flatMap {
+          case name if !name.cancelled && name.value.nonEmpty =>
+            Future.successful(Some(name.value))
+          case name if name.cancelled =>
+            Future.successful(None)
+          // reask if empty
+          case _ => askForName(default, prompt)
+        }
+    } else {
+      Future.successful(Some(default))
+    }
   }
 
-  private def constructPath(
+  private def askForPath(
       from: AbsolutePath
   ): Future[Option[AbsolutePath]] = {
     val paths = from.list.toList
@@ -242,13 +251,14 @@ class NewProjectProvider(
       )
       .asScala
       .flatMap {
-        case path if path.cancelled => Future.successful(None)
+        case path if path.cancelled =>
+          Future.successful(None)
         case path if path.itemId == currentDir.id =>
           Future.successful(Some(from))
         case path if path.itemId == parentDir.id =>
-          constructPath(from.parent)
+          askForPath(from.parent)
         case path =>
-          constructPath(from.resolve(path.itemId))
+          askForPath(from.resolve(path.itemId))
       }
   }
 
@@ -260,26 +270,25 @@ class NewProjectProvider(
 
 object NewProjectProvider {
 
-  val custom = MetalsQuickPickItem(
+  val custom: MetalsQuickPickItem = MetalsQuickPickItem(
     id = "custom",
     label = "Custom",
     description = "Enter template manually"
   )
 
-  val more = MetalsQuickPickItem(
+  val more: MetalsQuickPickItem = MetalsQuickPickItem(
     id = "more",
     label = "Discover more...",
     description = "From github.com/foundweekends/giter8/wiki/giter8-templates"
   )
 
-  val back = MetalsQuickPickItem(
+  val back: MetalsQuickPickItem = MetalsQuickPickItem(
     id = "back",
     label = "Back",
     description = "Back to curated Metals templates"
   )
 
-  // TODO - templates for maven/gradle/mill
-  def defaultTemplates(icons: Icons) = {
+  def curatedTemplates(icons: Icons): Seq[MetalsQuickPickItem] = {
     Seq(
       MetalsQuickPickItem(
         id = "scala/hello-world.g8",
@@ -324,7 +333,22 @@ object NewProjectProvider {
       MetalsQuickPickItem(
         id = "http4s/http4s.g8",
         label = "http4s/http4s.g8",
-        description = "http4s services"
+        description = "Simple http4s example"
+      ),
+      MetalsQuickPickItem(
+        id = "scalameta/mill-scala-seed.g8",
+        label = "scalameta/mill-scala-seed.g8",
+        description = "A Scala template for the Mill build tool"
+      ),
+      MetalsQuickPickItem(
+        id = "scalameta/gradle-scala-seed.g8",
+        label = "scalameta/gradle-scala-seed.g8",
+        description = "A Scala template for the Gradle build tool"
+      ),
+      MetalsQuickPickItem(
+        id = "VirtusLab/akka-http-kubernetes.g8",
+        label = "VirtusLab/akka-http-kubernetes.g8",
+        description = "Akka HTTP application using Kubernetes"
       )
     ).map { item =>
       item.copy(label = s"${icons.github} " + item.label)

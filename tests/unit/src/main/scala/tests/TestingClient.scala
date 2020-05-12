@@ -76,7 +76,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: ShowMessageRequestParams => None
   }
   var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = {
-    _: MetalsInputBoxParams => None
+    params: MetalsInputBoxParams => None
   }
 
   private val refreshCount = new AtomicInteger

@@ -1,20 +1,22 @@
 package scala.meta.internal.builds
 
 import scala.concurrent.Future
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.process.ProcessHandler
-import com.zaxxer.nuprocess.NuProcessBuilder
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.process.ExitCodes
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.MetalsSlowTaskParams
-import scala.meta.internal.metals.JavaBinary
+
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.JavaBinary
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessHandler
+import scala.meta.io.AbsolutePath
+
+import com.zaxxer.nuprocess.NuProcessBuilder
 import coursierapi._
 
 class ShellRunner(
@@ -55,7 +57,7 @@ class ShellRunner(
   }
 
   def run(
-      running: String,
+      commandRun: String,
       args: List[String],
       directory: AbsolutePath,
       redirectErrorOutput: Boolean,
@@ -79,23 +81,23 @@ class ShellRunner(
     // VS Code versions the message is hidden after a delay.
     val taskResponse =
       languageClient.metalsSlowTask(
-        new MetalsSlowTaskParams(running)
+        new MetalsSlowTaskParams(commandRun)
       )
     handler.response = Some(taskResponse)
     val processFuture = handler.completeProcess.future.map { result =>
       taskResponse.cancel(false)
       scribe.info(
-        s"time: ran '$running' in $elapsed"
+        s"time: ran '$commandRun' in $elapsed"
       )
       result
     }
     statusBar.trackFuture(
-      s"Running $running bloopInstall",
+      s"Running '$commandRun'",
       processFuture
     )
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
-        scribe.info("user cancelled build import")
+        scribe.info(s"user cancelled $commandRun")
         handler.completeProcess.trySuccess(ExitCodes.Cancel)
         ProcessHandler.destroyProcess(runningProcess)
       }

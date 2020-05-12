@@ -527,11 +527,19 @@ object Messages {
       MessageType.Error,
       s"Could not create $what in $where"
     )
-
+    def templateDownloadFailed(why: String) = new MessageParams(
+      MessageType.Error,
+      s"Failed to download templates from the web.\n" + why
+    )
     def yes = new MessageActionItem("Yes")
     def no = new MessageActionItem("No")
     def newWindowMessage =
-      "Do you want to open the new project in the current window?"
+      "Do you want to open the new project in a new window?"
+    def newProjectCreated(path: AbsolutePath) = new MessageParams(
+      MessageType.Info,
+      s"New project has been in created in $path"
+    )
+
     def askForNewWindowParams(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(newWindowMessage)
@@ -549,12 +557,12 @@ object Messages {
 
   object NoBuildTool {
 
-    def newProject =
+    def newProject: String =
       "No build tool detected in the current folder." +
         " Do you want to create a new project?"
 
-    def inCurrent = new MessageActionItem("In current folder")
-    def newWindow = new MessageActionItem("In new folder")
+    def inCurrent = new MessageActionItem("In the current directory")
+    def newWindow = new MessageActionItem("In a new directory")
     def dismiss = new MessageActionItem("Not now")
 
     def noBuildToolAskForTemplate(): ShowMessageRequestParams = {

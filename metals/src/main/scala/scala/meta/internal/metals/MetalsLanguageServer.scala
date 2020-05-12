@@ -26,8 +26,11 @@ import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -64,17 +67,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
-
-import java.{util => ju}
-import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-import scala.meta.internal.implementation.Supermethods
-import scala.meta.internal.metals.codelenses.RunTestCodeLens
-import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
-import scala.meta.internal.remotels.RemoteLanguageServer
-import scala.concurrent.duration._
-import scala.meta.internal.builds.NewProjectProvider
-import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.builds.BloopInstall
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -339,10 +331,11 @@ class MetalsLanguageServer(
       buildTools,
       languageClient,
       statusBar,
-      () => userConfig,
+      clientConfig,
       time,
       shellRunner,
-      initialConfig.icons
+      initialConfig.icons,
+      workspace
     )
     bloopServers = new BloopServers(
       workspace,
@@ -1412,7 +1405,7 @@ class MetalsLanguageServer(
       case ServerCommands.StopAmmoniteBuildServer() =>
         ammonite.stop()
       case ServerCommands.NewScalaProject() =>
-        newProjectProvider.checkNew(existingDirectory = None).asJavaObject
+        newProjectProvider.createNewProjectFromTemplate().asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

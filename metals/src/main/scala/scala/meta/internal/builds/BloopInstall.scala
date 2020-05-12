@@ -5,29 +5,18 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.builds.BuildTool
-import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.Digest.Status
-import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.process.ExitCodes
-import scala.meta.internal.process.ProcessHandler
-import scala.meta.io.AbsolutePath
-
-import com.zaxxer.nuprocess.NuProcessBuilder
-import org.eclipse.lsp4j.MessageActionItem
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.meta.internal.builds.Digest.Status
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.process.ExitCodes
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Confirmation
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.process.ExitCodes
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.MessageActionItem
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.

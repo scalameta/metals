@@ -131,7 +131,7 @@ object ClientCommands {
        |Example: 
        |```json
        |{
-       |  "uri": "file://path/to/Definition.scala",
+       |  "uri": "file://path/to/directory",
        |  "newWindow": true
        |}
        |```

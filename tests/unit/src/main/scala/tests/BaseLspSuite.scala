@@ -9,9 +9,9 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
@@ -41,8 +41,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   var client: TestingClient = _
   var workspace: AbsolutePath = _
 
-  protected def experimentalCapabilities
-      : Option[ClientExperimentalCapabilities] = None
+  protected def initializationOptions: Option[InitializationOptions] = None
 
   override def afterAll(): Unit = {
     if (server != null) {
@@ -76,7 +75,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       bspGlobalDirectories,
       sh,
       time,
-      experimentalCapabilities
+      initializationOptions
     )(ex)
     server.server.userConfig = this.userConfig
   }

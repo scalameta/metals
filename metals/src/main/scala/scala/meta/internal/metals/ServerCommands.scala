@@ -223,7 +223,9 @@ object ServerCommands {
   val NewScalaProject = new Command(
     "new-scala-project",
     "New Scala Project",
-    """Create a new Scala project, works with sbt"""
+    """|Create a new Scala project using one of the available g8 templates. 
+       |This includes simple projects as well as samples for most of the popular Scala frameworks.
+       |""".stripMargin
   )
 
   /**

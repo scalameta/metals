@@ -688,6 +688,7 @@ The currently available settings for `InitializationOptions` are listed below.
       "slowTaskProvider": boolean,
       "statusBarProvider": "on" | "off" | "show-message" | "log-message",
       "treeViewProvider": boolean
+      "openNewWindowProvider": boolean
     }
 ```
 
@@ -708,6 +709,7 @@ to be set via `InitializationOptions`, which is preferable.
       "slowTaskProvider": boolean,
       "statusBarProvider": boolean,
       "treeViewProvider": boolean
+      "openNewWindowProvider": boolean
     }
 ```
 
