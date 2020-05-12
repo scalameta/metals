@@ -8,12 +8,14 @@ import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
 final class CodeActionProvider(
-    compilers: Compilers
+    compilers: Compilers,
+    buffers: Buffers
 ) {
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
-    new CreateNewSymbol()
+    new CreateNewSymbol(),
+    new StringActions(buffers)
   )
 
   def codeActions(
