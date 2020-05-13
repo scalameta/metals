@@ -168,7 +168,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.1.5"
-  val scalafmt = "2.4.2"
+  val scalafmt = "2.5.2"
   val munit = "0.7.4"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
