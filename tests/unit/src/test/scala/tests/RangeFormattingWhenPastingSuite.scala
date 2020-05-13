@@ -3,6 +3,7 @@ package tests
 import munit.Location
 
 class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
+  private val indent = "  "
 
   check(
     "lines",
@@ -301,6 +302,29 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |}""".stripMargin
   )
 
+  check(
+    "pasting-after-interpolation",
+    s"""
+       |object Main {
+       |  val str = s'''
+       |               |ok'''.stripMargin
+       |  @@
+       |}""".stripMargin,
+    s"""
+       |  val other = '''
+       |              |  some text
+       |              |'''.stripMargin""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = s'''
+       |               |ok'''.stripMargin
+       |$indent
+       |  val other = '''
+       |              |  some text
+       |              |'''.stripMargin
+       |}""".stripMargin
+  )
+
   def check(
       name: String,
       testCase: String,
@@ -327,7 +351,7 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
           "a/src/main/scala/a/Main.scala",
           testCode, // bez @@
           expected,
-          paste,
+          unmangle(paste),
           workspace
         )
       } yield ()

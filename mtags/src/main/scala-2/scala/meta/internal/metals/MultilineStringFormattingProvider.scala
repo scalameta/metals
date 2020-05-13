@@ -142,7 +142,12 @@ object MultilineStringFormattingProvider {
       tokens.zipWithIndex
         .exists(
           shouldFormatMultiString(sourceText, tokens, startPos, endPos) orElse
-            shouldFormatInterpolationString(sourceText, tokens, startPos) orElse {
+            shouldFormatInterpolationString(
+              sourceText,
+              tokens,
+              startPos,
+              endPos
+            ) orElse {
             case _ => false
           }
         )
@@ -164,17 +169,18 @@ object MultilineStringFormattingProvider {
   private def shouldFormatInterpolationString(
       sourceText: String,
       tokens: Tokens,
-      start: StartPosition
+      start: StartPosition,
+      endPosition: EndPosition
   ): PartialFunction[(Token, Int), Boolean] = {
     case (token: Interpolation.Start, index: Int)
-        if token.start < start.start => {
+        if token.pos.start <= start.start => {
       var endIndex = index + 1
       while (!tokens(endIndex)
           .isInstanceOf[Interpolation.End]) endIndex += 1
       isMultilineString(sourceText, token) && hasStripMarginSuffix(
         endIndex,
         tokens
-      )
+      ) && tokens(endIndex).pos.end > endPosition.end
     }
   }
 
