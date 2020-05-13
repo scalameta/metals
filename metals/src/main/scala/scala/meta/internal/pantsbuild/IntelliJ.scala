@@ -75,6 +75,8 @@ object IntelliJ {
     "${V.bloopVersion}"
   ],
   "pantsTargets": ${targetsJson.toString},
+  "fastpassVersion": "${V.metalsVersion}",
+  "fastpassProjectName": "${project.name}",
   "X-detectExternalProjectFiles": false
 }
 """
