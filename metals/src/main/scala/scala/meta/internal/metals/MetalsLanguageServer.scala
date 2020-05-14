@@ -569,8 +569,9 @@ class MetalsLanguageServer(
         capabilities.setCodeActionProvider(true)
       }
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
-      capabilities.setExperimental(MetalsExperimental())
-      new InitializeResult(capabilities)
+
+      val serverInfo = new ServerInfo("Metals", BuildInfo.metalsVersion)
+      new InitializeResult(capabilities, serverInfo)
     }).asJava
   }
 
