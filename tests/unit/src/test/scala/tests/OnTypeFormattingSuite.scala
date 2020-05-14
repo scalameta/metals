@@ -291,6 +291,23 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
+    "after-interpolation-string",
+    s"""
+       |object Main {
+       |  val str = s'''
+       |               |word'''.stripMargin@@
+       |}
+       |""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = s'''
+       |               |word'''.stripMargin
+       |$indent
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "real-pipe",
     s"""
        |object Main {
@@ -307,6 +324,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |}
        |""".stripMargin
   )
+
   check(
     "string-two-lines",
     s"""
