@@ -1,7 +1,12 @@
 package scala.meta.internal.mtags
 
+import java.io.IOException
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{FileVisitResult, FileVisitor, Files, Path}
+import java.util
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
@@ -69,14 +74,44 @@ final class OnDemandSymbolIndex(
     try {
       if (sourceJars.addEntry(jar)) {
         FileIO.withJarFileSystem(jar, create = false) { root =>
-          root.listRecursive.foreach {
-            case source if source.isScala =>
-              try addSourceFile(source, None)
-              catch {
-                case NonFatal(e) => onError.lift(IndexError(source, e))
+          Files.walkFileTree(
+            root.toNIO,
+            new FileVisitor[Path] {
+              private val visitedPaths = new util.HashSet[Path]()
+              override def preVisitDirectory(
+                  dir: Path,
+                  attrs: BasicFileAttributes
+              ): FileVisitResult =
+                if (visitedPaths.add(dir)) FileVisitResult.CONTINUE
+                else FileVisitResult.SKIP_SUBTREE
+
+              override def visitFile(
+                  file: Path,
+                  attrs: BasicFileAttributes
+              ): FileVisitResult = {
+                val source = AbsolutePath(file)
+                if (source.isScala && visitedPaths.add(file)) {
+                  try addSourceFile(source, None)
+                  catch {
+                    case NonFatal(e) => onError.lift(IndexError(source, e))
+                  }
+                  FileVisitResult.CONTINUE
+                } else FileVisitResult.CONTINUE
               }
-            case _ =>
-          }
+
+              override def visitFileFailed(
+                  file: Path,
+                  exc: IOException
+              ): FileVisitResult =
+                FileVisitResult.CONTINUE
+
+              override def postVisitDirectory(
+                  dir: Path,
+                  exc: IOException
+              ): FileVisitResult =
+                FileVisitResult.CONTINUE
+            }
+          )
         }
       }
     } catch {
