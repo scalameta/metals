@@ -567,7 +567,6 @@ class MetalsLanguageServer(
         capabilities.setCodeActionProvider(true)
       }
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
-      capabilities.setExperimental(MetalsExperimental())
       new InitializeResult(capabilities)
     }).asJava
   }
