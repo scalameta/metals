@@ -607,10 +607,17 @@ final class TestingServer(
       query: String,
       expected: String,
       autoIndent: String,
+      replaceWith: String,
       root: AbsolutePath = workspace
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      (text, params) <- onTypeParams(filename, query, root, autoIndent)
+      (text, params) <- onTypeParams(
+        filename,
+        query,
+        root,
+        autoIndent,
+        replaceWith
+      )
       multiline <- server.onTypeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -805,22 +812,26 @@ final class TestingServer(
       filename: String,
       original: String,
       root: AbsolutePath,
-      autoIndent: String
+      autoIndent: String,
+      replaceWith: String
   ): Future[(String, DocumentOnTypeFormattingParams)] = {
     positionFromString(
       filename,
       original,
       root,
-      replaceWith = "\n" + autoIndent
+      replaceWith =
+        if (replaceWith == "\n") replaceWith + autoIndent else replaceWith
     ) {
       case (text, textId, start) =>
-        start.setLine(start.getLine() + 1) // + newline
-        start.setCharacter(autoIndent.size)
+        if (replaceWith == "\n") {
+          start.setLine(start.getLine() + 1) // + newline
+          start.setCharacter(autoIndent.size)
+        }
         val params = new DocumentOnTypeFormattingParams(
           textId,
           new FormattingOptions,
           start,
-          "\n"
+          replaceWith
         )
         (text, params)
     }
