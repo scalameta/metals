@@ -72,7 +72,11 @@ final case class MetalsServerConfig(
     ),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default,
-    compilers: PresentationCompilerConfigImpl = CompilersConfig()
+    compilers: PresentationCompilerConfigImpl = CompilersConfig(),
+    allowMultilineStringFormatting: Boolean = MetalsServerConfig.binaryOption(
+      "metals.allow-multiline-string-formatting",
+      default = true
+    )
 ) {
   override def toString: String =
     List[String](
