@@ -30,10 +30,8 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
 
   protected def logDapTraces(): Unit = {
     scribe.warn("The DAP test failed, printing the traces")
-    scribe.warn(dapClient.toString() + ":")
-    scribe.info(dapClient.readText)
-    scribe.warn(dapServer.toString() + ":")
-    scribe.info(dapServer.readText)
+    scribe.warn(dapClient.toString() + ":\n" + dapClient.readText)
+    scribe.warn(dapServer.toString() + ":\n" + dapServer.readText)
   }
 
   override def munitTestTransforms: List[TestTransform] =

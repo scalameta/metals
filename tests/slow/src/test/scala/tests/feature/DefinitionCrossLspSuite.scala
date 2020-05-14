@@ -31,12 +31,15 @@ class DefinitionCrossLspSuite
            |  }
            |}
            |/a/src/main/scala/a/Main.scala
-           |object Main {
-           |  println("hello!")
+           |package a
+           |
+           |class Main {
            |  val tests = new Test
            |  tests.dummy()
            |}
            |/a/src/main/scala/a/Test.scala
+           |package a
+           |
            |class Test{
            |  val x = 100_000
            |  def dummy() = x
