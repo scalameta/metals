@@ -406,7 +406,7 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.9",
       // For exporting Pants builds.
-      "com.lihaoyi" %% "ujson" % "1.0.0",
+      "com.lihaoyi" %% "ujson" % "1.1.0",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // For remote language server
