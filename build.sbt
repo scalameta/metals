@@ -370,7 +370,7 @@ lazy val metals = project
       // for file watching
       "io.methvin" % "directory-watcher" % "0.9.9",
       // for http client
-      "io.undertow" % "undertow-core" % "2.0.30.Final",
+      "io.undertow" % "undertow-core" % "2.1.0.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "6.4.2",
