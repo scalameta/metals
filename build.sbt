@@ -373,7 +373,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.0.30.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.3.3",
+      "org.flywaydb" % "flyway-core" % "6.4.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.0",
