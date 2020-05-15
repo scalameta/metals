@@ -52,30 +52,30 @@ trait AutoImports { this: MetalsGlobal =>
     findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
-        val enclosingPackage = lastVisitedParentTrees.collectFirst {
-          case pkg: PackageDef if notPackageObject(pkg) => pkg
-        }
-        enclosingPackage match {
-          case Some(pkg)
-              if pkg.symbol != rootMirror.EmptyPackage ||
-                pkg.stats.headOption.exists(_.isInstanceOf[Import]) =>
-            val lastImport = pkg.stats
+        val forScalaSource =
+          for {
+            pkg <- lastVisitedParentTrees.collectFirst {
+              case pkg: PackageDef if notPackageObject(pkg) => pkg
+            }
+            if pkg.symbol != rootMirror.EmptyPackage ||
+              pkg.stats.headOption.exists(_.isInstanceOf[Import])
+          } yield {
+            val lastImportOpt = pkg.stats
               .takeWhile(_.isInstanceOf[Import])
               .lastOption
-
-            val padTop = lastImport.isEmpty
-            val lastImportOrPkg = lastImport.getOrElse(pkg.pid)
-
-            Some(
-              new AutoImportPosition(
-                pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
-                text,
-                padTop
-              )
+            val padTop = lastImportOpt.isEmpty
+            val lastImportOrPkg = lastImportOpt.getOrElse(pkg.pid)
+            new AutoImportPosition(
+              pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
+              text,
+              padTop
             )
-          case _ =>
-            Some(AutoImportPosition(0, 0, padTop = false))
-        }
+          }
+
+        def fileStart = AutoImportPosition(0, 0, padTop = false)
+
+        forScalaSource
+          .orElse(Some(fileStart))
     }
   }
 
