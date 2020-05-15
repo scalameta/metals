@@ -169,7 +169,7 @@ lazy val V = new {
   val mavenBloop = bloop
   val mdoc = "2.1.5"
   val scalafmt = "2.5.2"
-  val munit = "0.7.4"
+  val munit = "0.7.7"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
@@ -200,7 +200,7 @@ lazy val V = new {
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-11"
-  val coursierInterfaces = "0.0.21"
+  val coursierInterfaces = "0.0.22"
 }
 
 val genyVersion = Def.setting {
@@ -296,7 +296,7 @@ val mtagsSettings = List(
     ),
     if3 = List(
       "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.10.4",
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
@@ -368,12 +368,12 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.10",
       // for file watching
-      "io.methvin" % "directory-watcher" % "0.9.9",
+      "io.methvin" % "directory-watcher" % "0.9.10",
       // for http client
-      "io.undertow" % "undertow-core" % "2.0.30.Final",
+      "io.undertow" % "undertow-core" % "2.1.0.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.3.3",
+      "org.flywaydb" % "flyway-core" % "6.4.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.0",
@@ -406,11 +406,11 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.9",
       // For exporting Pants builds.
-      "com.lihaoyi" %% "ujson" % "1.0.0",
+      "com.lihaoyi" %% "ujson" % "1.1.0",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.5.1",
+      "com.lihaoyi" %% "requests" % "0.5.2",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
