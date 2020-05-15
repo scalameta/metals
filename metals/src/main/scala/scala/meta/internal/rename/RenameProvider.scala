@@ -35,6 +35,7 @@ import scala.meta.pc.CancelToken
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.ClientConfiguration
+import ch.epfl.scala.bsp4j.StatusCode
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -77,105 +78,121 @@ final class RenameProvider(
       params: RenameParams,
       token: CancelToken
   ): Future[WorkspaceEdit] = {
-    if (!compilations.currentlyCompiling.isEmpty) {
-      client.showMessage(isCompiling)
-      Future.successful(new WorkspaceEdit())
-    } else {
-      val source = params.getTextDocument.getUri.toAbsolutePath
-      definitionProvider.definition(source, params, token).map { definition =>
-        val textParams = new TextDocumentPositionParams(
-          params.getTextDocument(),
-          params.getPosition()
-        )
-
-        val symbolOccurrence =
-          definitionProvider.symbolOccurrence(source, textParams.getPosition)
-
-        val suggestedName = params.getNewName()
-        val newName =
-          if (suggestedName.charAt(0) == '`')
-            suggestedName.substring(1, suggestedName.length() - 1)
-          else suggestedName
-
-        def includeSynthetic(syn: Synthetic) = {
-          syn.tree match {
-            case SelectTree(_, id) =>
-              id.exists(_.symbol.desc.name.toString == "apply")
-            case _ => false
-          }
-        }
-
-        val allReferences = for {
-          (occurence, semanticDb) <- symbolOccurrence.toIterable
-          definitionLoc <- definition.locations.asScala.headOption.toIterable
-          definitionPath = definitionLoc.getUri().toAbsolutePath
-          if canRenameSymbol(occurence.symbol, Option(newName)) &&
-            isWorkspaceSymbol(occurence.symbol, definitionPath)
-          parentSymbols = implementationProvider
-            .topMethodParents(occurence.symbol, semanticDb)
-          txtParams <- {
-            if (parentSymbols.isEmpty) List(textParams)
-            else parentSymbols.map(toTextParams)
-          }
-          isLocal = occurence.symbol.isLocal
-          currentReferences = referenceProvider
-            .references(
-              // we can't get definition by name for local symbols
-              toReferenceParams(txtParams, includeDeclaration = isLocal),
-              canSkipExactMatchCheck = false,
-              includeSynthetics = includeSynthetic
-            )
-            .locations
-          definitionLocation = {
-            if (parentSymbols.isEmpty)
-              definition.locations.asScala
-                .filter(_.getUri().isScalaFilename)
-            else parentSymbols
-          }
-          companionRefs = companionReferences(occurence.symbol)
-          implReferences = implementations(
-            txtParams,
-            !occurence.symbol.desc.isType
-          )
-          loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
-        } yield loc
-
-        def isOccurrence(fn: String => Boolean): Boolean = {
-          symbolOccurrence.exists {
-            case (occ, _) => fn(occ.symbol)
-          }
-        }
-
-        val allChanges = for {
-          (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
-        } yield {
-          val textEdits = for (loc <- locs) yield {
-            textEdit(isOccurrence, loc, newName)
-          }
-          Seq(uri.toAbsolutePath -> textEdits.toList)
-        }
-        val fileChanges = allChanges.flatten.toMap
-        val shouldRenameInBackground =
-          !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.initialConfig.renameFileThreshold
-        val (openedEdits, closedEdits) =
-          if (shouldRenameInBackground) {
-            if (clientConfig.isOpenFilesOnRenameProvider) {
-              client.showMessage(fileThreshold(fileChanges.keySet.size))
-            }
-            fileChanges.partition {
-              case (path, _) =>
-                buffers.contains(path)
-            }
+    def compilationFinishedSuccessfully(
+        source: AbsolutePath
+    ): Future[Boolean] = {
+      if (compilations.currentlyCompiling.isEmpty) {
+        Future(true)
+      } else {
+        compilations.cascadeCompileFiles(Seq(source)).map { compilationResult =>
+          if (compilationResult.getStatusCode() == StatusCode.OK) {
+            true
           } else {
-            (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+            false
+          }
+        }
+      }
+    }
+    val source = params.getTextDocument.getUri.toAbsolutePath
+    compilationFinishedSuccessfully(source).flatMap { compilationSucceeded =>
+      if (!compilationSucceeded) {
+        Future.successful(new WorkspaceEdit())
+      } else {
+        definitionProvider.definition(source, params, token).map { definition =>
+          val textParams = new TextDocumentPositionParams(
+            params.getTextDocument(),
+            params.getPosition()
+          )
+
+          val symbolOccurrence =
+            definitionProvider.symbolOccurrence(source, textParams.getPosition)
+
+          val suggestedName = params.getNewName()
+          val newName =
+            if (suggestedName.charAt(0) == '`')
+              suggestedName.substring(1, suggestedName.length() - 1)
+            else suggestedName
+
+          def includeSynthetic(syn: Synthetic) = {
+            syn.tree match {
+              case SelectTree(_, id) =>
+                id.exists(_.symbol.desc.name.toString == "apply")
+              case _ => false
+            }
           }
 
-        awaitingSave.add(() => changeClosedFiles(closedEdits))
+          val allReferences = for {
+            (occurence, semanticDb) <- symbolOccurrence.toIterable
+            definitionLoc <- definition.locations.asScala.headOption.toIterable
+            definitionPath = definitionLoc.getUri().toAbsolutePath
+            if canRenameSymbol(occurence.symbol, Option(newName)) &&
+              isWorkspaceSymbol(occurence.symbol, definitionPath)
+            parentSymbols = implementationProvider
+              .topMethodParents(occurence.symbol, semanticDb)
+            txtParams <- {
+              if (parentSymbols.isEmpty) List(textParams)
+              else parentSymbols.map(toTextParams)
+            }
+            isLocal = occurence.symbol.isLocal
+            currentReferences = referenceProvider
+              .references(
+                // we can't get definition by name for local symbols
+                toReferenceParams(txtParams, includeDeclaration = isLocal),
+                canSkipExactMatchCheck = false,
+                includeSynthetics = includeSynthetic
+              )
+              .locations
+            definitionLocation = {
+              if (parentSymbols.isEmpty)
+                definition.locations.asScala
+                  .filter(_.getUri().isScalaFilename)
+              else parentSymbols
+            }
+            companionRefs = companionReferences(occurence.symbol)
+            implReferences = implementations(
+              txtParams,
+              !occurence.symbol.desc.isType
+            )
+            loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
+          } yield loc
 
-        val edits = documentEdits(openedEdits)
-        val renames =
-          fileRenames(isOccurrence, fileChanges.keySet, newName)
-        new WorkspaceEdit((edits ++ renames).asJava)
+          def isOccurrence(fn: String => Boolean): Boolean = {
+            symbolOccurrence.exists {
+              case (occ, _) => fn(occ.symbol)
+            }
+          }
+
+          val allChanges = for {
+            (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
+          } yield {
+            val textEdits = for (loc <- locs) yield {
+              textEdit(isOccurrence, loc, newName)
+            }
+            Seq(uri.toAbsolutePath -> textEdits.toList)
+          }
+          val fileChanges = allChanges.flatten.toMap
+          val shouldRenameInBackground =
+            !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.initialConfig.renameFileThreshold
+          val (openedEdits, closedEdits) =
+            if (shouldRenameInBackground) {
+              if (clientConfig.isOpenFilesOnRenameProvider) {
+                client.showMessage(fileThreshold(fileChanges.keySet.size))
+              }
+              fileChanges.partition {
+                case (path, _) =>
+                  buffers.contains(path)
+              }
+            } else {
+              (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+            }
+
+          awaitingSave.add(() => changeClosedFiles(closedEdits))
+
+          val edits = documentEdits(openedEdits)
+          val renames =
+            fileRenames(isOccurrence, fileChanges.keySet, newName)
+          new WorkspaceEdit((edits ++ renames).asJava)
+        }
       }
     }
   }
