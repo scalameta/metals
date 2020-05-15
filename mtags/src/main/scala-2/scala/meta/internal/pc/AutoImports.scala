@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.reflect.internal.FatalError
 
 trait AutoImports { this: MetalsGlobal =>
@@ -52,7 +53,7 @@ trait AutoImports { this: MetalsGlobal =>
     findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
-        val forScalaSource =
+        def forScalaSource =
           for {
             pkg <- lastVisitedParentTrees.collectFirst {
               case pkg: PackageDef if notPackageObject(pkg) => pkg
@@ -72,9 +73,33 @@ trait AutoImports { this: MetalsGlobal =>
             )
           }
 
+        def forAmmoniteScript =
+          for {
+            obj <- lastVisitedParentTrees.collectFirst {
+              case mod: ModuleDef => mod
+            }
+          } yield {
+            val lastImportOpt = obj.impl.body.iterator
+              .dropWhile {
+                case d: DefDef => d.name.decoded == "<init>"
+                case _ => false
+              }
+              .takeWhile(_.isInstanceOf[Import])
+              .lastOption
+            val lastImportLine = lastImportOpt
+              .map(_.pos.focusEnd.line)
+              .getOrElse(0) // if no previous import, add the new one at the top
+            new AutoImportPosition(
+              pos.source.lineToOffset(lastImportLine),
+              text,
+              padTop = false
+            )
+          }
+
         def fileStart = AutoImportPosition(0, 0, padTop = false)
 
-        forScalaSource
+        (if (pos.source.path.endsWith(".sc.scala")) forAmmoniteScript else None)
+          .orElse(forScalaSource)
           .orElse(Some(fileStart))
     }
   }

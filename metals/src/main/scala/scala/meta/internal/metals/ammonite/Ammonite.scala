@@ -292,7 +292,12 @@ final class Ammonite(
     generatedScalaPath(targetId, source)
       .map { scalaPath =>
         val scInput = source.toInputFromBuffers(buffers)
-        val input = scalaPath.toInput
+        val input = {
+          val input0 = scalaPath.toInput
+          // ensuring the path ends with ".sc.scala" so that the PC has a way to know
+          // what we're giving it originates from an Ammonite script
+          input0.copy(path = input0.path.stripSuffix(".scala") + ".sc.scala")
+        }
 
         /*
 
