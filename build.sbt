@@ -199,7 +199,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
-  val coursier = "2.0.0-RC6-11"
+  val coursier = "2.0.0-RC6-16"
   val coursierInterfaces = "0.0.22"
 }
 
