@@ -14,6 +14,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.process.ProcessHandler
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.metals.Messages._
+import org.eclipse.lsp4j.MessageActionItem
+import scala.meta.internal.semver.SemVer
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
@@ -166,6 +168,15 @@ final class BloopInstall(
     }
   }
 
+  def checkForChosenBuildTool(
+      buildTools: List[BuildTool]
+  ): Future[Option[BuildTool]] =
+    tables.buildTool.selectedBuildTool match {
+      case Some(chosen) =>
+        Future(buildTools.find(_.executableName == chosen))
+      case None => requestBuildToolChoice(buildTools)
+    }
+
   private def persistChecksumStatus(
       status: Status,
       buildTool: BuildTool
@@ -201,4 +212,38 @@ final class BloopInstall(
       }
   }
 
+  private def requestBuildToolChoice(
+      buildTools: List[BuildTool]
+  ): Future[Option[BuildTool]] = {
+    languageClient
+      .showMessageRequest(ChooseBuildTool.params(buildTools))
+      .asScala
+      .map { choice =>
+        val selectedBuildTool =
+          buildTools.find(buildTool =>
+            new MessageActionItem(buildTool.executableName) == choice
+          )
+        selectedBuildTool match {
+          case Some(buildTool) => {
+            val isCompatibleVersion = SemVer.isCompatibleVersion(
+              buildTool.minimumVersion,
+              buildTool.version
+            )
+            if (isCompatibleVersion) {
+              tables.buildTool.chooseBuildTool(choice.getTitle)
+              Some(buildTool)
+            } else {
+              scribe.warn(
+                s"Unsupported $buildTool version ${buildTool.version}"
+              )
+              languageClient.showMessage(
+                Messages.IncompatibleBuildToolVersion.params(buildTool)
+              )
+              None
+            }
+          }
+          case None => None
+        }
+      }
+  }
 }

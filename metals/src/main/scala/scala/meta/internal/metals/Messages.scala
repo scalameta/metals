@@ -69,6 +69,20 @@ object Messages {
 
   }
 
+  object ChooseBuildTool {
+    def params(builtTools: List[BuildTool]): ShowMessageRequestParams = {
+      val messageActionItems =
+        builtTools.map(bt => new MessageActionItem(bt.executableName))
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        "Multiple build definitions found. Which would you like to use?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(messageActionItems.asJava)
+      params
+    }
+  }
+
   val PartialNavigation = new MetalsStatusParams(
     "$(info) Partial navigation",
     tooltip =

@@ -1444,44 +1444,51 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
-  private def supportedBuildTool(): Option[BuildTool] =
+  private def supportedBuildTool(): Future[Option[BuildTool]] =
     buildTools.loadSupported match {
-      case Some(buildTool) =>
+      case Nil => {
+        if (!buildTools.isAutoConnectable) {
+          warnings.noBuildTool()
+        }
+        Future(None)
+      }
+      case buildTool :: Nil => {
         val isCompatibleVersion = SemVer.isCompatibleVersion(
           buildTool.minimumVersion,
           buildTool.version
         )
         if (isCompatibleVersion) {
-          Some(buildTool)
+          Future(Some(buildTool))
         } else {
           scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
           languageClient.showMessage(
             Messages.IncompatibleBuildToolVersion.params(buildTool)
           )
-          None
+          Future(None)
         }
-      case None =>
-        if (!buildTools.isAutoConnectable) {
-          warnings.noBuildTool()
-        }
-        None
+      }
+      case buildTools @ head :: tail =>
+        bloopInstall.checkForChosenBuildTool(buildTools)
     }
 
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
-    supportedBuildTool match {
-      case Some(buildTool) =>
-        buildTool.digest(workspace) match {
-          case None =>
-            scribe.warn(s"Skipping build import, no checksum.")
-            Future.successful(BuildChange.None)
-          case Some(digest) =>
-            slowConnectToBuildServer(forceImport, buildTool, digest)
-        }
-      case None =>
-        Future.successful(BuildChange.None)
-    }
+    for {
+      possibleBuildTool <- supportedBuildTool
+      buildChange <- possibleBuildTool match {
+        case Some(buildTool) =>
+          buildTool.digest(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping build import, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) =>
+              slowConnectToBuildServer(forceImport, buildTool, digest)
+          }
+        case None =>
+          Future.successful(BuildChange.None)
+      }
+    } yield buildChange
   }
 
   private def slowConnectToBuildServer(
