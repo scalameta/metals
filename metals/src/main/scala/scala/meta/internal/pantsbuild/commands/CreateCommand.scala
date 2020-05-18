@@ -48,7 +48,12 @@ object CreateCommand extends Command[CreateOptions]("create") {
         )
         1
       case None =>
-        val project = Project.create(name, create.common, create.targets)
+        val project = Project.create(
+          name,
+          create.common,
+          create.targets,
+          create.export.disableSources
+        )
         SharedCommand.interpretExport(
           Export(project, create.open, app).copy(export = create.export)
         )

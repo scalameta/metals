@@ -58,7 +58,11 @@ object SharedCommand {
           }
           1
         case Success(exportResult) =>
-          IntelliJ.writeBsp(export.project, export.export.coursierBinary)
+          IntelliJ.writeBsp(
+            export.project,
+            export.export.coursierBinary,
+            exportResult
+          )
           exportResult.foreach { result =>
             val targets =
               LogMessages.pluralName("Pants target", result.exportedTargets)

@@ -20,7 +20,7 @@ case class Export(
     isRegenerate: Boolean = false,
     token: CancelToken = EmptyCancelToken
 ) {
-  def isSources: Boolean = !export.noSources
+  def isSources: Boolean = !export.disableSources
   def isMergeTargetsInSameDirectory: Boolean =
     export.mergeTargetsInSameDirectory
   def root = project.root
