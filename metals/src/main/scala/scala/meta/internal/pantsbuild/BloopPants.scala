@@ -154,7 +154,8 @@ object BloopPants {
       s"--no-quiet",
       s"--${noSources}export-dep-as-jar-sources",
       s"--export-dep-as-jar-output-file=$outputFile",
-      s"export-dep-as-jar"
+      s"export-dep-as-jar",
+      "--respect-strict-deps"
     ) ++ args.targets
     val shortName = "pants export-dep-as-jar"
     val bloopSymlink = args.workspace.resolve(".bloop")
@@ -391,41 +392,49 @@ private class BloopPants(
       if acyclicDependency.isTargetRoot
     } yield acyclicDependency.dependencyName
 
-    val libraries: List[PantsLibrary] = for {
-      dependency <- target :: transitiveDependencies
-      libraryName <- dependency.libraries
-      // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
-      module = {
-        val colon = libraryName.lastIndexOf(':')
-        if (colon < 0) libraryName
-        else libraryName.substring(0, colon)
-      }
-      // Respect "excludes" setting in Pants BUILD files to exclude library dependencies.
-      if !target.excludes.contains(module)
-      library <- export.libraries.get(libraryName)
-    } yield library
+    def libraries(extractor: PantsTarget => Seq[String]): List[PantsLibrary] =
+      for {
+        dependency <- target :: transitiveDependencies
+        libraryName <- extractor(dependency)
+        // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
+        module = {
+          val colon = libraryName.lastIndexOf(':')
+          if (colon < 0) libraryName
+          else libraryName.substring(0, colon)
+        }
+        // Respect "excludes" setting in Pants BUILD files to exclude library dependencies.
+        if !target.excludes.contains(module)
+        library <- export.libraries.get(libraryName)
+      } yield library
+    val compileLibraries: List[PantsLibrary] = libraries(_.compileLibraries)
+    val runtimeLibraries: List[PantsLibrary] = libraries(_.runtimeLibraries)
 
-    val classpath = new mutable.LinkedHashSet[Path]()
-    classpath ++= (for {
-      dependency <- transitiveDependencies
-      if dependency.isTargetRoot
-      acyclicDependency = cycles.parents
-        .get(dependency.name)
-        .flatMap(export.targets.get)
-        .getOrElse(dependency)
-    } yield acyclicDependency.classesDir(bloopDir))
-    classpath ++= libraries.iterator.flatMap(library =>
-      library.nonSources.map(path => toImmutableJar(library, path))
-    )
-    classpath ++= allScalaJars
-    if (target.targetType.isTest) {
-      classpath ++= testingFrameworkJars
+    def classpath(libraries: List[PantsLibrary]): List[Path] = {
+      val classpathEntries = new mutable.LinkedHashSet[Path]()
+      classpathEntries ++= (for {
+        dependency <- transitiveDependencies
+        if dependency.isTargetRoot
+        acyclicDependency = cycles.parents
+          .get(dependency.name)
+          .flatMap(export.targets.get)
+          .getOrElse(dependency)
+      } yield acyclicDependency.classesDir(bloopDir))
+      classpathEntries ++= libraries.iterator.flatMap(library =>
+        library.nonSources.map(path => toImmutableJar(library, path))
+      )
+      classpathEntries ++= allScalaJars
+      if (target.targetType.isTest) {
+        classpathEntries ++= testingFrameworkJars
+      }
+      classpathEntries.toList
     }
+    val compileClasspath = classpath(compileLibraries)
+    val runtimeClasspath = classpath(runtimeLibraries)
 
     val resolution = Some(
       C.Resolution(
         (for {
-          library <- libraries.iterator
+          library <- compileLibraries.iterator ++ runtimeLibraries.iterator
           source <- library.sources
           // NOTE(olafur): avoid sending the same *-sources.jar to reduce the
           // size of the Bloop JSON configs. Both IntelliJ and Metals only need each
@@ -467,7 +476,7 @@ private class BloopPants(
       sourcesGlobs = sourcesGlobs,
       sourceRoots = Some(sourceRoots),
       dependencies = dependencies,
-      classpath = classpath.toList,
+      classpath = compileClasspath,
       out = out,
       classesDir = classesDir,
       resources = resources,
@@ -484,7 +493,7 @@ private class BloopPants(
             ) ++ extraJvmOptions
           ),
           None,
-          None,
+          Some(runtimeClasspath),
           None
         )
       ),
