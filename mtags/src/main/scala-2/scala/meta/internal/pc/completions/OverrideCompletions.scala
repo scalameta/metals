@@ -209,9 +209,10 @@ trait OverrideCompletions { this: MetalsGlobal =>
         // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
         else ""
 
-      val lzy: String =
-        if (sym.isLazy) "lazy "
-        else ""
+      val _modifs = sym.flagString.replace("package ", "")
+      val modifs =
+        if (_modifs.isEmpty) ""
+        else _modifs + " "
 
       val keyword: String =
         if (isVarSetter(sym)) "var "
@@ -232,7 +233,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
 
       val name: String = Identifier(sym.name)
 
-      val filterText: String = s"${overrideKeyword}${lzy}${keyword}${name}"
+      val filterText: String = s"${overrideKeyword}${modifs}${keyword}${name}"
 
       // if we had no val or def then filter will be empty
       def toMember = new OverrideDefMember(
