@@ -23,6 +23,7 @@ case class PresentationCompilerConfigImpl(
     isSignatureHelpDocumentationEnabled: Boolean = true,
     isCompletionSnippetsEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,
+    isStripMarginEnabledOnTypeFormatting: Boolean = true,
     timeoutDelay: Long = 20,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS
 ) extends PresentationCompilerConfig {

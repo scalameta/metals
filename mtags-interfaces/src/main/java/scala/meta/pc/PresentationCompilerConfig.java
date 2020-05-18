@@ -50,6 +50,11 @@ public interface PresentationCompilerConfig {
     boolean isCompletionItemDetailEnabled();
 
     /**
+     * Returns false if the <code>UserConfiguration.enableStripMarginOnTypeFormatting</code> is configured to false.
+     */
+    boolean isStripMarginEnabledOnTypeFormatting();
+
+    /**
      * Returns true if the <code>CompletionItem.documentation</code> field should be populated.
      */
     boolean isCompletionItemDocumentationEnabled();

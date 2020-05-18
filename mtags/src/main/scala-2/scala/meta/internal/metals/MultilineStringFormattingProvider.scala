@@ -22,19 +22,25 @@ object MultilineStringFormattingProvider {
   type StartPosition = meta.Position
   type EndPosition = meta.Position
 
-  def hasStripMarginSuffix(token: Token): Boolean =
-    !stripMargin.zipWithIndex
-      .exists {
-        case (char, index) =>
-          token.input.chars(token.pos.end + index + 1) != char
-      }
+  private def hasStripMarginSuffix(
+      stringTokenIndex: Int,
+      tokens: Tokens
+  ): Boolean = {
+    var methodIndex = stringTokenIndex + 1
+    while (tokens(methodIndex).isWhiteSpaceOrComment ||
+      tokens(methodIndex).isInstanceOf[Token.Dot]) methodIndex += 1
+    tokens(methodIndex) match {
+      case token: Token.Ident if token.value == stripMargin =>
+        true
+      case _ =>
+        false
+    }
+  }
 
   private def isMultilineString(token: Token): Boolean = {
     val text = token.input.text
     val start = token.start
-    text(start) == quote &&
-    text(start + 1) == quote &&
-    text(start + 2) == quote
+    hasNQuotes(start, text, 3)
   }
 
   private def determineDefaultIndent(
@@ -79,11 +85,14 @@ object MultilineStringFormattingProvider {
   ): Boolean = {
     val currentLine = splitLines(position.getLine)
     val pos = position.getCharacter
-    currentLine(pos) == quote &&
-    currentLine(pos - 1) == quote &&
-    currentLine(pos - 2) == quote &&
-    currentLine(pos - 3) == quote
+    val onlyFour = 4
+    hasNQuotes(pos - 3, currentLine, onlyFour) && currentLine.count(_ == quote) == onlyFour
   }
+
+  private def hasNQuotes(start: Int, text: String, n: Int): Boolean =
+    (start until start + n).forall(i =>
+      if (i < 0 || i > text.length) false else text(i) == quote
+    )
 
   private def indent(
       splitLines: Array[String],
@@ -161,15 +170,9 @@ object MultilineStringFormattingProvider {
   ): List[TextEdit] = {
     tokens.zipWithIndex
       .collectFirst {
-        isStringOrInterpolation(
-          start,
-          end,
-          andMultilineString = true,
-          andHadStripMargin = true,
-          andHasPipeInScope = true
-        ) {
+        isStringOrInterpolation(start, end, text, newlineAdded, tokens)(
           indent(splitLines, start, range)
-        }(text, newlineAdded, tokens)
+        )
       }
       .getOrElse(Nil)
   }
@@ -177,18 +180,18 @@ object MultilineStringFormattingProvider {
   private def isStringOrInterpolation(
       startPosition: StartPosition,
       endPosition: EndPosition,
-      andMultilineString: Boolean,
-      andHadStripMargin: Boolean,
-      andHasPipeInScope: Boolean
-  )(indent: => List[TextEdit])(
-      implicit sourceText: String,
+      sourceText: String,
       newlineAdded: Boolean,
-      tokens: Tokens
-  ): PartialFunction[(Token, Int), List[TextEdit]] = {
-    case (token: Token.Constant.String, _)
+      tokens: Tokens,
+      andMultilineString: Boolean = true,
+      andHadStripMargin: Boolean = true,
+      andHasPipeInScope: Boolean = true
+  )(indent: => List[TextEdit]): PartialFunction[(Token, Int), List[TextEdit]] = {
+    case (token: Token.Constant.String, index)
         if inToken(startPosition, endPosition, token)
           && (if (andMultilineString) isMultilineString(token) else true)
-          && (if (andHadStripMargin) hasStripMarginSuffix(token) else true)
+          && (if (andHadStripMargin) hasStripMarginSuffix(index, tokens)
+              else true)
           && (if (andHasPipeInScope)
                 pipeInScope(
                   startPosition,
@@ -206,7 +209,8 @@ object MultilineStringFormattingProvider {
           val endToken = tokens(endIndex)
           endToken.pos.end > endPosition.end &&
           (if (andMultilineString) isMultilineString(token) else true) &&
-          (if (andHadStripMargin) hasStripMarginSuffix(endToken) else true) &&
+          (if (andHadStripMargin) hasStripMarginSuffix(endIndex, tokens)
+           else true) &&
           (if (andHasPipeInScope)
              pipeInScope(
                startPosition,
@@ -226,33 +230,35 @@ object MultilineStringFormattingProvider {
       newlineAdded: Boolean,
       splitLines: Array[String],
       position: Position,
-      text: String
+      text: String,
+      enableStripMargin: Boolean
   ): List[TextEdit] = {
-    implicit val sourceText: String = text
-    implicit val tokensImplicit: Tokens = tokens
-    implicit val newlineAddedImplicit: Boolean = newlineAdded
     tokens.zipWithIndex
       .collectFirst {
-        isStringOrInterpolation(
-          start,
-          end,
-          andMultilineString = true,
-          andHadStripMargin = true,
-          andHasPipeInScope = true
-        )(List(indent(splitLines, position))) orElse {
+        isStringOrInterpolation(start, end, text, newlineAdded, tokens)(
+          List(indent(splitLines, position))
+        ) orElse {
           isStringOrInterpolation(
             start,
             end,
-            andMultilineString = true,
-            andHadStripMargin = false,
-            andHasPipeInScope = true
+            text,
+            newlineAdded,
+            tokens,
+            andHadStripMargin = false
           ) {
-            val newPos =
-              new Position(position.getLine, position.getCharacter + 3)
-            List(
-              indent(splitLines, position),
-              new TextEdit(new Range(newPos, newPos), ".stripMargin")
-            )
+            if (enableStripMargin) {
+
+              if (splitLines(position.getLine - 1).trim.contains("\"\"\"")) {
+                val positionOfLastQuote =
+                  splitLines(position.getLine).lastIndexOf("\"")
+                val newPos =
+                  new Position(position.getLine, positionOfLastQuote + 1)
+                List(
+                  indent(splitLines, position),
+                  new TextEdit(new Range(newPos, newPos), ".stripMargin")
+                )
+              } else Nil
+            } else Nil
           }
         }
       }
@@ -371,7 +377,8 @@ object MultilineStringFormattingProvider {
 
   def format(
       params: DocumentOnTypeFormattingParams,
-      sourceText: String
+      sourceText: String,
+      enableStripMargin: Boolean
   ): List[TextEdit] = {
     val range = new Range(params.getPosition, params.getPosition)
     val doc = params.getTextDocument()
@@ -388,7 +395,8 @@ object MultilineStringFormattingProvider {
             newlineAdded,
             splitLines,
             position,
-            sourceText
+            sourceText,
+            enableStripMargin
           )
         case None =>
           if (fourQuotes(splitLines, position)) repaceWithSixQuotes(position)

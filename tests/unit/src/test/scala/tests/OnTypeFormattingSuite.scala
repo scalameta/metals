@@ -2,6 +2,8 @@ package tests
 
 import munit.Location
 
+import scala.concurrent.Future
+
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   private val indent = "  "
   private val escapedNewline = "\\n"
@@ -363,7 +365,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = ''''''
        |}""".stripMargin,
-    replaceWith = "\""
+    triggerCharacter = "\""
   )
   check(
     "4-quotes-interpolation",
@@ -375,7 +377,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = s''''''
        |}""".stripMargin,
-    replaceWith = "\""
+    triggerCharacter = "\""
   )
 
   check(
@@ -391,12 +393,42 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |}""".stripMargin
   )
 
+  check(
+    "add-stripMargin-with-config",
+    s"""
+       |object Main {
+       |  val str = '''|@@'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |  '''
+       |}""".stripMargin,
+    stripMarginEnabled = false
+  )
+
+  check(
+    "no-stripMargin",
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |@@'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |
+       |  '''
+       |}""".stripMargin
+  )
+
   def check(
       name: String,
       testCase: String,
       expectedCase: String,
       autoIndent: String = indent,
-      replaceWith: String = "\n"
+      triggerCharacter: String = "\n",
+      stripMarginEnabled: Boolean = true
   )(implicit loc: Location): Unit = {
     val quote = """\u0022"""
     def unmangle(string: String): String =
@@ -413,13 +445,21 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
              |/a/src/main/scala/a/Main.scala
       """.stripMargin + base
         )
+        _ <- if (!stripMarginEnabled)
+          server.didChangeConfiguration(
+            """{
+              |  "enable-strip-margin-on-type-formatting": flase
+              |}
+              |""".stripMargin
+          )
+        else Future.successful(())
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",
           testCode,
           expected,
           autoIndent,
-          replaceWith
+          triggerCharacter
         )
       } yield ()
     }

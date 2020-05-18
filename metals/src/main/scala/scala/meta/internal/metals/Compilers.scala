@@ -412,7 +412,9 @@ class Compilers(
             _symbolPrefixes = userConfig().symbolPrefixes,
             isCompletionSnippetsEnabled =
               initializeParams.supportsCompletionSnippets,
-            isFoldOnlyLines = initializeParams.foldOnlyLines
+            isFoldOnlyLines = initializeParams.foldOnlyLines,
+            isStripMarginEnabledOnTypeFormatting =
+              userConfig().enableStripMarginOnTypeFormatting
           )
       )
 
