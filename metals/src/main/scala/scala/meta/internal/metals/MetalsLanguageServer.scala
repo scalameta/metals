@@ -1467,7 +1467,7 @@ class MetalsLanguageServer(
           Future(None)
         }
       }
-      case buildTools @ head :: tail =>
+      case buildTools =>
         bloopInstall.checkForChosenBuildTool(buildTools)
     }
 

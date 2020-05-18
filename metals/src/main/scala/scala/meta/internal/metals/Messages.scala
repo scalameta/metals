@@ -66,7 +66,6 @@ object Messages {
       )
       params
     }
-
   }
 
   object ChooseBuildTool {
