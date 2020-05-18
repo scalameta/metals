@@ -1444,7 +1444,23 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
-  private def supportedBuildTool(): Future[Option[BuildTool]] =
+  private def supportedBuildTool(): Future[Option[BuildTool]] = {
+    def isCompatibleVersion(buildTool: BuildTool) = {
+      val isCompatibleVersion = SemVer.isCompatibleVersion(
+        buildTool.minimumVersion,
+        buildTool.version
+      )
+      if (isCompatibleVersion) {
+        Some(buildTool)
+      } else {
+        scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
+        languageClient.showMessage(
+          Messages.IncompatibleBuildToolVersion.params(buildTool)
+        )
+        None
+      }
+    }
+
     buildTools.loadSupported match {
       case Nil => {
         if (!buildTools.isAutoConnectable) {
@@ -1452,24 +1468,13 @@ class MetalsLanguageServer(
         }
         Future(None)
       }
-      case buildTool :: Nil => {
-        val isCompatibleVersion = SemVer.isCompatibleVersion(
-          buildTool.minimumVersion,
-          buildTool.version
-        )
-        if (isCompatibleVersion) {
-          Future(Some(buildTool))
-        } else {
-          scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
-          languageClient.showMessage(
-            Messages.IncompatibleBuildToolVersion.params(buildTool)
-          )
-          Future(None)
-        }
-      }
+      case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
       case buildTools =>
-        bloopInstall.checkForChosenBuildTool(buildTools)
+        for {
+          Some(buildTool) <- bloopInstall.checkForChosenBuildTool(buildTools)
+        } yield isCompatibleVersion(buildTool)
     }
+  }
 
   private def slowConnectToBuildServer(
       forceImport: Boolean

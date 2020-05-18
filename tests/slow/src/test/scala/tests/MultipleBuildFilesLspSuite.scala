@@ -9,10 +9,11 @@ import scala.meta.internal.builds.MillBuildTool
 class MultipleBuildFilesLspSuite
     extends BaseImportSuite("multiple-build-files") {
 
-  // SBT will be the main tool for this test, but Mill will be added
+  // SBT will be the main tool for this test, which is what will be
+  // chosen when the user is prompted in the test
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
-  val alternativeBuildTool = MillBuildTool(() => userConfig)
+  val alternativeBuildTool: MillBuildTool = MillBuildTool(() => userConfig)
 
   def chooseBuildToolMessage: String =
     ChooseBuildTool.params(List(buildTool, alternativeBuildTool)).getMessage

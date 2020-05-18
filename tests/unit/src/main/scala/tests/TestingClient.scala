@@ -257,7 +257,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
         } else if (SelectBspServer.isSelectBspServer(params)) {
           params.getActions.asScala.find(_.getTitle == "Bob").get
         } else if (isSameMessageFromList(ChooseBuildTool.params)) {
-          params.getActions.asScala.toList.headOption
+          params.getActions.asScala.toList
+            .find(_.getTitle == "sbt")
             .getOrElse(new MessageActionItem("fail"))
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           null

@@ -15,7 +15,6 @@ import scala.meta.internal.process.ProcessHandler
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.metals.Messages._
 import org.eclipse.lsp4j.MessageActionItem
-import scala.meta.internal.semver.SemVer
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
@@ -219,31 +218,9 @@ final class BloopInstall(
       .showMessageRequest(ChooseBuildTool.params(buildTools))
       .asScala
       .map { choice =>
-        val selectedBuildTool =
-          buildTools.find(buildTool =>
-            new MessageActionItem(buildTool.executableName) == choice
-          )
-        selectedBuildTool match {
-          case Some(buildTool) => {
-            val isCompatibleVersion = SemVer.isCompatibleVersion(
-              buildTool.minimumVersion,
-              buildTool.version
-            )
-            if (isCompatibleVersion) {
-              tables.buildTool.chooseBuildTool(choice.getTitle)
-              Some(buildTool)
-            } else {
-              scribe.warn(
-                s"Unsupported $buildTool version ${buildTool.version}"
-              )
-              languageClient.showMessage(
-                Messages.IncompatibleBuildToolVersion.params(buildTool)
-              )
-              None
-            }
-          }
-          case None => None
-        }
+        buildTools.find(buildTool =>
+          new MessageActionItem(buildTool.executableName) == choice
+        )
       }
   }
 }
