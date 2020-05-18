@@ -645,7 +645,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  protected def d(): Unit
        |  protected[a] val s: Unit
        |  implicit val a: String
-       |  lazy val l: Boolean
+       |  // lazy values might not be abstract
        |}
        |object Test {
        |   class <<Concrete>> extends Base
@@ -659,7 +659,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  protected def d(): Unit
        |  protected[a] val s: Unit
        |  implicit val a: String
-       |  lazy val l: Boolean
+       |  // lazy values might not be abstract
        |}
        |object Test {
        |   class Concrete extends Base {
@@ -671,8 +671,6 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |     override protected[a] val s: Unit = ???
        |
        |     override implicit val a: String = ???
-       |
-       |     override lazy val l: Boolean = ???
        |
        |   }
        |}

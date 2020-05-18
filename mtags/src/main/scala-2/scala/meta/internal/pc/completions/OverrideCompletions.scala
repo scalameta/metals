@@ -209,7 +209,11 @@ trait OverrideCompletions { this: MetalsGlobal =>
         // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
         else ""
 
-      val _modifs = sym.flagString.replace("package ", "")
+      val _modifs = sym.flagString
+        .replace("package ", "")
+        .replace("object ", "")
+        .replace("trait ", "")
+        .replace("class ", "")
       val modifs =
         if (_modifs.isEmpty) ""
         else _modifs + " "
