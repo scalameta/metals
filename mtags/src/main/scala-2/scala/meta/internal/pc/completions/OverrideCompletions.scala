@@ -213,11 +213,11 @@ trait OverrideCompletions { this: MetalsGlobal =>
         if (sym.isLazy) "lazy "
         else ""
 
-      val _modifs = sym.flagString
-        .replace("package ", "")
-        .replace("object ", "")
-        .replace("trait ", "")
-        .replace("class ", "")
+      val _modifs =
+        sym.flagString.replace(
+          sym.privateWithin.toString(),
+          sym.privateWithin.name.toString()
+        )
 
       val modifs =
         if (_modifs.isEmpty) ""
