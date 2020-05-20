@@ -122,7 +122,7 @@ class MetalsLanguageServer(
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
   private val buildTargetClasses =
-    new BuildTargetClasses(() => buildServer, buildTargets)
+    new BuildTargetClasses(_ => buildServer, buildTargets)
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
