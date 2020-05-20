@@ -12,6 +12,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import java.{util => ju}
 import io.methvin.watcher.DirectoryChangeEvent.EventType
+import scala.collection.mutable
 
 /**
  * Handles file watching of interesting files in this build.
@@ -40,25 +41,28 @@ final class FileWatcher(
 ) extends Cancelable {
 
   private val directoryExecutor = Executors.newFixedThreadPool(1)
+  private val fileExecutor = Executors.newFixedThreadPool(1)
 
   ThreadPools.discardRejectedRunnables(
     "FileWatcher.executor",
     directoryExecutor
   )
+  ThreadPools.discardRejectedRunnables(
+    "FileWatcher.fileExecutor",
+    fileExecutor
+  )
 
-  private var activeDirectoryWatcher: Option[DirectoryWatcher] = None
-
-  private var directoryWatching: CompletableFuture[Void] =
-    new CompletableFuture()
+  private var activeWatchers: Option[Watchers] = None
 
   override def cancel(): Unit = {
     stopWatching()
     directoryExecutor.shutdown()
-    activeDirectoryWatcher.foreach(_.close())
+    activeWatchers.foreach(_.close())
   }
 
   def restart(): Unit = {
-    val sourceDirectoriesToWatch = new util.LinkedHashSet[Path]()
+    val sourceDirectoriesToWatch = mutable.Set.empty[Path]
+    val sourceFilesToWatch = mutable.Set.empty[Path]
     val createdSourceDirectories = new util.ArrayList[AbsolutePath]()
     def watch(path: AbsolutePath, isSource: Boolean): Unit = {
       if (!path.isDirectory && !path.isFile) {
@@ -78,7 +82,7 @@ final class FileWatcher(
       if (buildTargets.isInsideSourceRoot(path)) {
         () // Do nothing, already covered by a source root
       } else if (path.isScalaOrJava) {
-        sourceDirectoriesToWatch.add(path.toNIO.getParent())
+        sourceFilesToWatch.add(path.toNIO)
       } else {
         sourceDirectoriesToWatch.add(path.toNIO)
       }
@@ -96,7 +100,10 @@ final class FileWatcher(
         )
       }
     }
-    startWatching(new ju.ArrayList(sourceDirectoriesToWatch))
+    startWatching(
+      directories = sourceDirectoriesToWatch.toSet,
+      files = sourceFilesToWatch.toSet
+    )
     // reverse sorting here is necessary to delete parent paths at the end
     createdSourceDirectories.asScala.sortBy(_.toNIO).reverse.foreach { dir =>
       if (dir.isEmptyDirectory) {
@@ -105,28 +112,66 @@ final class FileWatcher(
     }
   }
 
-  private def startWatching(directories: util.List[Path]): Unit = {
+  private def startWatching(
+      directories: Set[Path],
+      files: Set[Path]
+  ): Unit = {
     stopWatching()
     val directoryWatcher = DirectoryWatcher
       .builder()
-      .paths(directories)
+      .paths(directories.toList.asJava)
       .listener(new DirectoryListener())
       // File hashing is necessary for correctness, see:
       // https://github.com/scalameta/metals/pull/1153
       .fileHashing(true)
       .build()
-    activeDirectoryWatcher = Some(directoryWatcher)
-    directoryWatching = directoryWatcher.watchAsync(directoryExecutor)
+
+    val fileDirectories = files.map(_.getParent())
+    val fileWatcher = DirectoryWatcher
+      .builder()
+      .paths(fileDirectories.toList.asJava)
+      .listener(new FileListener(files))
+      // File hashing is necessary for correctness, see:
+      // https://github.com/scalameta/metals/pull/1153
+      .fileHashing(true)
+      .build()
+
+    val watchers = Watchers(
+      directoryWatcher,
+      directoryWatcher.watchAsync(directoryExecutor),
+      fileWatcher,
+      fileWatcher.watchAsync(fileExecutor)
+    )
+
+    activeWatchers = Some(watchers)
   }
 
   private def stopWatching(): Unit = {
-    try activeDirectoryWatcher.foreach(_.close())
+    try activeWatchers.foreach(_.close())
     catch {
       // safe to ignore because we're closing the file watcher and
       // this error won't affect correctness of Metals.
       case _: ju.ConcurrentModificationException =>
     }
-    directoryWatching.cancel(false)
+    activeWatchers.foreach(_.cancel(false))
+  }
+
+  case class Watchers(
+      directory: DirectoryWatcher,
+      directoryWatching: CompletableFuture[Void],
+      file: DirectoryWatcher,
+      fileWatching: CompletableFuture[Void]
+  ) {
+
+    def cancel(mayInterruptIfRunning: Boolean): Boolean = {
+      directoryWatching.cancel(mayInterruptIfRunning)
+      fileWatching.cancel(mayInterruptIfRunning)
+    }
+
+    def close(): Unit = {
+      directory.close()
+      file.close()
+    }
   }
 
   class DirectoryListener extends DirectoryChangeListener {
@@ -135,6 +180,17 @@ final class FileWatcher(
       if (event.eventType() == EventType.OVERFLOW) {
         didChangeWatchedFiles(event)
       } else if (!Files.isDirectory(event.path())) {
+        didChangeWatchedFiles(event)
+      }
+    }
+  }
+
+  class FileListener(files: Set[Path]) extends DirectoryChangeListener {
+    override def onEvent(event: DirectoryChangeEvent): Unit = {
+      // in non-MacOS systems the path will be null
+      if (event.eventType() == EventType.OVERFLOW) {
+        didChangeWatchedFiles(event)
+      } else if (files(event.path())) {
         didChangeWatchedFiles(event)
       }
     }
