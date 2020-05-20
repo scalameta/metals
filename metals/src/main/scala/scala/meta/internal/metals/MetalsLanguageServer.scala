@@ -503,23 +503,25 @@ class MetalsLanguageServer(
         worksheetPublisher
       )
     )
-    ammonite = new Ammonite(
-      buffers,
-      compilers,
-      compilations,
-      statusBar,
-      diagnostics,
-      doctor,
-      () => tables,
-      languageClient,
-      buildClient,
-      () => userConfig,
-      () => profiledIndexWorkspace(() => ()),
-      () => workspace,
-      () => focusedDocument,
-      buildTargets,
-      () => buildTools,
-      clientConfig.initialConfig
+    ammonite = register(
+      new Ammonite(
+        buffers,
+        compilers,
+        compilations,
+        statusBar,
+        diagnostics,
+        doctor,
+        () => tables,
+        languageClient,
+        buildClient,
+        () => userConfig,
+        () => profiledIndexWorkspace(() => ()),
+        () => workspace,
+        () => focusedDocument,
+        buildTargets,
+        () => buildTools,
+        clientConfig.initialConfig
+      )
     )
     if (clientConfig.isTreeViewProvider) {
       treeView = new MetalsTreeViewProvider(
