@@ -145,9 +145,10 @@ final class Ammonite(
     val versions = versionsOpt
       .orElse(lastImportVersions)
       .getOrElse(
-        AmmVersions
-          .default()
-          .withScalaVersion(BuildInfo.scala212)
+        AmmVersions(
+          ammoniteVersion = BuildInfo.ammoniteVersion,
+          scalaVersion = BuildInfo.scala212
+        )
       )
     val res = AmmoniteFetcher(versions)
       .withInterpOnly(false)
