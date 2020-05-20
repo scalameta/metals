@@ -402,7 +402,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''|
-       |  '''
+       |               |'''
        |}""".stripMargin,
     stripMarginEnabled = false
   )
@@ -418,7 +418,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = '''|
        |               |
-       |  '''
+       |               |'''
        |}""".stripMargin
   )
 

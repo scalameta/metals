@@ -227,28 +227,34 @@ object MultilineStringFormattingProvider {
       start: StartPosition,
       end: EndPosition,
       tokens: Tokens,
-      newlineAdded: Boolean,
+      triggerChar: String,
       splitLines: Array[String],
       position: Position,
       text: String,
       enableStripMargin: Boolean
   ): List[TextEdit] = {
-    tokens.zipWithIndex
-      .collectFirst {
-        isStringOrInterpolation(start, end, text, newlineAdded, tokens)(
-          List(indent(splitLines, position))
-        ) orElse {
+    if (triggerChar == "\n") {
+      tokens.zipWithIndex
+        .collectFirst {
           isStringOrInterpolation(
             start,
             end,
             text,
-            newlineAdded,
-            tokens,
-            andHadStripMargin = false
-          ) {
-            if (enableStripMargin) {
-
-              if (splitLines(position.getLine - 1).trim.contains("\"\"\"")) {
+            newlineAdded = true,
+            tokens
+          )(
+            List(indent(splitLines, position))
+          ) orElse {
+            isStringOrInterpolation(
+              start,
+              end,
+              text,
+              newlineAdded = true,
+              tokens,
+              andHadStripMargin = false
+            ) {
+              if (enableStripMargin && splitLines(position.getLine - 1).trim
+                  .contains("\"\"\"")) {
                 val positionOfLastQuote =
                   splitLines(position.getLine).lastIndexOf("\"")
                 val newPos =
@@ -257,12 +263,12 @@ object MultilineStringFormattingProvider {
                   indent(splitLines, position),
                   new TextEdit(new Range(newPos, newPos), ".stripMargin")
                 )
-              } else Nil
-            } else Nil
+              } else List(indent(splitLines, position))
+            }
           }
         }
-      }
-      .getOrElse(Nil)
+        .getOrElse(Nil)
+    } else Nil
   }
 
   private def withToken(
@@ -382,7 +388,7 @@ object MultilineStringFormattingProvider {
   ): List[TextEdit] = {
     val range = new Range(params.getPosition, params.getPosition)
     val doc = params.getTextDocument()
-    val newlineAdded = params.getCh() == "\n"
+    val triggerChar = params.getCh
     val splitLines = sourceText.split('\n')
     val position = params.getPosition
     withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
@@ -392,15 +398,19 @@ object MultilineStringFormattingProvider {
             startPos,
             endPos,
             tokens,
-            newlineAdded,
+            triggerChar,
             splitLines,
             position,
             sourceText,
             enableStripMargin
           )
         case None =>
-          if (fourQuotes(splitLines, position)) repaceWithSixQuotes(position)
-          else if (newlineAdded && doubleQuoteNotClosed(splitLines, position))
+          if (triggerChar == "\"" && fourQuotes(splitLines, position))
+            repaceWithSixQuotes(position)
+          else if (triggerChar == "\n" && doubleQuoteNotClosed(
+              splitLines,
+              position
+            ))
             fixStringNewline(position, splitLines)
           else Nil
       }
