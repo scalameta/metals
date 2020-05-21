@@ -81,6 +81,12 @@ inThisBuild(
         url("https://jvican.github.io/")
       ),
       Developer(
+        "kpbochenek",
+        "Krzysztof Bochenek",
+        "kbochenek@virtuslab.com ",
+        url("https://github.com/kpbochenek")
+      ),
+      Developer(
         "marek1840",
         "Marek Żarnowski",
         "mzarnowski@virtuslab.com",
