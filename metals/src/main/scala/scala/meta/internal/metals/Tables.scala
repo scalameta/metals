@@ -24,6 +24,8 @@ final class Tables(
     new DismissedNotifications(() => connection, time)
   val buildServers =
     new ChosenBuildServers(() => connection, time)
+  val buildTool =
+    new ChosenBuildTool(() => connection)
 
   def connect(): Unit = {
     this._connection =

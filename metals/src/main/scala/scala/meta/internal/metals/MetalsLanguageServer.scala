@@ -1444,44 +1444,56 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
-  private def supportedBuildTool(): Option[BuildTool] =
-    buildTools.loadSupported match {
-      case Some(buildTool) =>
-        val isCompatibleVersion = SemVer.isCompatibleVersion(
-          buildTool.minimumVersion,
-          buildTool.version
+  private def supportedBuildTool(): Future[Option[BuildTool]] = {
+    def isCompatibleVersion(buildTool: BuildTool) = {
+      val isCompatibleVersion = SemVer.isCompatibleVersion(
+        buildTool.minimumVersion,
+        buildTool.version
+      )
+      if (isCompatibleVersion) {
+        Some(buildTool)
+      } else {
+        scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
+        languageClient.showMessage(
+          Messages.IncompatibleBuildToolVersion.params(buildTool)
         )
-        if (isCompatibleVersion) {
-          Some(buildTool)
-        } else {
-          scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
-          languageClient.showMessage(
-            Messages.IncompatibleBuildToolVersion.params(buildTool)
-          )
-          None
-        }
-      case None =>
+        None
+      }
+    }
+
+    buildTools.loadSupported match {
+      case Nil => {
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
         }
-        None
+        Future(None)
+      }
+      case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
+      case buildTools =>
+        for {
+          Some(buildTool) <- bloopInstall.checkForChosenBuildTool(buildTools)
+        } yield isCompatibleVersion(buildTool)
     }
+  }
 
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
-    supportedBuildTool match {
-      case Some(buildTool) =>
-        buildTool.digest(workspace) match {
-          case None =>
-            scribe.warn(s"Skipping build import, no checksum.")
-            Future.successful(BuildChange.None)
-          case Some(digest) =>
-            slowConnectToBuildServer(forceImport, buildTool, digest)
-        }
-      case None =>
-        Future.successful(BuildChange.None)
-    }
+    for {
+      possibleBuildTool <- supportedBuildTool
+      buildChange <- possibleBuildTool match {
+        case Some(buildTool) =>
+          buildTool.digest(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping build import, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) =>
+              slowConnectToBuildServer(forceImport, buildTool, digest)
+          }
+        case None =>
+          Future.successful(BuildChange.None)
+      }
+    } yield buildChange
   }
 
   private def slowConnectToBuildServer(

@@ -43,6 +43,7 @@ import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.Command
 import scala.concurrent.Future
+import scala.meta.internal.builds.BuildTool
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -227,6 +228,21 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
         .map(tool => createParams(tool.toString()))
         .contains(params)
     }
+    // NOTE: (ckipp01) Just for easiness of testing, we are going to just look
+    // for sbt and mill builds together, which are most common. The logic however
+    // is identical for all build tools.
+    def isSameMessageFromList(
+        createParams: List[BuildTool] => ShowMessageRequestParams
+    ): Boolean = {
+      val buildTools = BuildTools
+        .default()
+        .allAvailable
+        .filter(bt => bt.executableName == "sbt" || bt.executableName == "mill")
+
+      val targetParams = createParams(buildTools)
+      params == targetParams
+    }
+
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
@@ -240,6 +256,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
           CheckDoctor.moreInformation
         } else if (SelectBspServer.isSelectBspServer(params)) {
           params.getActions.asScala.find(_.getTitle == "Bob").get
+        } else if (isSameMessageFromList(ChooseBuildTool.params)) {
+          params.getActions.asScala.toList
+            .find(_.getTitle == "sbt")
+            .getOrElse(new MessageActionItem("fail"))
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           null
         } else {

@@ -248,10 +248,16 @@ final class Doctor(
 
   private def buildTargetsJson(): String = {
     val targets = allTargets()
+    val heading = tables.buildTool.selectedBuildTool() match {
+      case Some(value) =>
+        doctorHeading + s"\n\nYour ${value} build definition has been imported."
+      case None => doctorHeading
+    }
+
     val results = if (targets.isEmpty) {
       DoctorResults(
         doctorTitle,
-        doctorHeading,
+        heading,
         Some(
           List(
             DoctorMessage(
@@ -266,7 +272,7 @@ final class Doctor(
     } else {
       val targetResults =
         targets.sortBy(_.baseDirectory).map(extractTargetInfo)
-      DoctorResults(doctorTitle, doctorHeading, None, Some(targetResults)).toJson
+      DoctorResults(doctorTitle, heading, None, Some(targetResults)).toJson
     }
     ujson.write(results)
   }
@@ -276,6 +282,15 @@ final class Doctor(
       .element("p")(
         _.text(doctorHeading)
       )
+
+    tables.buildTool.selectedBuildTool() match {
+      case Some(value) =>
+        html.element("p")(
+          _.text(s"Your ${value} build definition has been imported.")
+        )
+      case None => ()
+    }
+
     val targets = allTargets()
     if (targets.isEmpty) {
       html
