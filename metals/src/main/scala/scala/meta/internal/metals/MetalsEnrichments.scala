@@ -32,6 +32,7 @@ import scala.meta.io.AbsolutePath
 import scala.util.Properties
 import scala.{meta => m}
 import java.nio.file.StandardOpenOption
+import scala.collection.mutable
 import scala.util.control.NonFatal
 import scala.util.Try
 import scala.collection.convert.DecorateAsJava
@@ -395,12 +396,72 @@ object MetalsEnrichments
       if (index < safeLowerBound) -1 else index
     }
 
+    private def indicesOf(str: String): List[Int] = {
+      val b = new mutable.ListBuffer[Int]
+      var idx = 0
+      while (idx < value.length && idx >= 0) {
+        idx = value.indexOf(str, idx)
+        if (idx >= 0) {
+          b += idx
+          idx = idx + 1
+        }
+      }
+      b.result()
+    }
+
+    def onlyIndexOf(str: String): Option[Int] =
+      indicesOf(str) match {
+        case Nil => Some(-1)
+        case List(idx) => Some(idx)
+        case indices => None
+      }
+
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
     def toAbsolutePath: AbsolutePath =
       AbsolutePath(
         Paths.get(URI.create(value.stripPrefix("metals:")))
       ).dealias
+
+    def indexToLspPosition(index: Int): l.Position = {
+      var i = 0
+      var lineCount = 0
+      var lineStartIdx = 0
+      while (i < index && i < value.length) {
+        if (value.charAt(i) == '\n') {
+          lineStartIdx = i + 1
+          lineCount += 1
+        }
+        i += 1
+      }
+      new l.Position(lineCount, index - lineStartIdx)
+    }
+
+    def replaceAllBetween(start: String, end: String)(
+        replacement: String
+    ): String =
+      if (start.isEmpty || end.isEmpty)
+        value
+      else {
+        val startIdx = value.indexOf(start)
+        if (startIdx < 0)
+          value
+        else {
+          val endIdx = value.indexOf(end, startIdx + start.length)
+          if (endIdx < 0)
+            value
+          else {
+            val b = new java.lang.StringBuilder
+            b.append(value, 0, startIdx)
+            b.append(replacement)
+            b.append(value, endIdx + end.length, value.length)
+            b.toString
+          }
+        }
+      }
+
+    def lineAtIndex(index: Int): Int =
+      indexToLspPosition(index).getLine
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {

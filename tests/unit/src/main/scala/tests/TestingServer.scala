@@ -110,7 +110,7 @@ import scala.meta.internal.metals.Trees
  */
 final class TestingServer(
     workspace: AbsolutePath,
-    client: TestingClient,
+    val client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
@@ -668,19 +668,20 @@ final class TestingServer(
     // or fails if it could nat be achieved withing [[maxRetries]] number of tries
     var retries = maxRetries
     val codeLenses = Promise[List[l.CodeLens]]()
-    val handler = { () =>
-      for {
-        lenses <- server.codeLens(params).asScala.map(_.asScala)
-      } {
-        if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
-        else if (retries > 0) {
-          retries -= 1
-          server.compilations.compileFiles(List(path))
-        } else {
-          val error = s"Could not fetch any code lenses in $maxRetries tries"
-          codeLenses.tryFailure(new NoSuchElementException(error))
+    val handler = { refreshCount: Int =>
+      if (refreshCount > 0)
+        for {
+          lenses <- server.codeLens(params).asScala.map(_.asScala)
+        } {
+          if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
+          else if (retries > 0) {
+            retries -= 1
+            server.compilations.compileFile(path)
+          } else {
+            val error = s"Could not fetch any code lenses in $maxRetries tries"
+            codeLenses.tryFailure(new NoSuchElementException(error))
+          }
         }
-      }
     }
 
     for {
@@ -689,7 +690,7 @@ final class TestingServer(
         .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
-      _ <- server.compilations.compileFiles(List(path))
+      _ <- server.compilations.compileFile(path)
       lenses <- codeLenses.future
       textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)

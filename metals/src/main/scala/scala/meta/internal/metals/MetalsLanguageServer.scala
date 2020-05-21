@@ -55,10 +55,12 @@ import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.implementation.Supermethods
+import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -116,13 +118,18 @@ class MetalsLanguageServer(
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer: Option[BuildServerConnection] =
     Option.empty[BuildServerConnection]
+  private def buildServerOf(
+      target: b.BuildTargetIdentifier
+  ): Option[BuildServerConnection] =
+    if (Ammonite.isAmmBuildTarget(target)) ammonite.buildServer
+    else buildServer
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
   private val buildTargetClasses =
-    new BuildTargetClasses(() => buildServer, buildTargets)
+    new BuildTargetClasses(buildServerOf, buildTargets)
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
@@ -134,7 +141,7 @@ class MetalsLanguageServer(
     buildTargets,
     buildTargetClasses,
     () => workspace,
-    () => buildServer,
+    buildServerOf,
     languageClient,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
@@ -200,6 +207,7 @@ class MetalsLanguageServer(
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
+  var ammonite: Ammonite = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -298,7 +306,8 @@ class MetalsLanguageServer(
         compilers.didCompile(report)
       },
       () => treeView,
-      () => worksheetProvider
+      () => worksheetProvider,
+      () => ammonite
     )
     bloopInstall = register(
       new BloopInstall(
@@ -453,6 +462,7 @@ class MetalsLanguageServer(
         workspace,
         clientConfig.initialConfig,
         () => userConfig,
+        () => ammonite,
         buildTargets,
         buffers,
         symbolSearch,
@@ -493,6 +503,26 @@ class MetalsLanguageServer(
         worksheetPublisher
       )
     )
+    ammonite = register(
+      new Ammonite(
+        buffers,
+        compilers,
+        compilations,
+        statusBar,
+        diagnostics,
+        doctor,
+        () => tables,
+        languageClient,
+        buildClient,
+        () => userConfig,
+        () => profiledIndexWorkspace(() => ()),
+        () => workspace,
+        () => focusedDocument,
+        buildTargets,
+        () => buildTools,
+        clientConfig.initialConfig
+      )
+    )
     if (clientConfig.isTreeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
@@ -501,7 +531,7 @@ class MetalsLanguageServer(
         () => buildClient.ongoingCompilations(),
         definitionIndex,
         clientConfig.initialConfig.statistics,
-        id => compilations.compileTargets(List(id)),
+        id => compilations.compileTarget(id),
         sh
       )
     }
@@ -739,9 +769,11 @@ class MetalsLanguageServer(
         ()
       }
     } else {
+      if (path.isAmmoniteScript)
+        ammonite.maybeImport(path)
       val loadFuture = compilers.load(List(path))
       val compileFuture =
-        compilations.compileFiles(List(path))
+        compilations.compileFile(path)
       Future
         .sequence(List(didChangeFuture, loadFuture, compileFuture))
         .ignoreValue
@@ -783,7 +815,7 @@ class MetalsLanguageServer(
             isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
             compilations
-              .compileFiles(List(path))
+              .compileFile(path)
               .map(_ => DidFocusResult.Compiled)
               .asJava
           } else {
@@ -969,7 +1001,7 @@ class MetalsLanguageServer(
       .sequence(
         List(
           Future(reindexWorkspaceSources(paths)),
-          compilations.compileFiles(paths).ignoreValue,
+          compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue
         )
       )
@@ -1353,6 +1385,12 @@ class MetalsLanguageServer(
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
 
+      case ServerCommands.StartAmmoniteBuildServer() =>
+        ammonite.start().asJavaObject
+
+      case ServerCommands.StopAmmoniteBuildServer() =>
+        ammonite.stop()
+
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
@@ -1551,6 +1589,7 @@ class MetalsLanguageServer(
         value.shutdown()
     }
   }
+
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
@@ -1558,34 +1597,16 @@ class MetalsLanguageServer(
     cancelables.add(build)
     compilers.cancel()
     buildServer = Some(build)
-    val importedBuild = timed("imported build") {
-      for {
-        workspaceBuildTargets <- build.workspaceBuildTargets()
-        ids = workspaceBuildTargets.getTargets.map(_.getId)
-        scalacOptions <- build
-          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-        sources <- build
-          .buildTargetSources(new b.SourcesParams(ids))
-        dependencySources <- build
-          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
-      } yield {
-        ImportedBuild(
-          workspaceBuildTargets,
-          scalacOptions,
-          sources,
-          dependencySources,
-          build.version,
-          build.name
-        )
-      }
+    val importedBuild0 = timed("imported build") {
+      MetalsLanguageServer.importedBuild(build)
     }
     for {
-      i <- statusBar.trackFuture("Importing build", importedBuild)
-      _ <- profiledIndexWorkspace(
-        () => indexWorkspace(i),
-        () => indexingPromise.trySuccess(())
-      )
-      _ = checkRunningBloopVersion(i.bspServerVersion)
+      i <- statusBar.trackFuture("Importing build", importedBuild0)
+      _ = {
+        lastImportedBuild = i
+      }
+      _ <- profiledIndexWorkspace(() => doctor.check(build.name, build.version))
+      _ = checkRunningBloopVersion(build.version)
     } yield {
       BuildChange.Reconnected
     }
@@ -1600,7 +1621,7 @@ class MetalsLanguageServer(
       targets.asScala.foreach { target =>
         buildTargets.linkSourceFile(target, source)
       }
-      indexSourceFile(source, Some(sourceItem))
+      indexSourceFile(source, Some(sourceItem), targets.asScala.headOption)
     }
   }
 
@@ -1611,17 +1632,28 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceItem(path))
+      indexSourceFile(path, buildTargets.inverseSourceItem(path), None)
     }
   }
 
+  private def sourceToIndex(
+      source: AbsolutePath,
+      targetOpt: Option[b.BuildTargetIdentifier]
+  ): AbsolutePath =
+    targetOpt
+      .flatMap(ammonite.generatedScalaPath(_, source))
+      .getOrElse(source)
+
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceItem: Option[AbsolutePath]
+      sourceItem: Option[AbsolutePath],
+      targetOpt: Option[b.BuildTargetIdentifier]
   ): Unit = {
+
     try {
+      val sourceToIndex0 = sourceToIndex(source, targetOpt)
       val reluri = source.toIdeallyRelativeURI(sourceItem)
-      val input = source.toInput
+      val input = sourceToIndex0.toInput
       val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
       SemanticdbDefinition.foreach(input) {
         case SemanticdbDefinition(info, occ, owner) =>
@@ -1636,7 +1668,7 @@ class MetalsLanguageServer(
           }
           if (sourceItem.isDefined &&
             !info.symbol.isPackage &&
-            owner.isPackage) {
+            (owner.isPackage || source.isAmmoniteScript)) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
           }
       }
@@ -1644,7 +1676,7 @@ class MetalsLanguageServer(
 
       // Since the `symbols` here are toplevel symbols,
       // we cannot use `symbols` for expiring the cache for all symbols in the source.
-      symbolDocs.expireSymbolDefinition(source)
+      symbolDocs.expireSymbolDefinition(sourceToIndex0)
     } catch {
       case NonFatal(e) =>
         scribe.error(source.toString(), e)
@@ -1686,17 +1718,14 @@ class MetalsLanguageServer(
     }
   }
 
-  def profiledIndexWorkspace(
-      thunk: () => Unit,
-      onFinally: () => Unit
-  ): Future[Unit] = {
+  private def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
       Future {
         timedThunk("indexed workspace", onlyIf = true) {
-          try thunk()
+          try indexWorkspace(check)
           finally {
-            onFinally()
+            indexingPromise.trySuccess(())
           }
         }
       }
@@ -1736,7 +1765,10 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  private def indexWorkspace(i: ImportedBuild): Unit = {
+  private var lastImportedBuild = ImportedBuild.empty
+
+  private def indexWorkspace(check: () => Unit): Unit = {
+    val i = lastImportedBuild ++ ammonite.lastImportedBuild
     timedThunk(
       "updated build targets",
       clientConfig.initialConfig.statistics.isIndex
@@ -1757,7 +1789,7 @@ class MetalsLanguageServer(
         val sourceItemPath = source.getUri.toAbsolutePath
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
-      doctor.check(i.bspServerName, i.bspServerVersion)
+      check()
       buildTools
         .loadSupported()
         .foreach(_.onBuildTargets(workspace, buildTargets))
@@ -2039,12 +2071,47 @@ class MetalsLanguageServer(
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
-    OnDemandSymbolIndex(onError = {
-      case e @ (_: ParseException | _: TokenizeException) =>
-        scribe.error(e.toString)
-      case NonFatal(e) =>
-        scribe.error("unexpected error during source scanning", e)
-    })
+    OnDemandSymbolIndex(
+      onError = {
+        case e @ (_: ParseException | _: TokenizeException) =>
+          scribe.error(e.toString)
+        case NonFatal(e) =>
+          scribe.error("unexpected error during source scanning", e)
+      },
+      toIndexSource = path => {
+        if (path.isAmmoniteScript)
+          for {
+            target <- buildTargets.sourceBuildTargets(path).headOption
+            toIndex <- ammonite.generatedScalaPath(target, path)
+          } yield toIndex
+        else
+          None
+      }
+    )
   }
 
+}
+
+object MetalsLanguageServer {
+
+  def importedBuild(
+      build: BuildServerConnection
+  )(implicit ec: ExecutionContext): Future[ImportedBuild] =
+    for {
+      workspaceBuildTargets <- build.workspaceBuildTargets()
+      ids = workspaceBuildTargets.getTargets.map(_.getId)
+      scalacOptions <- build
+        .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
+      sources <- build
+        .buildTargetSources(new b.SourcesParams(ids))
+      dependencySources <- build
+        .buildTargetDependencySources(new b.DependencySourcesParams(ids))
+    } yield {
+      ImportedBuild(
+        workspaceBuildTargets,
+        scalacOptions,
+        sources,
+        dependencySources
+      )
+    }
 }

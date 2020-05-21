@@ -14,6 +14,10 @@ final class MutableCancelable extends Cancelable {
     cancelables.foreach { cancelable => toCancel.add(cancelable) }
     this
   }
+  def remove(cancelable: Cancelable): this.type = {
+    toCancel.remove(cancelable)
+    this
+  }
   override def cancel(): Unit = {
     Cancelable.cancelAll(ConcurrentQueue.pollAll(toCancel))
   }
