@@ -58,7 +58,7 @@ following settings.
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Configuration for vim-scala
-au BufRead,BufNewFile *.scala,*.sc set filetype=scala
+au BufRead,BufNewFile *.sbt,*.sc set filetype=scala
 ```
 
 Run `:PlugInstall` to install the plugin. If you already have `coc.nvim`
