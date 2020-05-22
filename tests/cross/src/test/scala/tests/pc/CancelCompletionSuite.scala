@@ -1,17 +1,19 @@
 package tests.pc
 
 import java.lang
-import scala.meta.internal.jdk.CollectionConverters._
+import java.net.URI
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean
+
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.pc.CancelToken
-import tests.BaseCompletionSuite
-import scala.meta.internal.pc.InterruptException
-import munit.Location
-import java.net.URI
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.pc.InterruptException
+import scala.meta.pc.CancelToken
+
+import munit.Location
+import tests.BaseCompletionSuite
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 

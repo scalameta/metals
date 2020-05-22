@@ -1,7 +1,8 @@
 package tests
 
-import org.eclipse.lsp4j.FoldingRange
 import scala.meta.internal.metals.FoldingRanges
+
+import org.eclipse.lsp4j.FoldingRange
 
 final class FoldingRangesSuite extends BaseSuite {
   test("preserves-last-line") {

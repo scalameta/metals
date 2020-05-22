@@ -2,10 +2,12 @@ package scala.meta.internal.pc
 
 import java.util.Optional
 import java.{util => ju}
-import org.eclipse.lsp4j.Location
+
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+
+import org.eclipse.lsp4j.Location
 
 object EmptySymbolSearch extends SymbolSearch {
   override def search(

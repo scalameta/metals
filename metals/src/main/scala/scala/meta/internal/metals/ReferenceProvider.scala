@@ -1,27 +1,30 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.BloomFilter
-import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.ReferenceParams
+
 import scala.collection.concurrent.TrieMap
+import scala.util.control.NonFatal
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
-import scala.meta.internal.semanticdb.Synthetic
-import scala.meta.internal.remotels.RemoteLanguageServer
+
+import com.google.common.hash.BloomFilter
+import com.google.common.hash.Funnels
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.ReferenceParams
 
 final class ReferenceProvider(
     workspace: AbsolutePath,

@@ -1,17 +1,20 @@
 package scala.meta.internal.pc
 
+import java.{util => ju}
+
+import scala.collection.mutable
+
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.SymbolSearch
+
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.collection.mutable
-import scala.meta.pc.OffsetParams
-import scala.meta.pc.SymbolSearch
 import org.eclipse.{lsp4j => l}
-import java.{util => ju}
 
 class CompletionProvider(
     val compiler: MetalsGlobal,

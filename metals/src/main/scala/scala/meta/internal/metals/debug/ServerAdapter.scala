@@ -1,12 +1,14 @@
 package scala.meta.internal.metals.debug
-import org.eclipse.lsp4j.jsonrpc.messages.Message
-import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
-import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+
 import scala.meta.internal.metals.Cancelable
+
+import org.eclipse.lsp4j.jsonrpc.messages.Message
+import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 
 final class ServerAdapter(server: RemoteEndpoint)(implicit ec: ExecutionContext)
     extends Cancelable {

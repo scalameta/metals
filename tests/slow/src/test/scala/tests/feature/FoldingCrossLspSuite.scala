@@ -1,7 +1,8 @@
 package tests.feature
 
-import tests.BaseLspSuite
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import tests.BaseLspSuite
 
 class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
 

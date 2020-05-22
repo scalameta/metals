@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.UserConfiguration
+
 import munit.Location
 
 class SbtVersionSuite extends BaseSuite {

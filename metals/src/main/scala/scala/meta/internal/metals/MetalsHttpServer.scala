@@ -1,11 +1,25 @@
 package scala.meta.internal.metals
 
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.nio.charset.StandardCharsets
+import java.util.Collections
+
+import scala.collection.mutable
+import scala.util.control.NonFatal
+
+import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import io.undertow.Handlers.path
 import io.undertow.Handlers.websocket
 import io.undertow.Undertow
 import io.undertow.server.HttpHandler
 import io.undertow.server.HttpServerExchange
+import io.undertow.server.handlers.BlockingHandler
 import io.undertow.util.Headers
+import io.undertow.util.StatusCodes
 import io.undertow.websockets.WebSocketConnectionCallback
 import io.undertow.websockets.core.AbstractReceiveListener
 import io.undertow.websockets.core.BufferedTextMessage
@@ -13,18 +27,7 @@ import io.undertow.websockets.core.StreamSourceFrameChannel
 import io.undertow.websockets.core.WebSocketChannel
 import io.undertow.websockets.core.WebSockets
 import io.undertow.websockets.spi.WebSocketHttpExchange
-import java.nio.charset.StandardCharsets
-import java.util.Collections
 import org.eclipse.lsp4j.ExecuteCommandParams
-import scala.collection.mutable
-import scala.meta.internal.io.InputStreamIO
-import MetalsEnrichments._
-import io.undertow.util.StatusCodes
-import java.io.IOException
-import java.net.InetSocketAddress
-import java.net.ServerSocket
-import scala.util.control.NonFatal
-import io.undertow.server.handlers.BlockingHandler
 
 /**
  * Http server

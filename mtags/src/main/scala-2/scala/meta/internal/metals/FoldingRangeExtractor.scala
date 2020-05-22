@@ -1,16 +1,19 @@
 package scala.meta.internal.metals
 
 import java.util
+
+import scala.annotation.tailrec
+import scala.collection.mutable
+
+import scala.meta._
+import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.tokens.Token
+import scala.meta.tokens.Token.KwMatch
+
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind._
 import org.eclipse.{lsp4j => l}
-import scala.annotation.tailrec
-import scala.collection.mutable
-import scala.meta._
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.tokens.Token
-import scala.meta.tokens.Token.KwMatch
 
 final class FoldingRangeExtractor(
     distance: TokenEditDistance,

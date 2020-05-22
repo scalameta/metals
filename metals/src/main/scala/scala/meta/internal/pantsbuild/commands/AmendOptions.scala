@@ -1,7 +1,7 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.annotation._
 import metaconfig._
+import metaconfig.annotation._
 import metaconfig.generic
 import metaconfig.generic._
 

@@ -1,13 +1,15 @@
 package bench
 
-import java.{util => ju}
 import java.util.Optional
-import org.eclipse.lsp4j.Location
+import java.{util => ju}
+
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+
+import org.eclipse.lsp4j.Location
 
 /**
  * Implementation of `SymbolSearch` for only classpath symbols.

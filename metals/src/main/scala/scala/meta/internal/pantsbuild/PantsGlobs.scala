@@ -1,12 +1,14 @@
 package scala.meta.internal.pantsbuild
 
 import java.nio.file.Path
-import ujson.Value
-import ujson.Obj
-import ujson.Arr
-import ujson.Str
-import bloop.config.{Config => C}
+
 import scala.meta.io.AbsolutePath
+
+import bloop.config.{Config => C}
+import ujson.Arr
+import ujson.Obj
+import ujson.Str
+import ujson.Value
 
 case class PantsGlobs(
     include: List[String],

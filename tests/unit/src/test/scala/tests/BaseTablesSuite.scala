@@ -1,11 +1,12 @@
 package tests
 
 import java.nio.file.Files
+
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Tables
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.ClientConfiguration
 
 abstract class BaseTablesSuite extends BaseSuite {
   MetalsLogger.updateDefaultFormat()

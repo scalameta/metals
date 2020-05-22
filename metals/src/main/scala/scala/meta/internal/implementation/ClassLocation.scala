@@ -1,13 +1,15 @@
 package scala.meta.internal.implementation
 
 import java.nio.file.Path
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.ClassSignature
-import scala.util.Try
+
 import scala.util.Success
+import scala.util.Try
+
+import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.Scope
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.TypeRef
 
 private[implementation] case class ClassLocation(
     symbol: String,

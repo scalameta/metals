@@ -1,13 +1,15 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.{bsp4j => b}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.BuildTargetClasses.Classes
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+
+import ch.epfl.scala.{bsp4j => b}
 
 /**
  * In-memory index of main class symbols grouped by their enclosing build target

@@ -1,15 +1,17 @@
 package scala.meta.internal.metals
 
+import scala.collection.mutable
+
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.collection.mutable
-import scala.meta.internal.builds.BuildTool
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.semver.SemVer
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.

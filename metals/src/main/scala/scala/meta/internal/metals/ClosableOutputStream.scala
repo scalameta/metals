@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.FilterOutputStream
 import java.io.IOException
 import java.io.OutputStream
+
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 
 class ClosableOutputStream(underlying: OutputStream, name: String)

@@ -1,6 +1,7 @@
 package docs
 
 import java.nio.file.Paths
+
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {

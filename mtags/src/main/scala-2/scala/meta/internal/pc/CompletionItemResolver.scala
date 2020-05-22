@@ -1,9 +1,10 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j.CompletionItem
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.SymbolDocumentation
+
+import org.eclipse.lsp4j.CompletionItem
 
 class CompletionItemResolver(
     val compiler: MetalsGlobal

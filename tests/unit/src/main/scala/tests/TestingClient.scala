@@ -1,11 +1,38 @@
 package tests
 
+import java.net.URI
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
+
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.Future
+
+import scala.meta.inputs.Input
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.decorations.DecorationOptions
+import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsInputBoxResult
+import scala.meta.internal.metals.MetalsSlowTaskParams
+import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.meta.internal.metals.MetalsStatusParams
+import scala.meta.internal.metals.NoopLanguageClient
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.tvp.TreeViewDidChangeParams
+import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
+import org.eclipse.lsp4j.CodeAction
+import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -16,34 +43,10 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
-import scala.collection.concurrent.TrieMap
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsInputBoxParams
-import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.MetalsSlowTaskParams
-import scala.meta.internal.metals.MetalsSlowTaskResult
-import scala.meta.internal.metals.MetalsStatusParams
-import scala.meta.io.AbsolutePath
 import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
-import scala.meta.inputs.Input
-import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.NoopLanguageClient
-import scala.meta.internal.tvp.TreeViewDidChangeParams
-import java.util.concurrent.ConcurrentHashMap
-import scala.meta.internal.decorations.DecorationOptions
-import scala.meta.internal.decorations.PublishDecorationsParams
-import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.builds.BuildTools
-import java.net.URI
-import org.eclipse.lsp4j.CodeAction
-import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.Command
-import scala.concurrent.Future
-import scala.meta.internal.builds.BuildTool
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.

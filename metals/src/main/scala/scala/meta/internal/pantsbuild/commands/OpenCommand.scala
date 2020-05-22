@@ -1,13 +1,14 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.Command
-import metaconfig.cli.CliApp
 import scala.meta.internal.pantsbuild.IntelliJ
-import org.typelevel.paiges.Doc
-import metaconfig.cli.Messages
 import scala.meta.internal.pantsbuild.VSCode
+
+import metaconfig.cli.CliApp
+import metaconfig.cli.Command
+import metaconfig.cli.Messages
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
+import org.typelevel.paiges.Doc
 
 object OpenCommand extends Command[OpenOptions]("open") {
   override def description: Doc =

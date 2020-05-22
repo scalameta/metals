@@ -3,14 +3,16 @@ package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
+
+import scala.util.control.NonFatal
+import scala.xml.Node
+
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Trees
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
-import scala.xml.Node
-import scala.meta.internal.metals.Trees
 
 case class Digest(
     md5: String,

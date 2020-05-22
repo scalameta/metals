@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 import scala.annotation.tailrec
+
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence

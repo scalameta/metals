@@ -1,10 +1,14 @@
 package scala.meta.internal.pc.completions
 
 import java.lang.StringBuilder
-import org.eclipse.{lsp4j => l}
 
 import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{CompletionFuzzy, MetalsGlobal, Identifier}
+
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.MetalsGlobal
+
+import org.eclipse.{lsp4j => l}
 
 trait InterpolatorCompletions { this: MetalsGlobal =>
 

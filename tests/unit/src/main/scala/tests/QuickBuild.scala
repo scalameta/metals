@@ -1,19 +1,13 @@
 package tests
 
-import bloop.config.{Config => C}
-import bloop.config.Tag
-import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
-import bloop.config.Config
-import coursierapi.Dependency
-import coursierapi.Fetch
-import coursierapi.Repository
+
+import scala.util.matching.Regex
+
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -22,7 +16,16 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
-import scala.util.matching.Regex
+
+import bloop.config.Config
+import bloop.config.Tag
+import bloop.config.{Config => C}
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import coursierapi.Dependency
+import coursierapi.Fetch
+import coursierapi.Repository
 
 /**
  * A basic build tool for faster testing.

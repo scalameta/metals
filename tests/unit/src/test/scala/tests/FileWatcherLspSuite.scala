@@ -1,6 +1,7 @@
 package tests
 
 import java.nio.file.Files
+
 import scala.meta.internal.metals.RecursivelyDelete
 
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {

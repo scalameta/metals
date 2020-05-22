@@ -1,5 +1,6 @@
 package scala.meta.internal.async
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.collection.mutable
 
 object ConcurrentQueue {

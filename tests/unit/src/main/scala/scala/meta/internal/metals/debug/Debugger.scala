@@ -1,6 +1,12 @@
 package scala.meta.internal.metals.debug
 
 import java.util.concurrent.TimeUnit
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
@@ -20,9 +26,6 @@ import org.eclipse.lsp4j.debug.StepInArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesResponse
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Provides simple facade over the Debug Adapter Protocol

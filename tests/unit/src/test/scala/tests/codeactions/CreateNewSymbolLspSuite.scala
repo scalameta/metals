@@ -1,11 +1,12 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+
 import munit.Location
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import scala.meta.internal.metals.MetalsEnrichments._
 
 class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
 

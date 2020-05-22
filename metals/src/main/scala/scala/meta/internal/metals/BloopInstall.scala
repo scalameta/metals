@@ -2,18 +2,21 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import com.zaxxer.nuprocess.NuProcessBuilder
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.builds.Digest
-import scala.meta.internal.builds.Digest.Status
+
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.process.ProcessHandler
-import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.builds.Digest
+import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessHandler
+import scala.meta.io.AbsolutePath
+
+import com.zaxxer.nuprocess.NuProcessBuilder
 import org.eclipse.lsp4j.MessageActionItem
 
 /**

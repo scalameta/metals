@@ -1,12 +1,14 @@
 package tests
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import scala.collection.concurrent.TrieMap
 
-import java.nio.file.{Path, Files}
 import scala.meta.internal.io.FileIO
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.JarTopLevels
 import scala.meta.internal.io.PlatformFileIO
+import scala.meta.internal.metals.JarTopLevels
+import scala.meta.io.AbsolutePath
 
 class JarTopLevelsSuite extends BaseTablesSuite {
   private def jarSymbols: JarTopLevels = tables.jarSymbols

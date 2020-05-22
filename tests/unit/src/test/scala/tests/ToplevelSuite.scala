@@ -1,7 +1,9 @@
 package tests
 
 import java.nio.charset.StandardCharsets
+
 import scala.collection.mutable.ListBuffer
+
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.Mtags

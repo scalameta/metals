@@ -1,11 +1,11 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.Command
 import metaconfig.cli.CliApp
-import org.typelevel.paiges.Doc
+import metaconfig.cli.Command
 import metaconfig.cli.Messages
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
+import org.typelevel.paiges.Doc
 
 object InfoCommand extends Command[InfoOptions]("info") {
   override def description: Doc =

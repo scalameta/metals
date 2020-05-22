@@ -1,10 +1,11 @@
 package tests
 
-import org.eclipse.lsp4j.Hover
 import scala.meta.inputs.Input
-import scala.meta.internal.pc.HoverMarkup
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.HoverMarkup
+
+import org.eclipse.lsp4j.Hover
 
 object TestHovers extends TestHovers
 trait TestHovers {

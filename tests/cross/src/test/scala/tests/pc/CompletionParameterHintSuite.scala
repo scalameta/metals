@@ -1,9 +1,11 @@
 package tests.pc
 
+import scala.collection.Seq
+
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
+
 import tests.BaseCompletionSuite
-import scala.collection.Seq
 import tests.BuildInfoVersions
 
 class CompletionParameterHintSuite extends BaseCompletionSuite {

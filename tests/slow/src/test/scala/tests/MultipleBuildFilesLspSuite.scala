@@ -1,10 +1,10 @@
 package tests
 
-import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.Messages.ChooseBuildTool
 import scala.meta.internal.builds.MillBuildTool
+import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.Messages.ChooseBuildTool
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
 
 class MultipleBuildFilesLspSuite
     extends BaseImportSuite("multiple-build-files") {

@@ -1,24 +1,28 @@
 package scala.meta.internal.pantsbuild
 
-import bloop.data.TraceSettings
+import java.net.URL
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.Files
-import scala.sys.process._
-import java.nio.charset.StandardCharsets
-import scala.meta.internal.metals.{BuildInfo => V}
-import java.net.URL
-import scala.meta.internal.pantsbuild.commands.OpenOptions
-import scala.meta.internal.pantsbuild.commands.{Project, RefreshCommand}
 import java.nio.file.StandardOpenOption
+
+import scala.sys.process._
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.pantsbuild.commands.OpenOptions
+import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.internal.pantsbuild.commands.RefreshCommand
+import scala.meta.internal.zipkin.Property
+import scala.meta.internal.zipkin.ZipkinProperties
+
+import bloop.data.TraceSettings
 import bloop.data.WorkspaceSettings
 import bloop.io.AbsolutePath
 import bloop.logging.NoopLogger
-import scala.meta.internal.zipkin.Property
-import scala.meta.internal.zipkin.ZipkinProperties
 import ujson.Obj
 import ujson.Str
-import scala.meta.internal.metals.MetalsEnrichments._
 
 object IntelliJ {
   def launch(project: Project, open: OpenOptions): Unit = {

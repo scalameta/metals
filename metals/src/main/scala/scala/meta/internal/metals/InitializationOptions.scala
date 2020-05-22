@@ -1,8 +1,9 @@
 package scala.meta.internal.metals
-import com.google.gson.JsonElement
-import org.eclipse.{lsp4j => l}
 import scala.meta.internal.pc.CompilerInitializationOptions
+
+import com.google.gson.JsonElement
 import com.google.gson.JsonNull
+import org.eclipse.{lsp4j => l}
 
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,

@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.{BuildInfo => V}
 
 class WarningsLspSuite extends BaseLspSuite("warnings") {
 

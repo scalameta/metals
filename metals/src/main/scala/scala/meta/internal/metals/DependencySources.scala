@@ -1,9 +1,11 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import java.sql.Connection
+
+import scala.meta.internal.metals.JdbcEnrichments._
 import scala.meta.io.AbsolutePath
-import JdbcEnrichments._
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class DependencySources(conn: () => Connection) {
   def setBuildTarget(

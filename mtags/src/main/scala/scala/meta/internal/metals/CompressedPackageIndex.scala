@@ -1,7 +1,8 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.jdk.CollectionConverters._
 import java.{util => ju}
+
+import scala.meta.internal.jdk.CollectionConverters._
 
 /**
  * The memory-compressed version of PackageIndex.

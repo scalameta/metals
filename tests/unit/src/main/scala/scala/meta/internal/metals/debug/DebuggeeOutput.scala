@@ -3,6 +3,7 @@ package scala.meta.internal.metals.debug
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.Promise
+
 import scala.meta.internal.metals.debug.DebuggeeOutput.PrefixPattern
 
 final class DebuggeeOutput {

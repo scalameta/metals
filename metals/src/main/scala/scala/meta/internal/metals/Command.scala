@@ -1,7 +1,8 @@
 package scala.meta.internal.metals
 
-import org.eclipse.{lsp4j => l}
 import scala.meta.internal.metals.MetalsEnrichments._
+
+import org.eclipse.{lsp4j => l}
 
 case class Command(
     id: String,

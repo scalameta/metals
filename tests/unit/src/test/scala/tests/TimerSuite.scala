@@ -1,7 +1,9 @@
 package tests
 
 import java.util.concurrent.TimeUnit
+
 import scala.meta.internal.metals.Timer
+
 import munit.Location
 
 class TimerSuite extends BaseSuite {

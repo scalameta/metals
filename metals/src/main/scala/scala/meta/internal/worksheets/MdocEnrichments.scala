@@ -1,8 +1,8 @@
 package scala.meta.internal.worksheets
 
-import org.eclipse.{lsp4j => l}
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import mdoc.{interfaces => i}
+import org.eclipse.{lsp4j => l}
 
 object MdocEnrichments {
 

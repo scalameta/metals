@@ -1,15 +1,18 @@
 package tests.pc
 
-import tests.BaseSuite
-import scala.meta.internal.pc.CompilerJobQueue
-import scala.concurrent.Promise
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.mutable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+
+import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
+
+import scala.meta.internal.pc.CompilerJobQueue
+
+import tests.BaseSuite
 
 class CompilerJobQueueSuite extends BaseSuite {
   var jobs: CompilerJobQueue = null

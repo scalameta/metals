@@ -1,8 +1,9 @@
 package tests
 
-import munit.TestOptions
-import munit.Location
 import scala.concurrent.Future
+
+import munit.Location
+import munit.TestOptions
 
 class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 

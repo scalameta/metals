@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.SbtOpts
+
 import munit.Location
 
 class SbtOptsSuite extends BaseSuite {

@@ -1,7 +1,8 @@
 package tests
 
-import scala.meta.internal.mtags.Semanticdbs
 import scala.util.Properties
+
+import scala.meta.internal.mtags.Semanticdbs
 
 /**
  * Baseline test suite that documents the unprocessed output of semanticdb-scalac

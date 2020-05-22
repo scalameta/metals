@@ -1,8 +1,9 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j.CompletionList
 import java.{util => ju}
+
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionList
 
 object EmptyCompletionList {
   def apply(): CompletionList = {

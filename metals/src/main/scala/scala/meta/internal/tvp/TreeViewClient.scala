@@ -1,6 +1,7 @@
 package scala.meta.internal.tvp
 
 import javax.annotation.Nullable
+
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 
 trait TreeViewClient {

@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.TrigramSubstrings
+
 import munit.Location
 
 class TrigramSubstringsSuite extends BaseSuite {

@@ -1,13 +1,15 @@
 package scala.meta.internal.pantsbuild
 
-import scala.meta.io.AbsolutePath
 import scala.sys.process._
-import ujson.Obj
-import scala.meta.internal.metals.BuildInfo
-import ujson.Str
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.io.AbsolutePath
+
+import ujson.Obj
+import ujson.Str
 
 object VSCode {
   def launch(project: Project): Unit =

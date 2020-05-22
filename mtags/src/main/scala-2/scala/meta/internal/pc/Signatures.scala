@@ -1,11 +1,13 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.Seq
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc
 import scala.meta.pc.SymbolDocumentation
+
 import org.eclipse.{lsp4j => l}
 
 trait Signatures { this: MetalsGlobal =>

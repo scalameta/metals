@@ -1,7 +1,8 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.meta.internal.metals.DependencySources
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 class DependencySourcesSuite extends BaseTablesSuite {
   def dependencySources: DependencySources = tables.dependencySources

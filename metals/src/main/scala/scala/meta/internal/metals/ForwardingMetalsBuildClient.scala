@@ -2,23 +2,24 @@ package scala.meta.internal.metals
 
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import java.{util => ju}
+
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
+import scala.util.Failure
+import scala.util.Success
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.tvp._
+import scala.meta.internal.worksheets.WorksheetProvider
 
 import ch.epfl.scala.bsp4j._
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
-
-import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Promise
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.tvp._
-import java.{util => ju}
-import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.metals.ammonite.Ammonite
-import scala.util.Failure
-import scala.util.Success
 
 /**
  * A build client that forwards notifications from the build server to the language client.

@@ -1,27 +1,27 @@
 package scala.meta.internal.mtags
 
-import scala.meta.Parsed
-import scala.meta.Source
-import scala.meta.Tree
-import scala.meta.Term
-import scala.meta.Type
-import scala.meta.Template
-import scala.meta.Member
-import scala.meta.Name
 import scala.meta.Ctor
-import scala.meta.Defn
-import scala.meta.Pkg
 import scala.meta.Decl
+import scala.meta.Defn
+import scala.meta.Member
 import scala.meta.Mod
-import scala.meta.quasiquotes._
+import scala.meta.Name
+import scala.meta.Parsed
+import scala.meta.Pat
+import scala.meta.Pkg
+import scala.meta.Source
+import scala.meta.Template
+import scala.meta.Term
+import scala.meta.Tree
+import scala.meta.Type
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.Trees
 import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.quasiquotes._
 import scala.meta.transversers.SimpleTraverser
-import scala.meta.Pat
-import scala.meta.internal.metals.Trees
 
 object ScalaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {

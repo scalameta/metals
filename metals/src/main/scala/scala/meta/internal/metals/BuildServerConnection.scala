@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.io.IOException
 import java.io.InputStream
 import java.net.URI
 import java.util.Collections
@@ -7,23 +8,23 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
-import ch.epfl.scala.bsp4j._
-import org.eclipse.lsp4j.jsonrpc.Launcher
-
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.util.Try
+
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
-import scala.util.Try
+
+import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
-import MetalsEnrichments._
-import org.eclipse.lsp4j.services.LanguageClient
-import java.util.concurrent.atomic.AtomicReference
-import scala.concurrent.Promise
-import scala.concurrent.ExecutionContext
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
-import java.io.IOException
+import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * An actively running and initialized BSP connection.

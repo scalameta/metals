@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.Fuzzy
+
 import munit.Location
 
 class FilenameLength extends BaseSuite {

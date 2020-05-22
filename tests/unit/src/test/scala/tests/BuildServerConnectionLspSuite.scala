@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.ServerCommands
 
 class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {

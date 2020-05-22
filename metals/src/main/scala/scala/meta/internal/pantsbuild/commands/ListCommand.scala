@@ -1,9 +1,9 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.Command
 import metaconfig.cli.CliApp
-import org.typelevel.paiges.Doc
+import metaconfig.cli.Command
 import metaconfig.cli.Messages
+import org.typelevel.paiges.Doc
 
 object ListCommand extends Command[ListProjects]("list") {
   override def description: Doc =

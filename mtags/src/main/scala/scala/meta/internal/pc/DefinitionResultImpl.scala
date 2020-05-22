@@ -1,8 +1,10 @@
 package scala.meta.internal.pc
 
 import java.{util => ju}
-import org.eclipse.lsp4j.Location
+
 import scala.meta.pc.DefinitionResult
+
+import org.eclipse.lsp4j.Location
 
 case class DefinitionResultImpl(
     symbol: String,

@@ -1,12 +1,14 @@
 package scala.meta.internal.pc.completions
 
+import scala.collection.immutable.Nil
+import scala.collection.mutable
+
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 import org.eclipse.{lsp4j => l}
-
-import scala.collection.mutable
-import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{CompletionFuzzy, MetalsGlobal, Identifier}
 
 trait OverrideCompletions { this: MetalsGlobal =>
 

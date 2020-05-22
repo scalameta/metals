@@ -1,7 +1,8 @@
 package scala.meta.internal.docstrings
 
-import scala.meta._
 import scala.collection.Seq
+
+import scala.meta._
 import scala.meta.internal.metals.Trees
 
 /**

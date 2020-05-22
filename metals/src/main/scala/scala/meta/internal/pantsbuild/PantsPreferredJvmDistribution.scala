@@ -2,6 +2,7 @@ package scala.meta.internal.pantsbuild
 
 import java.nio.file.Path
 import java.nio.file.Paths
+
 import ujson.Obj
 
 final case class PantsPreferredJvmDistribution(

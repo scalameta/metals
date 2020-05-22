@@ -1,12 +1,15 @@
 package scala.meta.internal.builds
 
-import java.nio.file.{Files, Path}
-import scala.meta.io.AbsolutePath
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import scala.meta.internal.metals.BloopInstallResult
+
 import scala.concurrent.Future
+
+import scala.meta.internal.metals.BloopInstallResult
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.io.AbsolutePath
 
 abstract class BuildTool {
 

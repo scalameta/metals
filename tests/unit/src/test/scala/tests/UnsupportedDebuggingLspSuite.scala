@@ -1,12 +1,14 @@
 package tests
 
 import java.util.concurrent.TimeUnit
+
 import scala.concurrent.TimeoutException
-import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.Failure
 import scala.util.Success
+
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.MetalsEnrichments._
 
 class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
