@@ -8,6 +8,9 @@ import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
 import sun.misc.Unsafe
 import scala.collection.Seq
+import scala.util.Try
+import scala.util.Failure
+import scala.util.Success
 
 object ClasspathLoader {
 
@@ -60,7 +63,9 @@ object ClasspathLoader {
  * Scala data structures like `AbsolutePath` and `Option[T]` instead of
  * `java.net.URL` and nulls.
  */
-final class ClasspathLoader() {
+final class ClasspathLoader(
+    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
+) {
   val loader = new OpenClassLoader
   def close(): Unit = loader.close()
   override def toString: String = loader.getURLs.toList.toString()
@@ -75,6 +80,15 @@ final class ClasspathLoader() {
   /** Load a resource from the classpath. */
   def load(path: RelativePath): Option[AbsolutePath] = {
     loader.resolve(path)
+  }
+
+  def loadClass(symbol: String): Option[Class[_]] = {
+    Try(loader.loadClass(symbol)) match {
+      case Failure(exception) =>
+        onError.lift(exception)
+        None
+      case Success(value) => Some(value)
+    }
   }
 
   /** Load a resource from the classpath. */

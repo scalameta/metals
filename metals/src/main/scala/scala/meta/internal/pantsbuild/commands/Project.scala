@@ -4,12 +4,14 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import ujson.Bool
 
 case class Project(
     common: SharedOptions,
     name: String,
     targets: List[String],
-    root: ProjectRoot
+    root: ProjectRoot,
+    sources: Boolean
 ) {
   val fuzzyName: String = PantsConfiguration.outputFilename(name)
   def matchesName(query: String): Boolean =
@@ -21,9 +23,16 @@ object Project {
   def create(
       name: String,
       common: SharedOptions,
-      targets: List[String]
+      targets: List[String],
+      sources: Boolean
   ): Project = {
-    Project(common, name, targets, ProjectRoot(common.home.resolve(name)))
+    Project(
+      common,
+      name,
+      targets,
+      ProjectRoot(common.home.resolve(name)),
+      sources
+    )
   }
   def names(common: SharedOptions): List[String] =
     fromCommon(common).map(_.name)
@@ -56,11 +65,16 @@ object Project {
       if root.bspJson.isFile
       json <- Try(ujson.read(root.bspJson.readText)).toOption
       targets <- json.obj.get("pantsTargets")
+      sources = json.obj.get("sources") match {
+        case Some(Bool(true)) => true
+        case _ => false
+      }
     } yield Project(
       common,
       project.filename,
       targets.arr.map(_.str).toList,
-      root
+      root,
+      sources
     )
   }
 

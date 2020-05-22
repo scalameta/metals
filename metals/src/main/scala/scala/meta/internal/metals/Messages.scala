@@ -66,7 +66,20 @@ object Messages {
       )
       params
     }
+  }
 
+  object ChooseBuildTool {
+    def params(builtTools: List[BuildTool]): ShowMessageRequestParams = {
+      val messageActionItems =
+        builtTools.map(bt => new MessageActionItem(bt.executableName))
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        "Multiple build definitions found. Which would you like to use?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(messageActionItems.asJava)
+      params
+    }
   }
 
   val PartialNavigation = new MetalsStatusParams(
@@ -478,5 +491,26 @@ object Messages {
         s"but class(es) with the same name also found in $anotherTargetsStr.\n" +
         "Build target can be specified with 'buildTarget' debug configuration"
     }
+  }
+
+  object ImportAmmoniteScript {
+    val message: String = "Ammonite script detected."
+    val importAll: String = "Import scripts automatically"
+    val doImport: String = "Import"
+    val dismiss: String = "Dismiss"
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams(
+        List(importAll, doImport, dismiss)
+          .map(new MessageActionItem(_))
+          .asJava
+      )
+      params.setMessage(message)
+      params.setType(MessageType.Info)
+      params
+    }
+    def ImportFailed(script: String) = new MessageParams(
+      MessageType.Error,
+      s"Error importing $script. See the logs for more details."
+    )
   }
 }

@@ -62,7 +62,7 @@ final class BloopServers(
         client,
         languageClient,
         () => connectToLauncher(bloopVersion),
-        tables,
+        tables.dismissedNotifications.ReconnectBsp,
         config
       )
       .map(Option(_))

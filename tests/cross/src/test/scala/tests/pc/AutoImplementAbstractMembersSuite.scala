@@ -636,6 +636,48 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "access-modifiers",
+    """|package a
+       |
+       |trait Base {
+       |  // private is not available for abstract members
+       |  protected[a] def f(): Unit
+       |  protected def d(): Unit
+       |  protected[a] val s: Unit
+       |  implicit val a: String
+       |  // lazy values might not be abstract
+       |}
+       |object Test {
+       |   class <<Concrete>> extends Base
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base {
+       |  // private is not available for abstract members
+       |  protected[a] def f(): Unit
+       |  protected def d(): Unit
+       |  protected[a] val s: Unit
+       |  implicit val a: String
+       |  // lazy values might not be abstract
+       |}
+       |object Test {
+       |   class Concrete extends Base {
+       |
+       |     override protected[a] def f(): Unit = ???
+       |
+       |     override protected def d(): Unit = ???
+       |
+       |     override protected[a] val s: Unit = ???
+       |
+       |     override implicit val a: String = ???
+       |
+       |   }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "complete-braces-indent",
     """|package a
        |

@@ -81,6 +81,12 @@ inThisBuild(
         url("https://jvican.github.io/")
       ),
       Developer(
+        "kpbochenek",
+        "Krzysztof Bochenek",
+        "kbochenek@virtuslab.com ",
+        url("https://github.com/kpbochenek")
+      ),
+      Developer(
         "marek1840",
         "Marek Żarnowski",
         "mzarnowski@virtuslab.com",
@@ -201,6 +207,7 @@ lazy val V = new {
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-16"
   val coursierInterfaces = "0.0.22"
+  val ammonite = "2.1.4"
 }
 
 val genyVersion = Def.setting {
@@ -413,7 +420,9 @@ lazy val metals = project
       "com.lihaoyi" %% "requests" % "0.5.2",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
-      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+      // For starting Ammonite
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.2.3"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -430,6 +439,7 @@ lazy val metals = project
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
+      "ammoniteVersion" -> V.ammonite,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "supportedScala3Versions" -> V.scala3Versions,
@@ -583,7 +593,10 @@ lazy val unit = project
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "org.scalameta" %% "munit" % V.munit
+      "org.scalameta" %% "munit" % V.munit,
+      // Only here to have scala-steward update V.ammonite.
+      // Not actually used in tests.
+      "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive ()
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),

@@ -24,6 +24,7 @@ private[debug] final class SetBreakpointsRequestHandler(
     val path =
       adapters.adaptPathForServer(request.getSource.getPath).toAbsolutePath
 
+    val originalSource = DebugProtocol.copy(request.getSource)
     val topLevels = Mtags.allToplevels(path.toInput)
     val occurrences = path.toLanguage match {
       case Language.JAVA =>
@@ -54,7 +55,7 @@ private[debug] final class SetBreakpointsRequestHandler(
       .sendPartitioned(partitions.map(DebugProtocol.syntheticRequest))
       .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
       .map(_.flatMap(_.toList))
-      .map(assembleResponse(_, request.getSource))
+      .map(assembleResponse(_, originalSource))
   }
 
   private def assembleResponse(
@@ -66,6 +67,13 @@ private[debug] final class SetBreakpointsRequestHandler(
       breakpoint <- response.getBreakpoints
     } yield {
       breakpoint.setSource(originalSource)
+      // note(@tgodzik) this seems to happen from time to time, not exactly sure why
+      // can be removed if the issue is closed:
+      // https://github.com/scalameta/metals/issues/1569
+      if (breakpoint.getSource() == null)
+        scribe.warn(
+          s"[DAP] Could not set the original source for breakpoint, since it was $originalSource"
+        )
       breakpoint
     }
 

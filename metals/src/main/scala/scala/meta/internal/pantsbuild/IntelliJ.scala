@@ -8,7 +8,6 @@ import scala.sys.process._
 import java.nio.charset.StandardCharsets
 import scala.meta.internal.metals.{BuildInfo => V}
 import java.net.URL
-import com.google.gson.JsonArray
 import scala.meta.internal.pantsbuild.commands.OpenOptions
 import scala.meta.internal.pantsbuild.commands.{Project, RefreshCommand}
 import java.nio.file.StandardOpenOption
@@ -17,6 +16,9 @@ import bloop.io.AbsolutePath
 import bloop.logging.NoopLogger
 import scala.meta.internal.zipkin.Property
 import scala.meta.internal.zipkin.ZipkinProperties
+import ujson.Obj
+import ujson.Str
+import scala.meta.internal.metals.MetalsEnrichments._
 
 object IntelliJ {
   def launch(project: Project, open: OpenOptions): Unit = {
@@ -52,37 +54,39 @@ object IntelliJ {
   }
 
   /** The .bsp/bloop.json file is necessary for IntelliJ to automatically import the project */
-  def writeBsp(project: Project, coursierBinary: Option[Path] = None): Unit = {
+  def writeBsp(
+      project: Project,
+      coursierBinary: Option[Path] = None,
+      exportResult: Option[PantsExportResult] = None
+  ): Unit = {
     val bspJson = project.root.bspJson.toNIO
     Files.createDirectories(bspJson.getParent)
     val coursier = coursierBinary.getOrElse(
       downloadCoursier(bspJson.resolveSibling("coursier"))
     )
-    val targetsJson = new JsonArray()
-    project.targets.foreach { target => targetsJson.add(target) }
-    val newJson = s"""{
-  "name": "Bloop",
-  "version": "${V.bloopNightlyVersion}",
-  "bspVersion": "${V.bspVersion}",
-  "languages": ["scala", "java"],
-  "argv": [
-    "$coursier",
-    "launch",
-    "ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopNightlyVersion}",
-    "--ttl",
-    "Inf",
-    "--",
-    "${V.bloopVersion}"
-  ],
-  "pantsTargets": ${targetsJson.toString},
-  "fastpassVersion": "${V.metalsVersion}",
-  "fastpassProjectName": "${project.name}",
-  "X-detectExternalProjectFiles": false
-}
-"""
+    val newJson = Obj()
+    newJson("name") = "Bloop"
+    newJson("version") = V.bloopNightlyVersion
+    newJson("bspVersion") = V.bspVersion
+    newJson("languages") = List[String]("scala", "java")
+    newJson("argv") = List[String](
+      coursier.toString(),
+      "launch",
+      s"ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopNightlyVersion}",
+      "--ttl",
+      "Inf",
+      "--",
+      V.bloopVersion
+    )
+    newJson("sources") = project.sources
+    newJson("pantsTargets") = project.targets
+    newJson("fastpassVersion") = V.metalsVersion
+    newJson("fastpassProjectName") = project.name
+    newJson("pantsTargets") = project.targets
+    newJson("X-detectExternalProjectFiles") = false
     Files.write(
       bspJson,
-      newJson.getBytes(StandardCharsets.UTF_8),
+      newJson.render(indent = 2).getBytes(StandardCharsets.UTF_8),
       StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.CREATE
     )
@@ -128,6 +132,7 @@ object IntelliJ {
         traceSettings = Some(traceSettings)
       )
     WorkspaceSettings.writeToFile(configDir, settings, NoopLogger)
+    exportResult.foreach(r => writeLibraryDependencies(project, r))
   }
 
   private def downloadCoursier(destination: Path): Path = {
@@ -144,5 +149,21 @@ object IntelliJ {
       destination.toFile().setExecutable(true)
       destination
     }
+  }
+
+  private def writeLibraryDependencies(
+      project: Project,
+      export: PantsExportResult
+  ): Unit = {
+    val libraries = Obj()
+    export.pantsExport.libraries.valuesIterator.foreach { obj =>
+      for {
+        default <- obj.default
+        sources <- obj.sources
+      } {
+        libraries(default.toString()) = Str(sources.toString())
+      }
+    }
+    project.root.pantsLibrariesJson.writeText(ujson.write(libraries))
   }
 }

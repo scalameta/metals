@@ -87,7 +87,8 @@ case class PantsBuildTool(
             val project = Project.create(
               name = "metals",
               SharedOptions(workspace = workspace.toNIO),
-              targets
+              targets,
+              sources = true
             )
             val args = Export(
               project,

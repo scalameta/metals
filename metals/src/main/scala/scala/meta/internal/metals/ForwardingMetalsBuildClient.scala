@@ -16,6 +16,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
 import java.{util => ju}
 import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.internal.metals.ammonite.Ammonite
+import scala.util.Failure
+import scala.util.Success
 
 /**
  * A build client that forwards notifications from the build server to the language client.
@@ -30,7 +33,8 @@ final class ForwardingMetalsBuildClient(
     time: Time,
     didCompile: CompileReport => Unit,
     treeViewProvider: () => TreeViewProvider,
-    worksheetProvider: () => WorksheetProvider
+    worksheetProvider: () => WorksheetProvider,
+    ammonite: () => Ammonite
 )(implicit ec: ExecutionContext)
     extends MetalsBuildClient
     with Cancelable {
@@ -94,7 +98,16 @@ final class ForwardingMetalsBuildClient(
   }
 
   def onBuildTargetDidChange(params: b.DidChangeBuildTarget): Unit = {
-    scribe.info(params.toString)
+    val ammoniteBuildChanged =
+      params.getChanges.asScala.exists(_.getTarget.getUri.isAmmoniteScript)
+    if (ammoniteBuildChanged)
+      ammonite().importBuild().onComplete {
+        case Success(()) =>
+        case Failure(exception) =>
+          scribe.error("Error re-importing Ammonite build", exception)
+      }
+    else
+      scribe.info(params.toString)
   }
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}

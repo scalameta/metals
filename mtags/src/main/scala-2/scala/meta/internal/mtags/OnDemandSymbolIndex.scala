@@ -13,6 +13,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import java.util.zip.ZipError
+import scala.util.Properties
 
 /**
  * An implementation of GlobalSymbolIndex with fast indexing and low memory usage.
@@ -37,10 +38,11 @@ import java.util.zip.ZipError
 final class OnDemandSymbolIndex(
     val toplevels: TrieMap[String, AbsolutePath] = TrieMap.empty,
     definitions: TrieMap[String, AbsolutePath] = TrieMap.empty,
-    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
+    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+    toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
-  private val sourceJars = new ClasspathLoader()
+  private val sourceJars = new ClasspathLoader(onError)
   var indexedSources = 0L
   def close(): Unit = sourceJars.close()
   private val onErrorOption = onError.andThen(_ => None)
@@ -116,7 +118,7 @@ final class OnDemandSymbolIndex(
       source: AbsolutePath,
       toplevel: String
   ): Unit = {
-    if (!isTrivialToplevelSymbol(path, toplevel)) {
+    if (source.isAmmoniteScript || !isTrivialToplevelSymbol(path, toplevel)) {
       toplevels(toplevel) = source
     }
   }
@@ -140,9 +142,10 @@ final class OnDemandSymbolIndex(
   // only non-trivial toplevel symbols.
   private def addMtagsSourceFile(file: AbsolutePath): Unit = {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
-      case "scala" | "java" =>
+      case "scala" | "java" | "sc" =>
         val language = file.toLanguage
-        val input = file.toInput
+        val toIndexSource0 = toIndexSource(file).getOrElse(file)
+        val input = toIndexSource0.toInput
         val document = mtags.index(language, input)
         s.TextDocuments(List(document))
       case _ =>
@@ -192,7 +195,9 @@ final class OnDemandSymbolIndex(
         case Some(file) =>
           addMtagsSourceFile(file)
         case _ =>
-          loadFromSourceJars(trivialPaths(toplevel)).foreach(addMtagsSourceFile)
+          loadFromSourceJars(trivialPaths(toplevel))
+            .orElse(loadFromSourceJars(modulePaths(toplevel)))
+            .foreach(addMtagsSourceFile)
       }
     }
     if (!definitions.contains(symbol.value)) {
@@ -231,9 +236,35 @@ final class OnDemandSymbolIndex(
     val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
     List(
       noExtension + ".scala",
-      noExtension + ".java",
-      "java.base/" + noExtension + ".java" // For Java 11.
+      noExtension + ".java"
     )
+  }
+
+  private def modulePaths(toplevel: Symbol): List[String] = {
+    if (Properties.isJavaAtLeast("9")) {
+      val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
+      val javaSymbol = noExtension.replace("/", ".")
+      try {
+        for {
+          cls <- sourceJars.loadClass(javaSymbol).toList
+          // note(@tgodzik) Modules are only available in Java 9+, so we need to invoke this reflectively
+          module <- Option(cls.getClass().getMethod("getModule").invoke(cls)).toList
+          moduleName <- Option(
+            module.getClass().getMethod("getName").invoke(module)
+          ).toList
+          file <- List(
+            s"$moduleName/$noExtension.java",
+            s"$moduleName/$noExtension.scala"
+          )
+        } yield file
+      } catch {
+        case NonFatal(t) =>
+          onError.lift(t)
+          Nil
+      }
+    } else {
+      Nil
+    }
   }
 
 }
@@ -242,7 +273,8 @@ object OnDemandSymbolIndex {
   def apply(
       toplevels: TrieMap[String, AbsolutePath] = TrieMap.empty,
       definitions: TrieMap[String, AbsolutePath] = TrieMap.empty,
-      onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
+      onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+      toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
   ): OnDemandSymbolIndex =
-    new OnDemandSymbolIndex(toplevels, definitions, onError)
+    new OnDemandSymbolIndex(toplevels, definitions, onError, toIndexSource)
 }

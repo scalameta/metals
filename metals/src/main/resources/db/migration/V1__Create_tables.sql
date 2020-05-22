@@ -22,3 +22,7 @@ create table dismissed_notification(
   when_expires timestamp
 );
 
+-- The choice of build tool when multiple build tool files are found in a workspace
+create table chosen_build_tool(
+  build_tool varchar primary key
+);

@@ -6,6 +6,8 @@ object PantsKeys {
   val excludes = "excludes"
   val transitiveTargets = "transitive_targets"
   val libraries = "libraries"
+  val compileLibraries = "compile_libraries"
+  val runtimeLibraries = "runtime_libraries"
   val isTargetRoot = "is_target_root"
   val id = "id"
   val pantsTargetType = "pants_target_type"

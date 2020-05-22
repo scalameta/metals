@@ -206,4 +206,29 @@ class DetectionSuite extends BaseSuite {
        |</project>
        |""".stripMargin
   )
+
+  /**------------ Multiple Build Files ------------**/
+  def checkMulti(name: String, layout: String, isTrue: Boolean = true)(
+      implicit loc: Location
+  ): Unit = {
+    test(s"sbt-$name") {
+      check(
+        layout,
+        p => {
+          val bt = BuildTools.default(p)
+          bt.isSbt && bt.isMill
+        },
+        isTrue
+      )
+    }
+  }
+
+  checkMulti(
+    "sbt-and-mill",
+    """|/build.sbt
+       |lazy val a = project
+       |/build.sc
+       |import mill._
+       |""".stripMargin
+  )
 }

@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.reflect.internal.FatalError
 
 trait AutoImports { this: MetalsGlobal =>
@@ -52,30 +53,54 @@ trait AutoImports { this: MetalsGlobal =>
     findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
-        val enclosingPackage = lastVisitedParentTrees.collectFirst {
-          case pkg: PackageDef if notPackageObject(pkg) => pkg
-        }
-        enclosingPackage match {
-          case Some(pkg)
-              if pkg.symbol != rootMirror.EmptyPackage ||
-                pkg.stats.headOption.exists(_.isInstanceOf[Import]) =>
-            val lastImport = pkg.stats
+        def forScalaSource =
+          for {
+            pkg <- lastVisitedParentTrees.collectFirst {
+              case pkg: PackageDef if notPackageObject(pkg) => pkg
+            }
+            if pkg.symbol != rootMirror.EmptyPackage ||
+              pkg.stats.headOption.exists(_.isInstanceOf[Import])
+          } yield {
+            val lastImportOpt = pkg.stats
               .takeWhile(_.isInstanceOf[Import])
               .lastOption
-
-            val padTop = lastImport.isEmpty
-            val lastImportOrPkg = lastImport.getOrElse(pkg.pid)
-
-            Some(
-              new AutoImportPosition(
-                pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
-                text,
-                padTop
-              )
+            val padTop = lastImportOpt.isEmpty
+            val lastImportOrPkg = lastImportOpt.getOrElse(pkg.pid)
+            new AutoImportPosition(
+              pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
+              text,
+              padTop
             )
-          case _ =>
-            Some(AutoImportPosition(0, 0, padTop = false))
-        }
+          }
+
+        def forAmmoniteScript =
+          for {
+            obj <- lastVisitedParentTrees.collectFirst {
+              case mod: ModuleDef => mod
+            }
+          } yield {
+            val lastImportOpt = obj.impl.body.iterator
+              .dropWhile {
+                case d: DefDef => d.name.decoded == "<init>"
+                case _ => false
+              }
+              .takeWhile(_.isInstanceOf[Import])
+              .lastOption
+            val lastImportLine = lastImportOpt
+              .map(_.pos.focusEnd.line)
+              .getOrElse(0) // if no previous import, add the new one at the top
+            new AutoImportPosition(
+              pos.source.lineToOffset(lastImportLine),
+              text,
+              padTop = false
+            )
+          }
+
+        def fileStart = AutoImportPosition(0, 0, padTop = false)
+
+        (if (pos.source.path.endsWith(".sc.scala")) forAmmoniteScript else None)
+          .orElse(forScalaSource)
+          .orElse(Some(fileStart))
     }
   }
 
