@@ -13,9 +13,10 @@ trait Cancelable {
 }
 
 object Cancelable {
-  def apply(fn: () => Unit): Cancelable = new Cancelable {
-    override def cancel(): Unit = fn()
-  }
+  def apply(fn: () => Unit): Cancelable =
+    new Cancelable {
+      override def cancel(): Unit = fn()
+    }
   val empty: Cancelable = Cancelable(() => ())
 
   def cancelEach[T](iterable: Iterable[T])(fn: T => Unit): Unit = {

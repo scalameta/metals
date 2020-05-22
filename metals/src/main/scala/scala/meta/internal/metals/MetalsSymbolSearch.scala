@@ -1,16 +1,19 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
-import org.eclipse.lsp4j.Location
 import java.util.Optional
+import java.{util => ju}
+
 import scala.collection.concurrent.TrieMap
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Mtags
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.internal.mtags.Mtags
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.Location
 
 /**
  * Implementation of SymbolSearch that delegates to WorkspaceSymbolProvider and SymbolDocumentationIndexer.

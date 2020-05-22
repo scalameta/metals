@@ -1,27 +1,30 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.BloomFilter
-import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.ReferenceParams
+
 import scala.collection.concurrent.TrieMap
+import scala.util.control.NonFatal
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
-import scala.meta.internal.semanticdb.Synthetic
-import scala.meta.internal.remotels.RemoteLanguageServer
+
+import com.google.common.hash.BloomFilter
+import com.google.common.hash.Funnels
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.ReferenceParams
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -127,22 +130,22 @@ final class ReferenceProvider(
         info.displayName == name &&
         occ.symbol == (Symbol(info.symbol) match {
           case GlobalSymbol(
-              GlobalSymbol(
-                GlobalSymbol(owner, Descriptor.Term(obj)),
-                Descriptor.Method("apply", _)
-              ),
-              _
+                GlobalSymbol(
+                  GlobalSymbol(owner, Descriptor.Term(obj)),
+                  Descriptor.Method("apply", _)
+                ),
+                _
               ) =>
             Symbols.Global(
               Symbols.Global(owner.value, Descriptor.Type(obj)),
               Descriptor.Term(name)
             )
           case GlobalSymbol(
-              GlobalSymbol(
-                GlobalSymbol(owner, Descriptor.Type(obj)),
-                Descriptor.Method("copy", _)
-              ),
-              _
+                GlobalSymbol(
+                  GlobalSymbol(owner, Descriptor.Type(obj)),
+                  Descriptor.Method("copy", _)
+                ),
+                _
               ) =>
             Symbols.Global(
               Symbols.Global(owner.value, Descriptor.Type(obj)),
@@ -208,37 +211,40 @@ final class ReferenceProvider(
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
         if bloom.mightContain(occ.symbol)
-        scalaPath <- SemanticdbClasspath
-          .toScala(workspace, AbsolutePath(path))
-          .iterator
+        scalaPath <-
+          SemanticdbClasspath
+            .toScala(workspace, AbsolutePath(path))
+            .iterator
         if !visited(scalaPath)
         _ = visited.add(scalaPath)
         if scalaPath.exists
-        semanticdb <- semanticdbs
-          .textDocument(scalaPath)
-          .documentIncludingStale
-          .iterator
+        semanticdb <-
+          semanticdbs
+            .textDocument(scalaPath)
+            .documentIncludingStale
+            .iterator
         semanticdbDistance = buffers.tokenEditDistance(
           scalaPath,
           semanticdb.text
         )
         uri = scalaPath.toURI.toString
-        reference <- try {
-          referenceLocations(
-            semanticdb,
-            isSymbol,
-            semanticdbDistance,
-            uri,
-            isIncludeDeclaration,
-            canSkipExactMatchCheck,
-            includeSynthetics
-          )
-        } catch {
-          case NonFatal(e) =>
-            // Can happen for example if the SemanticDB text is empty for some reason.
-            scribe.error(s"reference: $scalaPath", e)
-            Nil
-        }
+        reference <-
+          try {
+            referenceLocations(
+              semanticdb,
+              isSymbol,
+              semanticdbDistance,
+              uri,
+              isIncludeDeclaration,
+              canSkipExactMatchCheck,
+              includeSynthetics
+            )
+          } catch {
+            case NonFatal(e) =>
+              // Can happen for example if the SemanticDB text is empty for some reason.
+              scribe.error(s"reference: $scalaPath", e)
+              Nil
+          }
       } yield reference
       results.toSeq
     }

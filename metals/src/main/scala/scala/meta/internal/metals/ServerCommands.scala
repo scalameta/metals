@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
-import scala.util.matching.Regex
-import ch.epfl.scala.{bsp4j => b}
 import javax.annotation.Nullable
+
+import scala.util.matching.Regex
+
+import ch.epfl.scala.{bsp4j => b}
 
 /**
  * LSP commands supported by the Metals language server.
@@ -108,37 +110,37 @@ object ServerCommands {
     "Start debug adapter",
     "Start debug adapter",
     s"""|DebugSessionParameters object
-        |Example:
-        |```json
-        |{
-        |  "targets": ["mybuild://workspace/foo/?id=foo"],
-        |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
-        |   data: {
-        |      className: "com.foo.App"
-        |   }
-        |}
-        |```
-        |
-        |or DebugUnresolvedMainClassParams object
-        |Example:
-        |```json
-        |{
-        |   mainClass: "com.foo.App",
-        |   buildTarget: "foo",
-        |   args: ["bar"],
-        |   jvmOptions: ["-Dfile.encoding=UTF-16"]
-        |}
-        |```
-        |
-        |or DebugUnresolvedTestClassParams object
-        |Example:
-        |```json
-        |{
-        |   testClass: "com.foo.FooSuite",
-        |   buildTarget: "foo"
-        |}
-        |```
-        |""".stripMargin
+       |Example:
+       |```json
+       |{
+       |  "targets": ["mybuild://workspace/foo/?id=foo"],
+       |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
+       |   data: {
+       |      className: "com.foo.App"
+       |   }
+       |}
+       |```
+       |
+       |or DebugUnresolvedMainClassParams object
+       |Example:
+       |```json
+       |{
+       |   mainClass: "com.foo.App",
+       |   buildTarget: "foo",
+       |   args: ["bar"],
+       |   jvmOptions: ["-Dfile.encoding=UTF-16"]
+       |}
+       |```
+       |
+       |or DebugUnresolvedTestClassParams object
+       |Example:
+       |```json
+       |{
+       |   testClass: "com.foo.FooSuite",
+       |   buildTarget: "foo"
+       |}
+       |```
+       |""".stripMargin
   )
 
   val PresentationCompilerRestart = new Command(
@@ -290,23 +292,24 @@ object ServerCommands {
     "Something"
   )
 
-  def all: List[Command] = List(
-    ImportBuild,
-    RestartBuildServer,
-    ConnectBuildServer,
-    ScanWorkspaceSources,
-    RunDoctor,
-    CascadeCompile,
-    CancelCompile,
-    BspSwitch,
-    StartDebugAdapter,
-    GotoLocation,
-    NewScalaFile,
-    GotoSuperMethod,
-    SuperMethodHierarchy,
-    StartAmmoniteBuildServer,
-    StopAmmoniteBuildServer
-  )
+  def all: List[Command] =
+    List(
+      ImportBuild,
+      RestartBuildServer,
+      ConnectBuildServer,
+      ScanWorkspaceSources,
+      RunDoctor,
+      CascadeCompile,
+      CancelCompile,
+      BspSwitch,
+      StartDebugAdapter,
+      GotoLocation,
+      NewScalaFile,
+      GotoSuperMethod,
+      SuperMethodHierarchy,
+      StartAmmoniteBuildServer,
+      StopAmmoniteBuildServer
+    )
 }
 
 case class DebugUnresolvedMainClassParams(

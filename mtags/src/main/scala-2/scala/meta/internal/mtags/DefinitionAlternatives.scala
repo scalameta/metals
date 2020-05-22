@@ -39,11 +39,11 @@ object DefinitionAlternatives {
   private def caseClassApplyOrCopyParams(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(
-          GlobalSymbol(
-            GlobalSymbol(owner, signature),
-            Descriptor.Method("copy" | "apply", _)
-          ),
-          Descriptor.Parameter(param)
+            GlobalSymbol(
+              GlobalSymbol(owner, signature),
+              Descriptor.Method("copy" | "apply", _)
+            ),
+            Descriptor.Parameter(param)
           ) =>
         GlobalSymbol(
           GlobalSymbol(owner, Descriptor.Type(signature.name.value)),
@@ -59,8 +59,8 @@ object DefinitionAlternatives {
   private def caseClassApplyOrCopy(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(
-          GlobalSymbol(owner, signature),
-          Descriptor.Method("apply" | "copy", _)
+            GlobalSymbol(owner, signature),
+            Descriptor.Method("apply" | "copy", _)
           ) =>
         GlobalSymbol(owner, Descriptor.Type(signature.name.value))
     }

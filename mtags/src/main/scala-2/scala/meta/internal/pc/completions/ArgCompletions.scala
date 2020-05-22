@@ -1,9 +1,10 @@
 package scala.meta.internal.pc.completions
 
-import org.eclipse.{lsp4j => l}
-
 import scala.collection.immutable.Nil
+
 import scala.meta.internal.pc.MetalsGlobal
+
+import org.eclipse.{lsp4j => l}
 
 trait ArgCompletions { this: MetalsGlobal =>
 
@@ -83,7 +84,9 @@ trait ArgCompletions { this: MetalsGlobal =>
           results
             .collect {
               case mem
-                  if mem.sym.tpe <:< paramType && notNothingOrNull(mem) && mem.sym.isTerm =>
+                  if mem.sym.tpe <:< paramType && notNothingOrNull(
+                    mem
+                  ) && mem.sym.isTerm =>
                 mem.sym.name.toString().trim()
             }
             // None and Nil are always in scope
@@ -110,7 +113,9 @@ trait ArgCompletions { this: MetalsGlobal =>
         allParams.exists(param => param.name.startsWith(prefix))
       val isExplicitlyCalled = suffix.startsWith(prefix)
       val hasParamsToFill = allParams.count(!_.hasDefault) > 1
-      if ((shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets) {
+      if (
+        (shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets
+      ) {
         val editText = allParams.zipWithIndex
           .collect {
             case (param, index) if !param.hasDefault =>
@@ -149,7 +154,9 @@ trait ArgCompletions { this: MetalsGlobal =>
     }
 
     override def contribute: List[Member] = {
-      params.map(param => new NamedArgMember(param)) ::: findPossibleDefaults() ::: fillAllFields()
+      params.map(param =>
+        new NamedArgMember(param)
+      ) ::: findPossibleDefaults() ::: fillAllFields()
     }
   }
 }

@@ -5,15 +5,18 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.util.control.NonFatal
-import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
 import scala.util.Failure
 import scala.util.Success
-import scala.concurrent.ExecutionContext
+import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.MetalsEnrichments._
+
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -159,10 +162,11 @@ final class StatusBar(
   }
 
   private var activeItem: Option[Item] = None
-  private def isActiveMessage: Boolean = activeItem.exists {
-    case m: Message => !m.isOutdated
-    case _ => false
-  }
+  private def isActiveMessage: Boolean =
+    activeItem.exists {
+      case m: Message => !m.isOutdated
+      case _ => false
+    }
   private sealed abstract class Item {
     val timer = new Timer(time)
     private var firstShow: Option[Timer] = None
@@ -174,32 +178,34 @@ final class StatusBar(
     def priority: Long = timer.elapsedNanos
     def isRecent: Boolean = timer.elapsedSeconds < 3
     private val dots = new AtomicInteger()
-    def formattedMessage: String = this match {
-      case Message(value) => value.text
-      case Progress(message, _, showTimer, maybeProgress) =>
-        if (showTimer) {
-          val seconds = timer.elapsedSeconds
-          if (seconds == 0) {
-            s"$message   "
-          } else {
-            maybeProgress match {
-              case Some(TaskProgress(percentage)) if seconds > 3 =>
-                s"$message ${Timer.readableSeconds(seconds)} ($percentage%)"
-              case _ =>
-                s"$message ${Timer.readableSeconds(seconds)}"
+    def formattedMessage: String =
+      this match {
+        case Message(value) => value.text
+        case Progress(message, _, showTimer, maybeProgress) =>
+          if (showTimer) {
+            val seconds = timer.elapsedSeconds
+            if (seconds == 0) {
+              s"$message   "
+            } else {
+              maybeProgress match {
+                case Some(TaskProgress(percentage)) if seconds > 3 =>
+                  s"$message ${Timer.readableSeconds(seconds)} ($percentage%)"
+                case _ =>
+                  s"$message ${Timer.readableSeconds(seconds)}"
+              }
             }
+          } else {
+            message + progressTicks.format(dots.getAndIncrement())
           }
-        } else {
-          message + progressTicks.format(dots.getAndIncrement())
-        }
-    }
+      }
     def isOutdated: Boolean =
       timer.elapsedSeconds > 10 ||
         firstShow.exists(_.elapsedSeconds > 5)
-    def isStale: Boolean = this match {
-      case _: Message => (firstShow.isDefined && !isRecent) || isOutdated
-      case p: Progress => p.job.isCompleted
-    }
+    def isStale: Boolean =
+      this match {
+        case _: Message => (firstShow.isDefined && !isRecent) || isOutdated
+        case p: Progress => p.job.isCompleted
+      }
   }
   private case class Message(params: MetalsStatusParams) extends Item
   private case class Progress(

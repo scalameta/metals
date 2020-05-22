@@ -1,9 +1,10 @@
 package tests
 
-import scala.meta.internal.metals.UserConfiguration
 import scala.concurrent.Promise
-import scala.meta.internal.metals.MetalsSlowTaskResult
+
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.meta.internal.metals.UserConfiguration
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
     extends BaseLspSuite("worksheet") {
@@ -247,11 +248,11 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     for {
       _ <- server.initialize(
         s"""|/metals.json
-            |{"a": {"scalaVersion": "$scalaVersion"}}
-            |/a/src/main/scala/Main.sc
-            |identity(42)
-            |val x: Int = ""
-            |""".stripMargin
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/Main.sc
+           |identity(42)
+           |val x: Int = ""
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.sc")
       _ = assertNoDiagnostics()
@@ -308,10 +309,10 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     for {
       _ <- server.initialize(
         s"""|/metals.json
-            |{"a": {"scalaVersion": "$scalaVersion"}}
-            |/a/src/main/scala/a/Main.worksheet.sc
-            |val x: Int = ""
-            |""".stripMargin
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/a/Main.worksheet.sc
+           |val x: Int = ""
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ = assertNoDiff(

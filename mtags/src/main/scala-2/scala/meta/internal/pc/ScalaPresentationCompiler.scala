@@ -1,45 +1,48 @@
 package scala.meta.internal.pc
 
 import java.io.File
+import java.net.URI
 import java.nio.file.Path
 import java.util
 import java.util.Optional
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionList
-import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.SignatureHelp
-import org.eclipse.lsp4j.TextEdit
+import java.{util => ju}
+
+import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
-import scala.meta.internal.mtags.BuildInfo
-import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.SymbolSearch
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
-import scala.meta.pc.PresentationCompilerConfig
-import java.util.concurrent.CompletableFuture
-import scala.meta.pc.DefinitionResult
-import scala.collection.Seq
-import java.{util => ju}
-import scala.meta.pc.AutoImportsResult
-import org.eclipse.lsp4j.Diagnostic
-import scala.meta.pc.VirtualFileParams
-import org.eclipse.lsp4j.FoldingRange
-import scala.meta.internal.metals.FoldingRangeProvider
-import scala.meta.internal.metals.Trees
-import org.eclipse.lsp4j.DocumentSymbol
+
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.DocumentSymbolProvider
+import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.FoldingRangeProvider
+import scala.meta.internal.metals.MultilineStringFormattingProvider
+import scala.meta.internal.metals.Trees
+import scala.meta.internal.mtags.BuildInfo
+import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.DefinitionResult
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.VirtualFileParams
+
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import scala.meta.internal.metals.MultilineStringFormattingProvider
-import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.jdk.CollectionConverters._
-import java.net.URI
+import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.FoldingRange
+import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.TextEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -196,11 +199,12 @@ case class ScalaPresentationCompiler(
   override def completionItemResolve(
       item: CompletionItem,
       symbol: String
-  ): CompletableFuture[CompletionItem] = CompletableFuture.completedFuture {
-    compilerAccess.withSharedCompiler(item) { pc =>
-      new CompletionItemResolver(pc.compiler).resolve(item, symbol)
+  ): CompletableFuture[CompletionItem] =
+    CompletableFuture.completedFuture {
+      compilerAccess.withSharedCompiler(item) { pc =>
+        new CompletionItemResolver(pc.compiler).resolve(item, symbol)
+      }
     }
-  }
 
   override def signatureHelp(
       params: OffsetParams
@@ -249,8 +253,10 @@ case class ScalaPresentationCompiler(
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-    if (!BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
-      BuildInfo.scalaCompilerVersion != "2.12.4") {
+    if (
+      !BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
+      BuildInfo.scalaCompilerVersion != "2.12.4"
+    ) {
       settings.processArguments(
         List("-Ycache-plugin-class-loader:last-modified"),
         processAll = true

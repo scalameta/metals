@@ -1,11 +1,12 @@
 package docs
 
-import mdoc.Reporter
-import mdoc.StringModifier
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.ServerCommands
+
+import mdoc.Reporter
+import mdoc.StringModifier
 
 class CommandsModifiers extends StringModifier {
   override val name: String = "commands"

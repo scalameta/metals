@@ -1,9 +1,11 @@
 package tests.pc
 
-import tests.BaseCompletionSuite
-import scala.collection.Seq
-import coursierapi.Dependency
 import java.nio.file.Path
+
+import scala.collection.Seq
+
+import coursierapi.Dependency
+import tests.BaseCompletionSuite
 import tests.BuildInfoVersions
 
 class MacroCompletionSuite extends BaseCompletionSuite {

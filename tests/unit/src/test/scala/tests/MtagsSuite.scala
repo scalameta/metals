@@ -1,10 +1,10 @@
 package tests
 
-import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.inputs._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.semanticdb.Scala._
 
 /**
  * Assert the symbols emitted by ScalaMtags is a subset of semanticdb-scalac.
@@ -27,7 +27,8 @@ class MtagsSuite extends DirectoryExpectSuite("mtags") {
   def testCases(): List[ExpectTestCase] = {
     input.allFiles.map { file =>
       ExpectTestCase(
-        file, { () =>
+        file,
+        { () =>
           val input = file.input
           val mtags = Mtags.index(input)
           val obtained = Semanticdbs.printTextDocument(mtags)

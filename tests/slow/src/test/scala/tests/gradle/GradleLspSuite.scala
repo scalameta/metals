@@ -1,13 +1,15 @@
 package tests.gradle
 
 import scala.concurrent.Future
+
+import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.GradleDigest
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.builds.GradleBuildTool
+
 import tests.BaseImportSuite
 
 class GradleLspSuite extends BaseImportSuite("gradle-import") {
@@ -23,16 +25,16 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     for {
       _ <- server.initialize(
         s"""|/build.gradle
-            |plugins {
-            |    id 'scala'
-            |}
-            |repositories {
-            |    mavenCentral()
-            |}
-            |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
-            |}
-            |""".stripMargin
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+           |}
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -71,16 +73,16 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     for {
       _ <- server.initialize(
         s"""|/build.gradle
-            |plugins {
-            |    id 'scala'
-            |}
-            |repositories {
-            |    mavenCentral()
-            |}
-            |dependencies {
-            |    implementation 'org.scala-lang:scala-reflect:${V.scala212}'
-            |}
-            |""".stripMargin
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-reflect:${V.scala212}'
+           |}
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -100,16 +102,16 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     for {
       _ <- server.initialize(
         s"""|/build.gradle
-            |plugins {
-            |    id 'scala'
-            |}
-            |repositories {
-            |    mavenCentral()
-            |}
-            |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
-            |}
-            |""".stripMargin
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+           |}
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -135,21 +137,21 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     for {
       _ <- server.initialize(
         s"""|/build.gradle
-            |plugins {
-            |    id 'scala'
-            |}
-            |repositories {
-            |    mavenCentral()
-            |}
-            |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
-            |}
-            |/src/main/scala/reload/Main.scala
-            |package reload
-            |object Main extends App {
-            |  println("sourcecode.Line(42)")
-            |}
-            |""".stripMargin
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+           |}
+           |/src/main/scala/reload/Main.scala
+           |package reload
+           |object Main extends App {
+           |  println("sourcecode.Line(42)")
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -160,11 +162,12 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
            |}
            |""".stripMargin
       }
-      _ <- server
-        .didSave("src/main/scala/reload/Main.scala") { text =>
-          text.replaceAll("\"", "")
-        }
-        .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("src/main/scala/reload/Main.scala") { text =>
+            text.replaceAll("\"", "")
+          }
+          .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -193,15 +196,15 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.gradle") { _ =>
         s"""|plugins {
-            |    id 'scala'
-            |}
-            |repositories {
-            |    mavenCentral()
-            |}
-            |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
-            |}
-            |""".stripMargin
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+           |}
+           |""".stripMargin
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -216,15 +219,15 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
 
   private def projectWithVersion(version: String) = {
     s"""|plugins {
-        |    id 'scala'
-        |}
-        |repositories {
-        |    mavenCentral()
-        |}
-        |dependencies {
-        |    implementation 'org.scala-lang:scala-library:$version'
-        |}
-        |""".stripMargin
+       |    id 'scala'
+       |}
+       |repositories {
+       |    mavenCentral()
+       |}
+       |dependencies {
+       |    implementation 'org.scala-lang:scala-library:$version'
+       |}
+       |""".stripMargin
   }
 
   test("different-scala".flaky) {

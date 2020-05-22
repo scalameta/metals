@@ -1,10 +1,14 @@
 package scala.meta.internal.pc.completions
 
 import java.lang.StringBuilder
-import org.eclipse.{lsp4j => l}
 
 import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{CompletionFuzzy, MetalsGlobal, Identifier}
+
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.MetalsGlobal
+
+import org.eclipse.{lsp4j => l}
 
 trait InterpolatorCompletions { this: MetalsGlobal =>
 
@@ -176,7 +180,9 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     val offset = pos.point
     val chars = pos.source.content
     var i = offset
-    while (i > 0 && (chars(i) match { case '$' | '\n' => false; case _ => true })) {
+    while (
+      i > 0 && (chars(i) match { case '$' | '\n' => false; case _ => true })
+    ) {
       i -= 1
     }
     val isCandidate = i > 0 &&
@@ -214,11 +220,11 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
   private def interpolatorMemberArg(parent: Tree, lit: Literal): Option[Ident] =
     parent match {
       case Apply(
-          Select(
-            Apply(Ident(TermName("StringContext")), _ :: parts),
-            _
-          ),
-          args
+            Select(
+              Apply(Ident(TermName("StringContext")), _ :: parts),
+              _
+            ),
+            args
           ) =>
         parts.zip(args).collectFirst {
           case (`lit`, i: Ident) => i
@@ -231,9 +237,11 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     lit match {
       case Literal(Constant(s: String)) =>
         if (s.startsWith(s".$CURSOR")) Some("")
-        else if (s.startsWith(".") &&
+        else if (
+          s.startsWith(".") &&
           s.length > 2 &&
-          s.charAt(1).isUnicodeIdentifierStart) {
+          s.charAt(1).isUnicodeIdentifierStart
+        ) {
           val cursor = s.indexOf(CURSOR)
           if (cursor < 0) None
           else {

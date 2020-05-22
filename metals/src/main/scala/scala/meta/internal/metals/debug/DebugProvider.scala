@@ -4,41 +4,44 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URI
-import java.{util => ju}
-import java.util.concurrent.TimeUnit
 import java.util.Collections.singletonList
+import java.util.concurrent.TimeUnit
+import java.{util => ju}
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.util.Failure
+import scala.util.Try
+
+import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.BuildTargetClasses
+import scala.meta.internal.metals.BuildTargetClassesFinder
+import scala.meta.internal.metals.BuildTargetNotFoundException
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
+import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.JsonParser
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
+import scala.meta.internal.metals.MetalsBuildClient
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.StatusBar
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.{bsp4j => b}
 import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
-import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.BuildTargetClasses
-import scala.meta.internal.metals.MetalsLanguageClient
-import ch.epfl.scala.{bsp4j => b}
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.BuildServerConnection
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.DebugUnresolvedMainClassParams
-import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.BuildTargetClassesFinder
-import scala.meta.internal.metals.Compilations
-import scala.util.Try
-import scala.util.Failure
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import scala.meta.internal.metals.JsonParser
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
-import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
-import scala.meta.internal.metals.MetalsBuildClient
-import org.eclipse.lsp4j.ExecuteCommandParams
-import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.BuildTargetNotFoundException
-import scala.meta.internal.metals.Messages
 
 class DebugProvider(
     definitionProvider: DefinitionProvider,

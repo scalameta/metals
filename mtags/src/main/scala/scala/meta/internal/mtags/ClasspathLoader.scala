@@ -1,16 +1,20 @@
 package scala.meta.internal.mtags
 
-import java.net.{URL, URLClassLoader}
+import java.net.URL
+import java.net.URLClassLoader
 import java.util
+
+import scala.collection.Seq
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
+
 import sun.misc.Unsafe
-import scala.collection.Seq
-import scala.util.Try
-import scala.util.Failure
-import scala.util.Success
 
 object ClasspathLoader {
 
@@ -22,10 +26,12 @@ object ClasspathLoader {
     if (classLoader.isInstanceOf[URLClassLoader]) {
       classLoader.asInstanceOf[URLClassLoader].getURLs()
       // java9+
-    } else if (classLoader
+    } else if (
+      classLoader
         .getClass()
         .getName()
-        .startsWith("jdk.internal.loader.ClassLoaders$")) {
+        .startsWith("jdk.internal.loader.ClassLoaders$")
+    ) {
       try {
         val field = classOf[Unsafe].getDeclaredField("theUnsafe")
         field.setAccessible(true)

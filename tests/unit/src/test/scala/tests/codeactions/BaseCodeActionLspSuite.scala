@@ -1,8 +1,9 @@
 package tests.codeactions
 
-import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
+
 import munit.Location
+import tests.BaseLspSuite
 
 abstract class BaseCodeActionLspSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
@@ -23,8 +24,8 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
                                   |{"a":{}}
                                   |/$path
                                   |${input
-                                    .replace("<<", "")
-                                    .replace(">>", "")}
+          .replace("<<", "")
+          .replace(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)

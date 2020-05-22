@@ -1,12 +1,14 @@
 package tests.maven
 
-import scala.meta.internal.metals.Messages._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.builds.MavenDigest
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.io.InputStreamIO
 import java.nio.charset.StandardCharsets
+
 import scala.meta.internal.builds.MavenBuildTool
+import scala.meta.internal.builds.MavenDigest
+import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.io.AbsolutePath
+
 import tests.BaseImportSuite
 
 class MavenLspSuite extends BaseImportSuite("maven-import") {
@@ -29,8 +31,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     for {
       _ <- server.initialize(
         s"""|/pom.xml
-            |$defaultPom
-            |""".stripMargin
+           |$defaultPom
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -71,8 +73,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     for {
       _ <- server.initialize(
         s"""|/pom.xml
-            |$defaultPom
-            |""".stripMargin
+           |$defaultPom
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -97,13 +99,13 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     for {
       _ <- server.initialize(
         s"""|/pom.xml
-            |$defaultPom
-            |/src/main/scala/reload/Main.scala
-            |package reload
-            |object Main extends App {
-            |  println("sourcecode.Line(42)")
-            |}
-            |""".stripMargin
+           |$defaultPom
+           |/src/main/scala/reload/Main.scala
+           |package reload
+           |object Main extends App {
+           |  println("sourcecode.Line(42)")
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -119,11 +121,12 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
              |""".stripMargin
         )
       }
-      _ <- server
-        .didSave("src/main/scala/reload/Main.scala") { text =>
-          text.replaceAll("\"", "")
-        }
-        .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("src/main/scala/reload/Main.scala") { text =>
+            text.replaceAll("\"", "")
+          }
+          .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -143,8 +146,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     for {
       _ <- server.initialize(
         s"""|/pom.xml
-            |$badPom
-            |""".stripMargin,
+           |$badPom
+           |""".stripMargin,
         expectError = true
       )
       _ = assertNoDiff(

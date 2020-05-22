@@ -5,11 +5,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+
+import scala.sys.process._
+import scala.util.control.NonFatal
+
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.sys.process._
-import scala.util.control.NonFatal
 
 /**
  * Finds sources in the workspace when there is no available build tool.

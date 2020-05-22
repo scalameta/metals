@@ -40,8 +40,8 @@ object HoverMarkup {
 
   def apply(body: String): String = {
     s"""|```scala
-        |$body
-        |```""".stripMargin
+       |$body
+       |```""".stripMargin
   }
 
 }

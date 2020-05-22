@@ -1,11 +1,13 @@
 package scala.meta.internal.pc
 
 import java.util.concurrent.ScheduledExecutorService
-import scala.tools.nsc.reporters.StoreReporter
-import scala.tools.nsc.interactive.ShutdownReq
-import scala.util.control.NonFatal
-import scala.meta.pc.PresentationCompilerConfig
+
 import scala.concurrent.ExecutionContextExecutor
+import scala.tools.nsc.interactive.ShutdownReq
+import scala.tools.nsc.reporters.StoreReporter
+import scala.util.control.NonFatal
+
+import scala.meta.pc.PresentationCompilerConfig
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
     extends CompilerWrapper[StoreReporter, MetalsGlobal] {
@@ -42,7 +44,11 @@ class ScalaCompilerAccess(
     sh: Option[ScheduledExecutorService],
     newCompiler: () => ScalaCompilerWrapper
 )(implicit ec: ExecutionContextExecutor)
-    extends CompilerAccess[StoreReporter, MetalsGlobal](config, sh, newCompiler) {
+    extends CompilerAccess[StoreReporter, MetalsGlobal](
+      config,
+      sh,
+      newCompiler
+    ) {
 
   def newReporter() = new StoreReporter
 
@@ -78,7 +84,8 @@ class ScalaCompilerAccess(
     }
   }
 
-  protected def ignoreException(t: Throwable): Boolean = t match {
-    case ShutdownReq => true
-  }
+  protected def ignoreException(t: Throwable): Boolean =
+    t match {
+      case ShutdownReq => true
+    }
 }

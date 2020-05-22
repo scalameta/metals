@@ -1,12 +1,14 @@
 package tests.pc
 
-import tests.BaseCodeActionSuite
-import scala.meta.pc.AutoImportsResult
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.TextEdits
-import munit.Location
 import java.nio.file.Paths
+
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.TextEdits
+import scala.meta.pc.AutoImportsResult
+
+import munit.Location
+import tests.BaseCodeActionSuite
 import tests.BuildInfoVersions
 
 class AutoImportsSuite extends BaseCodeActionSuite {
@@ -212,15 +214,15 @@ class AutoImportsSuite extends BaseCodeActionSuite {
     // Just not referencing any Ammonite class, that we don't pull
     // in the tests here.
     s"""|package ammonite
-        |package $$file.`auto-import`
-        |import _root_.scala.collection.mutable.{
-        |  HashMap => MutableHashMap
-        |}
-        |
-        |object test{
-        |$code
-        |}
-        |""".stripMargin
+       |package $$file.`auto-import`
+       |import _root_.scala.collection.mutable.{
+       |  HashMap => MutableHashMap
+       |}
+       |
+       |object test{
+       |$code
+       |}
+       |""".stripMargin
 
   def check(
       name: String,
@@ -237,8 +239,8 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       )
     }
 
-  def checkEdit(name: String, original: String, expected: String)(
-      implicit loc: Location
+  def checkEdit(name: String, original: String, expected: String)(implicit
+      loc: Location
   ): Unit =
     checkEdit(name, "A.scala", original, expected)
 
@@ -247,8 +249,8 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       filename: String,
       original: String,
       expected: String
-  )(
-      implicit loc: Location
+  )(implicit
+      loc: Location
   ): Unit =
     test(name) {
       val imports = getAutoImports(original, filename)

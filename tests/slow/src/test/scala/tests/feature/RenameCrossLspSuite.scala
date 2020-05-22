@@ -1,7 +1,8 @@
 package tests.feature
 
-import tests.BaseRenameLspSuite
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import tests.BaseRenameLspSuite
 
 class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
 

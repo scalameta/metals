@@ -14,8 +14,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin,
     s"""|first line
-        |second line
-        | different indent""".stripMargin,
+       |second line
+       | different indent""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -35,8 +35,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin,
     s"""|first line
-        |second line
-        | different indent""".stripMargin,
+       |second line
+       | different indent""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -122,8 +122,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |                |'''.stripMargin
        |}""".stripMargin,
     s"""|some text
-        |  some other text
-        |""".stripMargin,
+       |  some other text
+       |""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -149,8 +149,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |                |'''.stripMargin
        |}""".stripMargin,
     s"""|  some text
-        |some other text
-        |""".stripMargin,
+       |some other text
+       |""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -207,8 +207,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''
        |}""".stripMargin,
     s"""|first line
-        |second line
-        | different indent""".stripMargin,
+       |second line
+       | different indent""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -228,7 +228,7 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin,
     s"""| |single line
-        |""".stripMargin,
+       |""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -247,8 +247,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin,
     s"""| |first line
-        | |second line
-        | | different indent""".stripMargin,
+       | |second line
+       | | different indent""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -268,8 +268,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin,
     s"""| |first line
-        |
-        | |second line""".stripMargin,
+       |
+       | |second line""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
@@ -290,8 +290,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin,
     s"""| |first line
-        |
-        | |second line""".stripMargin,
+       |
+       | |second line""".stripMargin,
     s"""
        |object Main {
        |  val str = '''

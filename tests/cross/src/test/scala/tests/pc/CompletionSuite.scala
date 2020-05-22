@@ -680,10 +680,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "dynamic",
     s"""|$classFoo
-        |object Main {
-        |  new Foo().bana@@
-        |}
-        |""".stripMargin,
+       |object Main {
+       |  new Foo().bana@@
+       |}
+       |""".stripMargin,
     """|banana: Int
        |""".stripMargin,
     compat = Map(
@@ -694,10 +694,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "dynamic2",
     s"""|$classFoo
-        |object Main {
-        |  val x = new Foo().foo.bana@@
-        |}
-        |""".stripMargin,
+       |object Main {
+       |  val x = new Foo().foo.bana@@
+       |}
+       |""".stripMargin,
     """|banana: Int
        |""".stripMargin,
     compat = Map(
@@ -708,11 +708,11 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "dynamic3",
     s"""|$classFoo
-        |object Main {
-        |  val foo = new Foo()
-        |  (foo.bar = 42).bana@@
-        |}
-        |""".stripMargin,
+       |object Main {
+       |  val foo = new Foo()
+       |  (foo.bar = 42).bana@@
+       |}
+       |""".stripMargin,
     """|banana: Int
        |""".stripMargin,
     compat = Map(
@@ -723,10 +723,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "dynamic4",
     s"""|$classFoo
-        |object Main {
-        |  val foo = new Foo().foo(x = 42).bana@@
-        |}
-        |""".stripMargin,
+       |object Main {
+       |  val foo = new Foo().foo(x = 42).bana@@
+       |}
+       |""".stripMargin,
     """|banana: Int
        |""".stripMargin,
     compat = Map(
@@ -737,11 +737,11 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "dynamic5",
     s"""|$classFoo
-        |object Main {
-        |  val foo = new Foo()
-        |  List(foo.selectDy@@)
-        |}
-        |""".stripMargin,
+       |object Main {
+       |  val foo = new Foo()
+       |  List(foo.selectDy@@)
+       |}
+       |""".stripMargin,
     """|selectDynamic(field: String): Foo
        |""".stripMargin,
     compat = Map(
@@ -752,9 +752,9 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
     s"""|object Main {
-        |  val foo: ListBuffe@@
-        |}
-        |""".stripMargin,
+       |  val foo: ListBuffe@@
+       |}
+       |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin
   )
@@ -762,9 +762,9 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "type1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
     s"""|object Main {
-        |  val foo: Map[Int, ListBuffe@@]
-        |}
-        |""".stripMargin,
+       |  val foo: Map[Int, ListBuffe@@]
+       |}
+       |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
        |""".stripMargin
   )
@@ -772,9 +772,9 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "type2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
     s"""|object Main {
-        |  new scala.Iterable@@
-        |}
-        |""".stripMargin,
+       |  new scala.Iterable@@
+       |}
+       |""".stripMargin,
     """|Iterable scala.collection
        |Iterable[+A] = Iterable
        |""".stripMargin,
@@ -790,10 +790,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "pat",
     s"""|object Main {
-        |  Option(1) match {
-        |    case Som@@
-        |}
-        |""".stripMargin,
+       |  Option(1) match {
+       |    case Som@@
+       |}
+       |""".stripMargin,
     """|Some scala
        |""".stripMargin,
     compat = Map(
@@ -804,10 +804,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "pat1",
     s"""|object Main {
-        |  Option(1) match {
-        |    case List(Som@@)
-        |}
-        |""".stripMargin,
+       |  Option(1) match {
+       |    case List(Som@@)
+       |}
+       |""".stripMargin,
     """|Some scala
        |""".stripMargin,
     compat = Map(
@@ -818,10 +818,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "adt",
     s"""|object Main {
-        |  Option(1) match {
-        |    case No@@
-        |}
-        |""".stripMargin,
+       |  Option(1) match {
+       |    case No@@
+       |}
+       |""".stripMargin,
     """|None scala
        |NoManifest scala.reflect
        |""".stripMargin,
@@ -837,10 +837,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "adt1",
     s"""|object Main {
-        |  Option(1) match {
-        |    case S@@
-        |}
-        |""".stripMargin,
+       |  Option(1) match {
+       |    case S@@
+       |}
+       |""".stripMargin,
     """|Some scala
        |Seq scala.collection
        |Set scala.collection.immutable
@@ -863,10 +863,10 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "adt2",
     s"""|object Main {
-        |  Option(1) match {
-        |    case _: S@@
-        |}
-        |""".stripMargin,
+       |  Option(1) match {
+       |    case _: S@@
+       |}
+       |""".stripMargin,
     """|Some scala
        |Seq scala.collection
        |Set scala.collection.immutable
@@ -889,17 +889,17 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "adt3",
     s"""|import Matches._
-        |object Matches {
-        |  val Number = "".r
-        |}
-        |object Main {
-        |  locally {
-        |    val NotString = 42
-        |    "" match {
-        |      case N@@
-        |  }
-        |}
-        |""".stripMargin,
+       |object Matches {
+       |  val Number = "".r
+       |}
+       |object Main {
+       |  locally {
+       |    val NotString = 42
+       |    "" match {
+       |      case N@@
+       |  }
+       |}
+       |""".stripMargin,
     """|Number: Regex
        |NotString: Int
        |Nil scala.collection.immutable
@@ -917,11 +917,11 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "adt4",
     s"""|object Main {
-        |  val Number = "".r
-        |  "" match {
-        |    case _: N@@
-        |}
-        |""".stripMargin,
+       |  val Number = "".r
+       |  "" match {
+       |    case _: N@@
+       |}
+       |""".stripMargin,
     """|Number: Regex
        |Nil scala.collection.immutable
        |NoManifest scala.reflect
@@ -939,11 +939,11 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "adt5",
     s"""|object Main {
-        |  val Number = "".r
-        |  "" match {
-        |    case _: N@@
-        |}
-        |""".stripMargin,
+       |  val Number = "".r
+       |  "" match {
+       |    case _: N@@
+       |}
+       |""".stripMargin,
     """|Number: Regex
        |Nil scala.collection.immutable
        |NoManifest scala.reflect
@@ -961,9 +961,9 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "underscore",
     s"""|object Main {
-        |  List(1).exists(_@@)
-        |}
-        |""".stripMargin,
+       |  List(1).exists(_@@)
+       |}
+       |""".stripMargin,
     // assert that `_root_` is not a completion item.
     ""
   )
@@ -971,9 +971,9 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "filterText",
     s"""|object Main {
-        |  "".substring@@
-        |}
-        |""".stripMargin,
+       |  "".substring@@
+       |}
+       |""".stripMargin,
     """substring(beginIndex: Int): String
       |substring(beginIndex: Int, endIndex: Int): String
       |""".stripMargin,
@@ -986,26 +986,26 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "error",
     s"""|object Main {
-        |  def foo(myError: String): String = {
-        |    println(myErr@@)
-        |    // type mismatch: obtained Unit, expected String
-        |  }
-        |}
-        |""".stripMargin,
+       |  def foo(myError: String): String = {
+       |    println(myErr@@)
+       |    // type mismatch: obtained Unit, expected String
+       |  }
+       |}
+       |""".stripMargin,
     "myError: String"
   )
 
   check(
     "sort",
     s"""|object Main {
-        |  def printnnn = ""
-        |  def printmmm = ""
-        |  locally {
-        |    val printxxx = ""
-        |    print@@
-        |  }
-        |}
-        |""".stripMargin,
+       |  def printnnn = ""
+       |  def printmmm = ""
+       |  locally {
+       |    val printxxx = ""
+       |    print@@
+       |  }
+       |}
+       |""".stripMargin,
     """|printxxx: String
        |printmmm: String
        |printnnn: String
@@ -1025,12 +1025,12 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "fuzzy-member".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
     s"""|class Foo {
-        |  def getTimeStamp: Int = 0
-        |}
-        |object Main {
-        |  new Foo().time@@
-        |}
-        |""".stripMargin,
+       |  def getTimeStamp: Int = 0
+       |}
+       |object Main {
+       |  new Foo().time@@
+       |}
+       |""".stripMargin,
     """|getTimeStamp: Int
        |""".stripMargin
   )
@@ -1038,14 +1038,14 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     "fuzzy-member-sort",
     s"""|class Foo {
-        |  def toInt: Int = 0
-        |  def instance: Int = 42
-        |  def intNumber: Int = 42
-        |}
-        |object Main {
-        |  new Foo().int@@
-        |}
-        |""".stripMargin,
+       |  def toInt: Int = 0
+       |  def instance: Int = 42
+       |  def intNumber: Int = 42
+       |}
+       |object Main {
+       |  new Foo().int@@
+       |}
+       |""".stripMargin,
     """|intNumber: Int
        |toInt: Int
        |instance: Int

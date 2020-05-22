@@ -2,18 +2,21 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import com.zaxxer.nuprocess.NuProcessBuilder
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.builds.Digest
-import scala.meta.internal.builds.Digest.Status
+
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.process.ProcessHandler
-import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.builds.Digest
+import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessHandler
+import scala.meta.io.AbsolutePath
+
+import com.zaxxer.nuprocess.NuProcessBuilder
 import org.eclipse.lsp4j.MessageActionItem
 
 /**
@@ -141,31 +144,32 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BuildTool,
       digest: String
-  ): Future[BloopInstallResult] = synchronized {
-    oldInstallResult(digest) match {
-      case Some(result) =>
-        scribe.info(s"skipping build import with status '${result.name}'")
-        Future.successful(result)
-      case None =>
-        for {
-          userResponse <- requestImport(
-            buildTools,
-            buildTool,
-            languageClient,
-            digest
-          )
-          installResult <- {
-            if (userResponse.isYes) {
-              runUnconditionally(buildTool)
-            } else {
-              // Don't spam the user with requests during rapid build changes.
-              notification.dismiss(2, TimeUnit.MINUTES)
-              Future.successful(BloopInstallResult.Rejected)
+  ): Future[BloopInstallResult] =
+    synchronized {
+      oldInstallResult(digest) match {
+        case Some(result) =>
+          scribe.info(s"skipping build import with status '${result.name}'")
+          Future.successful(result)
+        case None =>
+          for {
+            userResponse <- requestImport(
+              buildTools,
+              buildTool,
+              languageClient,
+              digest
+            )
+            installResult <- {
+              if (userResponse.isYes) {
+                runUnconditionally(buildTool)
+              } else {
+                // Don't spam the user with requests during rapid build changes.
+                notification.dismiss(2, TimeUnit.MINUTES)
+                Future.successful(BloopInstallResult.Rejected)
+              }
             }
-          }
-        } yield installResult
+          } yield installResult
+      }
     }
-  }
 
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]

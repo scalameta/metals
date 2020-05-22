@@ -1,11 +1,12 @@
 package tests.mill
 
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.builds.MillBuildTool
-import tests.BaseImportSuite
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
+
+import tests.BaseImportSuite
 
 class MillLspSuite extends BaseImportSuite("mill-import") {
 
@@ -45,10 +46,10 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ <- server.didChange("build.sc") { text =>
         text +
           s"""|
-              |object bar extends ScalaModule {
-              |  def scalaVersion = "${V.scala212}"
-              |}
-              |""".stripMargin
+             |object bar extends ScalaModule {
+             |  def scalaVersion = "${V.scala212}"
+             |}
+             |""".stripMargin
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didSave("build.sc")(identity)
@@ -90,11 +91,12 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
           "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.4\")"
         )
       }
-      _ <- server
-        .didSave("foo/src/reload/Main.scala") { text =>
-          text.replaceAll("\"", "")
-        }
-        .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("foo/src/reload/Main.scala") { text =>
+            text.replaceAll("\"", "")
+          }
+          .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }

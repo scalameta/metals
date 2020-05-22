@@ -3,8 +3,8 @@ package scala.meta.internal.metals
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import scribe.LogRecord
-import scribe.writer.Writer
 import scribe.output.LogOutput
+import scribe.writer.Writer
 
 /**
  * Scribe logging handler that forwards logging messages to the LSP editor client.

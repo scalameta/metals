@@ -1,18 +1,20 @@
 package scala.meta.internal.metals
 
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolDocumentation
 import java.{util => ju}
-import org.eclipse.lsp4j.Location
-import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.SymbolSearch.Result
 
-import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.mtags.Mtags
 import scala.collection.concurrent.TrieMap
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.Symbol
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SymbolSearch.Result
+import scala.meta.pc.SymbolSearchVisitor
+
+import org.eclipse.lsp4j.Location
 
 class RamboSymbolSearch(
     workspace: AbsolutePath,

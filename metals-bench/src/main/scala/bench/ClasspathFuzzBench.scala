@@ -2,9 +2,15 @@ package bench
 
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+
+import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.SymbolInformation
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Level
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.OutputTimeUnit
 import org.openjdk.jmh.annotations.Param
@@ -12,13 +18,9 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
-import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.WorkspaceSymbolProvider
-import scala.meta.io.AbsolutePath
 import tests.Library
-import tests.TestingWorkspaceSymbolProvider
 import tests.MetalsTestEnrichments._
-import org.openjdk.jmh.annotations.Level
+import tests.TestingWorkspaceSymbolProvider
 
 @State(Scope.Benchmark)
 class ClasspathFuzzBench {

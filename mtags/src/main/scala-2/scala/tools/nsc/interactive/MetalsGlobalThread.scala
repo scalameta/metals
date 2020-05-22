@@ -18,9 +18,11 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
     compiler.debugLog("starting new runner thread")
     while (compiler ne null) try {
       compiler.checkNoResponsesOutstanding()
-      compiler.log.logreplay("wait for more work", {
-        compiler.scheduler.waitForMoreWork(); true
-      })
+      compiler.log.logreplay(
+        "wait for more work", {
+          compiler.scheduler.waitForMoreWork(); true
+        }
+      )
       compiler.pollForWork(compiler.NoPosition)
       while (compiler.isOutOfDate) {
         try {

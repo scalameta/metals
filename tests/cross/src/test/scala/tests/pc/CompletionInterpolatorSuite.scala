@@ -1,8 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.pc.CrossTestEnrichments._
 import tests.BuildInfoVersions
+import tests.pc.CrossTestEnrichments._
 
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
@@ -42,10 +42,10 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   checkEdit(
     "string2",
     s"""|object Main {
-        |  val myName = ""
-        |  def message = "$$myNa@@me"
-        |}
-        |""".stripMargin,
+       |  val myName = ""
+       |  def message = "$$myNa@@me"
+       |}
+       |""".stripMargin,
     """|object Main {
        |  val myName = ""
        |  def message = s"${myName$0}me"

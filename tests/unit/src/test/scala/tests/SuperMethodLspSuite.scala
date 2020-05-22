@@ -1,8 +1,8 @@
 package tests
 
-import org.eclipse.lsp4j.Position
-
 import scala.concurrent.Future
+
+import org.eclipse.lsp4j.Position
 
 class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
@@ -282,7 +282,10 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
       // Checked manually it is actually there and operated under artificial ID link "50"
       externalDep = Map(
-        50 -> (new Position(60, 6), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
+        50 -> (new Position(
+          60,
+          6
+        ), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
       )
 
       (context, assertions) = parseWithUri(code, path)

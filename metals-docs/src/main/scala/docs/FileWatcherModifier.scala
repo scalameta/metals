@@ -1,12 +1,13 @@
 package docs
 
-import com.google.gson.GsonBuilder
-import mdoc.Reporter
-import mdoc.StringModifier
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Configs.GlobSyntaxConfig
 import scala.meta.io.AbsolutePath
+
+import com.google.gson.GsonBuilder
+import mdoc.Reporter
+import mdoc.StringModifier
 
 class FileWatcherModifier extends StringModifier {
   override val name: String = "file-watcher"

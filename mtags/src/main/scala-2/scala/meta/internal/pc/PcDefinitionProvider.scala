@@ -1,11 +1,13 @@
 package scala.meta.internal.pc
 
 import java.{util => ju}
-import org.eclipse.lsp4j.Location
-import scala.meta.pc.OffsetParams
-import scala.meta.internal.semanticdb.Scala._
+
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.DefinitionResult
+import scala.meta.pc.OffsetParams
+
+import org.eclipse.lsp4j.Location
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
@@ -20,19 +22,23 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       val pos = unit.position(params.offset())
       val tree = definitionTypedTreeAt(pos)
-      if (tree.symbol == null ||
+      if (
+        tree.symbol == null ||
         tree.symbol == NoSymbol ||
         tree.symbol.isErroneous ||
-        tree.symbol.isSynthetic) {
+        tree.symbol.isSynthetic
+      ) {
         DefinitionResultImpl.empty
       } else if (tree.symbol.hasPackageFlag) {
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           ju.Collections.emptyList()
         )
-      } else if (tree.symbol.pos != null &&
+      } else if (
+        tree.symbol.pos != null &&
         tree.symbol.pos.isDefined &&
-        tree.symbol.pos.source.eq(unit.source)) {
+        tree.symbol.pos.source.eq(unit.source)
+      ) {
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           ju.Collections.singletonList(
@@ -59,8 +65,10 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     def loop(tree: Tree): Tree = {
       tree match {
         case Select(qualifier, name) =>
-          if (name == termNames.apply &&
-            qualifier.pos.includes(pos)) {
+          if (
+            name == termNames.apply &&
+            qualifier.pos.includes(pos)
+          ) {
             if (definitions.isFunctionSymbol(tree.symbol.owner)) loop(qualifier)
             else if (definitions.isTupleSymbol(tree.symbol.owner)) {
               EmptyTree
@@ -98,10 +106,11 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case pt: PolyType => isImplicitMethodType(pt.resultType)
       case _ => false
     }
-    def selectQual(tree: Tree): Tree = tree match {
-      case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
-      case t => t
-    }
+    def selectQual(tree: Tree): Tree =
+      tree match {
+        case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
+        case t => t
+      }
     // TODO: guard with try/catch to deal with ill-typed qualifiers.
     val tree =
       if (shouldTypeQualifier) analyzer.newTyper(context).typedQualifier(tree0)

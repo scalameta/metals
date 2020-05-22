@@ -1,7 +1,8 @@
 package tests.feature
 
-import tests.BaseCodeLensLspSuite
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import tests.BaseCodeLensLspSuite
 
 class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
 

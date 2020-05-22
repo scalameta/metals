@@ -11,56 +11,59 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.JsonElement
-import io.methvin.watcher.DirectoryChangeEvent
-import io.methvin.watcher.DirectoryChangeEvent.EventType
-import io.undertow.server.HttpServerExchange
-import org.eclipse.lsp4j._
-import org.eclipse.{lsp4j => l}
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
-import scala.collection.mutable.ArrayBuffer
+import java.{util => ju}
+
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
+import scala.util.Success
+import scala.util.control.NonFatal
+
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.metals.codelenses.RunTestCodeLens
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
+import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.mtags._
+import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
+import scala.meta.internal.worksheets.DecorationWorksheetPublisher
+import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
-import scala.util.control.NonFatal
-import scala.util.Success
-import com.google.gson.JsonPrimitive
-import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.DecorationWorksheetPublisher
-import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
-import scala.meta.internal.rename.RenameProvider
+
 import ch.epfl.scala.bsp4j.CompileReport
-import java.{util => ju}
-import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-import scala.meta.internal.implementation.Supermethods
-import scala.meta.internal.metals.ammonite.Ammonite
-import scala.meta.internal.metals.codelenses.RunTestCodeLens
-import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
-import scala.meta.internal.remotels.RemoteLanguageServer
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
+import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
+import io.methvin.watcher.DirectoryChangeEvent
+import io.methvin.watcher.DirectoryChangeEvent.EventType
+import io.undertow.server.HttpServerExchange
+import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+import org.eclipse.{lsp4j => l}
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1328,7 +1331,10 @@ class MetalsLanguageServer(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
               List(
-                new Location(log.toURI.toString(), new l.Range(pos, pos)): Object
+                new Location(
+                  log.toURI.toString(),
+                  new l.Range(pos, pos)
+                ): Object
               ).asJava
             )
           )
@@ -1678,9 +1684,11 @@ class MetalsLanguageServer(
               )
             }
           }
-          if (sourceItem.isDefined &&
+          if (
+            sourceItem.isDefined &&
             !info.symbol.isPackage &&
-            (owner.isPackage || source.isAmmoniteScript)) {
+            (owner.isPackage || source.isAmmoniteScript)
+          ) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
           }
       }
@@ -1711,7 +1719,9 @@ class MetalsLanguageServer(
   )(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk
-    if (onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)) {
+    if (
+      onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)
+    ) {
       scribe.info(s"time: $didWhat in $elapsed")
     }
     result
@@ -2112,12 +2122,15 @@ object MetalsLanguageServer {
     for {
       workspaceBuildTargets <- build.workspaceBuildTargets()
       ids = workspaceBuildTargets.getTargets.map(_.getId)
-      scalacOptions <- build
-        .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-      sources <- build
-        .buildTargetSources(new b.SourcesParams(ids))
-      dependencySources <- build
-        .buildTargetDependencySources(new b.DependencySourcesParams(ids))
+      scalacOptions <-
+        build
+          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
+      sources <-
+        build
+          .buildTargetSources(new b.SourcesParams(ids))
+      dependencySources <-
+        build
+          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
     } yield {
       ImportedBuild(
         workspaceBuildTargets,

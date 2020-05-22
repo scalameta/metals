@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.builds.BuildTools
 import scala.meta.io.AbsolutePath
+
 import munit.Location
 
 class DetectionSuite extends BaseSuite {
@@ -19,14 +20,14 @@ class DetectionSuite extends BaseSuite {
   }
 
   /**------------ SBT ------------**/
-  def checkNotSbt(name: String, layout: String)(
-      implicit loc: Location
+  def checkNotSbt(name: String, layout: String)(implicit
+      loc: Location
   ): Unit = {
     checkSbt(name, layout, isTrue = false)
   }
 
-  def checkSbt(name: String, layout: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkSbt(name: String, layout: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"sbt-$name") {
       check(
@@ -37,8 +38,8 @@ class DetectionSuite extends BaseSuite {
     }
   }
 
-  def checkPants(name: String, layout: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkPants(name: String, layout: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"pants-$name") {
       check(
@@ -114,8 +115,8 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**------------ Gradle ------------**/
-  def checkNotGradle(name: String, layout: String)(
-      implicit loc: Location
+  def checkNotGradle(name: String, layout: String)(implicit
+      loc: Location
   ): Unit = {
     checkGradle(name, layout, isTrue = false)
   }
@@ -162,8 +163,8 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**------------ Maven ------------**/
-  def checkNotMaven(name: String, layout: String)(
-      implicit loc: Location
+  def checkNotMaven(name: String, layout: String)(implicit
+      loc: Location
   ): Unit = {
     checkMaven(name, layout, isTrue = false)
   }
@@ -208,8 +209,8 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**------------ Multiple Build Files ------------**/
-  def checkMulti(name: String, layout: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkMulti(name: String, layout: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"sbt-$name") {
       check(

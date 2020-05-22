@@ -23,24 +23,25 @@ object Synthetics {
       synthetic: Synthetic
   )(fn: String => ForeachResult): ForeachResult = {
     import scala.meta.internal.semanticdb._
-    def isStop(t: Tree): Boolean = t match {
-      case ApplyTree(function, arguments) =>
-        isStop(function) || arguments.exists(isStop)
-      case SelectTree(qualifier, id) =>
-        id.exists(isStop)
-      case IdTree(symbol) =>
-        fn(symbol).isStop
-      case TypeApplyTree(function, _) =>
-        isStop(function)
-      case FunctionTree(_, body) =>
-        isStop(body)
-      case LiteralTree(_) =>
-        false
-      case MacroExpansionTree(_, _) =>
-        false
-      case OriginalTree(_) => false
-      case Tree.Empty => false
-    }
+    def isStop(t: Tree): Boolean =
+      t match {
+        case ApplyTree(function, arguments) =>
+          isStop(function) || arguments.exists(isStop)
+        case SelectTree(qualifier, id) =>
+          id.exists(isStop)
+        case IdTree(symbol) =>
+          fn(symbol).isStop
+        case TypeApplyTree(function, _) =>
+          isStop(function)
+        case FunctionTree(_, body) =>
+          isStop(body)
+        case LiteralTree(_) =>
+          false
+        case MacroExpansionTree(_, _) =>
+          false
+        case OriginalTree(_) => false
+        case Tree.Empty => false
+      }
     if (isStop(synthetic.tree)) Stop
     else Continue
   }

@@ -19,7 +19,7 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
-        |""".stripMargin,
+       |""".stripMargin,
     """|package a
        |
        |object A {
@@ -52,7 +52,7 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
-        |""".stripMargin,
+       |""".stripMargin,
     """|package a
        |
        |object A {
@@ -83,7 +83,7 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
-        |""".stripMargin,
+       |""".stripMargin,
     """|package a
        |
        |object A {
@@ -113,7 +113,7 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
-        |""".stripMargin,
+       |""".stripMargin,
     """|package a
        |
        |object A {
@@ -141,7 +141,7 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
-        |""".stripMargin,
+       |""".stripMargin,
     """|package a
        |
        |object A {
@@ -168,7 +168,7 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
-        |""".stripMargin,
+       |""".stripMargin,
     """|package a
        |
        |object A {

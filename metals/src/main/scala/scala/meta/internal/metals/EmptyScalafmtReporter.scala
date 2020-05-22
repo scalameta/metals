@@ -1,10 +1,11 @@
 package scala.meta.internal.metals
 
-import org.scalafmt.interfaces.ScalafmtReporter
-import java.io.PrintWriter
 import java.io.OutputStream
-import java.nio.file.Path
 import java.io.OutputStreamWriter
+import java.io.PrintWriter
+import java.nio.file.Path
+
+import org.scalafmt.interfaces.ScalafmtReporter
 
 /**
  * A Scalafmt reporter that ignores all messages

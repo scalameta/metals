@@ -1,11 +1,13 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.concurrent.Future
-import scala.meta.pc.CancelToken
-import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals._
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals._
+import scala.meta.pc.CancelToken
+
+import org.eclipse.{lsp4j => l}
 
 class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
 

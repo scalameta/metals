@@ -136,7 +136,8 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
         """.stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ = server.workspaceDefinitions // triggers goto definition, creating Predef.scala
+      _ =
+        server.workspaceDefinitions // triggers goto definition, creating Predef.scala
       _ <- server.assertHover(
         "scala/Predef.scala",
         """

@@ -1,7 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.Compression
 import scala.meta.internal.metals.ClassfileElementPart
+import scala.meta.internal.metals.Compression
+
 import munit.Location
 
 class CompressionSuite extends BaseSuite {

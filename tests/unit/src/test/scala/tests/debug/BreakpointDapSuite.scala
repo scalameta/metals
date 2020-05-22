@@ -1,11 +1,12 @@
 package tests.debug
-import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
+
 import munit.Location
 import munit.TestOptions
+import tests.BaseDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -616,10 +617,10 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
     for {
       _ <- server.initialize(
         s"""|/metals.json
-            |{ "a": {} }
-            |
-            |$workspaceLayout
-            |""".stripMargin
+           |{ "a": {} }
+           |
+           |$workspaceLayout
+           |""".stripMargin
       )
       debugger <- debugMain("a", "a.Main", Stoppage.Handler.Fail)
       _ <- debugger.initialize
@@ -642,10 +643,10 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
       val layout =
         s"""|/metals.json
-            |{ "a": {}, "b": {} }
-            |
-            |$workspaceLayout
-            |""".stripMargin
+           |{ "a": {}, "b": {} }
+           |
+           |$workspaceLayout
+           |""".stripMargin
 
       val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
         file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))

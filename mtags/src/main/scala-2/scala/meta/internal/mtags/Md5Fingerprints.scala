@@ -7,8 +7,9 @@ trait Md5Fingerprints {
 }
 
 object Md5Fingerprints {
-  def empty: Md5Fingerprints = new Md5Fingerprints {
-    override def lookupText(path: AbsolutePath, md5: String): Option[String] =
-      None
-  }
+  def empty: Md5Fingerprints =
+    new Md5Fingerprints {
+      override def lookupText(path: AbsolutePath, md5: String): Option[String] =
+        None
+    }
 }

@@ -1,9 +1,18 @@
 package scala.meta.internal.worksheets
 
+import scala.meta.inputs.Input
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
-import mdoc.interfaces.EvaluatedWorksheet
+import scala.meta.internal.pc.HoverMarkup
+import scala.meta.internal.worksheets.MdocEnrichments.truncatify
+import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher._
 import scala.meta.io.AbsolutePath
+
+import mdoc.interfaces.EvaluatedWorksheet
+import mdoc.interfaces.EvaluatedWorksheetStatement
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
@@ -11,14 +20,6 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
-import scala.meta.internal.metals.MetalsEnrichments._
-import mdoc.interfaces.EvaluatedWorksheetStatement
-import scala.meta.inputs.Input
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.pc.HoverMarkup
-import scala.meta.internal.worksheets.MdocEnrichments.truncatify
-import org.eclipse.lsp4j.Hover
-import WorkspaceEditWorksheetPublisher._
 
 class WorkspaceEditWorksheetPublisher(buffers: Buffers)
     extends WorksheetPublisher {
@@ -41,9 +42,10 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
         path,
         messages.textSnapshot
       )
-      snapshotPosition <- distance
-        .toOriginal(position.getLine(), position.getCharacter())
-        .toPosition(position)
+      snapshotPosition <-
+        distance
+          .toOriginal(position.getLine(), position.getCharacter())
+          .toPosition(position)
       message <- getHoverMessage(snapshotPosition, messages.hovers)
     } yield new Hover(
       new MarkupContent(
@@ -123,7 +125,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   ): Option[Position] = {
     val editPattern = """\A\s*/\*>.*?\*/""".r
     val offset =
-      source.lineToOffset(statement.position.endLine) + statement.position.endColumn
+      source.lineToOffset(
+        statement.position.endLine
+      ) + statement.position.endColumn
     val text = source.text.drop(offset)
     editPattern
       .findFirstMatchIn(text)

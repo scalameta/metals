@@ -1,45 +1,48 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Paths
+import java.util.Collections
+import java.util.concurrent.ScheduledExecutorService
+import java.{util => ju}
+
+import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
+import scala.util.Try
+
+import scala.meta.inputs.Input
+import scala.meta.inputs.Position
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.mtags
+import scala.meta.internal.pc.EmptySymbolSearch
+import scala.meta.internal.pc.LogMessages
+import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CancelToken
+import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.SymbolSearch
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import java.util.Collections
-import java.util.concurrent.ScheduledExecutorService
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FoldingRange
+import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.{Position => LspPosition}
+import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import scala.concurrent.ExecutionContextExecutorService
-import scala.meta.inputs.Input
-import scala.meta.inputs.Position
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags
-import scala.meta.internal.pc.LogMessages
-import scala.meta.internal.pc.ScalaPresentationCompiler
-import scala.meta.io.AbsolutePath
-import scala.meta.pc.CancelToken
-import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.SymbolSearch
-import scala.concurrent.Future
-import scala.meta.pc.AutoImportsResult
 import org.eclipse.lsp4j.TextEdit
-import scala.util.Try
-import org.eclipse.lsp4j.FoldingRange
-import java.{util => ju}
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.FoldingRangeRequestParams
-import org.eclipse.lsp4j.DocumentSymbolParams
-import org.eclipse.lsp4j.DocumentSymbol
-import java.nio.file.Paths
-import scala.meta.internal.metals.ammonite.Ammonite
-import scala.meta.internal.pc.EmptySymbolSearch
+import org.eclipse.lsp4j.{Position => LspPosition}
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -180,9 +183,9 @@ class Compilers(
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     val input = path.toInputFromBuffers(buffers)
     for {
-      ds <- pc
-        .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
-        .asScala
+      ds <-
+        pc.didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
+          .asScala
     } yield {
       ds.asScala.headOption match {
         case None =>
@@ -338,7 +341,8 @@ class Compilers(
       scalac <- buildTargets.scalacOptions(target)
     } yield {
       jcache.computeIfAbsent(
-        target, { _ =>
+        target,
+        { _ =>
           statusBar.trackBlockingTask(
             s"${config.icons.sync}Loading presentation compiler"
           ) {
@@ -356,9 +360,10 @@ class Compilers(
   ): Option[(Input.VirtualFile, LspPosition)] =
     if (path.isAmmoniteScript)
       for {
-        target <- buildTargets
-          .inverseSources(path)
-          .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+        target <-
+          buildTargets
+            .inverseSources(path)
+            .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
         res <- ammonite().generatedScalaInputForPc(
           target,
           path,

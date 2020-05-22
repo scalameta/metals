@@ -1,10 +1,8 @@
 package scala.meta.internal.implementation
 
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.Position
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
 import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
@@ -18,12 +16,16 @@ import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSupe
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
+
 class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider
-)(
-    implicit ec: ExecutionContext
+)(implicit
+    ec: ExecutionContext
 ) {
 
   def getGoToSuperMethodCommand(
@@ -164,9 +166,10 @@ class Supermethods(
     for {
       args <- Option(commandParams.getArguments)
       argObject <- args.asScala.headOption
-      superMethodParams <- argObject.toJsonObject
-        .as[GoToSuperMethodParams]
-        .toOption
+      superMethodParams <-
+        argObject.toJsonObject
+          .as[GoToSuperMethodParams]
+          .toOption
     } yield superMethodParams
   }
 }

@@ -1,8 +1,9 @@
 package tests.pc
 
-import tests.BaseCompletionSuite
-import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import scala.meta.pc.PresentationCompilerConfig
+
+import tests.BaseCompletionSuite
 import tests.BuildInfoVersions
 
 class CompletionSnippetNegSuite extends BaseCompletionSuite {
@@ -72,9 +73,9 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
   checkSnippet(
     "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
     s"""|object Main {
-        |  val x: scala.IndexedSe@@
-        |}
-        |""".stripMargin,
+       |  val x: scala.IndexedSe@@
+       |}
+       |""".stripMargin,
     // It's expected to have two separate results, one for `object IndexedSeq` and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq

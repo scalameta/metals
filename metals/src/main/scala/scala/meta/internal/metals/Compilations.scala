@@ -1,15 +1,17 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.{bsp4j => b}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.{bsp4j => b}
 
 final class Compilations(
     buildTargets: BuildTargets,

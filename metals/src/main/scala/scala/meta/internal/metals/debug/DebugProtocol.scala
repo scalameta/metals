@@ -1,5 +1,11 @@
 package scala.meta.internal.metals.debug
 
+import scala.reflect.ClassTag
+import scala.util.Failure
+import scala.util.Try
+
+import scala.meta.internal.metals.debug.DebugProxy.DebugMode
+
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
@@ -16,10 +22,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.eclipse.lsp4j.{debug => dap}
-import scala.meta.internal.metals.debug.DebugProxy.DebugMode
-import scala.reflect.ClassTag
-import scala.util.Failure
-import scala.util.Try
 
 object DebugProtocol {
   import scala.meta.internal.metals.JsonParser._

@@ -1,13 +1,13 @@
 package bench
 
-import org.openjdk.jmh.annotations.Benchmark
-import org.openjdk.jmh.annotations.BenchmarkMode
-import org.openjdk.jmh.annotations.Mode
-import org.openjdk.jmh.annotations.Scope
-import org.openjdk.jmh.annotations.State
+import scala.reflect.internal.util.BatchSourceFile
+import scala.reflect.io.VirtualFile
+import scala.tools.nsc.interactive.Global
+
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.Trees
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -16,12 +16,14 @@ import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.reflect.internal.util.BatchSourceFile
-import scala.reflect.io.VirtualFile
+
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.State
 import tests.InputProperties
 import tests.Library
-import scala.tools.nsc.interactive.Global
-import scala.meta.internal.metals.Trees
 
 @State(Scope.Benchmark)
 class MetalsBench {

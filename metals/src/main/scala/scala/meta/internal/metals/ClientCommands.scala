@@ -57,21 +57,21 @@ object ClientCommands {
     "metals-run-session-start",
     "Start run session",
     s"""|Starts a run session. The address of a new Debug Adapter can be obtained 
-        | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
-        | with the same arguments as provided to this command.
+       | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
+       | with the same arguments as provided to this command.
     """.stripMargin,
     s"""|DebugSessionParameters object. It should be forwarded
-        |to the ${ServerCommands.StartDebugAdapter.id} command as is.
-        |
-        |Example:
-        |```json
-        |{
-        |  "targets": ["mybuild://workspace/foo/?id=foo"],
-        |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
-        |   data: {
-        |      className: "com.foo.App"
-        |   }
-        |}```
+       |to the ${ServerCommands.StartDebugAdapter.id} command as is.
+       |
+       |Example:
+       |```json
+       |{
+       |  "targets": ["mybuild://workspace/foo/?id=foo"],
+       |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
+       |   data: {
+       |      className: "com.foo.App"
+       |   }
+       |}```
     """.stripMargin
   )
 
@@ -79,21 +79,21 @@ object ClientCommands {
     "metals-debug-session-start",
     "Start debug session",
     s"""|Starts a debug session. The address of a new Debug Adapter can be obtained 
-        | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
-        | with the same arguments as provided to this command.
+       | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
+       | with the same arguments as provided to this command.
     """.stripMargin,
     s"""|DebugSessionParameters object. It should be forwarded
-        |to the ${ServerCommands.StartDebugAdapter.id} command as is.
-        |
-        |Example:
-        |```json
-        |{
-        |  "targets": ["mybuild://workspace/foo/?id=foo"],
-        |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
-        |   data: {
-        |      className: "com.foo.App"
-        |   }
-        |}```
+       |to the ${ServerCommands.StartDebugAdapter.id} command as is.
+       |
+       |Example:
+       |```json
+       |{
+       |  "targets": ["mybuild://workspace/foo/?id=foo"],
+       |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
+       |   data: {
+       |      className: "com.foo.App"
+       |   }
+       |}```
     """.stripMargin
   )
 
@@ -123,12 +123,13 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  def all: List[Command] = List(
-    RunDoctor,
-    ReloadDoctor,
-    ToggleLogs,
-    FocusDiagnostics,
-    GotoLocation,
-    EchoCommand
-  )
+  def all: List[Command] =
+    List(
+      RunDoctor,
+      ReloadDoctor,
+      ToggleLogs,
+      FocusDiagnostics,
+      GotoLocation,
+      EchoCommand
+    )
 }

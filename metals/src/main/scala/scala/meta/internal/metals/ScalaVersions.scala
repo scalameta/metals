@@ -65,7 +65,9 @@ object ScalaVersions {
   }
 
   def isCurrentScalaCompilerVersion(version: String): Boolean =
-    ScalaVersions.dropVendorSuffix(version) == mtags.BuildInfo.scalaCompilerVersion
+    ScalaVersions.dropVendorSuffix(
+      version
+    ) == mtags.BuildInfo.scalaCompilerVersion
 
   def scalaBinaryVersionFromFullVersion(scalaVersion: String): String =
     scalaVersion.split('.').take(2).mkString(".")

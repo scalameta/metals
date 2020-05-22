@@ -1,13 +1,15 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import java.nio.file.Path
+import java.{util => ju}
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import java.{util => ju}
-import java.nio.file.Path
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
+
+import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
 
 case class ScalaTarget(
     info: BuildTarget,

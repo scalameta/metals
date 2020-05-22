@@ -1,8 +1,9 @@
 package tests
 
-import munit.TestOptions
-import munit.Location
 import scala.concurrent.Future
+
+import munit.Location
+import munit.TestOptions
 
 class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 
@@ -33,16 +34,16 @@ class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
       for {
         _ <- server.initialize(
           s"""|/metals.json
-              |{
-              |  "a": { 
-              |    "libraryDependencies" : [ $libraryString ],
-              |    "scalaVersion": "$actualScalaVersion"
-              |  }
-              |}
-              |
-              |/$sourceFile
-              |$original
-              |""".stripMargin
+             |{
+             |  "a": { 
+             |    "libraryDependencies" : [ $libraryString ],
+             |    "scalaVersion": "$actualScalaVersion"
+             |  }
+             |}
+             |
+             |/$sourceFile
+             |$original
+             |""".stripMargin
         )
         _ <- assertCodeLenses(sourceFile, expected)
       } yield ()

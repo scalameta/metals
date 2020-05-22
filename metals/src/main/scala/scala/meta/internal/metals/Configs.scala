@@ -1,12 +1,14 @@
 package scala.meta.internal.metals
 
 import java.util.Properties
-import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
-import org.eclipse.lsp4j.FileSystemWatcher
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+
+import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
+import org.eclipse.lsp4j.FileSystemWatcher
 
 object Configs {
 
@@ -38,9 +40,10 @@ object Configs {
   object GlobSyntaxConfig {
     def uri = new GlobSyntaxConfig("uri")
     def vscode = new GlobSyntaxConfig("vscode")
-    def default = new GlobSyntaxConfig(
-      System.getProperty("metals.glob-syntax", uri.value)
-    )
+    def default =
+      new GlobSyntaxConfig(
+        System.getProperty("metals.glob-syntax", uri.value)
+      )
   }
 
   object CompilersConfig {

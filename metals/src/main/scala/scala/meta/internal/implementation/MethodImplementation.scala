@@ -1,28 +1,28 @@
 package scala.meta.internal.implementation
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.Type
-import scala.meta.internal.semanticdb.Scope
-import scala.meta.internal.semanticdb.ValueSignature
-import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.TypeRef
-import scala.meta.internal.semanticdb.MethodSignature
-import scala.meta.internal.semanticdb.Signature
-import scala.meta.internal.semanticdb.ClassSignature
-import scala.meta.internal.semanticdb.ExistentialType
-import scala.meta.internal.semanticdb.RepeatedType
-import scala.meta.internal.semanticdb.IntersectionType
 import scala.meta.internal.semanticdb.AnnotatedType
-import scala.meta.internal.semanticdb.UniversalType
-import scala.meta.internal.semanticdb.UnionType
-import scala.meta.internal.semanticdb.Type.Empty
-import scala.meta.internal.semanticdb.StructuralType
-import scala.meta.internal.semanticdb.ConstantType
-import scala.meta.internal.semanticdb.SingleType
-import scala.meta.internal.semanticdb.ThisType
-import scala.meta.internal.semanticdb.SuperType
-import scala.meta.internal.semanticdb.WithType
 import scala.meta.internal.semanticdb.ByNameType
+import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.ConstantType
+import scala.meta.internal.semanticdb.ExistentialType
+import scala.meta.internal.semanticdb.IntersectionType
+import scala.meta.internal.semanticdb.MethodSignature
+import scala.meta.internal.semanticdb.RepeatedType
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scope
+import scala.meta.internal.semanticdb.Signature
+import scala.meta.internal.semanticdb.SingleType
+import scala.meta.internal.semanticdb.StructuralType
+import scala.meta.internal.semanticdb.SuperType
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.ThisType
+import scala.meta.internal.semanticdb.Type
+import scala.meta.internal.semanticdb.Type.Empty
+import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.UnionType
+import scala.meta.internal.semanticdb.UniversalType
+import scala.meta.internal.semanticdb.ValueSignature
+import scala.meta.internal.semanticdb.WithType
 
 object MethodImplementation {
 
@@ -218,8 +218,8 @@ object MethodImplementation {
   )(implicit context: Context): Boolean = {
     (parentSignature, childSignature) match {
       case (
-          methodParentSignature: MethodSignature,
-          methodChildSignature: MethodSignature
+            methodParentSignature: MethodSignature,
+            methodChildSignature: MethodSignature
           ) =>
         val newContext = context.addAsSeenFrom(
           typeMappingFromMethodScope(

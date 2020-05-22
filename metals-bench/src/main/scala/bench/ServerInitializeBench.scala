@@ -4,6 +4,14 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+
+import scala.concurrent.ExecutionContext
+
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.io.AbsolutePath
+
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.openjdk.jmh.annotations.Benchmark
@@ -15,11 +23,6 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.MetalsLogger
-import scala.meta.io.AbsolutePath
 import tests.TestingClient
 
 @State(Scope.Benchmark)

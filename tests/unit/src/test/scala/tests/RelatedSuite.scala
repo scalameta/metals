@@ -1,11 +1,12 @@
 package tests
 
 import scala.meta.internal.builds.GradleBuildTool
+import scala.meta.internal.builds.MavenBuildTool
+import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.builds.MavenBuildTool
-import scala.meta.internal.builds.MillBuildTool
+
 import munit.Location
 
 class RelatedSuite extends BaseSuite {
@@ -30,8 +31,8 @@ class RelatedSuite extends BaseSuite {
   def checkIsNotSbtRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsSbtRelated(relpath, isTrue = false)
   }
-  def checkIsSbtRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsSbtRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}SbtRelated - $relpath") {
       checkRelated(relpath, SbtBuildTool.isSbtRelatedPath, isTrue)
@@ -51,8 +52,8 @@ class RelatedSuite extends BaseSuite {
   def checkIsNotGradleRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsGradleRelated(relpath, isTrue = false)
   }
-  def checkIsGradleRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsGradleRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}GradleRelated - $relpath") {
       checkRelated(relpath, GradleBuildTool.isGradleRelatedPath, isTrue)
@@ -72,8 +73,8 @@ class RelatedSuite extends BaseSuite {
   def checkIsNotMavenRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsMavenRelated(relpath, isTrue = false)
   }
-  def checkIsMavenRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsMavenRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}MavenRelated - $relpath") {
       checkRelated(relpath, MavenBuildTool.isMavenRelatedPath, isTrue)
@@ -88,8 +89,8 @@ class RelatedSuite extends BaseSuite {
   def checkIsNotMillRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsMillRelated(relpath, isTrue = false)
   }
-  def checkIsMillRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsMillRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}MillRelated - $relpath") {
       checkRelated(relpath, MillBuildTool.isMillRelatedPath, isTrue)

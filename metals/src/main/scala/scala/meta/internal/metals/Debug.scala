@@ -9,8 +9,8 @@ object Debug {
     e.setStackTrace(e.getStackTrace.slice(2, 30))
     e.printStackTrace()
   }
-  def printEnclosing()(
-      implicit line: sourcecode.Line,
+  def printEnclosing()(implicit
+      line: sourcecode.Line,
       enclosing: sourcecode.Enclosing
   ): Unit = {
     val enclosingTrimmed =

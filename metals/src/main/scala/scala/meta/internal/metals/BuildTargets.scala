@@ -1,27 +1,30 @@
 package scala.meta.internal.metals
 
-import java.util
-import java.{util => ju}
 import java.lang.{Iterable => JIterable}
-import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
+import java.net.URLClassLoader
+import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.Symbol
 import scala.util.Try
-import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.io.PathIO
-import java.net.URLClassLoader
 import scala.util.control.NonFatal
+
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.Symbol
+import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 
 /**
  * In-memory cache for looking up build server metadata.
@@ -406,21 +409,22 @@ object BuildTargets {
   ): Boolean = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     @tailrec
-    def loop(toVisit: List[BuildTargetIdentifier]): Boolean = toVisit match {
-      case Nil => false
-      case head :: tail =>
-        if (head == query) true
-        else if (isVisited(head)) false
-        else {
-          isVisited += head
-          inverseDeps(head) match {
-            case Some(next) =>
-              loop(next.toList ++ tail)
-            case None =>
-              loop(tail)
+    def loop(toVisit: List[BuildTargetIdentifier]): Boolean =
+      toVisit match {
+        case Nil => false
+        case head :: tail =>
+          if (head == query) true
+          else if (isVisited(head)) false
+          else {
+            isVisited += head
+            inverseDeps(head) match {
+              case Some(next) =>
+                loop(next.toList ++ tail)
+              case None =>
+                loop(tail)
+            }
           }
-        }
-    }
+      }
     loop(roots)
   }
 
@@ -443,23 +447,24 @@ object BuildTargets {
   ): InverseDependencies = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val leaves = mutable.Set.empty[BuildTargetIdentifier]
-    def loop(toVisit: List[BuildTargetIdentifier]): Unit = toVisit match {
-      case Nil => ()
-      case head :: tail =>
-        if (!isVisited(head)) {
-          isVisited += head
-          inverseDeps(head) match {
-            case Some(next) =>
-              loop(next.toList)
-            case None =>
-              // Only add leaves of the tree to the result to minimize the number
-              // of targets that we compile. If `B` depends on `A`, it's faster
-              // in Bloop to compile only `B` than `A+B`.
-              leaves += head
+    def loop(toVisit: List[BuildTargetIdentifier]): Unit =
+      toVisit match {
+        case Nil => ()
+        case head :: tail =>
+          if (!isVisited(head)) {
+            isVisited += head
+            inverseDeps(head) match {
+              case Some(next) =>
+                loop(next.toList)
+              case None =>
+                // Only add leaves of the tree to the result to minimize the number
+                // of targets that we compile. If `B` depends on `A`, it's faster
+                // in Bloop to compile only `B` than `A+B`.
+                leaves += head
+            }
+            loop(tail)
           }
-          loop(tail)
-        }
-    }
+      }
     loop(root)
     InverseDependencies(isVisited, leaves)
   }

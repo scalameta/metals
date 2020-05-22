@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.{bsp4j => b}
-import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
@@ -9,34 +7,39 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.{lsp4j => l}
+
+import scala.collection.convert.DecorateAsJava
+import scala.collection.convert.DecorateAsScala
+import scala.collection.mutable
 import scala.compat.java8.FutureConverters
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.Promise
+import scala.concurrent.duration.FiniteDuration
+import scala.util.Properties
+import scala.util.Try
+import scala.util.control.NonFatal
+import scala.{meta => m}
+
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.util.Properties
-import scala.{meta => m}
-import java.nio.file.StandardOpenOption
-import scala.collection.mutable
-import scala.util.control.NonFatal
-import scala.util.Try
-import scala.collection.convert.DecorateAsJava
-import scala.collection.convert.DecorateAsScala
+
+import ch.epfl.scala.{bsp4j => b}
+import io.undertow.server.HttpServerExchange
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.{lsp4j => l}
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -113,11 +116,12 @@ object MetalsEnrichments
         onPosition: m.Position => B,
         onUnchanged: () => B,
         onNoMatch: () => B
-    ): B = result match {
-      case Right(pos) => onPosition(pos)
-      case Left(EmptyResult.Unchanged) => onUnchanged()
-      case Left(EmptyResult.NoMatch) => onNoMatch()
-    }
+    ): B =
+      result match {
+        case Right(pos) => onPosition(pos)
+        case Left(EmptyResult.Unchanged) => onUnchanged()
+        case Left(EmptyResult.NoMatch) => onNoMatch()
+      }
   }
 
   implicit class XtensionJavaFuture[T](future: CompletionStage[T]) {
@@ -154,8 +158,8 @@ object MetalsEnrichments
       }
     }
 
-    def withTimeout(length: Int, unit: TimeUnit)(
-        implicit ec: ExecutionContext
+    def withTimeout(length: Int, unit: TimeUnit)(implicit
+        ec: ExecutionContext
     ): Future[A] = {
       Future(Await.result(future, FiniteDuration(length, unit)))
     }
@@ -171,8 +175,8 @@ object MetalsEnrichments
       }
     }
 
-    def liftOption(
-        implicit ec: ExecutionContext
+    def liftOption(implicit
+        ec: ExecutionContext
     ): Future[Option[A]] = future.map(Some(_))
   }
 

@@ -2,10 +2,12 @@ package scala.meta.internal.metals
 
 import java.util
 import java.util.Collections
-import org.eclipse.lsp4j.Location
+
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.Location
 
 case class DefinitionResult(
     locations: util.List[Location],

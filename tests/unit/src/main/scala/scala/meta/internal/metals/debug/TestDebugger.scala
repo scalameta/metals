@@ -4,21 +4,24 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import java.util.concurrent.TimeUnit
-import org.eclipse.lsp4j.debug.Capabilities
-import org.eclipse.lsp4j.debug.OutputEventArguments
-import org.eclipse.lsp4j.debug.SetBreakpointsResponse
-import org.eclipse.lsp4j.debug.StoppedEventArguments
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
-import scala.meta.inputs.Position
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import tests.DapTestEnrichments._
 import scala.util.Failure
 import scala.util.Success
+
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.debug.Capabilities
+import org.eclipse.lsp4j.debug.OutputEventArguments
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.StoppedEventArguments
+import tests.DapTestEnrichments._
 
 final class TestDebugger(
     connect: RemoteServer.Listener => Debugger,
@@ -186,7 +189,7 @@ final class TestDebugger(
           case Success(value) =>
             failure match {
               case Some(
-                  error
+                    error
                   ) => // propagate failure that occurred while processing action
                 Future.failed(error)
               case None =>
@@ -209,8 +212,8 @@ final class TestDebugger(
 object TestDebugger {
   private val timeout = TimeUnit.SECONDS.toMillis(60).toInt
 
-  def apply(uri: URI, stoppageHandler: Stoppage.Handler)(
-      implicit ec: ExecutionContext
+  def apply(uri: URI, stoppageHandler: Stoppage.Handler)(implicit
+      ec: ExecutionContext
   ): TestDebugger = {
     def connect(listener: RemoteServer.Listener): Debugger = {
       val socket = new Socket()

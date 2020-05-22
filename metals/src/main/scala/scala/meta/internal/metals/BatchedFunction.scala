@@ -3,10 +3,12 @@ package scala.meta.internal.metals
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
+
 import scala.meta.internal.async.ConcurrentQueue
 
 /**
@@ -107,8 +109,8 @@ final class BatchedFunction[A, B](
 }
 
 object BatchedFunction {
-  def fromFuture[A, B](fn: Seq[A] => Future[B])(
-      implicit ec: ExecutionContext,
+  def fromFuture[A, B](fn: Seq[A] => Future[B])(implicit
+      ec: ExecutionContext,
       dummy: DummyImplicit
   ): BatchedFunction[A, B] =
     new BatchedFunction(fn.andThen(CancelableFuture(_)))

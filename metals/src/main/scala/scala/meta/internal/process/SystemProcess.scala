@@ -1,12 +1,14 @@
 package scala.meta.internal.process
 
 import java.nio.file.Path
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
-import scala.meta.internal.pantsbuild.MessageOnlyException
+
 import scala.concurrent.ExecutionContext
-import scala.meta.pc.CancelToken
 import scala.sys.process._
+
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.pantsbuild.MessageOnlyException
+import scala.meta.pc.CancelToken
 
 object SystemProcess {
   def run(

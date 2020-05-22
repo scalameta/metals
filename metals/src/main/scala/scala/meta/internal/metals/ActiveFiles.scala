@@ -1,8 +1,9 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
+
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import MetalsEnrichments._
 
 /**
  * Keeps track of files that have been "recently active"

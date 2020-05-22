@@ -1,7 +1,7 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
@@ -15,9 +15,9 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${CreateNewSymbol.title("Future")}
-        |""".stripMargin,
+       |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+       |${CreateNewSymbol.title("Future")}
+       |""".stripMargin,
     """|package a
        |
        |import scala.concurrent.Future
@@ -37,9 +37,9 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${CreateNewSymbol.title("Future")}
-        |""".stripMargin,
+       |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+       |${CreateNewSymbol.title("Future")}
+       |""".stripMargin,
     """|package a
        |
        |import scala.concurrent.Future
@@ -60,11 +60,11 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${CreateNewSymbol.title("Future")}
-        |${CreateNewSymbol.title("Instant")}
-        |""".stripMargin,
+       |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+       |${ImportMissingSymbol.title("Instant", "java.time")}
+       |${CreateNewSymbol.title("Future")}
+       |${CreateNewSymbol.title("Instant")}
+       |""".stripMargin,
     """|package a
        |
        |import scala.concurrent.Future
@@ -89,11 +89,11 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.allSymbolsTitle}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
-        |${CreateNewSymbol.title("Instant")}
-        |${CreateNewSymbol.title("ListBuffer")}
-        |""".stripMargin,
+       |${ImportMissingSymbol.title("Instant", "java.time")}
+       |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+       |${CreateNewSymbol.title("Instant")}
+       |${CreateNewSymbol.title("ListBuffer")}
+       |""".stripMargin,
     """|package a
        |
        |import scala.concurrent.Future
@@ -118,14 +118,14 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.allSymbolsTitle}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
-        |${CreateNewSymbol.title("Future")}
-        |${CreateNewSymbol.title("Instant")}
-        |${CreateNewSymbol.title("ListBuffer")}
-        |""".stripMargin,
+       |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+       |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+       |${ImportMissingSymbol.title("Instant", "java.time")}
+       |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+       |${CreateNewSymbol.title("Future")}
+       |${CreateNewSymbol.title("Instant")}
+       |${CreateNewSymbol.title("ListBuffer")}
+       |""".stripMargin,
     """|package a
        |
        |import java.time.Instant
@@ -150,19 +150,19 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.allSymbolsTitle}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
-        |${CreateNewSymbol.title("Future")}
-        |${CreateNewSymbol.title("Instant")}
-        |${CreateNewSymbol.title("ListBuffer")}
-        |${CreateNewSymbol.title("Future")}
-        |${CreateNewSymbol.title("ListBuffer")}
-        |""".stripMargin,
+       |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+       |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+       |${ImportMissingSymbol.title("Instant", "java.time")}
+       |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+       |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+       |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+       |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+       |${CreateNewSymbol.title("Future")}
+       |${CreateNewSymbol.title("Instant")}
+       |${CreateNewSymbol.title("ListBuffer")}
+       |${CreateNewSymbol.title("Future")}
+       |${CreateNewSymbol.title("ListBuffer")}
+       |""".stripMargin,
     """|package a
        |
        |import java.time.Instant
@@ -189,8 +189,8 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
-        |${CreateNewSymbol.title("Instant")}
-        |""".stripMargin,
+       |${CreateNewSymbol.title("Instant")}
+       |""".stripMargin,
     """|package a
        |
        |import java.time.Instant

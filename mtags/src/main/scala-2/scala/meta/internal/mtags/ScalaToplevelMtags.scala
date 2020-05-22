@@ -3,13 +3,13 @@ package scala.meta.internal.mtags
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.semanticdb.Language
-import scala.meta.internal.tokenizers.LegacyScanner
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.inputs._
+import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
+import scala.meta.internal.tokenizers.LegacyScanner
+import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.tokenizers.TokenizeException
 
 final class Identifier(val name: String, val pos: Position) {
@@ -213,11 +213,13 @@ class ScalaToplevelMtags(
   /** Consumes the token stream until the next non-trivia token */
   def acceptTrivia(): Unit = {
     scanner.nextToken()
-    while (!isDone &&
+    while (
+      !isDone &&
       (scanner.curr.token match {
         case WHITESPACE | COMMENT => true
         case _ => false
-      })) {
+      })
+    ) {
       scanner.nextToken()
     }
   }

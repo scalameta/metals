@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.ServerCommands
 
 class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {
@@ -47,18 +47,18 @@ class BuildServerConnectionLspSuite
     for {
       _ <- server.initialize(
         s"""|/metals.json
-            |{"a":
-            |  {}
-            |}""".stripMargin
+           |{"a":
+           |  {}
+           |}""".stripMargin
       )
       _ = assertEmpty(
         client.workspaceMessageRequests
       )
       _ <- server.didChangeConfiguration(
         s"""|{
-            |  "bloopVersion": "${scala.meta.internal.metals.BuildInfo.bloopVersion}"
-            |}
-            |""".stripMargin
+           |  "bloopVersion": "${scala.meta.internal.metals.BuildInfo.bloopVersion}"
+           |}
+           |""".stripMargin
       )
 
       _ = assertEmpty(
@@ -66,9 +66,9 @@ class BuildServerConnectionLspSuite
       )
       _ <- server.didChangeConfiguration(
         s"""|{
-            |  "bloopVersion": "$updatedBloopVersion"
-            |}
-            |""".stripMargin
+           |  "bloopVersion": "$updatedBloopVersion"
+           |}
+           |""".stripMargin
       )
     } yield {
       assertNoDiff(

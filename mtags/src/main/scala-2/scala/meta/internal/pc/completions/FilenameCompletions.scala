@@ -1,12 +1,15 @@
 package scala.meta.internal.pc.completions
 
-import org.eclipse.{lsp4j => l}
-import java.nio.file.Paths
 import java.net.URI
+import java.nio.file.Paths
 
 import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{CompletionFuzzy, MetalsGlobal}
 import scala.util.control.NonFatal
+
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.MetalsGlobal
+
+import org.eclipse.{lsp4j => l}
 
 trait FilenameCompletions { this: MetalsGlobal =>
 
@@ -44,9 +47,11 @@ trait FilenameCompletions { this: MetalsGlobal =>
               d.name.isTermName == isTermName
           case _ => false
         }
-        if (!name.isEmpty &&
+        if (
+          !name.isEmpty &&
           CompletionFuzzy.matches(query, name) &&
-          siblings == 0) {
+          siblings == 0
+        ) {
           List(
             new TextEditMember(
               name,

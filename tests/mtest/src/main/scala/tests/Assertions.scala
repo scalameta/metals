@@ -1,8 +1,9 @@
 package tests
 
-import org.eclipse.lsp4j
-import munit.Location
 import scala.meta.io.AbsolutePath
+
+import munit.Location
+import org.eclipse.lsp4j
 
 trait Assertions extends munit.Assertions {
 
@@ -18,14 +19,14 @@ trait Assertions extends munit.Assertions {
     }
   }
 
-  def assertContains(string: String, substring: String)(
-      implicit loc: Location
+  def assertContains(string: String, substring: String)(implicit
+      loc: Location
   ): Unit = {
     assert(string.contains(substring))
   }
 
-  def assertNotContains(string: String, substring: String)(
-      implicit loc: Location
+  def assertNotContains(string: String, substring: String)(implicit
+      loc: Location
   ): Unit = {
     assert(!string.contains(substring))
   }
@@ -42,8 +43,8 @@ trait Assertions extends munit.Assertions {
     }
   }
 
-  def assertDiffEqual[T](obtained: T, expected: T, hint: String = "")(
-      implicit loc: Location
+  def assertDiffEqual[T](obtained: T, expected: T, hint: String = "")(implicit
+      loc: Location
   ): Unit = {
     if (obtained != expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"

@@ -1,31 +1,34 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.bsp4j.BuildTargetCapabilities
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
-import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import java.nio.file.Files
-import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.{lsp4j => l}
+
 import scala.collection.mutable.ArrayBuffer
-import scala.meta.internal.metals.WorkspaceSymbolInformation
+import scala.{meta => m}
+
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSources
+import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.{meta => m}
+
+import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetCapabilities
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import com.google.gson.Gson
-import scala.meta.io.AbsolutePath
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.{lsp4j => l}
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments
@@ -137,10 +140,11 @@ object MetalsTestEnrichments {
     }
   }
   implicit class XtensionMetaToken(token: m.Token) {
-    def isIdentifier: Boolean = token match {
-      case _: m.Token.Ident | _: m.Token.Interpolation.Id => true
-      case _ => false
-    }
+    def isIdentifier: Boolean =
+      token match {
+        case _: m.Token.Ident | _: m.Token.Interpolation.Id => true
+        case _ => false
+      }
     def toPositionParams(
         identifier: TextDocumentIdentifier
     ): TextDocumentPositionParams = {

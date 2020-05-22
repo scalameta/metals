@@ -1,7 +1,8 @@
 package scala.meta.internal.mtags
 
-import scala.meta.internal.semanticdb.Scala._
 import scala.util.control.NonFatal
+
+import scala.meta.internal.semanticdb.Scala._
 
 /**
  * Represents a unique definitions such as a Scala `val`, `object`, `class`, or Java field/method.
@@ -95,10 +96,11 @@ object Symbol {
     // parser that reports positioned error messages with actionable feedback
     // on how to write correct SemanticDB symbols. This here is better than nothing
     // at least.
-    def fail(message: String) = Left(
-      s"invalid SemanticDB symbol '$sym': ${message} (to learn the syntax " +
-        s"see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
-    )
+    def fail(message: String) =
+      Left(
+        s"invalid SemanticDB symbol '$sym': ${message} (to learn the syntax " +
+          s"see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
+      )
     def errorMessage(s: String): Option[String] = {
       if (s.isNone) {
         scala.None

@@ -1,15 +1,13 @@
 package scala.meta.internal.pc
 
 import java.util
-import java.{util => ju}
 import java.util.logging.Logger
-import org.eclipse.{lsp4j => l}
+import java.{util => ju}
+
+import scala.collection.mutable
 import scala.language.implicitConversions
-import scala.meta.internal.semanticdb.scalac.SemanticdbOps
-import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
 import scala.reflect.internal.util.Position
+import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
@@ -18,9 +16,14 @@ import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
-import scala.collection.mutable
+
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.reflect.internal.util.ScriptSourceFile
+import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
+
+import org.eclipse.{lsp4j => l}
 
 class MetalsGlobal(
     settings: Settings,
@@ -136,9 +139,11 @@ class MetalsGlobal(
   def treePos(tree: Tree): Position = {
     if (tree.pos == null) {
       NoPosition
-    } else if (tree.symbol != null &&
+    } else if (
+      tree.symbol != null &&
       tree.symbol.name.startsWith("x$") &&
-      tree.symbol.isArtifact) {
+      tree.symbol.isArtifact
+    ) {
       tree.symbol.pos
     } else {
       tree.pos
@@ -205,9 +210,11 @@ class MetalsGlobal(
                     args.map(arg => loop(arg, None))
                   )
                 case _ =>
-                  if (sym.isAliasType &&
+                  if (
+                    sym.isAliasType &&
                     (sym.isAbstract ||
-                    sym.overrides.lastOption.exists(_.isAbstract))) {
+                    sym.overrides.lastOption.exists(_.isAbstract))
+                  ) {
 
                     // Always dealias abstract type aliases but leave concrete aliases alone.
                     // trait Generic { type Repr /* dealias */ }
@@ -471,10 +478,11 @@ class MetalsGlobal(
 
   implicit class XtensionTreeMetals(tree: Tree) {
     def findSubtree(pos: Position): Tree = {
-      def loop(tree: Tree): Tree = tree match {
-        case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
-        case t => t
-      }
+      def loop(tree: Tree): Tree =
+        tree match {
+          case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
+          case t => t
+        }
       loop(tree)
     }
   }
@@ -536,7 +544,9 @@ class MetalsGlobal(
     def fullNameSyntax: String = {
       val out = new java.lang.StringBuilder
       def loop(s: Symbol): Unit = {
-        if (s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot) {
+        if (
+          s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot
+        ) {
           val name =
             if (s.isEmptyPackage || s.isEmptyPackageClass) TermName("_empty_")
             else if (s.isRootPackage || s.isRoot) TermName("_root_")
@@ -558,8 +568,10 @@ class MetalsGlobal(
     }
 
     def asInfixPattern: Option[String] =
-      if (sym.isCase &&
-        !Character.isUnicodeIdentifierStart(sym.decodedName.head)) {
+      if (
+        sym.isCase &&
+        !Character.isUnicodeIdentifierStart(sym.decodedName.head)
+      ) {
         sym.primaryConstructor.paramss match {
           case (a :: b :: Nil) :: _ =>
             Some(s"${a.decodedName} ${sym.decodedName} ${b.decodedName}")
@@ -582,14 +594,15 @@ class MetalsGlobal(
       }
     }
 
-    def snippetCursor: String = sym.paramss match {
-      case Nil =>
-        if (clientSupportsSnippets) "$0" else ""
-      case Nil :: Nil =>
-        if (clientSupportsSnippets) "()$0" else "()"
-      case _ =>
-        if (clientSupportsSnippets) "($0)" else ""
-    }
+    def snippetCursor: String =
+      sym.paramss match {
+        case Nil =>
+          if (clientSupportsSnippets) "$0" else ""
+        case Nil :: Nil =>
+          if (clientSupportsSnippets) "()$0" else "()"
+        case _ =>
+          if (clientSupportsSnippets) "($0)" else ""
+      }
 
     def isDefined: Boolean =
       sym != null &&
@@ -633,12 +646,13 @@ class MetalsGlobal(
   }
 
   def metalsSeenFromType(tree: Tree, symbol: Symbol): Type = {
-    def qual(t: Tree): Tree = t match {
-      case TreeApply(q, _) => qual(q)
-      case Select(q, _) => q
-      case Import(q, _) => q
-      case t => t
-    }
+    def qual(t: Tree): Tree =
+      t match {
+        case TreeApply(q, _) => qual(q)
+        case Select(q, _) => q
+        case Import(q, _) => q
+        case t => t
+      }
     val pre = stabilizedType(qual(tree))
     val memberType = pre.memberType(symbol)
     if (memberType.isErroneous) symbol.info
@@ -647,13 +661,14 @@ class MetalsGlobal(
 
   // Extractor for both term and type applications like `foo(1)` and foo[T]`
   object TreeApply {
-    def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
-      case TypeApply(qual, args) => Some(qual -> args)
-      case Apply(qual, args) => Some(qual -> args)
-      case UnApply(qual, args) => Some(qual -> args)
-      case AppliedTypeTree(qual, args) => Some(qual -> args)
-      case _ => None
-    }
+    def unapply(tree: Tree): Option[(Tree, List[Tree])] =
+      tree match {
+        case TypeApply(qual, args) => Some(qual -> args)
+        case Apply(qual, args) => Some(qual -> args)
+        case UnApply(qual, args) => Some(qual -> args)
+        case AppliedTypeTree(qual, args) => Some(qual -> args)
+        case _ => None
+      }
   }
 
 }

@@ -16,9 +16,9 @@ class NewFileTemplateSuite extends BaseSuite {
   test("cursor-marker-position") {
     val template =
       s"""|package a
-          |
-          |case class Foo()
-          |""".stripMargin
+         |
+         |case class Foo()
+         |""".stripMargin
     val cursorOffsets = 0.to(template.length)
     cursorOffsets.foreach { cursorOffset =>
       val templateWithCursor = template.patch(cursorOffset, "@@", 0)

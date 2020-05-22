@@ -1,16 +1,19 @@
 package tests.remotels
 
-import io.undertow.Undertow
-import scala.meta.internal.metals.MetalsHttpServer
-import io.undertow.Handlers.path
-import scala.meta.internal.io.InputStreamIO
 import java.nio.charset.StandardCharsets
-import scala.meta.internal.metals.JsonParser._
-import scala.util.control.NonFatal
-import scala.meta.internal.remotels.RemoteLocationResult
-import org.eclipse.{lsp4j => l}
-import org.eclipse.lsp4j.TextDocumentPositionParams
 import java.{util => ju}
+
+import scala.util.control.NonFatal
+
+import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsHttpServer
+import scala.meta.internal.remotels.RemoteLocationResult
+
+import io.undertow.Handlers.path
+import io.undertow.Undertow
+import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.{lsp4j => l}
 
 class TestingRemoteLanguageServer(server: Undertow) {
   def address: String = {

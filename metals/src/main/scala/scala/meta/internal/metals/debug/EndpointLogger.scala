@@ -5,6 +5,12 @@ import java.time.Clock
 import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.function.Consumer
+
+import scala.meta.internal.metals.debug.EndpointLogger.Direction
+import scala.meta.internal.metals.debug.EndpointLogger.Received
+import scala.meta.internal.metals.debug.EndpointLogger.Sent
+import scala.meta.internal.metals.debug.EndpointLogger.time
+
 import com.google.gson.GsonBuilder
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.json.DebugMessageJsonHandler
@@ -13,10 +19,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
-import scala.meta.internal.metals.debug.EndpointLogger.Direction
-import scala.meta.internal.metals.debug.EndpointLogger.Received
-import scala.meta.internal.metals.debug.EndpointLogger.Sent
-import scala.meta.internal.metals.debug.EndpointLogger.time
 
 final class EndpointLogger(endpoint: RemoteEndpoint, logger: PrintWriter)
     extends RemoteEndpoint {
@@ -36,12 +38,13 @@ final class EndpointLogger(endpoint: RemoteEndpoint, logger: PrintWriter)
 
   override def cancel(): Unit = endpoint.cancel()
 
-  private def log(direction: Direction, message: Message): Unit = synchronized {
-    logger.println(s"[Trace][$time] $direction ${typeOf(message)}:")
-    writer.serialize(message, logger)
-    logger.println()
-    logger.flush()
-  }
+  private def log(direction: Direction, message: Message): Unit =
+    synchronized {
+      logger.println(s"[Trace][$time] $direction ${typeOf(message)}:")
+      writer.serialize(message, logger)
+      logger.println()
+      logger.flush()
+    }
 
   private def typeOf(message: Message): String = {
     message match {

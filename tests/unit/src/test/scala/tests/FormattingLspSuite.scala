@@ -1,12 +1,13 @@
 package tests
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.Messages
+
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 
 class FormattingLspSuite extends BaseLspSuite("formatting") {
 
@@ -269,8 +270,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         assertNoDiff(
           server.textContents(".scalafmt.conf"),
           s"""|version = "${V.scalafmtVersion}"
-              |maxColumn=40
-              |""".stripMargin
+             |maxColumn=40
+             |""".stripMargin
         )
       }
     } yield ()
@@ -317,9 +318,9 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         assertNoDiff(
           client.workspaceDiagnostics,
           s"""|.scalafmt.conf:1:1: error: missing setting 'version'. To fix this problem, add the following line to .scalafmt.conf: 'version=${V.scalafmtVersion}'.
-              |maxColumn=40
-              |^^^^^^^^^^^^
-              |""".stripMargin
+             |maxColumn=40
+             |^^^^^^^^^^^^
+             |""".stripMargin
         )
       }
     } yield ()

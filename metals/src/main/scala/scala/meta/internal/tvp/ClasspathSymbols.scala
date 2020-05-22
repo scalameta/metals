@@ -1,32 +1,34 @@
 package scala.meta.internal.tvp
 
-import scala.collection.mutable
-import scala.meta.io.Classpath
-import scala.meta.internal.metacp._
-import scala.meta.internal.io._
-import scala.meta.internal.classpath.ClasspathIndex
-import scala.meta.io.AbsolutePath
-import java.nio.file.Path
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+import scala.tools.asm.tree.ClassNode
+import scala.tools.scalap.scalax.rules.scalasig.SymbolInfoSymbol
+import scala.util.control.NonFatal
+
+import scala.meta.internal.classpath.ClasspathIndex
+import scala.meta.internal.io._
+import scala.meta.internal.javacp.Javacp
+import scala.meta.internal.metacp._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.scalacp.SymlinkChildren
+import scala.meta.internal.scalacp.Synthetics
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scala.{Descriptor => d}
-import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.tools.asm.tree.ClassNode
-import scala.tools.scalap.scalax.rules.scalasig.SymbolInfoSymbol
-import scala.meta.internal.scalacp.SymlinkChildren
-import scala.meta.internal.scalacp.Synthetics
-import scala.util.control.NonFatal
-import scala.meta.internal.javacp.Javacp
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Timer
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.FileVisitResult
-import java.nio.file.attribute.BasicFileAttributes
-import scala.collection.concurrent.TrieMap
+import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
 
 /**
  * Extracts SemanticDB symbols from `*.class` files in jars.
@@ -105,11 +107,20 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
         case path if isClassfile(path.toNIO) =>
           try {
             val node = path.toClassNode
-            classfileSymbols(path.toNIO, node, index, { i =>
-              if (isRelevant(i)) {
-                buf += TreeViewSymbolInformation(i.symbol, i.kind, i.properties)
+            classfileSymbols(
+              path.toNIO,
+              node,
+              index,
+              { i =>
+                if (isRelevant(i)) {
+                  buf += TreeViewSymbolInformation(
+                    i.symbol,
+                    i.kind,
+                    i.properties
+                  )
+                }
               }
-            })
+            )
           } catch {
             case NonFatal(ex) =>
               scribe.warn(s"error: can't convert $path in $in", ex)

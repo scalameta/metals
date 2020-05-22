@@ -1,9 +1,10 @@
 package scala.meta.internal.metals
 
 import scala.collection.concurrent.TrieMap
-import scala.meta.io.AbsolutePath
-import MetalsEnrichments._
+
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 /**
  * Manages in-memory text contents of unsaved files in the editor.

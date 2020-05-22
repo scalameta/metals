@@ -1,10 +1,11 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
 import java.util.Collections
-import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.lsp4j.Location
-import scala.meta.pc.CancelToken
+import java.{util => ju}
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -12,14 +13,16 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
+import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.pc.CancelToken
+
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
-import scala.meta.internal.remotels.RemoteLanguageServer
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -108,9 +111,10 @@ final class DefinitionProvider(
       dirtyPosition: Position
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
-      currentDocument <- semanticdbs
-        .textDocument(source)
-        .documentIncludingStale
+      currentDocument <-
+        semanticdbs
+          .textDocument(source)
+          .documentIncludingStale
       posOcc = positionOccurrence(
         source,
         dirtyPosition,
@@ -139,10 +143,11 @@ final class DefinitionProvider(
     // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
       queryPosition <- snapshotPosition.toPosition(dirtyPosition)
-      occurrence <- snapshot.occurrences
-        .find(_.encloses(queryPosition, true))
-        // In case of macros we might need to get the postion from the presentation compiler
-        .orElse(fromMtags(source, queryPosition))
+      occurrence <-
+        snapshot.occurrences
+          .find(_.encloses(queryPosition, true))
+          // In case of macros we might need to get the postion from the presentation compiler
+          .orElse(fromMtags(source, queryPosition))
     } yield occurrence
 
     ResolvedSymbolOccurrence(sourceDistance, occurrence)

@@ -1,26 +1,29 @@
 package scala.meta.internal.remotels
 
-import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.UserConfiguration
 import java.{util => ju}
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.JsonParser._
-import scala.util.Try
-import scala.meta.internal.metals.DefinitionResult
-import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.metals.ReferencesResult
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.mtags.MD5
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonObject
-import org.eclipse.lsp4j.Location
-import scala.meta.internal.metals.BuildTargets
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.concurrent.duration.Duration
+
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.util.Try
+
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.DefinitionResult
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ReferencesResult
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.mtags.MD5
+import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.io.AbsolutePath
+
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import org.eclipse.lsp4j.Location
+import org.eclipse.{lsp4j => l}
 
 class RemoteLanguageServer(
     workspace: () => AbsolutePath,
@@ -46,27 +49,29 @@ class RemoteLanguageServer(
   }
   def references(
       params: l.ReferenceParams
-  ): Future[Option[ReferencesResult]] = blockingRequest { url =>
-    for {
-      locations <- postLocationRequest(
-        url,
-        params.toJsonObject,
-        "textDocument/references"
-      )
-    } yield ReferencesResult(Symbols.None, locations.asScala)
-  }
+  ): Future[Option[ReferencesResult]] =
+    blockingRequest { url =>
+      for {
+        locations <- postLocationRequest(
+          url,
+          params.toJsonObject,
+          "textDocument/references"
+        )
+      } yield ReferencesResult(Symbols.None, locations.asScala)
+    }
 
   def definition(
       params: l.TextDocumentPositionParams
-  ): Future[Option[DefinitionResult]] = blockingRequest { url =>
-    for {
-      locations <- postLocationRequest(
-        url,
-        params.toJsonObject,
-        "textDocument/definition"
-      )
-    } yield DefinitionResult(locations, Symbols.None, None, None)
-  }
+  ): Future[Option[DefinitionResult]] =
+    blockingRequest { url =>
+      for {
+        locations <- postLocationRequest(
+          url,
+          params.toJsonObject,
+          "textDocument/definition"
+        )
+      } yield DefinitionResult(locations, Symbols.None, None, None)
+    }
 
   private def blockingRequest[T](fn: String => Option[T]): Future[Option[T]] = {
     userConfig().remoteLanguageServer match {

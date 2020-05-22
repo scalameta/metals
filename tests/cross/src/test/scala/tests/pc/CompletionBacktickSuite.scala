@@ -7,10 +7,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   check(
     "keyword",
     s"""|object Main {
-        |  val `type` = 42
-        |  Main.typ@@
-        |}
-        |""".stripMargin,
+       |  val `type` = 42
+       |  Main.typ@@
+       |}
+       |""".stripMargin,
     """|`type`: Int
        |""".stripMargin,
     filterText = "type",
@@ -22,10 +22,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   check(
     "space",
     s"""|object Main {
-        |  val `hello world` = 42
-        |  Main.hello@@
-        |}
-        |""".stripMargin,
+       |  val `hello world` = 42
+       |  Main.hello@@
+       |}
+       |""".stripMargin,
     """|`hello world`: Int
        |""".stripMargin,
     filterText = "hello world",
@@ -37,10 +37,10 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   check(
     "comment",
     s"""|object Main {
-        |  val `///` = 42
-        |  Main./@@
-        |}
-        |""".stripMargin,
+       |  val `///` = 42
+       |  Main./@@
+       |}
+       |""".stripMargin,
     """|`///`: Int
        |""".stripMargin,
     filterText = "///",

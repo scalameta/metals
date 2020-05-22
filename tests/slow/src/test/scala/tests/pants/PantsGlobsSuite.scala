@@ -1,8 +1,10 @@
 package tests.pants
 
-import tests.BaseSuite
-import scala.meta.internal.pantsbuild.PantsGlobs
 import java.nio.file.Files
+
+import scala.meta.internal.pantsbuild.PantsGlobs
+
+import tests.BaseSuite
 
 class PantsGlobsSuite extends BaseSuite {
   def check(
@@ -10,8 +12,8 @@ class PantsGlobsSuite extends BaseSuite {
       includes: List[String],
       expectedWalkDepth: Option[Int],
       expectedIncludes: List[String]
-  )(
-      implicit loc: munit.Location
+  )(implicit
+      loc: munit.Location
   ): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")

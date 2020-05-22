@@ -1,9 +1,12 @@
 package scala.meta.internal.pc
 
-import scala.meta.pc.SymbolSearchVisitor
 import java.nio.file.Path
-import org.eclipse.{lsp4j => l}
+
 import scala.util.control.NonFatal
+
+import scala.meta.pc.SymbolSearchVisitor
+
+import org.eclipse.{lsp4j => l}
 
 trait WorkspaceSymbolSearch { this: MetalsGlobal =>
 

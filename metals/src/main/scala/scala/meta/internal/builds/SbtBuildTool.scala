@@ -2,6 +2,7 @@ package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Properties
+
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
@@ -129,10 +130,10 @@ object SbtBuildTool {
       ""
     }
     s"""|// DO NOT EDIT! This file is auto-generated.
-        |// This file enables sbt-bloop to create bloop config files.
-        |$resolvers
-        |addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "$bloopSbtVersion")
-        |""".stripMargin
+       |// This file enables sbt-bloop to create bloop config files.
+       |$resolvers
+       |addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "$bloopSbtVersion")
+       |""".stripMargin
   }
 
   def apply(

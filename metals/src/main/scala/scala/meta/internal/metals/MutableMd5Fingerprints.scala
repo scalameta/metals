@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Md5Fingerprints
@@ -13,9 +14,12 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
     new ConcurrentHashMap[AbsolutePath, ConcurrentLinkedQueue[Fingerprint]]()
   def add(path: AbsolutePath, text: String): Unit = {
     val md5 = MD5.compute(text)
-    val value = fingerprints.computeIfAbsent(path, { _ =>
-      new ConcurrentLinkedQueue()
-    })
+    val value = fingerprints.computeIfAbsent(
+      path,
+      { _ =>
+        new ConcurrentLinkedQueue()
+      }
+    )
     value.add(Fingerprint(text, md5))
   }
 

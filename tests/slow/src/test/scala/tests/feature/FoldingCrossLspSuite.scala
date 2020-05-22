@@ -1,7 +1,8 @@
 package tests.feature
 
-import tests.BaseLspSuite
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import tests.BaseLspSuite
 
 class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
 
@@ -9,21 +10,21 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
     for {
       _ <- server.initialize(
         s"""|
-            |/metals.json
-            |{
-            |  "a": { "scalaVersion" : "${V.scala213}" }
-            |}
-            |/a/src/main/scala/a/Main.scala
-            |object Main {
-            |  def foo = {
-            |    ???
-            |    ???
-            |    ???
-            |  }
-            |
-            |  val justAPadding = ???
-            |}
-            |""".stripMargin
+           |/metals.json
+           |{
+           |  "a": { "scalaVersion" : "${V.scala213}" }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |object Main {
+           |  def foo = {
+           |    ???
+           |    ???
+           |    ???
+           |  }
+           |
+           |  val justAPadding = ???
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.assertFolded(

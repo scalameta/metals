@@ -4,34 +4,35 @@ import java.io.InputStream
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeoutException
 import java.util.concurrent.TimeUnit
-
-import ammrunner.AmmoniteFetcher
-import ammrunner.AmmoniteFetcherException
-import ammrunner.{Command => AmmCommand}
-import ammrunner.{Versions => AmmVersions}
-import ammrunner.VersionsOption
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.lsp4j.CompletionList
-import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.{Range => LspRange}
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.meta.inputs.Input
-import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.metals._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
 import scala.util.Failure
 import scala.util.Success
+import scala.util.control.NonFatal
+
+import scala.meta.inputs.Input
+import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals._
+import scala.meta.io.AbsolutePath
+
+import ammrunner.AmmoniteFetcher
+import ammrunner.AmmoniteFetcherException
+import ammrunner.VersionsOption
+import ammrunner.{Command => AmmCommand}
+import ammrunner.{Versions => AmmVersions}
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.{Range => LspRange}
 
 final class Ammonite(
     buffers: Buffers,

@@ -1,14 +1,17 @@
 package tests.pants
 
-import scala.meta.internal.builds.{PantsBuildTool, PantsDigest}
+import scala.sys.process._
+import scala.util.control.NonFatal
+
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.PantsBuildTool
+import scala.meta.internal.builds.PantsDigest
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+
 import tests.BaseImportSuite
-import scala.meta.internal.builds.BuildTool
 import tests.FileLayout
-import scala.meta.internal.metals.BuildInfo
-import scala.util.control.NonFatal
-import scala.sys.process._
 
 class PantsLspSuite extends BaseImportSuite("pants") {
 
@@ -52,29 +55,29 @@ class PantsLspSuite extends BaseImportSuite("pants") {
     pants.toFile().setExecutable(true)
     FileLayout.fromString(
       s"""|/BUILD.tools
-          |SCALA_VERSION='${BuildInfo.scala212}'
-          |jar_library(
-          |  name = 'scalac',
-          |  jars = [
-          |    jar(org = 'org.scala-lang', name = 'scala-compiler', rev = SCALA_VERSION),
-          |  ],
-          |  dependencies=[
-          |    ':scala-reflect',
-          |    ':scala-library',
-          |  ])
-          |jar_library(name = 'scala-library', jars = [jar(org = 'org.scala-lang', name = 'scala-library', rev = SCALA_VERSION)], scope='force')
-          |jar_library(name = 'scala-reflect', jars = [jar(org = 'org.scala-lang', name = 'scala-reflect', rev = SCALA_VERSION, intransitive=True)])
-          |target(name = 'scala-repl', dependencies=[ ':scalac', ':scala-reflect', ':scala-library'])
-          |
-          |/pants.ini
-          |[GLOBAL]
-          |pants_version: 1.26.0rc2
-          |[scala]
-          |version: custom
-          |suffix_version: 2.12
-          |strict_deps: False
-          |scala_repl: //:scala-repl
-          |""".stripMargin,
+         |SCALA_VERSION='${BuildInfo.scala212}'
+         |jar_library(
+         |  name = 'scalac',
+         |  jars = [
+         |    jar(org = 'org.scala-lang', name = 'scala-compiler', rev = SCALA_VERSION),
+         |  ],
+         |  dependencies=[
+         |    ':scala-reflect',
+         |    ':scala-library',
+         |  ])
+         |jar_library(name = 'scala-library', jars = [jar(org = 'org.scala-lang', name = 'scala-library', rev = SCALA_VERSION)], scope='force')
+         |jar_library(name = 'scala-reflect', jars = [jar(org = 'org.scala-lang', name = 'scala-reflect', rev = SCALA_VERSION, intransitive=True)])
+         |target(name = 'scala-repl', dependencies=[ ':scalac', ':scala-reflect', ':scala-library'])
+         |
+         |/pants.ini
+         |[GLOBAL]
+         |pants_version: 1.26.0rc2
+         |[scala]
+         |version: custom
+         |suffix_version: 2.12
+         |strict_deps: False
+         |scala_repl: //:scala-repl
+         |""".stripMargin,
       root = workspace
     )
   }

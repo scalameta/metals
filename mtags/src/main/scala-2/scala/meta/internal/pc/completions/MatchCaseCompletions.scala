@@ -1,13 +1,15 @@
 package scala.meta.internal.pc.completions
 
-import org.eclipse.{lsp4j => l}
-
 import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{Identifier, MetalsGlobal}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.meta.internal.mtags.MtagsEnrichments._
+
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.MetalsGlobal
+
+import org.eclipse.{lsp4j => l}
 
 trait MatchCaseCompletions { this: MetalsGlobal =>
 
@@ -320,9 +322,11 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         context.symbolIsInScope(sym) ||
           autoImports.nonEmpty
       val infixPattern: Option[String] =
-        if (isInfixEligible &&
+        if (
+          isInfixEligible &&
           sym.isCase &&
-          !Character.isUnicodeIdentifierStart(sym.decodedName.head)) {
+          !Character.isUnicodeIdentifierStart(sym.decodedName.head)
+        ) {
           sym.primaryConstructor.paramss match {
             case (a :: b :: Nil) :: _ =>
               Some(
@@ -382,13 +386,14 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
 
   class Parents(val selector: Type) {
     def this(pos: Position) = this(typedTreeAt(pos).tpe)
-    def this(tpes: List[Type]) = this(
-      tpes match {
-        case Nil => NoType
-        case head :: Nil => head
-        case _ => definitions.tupleType(tpes)
-      }
-    )
+    def this(tpes: List[Type]) =
+      this(
+        tpes match {
+          case Nil => NoType
+          case head :: Nil => head
+          case _ => definitions.tupleType(tpes)
+        }
+      )
     val isParent: Set[Symbol] =
       Set(selector.typeSymbol, selector.typeSymbol.companion)
         .filterNot(_ == NoSymbol)

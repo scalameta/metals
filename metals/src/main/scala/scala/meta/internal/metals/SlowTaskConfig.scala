@@ -8,7 +8,8 @@ final case class SlowTaskConfig(value: String) {
 object SlowTaskConfig {
   def off = new SlowTaskConfig("off")
   def on = new SlowTaskConfig("on")
-  def default = new SlowTaskConfig(
-    System.getProperty("metals.slow-task", "off")
-  )
+  def default =
+    new SlowTaskConfig(
+      System.getProperty("metals.slow-task", "off")
+    )
 }

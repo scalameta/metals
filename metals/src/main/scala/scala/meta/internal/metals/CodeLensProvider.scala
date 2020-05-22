@@ -1,10 +1,11 @@
 package scala.meta.internal.metals
 
-import org.eclipse.{lsp4j => l}
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
+
+import org.eclipse.{lsp4j => l}
 
 final class CodeLensProvider(
     codeLensProviders: List[CodeLens],

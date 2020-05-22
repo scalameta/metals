@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.charset.Charset
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.internal.mtags.Semanticdbs
@@ -18,8 +19,10 @@ final class FileSystemSemanticdbs(
 ) extends Semanticdbs {
 
   override def textDocument(file: AbsolutePath): TextDocumentLookup = {
-    if (!file.toLanguage.isScala ||
-      file.toNIO.getFileSystem != workspace.toNIO.getFileSystem) {
+    if (
+      !file.toLanguage.isScala ||
+      file.toNIO.getFileSystem != workspace.toNIO.getFileSystem
+    ) {
       TextDocumentLookup.NotFound(file)
     } else {
       semanticdbTargetroot(file) match {

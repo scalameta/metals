@@ -1,10 +1,9 @@
 package tests.sbt
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import java.util.concurrent.TimeUnit
-import tests.BaseImportSuite
+
 import scala.concurrent.Future
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.ClientCommands
@@ -13,6 +12,10 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
+
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import tests.BaseImportSuite
 
 class SbtLspSuite extends BaseImportSuite("sbt-import") {
 
@@ -28,10 +31,10 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "${V.scala212}"
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -70,8 +73,8 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     for {
       _ <- server.initialize(
         s"""|/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
+           |scalaVersion := "${V.scala212}"
+           |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -82,10 +85,10 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "${V.scala212}"
+           |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -111,15 +114,15 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |/src/main/scala/reload/Main.scala
-            |package reload
-            |object Main extends App {
-            |  println("sourcecode.Line(42)")
-            |}
-            |""".stripMargin
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "${V.scala212}"
+           |/src/main/scala/reload/Main.scala
+           |package reload
+           |object Main extends App {
+           |  println("sourcecode.Line(42)")
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -128,11 +131,12 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
            |""".stripMargin
       }
-      _ <- server
-        .didSave("src/main/scala/reload/Main.scala") { text =>
-          text.replaceAll("\"", "")
-        }
-        .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("src/main/scala/reload/Main.scala") { text =>
+            text.replaceAll("\"", "")
+          }
+          .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -174,10 +178,10 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |, syntax error
-            |""".stripMargin,
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |, syntax error
+           |""".stripMargin,
         expectError = true
       )
       _ = assertNoDiff(

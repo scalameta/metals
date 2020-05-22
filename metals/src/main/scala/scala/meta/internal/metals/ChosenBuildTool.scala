@@ -1,7 +1,8 @@
 package scala.meta.internal.metals
 
 import java.sql.Connection
-import JdbcEnrichments._
+
+import scala.meta.internal.metals.JdbcEnrichments._
 
 class ChosenBuildTool(conn: () => Connection) {
   def selectedBuildTool(): Option[String] = {

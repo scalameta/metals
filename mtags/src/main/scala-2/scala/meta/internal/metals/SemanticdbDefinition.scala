@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
-import org.eclipse.{lsp4j => l}
+import scala.util.control.NonFatal
+
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -8,9 +9,10 @@ import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.tokenizers.TokenizeException
-import scala.util.control.NonFatal
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.tokenizers.TokenizeException
+
+import org.eclipse.{lsp4j => l}
 
 /**
  * A definition of a global symbol produced by mtags.

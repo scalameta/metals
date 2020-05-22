@@ -1,11 +1,12 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+
 import munit.Location
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import scala.meta.internal.metals.MetalsEnrichments._
 
 class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
 
@@ -16,7 +17,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewSymbol.title("Location")}""".stripMargin,
+       |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "case-class",
     newFile =
@@ -34,17 +35,17 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewSymbol.title("Location")}""".stripMargin,
+       |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "trait",
     newFile =
       "a/src/main/scala/a/Location.scala" ->
         s"""|package a
-            |
-            |trait Location {
-            |$indent
-            |}
-            |""".stripMargin
+           |
+           |trait Location {
+           |$indent
+           |}
+           |""".stripMargin
   )
 
   checkNewSymbol(
@@ -54,19 +55,19 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |<<case class School(name: Missing, location: Location)>>
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewSymbol.title("Missing")}
-        |${CreateNewSymbol.title("Location")}
-        |""".stripMargin,
+       |${CreateNewSymbol.title("Missing")}
+       |${CreateNewSymbol.title("Location")}
+       |""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "class",
     newFile =
       "a/src/main/scala/a/Missing.scala" ->
         s"""|package a
-            |
-            |class Missing {
-            |$indent
-            |}
-            |""".stripMargin,
+           |
+           |class Missing {
+           |$indent
+           |}
+           |""".stripMargin,
     expectNoDiagnostics = false
   )
 
@@ -89,8 +90,8 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
                                   |{"a":{}}
                                   |/$path
                                   |${input
-                                    .replace("<<", "")
-                                    .replace(">>", "")}
+          .replace("<<", "")
+          .replace(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)

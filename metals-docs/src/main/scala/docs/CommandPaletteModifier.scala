@@ -1,8 +1,9 @@
 package docs
 
+import scala.meta.inputs.Input
+
 import mdoc.Reporter
 import mdoc.StringModifier
-import scala.meta.inputs.Input
 
 class CommandPaletteModifier extends StringModifier {
   override val name: String = "command-palette"

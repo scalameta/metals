@@ -13,12 +13,12 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   check(
     "top-of-file",
     s"""|@@
-        |object Main {}
-        |""".stripMargin,
+       |object Main {}
+       |""".stripMargin,
     s"""|
-        |
-        |object Main {}
-        |""".stripMargin
+       |
+       |object Main {}
+       |""".stripMargin
   )
 
   check(

@@ -2,14 +2,17 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.ExecuteCommandParams
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.ExecuteCommandParams
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -48,9 +51,12 @@ final class Doctor(
 
   /** Executes the "Run doctor" server command. */
   def executeRunDoctor(): Unit = {
-    executeDoctor(ClientCommands.RunDoctor, server => {
-      Urls.openBrowser(server.address + "/doctor")
-    })
+    executeDoctor(
+      ClientCommands.RunDoctor,
+      server => {
+        Urls.openBrowser(server.address + "/doctor")
+      }
+    )
   }
 
   /** Executes the "Reload doctor" server command. */
@@ -60,9 +66,12 @@ final class Doctor(
       hasProblems.set(false)
       languageClient.showMessage(CheckDoctor.problemsFixed)
     }
-    executeDoctor(ClientCommands.ReloadDoctor, server => {
-      server.reload()
-    })
+    executeDoctor(
+      ClientCommands.ReloadDoctor,
+      server => {
+        server.reload()
+      }
+    )
   }
 
   private def executeDoctor(
@@ -137,10 +146,12 @@ final class Doctor(
     if (!isSemanticdbEnabled) {
       if (bspServerVersion.exists(isUnsupportedBloopVersion)) {
         s"""|The installed Bloop server version is ${bspServerVersion.get} while Metals requires at least Bloop version ${BuildInfo.bloopVersion},
-            |To fix this problem please update your Bloop server.""".stripMargin
-      } else if (isSupportedScalaVersion(
+           |To fix this problem please update your Bloop server.""".stripMargin
+      } else if (
+        isSupportedScalaVersion(
           scalaVersion
-        )) {
+        )
+      ) {
         hint.capitalize
       } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
         val recommended = recommendedVersion(scalaVersion)

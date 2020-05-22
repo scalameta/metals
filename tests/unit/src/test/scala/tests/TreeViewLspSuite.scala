@@ -1,6 +1,7 @@
 package tests
 
 import scala.collection.SortedSet
+
 import scala.meta.internal.tvp.TreeViewProvider
 
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
@@ -81,9 +82,9 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ = assertNoDiff(
         client.workspaceTreeViewChanges,
         s"""|${TreeViewProvider.Project} <root>
-            |${TreeViewProvider.Build} <root>
-            |${TreeViewProvider.Compile} <root>
-            |""".stripMargin
+           |${TreeViewProvider.Build} <root>
+           |${TreeViewProvider.Compile} <root>
+           |""".stripMargin
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}",
@@ -197,48 +198,48 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             }
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
-              |    sourcecode_2.12-0.1.7.jar
-              |    sourcecode_2.12-0.1.7.jar
-              |      sourcecode/
-              |      sourcecode/
-              |        Args class
-              |        Args object
-              |        ArgsMacros trait
-              |        Compat object
-              |        Enclosing class
-              |        Enclosing object
-              |        EnclosingMachineMacros trait
-              |        EnclosingMacros trait
-              |        File class
-              |        File object
-              |        FileMacros trait
-              |        FullName class
-              |        FullName object
-              |        FullNameMachineMacros trait
-              |        FullNameMacros trait
-              |        Line class
-              |        Line object
-              |        LineMacros trait
-              |        Macros object
-              |        Name class
-              |        Name object
-              |        NameMachineMacros trait
-              |        NameMacros trait
-              |        Pkg class
-              |        Pkg object
-              |        PkgMacros trait
-              |        SourceCompanion class
-              |        SourceValue class
-              |        Text class
-              |        Text object
-              |        TextMacros trait
-              |        Util object
-              |        File class
-              |          value val
-              |""".stripMargin
+             |  Projects (0)
+             |  Libraries (${expectedLibrariesCount})
+             |  Libraries (${expectedLibrariesCount})
+             |    sourcecode_2.12-0.1.7.jar
+             |    sourcecode_2.12-0.1.7.jar
+             |      sourcecode/
+             |      sourcecode/
+             |        Args class
+             |        Args object
+             |        ArgsMacros trait
+             |        Compat object
+             |        Enclosing class
+             |        Enclosing object
+             |        EnclosingMachineMacros trait
+             |        EnclosingMacros trait
+             |        File class
+             |        File object
+             |        FileMacros trait
+             |        FullName class
+             |        FullName object
+             |        FullNameMachineMacros trait
+             |        FullNameMacros trait
+             |        Line class
+             |        Line object
+             |        LineMacros trait
+             |        Macros object
+             |        Name class
+             |        Name object
+             |        NameMachineMacros trait
+             |        NameMacros trait
+             |        Pkg class
+             |        Pkg object
+             |        PkgMacros trait
+             |        SourceCompanion class
+             |        SourceValue class
+             |        Text class
+             |        Text object
+             |        TextMacros trait
+             |        Util object
+             |        File class
+             |          value val
+             |""".stripMargin
         )
         assertNoDiff(
           server.treeViewReveal(
@@ -250,206 +251,206 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             }
           ),
           s"""|root
-              |  Projects (0)
-              |  Libraries (${expectedLibrariesCount})
-              |  Libraries (${expectedLibrariesCount})
-              |    org.eclipse.lsp4j-0.5.0.jar
-              |    org.eclipse.lsp4j.generator-0.5.0.jar
-              |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
-              |    org.eclipse.lsp4j-0.5.0.jar
-              |      org/
-              |      org/
-              |        eclipse/
-              |        eclipse/
-              |          lsp4j/
-              |          lsp4j/
-              |            adapters/
-              |            launch/
-              |            services/
-              |            util/
-              |            ApplyWorkspaceEditParams class
-              |            ApplyWorkspaceEditResponse class
-              |            ClientCapabilities class
-              |            CodeAction class
-              |            CodeActionCapabilities class
-              |            CodeActionContext class
-              |            CodeActionKind class
-              |            CodeActionKindCapabilities class
-              |            CodeActionLiteralSupportCapabilities class
-              |            CodeActionParams class
-              |            CodeLens class
-              |            CodeLensCapabilities class
-              |            CodeLensOptions class
-              |            CodeLensParams class
-              |            CodeLensRegistrationOptions class
-              |            Color class
-              |            ColorInformation class
-              |            ColorPresentation class
-              |            ColorPresentationParams class
-              |            ColorProviderCapabilities class
-              |            ColorProviderOptions class
-              |            ColoringInformation class
-              |            ColoringParams class
-              |            ColoringStyle class
-              |            Command class
-              |            CompletionCapabilities class
-              |            CompletionContext class
-              |            CompletionItem class
-              |            CompletionItemCapabilities class
-              |            CompletionItemKind class
-              |            CompletionItemKindCapabilities class
-              |            CompletionList class
-              |            CompletionOptions class
-              |            CompletionParams class
-              |            CompletionRegistrationOptions class
-              |            CompletionTriggerKind class
-              |            ConfigurationItem class
-              |            ConfigurationParams class
-              |            DefinitionCapabilities class
-              |            Diagnostic class
-              |            DiagnosticRelatedInformation class
-              |            DiagnosticSeverity class
-              |            DidChangeConfigurationCapabilities class
-              |            DidChangeConfigurationParams class
-              |            DidChangeTextDocumentParams class
-              |            DidChangeWatchedFilesCapabilities class
-              |            DidChangeWatchedFilesParams class
-              |            DidChangeWatchedFilesRegistrationOptions class
-              |            DidChangeWorkspaceFoldersParams class
-              |            DidCloseTextDocumentParams class
-              |            DidOpenTextDocumentParams class
-              |            DidSaveTextDocumentParams class
-              |            DocumentColorParams class
-              |            DocumentFilter class
-              |            DocumentFormattingParams class
-              |            DocumentHighlight class
-              |            DocumentHighlightCapabilities class
-              |            DocumentHighlightKind class
-              |            DocumentLink class
-              |            DocumentLinkCapabilities class
-              |            DocumentLinkOptions class
-              |            DocumentLinkParams class
-              |            DocumentLinkRegistrationOptions class
-              |            DocumentOnTypeFormattingOptions class
-              |            DocumentOnTypeFormattingParams class
-              |            DocumentOnTypeFormattingRegistrationOptions class
-              |            DocumentRangeFormattingParams class
-              |            DocumentSymbol class
-              |            DocumentSymbolCapabilities class
-              |            DocumentSymbolParams class
-              |            DynamicRegistrationCapabilities class
-              |            ExecuteCommandCapabilities class
-              |            ExecuteCommandOptions class
-              |            ExecuteCommandParams class
-              |            ExecuteCommandRegistrationOptions class
-              |            FileChangeType class
-              |            FileEvent class
-              |            FileSystemWatcher class
-              |            FoldingRange class
-              |            FoldingRangeCapabilities class
-              |            FoldingRangeKind class
-              |            FoldingRangeProviderOptions class
-              |            FoldingRangeRequestParams class
-              |            FormattingCapabilities class
-              |            FormattingOptions class
-              |            Hover class
-              |            HoverCapabilities class
-              |            ImplementationCapabilities class
-              |            InitializeError class
-              |            InitializeErrorCode class
-              |            InitializeParams class
-              |            InitializeResult class
-              |            InitializedParams class
-              |            InsertTextFormat class
-              |            Location class
-              |            MarkedString class
-              |            MarkupContent class
-              |            MarkupKind class
-              |            MessageActionItem class
-              |            MessageParams class
-              |            MessageType class
-              |            OnTypeFormattingCapabilities class
-              |            ParameterInformation class
-              |            Position class
-              |            PublishDiagnosticsCapabilities class
-              |            PublishDiagnosticsParams class
-              |            Range class
-              |            RangeFormattingCapabilities class
-              |            ReferenceContext class
-              |            ReferenceParams class
-              |            ReferencesCapabilities class
-              |            Registration class
-              |            RegistrationParams class
-              |            RenameCapabilities class
-              |            RenameParams class
-              |            ResourceChange class
-              |            ResponseErrorCode class
-              |            SaveOptions class
-              |            SemanticHighlightingCapabilities class
-              |            SemanticHighlightingInformation class
-              |            SemanticHighlightingParams class
-              |            SemanticHighlightingServerCapabilities class
-              |            ServerCapabilities class
-              |            ShowMessageRequestParams class
-              |            SignatureHelp class
-              |            SignatureHelpCapabilities class
-              |            SignatureHelpOptions class
-              |            SignatureHelpRegistrationOptions class
-              |            SignatureInformation class
-              |            SignatureInformationCapabilities class
-              |            StaticRegistrationOptions class
-              |            SymbolCapabilities class
-              |            SymbolInformation class
-              |            SymbolKind class
-              |            SymbolKindCapabilities class
-              |            SynchronizationCapabilities class
-              |            TextDocumentChangeRegistrationOptions class
-              |            TextDocumentClientCapabilities class
-              |            TextDocumentContentChangeEvent class
-              |            TextDocumentEdit class
-              |            TextDocumentIdentifier class
-              |            TextDocumentItem class
-              |            TextDocumentPositionParams class
-              |            TextDocumentRegistrationOptions class
-              |            TextDocumentSaveReason class
-              |            TextDocumentSaveRegistrationOptions class
-              |            TextDocumentSyncKind class
-              |            TextDocumentSyncOptions class
-              |            TextEdit class
-              |            TypeDefinitionCapabilities class
-              |            Unregistration class
-              |            UnregistrationParams class
-              |            VersionedTextDocumentIdentifier class
-              |            WatchKind class
-              |            WillSaveTextDocumentParams class
-              |            WorkspaceClientCapabilities class
-              |            WorkspaceEdit class
-              |            WorkspaceEditCapabilities class
-              |            WorkspaceFolder class
-              |            WorkspaceFoldersChangeEvent class
-              |            WorkspaceFoldersOptions class
-              |            WorkspaceServerCapabilities class
-              |            WorkspaceSymbolParams class
-              |            services/
-              |              LanguageClient class
-              |              LanguageClientAware class
-              |              LanguageClientExtensions class
-              |              LanguageServer class
-              |              TextDocumentService class
-              |              WorkspaceService class
-              |              LanguageClient class
-              |                applyEdit() method
-              |                registerCapability() method
-              |                unregisterCapability() method
-              |                telemetryEvent() method
-              |                publishDiagnostics() method
-              |                showMessage() method
-              |                showMessageRequest() method
-              |                logMessage() method
-              |                workspaceFolders() method
-              |                configuration() method
-              |                semanticHighlighting() method
-              |""".stripMargin
+             |  Projects (0)
+             |  Libraries (${expectedLibrariesCount})
+             |  Libraries (${expectedLibrariesCount})
+             |    org.eclipse.lsp4j-0.5.0.jar
+             |    org.eclipse.lsp4j.generator-0.5.0.jar
+             |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
+             |    org.eclipse.lsp4j-0.5.0.jar
+             |      org/
+             |      org/
+             |        eclipse/
+             |        eclipse/
+             |          lsp4j/
+             |          lsp4j/
+             |            adapters/
+             |            launch/
+             |            services/
+             |            util/
+             |            ApplyWorkspaceEditParams class
+             |            ApplyWorkspaceEditResponse class
+             |            ClientCapabilities class
+             |            CodeAction class
+             |            CodeActionCapabilities class
+             |            CodeActionContext class
+             |            CodeActionKind class
+             |            CodeActionKindCapabilities class
+             |            CodeActionLiteralSupportCapabilities class
+             |            CodeActionParams class
+             |            CodeLens class
+             |            CodeLensCapabilities class
+             |            CodeLensOptions class
+             |            CodeLensParams class
+             |            CodeLensRegistrationOptions class
+             |            Color class
+             |            ColorInformation class
+             |            ColorPresentation class
+             |            ColorPresentationParams class
+             |            ColorProviderCapabilities class
+             |            ColorProviderOptions class
+             |            ColoringInformation class
+             |            ColoringParams class
+             |            ColoringStyle class
+             |            Command class
+             |            CompletionCapabilities class
+             |            CompletionContext class
+             |            CompletionItem class
+             |            CompletionItemCapabilities class
+             |            CompletionItemKind class
+             |            CompletionItemKindCapabilities class
+             |            CompletionList class
+             |            CompletionOptions class
+             |            CompletionParams class
+             |            CompletionRegistrationOptions class
+             |            CompletionTriggerKind class
+             |            ConfigurationItem class
+             |            ConfigurationParams class
+             |            DefinitionCapabilities class
+             |            Diagnostic class
+             |            DiagnosticRelatedInformation class
+             |            DiagnosticSeverity class
+             |            DidChangeConfigurationCapabilities class
+             |            DidChangeConfigurationParams class
+             |            DidChangeTextDocumentParams class
+             |            DidChangeWatchedFilesCapabilities class
+             |            DidChangeWatchedFilesParams class
+             |            DidChangeWatchedFilesRegistrationOptions class
+             |            DidChangeWorkspaceFoldersParams class
+             |            DidCloseTextDocumentParams class
+             |            DidOpenTextDocumentParams class
+             |            DidSaveTextDocumentParams class
+             |            DocumentColorParams class
+             |            DocumentFilter class
+             |            DocumentFormattingParams class
+             |            DocumentHighlight class
+             |            DocumentHighlightCapabilities class
+             |            DocumentHighlightKind class
+             |            DocumentLink class
+             |            DocumentLinkCapabilities class
+             |            DocumentLinkOptions class
+             |            DocumentLinkParams class
+             |            DocumentLinkRegistrationOptions class
+             |            DocumentOnTypeFormattingOptions class
+             |            DocumentOnTypeFormattingParams class
+             |            DocumentOnTypeFormattingRegistrationOptions class
+             |            DocumentRangeFormattingParams class
+             |            DocumentSymbol class
+             |            DocumentSymbolCapabilities class
+             |            DocumentSymbolParams class
+             |            DynamicRegistrationCapabilities class
+             |            ExecuteCommandCapabilities class
+             |            ExecuteCommandOptions class
+             |            ExecuteCommandParams class
+             |            ExecuteCommandRegistrationOptions class
+             |            FileChangeType class
+             |            FileEvent class
+             |            FileSystemWatcher class
+             |            FoldingRange class
+             |            FoldingRangeCapabilities class
+             |            FoldingRangeKind class
+             |            FoldingRangeProviderOptions class
+             |            FoldingRangeRequestParams class
+             |            FormattingCapabilities class
+             |            FormattingOptions class
+             |            Hover class
+             |            HoverCapabilities class
+             |            ImplementationCapabilities class
+             |            InitializeError class
+             |            InitializeErrorCode class
+             |            InitializeParams class
+             |            InitializeResult class
+             |            InitializedParams class
+             |            InsertTextFormat class
+             |            Location class
+             |            MarkedString class
+             |            MarkupContent class
+             |            MarkupKind class
+             |            MessageActionItem class
+             |            MessageParams class
+             |            MessageType class
+             |            OnTypeFormattingCapabilities class
+             |            ParameterInformation class
+             |            Position class
+             |            PublishDiagnosticsCapabilities class
+             |            PublishDiagnosticsParams class
+             |            Range class
+             |            RangeFormattingCapabilities class
+             |            ReferenceContext class
+             |            ReferenceParams class
+             |            ReferencesCapabilities class
+             |            Registration class
+             |            RegistrationParams class
+             |            RenameCapabilities class
+             |            RenameParams class
+             |            ResourceChange class
+             |            ResponseErrorCode class
+             |            SaveOptions class
+             |            SemanticHighlightingCapabilities class
+             |            SemanticHighlightingInformation class
+             |            SemanticHighlightingParams class
+             |            SemanticHighlightingServerCapabilities class
+             |            ServerCapabilities class
+             |            ShowMessageRequestParams class
+             |            SignatureHelp class
+             |            SignatureHelpCapabilities class
+             |            SignatureHelpOptions class
+             |            SignatureHelpRegistrationOptions class
+             |            SignatureInformation class
+             |            SignatureInformationCapabilities class
+             |            StaticRegistrationOptions class
+             |            SymbolCapabilities class
+             |            SymbolInformation class
+             |            SymbolKind class
+             |            SymbolKindCapabilities class
+             |            SynchronizationCapabilities class
+             |            TextDocumentChangeRegistrationOptions class
+             |            TextDocumentClientCapabilities class
+             |            TextDocumentContentChangeEvent class
+             |            TextDocumentEdit class
+             |            TextDocumentIdentifier class
+             |            TextDocumentItem class
+             |            TextDocumentPositionParams class
+             |            TextDocumentRegistrationOptions class
+             |            TextDocumentSaveReason class
+             |            TextDocumentSaveRegistrationOptions class
+             |            TextDocumentSyncKind class
+             |            TextDocumentSyncOptions class
+             |            TextEdit class
+             |            TypeDefinitionCapabilities class
+             |            Unregistration class
+             |            UnregistrationParams class
+             |            VersionedTextDocumentIdentifier class
+             |            WatchKind class
+             |            WillSaveTextDocumentParams class
+             |            WorkspaceClientCapabilities class
+             |            WorkspaceEdit class
+             |            WorkspaceEditCapabilities class
+             |            WorkspaceFolder class
+             |            WorkspaceFoldersChangeEvent class
+             |            WorkspaceFoldersOptions class
+             |            WorkspaceServerCapabilities class
+             |            WorkspaceSymbolParams class
+             |            services/
+             |              LanguageClient class
+             |              LanguageClientAware class
+             |              LanguageClientExtensions class
+             |              LanguageServer class
+             |              TextDocumentService class
+             |              WorkspaceService class
+             |              LanguageClient class
+             |                applyEdit() method
+             |                registerCapability() method
+             |                unregisterCapability() method
+             |                telemetryEvent() method
+             |                publishDiagnostics() method
+             |                showMessage() method
+             |                showMessageRequest() method
+             |                logMessage() method
+             |                workspaceFolders() method
+             |                configuration() method
+             |                semanticHighlighting() method
+             |""".stripMargin
         )
       }
     } yield ()

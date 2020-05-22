@@ -1,18 +1,18 @@
 package scala.meta.internal.metals
 
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.TextEdit
-
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
 import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
+
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextEdit
 
 object MultilineStringFormattingProvider {
 
@@ -28,8 +28,10 @@ object MultilineStringFormattingProvider {
       tokens: Tokens
   ): Boolean = {
     var methodIndex = stringTokenIndex + 1
-    while (tokens(methodIndex).isWhiteSpaceOrComment ||
-      tokens(methodIndex).isInstanceOf[Token.Dot]) methodIndex += 1
+    while (
+      tokens(methodIndex).isWhiteSpaceOrComment ||
+      tokens(methodIndex).isInstanceOf[Token.Dot]
+    ) methodIndex += 1
     tokens(methodIndex) match {
       case token: Token.Ident if token.value == stripMargin =>
         true
@@ -175,8 +177,10 @@ object MultilineStringFormattingProvider {
     case (token: Interpolation.Start, index: Int)
         if token.pos.start <= start.start => {
       var endIndex = index + 1
-      while (!tokens(endIndex)
-          .isInstanceOf[Interpolation.End]) endIndex += 1
+      while (
+        !tokens(endIndex)
+          .isInstanceOf[Interpolation.End]
+      ) endIndex += 1
       isMultilineString(sourceText, token) && hasStripMarginSuffix(
         endIndex,
         tokens
@@ -230,8 +234,12 @@ object MultilineStringFormattingProvider {
     )
     val defaultIndent = previousLine.prefixLength(_ == ' ')
     val indent =
-      if (previousLineNumber > 1 && !splitLines(previousLineNumber - 1).trim.lastOption
-          .contains('+'))
+      if (
+        previousLineNumber > 1 && !splitLines(
+          previousLineNumber - 1
+        ).trim.lastOption
+          .contains('+')
+      )
         defaultIndent + 2
       else defaultIndent
     val interpolationString = getIndexOfLastQuote(previousLine)
@@ -302,13 +310,15 @@ object MultilineStringFormattingProvider {
       (startPos, endPos, sourceText, tokens) =>
         tokens match {
           case Some(tokens) =>
-            if (multilineStringInTokens(
+            if (
+              multilineStringInTokens(
                 tokens,
                 startPos,
                 endPos,
                 sourceText,
                 newlineAdded
-              )) {
+              )
+            ) {
               List(indent(splitLines, position))
             } else Nil
           case None =>
@@ -333,13 +343,15 @@ object MultilineStringFormattingProvider {
           determineDefaultIndent(splitLines, startPos.startLine)
         tokens match {
           case Some(tokens) =>
-            if (multilineStringInTokens(
+            if (
+              multilineStringInTokens(
                 tokens,
                 startPos,
                 endPos,
                 sourceText,
                 newlineAdded = false
-              )) {
+              )
+            ) {
               val linesToFormat =
                 range.getStart().getLine().to(range.getEnd().getLine())
               linesToFormat

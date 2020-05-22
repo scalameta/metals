@@ -7,14 +7,15 @@ abstract class Icons {
   def info: String
   def check: String
   def findsuper: String
-  final def all: List[String] = List(
-    rocket,
-    sync,
-    alert,
-    info,
-    check,
-    findsuper
-  )
+  final def all: List[String] =
+    List(
+      rocket,
+      sync,
+      alert,
+      info,
+      check,
+      findsuper
+    )
 }
 object Icons {
   def translate(from: Icons, to: Icons, message: String): String = {

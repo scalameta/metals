@@ -1,13 +1,14 @@
 package tests.debug
 
-import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.StackFrameCollector
 import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
+
 import munit.Location
 import munit.TestOptions
+import tests.BaseDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -158,8 +159,8 @@ class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   def assertStackFrame(
       name: TestOptions,
       disabled: Boolean = false
-  )(source: String, expectedFrames: List[Variables])(
-      implicit loc: Location
+  )(source: String, expectedFrames: List[Variables])(implicit
+      loc: Location
   ): Unit = {
     if (disabled) return
 

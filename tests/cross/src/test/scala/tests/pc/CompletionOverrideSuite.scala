@@ -304,15 +304,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "mutable-conflict",
     s"""|abstract class Mutable {
-        |  def foo: scala.collection.mutable.Set[Int]
-        |}
-        |object Main {
-        |  new Mutable {
-        |    val mutable = 42
-        |___
-        |  }
-        |}
-        |""".stripMargin,
+       |  def foo: scala.collection.mutable.Set[Int]
+       |}
+       |object Main {
+       |  new Mutable {
+       |    val mutable = 42
+       |___
+       |  }
+       |}
+       |""".stripMargin,
     "    def foo@@",
     """    def foo: scala.collection.mutable.Set[Int] = ${0:???}"""
   )
@@ -364,14 +364,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "jutil-conflict2",
     s"""|package jutil2
-        |abstract class JUtil {
-        |  def foo: java.util.List[Int]
-        |}
-        |class Main extends JUtil {
-        |  val ju = 42
-        |___
-        |}
-        |""".stripMargin,
+       |abstract class JUtil {
+       |  def foo: java.util.List[Int]
+       |}
+       |class Main extends JUtil {
+       |  val ju = 42
+       |___
+       |}
+       |""".stripMargin,
     "  def foo@@",
     // Can't use `import java.{util => ju}` because `val ju = 42` is in scope.
     """  def foo: java.util.List[Int] = ${0:???}"""
@@ -380,12 +380,12 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "jlang",
     s"""|abstract class Mutable {
-        |  def foo: java.lang.StringBuilder
-        |}
-        |class Main extends Mutable {
-        |  ___
-        |}
-        |""".stripMargin,
+       |  def foo: java.lang.StringBuilder
+       |}
+       |class Main extends Mutable {
+       |  ___
+       |}
+       |""".stripMargin,
     "  def foo@@",
     """  def foo: java.lang.StringBuilder = ${0:???}""".stripMargin
   )
@@ -393,14 +393,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "alias",
     s"""|
-        |abstract class Abstract {
-        |  def foo: scala.collection.immutable.List[Int]
-        |}
-        |class Main extends Abstract {
-        |  ___
-        |}
-        |
-        |""".stripMargin,
+       |abstract class Abstract {
+       |  def foo: scala.collection.immutable.List[Int]
+       |}
+       |class Main extends Abstract {
+       |  ___
+       |}
+       |
+       |""".stripMargin,
     "  def foo@@",
     """  def foo: List[Int] = ${0:???}""".stripMargin
   )
@@ -408,15 +408,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "alias2",
     s"""|package alias
-        |abstract class Alias {
-        |  type Foobar = List[Int]
-        |  def foo: Foobar
-        |}
-        |class Main extends Alias {
-        |  ___
-        |}
-        |
-        |""".stripMargin,
+       |abstract class Alias {
+       |  type Foobar = List[Int]
+       |  def foo: Foobar
+       |}
+       |class Main extends Alias {
+       |  ___
+       |}
+       |
+       |""".stripMargin,
     "  def foo@@",
     // NOTE(olafur) I am not sure this is desirable behavior, we might want to
     // consider not dealiasing here.
@@ -426,14 +426,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "rename",
     s"""|import java.lang.{Boolean => JBoolean}
-        |abstract class Abstract {
-        |  def foo: JBoolean
-        |}
-        |class Main extends Abstract {
-        |___
-        |}
-        |
-        |""".stripMargin,
+       |abstract class Abstract {
+       |  def foo: JBoolean
+       |}
+       |class Main extends Abstract {
+       |___
+       |}
+       |
+       |""".stripMargin,
     "  def foo@@",
     """  def foo: JBoolean = ${0:???}""".stripMargin
   )
@@ -441,15 +441,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "path",
     s"""|package path
-        |abstract class Path {
-        |  type Out
-        |  def foo: Out
-        |}
-        |class Main extends Path {
-        |___
-        |}
-        |
-        |""".stripMargin,
+       |abstract class Path {
+       |  type Out
+       |  def foo: Out
+       |}
+       |class Main extends Path {
+       |___
+       |}
+       |
+       |""".stripMargin,
     "  def foo@@",
     """  def foo: Out = ${0:???}""".stripMargin
   )
@@ -457,16 +457,16 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   checkEditLine(
     "path-alias",
     s"""|package paththis
-        |abstract class Path {
-        |  type Out
-        |  def foo: Out
-        |}
-        |class Main extends Path {
-        |  type Out = String
-        |___
-        |}
-        |
-        |""".stripMargin,
+       |abstract class Path {
+       |  type Out
+       |  def foo: Out
+       |}
+       |class Main extends Path {
+       |  type Out = String
+       |___
+       |}
+       |
+       |""".stripMargin,
     "  def foo@@",
     """  def foo: String = ${0:???}""".stripMargin
   )

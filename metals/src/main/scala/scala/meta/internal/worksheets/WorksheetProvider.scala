@@ -1,38 +1,41 @@
 package scala.meta.internal.worksheets
 
-import scala.meta._
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Cancelable
-import scala.collection.concurrent.TrieMap
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import scala.concurrent.Future
-import scala.meta.pc.CancelToken
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.pc.CompilerJobQueue
 import java.util.concurrent.CompletableFuture
-import scala.concurrent.ExecutionContext
-import java.util.concurrent.ScheduledExecutorService
-import scala.meta.internal.metals.MetalsSlowTaskParams
-import java.util.concurrent.TimeUnit
-import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.pc.InterruptException
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta._
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Embedded
-import mdoc.interfaces.Mdoc
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsSlowTaskParams
+import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.pc.CompilerJobQueue
+import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.worksheets.MdocEnrichments._
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import mdoc.interfaces.EvaluatedWorksheet
-import MdocEnrichments._
-import org.eclipse.lsp4j.Position
+import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Position
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -254,9 +257,10 @@ class WorksheetProvider(
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
-        isSupported = ScalaVersions
-          .isSupportedScalaVersion(scalaVersion) && !ScalaVersions
-          .isScala3Version(scalaVersion)
+        isSupported =
+          ScalaVersions
+            .isSupportedScalaVersion(scalaVersion) && !ScalaVersions
+            .isScala3Version(scalaVersion)
         _ = {
           if (!isSupported) {
             scribe.warn(

@@ -1,29 +1,32 @@
 package tests
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.nio.charset.StandardCharsets
-import coursierapi.Dependency
-import coursierapi.Fetch
-import org.eclipse.lsp4j.MarkupContent
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.Docstrings
-import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.pc.PresentationCompilerConfigImpl
-import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.io.AbsolutePath
-import scala.meta.pc.PresentationCompilerConfig
+
 import scala.collection.Seq
 import scala.util.control.NonFatal
-import scala.meta.pc.PresentationCompiler
-import scala.meta.internal.pc.ScalaPresentationCompiler
+
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
+import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.PresentationCompilerConfig
+
+import coursierapi.Dependency
+import coursierapi.Fetch
 import munit.Tag
+import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 abstract class BasePCSuite extends BaseSuite {
 
@@ -133,18 +136,24 @@ abstract class BasePCSuite extends BaseSuite {
 
   override def munitTestTransforms: List[TestTransform] =
     super.munitTestTransforms ++ List(
-      new TestTransform("Append Scala version", { test =>
-        test.withName(test.name + "_" + scalaVersion)
-      }),
-      new TestTransform("Ignore Scala version", { test =>
-        val isIgnoredScalaVersion = test.tags.collect {
-          case IgnoreScalaVersion(versions) => versions
-        }.flatten
+      new TestTransform(
+        "Append Scala version",
+        { test =>
+          test.withName(test.name + "_" + scalaVersion)
+        }
+      ),
+      new TestTransform(
+        "Ignore Scala version",
+        { test =>
+          val isIgnoredScalaVersion = test.tags.collect {
+            case IgnoreScalaVersion(versions) => versions
+          }.flatten
 
-        if (isIgnoredScalaVersion(scalaVersion))
-          test.withTags(test.tags + munit.Ignore)
-        else test
-      })
+          if (isIgnoredScalaVersion(scalaVersion))
+            test.withTags(test.tags + munit.Ignore)
+          else test
+        }
+      )
     )
 
   def params(code: String, filename: String = "test.scala"): (String, Int) = {

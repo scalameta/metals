@@ -10,8 +10,8 @@ final case class DebugFileLayout(
 ) {
   override def toString: String =
     s"""|/$relativePath
-        |$content
-        |""".stripMargin
+       |$content
+       |""".stripMargin
 }
 
 object DebugFileLayout {

@@ -1,16 +1,18 @@
 package scala.meta.internal.metals.debug
-import org.eclipse.lsp4j.debug.SetBreakpointsArguments
-import org.eclipse.lsp4j.debug.SetBreakpointsResponse
-import org.eclipse.lsp4j.debug.Source
-import org.eclipse.lsp4j.debug.SourceBreakpoint
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.JvmSignatures
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+
+import org.eclipse.lsp4j.debug.SetBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.Source
+import org.eclipse.lsp4j.debug.SourceBreakpoint
 
 private[debug] final class SetBreakpointsRequestHandler(
     server: ServerAdapter,

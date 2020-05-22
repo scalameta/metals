@@ -1,15 +1,17 @@
 package scala.meta.internal.metals
 
+import scala.collection.mutable
+
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.collection.mutable
-import scala.meta.internal.builds.BuildTool
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.semver.SemVer
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -213,9 +215,9 @@ object Messages {
         else ""
       params.setMessage(
         s"""|You have Bloop $bloopVersion installed and Metals requires at least Bloop $minimumBloopVersion.
-            |If you installed bloop via a system package manager (brew, aur, scoop), please upgrade manually.
-            |If not, select "Turn off old server". A newer server will be started automatically afterwards.
-            |""".stripMargin + s"\n$additional"
+           |If you installed bloop via a system package manager (brew, aur, scoop), please upgrade manually.
+           |If not, select "Turn off old server". A newer server will be started automatically afterwards.
+           |""".stripMargin + s"\n$additional"
       )
       params.setType(MessageType.Warning)
       params.setActions(
@@ -304,11 +306,12 @@ object Messages {
       )
     def isMissingScalafmtVersion(params: ShowMessageRequestParams): Boolean =
       params.getMessage == messageRequestMessage
-    def inputBox(): MetalsInputBoxParams = MetalsInputBoxParams(
-      prompt =
-        "No Scalafmt version is configured for this workspace, what version would you like to use?",
-      value = BuildInfo.scalafmtVersion
-    )
+    def inputBox(): MetalsInputBoxParams =
+      MetalsInputBoxParams(
+        prompt =
+          "No Scalafmt version is configured for this workspace, what version would you like to use?",
+        value = BuildInfo.scalafmtVersion
+      )
     def messageRequestMessage: String =
       s"No Scalafmt version is configured for this workspace. " +
         s"To fix this problem, update .scalafmt.conf to include 'version=${BuildInfo.scalafmtVersion}'."
@@ -508,9 +511,10 @@ object Messages {
       params.setType(MessageType.Info)
       params
     }
-    def ImportFailed(script: String) = new MessageParams(
-      MessageType.Error,
-      s"Error importing $script. See the logs for more details."
-    )
+    def ImportFailed(script: String) =
+      new MessageParams(
+        MessageType.Error,
+        s"Error importing $script. See the logs for more details."
+      )
   }
 }

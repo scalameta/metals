@@ -1,26 +1,27 @@
 package tests
 import java.nio.file.Files
 import java.util.UUID
-import scala.meta.io.AbsolutePath
+
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
 
 class SymlinkedProjectSuite extends BaseLspSuite("symlinked-project") {
   test("definitions-from-other-file") {
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=1.2.6
-            |
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |
-            |/src/main/scala/Foo.scala
-            |class Foo
-            |
-            |/src/main/scala/Bar.scala
-            |object Bar{
-            |  val foo = new Foo
-            |}
+           |sbt.version=1.2.6
+           |
+           |/build.sbt
+           |scalaVersion := "${V.scala212}"
+           |
+           |/src/main/scala/Foo.scala
+           |class Foo
+           |
+           |/src/main/scala/Bar.scala
+           |object Bar{
+           |  val foo = new Foo
+           |}
         """.stripMargin
       )
       _ <- server.didOpen("src/main/scala/Bar.scala")

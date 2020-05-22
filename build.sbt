@@ -44,6 +44,7 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused:imports"
     ),
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.2.1-RC1",
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -512,21 +513,22 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   }
 )
 
-def crossPublishLocal(scalaV: String) = Def.task[Unit] {
-  // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
-  val newState = Project
-    .extract(state.value)
-    .appendWithSession(
-      List(
-        scalaVersion.in(mtags) := scalaV,
-        useSuperShell.in(ThisBuild) := false
-      ),
-      state.value
-    )
-  val (s, _) = Project
-    .extract(newState)
-    .runTask(publishLocal.in(mtags), newState)
-}
+def crossPublishLocal(scalaV: String) =
+  Def.task[Unit] {
+    // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
+    val newState = Project
+      .extract(state.value)
+      .appendWithSession(
+        List(
+          scalaVersion.in(mtags) := scalaV,
+          useSuperShell.in(ThisBuild) := false
+        ),
+        state.value
+      )
+    val (s, _) = Project
+      .extract(newState)
+      .runTask(publishLocal.in(mtags), newState)
+  }
 
 def publishAllMtags(
     all: List[String]

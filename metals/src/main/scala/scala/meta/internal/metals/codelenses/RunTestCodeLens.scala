@@ -1,22 +1,24 @@
 package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
+
+import scala.meta.internal.implementation.TextDocumentWithPath
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargetClasses
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.ClientCommands.StartDebugSession
+import scala.meta.internal.metals.ClientCommands.StartRunSession
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Command
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TokenEditDistance
+import scala.meta.internal.semanticdb.TextDocument
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.implementation.TextDocumentWithPath
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.ClientCommands.StartDebugSession
-import scala.meta.internal.metals.ClientCommands.StartRunSession
-import scala.meta.internal.metals.Command
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.TokenEditDistance
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.BuildTargetClasses
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.ClientConfiguration
 
 final class RunTestCodeLens(
     buildTargetClasses: BuildTargetClasses,
@@ -66,9 +68,10 @@ final class RunTestCodeLens(
         main ++ tests
       }
       if commands.nonEmpty
-      range <- occurrence.range
-        .flatMap(r => distance.toRevised(r.toLSP))
-        .toList
+      range <-
+        occurrence.range
+          .flatMap(r => distance.toRevised(r.toLSP))
+          .toList
       command <- commands
     } yield new l.CodeLens(range, command, null)
   }

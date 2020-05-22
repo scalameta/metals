@@ -1,9 +1,11 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+
 import scala.meta.internal.metals.BuildTargets
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import munit.Location
 
 class InverseDependenciesSuite extends BaseSuite {
@@ -25,7 +27,8 @@ class InverseDependenciesSuite extends BaseSuite {
   )(implicit loc: Location): Unit = {
     test(name) {
       val obtained = BuildTargets.inverseDependencies(
-        List(new BuildTargetIdentifier(original.root)), { key =>
+        List(new BuildTargetIdentifier(original.root)),
+        { key =>
           original.inverseDependencies
             .get(key.getUri)
             .map(_.map(new BuildTargetIdentifier(_)))

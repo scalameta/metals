@@ -2,14 +2,17 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+
+import scala.concurrent.ExecutionContext
+
+import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.

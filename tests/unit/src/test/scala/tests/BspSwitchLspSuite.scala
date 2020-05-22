@@ -1,9 +1,10 @@
 package tests
 
-import bill.Bill
+import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.Messages._
+
+import bill.Bill
 
 class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
 

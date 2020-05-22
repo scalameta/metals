@@ -107,26 +107,26 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |}
     """.stripMargin,
     s"""|$foldLatestDocs
-        |**Parameters**
-        |- `ifEmpty`: the expression to evaluate if empty.
-        |- `f`: the function to apply if nonempty.
-        |fold[B](ifEmpty: => B)(f: Int => B): B
-        |        ^^^^^^^^^^^^^
-        |  @param ifEmpty String the expression to evaluate if empty.
-        |  @param f the function to apply if nonempty.
-        |""".stripMargin,
+       |**Parameters**
+       |- `ifEmpty`: the expression to evaluate if empty.
+       |- `f`: the function to apply if nonempty.
+       |fold[B](ifEmpty: => B)(f: Int => B): B
+       |        ^^^^^^^^^^^^^
+       |  @param ifEmpty String the expression to evaluate if empty.
+       |  @param f the function to apply if nonempty.
+       |""".stripMargin,
     compat = Map(
       "2.12.8" -> foldOlderDocs2,
       "2.13" ->
         s"""|$foldLatestDocs
-            |**Parameters**
-            |- `f`: the function to apply if nonempty.
-            |- `ifEmpty`: the expression to evaluate if empty.
-            |fold[B](ifEmpty: => B)(f: Int => B): B
-            |        ^^^^^^^^^^^^^
-            |  @param ifEmpty String the expression to evaluate if empty.
-            |  @param f the function to apply if nonempty.
-            |""".stripMargin
+           |**Parameters**
+           |- `f`: the function to apply if nonempty.
+           |- `ifEmpty`: the expression to evaluate if empty.
+           |fold[B](ifEmpty: => B)(f: Int => B): B
+           |        ^^^^^^^^^^^^^
+           |  @param ifEmpty String the expression to evaluate if empty.
+           |  @param f the function to apply if nonempty.
+           |""".stripMargin
     )
   )
   checkDoc(

@@ -12,8 +12,57 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.util.Properties
+import scala.util.matching.Regex
+import scala.{meta => m}
+
+import scala.meta.Input
+import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
+import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
+import scala.meta.internal.io.FileIO
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DebugSession
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
+import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Trees
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WindowStateDidChangeParams
+import scala.meta.internal.metals.debug.Stoppage
+import scala.meta.internal.metals.debug.TestDebugger
+import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.tvp.TreeViewChildrenParams
+import scala.meta.internal.tvp.TreeViewProvider
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
+
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -24,6 +73,7 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRangeCapabilities
@@ -34,6 +84,8 @@ import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameFile
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -42,59 +94,10 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import tests.MetalsTestEnrichments._
-import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContextExecutorService
-import scala.concurrent.Future
-import scala.meta.Input
-import scala.meta.internal.io.FileIO
-import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Debug
-import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.WindowStateDidChangeParams
-import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.{semanticdb => s}
-import scala.meta.internal.tvp.TreeViewChildrenParams
-import scala.meta.io.AbsolutePath
-import scala.meta.io.RelativePath
-import scala.{meta => m}
-import scala.meta.internal.tvp.TreeViewProvider
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import scala.concurrent.Promise
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.debug.TestDebugger
-import scala.meta.internal.metals.DebugSession
-import scala.util.matching.Regex
-import org.eclipse.lsp4j.RenameParams
-import scala.meta.internal.metals.TextEdits
-import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.RenameFile
-import scala.meta.internal.metals.debug.Stoppage
-import scala.util.Properties
-import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.lsp4j.CodeActionContext
-import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
-import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
-import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.ClientExperimentalCapabilities
-import scala.meta.internal.metals.DebugUnresolvedMainClassParams
-import com.google.gson.JsonElement
-import scala.meta.internal.metals.Trees
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -171,9 +174,10 @@ final class TestingServer(
     for {
       sourceItem <- server.buildTargets.sourceItems.toSeq
       if sourceItem.exists
-      source <- if (sourceItem.isScalaOrJava)
-        Seq(sourceItem)
-      else FileIO.listAllFilesRecursively(sourceItem)
+      source <-
+        if (sourceItem.isScalaOrJava)
+          Seq(sourceItem)
+        else FileIO.listAllFilesRecursively(sourceItem)
     } yield source
   }
 
@@ -182,14 +186,16 @@ final class TestingServer(
       case Some(build) =>
         for {
           workspaceBuildTargets <- build.workspaceBuildTargets()
-          ids = workspaceBuildTargets.getTargets
-            .map(_.getId)
-            .asScala
-            .filter(_.getUri().contains(s"?id=$buildTarget"))
-          dependencySources <- build
-            .buildTargetDependencySources(
-              new b.DependencySourcesParams(ids.asJava)
-            )
+          ids =
+            workspaceBuildTargets.getTargets
+              .map(_.getId)
+              .asScala
+              .filter(_.getUri().contains(s"?id=$buildTarget"))
+          dependencySources <-
+            build
+              .buildTargetDependencySources(
+                new b.DependencySourcesParams(ids.asJava)
+              )
         } yield {
           dependencySources
             .getItems()
@@ -294,8 +300,8 @@ final class TestingServer(
     }
   }
 
-  def assertReferenceDefinitionBijection()(
-      implicit loc: munit.Location
+  def assertReferenceDefinitionBijection()(implicit
+      loc: munit.Location
   ): Unit = {
     val compare = workspaceReferences()
     assert(compare.definition.nonEmpty)
@@ -591,8 +597,8 @@ final class TestingServer(
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
-  def assertFolded(filename: String, expected: String)(
-      implicit loc: munit.Location
+  def assertFolded(filename: String, expected: String)(implicit
+      loc: munit.Location
   ): Future[Unit] =
     for {
       folded <- foldingRange(filename)
@@ -685,9 +691,10 @@ final class TestingServer(
     }
 
     for {
-      _ <- server
-        .didFocus(uri)
-        .asScala // model is refreshed only for focused document
+      _ <-
+        server
+          .didFocus(uri)
+          .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFile(path)
@@ -980,11 +987,12 @@ final class TestingServer(
       _ = renameParams.setNewName(newName)
       _ = renameParams.setPosition(params.getPosition())
       _ = renameParams.setTextDocument(params.getTextDocument())
-      renames <- if (prepare != null) {
-        server.rename(renameParams).asScala
-      } else {
-        Future.successful(new WorkspaceEdit)
-      }
+      renames <-
+        if (prepare != null) {
+          server.rename(renameParams).asScala
+        } else {
+          Future.successful(new WorkspaceEdit)
+        }
       // save current file to simulate user saving in the editor
       _ <- didSave(filename)(identity)
     } yield {

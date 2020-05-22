@@ -1,12 +1,13 @@
 package tests
 
 import scala.meta.internal.docstrings.MarkdownGenerator
+
 import munit.Location
 
 class JavadocSuite extends BaseSuite {
 
-  def check(name: String, original: String, expected: String)(
-      implicit loc: Location
+  def check(name: String, original: String, expected: String)(implicit
+      loc: Location
   ): Unit = {
     test(name) {
       val obtained = MarkdownGenerator.toMarkdown(original).mkString
@@ -120,15 +121,15 @@ class JavadocSuite extends BaseSuite {
                  | * @see     java.awt.Button
                  | */""".stripMargin,
     s"""|A class representing a window on the screen.
-        |For example:
-        |
-        |```
-        |Window win = new Window(parent);
-        |win.show();
-        |```
-        |**See**
-        |- [java.awt.BaseWindow](java.awt.BaseWindow)
-        |- [java.awt.Button](java.awt.Button)
+       |For example:
+       |
+       |```
+       |Window win = new Window(parent);
+       |win.show();
+       |```
+       |**See**
+       |- [java.awt.BaseWindow](java.awt.BaseWindow)
+       |- [java.awt.Button](java.awt.Button)
      """.stripMargin
   )
   check(
@@ -153,27 +154,27 @@ class JavadocSuite extends BaseSuite {
        | * @see         Image
        | */""".stripMargin,
     s"""|Returns an Image object that can then be painted on the screen.
-        |The url argument must specify an absolute [URL](URL). The name
-        |argument is a specifier that is relative to the url argument.
-        |
-        |This method always returns immediately, whether or not the
-        |image exists. When this applet attempts to draw the image on
-        |the screen, the data will be loaded. The graphics primitives
-        |that draw the image will incrementally paint on the screen.
-        |
-        |[#javadoc](#javadoc)
-        |
-        |**Parameters**
-        |- `url`: an absolute URL giving the base location of the image
-        |- `name`: the location of the image, relative to the url argument
-        |
-        |**Returns:** the image at the specified URL
-        |
-        |**Throws**
-        |- `IOException`: 
-        |
-        |**See**
-        |- [Image](Image)""".stripMargin
+       |The url argument must specify an absolute [URL](URL). The name
+       |argument is a specifier that is relative to the url argument.
+       |
+       |This method always returns immediately, whether or not the
+       |image exists. When this applet attempts to draw the image on
+       |the screen, the data will be loaded. The graphics primitives
+       |that draw the image will incrementally paint on the screen.
+       |
+       |[#javadoc](#javadoc)
+       |
+       |**Parameters**
+       |- `url`: an absolute URL giving the base location of the image
+       |- `name`: the location of the image, relative to the url argument
+       |
+       |**Returns:** the image at the specified URL
+       |
+       |**Throws**
+       |- `IOException`: 
+       |
+       |**See**
+       |- [Image](Image)""".stripMargin
   )
 
   check(
@@ -263,8 +264,8 @@ class JavadocSuite extends BaseSuite {
        | * </ul>
        | */""".stripMargin,
     s"""|- some element
-        |\t- some other element
-        |\t\t- yet some other element""".stripMargin
+       |\t- some other element
+       |\t\t- yet some other element""".stripMargin
   )
 
 }

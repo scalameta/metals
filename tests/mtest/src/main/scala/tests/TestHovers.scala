@@ -1,22 +1,24 @@
 package tests
 
-import org.eclipse.lsp4j.Hover
 import scala.meta.inputs.Input
-import scala.meta.internal.pc.HoverMarkup
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.HoverMarkup
+
+import org.eclipse.lsp4j.Hover
 
 object TestHovers extends TestHovers
 trait TestHovers {
   implicit class XtensionString(string: String) {
-    def hover: String = string.trim.linesIterator.toList match {
-      case List(symbolSignature) =>
-        HoverMarkup("", symbolSignature, "")
-      case List(expressionType, symbolSignature) =>
-        HoverMarkup(expressionType, symbolSignature, "")
-      case _ =>
-        string
-    }
+    def hover: String =
+      string.trim.linesIterator.toList match {
+        case List(symbolSignature) =>
+          HoverMarkup("", symbolSignature, "")
+        case List(expressionType, symbolSignature) =>
+          HoverMarkup(expressionType, symbolSignature, "")
+        case _ =>
+          string
+      }
   }
 
   def renderAsString(

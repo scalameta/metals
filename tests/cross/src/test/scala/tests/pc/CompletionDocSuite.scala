@@ -365,13 +365,13 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     s"""|$executionDocstring
-        |global: ExecutionContext
-        |""".stripMargin,
+       |global: ExecutionContext
+       |""".stripMargin,
     includeDocs = true,
     compat = Map(
       "2.11" -> s"""|$executionDocstring
-                    |global: ExecutionContextExecutor
-                    |""".stripMargin
+                   |global: ExecutionContextExecutor
+                   |""".stripMargin
     )
   )
   check(

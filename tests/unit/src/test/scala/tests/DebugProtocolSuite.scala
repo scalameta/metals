@@ -2,12 +2,14 @@ package tests
 
 import java.util.Collections.emptyList
 import java.util.Collections.singletonList
-import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
-import ch.epfl.scala.bsp4j.ScalaMainClass
+
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.WorkspaceErrorsException
+
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -225,18 +227,19 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |  val a : Int = ""
            |}""".stripMargin
       }
-      result <- server
-        .startDebuggingUnresolved(
-          new DebugUnresolvedMainClassParams(
-            "a.Main",
-            "a",
-            singletonList("Foo")
-          ).toJson
-        )
-        .recover {
-          case WorkspaceErrorsException =>
-            WorkspaceErrorsException
-        }
+      result <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedMainClassParams(
+              "a.Main",
+              "a",
+              singletonList("Foo")
+            ).toJson
+          )
+          .recover {
+            case WorkspaceErrorsException =>
+              WorkspaceErrorsException
+          }
     } yield assertDiffEqual(
       result.toString(),
       WorkspaceErrorsException.toString()
@@ -301,16 +304,17 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |  }
            |}""".stripMargin
       }
-      result <- server
-        .startDebuggingUnresolved(
-          new DebugUnresolvedTestClassParams(
-            "a.Foo"
-          ).toJson
-        )
-        .recover {
-          case WorkspaceErrorsException =>
-            WorkspaceErrorsException
-        }
+      result <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedTestClassParams(
+              "a.Foo"
+            ).toJson
+          )
+          .recover {
+            case WorkspaceErrorsException =>
+              WorkspaceErrorsException
+          }
     } yield assertContains(
       result.toString(),
       WorkspaceErrorsException.toString()

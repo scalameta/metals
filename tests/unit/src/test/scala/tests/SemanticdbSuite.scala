@@ -1,7 +1,8 @@
 package tests
 
-import scala.meta.internal.mtags.Semanticdbs
 import scala.util.Properties
+
+import scala.meta.internal.mtags.Semanticdbs
 
 /**
  * Baseline test suite that documents the unprocessed output of semanticdb-scalac
@@ -12,8 +13,10 @@ import scala.util.Properties
 class SemanticdbSuite extends DirectoryExpectSuite("semanticdb") {
   override def testCases(): List[ExpectTestCase] = {
     def isEnabled(f: InputFile): Boolean = {
-      if (Properties.isWin &&
-        f.file.toNIO.getFileName.endsWith("MacroAnnotation.scala")) {
+      if (
+        Properties.isWin &&
+        f.file.toNIO.getFileName.endsWith("MacroAnnotation.scala")
+      ) {
         // Produces inconsistent positions on Windows vs. Unix.
         false
       } else {
@@ -22,7 +25,8 @@ class SemanticdbSuite extends DirectoryExpectSuite("semanticdb") {
     }
     input.scalaFiles.filter(isEnabled).map { file =>
       ExpectTestCase(
-        file, { () =>
+        file,
+        { () =>
           val textDocument = classpath.textDocument(file.file).get
           val obtained = Semanticdbs.printTextDocument(textDocument)
           obtained

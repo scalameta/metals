@@ -1,13 +1,16 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.meta.internal.metals.CodeAction
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
-import org.eclipse.{lsp4j => l}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.meta.internal.metals.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
-import scala.meta.internal.metals.Trees
+
+import org.eclipse.{lsp4j => l}
 
 class StringActions(buffers: Buffers) extends CodeAction {
 

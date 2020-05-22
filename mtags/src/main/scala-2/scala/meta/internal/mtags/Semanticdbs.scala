@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.Charset
 import java.nio.file.Files
+
 import scala.meta.AbsolutePath
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
@@ -16,10 +17,11 @@ trait Semanticdbs {
 }
 
 object Semanticdbs {
-  def empty: Semanticdbs = new Semanticdbs {
-    override def textDocument(path: AbsolutePath): TextDocumentLookup =
-      TextDocumentLookup.NotFound(path)
-  }
+  def empty: Semanticdbs =
+    new Semanticdbs {
+      override def textDocument(path: AbsolutePath): TextDocumentLookup =
+        TextDocumentLookup.NotFound(path)
+    }
   def loadTextDocuments(path: AbsolutePath): s.TextDocuments = {
     val in = Files.newInputStream(path.toNIO)
     try s.TextDocuments.parseFrom(in)

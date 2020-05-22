@@ -134,17 +134,17 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     for {
       _ <- server.initialize(
         s"""|
-            |/metals.json
-            |{
-            |  "a": {}
-            |}
-            |/a/src/main/scala/a/Post.scala
-            |package a
-            |trait Post {
-            |  def post: Int
-            |}
-            |object Post extends Post
-            |""".stripMargin
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Post.scala
+           |package a
+           |trait Post {
+           |  def post: Int
+           |}
+           |object Post extends Post
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Post.scala")
       _ = assertNoDiff(
@@ -162,16 +162,16 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     for {
       _ <- server.initialize(
         s"""|
-            |/metals.json
-            |{
-            |  "a": {"scalacOptions": ["-deprecation", "-Xfatal-warnings"]}
-            |}
-            |/a/src/main/scala/a/Deprecation.scala
-            |package a
-            |object Deprecation {
-            | val x = readInt()
-            |}
-            |""".stripMargin
+           |/metals.json
+           |{
+           |  "a": {"scalacOptions": ["-deprecation", "-Xfatal-warnings"]}
+           |}
+           |/a/src/main/scala/a/Deprecation.scala
+           |package a
+           |object Deprecation {
+           | val x = readInt()
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Deprecation.scala")
       _ = assertNoDiff(
@@ -199,15 +199,15 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     for {
       _ <- server.initialize(
         s"""|
-            |/metals.json
-            |{
-            |  "a": {}
-            |}
-            |/a/src/main/scala/a/Expo1.scala
-            |${expo(1, "a")}
-            |/a/src/main/scala/a/Expo2.scala
-            |${expo(2, "a")}
-            |""".stripMargin
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Expo1.scala
+           |${expo(1, "a")}
+           |/a/src/main/scala/a/Expo2.scala
+           |${expo(2, "a")}
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Expo1.scala")
       _ = assertNoDiff(
@@ -226,21 +226,21 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     for {
       _ <- server.initialize(
         s"""|
-            |/metals.json
-            |{
-            |  "a": {}
-            |}
-            |/a/src/main/scala/a/A.scala
-            |package a
-            |object A {
-            |  val x: Int = 42
-            |}
-            |/a/src/main/scala/a/B.scala
-            |package a
-            |object B {
-            |  val x: String = 42
-            |}
-            |""".stripMargin
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |object A {
+           |  val x: Int = 42
+           |}
+           |/a/src/main/scala/a/B.scala
+           |package a
+           |object B {
+           |  val x: String = 42
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/B.scala")
       _ = assertNoDiff(

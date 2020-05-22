@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
-import ch.epfl.scala.bsp4j._
-
 import scala.collection.JavaConverters._
+
+import ch.epfl.scala.bsp4j._
 
 /**
  * Metadata that we import from the build tool via BSP.

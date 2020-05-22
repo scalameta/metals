@@ -1,21 +1,24 @@
 package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
-import org.eclipse.{lsp4j => l}
+
 import scala.collection.{mutable => m}
+
+import scala.meta.internal.implementation.ClassHierarchyItem
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
-import scala.meta.internal.implementation.ClassHierarchyItem
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.LensGoSuperCache
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
-import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.SymbolOccurrence
+
+import org.eclipse.{lsp4j => l}
 
 final class SuperMethodCodeLens(
     implementationProvider: ImplementationProvider,
@@ -49,9 +52,10 @@ final class SuperMethodCodeLens(
         emptyLensGoSuperCache(),
         search
       ).toIterable
-      range <- occurrence.range
-        .flatMap(r => distance.toRevised(r.toLSP))
-        .toList
+      range <-
+        occurrence.range
+          .flatMap(r => distance.toRevised(r.toLSP))
+          .toList
     } yield new l.CodeLens(range, gotoSuperMethod, null)
   }
 

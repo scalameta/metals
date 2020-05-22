@@ -1,8 +1,9 @@
 package scala.meta.internal.metals
 
-import org.eclipse.{lsp4j => l}
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.{semanticdb => s}
+
+import org.eclipse.{lsp4j => l}
 
 case class WorkspaceSymbolInformation(
     symbol: String,

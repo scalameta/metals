@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.io.IOException
 import java.io.InputStream
 import java.net.URI
 import java.util.Collections
@@ -7,23 +8,23 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
-import ch.epfl.scala.bsp4j._
-import org.eclipse.lsp4j.jsonrpc.Launcher
-
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.util.Try
+
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
-import scala.util.Try
+
+import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
-import MetalsEnrichments._
-import org.eclipse.lsp4j.services.LanguageClient
-import java.util.concurrent.atomic.AtomicReference
-import scala.concurrent.Promise
-import scala.concurrent.ExecutionContext
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
-import java.io.IOException
+import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * An actively running and initialized BSP connection.
@@ -65,27 +66,28 @@ class BuildServerConnection private (
   }
 
   /** Run build/shutdown procedure */
-  def shutdown(): Future[Unit] = connection.map { conn =>
-    try {
-      if (isShuttingDown.compareAndSet(false, true)) {
-        conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
-        conn.server.onBuildExit()
-        // Cancel pending compilations on our side, this is not needed for Bloop.
-        cancel()
+  def shutdown(): Future[Unit] =
+    connection.map { conn =>
+      try {
+        if (isShuttingDown.compareAndSet(false, true)) {
+          conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
+          conn.server.onBuildExit()
+          // Cancel pending compilations on our side, this is not needed for Bloop.
+          cancel()
+        }
+      } catch {
+        case e: TimeoutException =>
+          scribe.error(
+            s"timeout: build server '${conn.displayName}' during shutdown"
+          )
+        case InterruptException() =>
+        case e: Throwable =>
+          scribe.error(
+            s"build shutdown: ${conn.displayName}",
+            e
+          )
       }
-    } catch {
-      case e: TimeoutException =>
-        scribe.error(
-          s"timeout: build server '${conn.displayName}' during shutdown"
-        )
-      case InterruptException() =>
-      case e: Throwable =>
-        scribe.error(
-          s"build shutdown: ${conn.displayName}",
-          e
-        )
     }
-  }
 
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(server => server.buildTargetCompile(params))
@@ -224,8 +226,8 @@ object BuildServerConnection {
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig
-  )(
-      implicit ec: ExecutionContextExecutorService
+  )(implicit
+      ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
 
     def setupServer(): Future[LauncherConnection] = {

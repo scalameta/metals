@@ -1,10 +1,10 @@
 package scala.meta.internal.tvp
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
-import scala.meta.internal.mtags.GlobalSymbolIndex
 
 /**
  * A tree view that exposes a package explorer to browse symbols such as classes, traits and methods.
@@ -28,12 +28,13 @@ class ClasspathTreeView[Value, Key](
     loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation]
 ) {
   val rootUri: String = scheme + ":"
-  def root: TreeViewNode = TreeViewNode(
-    viewId,
-    rootUri,
-    title + s" (${toplevels().size})",
-    collapseState = MetalsTreeItemCollapseState.collapsed
-  )
+  def root: TreeViewNode =
+    TreeViewNode(
+      viewId,
+      rootUri,
+      title + s" (${toplevels().size})",
+      collapseState = MetalsTreeItemCollapseState.collapsed
+    )
 
   def matches(uri: String): Boolean = uri.startsWith(rootUri)
 

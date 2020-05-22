@@ -1,17 +1,20 @@
 package tests.debug
 
 import java.util.concurrent.atomic.AtomicInteger
+
+import scala.collection.mutable
+
+import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
+import scala.meta.internal.metals.debug.MessageIdAdapter
+import scala.meta.internal.metals.debug.TestingDebugServer
+
+import munit.Location
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugRequestMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.IdentifiableMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import tests.BaseSuite
-import scala.collection.mutable
-import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
-import scala.meta.internal.metals.debug.TestingDebugServer
-import scala.meta.internal.metals.debug.MessageIdAdapter
-import munit.Location
 
 class MessageIdAdapterSuite extends BaseSuite {
   private val idCounter = new AtomicInteger(FirstMessageId)
@@ -88,8 +91,8 @@ class MessageIdAdapterSuite extends BaseSuite {
     request
   }
 
-  def assertId(obtained: Message, expected: Int)(
-      implicit loc: Location
+  def assertId(obtained: Message, expected: Int)(implicit
+      loc: Location
   ): Unit = {
     obtained match {
       case message: IdentifiableMessage =>

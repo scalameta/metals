@@ -1,8 +1,8 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.CliApp
-import fansi.Str
 import fansi.Color
+import fansi.Str
+import metaconfig.cli.CliApp
 
 object MetaconfigEnrichments {
   implicit class XtensionCliApp(app: CliApp) {

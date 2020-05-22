@@ -1,9 +1,10 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j.CompletionItem
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.SymbolDocumentation
+
+import org.eclipse.lsp4j.CompletionItem
 
 class CompletionItemResolver(
     val compiler: MetalsGlobal
@@ -12,7 +13,9 @@ class CompletionItemResolver(
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
     val gsym = inverseSemanticdbSymbol(msym)
     if (gsym != NoSymbol) {
-      symbolDocumentation(gsym).orElse(symbolDocumentation(gsym.companion)) match {
+      symbolDocumentation(gsym).orElse(
+        symbolDocumentation(gsym.companion)
+      ) match {
         case Some(info) if item.getDetail != null =>
           if (isJavaSymbol(gsym)) {
             val data = item.data.getOrElse(CompletionItemData.empty)
@@ -20,7 +23,9 @@ class CompletionItemResolver(
             if (metalsConfig.isCompletionItemDetailEnabled) {
               item.setDetail(replaceJavaParameters(info, item.getDetail))
             }
-            if (item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind) {
+            if (
+              item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind
+            ) {
               item.getTextEdit.setNewText(
                 replaceJavaParameters(info, item.getTextEdit.getNewText)
               )
@@ -123,11 +128,11 @@ class CompletionItemResolver(
       else {
         List(
           s"""|### ${keyword(companion)} ${companion.name}
-              |$companionDoc
-              |""".stripMargin,
+             |$companionDoc
+             |""".stripMargin,
           s"""|### ${keyword(gsym)} ${gsym.name}
-              |${gsymDoc}
-              |""".stripMargin
+             |${gsymDoc}
+             |""".stripMargin
         ).sorted.mkString("\n")
       }
     }

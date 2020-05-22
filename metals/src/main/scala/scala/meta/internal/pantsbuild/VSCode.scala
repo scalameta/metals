@@ -1,13 +1,15 @@
 package scala.meta.internal.pantsbuild
 
-import scala.meta.io.AbsolutePath
 import scala.sys.process._
-import ujson.Obj
-import scala.meta.internal.metals.BuildInfo
-import ujson.Str
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.io.AbsolutePath
+
+import ujson.Obj
+import ujson.Str
 
 object VSCode {
   def launch(project: Project): Unit =
@@ -74,11 +76,12 @@ object VSCode {
         AbsolutePath(project.common.workspace),
         project.targets
       )
-      file <- root.listRecursive
-        .filter(_.isScala)
-        .filter(!_.toNIO.startsWith(readonly))
-        .take(1)
-        .headOption
+      file <-
+        root.listRecursive
+          .filter(_.isScala)
+          .filter(!_.toNIO.startsWith(readonly))
+          .take(1)
+          .headOption
     } yield file
   }
   private def readSettings(settings: AbsolutePath): Obj = {

@@ -1,9 +1,11 @@
 package scala.meta.internal.pantsbuild.commands
 
+import scala.util.Try
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.io.AbsolutePath
-import scala.util.Try
+
 import ujson.Bool
 
 case class Project(
@@ -50,9 +52,12 @@ object Project {
       common: SharedOptions
   ): Option[Project] = {
     val fuzzyName = PantsConfiguration.outputFilename(name)
-    fromCommon(common, { candidate =>
-      matchesFuzzyName(candidate, name, fuzzyName)
-    }).headOption
+    fromCommon(
+      common,
+      { candidate =>
+        matchesFuzzyName(candidate, name, fuzzyName)
+      }
+    ).headOption
   }
   def fromCommon(
       common: SharedOptions,

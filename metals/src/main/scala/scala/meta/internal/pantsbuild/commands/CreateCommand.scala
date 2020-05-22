@@ -1,15 +1,18 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.cli.Command
-import metaconfig.cli.CliApp
-import org.typelevel.paiges.Doc
-import scala.meta.internal.pantsbuild.Export
-import metaconfig.cli.Messages
-import metaconfig.cli.{TabCompletionContext, TabCompletionItem}
+import java.io.File
+
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import java.io.File
+import scala.meta.internal.pantsbuild.Export
 import scala.meta.io.AbsolutePath
+
+import metaconfig.cli.CliApp
+import metaconfig.cli.Command
+import metaconfig.cli.Messages
+import metaconfig.cli.TabCompletionContext
+import metaconfig.cli.TabCompletionItem
+import org.typelevel.paiges.Doc
 
 object CreateCommand extends Command[CreateOptions]("create") {
   override def description: Doc =
@@ -70,8 +73,10 @@ object CreateCommand extends Command[CreateOptions]("create") {
         case (dir, name) => dir.resolve(name)
       }
     val toList =
-      if (context.last.isEmpty ||
-        context.last.endsWith(File.separator)) path
+      if (
+        context.last.isEmpty ||
+        context.last.endsWith(File.separator)
+      ) path
       else path.parent
     toList.list
       .filter(_.isDirectory)

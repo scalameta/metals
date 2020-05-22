@@ -1,13 +1,16 @@
 package scala.meta.internal.implementation
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.symtab.GlobalSymbolTable
-import scala.meta.io.Classpath
-import scala.collection.concurrent.TrieMap
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.collection.mutable
 import java.nio.file.Path
+
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.symtab.GlobalSymbolTable
+import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class GlobalClassTable(
     buildTargets: BuildTargets
@@ -33,18 +36,19 @@ final class GlobalClassTable(
 
   def globalSymbolTableFor(
       source: AbsolutePath
-  ): Option[GlobalSymbolTable] = synchronized {
-    for {
-      buildTargetId <- buildTargets.inverseSources(source)
-      scalaTarget <- buildTargets.scalaTarget(buildTargetId)
-      classpath = new Classpath(scalaTarget.jarClasspath)
-    } yield {
-      buildTargetsIndexes.getOrElseUpdate(
-        buildTargetId,
-        GlobalSymbolTable(classpath, includeJdk = true)
-      )
+  ): Option[GlobalSymbolTable] =
+    synchronized {
+      for {
+        buildTargetId <- buildTargets.inverseSources(source)
+        scalaTarget <- buildTargets.scalaTarget(buildTargetId)
+        classpath = new Classpath(scalaTarget.jarClasspath)
+      } yield {
+        buildTargetsIndexes.getOrElseUpdate(
+          buildTargetId,
+          GlobalSymbolTable(classpath, includeJdk = true)
+        )
+      }
     }
-  }
 
   private def calculateIndex(
       symTab: GlobalSymbolTable,

@@ -1,8 +1,10 @@
 package tests.feature
 
 import scala.concurrent.Future
-import munit.Location
+
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import munit.Location
 import tests.BaseLspSuite
 
 class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
@@ -14,19 +16,20 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       asserts: Assert*
   )(implicit loc: Location): Unit = {
     test(name) {
-      def runAsserts(as: List[Assert]): Future[Unit] = as match {
-        case Nil => Future.successful(())
-        case assert :: tail =>
-          server
-            .didChange("a/src/main/scala/A.scala")(assert.didChange)
-            .flatMap { _ =>
-              assertNoDiff(
-                client.workspaceDiagnostics,
-                assert.expectedDiagnostics
-              )
-              runAsserts(tail)
-            }
-      }
+      def runAsserts(as: List[Assert]): Future[Unit] =
+        as match {
+          case Nil => Future.successful(())
+          case assert :: tail =>
+            server
+              .didChange("a/src/main/scala/A.scala")(assert.didChange)
+              .flatMap { _ =>
+                assertNoDiff(
+                  client.workspaceDiagnostics,
+                  assert.expectedDiagnostics
+                )
+                runAsserts(tail)
+              }
+        }
 
       for {
         _ <- server.initialize(

@@ -1,21 +1,24 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.net.URLClassLoader
+import java.nio.file.Path
 import java.util.ServiceLoader
+
 import scala.collection.concurrent.TrieMap
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.pc.PresentationCompiler
+
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import coursierapi.Dependency
 import coursierapi.Fetch
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import coursierapi.ResolutionParams
-import scala.meta.internal.worksheets.MdocClassLoader
 import mdoc.interfaces.Mdoc
-import java.nio.file.Path
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -147,20 +150,22 @@ object Embedded {
     Dependency.of("ch.epfl.lamp", s"dotty-library_$binaryVersion", scalaVersion)
   }
 
-  private def mtagsDependency(scalaVersion: String): Dependency = Dependency.of(
-    "org.scalameta",
-    s"mtags_$scalaVersion",
-    BuildInfo.metalsVersion
-  )
+  private def mtagsDependency(scalaVersion: String): Dependency =
+    Dependency.of(
+      "org.scalameta",
+      s"mtags_$scalaVersion",
+      BuildInfo.metalsVersion
+    )
 
   private def mdocDependency(
       scalaVersion: String,
       scalaBinaryVersion: String
-  ): Dependency = Dependency.of(
-    "org.scalameta",
-    s"mdoc_${scalaBinaryVersion}",
-    BuildInfo.mdocVersion
-  )
+  ): Dependency =
+    Dependency.of(
+      "org.scalameta",
+      s"mdoc_${scalaBinaryVersion}",
+      BuildInfo.mdocVersion
+    )
 
   private def semanticdbScalacDependency(scalaVersion: String): Dependency =
     Dependency.of(

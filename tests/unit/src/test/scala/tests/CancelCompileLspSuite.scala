@@ -1,6 +1,7 @@
 package tests
 
 import java.util.concurrent.CancellationException
+
 import scala.meta.internal.metals.ServerCommands
 
 class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {

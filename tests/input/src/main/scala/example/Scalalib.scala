@@ -4,17 +4,8 @@ class Scalalib {
   val nil = List()
   val lst = List[
     (
-        Nothing,
-        Null,
-        Singleton,
-        Any,
-        AnyRef,
-        AnyVal,
-        Int,
-        Short,
-        Double,
-        Float,
-        Char
+        Nothing, Null, Singleton, Any, AnyRef, AnyVal, Int, Short, Double,
+        Float, Char
     )
   ](null)
   lst.isInstanceOf[Any]

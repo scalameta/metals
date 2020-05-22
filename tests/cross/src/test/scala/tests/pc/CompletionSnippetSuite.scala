@@ -98,9 +98,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type",
     s"""|object Main {
-        |  val x: scala.IndexedSe@@
-        |}
-        |""".stripMargin,
+       |  val x: scala.IndexedSe@@
+       |}
+       |""".stripMargin,
     // It's expected to have two separate results, one for `object IndexedSeq` (which should not
     // expand snipppet) and one for `type IndexedSeq[T]`.
     """|IndexedSeq
@@ -111,9 +111,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type2",
     s"""|object Main {
-        |  new scala.IndexedSeq@@
-        |}
-        |""".stripMargin,
+       |  new scala.IndexedSeq@@
+       |}
+       |""".stripMargin,
     """|IndexedSeq
        |IndexedSeq[$0] {}
        |""".stripMargin
@@ -122,9 +122,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type3",
     s"""|object Main {
-        |  def foo(param: ArrayDeque@@)
-        |}
-        |""".stripMargin,
+       |  def foo(param: ArrayDeque@@)
+       |}
+       |""".stripMargin,
     """|ju.ArrayDeque[$0]
        |""".stripMargin,
     compat = Map(
@@ -139,9 +139,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type4",
     s"""|object Main {
-        |  new SimpleFileVisitor@@
-        |}
-        |""".stripMargin,
+       |  new SimpleFileVisitor@@
+       |}
+       |""".stripMargin,
     """|SimpleFileVisitor[$0]
        |""".stripMargin
   )
@@ -149,9 +149,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type5",
     s"""|object Main {
-        |  new scala.Iterabl@@
-        |}
-        |""".stripMargin,
+       |  new scala.Iterabl@@
+       |}
+       |""".stripMargin,
     """|Iterable
        |Iterable[$0] {}
        |""".stripMargin,
@@ -167,9 +167,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type6",
     s"""|object Main {
-        |  def foo: scala.Iterable@@
-        |}
-        |""".stripMargin,
+       |  def foo: scala.Iterable@@
+       |}
+       |""".stripMargin,
     """|Iterable
        |Iterable[$0]
        |""".stripMargin,
@@ -185,9 +185,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "type7",
     s"""|object Main {
-        |  def foo(param: List[scala.Iterable@@])
-        |}
-        |""".stripMargin,
+       |  def foo(param: List[scala.Iterable@@])
+       |}
+       |""".stripMargin,
     """|Iterable
        |Iterable[$0]
        |""".stripMargin,
@@ -203,10 +203,10 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "trailing-paren",
     s"""|object Main {
-        |  def trailing(a: Int) = ()
-        |  ___
-        |}
-        |""".stripMargin,
+       |  def trailing(a: Int) = ()
+       |  ___
+       |}
+       |""".stripMargin,
     "trailing@@()",
     "trailing()"
   )
@@ -214,10 +214,10 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "trailing-brace",
     s"""|object Main {
-        |  def trailing(a: Int) = ()
-        |  ___
-        |}
-        |""".stripMargin,
+       |  def trailing(a: Int) = ()
+       |  ___
+       |}
+       |""".stripMargin,
     "trailing@@ { }",
     "trailing { }"
   )
@@ -225,10 +225,10 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "trailing-brace1",
     s"""|object Main {
-        |  def trailing(a: Int) = ()
-        |  ___
-        |}
-        |""".stripMargin,
+       |  def trailing(a: Int) = ()
+       |  ___
+       |}
+       |""".stripMargin,
     "trailing@@{ }",
     "trailing{ }"
   )
@@ -236,10 +236,10 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "trailing-eta",
     s"""|object Main {
-        |  def trailing(a: Int) = ()
-        |  ___
-        |}
-        |""".stripMargin,
+       |  def trailing(a: Int) = ()
+       |  ___
+       |}
+       |""".stripMargin,
     "trailing@@ _",
     "trailing _"
   )
@@ -247,9 +247,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "implicit",
     s"""|object Main {
-        |  ___
-        |}
-        |""".stripMargin,
+       |  ___
+       |}
+       |""".stripMargin,
     "List(1).flatte@@",
     "List(1).flatten"
   )
@@ -257,9 +257,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "bug1",
     s"""|object Main {
-        |  ___
-        |}
-        |""".stripMargin,
+       |  ___
+       |}
+       |""".stripMargin,
     "scala.util.Try@@(1)",
     "scala.util.Try(1)"
   )
@@ -267,10 +267,10 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   checkEditLine(
     "symbol",
     s"""|object Main {
-        |  val out = new StringBuilder()
-        |  ___
-        |}
-        |""".stripMargin,
+       |  val out = new StringBuilder()
+       |  ___
+       |}
+       |""".stripMargin,
     "out.+@@=('a')",
     "out.++==('a')",
     filter = _.contains("++=(s: String)")

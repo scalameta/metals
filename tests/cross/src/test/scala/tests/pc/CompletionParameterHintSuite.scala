@@ -1,9 +1,11 @@
 package tests.pc
 
+import scala.collection.Seq
+
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
+
 import tests.BaseCompletionSuite
-import scala.collection.Seq
 import tests.BuildInfoVersions
 
 class CompletionParameterHintSuite extends BaseCompletionSuite {
@@ -21,7 +23,8 @@ class CompletionParameterHintSuite extends BaseCompletionSuite {
       |object Main {
       |  "".stripSuffi@@
       |}
-    """.stripMargin, {
+    """.stripMargin,
+    {
       case Seq(item) =>
         assert(item.getCommand.getCommand == "hello")
     }
@@ -33,7 +36,8 @@ class CompletionParameterHintSuite extends BaseCompletionSuite {
       |object Main {
       |  println@@
       |}
-    """.stripMargin, {
+    """.stripMargin,
+    {
       case Seq(item1, item2) =>
         assert(item1.getCommand == null)
         assert(item2.getCommand.getCommand == "hello")

@@ -1,16 +1,18 @@
 package tests
 
-import java.nio.file.Files
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.MetalsInputBoxParams
-import org.eclipse.lsp4j.ShowMessageRequestParams
-import munit.TestOptions
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.Messages.NewScalaFile
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsInputBoxResult
+import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.ServerCommands
+
+import munit.TestOptions
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def experimentalCapabilities
@@ -30,11 +32,11 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Some("Foo"),
     "a/src/main/scala/foo/Foo.scala",
     s"""|package foo
-        |
-        |class Foo {
-        |$indent
-        |}
-        |""".stripMargin
+       |
+       |class Foo {
+       |$indent
+       |}
+       |""".stripMargin
   )
 
   check("new-case-class")(
@@ -54,9 +56,9 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Some("Bar"),
     "Bar.scala",
     s"""|object Bar {
-        |$indent
-        |}
-        |""".stripMargin
+       |$indent
+       |}
+       |""".stripMargin
   )
 
   check("new-trait-new-dir")(
@@ -65,11 +67,11 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Some("bar/Baz"),
     "a/src/main/scala/bar/Baz.scala",
     s"""|package bar
-        |
-        |trait Baz {
-        |$indent
-        |}
-        |""".stripMargin
+       |
+       |trait Baz {
+       |$indent
+       |}
+       |""".stripMargin
   )
 
   check("new-package-object")(
@@ -78,9 +80,9 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     name = None,
     "a/src/main/scala/foo/package.scala",
     s"""|package object foo {
-        |$indent
-        |}
-        |""".stripMargin
+       |$indent
+       |}
+       |""".stripMargin
   )
 
   check("new-class-on-file")(
@@ -89,11 +91,11 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Some("Foo"),
     "a/src/main/scala/foo/Foo.scala",
     s"""|package foo
-        |
-        |class Foo {
-        |$indent
-        |}
-        |""".stripMargin,
+       |
+       |class Foo {
+       |$indent
+       |}
+       |""".stripMargin,
     existingFiles = """|/a/src/main/scala/foo/Other.scala
                        |package foo
                        |
@@ -107,18 +109,18 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Some("Other"),
     "a/src/main/scala/foo/Other.scala",
     expectedContent = s"""|package foo
-                          |
-                          |class Other {
-                          | val withContent = true
-                          |}
-                          |""".stripMargin,
+                         |
+                         |class Other {
+                         | val withContent = true
+                         |}
+                         |""".stripMargin,
     existingFiles = s"""|/a/src/main/scala/foo/Other.scala
-                        |package foo
-                        |
-                        |class Other {
-                        | val withContent = true
-                        |}
-                        |""".stripMargin,
+                       |package foo
+                       |
+                       |class Other {
+                       | val withContent = true
+                       |}
+                       |""".stripMargin,
     expectedException = List(classOf[FileAlreadyExistsException])
   )
 
@@ -132,78 +134,80 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
       expectedContent: String,
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil
-  ): Unit = test(testName) {
-    val directoryUri = directory.fold(null.asInstanceOf[String])(
-      workspace.resolve(_).toURI.toString()
-    )
-    val expectedFilePathAbsolute = workspace.resolve(expectedFilePath)
+  ): Unit =
+    test(testName) {
+      val directoryUri = directory.fold(null.asInstanceOf[String])(
+        workspace.resolve(_).toURI.toString()
+      )
+      val expectedFilePathAbsolute = workspace.resolve(expectedFilePath)
 
-    RecursivelyDelete(expectedFilePathAbsolute)
-    cleanCompileCache("a")
-    RecursivelyDelete(workspace.resolve("a"))
-    Files.createDirectories(
-      workspace.resolve("a/src/main/scala/").toNIO
-    )
+      RecursivelyDelete(expectedFilePathAbsolute)
+      cleanCompileCache("a")
+      RecursivelyDelete(workspace.resolve("a"))
+      Files.createDirectories(
+        workspace.resolve("a/src/main/scala/").toNIO
+      )
 
-    client.showMessageRequestHandler = { params =>
-      if (isSelectTheKindOfFile(params)) {
-        params.getActions().asScala.find(_.getTitle() == pickedKind)
-      } else {
-        None
-      }
-    }
-    name.foreach { name =>
-      client.inputBoxHandler = { params =>
-        if (isEnterName(params, pickedKind)) {
-          Some(new MetalsInputBoxResult(value = name))
+      client.showMessageRequestHandler = { params =>
+        if (isSelectTheKindOfFile(params)) {
+          params.getActions().asScala.find(_.getTitle() == pickedKind)
         } else {
           None
         }
       }
-    }
-
-    val expectedMessages =
-      NewScalaFile.selectTheKindOfFileMessage + name.fold("")(_ =>
-        "\n" + NewScalaFile.enterNameMessage(pickedKind)
-      )
-
-    val futureToRecover = for {
-      _ <- server.initialize(s"""
-                                |/metals.json
-                                |{
-                                |  "a": { }
-                                |}
-                                |$existingFiles
-                                |""".stripMargin)
-      _ <- server
-        .executeCommand(
-          ServerCommands.NewScalaFile.id,
-          directoryUri
-        )
-      _ = {
-        assertNoDiff(
-          client.workspaceMessageRequests,
-          expectedMessages
-        )
-        assert(expectedFilePathAbsolute.exists)
-        assertNoDiff(
-          expectedFilePathAbsolute.readText,
-          expectedContent
-        )
+      name.foreach { name =>
+        client.inputBoxHandler = { params =>
+          if (isEnterName(params, pickedKind)) {
+            Some(new MetalsInputBoxResult(value = name))
+          } else {
+            None
+          }
+        }
       }
-    } yield ()
 
-    futureToRecover
-      .recover {
-        case e if expectedException.contains(e.getClass()) =>
+      val expectedMessages =
+        NewScalaFile.selectTheKindOfFileMessage + name.fold("")(_ =>
+          "\n" + NewScalaFile.enterNameMessage(pickedKind)
+        )
+
+      val futureToRecover = for {
+        _ <- server.initialize(s"""
+                                  |/metals.json
+                                  |{
+                                  |  "a": { }
+                                  |}
+                                  |$existingFiles
+                                  |""".stripMargin)
+        _ <-
+          server
+            .executeCommand(
+              ServerCommands.NewScalaFile.id,
+              directoryUri
+            )
+        _ = {
+          assertNoDiff(
+            client.workspaceMessageRequests,
+            expectedMessages
+          )
+          assert(expectedFilePathAbsolute.exists)
           assertNoDiff(
             expectedFilePathAbsolute.readText,
             expectedContent
           )
-        case other =>
-          throw other
-      }
-  }
+        }
+      } yield ()
+
+      futureToRecover
+        .recover {
+          case e if expectedException.contains(e.getClass()) =>
+            assertNoDiff(
+              expectedFilePathAbsolute.readText,
+              expectedContent
+            )
+          case other =>
+            throw other
+        }
+    }
 
   private def isSelectTheKindOfFile(params: ShowMessageRequestParams): Boolean =
     params.getMessage() == NewScalaFile.selectTheKindOfFileMessage
