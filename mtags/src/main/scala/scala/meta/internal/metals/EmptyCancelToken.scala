@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.lang
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+
 import scala.meta.pc.CancelToken
 
 object EmptyCancelToken extends CancelToken {

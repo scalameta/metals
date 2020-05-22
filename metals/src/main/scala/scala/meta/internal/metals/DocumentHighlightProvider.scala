@@ -1,8 +1,5 @@
 package scala.meta.internal.metals
 
-import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.DocumentHighlightKind
-import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
@@ -12,6 +9,10 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
+
+import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.DocumentHighlightKind
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class DocumentHighlightProvider(
     definitionProvider: DefinitionProvider,

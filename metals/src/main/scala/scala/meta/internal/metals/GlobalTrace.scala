@@ -1,12 +1,15 @@
 package scala.meta.internal.metals
 
-import io.github.soc.directories.ProjectDirectories
 import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+
+import scala.util.control.NonFatal
+
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
+
+import io.github.soc.directories.ProjectDirectories
 
 /**
  * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.

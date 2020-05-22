@@ -1,8 +1,10 @@
 package tests.feature
 
 import scala.concurrent.Future
-import munit.Location
+
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import munit.Location
 import tests.BaseLspSuite
 
 class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {

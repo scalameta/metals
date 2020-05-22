@@ -1,9 +1,10 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable
+
 import scala.meta._
 import scala.meta.internal.docstrings._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols

@@ -1,16 +1,19 @@
 package scala.meta.internal.metals
 
+import java.io.ByteArrayInputStream
+import java.nio.channels.Channels
+import java.nio.channels.Pipe
+import java.nio.charset.StandardCharsets
+
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+
 import scala.meta.io.AbsolutePath
-import bloop.launcher.LauncherMain
-import java.nio.charset.StandardCharsets
-import bloop.bloopgun.core.Shell
-import java.nio.channels.Channels
-import java.nio.channels.Pipe
-import java.io.ByteArrayInputStream
+
 import bloop.bloopgun.BloopgunCli
+import bloop.bloopgun.core.Shell
+import bloop.launcher.LauncherMain
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**

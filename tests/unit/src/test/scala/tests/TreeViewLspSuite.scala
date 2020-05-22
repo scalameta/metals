@@ -1,6 +1,7 @@
 package tests
 
 import scala.collection.SortedSet
+
 import scala.meta.internal.tvp.TreeViewProvider
 
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {

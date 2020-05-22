@@ -1,9 +1,10 @@
 package tests
 
-import scala.meta.internal.metals.UserConfiguration
 import scala.concurrent.Promise
-import scala.meta.internal.metals.MetalsSlowTaskResult
+
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.meta.internal.metals.UserConfiguration
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
     extends BaseLspSuite("worksheet") {

@@ -1,8 +1,17 @@
 package bench
 
-import scala.meta.internal.jdk.CollectionConverters._
+import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.SymbolSearch
+
 import org.eclipse.lsp4j.CompletionList
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -12,15 +21,8 @@ import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
-import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.pc.ScalaPresentationCompiler
-import scala.meta.io.AbsolutePath
-import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.SymbolSearch
 import tests.Library
 import tests.TestingSymbolSearch
-import java.net.URI
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {

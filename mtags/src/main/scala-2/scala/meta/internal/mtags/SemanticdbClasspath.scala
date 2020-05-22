@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+
 import scala.meta.AbsolutePath
 import scala.meta.Classpath
 import scala.meta.internal.mtags

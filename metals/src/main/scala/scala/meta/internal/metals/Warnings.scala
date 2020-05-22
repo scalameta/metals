@@ -1,12 +1,13 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLogger.{silentInTests => logger}
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 /**
  * A helper to construct clear and actionable warning messages.

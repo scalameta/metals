@@ -1,8 +1,10 @@
 package tests
 
 import scala.concurrent.duration.Duration
-import scala.meta.internal.semver.SemVer
 import scala.util.Properties
+
+import scala.meta.internal.semver.SemVer
+
 import munit.Flaky
 import munit.Tag
 

@@ -1,12 +1,14 @@
 package tests.pc
 
-import tests.BaseCodeActionSuite
-import scala.meta.pc.AutoImportsResult
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.TextEdits
-import munit.Location
 import java.nio.file.Paths
+
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.TextEdits
+import scala.meta.pc.AutoImportsResult
+
+import munit.Location
+import tests.BaseCodeActionSuite
 import tests.BuildInfoVersions
 
 class AutoImportsSuite extends BaseCodeActionSuite {

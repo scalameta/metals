@@ -1,13 +1,17 @@
 package scala.meta.internal.docstrings
 
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Entities.EscapeMode
-import org.jsoup.nodes.{Element, Node, TextNode}
-import org.jsoup.safety.{Cleaner, Whitelist}
-
 import scala.annotation.tailrec
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.matching.Regex
+
+import scala.meta.internal.jdk.CollectionConverters._
+
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import org.jsoup.nodes.Entities.EscapeMode
+import org.jsoup.nodes.Node
+import org.jsoup.nodes.TextNode
+import org.jsoup.safety.Cleaner
+import org.jsoup.safety.Whitelist
 
 // TODO - Add conversion of tables
 

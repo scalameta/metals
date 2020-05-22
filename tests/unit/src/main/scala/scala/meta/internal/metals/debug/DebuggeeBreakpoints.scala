@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.debug
-import org.eclipse.lsp4j.debug.Breakpoint
 import scala.collection.concurrent.TrieMap
+
+import org.eclipse.lsp4j.debug.Breakpoint
 
 final class DebuggeeBreakpoints {
   private val breakpoints = TrieMap.empty[Int, Breakpoint]

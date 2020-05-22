@@ -1,6 +1,7 @@
 package bench
 
 import java.nio.charset.StandardCharsets
+
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.io.AbsolutePath

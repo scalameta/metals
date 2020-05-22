@@ -1,7 +1,8 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.reflect.internal.FatalError
+
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 trait AutoImports { this: MetalsGlobal =>
 

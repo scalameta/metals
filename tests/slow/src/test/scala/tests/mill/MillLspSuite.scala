@@ -1,11 +1,12 @@
 package tests.mill
 
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.builds.MillBuildTool
-import tests.BaseImportSuite
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
+
+import tests.BaseImportSuite
 
 class MillLspSuite extends BaseImportSuite("mill-import") {
 

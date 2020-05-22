@@ -4,12 +4,14 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.net.Socket
 import java.util.Collections
+
+import scala.meta.internal.metals.debug.SocketEndpoint._
+
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.json.DebugMessageJsonHandler
 import org.eclipse.lsp4j.jsonrpc.json.StreamMessageConsumer
 import org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
-import scala.meta.internal.metals.debug.SocketEndpoint._
 
 private[debug] final class SocketEndpoint(socket: Socket)
     extends RemoteEndpoint {

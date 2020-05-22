@@ -1,13 +1,16 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.meta.internal.metals._
-import scala.meta.internal.metals.MetalsEnrichments._
-import org.eclipse.{lsp4j => l}
-import scala.meta.pc.CancelToken
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import java.net.URI
 import java.nio.file.Paths
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals._
+import scala.meta.pc.CancelToken
+
+import org.eclipse.{lsp4j => l}
 
 class CreateNewSymbol() extends CodeAction {
   override def kind: String = l.CodeActionKind.QuickFix

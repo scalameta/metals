@@ -2,13 +2,17 @@ package scala.meta.internal.metals
 
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributeView
-import java.sql.{Connection, PreparedStatement, Statement}
+import java.sql.Connection
+import java.sql.PreparedStatement
+import java.sql.Statement
+import java.util.zip.ZipError
+
 import scala.collection.concurrent.TrieMap
+
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.MD5
-import java.util.zip.ZipError
+import scala.meta.io.AbsolutePath
 
 /**
  * Handles caching of Jar Top Level Symbols in H2

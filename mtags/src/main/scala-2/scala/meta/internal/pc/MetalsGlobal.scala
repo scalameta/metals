@@ -1,15 +1,13 @@
 package scala.meta.internal.pc
 
 import java.util
-import java.{util => ju}
 import java.util.logging.Logger
-import org.eclipse.{lsp4j => l}
+import java.{util => ju}
+
+import scala.collection.mutable
 import scala.language.implicitConversions
-import scala.meta.internal.semanticdb.scalac.SemanticdbOps
-import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
 import scala.reflect.internal.util.Position
+import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
@@ -18,9 +16,14 @@ import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
-import scala.collection.mutable
+
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.reflect.internal.util.ScriptSourceFile
+import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
+
+import org.eclipse.{lsp4j => l}
 
 class MetalsGlobal(
     settings: Settings,

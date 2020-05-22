@@ -1,9 +1,10 @@
 package tests
 
-import java.nio.file.Files
 import java.nio.file.FileAlreadyExistsException
-import scala.meta.io.AbsolutePath
+import java.nio.file.Files
+
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 class CreateDirectoriesSuite extends BaseSuite {
 

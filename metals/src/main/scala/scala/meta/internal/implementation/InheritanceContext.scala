@@ -1,8 +1,10 @@
 package scala.meta.internal.implementation
 
-import scala.meta.internal.semanticdb.SymbolInformation
 import java.nio.file.Path
+
 import scala.collection.mutable
+
+import scala.meta.internal.semanticdb.SymbolInformation
 
 case class InheritanceContext(
     findSymbol: String => Option[SymbolInformation],

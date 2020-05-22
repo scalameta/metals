@@ -1,8 +1,9 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BspConnectionDetails
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+
+import ch.epfl.scala.bsp4j.BspConnectionDetails
 import munit.Location
 
 class SelectBspServerSuite extends BaseSuite {

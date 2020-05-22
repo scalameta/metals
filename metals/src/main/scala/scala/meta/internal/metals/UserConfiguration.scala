@@ -1,18 +1,21 @@
 package scala.meta.internal.metals
 
+import java.util.Properties
+
+import scala.collection.mutable.ListBuffer
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+
+import scala.meta.RelativePath
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.pantsbuild.PantsConfiguration
+import scala.meta.pc.PresentationCompilerConfig
+
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import java.util.Properties
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.collection.mutable.ListBuffer
-import scala.meta.RelativePath
-import scala.meta.internal.mtags.Symbol
-import scala.meta.pc.PresentationCompilerConfig
-import scala.util.Try
-import scala.util.Failure
-import scala.util.Success
-import scala.meta.internal.pantsbuild.PantsConfiguration
 
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.

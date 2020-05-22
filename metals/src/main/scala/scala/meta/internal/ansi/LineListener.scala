@@ -2,8 +2,9 @@ package scala.meta.internal.ansi
 
 import java.lang.StringBuilder
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.nio.CharBuffer
+import java.nio.charset.StandardCharsets
+
 import scala.collection.mutable
 
 object LineListener {

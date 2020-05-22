@@ -1,23 +1,26 @@
 package scala.meta.internal.mtags
 
+import java.net.URI
 import java.nio.file.Paths
 import java.util.concurrent.CancellationException
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import org.eclipse.{lsp4j => l}
+
 import scala.collection.mutable
-import scala.meta.pc.OffsetParams
+import scala.{meta => m}
+
+import scala.meta.XtensionTokenizeInputLike
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.trees.Origin
+import scala.meta.internal.metals.Trees
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
+import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.{meta => m}
-import java.net.URI
-import scala.meta.XtensionTokenizeInputLike
-import scala.meta.internal.metals.Trees
+import scala.meta.pc.OffsetParams
+
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
+import org.eclipse.{lsp4j => l}
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments extends CommonMtagsEnrichments {

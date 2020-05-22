@@ -1,12 +1,13 @@
 package scala.meta.internal.pantsbuild
 
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.pc.CancelToken
+import scala.meta.internal.pantsbuild.commands.ExportOptions
 import scala.meta.internal.pantsbuild.commands.OpenOptions
 import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
+
 import metaconfig.cli.CliApp
-import scala.meta.internal.pantsbuild.commands.ExportOptions
 
 /**
  * The command-line argument parser for BloopPants.

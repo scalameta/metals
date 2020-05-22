@@ -1,8 +1,9 @@
 package scala.meta.internal.metals.debug
+import scala.collection.mutable
+
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
-import scala.collection.mutable
 
 final class TestingDebugServer(
     respondTo: PartialFunction[Message, ResponseMessage] = PartialFunction.empty

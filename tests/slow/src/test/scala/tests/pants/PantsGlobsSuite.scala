@@ -1,8 +1,10 @@
 package tests.pants
 
-import tests.BaseSuite
-import scala.meta.internal.pantsbuild.PantsGlobs
 import java.nio.file.Files
+
+import scala.meta.internal.pantsbuild.PantsGlobs
+
+import tests.BaseSuite
 
 class PantsGlobsSuite extends BaseSuite {
   def check(

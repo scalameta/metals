@@ -1,6 +1,10 @@
 package bench
 
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+
+import scala.meta.internal.metals.ClasspathSearch
+
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -10,8 +14,6 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import tests.Library
-import scala.meta.internal.metals.ClasspathSearch
-import java.nio.file.Path
 
 @State(Scope.Benchmark)
 class ClasspathIndexingBench {

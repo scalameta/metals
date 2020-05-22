@@ -1,12 +1,13 @@
 package tests
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
+
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.meta.internal.metals.ClientConfiguration
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime

@@ -1,5 +1,19 @@
 package scala.meta.internal.metals
 
+import java.util
+
+import scala.util.control.NonFatal
+
+import scala.meta.inputs.Input
+import scala.meta.inputs.Position
+import scala.meta.internal.docstrings.MarkdownGenerator
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.pc.SymbolDocumentation
+
 import com.thoughtworks.qdox.model.JavaAnnotatedElement
 import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaConstructor
@@ -7,17 +21,6 @@ import com.thoughtworks.qdox.model.JavaGenericDeclaration
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaParameter
 import com.thoughtworks.qdox.model.JavaTypeVariable
-import java.util
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.inputs.Input
-import scala.meta.inputs.Position
-import scala.meta.internal.docstrings.MarkdownGenerator
-import scala.meta.internal.mtags.JavaMtags
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.pc.SymbolDocumentation
-import scala.util.control.NonFatal
 
 /**
  * Extracts Javadoc from Java source code.

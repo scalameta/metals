@@ -1,22 +1,24 @@
 package scala.meta.internal.tvp
 
 import java.{util => ju}
+
 import scala.collection.mutable
-import scala.meta.internal.{semanticdb => s}
-import scala.meta.internal.scalacp._
-import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.Scala.{Descriptor => d}
-import scala.meta.internal.semanticdb.Scala.{Names => n}
-import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
+import scala.collection.mutable
 import scala.reflect.NameTransformer
 import scala.tools.scalap.scalax.rules.scalasig._
-import scala.collection.mutable
-import scala.meta.internal.{semanticdb => s}
-import scala.meta.internal.semanticdb.{Language => l}
+
+import scala.meta.internal.scalacp._
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.{Descriptor => d}
 import scala.meta.internal.semanticdb.Scala.{DisplayNames => dn}
+import scala.meta.internal.semanticdb.Scala.{Names => n}
+import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
+import scala.meta.internal.semanticdb.{Language => l}
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.{semanticdb => s}
 
 /**
  * This class contains copy-pasted code from scala.meta.internal.scalacp with minor changes.

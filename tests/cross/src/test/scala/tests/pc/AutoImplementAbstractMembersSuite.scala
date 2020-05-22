@@ -1,12 +1,13 @@
 package tests.pc
 
-import org.eclipse.{lsp4j => l}
+import java.net.URI
 
-import tests.BaseCodeActionSuite
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.jdk.CollectionConverters._
-import java.net.URI
+
+import org.eclipse.{lsp4j => l}
+import tests.BaseCodeActionSuite
 import tests.BuildInfoVersions
 
 class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {

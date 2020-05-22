@@ -1,14 +1,16 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.util
+
+import scala.meta._
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.transversers.SimpleTraverser
+
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.{lsp4j => l}
-import scala.meta._
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.transversers.SimpleTraverser
-import scala.meta.internal.jdk.CollectionConverters._
-import java.net.URI
 
 /**
  *  Retrieves all the symbols defined in a document

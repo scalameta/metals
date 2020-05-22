@@ -1,41 +1,44 @@
 package scala.meta.internal.pantsbuild
 
-import bloop.config.{Config => C}
-import bloop.config.Tag
-import coursierapi.Dependency
-import coursierapi.MavenRepository
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.{util => ju}
+
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.sys.process.Process
+import scala.util.Failure
+import scala.util.Properties
+import scala.util.Success
+import scala.util.Try
+import scala.util.control.NonFatal
+
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pantsbuild.commands._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-import scala.sys.process.Process
-import scala.util.control.NonFatal
-import scala.util.Failure
-import scala.util.Properties
-import scala.util.Success
-import scala.util.Try
-import ujson.Value
+
+import bloop.config.Tag
+import bloop.config.{Config => C}
+import coursierapi.Dependency
+import coursierapi.MavenRepository
 import metaconfig.cli.CliApp
-import metaconfig.cli.TabCompleteCommand
 import metaconfig.cli.HelpCommand
+import metaconfig.cli.TabCompleteCommand
 import metaconfig.cli.VersionCommand
-import java.{util => ju}
-import java.nio.file.FileSystems
-import scala.annotation.tailrec
-import scala.meta.internal.mtags.MD5
+import ujson.Value
 
 object BloopPants {
   lazy val app: CliApp = CliApp(

@@ -1,8 +1,9 @@
 package tests
 
-import org.eclipse.lsp4j
-import munit.Location
 import scala.meta.io.AbsolutePath
+
+import munit.Location
+import org.eclipse.lsp4j
 
 trait Assertions extends munit.Assertions {
 

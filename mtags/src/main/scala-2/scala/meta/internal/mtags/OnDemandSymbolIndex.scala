@@ -2,18 +2,20 @@ package scala.meta.internal.mtags
 
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
+import java.util.zip.ZipError
+
 import scala.collection.concurrent.TrieMap
+import scala.util.Properties
+import scala.util.control.NonFatal
+
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.io.{ListFiles => _}
 import scala.meta.internal.io._
+import scala.meta.internal.io.{ListFiles => _}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
-import java.util.zip.ZipError
-import scala.util.Properties
 
 /**
  * An implementation of GlobalSymbolIndex with fast indexing and low memory usage.

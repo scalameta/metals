@@ -3,20 +3,22 @@ package scala.meta.internal.metals
 import java.util.Optional
 import java.util.logging.Level
 import java.util.logging.Logger
+
 import scala.collection.concurrent.TrieMap
+import scala.util.control.NonFatal
+
+import scala.meta.inputs.Input
+import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Language
-import scala.meta.pc.SymbolDocumentation
-import scala.util.control.NonFatal
-import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.mtags.ScalaMtags
-import scala.meta.inputs.Input
 import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.SymbolDocumentation
 
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.

@@ -1,25 +1,27 @@
 package scala.meta.internal.metals
 
+import java.net.URI
+import java.nio.file.FileSystems
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.Paths
 import java.util
 import java.util.jar.JarFile
 import java.util.logging.Level
 import java.util.logging.Logger
+
+import scala.util.Properties
+import scala.util.control.NonFatal
+
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.util.control.NonFatal
-import scala.util.Properties
-import java.nio.file.FileSystems
-import java.net.URI
 
 /**
  * An index to lookup classfiles contained in a given classpath.

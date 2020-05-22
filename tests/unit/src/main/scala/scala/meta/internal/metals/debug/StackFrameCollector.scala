@@ -2,6 +2,7 @@ package scala.meta.internal.metals.debug
 
 import scala.collection.mutable
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.debug.Stoppage.Handler
 
 final class StackFrameCollector extends Handler {

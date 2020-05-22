@@ -4,15 +4,16 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
+import scala.concurrent.Future
+import scala.concurrent.Promise
+
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
-
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
 
 abstract class BaseAmmoniteSuite(scalaVersion: String)
     extends BaseLspSuite("ammonite") {

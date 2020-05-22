@@ -1,7 +1,9 @@
 package tests
 
 import scala.concurrent.Future
+
 import scala.meta.internal.metals.{BuildInfo => V}
+
 import munit.Location
 
 class CompletionLspSuite extends BaseCompletionLspSuite("completion") {

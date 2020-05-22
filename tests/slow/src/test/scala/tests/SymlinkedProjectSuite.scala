@@ -1,8 +1,9 @@
 package tests
 import java.nio.file.Files
 import java.util.UUID
-import scala.meta.io.AbsolutePath
+
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
 
 class SymlinkedProjectSuite extends BaseLspSuite("symlinked-project") {
   test("definitions-from-other-file") {

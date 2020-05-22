@@ -1,7 +1,7 @@
 package tests.pc
 
-import tests.BaseSignatureHelpSuite
 import coursierapi._
+import tests.BaseSignatureHelpSuite
 import tests.BuildInfoVersions
 
 class HKSignatureHelpSuite extends BaseSignatureHelpSuite {

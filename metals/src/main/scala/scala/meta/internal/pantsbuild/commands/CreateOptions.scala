@@ -1,11 +1,14 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.generic
-import metaconfig.annotation._
-import metaconfig.generic.Settings
-import metaconfig.{ConfDecoder, ConfEncoder}
 import scala.collection.immutable.Nil
+
 import scala.meta.internal.pantsbuild.PantsConfiguration
+
+import metaconfig.ConfDecoder
+import metaconfig.ConfEncoder
+import metaconfig.annotation._
+import metaconfig.generic
+import metaconfig.generic.Settings
 
 case class CreateOptions(
     @ExtraName("remainingArgs")

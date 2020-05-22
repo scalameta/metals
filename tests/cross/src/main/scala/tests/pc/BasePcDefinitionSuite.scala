@@ -1,14 +1,16 @@
 package tests.pc
 
-import tests.BasePCSuite
+import java.net.URI
+
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.mtags.MtagsEnrichments._
+
+import munit.Location
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.TextEdits
-import munit.Location
-import java.net.URI
+import tests.BasePCSuite
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(

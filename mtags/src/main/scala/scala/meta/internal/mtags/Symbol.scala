@@ -1,7 +1,8 @@
 package scala.meta.internal.mtags
 
-import scala.meta.internal.semanticdb.Scala._
 import scala.util.control.NonFatal
+
+import scala.meta.internal.semanticdb.Scala._
 
 /**
  * Represents a unique definitions such as a Scala `val`, `object`, `class`, or Java field/method.

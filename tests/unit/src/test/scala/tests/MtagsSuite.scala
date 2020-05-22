@@ -1,10 +1,10 @@
 package tests
 
-import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.inputs._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.semanticdb.Scala._
 
 /**
  * Assert the symbols emitted by ScalaMtags is a subset of semanticdb-scalac.

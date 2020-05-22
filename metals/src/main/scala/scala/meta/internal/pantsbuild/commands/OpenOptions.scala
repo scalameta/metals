@@ -1,10 +1,12 @@
 package scala.meta.internal.pantsbuild.commands
 
-import metaconfig.generic
-import metaconfig.annotation._
-import metaconfig.generic.Settings
-import metaconfig.{ConfDecoder, ConfEncoder}
 import java.nio.file.Path
+
+import metaconfig.ConfDecoder
+import metaconfig.ConfEncoder
+import metaconfig.annotation._
+import metaconfig.generic
+import metaconfig.generic.Settings
 
 case class OpenOptions(
     @Description("Open IntelliJ in the given project")

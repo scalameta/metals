@@ -1,12 +1,15 @@
 package scala.meta.internal.pantsbuild
 
-import scala.collection.JavaConverters._
 import java.nio.file.Path
-import ujson.Value
 import java.nio.file.Paths
+
+import scala.collection.JavaConverters._
+
 import scala.meta.internal.metals.BuildInfo
+
 import coursierapi.Dependency
 import coursierapi.Fetch
+import ujson.Value
 
 case class PantsScalaPlatform(
     scalaBinaryVersion: String,

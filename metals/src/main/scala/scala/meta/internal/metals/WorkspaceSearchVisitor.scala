@@ -1,10 +1,10 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import org.eclipse.{lsp4j => l}
+import java.{util => ju}
+
 import scala.collection.mutable
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
@@ -14,8 +14,11 @@ import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearchVisitor
+
 import org.eclipse.lsp4j.SymbolKind
-import java.{util => ju}
+import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
+import org.eclipse.{lsp4j => l}
 
 /**
  * A symbol search visitor for `workspace/symbol`.

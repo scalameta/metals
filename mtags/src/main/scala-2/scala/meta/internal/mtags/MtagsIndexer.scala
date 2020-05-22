@@ -1,14 +1,15 @@
 package scala.meta.internal.mtags
 
+import scala.{meta => m}
+
 import scala.meta.Name
 import scala.meta.Term
 import scala.meta.inputs.Input
-import scala.{meta => m}
-import scala.meta.internal.semanticdb.Language
-import scala.meta.internal.{semanticdb => s}
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.inputs._
+import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
+import scala.meta.internal.{semanticdb => s}
 
 trait MtagsIndexer {
   def language: Language

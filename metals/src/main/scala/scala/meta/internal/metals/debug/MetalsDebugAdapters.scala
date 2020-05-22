@@ -1,11 +1,11 @@
 package scala.meta.internal.metals.debug
 
 import java.nio.file.Paths
-import org.eclipse.lsp4j.debug.InitializeRequestArguments
-import org.eclipse.lsp4j.debug.{
-  InitializeRequestArgumentsPathFormat => PathFormat
-}
+
 import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.InitializeRequestArgumentsPathFormat
 
 final class MetalsDebugAdapters {
   private var lineAdapter: Long => Long = identity
@@ -22,10 +22,10 @@ final class MetalsDebugAdapters {
     }
 
     Option(clientConfig.getPathFormat) match {
-      case Some(PathFormat.PATH) =>
+      case Some(InitializeRequestArgumentsPathFormat.PATH) =>
         clientToServerPathAdapter = path => Paths.get(path).toUri().toString()
         serverToClientPathAdapter = _.toString
-      case Some(PathFormat.URI) =>
+      case Some(InitializeRequestArgumentsPathFormat.URI) =>
         clientToServerPathAdapter = identity // metals expects an URI
         serverToClientPathAdapter = _.toURI.toString
       case _ =>

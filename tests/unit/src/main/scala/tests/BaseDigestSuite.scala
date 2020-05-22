@@ -1,8 +1,9 @@
 package tests
 
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.io.AbsolutePath
+
 import munit.Location
 
 trait BaseDigestSuite extends BaseSuite {

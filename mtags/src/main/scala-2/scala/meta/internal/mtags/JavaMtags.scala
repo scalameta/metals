@@ -1,5 +1,16 @@
 package scala.meta.internal.mtags
 
+import java.io.StringReader
+import java.util.Comparator
+
+import scala.meta.inputs.Input
+import scala.meta.inputs.Position
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
+import scala.meta.internal.semanticdb.SymbolInformation.Property
+
 import com.thoughtworks.qdox._
 import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaConstructor
@@ -8,15 +19,6 @@ import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
-import java.io.StringReader
-import java.util.Comparator
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.inputs.Input
-import scala.meta.inputs.Position
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.semanticdb.Language
-import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import scala.meta.internal.semanticdb.SymbolInformation.Property
 
 object JavaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer =

@@ -1,13 +1,15 @@
 package scala.meta.internal.pc.completions
 
-import org.eclipse.{lsp4j => l}
-
 import scala.collection.immutable.Nil
-import scala.meta.internal.pc.{Identifier, MetalsGlobal}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.meta.internal.mtags.MtagsEnrichments._
+
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.MetalsGlobal
+
+import org.eclipse.{lsp4j => l}
 
 trait MatchCaseCompletions { this: MetalsGlobal =>
 

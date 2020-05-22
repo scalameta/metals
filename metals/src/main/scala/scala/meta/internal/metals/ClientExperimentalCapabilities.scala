@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 import com.google.gson.JsonElement
-import org.eclipse.{lsp4j => l}
 import com.google.gson.JsonNull
+import org.eclipse.{lsp4j => l}
 
 final case class ClientExperimentalCapabilities(
     debuggingProvider: Boolean,

@@ -1,11 +1,12 @@
 package tests
 
 import scala.meta.internal.builds.GradleBuildTool
+import scala.meta.internal.builds.MavenBuildTool
+import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.builds.MavenBuildTool
-import scala.meta.internal.builds.MillBuildTool
+
 import munit.Location
 
 class RelatedSuite extends BaseSuite {

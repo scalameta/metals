@@ -1,16 +1,18 @@
 package tests
 
-import java.nio.file.Files
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.MetalsInputBoxParams
-import org.eclipse.lsp4j.ShowMessageRequestParams
-import munit.TestOptions
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+
 import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.Messages.NewScalaFile
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsInputBoxResult
+import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.ServerCommands
+
+import munit.TestOptions
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def experimentalCapabilities
