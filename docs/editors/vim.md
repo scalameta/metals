@@ -51,37 +51,33 @@ Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used (another
 plugin manager like vundle works too), update your `~/.vimrc` to include the
 following settings.
 
-```vim
-" ~/.vimrc
-
-" Configuration for vim-plug
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
-
-" Configuration for vim-scala
-au BufRead,BufNewFile *.sbt,*.sc set filetype=scala
-```
-
-Run `:PlugInstall` to install the plugin. If you already have `coc.nvim`
-installed, be sure to update to the latest version with `:PlugUpdate`.
-
-`coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as
-a configuration file format. It's basically json with comment support.
-
-In order to get comment highlighting, please add:
-
-```vim
-autocmd FileType json syntax match Comment +\/\/.\+$+
-```
 ### Recommended coc.nvim mappings
 
 `coc.nvim` doesn't come with a default key mapping for LSP commands, so you need to
 configure it yourself.
 
-Here's a recommended configuration:
 
 ```vim
-" ~/.vimrc
+" Initialize plugin start (vim-plug)
+" Avoid using standard Vim directory names like 'plugin' 
+" The setting below is for vim, use '~/.config/nvim/plugged' for neovim
+call plug#begin('~/.vim/plugged')
+
+" Plugin for coc.nvim
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+
+" Initialize plugin end
+call plug#end()
+
 " Configuration for coc.nvim
+
+" Needed by Vim to be able to recognize build scripts and worksheets as scala 
+au BufRead,BufNewFile *.sbt,*.sc set filetype=scala
+
+" Syntax highlighting for coc.nvim which uses jsonc as a configuration file format. It's basically json with comment support. 
+autocmd FileType json syntax match Comment +\/\/.\+$+
+
 
 " If hidden is not set, TextEdit might fail.
 set hidden
@@ -215,6 +211,8 @@ nnoremap <silent> <space>tb :<C-u>CocCommand metals.tvp metalsBuild<CR>
 nnoremap <silent> <space>tf :<C-u>CocCommand metals.revealInTreeView metalsPackages<CR>
 ```
 
+Run :PlugInstall to install the plugin. If you already have coc.nvim installed, be sure to update to the latest version with :PlugUpdate.
+
 ### Installing coc-metals
 
 Once you have `coc.nvim` installed, you can then install Metals a few different
@@ -303,7 +301,7 @@ open buffer.
 
 ## Worksheets
 
-Metals allows users to create a `src/main/scala/*.worksheet.sc` file and see evaluations right
+Metals allows users to create a `*.worksheet.sc` file and see evaluations right
 in the file. In Vim, this is done using comments that are inserted which will
 allow you to hover on them to expand. In Neovim, this is done using Neovim's
 [virtual text](https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text())
