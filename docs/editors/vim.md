@@ -58,7 +58,7 @@ following settings.
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Configuration for vim-scala
-au BufRead,BufNewFile *.sbt set filetype=scala
+au BufRead,BufNewFile *.scala,*.sc set filetype=scala
 ```
 
 Run `:PlugInstall` to install the plugin. If you already have `coc.nvim`
@@ -303,7 +303,7 @@ open buffer.
 
 ## Worksheets
 
-Metals allows users to create a `*.worksheet.sc` file and see evaluations right
+Metals allows users to create a `src/main/scala/*.worksheet.sc` file and see evaluations right
 in the file. In Vim, this is done using comments that are inserted which will
 allow you to hover on them to expand. In Neovim, this is done using Neovim's
 [virtual text](https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text())
