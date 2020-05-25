@@ -44,7 +44,7 @@ final class OnDemandSymbolIndex(
     toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
-  private val sourceJars = new ClasspathLoader(onError)
+  private val sourceJars = new ClasspathLoader()
   var indexedSources = 0L
   def close(): Unit = sourceJars.close()
   private val onErrorOption = onError.andThen(_ => None)

@@ -5,8 +5,6 @@ import java.net.URLClassLoader
 import java.util
 
 import scala.collection.Seq
-import scala.util.Failure
-import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -67,9 +65,7 @@ object ClasspathLoader {
  * Scala data structures like `AbsolutePath` and `Option[T]` instead of
  * `java.net.URL` and nulls.
  */
-final class ClasspathLoader(
-    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
-) {
+final class ClasspathLoader() {
   val loader = new OpenClassLoader
   def close(): Unit = loader.close()
   override def toString: String = loader.getURLs.toList.toString()
@@ -87,12 +83,7 @@ final class ClasspathLoader(
   }
 
   def loadClass(symbol: String): Option[Class[_]] = {
-    Try(loader.loadClass(symbol)) match {
-      case Failure(exception) =>
-        onError.lift(exception)
-        None
-      case Success(value) => Some(value)
-    }
+    Try(loader.loadClass(symbol)).toOption
   }
 
   /** Load a resource from the classpath. */
