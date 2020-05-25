@@ -221,9 +221,13 @@ final class BloopInstall(
       .showMessageRequest(ChooseBuildTool.params(buildTools))
       .asScala
       .map { choice =>
-        buildTools.find(buildTool =>
+        val foundBuildTool = buildTools.find(buildTool =>
           new MessageActionItem(buildTool.executableName) == choice
         )
+        foundBuildTool.foreach(buildTool =>
+          tables.buildTool.chooseBuildTool(buildTool.executableName)
+        )
+        foundBuildTool
       }
   }
 }
