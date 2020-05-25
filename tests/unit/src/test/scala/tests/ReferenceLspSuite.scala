@@ -150,7 +150,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin
   )
 
-  checkInSamePackage( // FIXME: doesn't find the case class declaration
+  checkInSamePackage( // FIXME: doesn't find the case class declaration: https://github.com/scalameta/metals/issues/1553#issuecomment-617884934
     "simple-case-class-starting-elsewhere",
     """|case class Main(name: String) // doesn't find this
        |object F {
@@ -177,7 +177,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin
   )
 
-  checkInSamePackage( // FIXME: should, but doesn't find the class declaration
+  checkInSamePackage( // FIXME: should, but doesn't find the class declaration: https://github.com/scalameta/metals/issues/1553#issuecomment-617884934
     "case-class-unapply-starting-elsewhere",
     """|sealed trait Stuff
        |case class Foo(n: Int) extends Stuff // doesn't find this
@@ -197,7 +197,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin
   )
 
-  checkInSamePackage( // FIXME: doesn't find the class declaration
+  checkInSamePackage( // FIXME: doesn't find the class declaration: https://github.com/scalameta/metals/issues/1553#issuecomment-617884934
     "explicit-unapply",
     """|sealed trait Stuff
        |class Foo(val n: Int) extends Stuff // doesn't find this; but should it?
