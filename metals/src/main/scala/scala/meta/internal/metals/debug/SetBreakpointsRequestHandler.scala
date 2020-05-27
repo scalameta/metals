@@ -69,13 +69,6 @@ private[debug] final class SetBreakpointsRequestHandler(
       breakpoint <- response.getBreakpoints
     } yield {
       breakpoint.setSource(originalSource)
-      // note(@tgodzik) this seems to happen from time to time, not exactly sure why
-      // can be removed if the issue is closed:
-      // https://github.com/scalameta/metals/issues/1569
-      if (breakpoint.getSource() == null)
-        scribe.warn(
-          s"[DAP] Could not set the original source for breakpoint, since it was $originalSource"
-        )
       breakpoint
     }
 

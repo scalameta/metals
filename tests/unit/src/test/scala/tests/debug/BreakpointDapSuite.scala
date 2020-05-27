@@ -29,7 +29,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertBreakpoints("succeeding-class")(
+  assertBreakpoints("succeeding-class".only)(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
