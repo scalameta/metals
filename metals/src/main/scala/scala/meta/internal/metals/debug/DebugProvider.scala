@@ -72,10 +72,11 @@ class DebugProvider(
       val awaitClient =
         () => Future(proxyServer.accept()).withTimeout(10, TimeUnit.SECONDS)
 
+      val jvmOptionsTranslatedParams = translateJvmParams(parameters)
       // long timeout, since server might take a while to compile the project
       val connectToServer = () => {
         buildServer
-          .map(_.startDebugSession(parameters))
+          .map(_.startDebugSession(jvmOptionsTranslatedParams))
           .getOrElse(BuildServerUnavailableError)
           .withTimeout(60, TimeUnit.SECONDS)
           .map { uri =>
@@ -226,6 +227,26 @@ class DebugProvider(
     }
   }
 
+  private def translateJvmParams(
+      parameters: b.DebugSessionParams
+  ): b.DebugSessionParams = {
+    parameters.getData match {
+      case json: JsonElement if parameters.getDataKind == "scala-main-class" =>
+        json.as[b.ScalaMainClass].foreach { main =>
+          val translated = main.getJvmOptions().asScala.map { param =>
+            if (!param.startsWith("-J"))
+              s"-J$param"
+            else
+              param
+          }
+          main.setJvmOptions(translated.asJava)
+          parameters.setData(main.toJsonObject)
+        }
+        parameters
+      case data =>
+        parameters
+    }
+  }
   private def connect(uri: URI): Socket = {
     val socket = new Socket()
 

@@ -49,9 +49,13 @@ class BuildTargetClassesFinder(
   ): Try[List[(A, b.BuildTarget)]] =
     buildTarget.fold {
       val classes =
-        findClassesByName(className).collect {
-          case (clazz, BuildTargetIdOf(buildTarget)) => (clazz, buildTarget)
-        }
+        findClassesByName(className)
+          .collect {
+            case (clazz, BuildTargetIdOf(buildTarget)) => (clazz, buildTarget)
+          }
+          .sortBy {
+            case (_, target) => buildTargets.buildTargetsOrder(target.getId())
+          }
       if (classes.nonEmpty) Success(classes)
       else
         Failure(new ClassNotFoundException(className))

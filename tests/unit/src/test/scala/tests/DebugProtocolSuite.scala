@@ -6,6 +6,7 @@ import java.util.Collections.singletonList
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
@@ -26,7 +27,9 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
-           |    print("Foo")
+           |    val foo = sys.props.getOrElse("property", "")
+           |    val bar = args(0)
+           |    print(foo + bar)
            |    System.exit(0)
            |  }
            |}
@@ -35,14 +38,18 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass("a.Main", emptyList(), emptyList())
+        new ScalaMainClass(
+          "a.Main",
+          List("Bar").asJava,
+          List("-Dproperty=Foo").asJava
+        )
       )
       _ <- debugger.initialize
       _ <- debugger.launch
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertNoDiff(output, "Foo")
+    } yield assertNoDiff(output, "FooBar")
   }
 
   test("disconnect") {
