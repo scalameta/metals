@@ -19,6 +19,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.ClassFinder
 import scala.meta.internal.metals.DocumentSymbolProvider
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.FoldingRangeProvider
@@ -41,6 +42,7 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 
@@ -298,5 +300,18 @@ case class ScalaPresentationCompiler(
       .filterNot(_.contains("_CURSOR_"))
       .toList
       .asJava
+  }
+
+  override def enclosingClass(
+      pos: Position,
+      params: VirtualFileParams
+  ): CompletableFuture[Optional[String]] = {
+    CompletableFuture.completedFuture(
+      trees
+        .get(params.uri(), params.text())
+        .map(tree => ClassFinder.findClassForPos(tree, pos))
+        .map(Optional.of(_))
+        .getOrElse(Optional.empty())
+    )
   }
 }

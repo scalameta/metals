@@ -307,6 +307,8 @@ val mtagsSettings = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.10.4",
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value),
+      ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
+        .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
         .withDottyCompat(scalaVersion.value)
     )

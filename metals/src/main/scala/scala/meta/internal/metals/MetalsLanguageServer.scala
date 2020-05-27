@@ -379,16 +379,6 @@ class MetalsLanguageServer(
       packageProvider,
       () => focusedDocument
     )
-    debugProvider = new DebugProvider(
-      definitionProvider,
-      buildServer,
-      buildTargets,
-      buildTargetClasses,
-      compilations,
-      languageClient,
-      buildClient,
-      statusBar
-    )
     referencesProvider = new ReferenceProvider(
       workspace,
       semanticdbs,
@@ -475,6 +465,17 @@ class MetalsLanguageServer(
         Option(params),
         diagnostics
       )
+    )
+    debugProvider = new DebugProvider(
+      definitionProvider,
+      buildServer,
+      buildTargets,
+      buildTargetClasses,
+      compilations,
+      languageClient,
+      buildClient,
+      statusBar,
+      compilers
     )
     codeActionProvider = new CodeActionProvider(
       compilers,

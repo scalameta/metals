@@ -1,5 +1,7 @@
 package tests.debug
+
 import scala.meta.internal.metals.debug.DebugStep._
+import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
@@ -14,7 +16,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
   // disabled, because finding enclosing class for the breakpoint line is not working
   // see [[scala.meta.internal.metals.debug.SetBreakpointsRequestHandler]]
-  assertBreakpoints("preceding-class", disabled = true)(
+  assertBreakpoints("preceding-class")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
@@ -29,7 +31,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertBreakpoints("succeeding-class".only)(
+  assertBreakpoints("succeeding-class")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
@@ -495,6 +497,30 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
+  assertBreakpoints("java-preceeding")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    val foo = new Foo()
+                |    foo.call()
+                |    System.exit(0)
+                |  }
+                |}
+                |
+                |/a/src/main/java/a/Foo.java
+                |package a;
+                |
+                |class Foo {
+                |  class Bar {}
+                |
+                |  void call() {
+                |>>  System.out.println();
+                |  }
+                |}
+                |""".stripMargin
+  )
+
   assertBreakpoints("java-anonymous")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
@@ -569,7 +595,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
   )
 
   // TODO: https://github.com/scalameta/metals/issues/1196
-  assertBreakpoints("ambiguous", disabled = true)(
+  assertBreakpoints("ambiguous".ignore)(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |object Main {
@@ -632,19 +658,17 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
     } yield assertNoDiff(output, "1\n2\n3\n")
   }
 
-  def assertBreakpoints(name: TestOptions, disabled: Boolean = false)(
+  def assertBreakpoints(name: TestOptions)(
       source: String
   )(implicit loc: Location): Unit = {
-    if (disabled) return
-
     test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(source)
-
       val layout =
         s"""|/metals.json
-            |{ "a": {}, "b": {} }
-            |
+            |{ 
+            |  "a": {},  "b": {} 
+            |}
             |$workspaceLayout
             |""".stripMargin
 
