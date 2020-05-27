@@ -52,6 +52,27 @@ final class BuildTargets() {
   private val buildTargetInference =
     new ConcurrentLinkedQueue[AbsolutePath => Seq[BuildTargetIdentifier]]()
 
+  val buildTargetsOrder: BuildTargetIdentifier => Int = {
+    (t: BuildTargetIdentifier) =>
+      var score = 1
+
+      val isSupportedScalaVersion = scalaInfo(t).exists(t =>
+        ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
+      )
+      if (isSupportedScalaVersion) score <<= 2
+
+      val isJVM = scalacOptions(t).exists(_.isJVM)
+      if (isJVM) score <<= 1
+
+      // note(@tgodzik) once the support for Scala 3 is on par with Scala 2 this can be removed
+      val isScala2 = scalaInfo(t).exists(info =>
+        !ScalaVersions.isScala3Version(info.getScalaVersion())
+      )
+      if (isScala2) score <<= 1
+
+      score
+  }
+
   def setTables(newTables: Tables): Unit = {
     tables = Some(newTables)
   }
@@ -211,25 +232,7 @@ final class BuildTargets() {
         .flatMap(_.dependencySources.getBuildTarget(source))
         .orElse(inferBuildTarget(source))
     } else {
-      Some(buildTargets.maxBy { t =>
-        var score = 1
-
-        val isSupportedScalaVersion = scalaInfo(t).exists(t =>
-          ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
-        )
-        if (isSupportedScalaVersion) score <<= 2
-
-        val isJVM = scalacOptions(t).exists(_.isJVM)
-        if (isJVM) score <<= 1
-
-        // note(@tgodzik) once the support for Scala 3 is on par with Scala 2 this can be removed
-        val isScala2 = scalaInfo(t).exists(info =>
-          !ScalaVersions.isScala3Version(info.getScalaVersion())
-        )
-        if (isScala2) score <<= 1
-
-        score
-      })
+      Some(buildTargets.maxBy(buildTargetsOrder))
     }
   }
 
