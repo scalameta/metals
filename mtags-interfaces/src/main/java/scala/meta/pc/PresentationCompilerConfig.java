@@ -52,7 +52,7 @@ public interface PresentationCompilerConfig {
     /**
      * Returns false if the <code>UserConfiguration.enableStripMarginOnTypeFormatting</code> is configured to false.
      */
-    boolean isStripMarginEnabledOnTypeFormatting();
+    boolean isStripMarginOnTypeFormattingEnabled();
 
     /**
      * Returns true if the <code>CompletionItem.documentation</code> field should be populated.

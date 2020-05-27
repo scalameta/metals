@@ -154,7 +154,7 @@ case class ScalaPresentationCompiler(
     CompletableFuture.supplyAsync(
       () =>
         MultilineStringFormattingProvider
-          .format(params, source, config.isStripMarginEnabledOnTypeFormatting)
+          .format(params, source, config.isStripMarginOnTypeFormattingEnabled)
           .asJava,
       ec
     )

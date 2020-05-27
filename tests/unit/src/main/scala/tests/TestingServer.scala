@@ -813,17 +813,17 @@ final class TestingServer(
       original: String,
       root: AbsolutePath,
       autoIndent: String,
-      replaceWith: String
+      triggerChar: String
   ): Future[(String, DocumentOnTypeFormattingParams)] = {
     positionFromString(
       filename,
       original,
       root,
       replaceWith =
-        if (replaceWith == "\n") replaceWith + autoIndent else replaceWith
+        if (triggerChar == "\n") triggerChar + autoIndent else triggerChar
     ) {
       case (text, textId, start) =>
-        if (replaceWith == "\n") {
+        if (triggerChar == "\n") {
           start.setLine(start.getLine() + 1) // + newline
           start.setCharacter(autoIndent.size)
         }
@@ -831,7 +831,7 @@ final class TestingServer(
           textId,
           new FormattingOptions,
           start,
-          replaceWith
+          triggerChar
         )
         (text, params)
     }

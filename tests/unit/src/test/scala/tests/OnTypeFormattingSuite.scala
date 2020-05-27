@@ -1,8 +1,8 @@
 package tests
 
-import munit.Location
-
 import scala.concurrent.Future
+
+import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   private val indent = "  "
