@@ -1801,7 +1801,7 @@ class MetalsLanguageServer(
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
       } {
-        val sourceItemPath = source.getUri.toAbsolutePath
+        val sourceItemPath = source.getUri.toAbsolutePath(followSymlink = false)
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
       check()
