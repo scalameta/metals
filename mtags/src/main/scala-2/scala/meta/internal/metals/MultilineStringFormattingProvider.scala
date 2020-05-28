@@ -79,7 +79,7 @@ object MultilineStringFormattingProvider {
     if (lastQuote != -1) Some((lastQuote, quoteClosed)) else None
   }
 
-  private def fourQuotes(
+  private def onlyFourQuotes(
       splitLines: Array[String],
       position: Position
   ): Boolean = {
@@ -102,13 +102,15 @@ object MultilineStringFormattingProvider {
       enableStripMargin: Boolean
   ): List[TextEdit] = {
     if (enableStripMargin && startToken.pos.startLine == position.getLine - 1 && endToken.pos.endLine == position.getLine) {
-      val positionOfLastQuote =
-        splitLines(position.getLine).lastIndexOf("\"")
       val newPos =
-        new Position(position.getLine, positionOfLastQuote + 1)
+        new scala.meta.inputs.Position.Range(
+          endToken.input,
+          endToken.end,
+          endToken.end
+        )
       List(
         indent(splitLines, position),
-        new TextEdit(new Range(newPos, newPos), ".stripMargin")
+        new TextEdit(newPos.toLSP, ".stripMargin")
       )
     } else List(indent(splitLines, position))
   }
@@ -350,7 +352,7 @@ object MultilineStringFormattingProvider {
     List(textEditPrecedentLine, textEditcurrentLine)
   }
 
-  private def repaceWithSixQuotes(pos: Position): List[TextEdit] = {
+  private def replaceWithSixQuotes(pos: Position): List[TextEdit] = {
     val pos1 = new Position(pos.getLine, pos.getCharacter - 3)
     val pos2 = new Position(pos.getLine, pos.getCharacter + 1)
     List(new TextEdit(new Range(pos1, pos2), "\"\"\"\"\"\""))
@@ -418,8 +420,8 @@ object MultilineStringFormattingProvider {
             enableStripMargin
           )
         case None =>
-          if (triggerChar == "\"" && fourQuotes(splitLines, position))
-            repaceWithSixQuotes(position)
+          if (triggerChar == "\"" && onlyFourQuotes(splitLines, position))
+            replaceWithSixQuotes(position)
           else if (triggerChar == "\n" && doubleQuoteNotClosed(
               splitLines,
               position
