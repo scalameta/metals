@@ -210,7 +210,7 @@ final class ReferenceProvider(
       val visited = scala.collection.mutable.Set.empty[AbsolutePath]
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
-        if bloom.mightContain(occ.symbol)
+        if isSymbol.exists(bloom.mightContain)
         scalaPath <- SemanticdbClasspath
           .toScala(workspace, AbsolutePath(path))
           .iterator
