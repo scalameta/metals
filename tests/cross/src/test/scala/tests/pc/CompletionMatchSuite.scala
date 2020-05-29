@@ -271,6 +271,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |\tcase Bar =>
       |}
       |}""".stripMargin,
-      filter = _.contains("exhaustive")
+    filter = _.contains("exhaustive")
   )
 }
