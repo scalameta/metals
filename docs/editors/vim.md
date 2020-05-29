@@ -6,8 +6,9 @@ title: Vim
 ![Vim demo](https://i.imgur.com/4BYHCCL.gif)
 
 Metals works with most LSP clients for Vim, but we recommend using the
-[coc-metals extension](https://github.com/scalameta/coc-metals) for [`coc.nvim`](https://github.com/neoclide/coc.nvim)
-which will provide the most complete implementation of LSP and Metals-specific helpers.
+[coc-metals extension](https://github.com/scalameta/coc-metals) for
+[`coc.nvim`](https://github.com/neoclide/coc.nvim) which will provide the most
+complete implementation of LSP and Metals-specific helpers.
 
 ```scala mdoc:requirements
 
@@ -16,8 +17,9 @@ which will provide the most complete implementation of LSP and Metals-specific h
 ## Installing Vim
 
 The coc.nvim plugin requires either **Vim >= 8.1** or **Neovim >= 0.3.1**. Make
-sure you have the correct version installed. While it works with both Vim and Neovim,
-we recommend using Neovim since it provides a smoother experience with some of the features.
+sure you have the correct version installed. While it works with both Vim and
+Neovim, we recommend using Neovim since it provides a smoother experience with
+some of the features.
 
 ```sh
 # If using Vim
@@ -34,7 +36,8 @@ NVIM v0.4.3
 It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage
 extensions but you could opt-out of it and use `vim-plug` instead.
 
-For convenience we recommend installing both via your favorite package manager or manually:
+For convenience we recommend installing both via your favorite package manager
+or manually:
 
 ```sh
 curl -sL install-node.now.sh/lts | sh
@@ -43,29 +46,24 @@ curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 
 ## Installing coc.nvim
 
-Once the requirements are satisfied, we can now proceed to install [`neoclide/coc.nvim`]
-(https://github.com/neoclide/coc.nvim/), which provides Language Server Protocol
-support to Vim/Nvim  to communicate with the Metals language server.
+Once the requirements are satisfied, we can now proceed to install
+[`neoclide/coc.nvim`] (https://github.com/neoclide/coc.nvim/), which provides
+Language Server Protocol support to Vim/Nvim  to communicate with the Metals
+language server.
 
 Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used (another
 plugin manager like vundle works too), update your `~/.vimrc` to include the
 following settings.
 
 ```vim
-" ~/.vimrc
-
-" Configuration for vim-plug
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
-
-" Configuration for vim-scala
-au BufRead,BufNewFile *.sbt set filetype=scala
 ```
 
 Run `:PlugInstall` to install the plugin. If you already have `coc.nvim`
 installed, be sure to update to the latest version with `:PlugUpdate`.
 
-`coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as
-a configuration file format. It's basically json with comment support.
+`coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as a
+configuration file format. It's basically json with comment support.
 
 In order to get comment highlighting, please add:
 
@@ -74,8 +72,8 @@ autocmd FileType json syntax match Comment +\/\/.\+$+
 ```
 ### Recommended coc.nvim mappings
 
-`coc.nvim` doesn't come with a default key mapping for LSP commands, so you need to
-configure it yourself.
+`coc.nvim` doesn't come with a default key mapping for LSP commands, so you need
+to configure it yourself.
 
 Here's a recommended configuration:
 
@@ -98,6 +96,9 @@ set shortmess+=c
 
 " Always show signcolumns
 set signcolumn=yes
+
+" Help Vim recognize *.sbt and *.sc as Scala files
+au BufRead,BufNewFile *.sbt,*.sc set filetype=scala
 
 " Use tab for trigger completion with characters ahead and navigate.
 " Use command ':verbose imap <tab>' to make sure tab is not mapped by other plugin.
