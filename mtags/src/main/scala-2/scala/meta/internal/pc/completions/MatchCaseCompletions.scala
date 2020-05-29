@@ -150,7 +150,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       text: String
   ) extends CompletionPosition {
     override def contribute: List[Member] = {
-      val tpe = prefix.widen
+      val tpe = prefix.widen.bounds.hi
       val members = ListBuffer.empty[TextEditMember]
       val importPos = autoImportPosition(pos, text)
       val context = doLocateImportContext(pos, importPos)

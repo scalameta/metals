@@ -242,4 +242,35 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     filter = _.contains("exhaustive")
   )
+
+  // https://github.com/scalameta/metals/issues/1066
+  checkEdit(
+    "exhaustive-upper-type-bounds",
+    """
+      |package example
+      |
+      |sealed trait Test
+      |case object Foo extends Test
+      |case object Bar extends Test
+      |
+      |object Main {
+      |  def testExhaustive[T <: Test](test: T): Boolean =
+      |    test m@@
+      |}""".stripMargin,
+    """
+      |package example
+      |
+      |sealed trait Test
+      |case object Foo extends Test
+      |case object Bar extends Test
+      |
+      |object Main {
+      |  def testExhaustive[T <: Test](test: T): Boolean =
+      |    test match {
+      |\tcase Foo => $0
+      |\tcase Bar =>
+      |}
+      |}""".stripMargin,
+      filter = _.contains("exhaustive")
+  )
 }
