@@ -64,8 +64,9 @@
             });
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/vim.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Vim</h1></header><article><div><span><p><img src="https://i.imgur.com/4BYHCCL.gif" alt="Vim demo"></p>
 <p>Metals works with most LSP clients for Vim, but we recommend using the
-<a href="https://github.com/scalameta/coc-metals">coc-metals extension</a> for <a href="https://github.com/neoclide/coc.nvim"><code>coc.nvim</code></a>
-which will provide the most complete implementation of LSP and Metals-specific helpers.</p>
+<a href="https://github.com/scalameta/coc-metals">coc-metals extension</a> for
+<a href="https://github.com/neoclide/coc.nvim"><code>coc.nvim</code></a> which will provide the most
+complete implementation of LSP and Metals-specific helpers.</p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
 <p><strong>Java 8 or 11 provided by OpenJDK or Oracle</strong>. Eclipse OpenJ9 is not
 supported, please make sure the <code>JAVA_HOME</code> environment variable
@@ -77,8 +78,9 @@ Note that 2.11.x support is deprecated and it will be removed in future releases
 It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="installing-vim"></a><a href="#installing-vim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing Vim</h2>
 <p>The coc.nvim plugin requires either <strong>Vim &gt;= 8.1</strong> or <strong>Neovim &gt;= 0.3.1</strong>. Make
-sure you have the correct version installed. While it works with both Vim and Neovim,
-we recommend using Neovim since it provides a smoother experience with some of the features.</p>
+sure you have the correct version installed. While it works with both Vim and
+Neovim, we recommend using Neovim since it provides a smoother experience with
+some of the features.</p>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># If using Vim</span>
 vim --version | head
 VIM - Vi IMproved 8.2
@@ -91,35 +93,31 @@ NVIM v0.4.3
 <p><code>coc.nvim</code> requires <a href="https://nodejs.org/en/download/">Node.js</a> in order to work.
 It also uses <a href="https://yarnpkg.com/en/docs/install#debian-stable">Yarn</a> to manage
 extensions but you could opt-out of it and use <code>vim-plug</code> instead.</p>
-<p>For convenience we recommend installing both via your favorite package manager or manually:</p>
+<p>For convenience we recommend installing both via your favorite package manager
+or manually:</p>
 <pre><code class="hljs css language-sh">curl -sL install-node.now.sh/lts | sh
 curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="installing-cocnvim"></a><a href="#installing-cocnvim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing coc.nvim</h2>
-<p>Once the requirements are satisfied, we can now proceed to install [<code>neoclide/coc.nvim</code>]
-(<a href="https://github.com/neoclide/coc.nvim/">https://github.com/neoclide/coc.nvim/</a>), which provides Language Server Protocol
-support to Vim/Nvim  to communicate with the Metals language server.</p>
+<p>Once the requirements are satisfied, we can now proceed to install
+[<code>neoclide/coc.nvim</code>] (<a href="https://github.com/neoclide/coc.nvim/">https://github.com/neoclide/coc.nvim/</a>), which provides
+Language Server Protocol support to Vim/Nvim  to communicate with the Metals
+language server.</p>
 <p>Assuming <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a> is used (another
 plugin manager like vundle works too), update your <code>~/.vimrc</code> to include the
 following settings.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
-
-<span class="hljs-comment">" Configuration for vim-plug</span>
-Plug <span class="hljs-string">'neoclide/coc.nvim'</span>, {<span class="hljs-string">'branch'</span>: <span class="hljs-string">'release'</span>}
-
-<span class="hljs-comment">" Configuration for vim-scala</span>
-<span class="hljs-keyword">au</span> BufRead,BufNewFile *.sbt <span class="hljs-keyword">set</span> <span class="hljs-keyword">filetype</span>=scala
+<pre><code class="hljs css language-vim">Plug <span class="hljs-string">'neoclide/coc.nvim'</span>, {<span class="hljs-string">'branch'</span>: <span class="hljs-string">'release'</span>}
 </code></pre>
 <p>Run <code>:PlugInstall</code> to install the plugin. If you already have <code>coc.nvim</code>
 installed, be sure to update to the latest version with <code>:PlugUpdate</code>.</p>
-<p><code>coc.nvim</code> uses <a href="https://code.visualstudio.com/docs/languages/json">jsonc</a> as
-a configuration file format. It's basically json with comment support.</p>
+<p><code>coc.nvim</code> uses <a href="https://code.visualstudio.com/docs/languages/json">jsonc</a> as a
+configuration file format. It's basically json with comment support.</p>
 <p>In order to get comment highlighting, please add:</p>
 <pre><code class="hljs css language-vim"><span class="hljs-keyword">autocmd</span> FileType json <span class="hljs-keyword">syntax</span> <span class="hljs-keyword">match</span> Comment +\/\/.\+$+
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="recommended-cocnvim-mappings"></a><a href="#recommended-cocnvim-mappings" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Recommended coc.nvim mappings</h3>
-<p><code>coc.nvim</code> doesn't come with a default key mapping for LSP commands, so you need to
-configure it yourself.</p>
+<p><code>coc.nvim</code> doesn't come with a default key mapping for LSP commands, so you need
+to configure it yourself.</p>
 <p>Here's a recommended configuration:</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
 <span class="hljs-comment">" Configuration for coc.nvim</span>
@@ -139,6 +137,9 @@ configure it yourself.</p>
 
 <span class="hljs-comment">" Always show signcolumns</span>
 <span class="hljs-keyword">set</span> signcolumn=yes
+
+<span class="hljs-comment">" Help Vim recognize *.sbt and *.sc as Scala files</span>
+<span class="hljs-keyword">au</span> BufRead,BufNewFile *.sbt,*.sc <span class="hljs-keyword">set</span> <span class="hljs-keyword">filetype</span>=scala
 
 <span class="hljs-comment">" Use tab for trigger completion with characters ahead and navigate.</span>
 <span class="hljs-comment">" Use command ':verbose imap &lt;tab&gt;' to make sure tab is not mapped by other plugin.</span>
@@ -336,8 +337,8 @@ features.</p>
           <td>05 May 2020 09:25</td>
         </tr>
         <tr>
-          <td>0.9.0+143-0c8e2b43-SNAPSHOT</td>
-          <td>26 May 2020 08:51</td>
+          <td>0.9.0+147-ef574ac1-SNAPSHOT</td>
+          <td>29 May 2020 03:35</td>
         </tr>
       </tbody>
     </table>
@@ -646,8 +647,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.9.0+143-0c8e2b43-SNAPSHOT</td>
-          <td>26 May 2020 08:51</td>
+          <td>0.9.0+147-ef574ac1-SNAPSHOT</td>
+          <td>29 May 2020 03:35</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
