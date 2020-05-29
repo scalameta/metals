@@ -214,4 +214,13 @@ class UserConfigurationSuite extends BaseSuite {
     """Unexpected 'pants-targets' configuration. Expected a string or a list of strings. Obtained: 42"""
   )
 
+  checkOK(
+    "strip-margin false",
+    """
+      |{
+      | "enable-strip-margin-on-type-formatting": false
+      |}
+    """.stripMargin
+  ) { ok => assert(ok.enableStripMarginOnTypeFormatting == false) }
+
 }

@@ -1,5 +1,7 @@
 package tests
 
+import scala.concurrent.Future
+
 import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
@@ -353,15 +355,84 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |}""".stripMargin
   )
 
+  check(
+    "4-quotes",
+    s"""
+       |object Main {
+       |  val str = '''@@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = ''''''
+       |}""".stripMargin,
+    triggerCharacter = "\""
+  )
+  check(
+    "4-quotes-interpolation",
+    s"""
+       |object Main {
+       |  val str = s'''@@
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = s''''''
+       |}""".stripMargin,
+    triggerCharacter = "\""
+  )
+
+  check(
+    "add-stripMargin",
+    s"""
+       |object Main {
+       |  val str = '''|@@'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "add-stripMargin-with-config",
+    s"""
+       |object Main {
+       |  val str = '''|@@'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |'''
+       |}""".stripMargin,
+    stripMarginEnabled = false
+  )
+
+  check(
+    "no-stripMargin",
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |@@'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |
+       |               |'''
+       |}""".stripMargin
+  )
+
   def check(
       name: String,
       testCase: String,
       expectedCase: String,
-      autoIndent: String = "  "
+      autoIndent: String = indent,
+      triggerCharacter: String = "\n",
+      stripMarginEnabled: Boolean = true
   )(implicit loc: Location): Unit = {
-    val tripleQuote = """\u0022\u0022\u0022"""
+    val quote = """\u0022"""
     def unmangle(string: String): String =
-      string.replaceAll("'''", tripleQuote)
+      string.replaceAll("'", quote)
 
     val testCode = unmangle(testCase)
     val base = testCode.replaceAll("(@@)", "")
@@ -374,12 +445,21 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
              |/a/src/main/scala/a/Main.scala
       """.stripMargin + base
         )
+        _ <- if (!stripMarginEnabled)
+          server.didChangeConfiguration(
+            """{
+              |  "enable-strip-margin-on-type-formatting": false
+              |}
+              |""".stripMargin
+          )
+        else Future.successful(())
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",
           testCode,
           expected,
-          autoIndent
+          autoIndent,
+          triggerCharacter
         )
       } yield ()
     }
