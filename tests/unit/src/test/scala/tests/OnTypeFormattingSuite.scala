@@ -448,7 +448,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
         _ <- if (!stripMarginEnabled)
           server.didChangeConfiguration(
             """{
-              |  "enable-strip-margin-on-type-formatting": flase
+              |  "enable-strip-margin-on-type-formatting": false
               |}
               |""".stripMargin
           )
