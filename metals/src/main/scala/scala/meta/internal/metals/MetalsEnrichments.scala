@@ -421,10 +421,16 @@ object MetalsEnrichments
 
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
-    def toAbsolutePath: AbsolutePath =
-      AbsolutePath(
+    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
+    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+      val path = AbsolutePath(
         Paths.get(URI.create(value.stripPrefix("metals:")))
-      ).dealias
+      )
+      if (followSymlink)
+        path.dealias
+      else
+        path
+    }
 
     def indexToLspPosition(index: Int): l.Position = {
       var i = 0

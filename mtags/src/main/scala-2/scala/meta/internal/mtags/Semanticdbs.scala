@@ -7,6 +7,7 @@ import scala.meta.AbsolutePath
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.SymbolOccurrenceOrdering._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -17,10 +18,6 @@ trait Semanticdbs {
 }
 
 object Semanticdbs {
-  def empty: Semanticdbs = new Semanticdbs {
-    override def textDocument(path: AbsolutePath): TextDocumentLookup =
-      TextDocumentLookup.NotFound(path)
-  }
   def loadTextDocuments(path: AbsolutePath): s.TextDocuments = {
     val in = Files.newInputStream(path.toNIO)
     try s.TextDocuments.parseFrom(in)
@@ -32,12 +29,12 @@ object Semanticdbs {
       sourceroot: AbsolutePath,
       charset: Charset,
       fingerprints: Md5Fingerprints,
-      loader: RelativePath => Option[AbsolutePath]
+      loader: RelativePath => Option[FoundSemanticDbPath]
   ): TextDocumentLookup = {
     if (scalaPath.toNIO.getFileSystem != sourceroot.toNIO.getFileSystem) {
       TextDocumentLookup.NotFound(scalaPath)
     } else {
-      val scalaRelativePath = scalaPath.toRelative(sourceroot)
+      val scalaRelativePath = scalaPath.toRelative(sourceroot.dealias)
       val semanticdbRelativePath =
         SemanticdbClasspath.fromScala(scalaRelativePath)
       loader(semanticdbRelativePath) match {
@@ -46,8 +43,8 @@ object Semanticdbs {
         case Some(semanticdbPath) =>
           loadResolvedTextDocument(
             scalaPath,
-            scalaRelativePath,
-            semanticdbPath,
+            semanticdbPath.nonDefaultRelPath.getOrElse(scalaRelativePath),
+            semanticdbPath.path,
             charset,
             fingerprints
           )
@@ -114,4 +111,9 @@ object Semanticdbs {
       .append(symbol.replace('/', '.'))
       .append("*/")
   }
+
+  case class FoundSemanticDbPath(
+      path: AbsolutePath,
+      nonDefaultRelPath: Option[RelativePath]
+  )
 }

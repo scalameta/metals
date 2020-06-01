@@ -51,6 +51,8 @@ final class BuildTargets() {
     ConcurrentHashSet.empty[AbsolutePath]
   private val buildTargetInference =
     new ConcurrentLinkedQueue[AbsolutePath => Seq[BuildTargetIdentifier]]()
+  // if workspace contains symlinks, original source items are kept here and source items dealiased
+  private val originalSourceItems = ConcurrentHashSet.empty[AbsolutePath]
 
   val buildTargetsOrder: BuildTargetIdentifier => Int = {
     (t: BuildTargetIdentifier) =>
@@ -129,8 +131,12 @@ final class BuildTargets() {
       sourceItem: AbsolutePath,
       buildTarget: BuildTargetIdentifier
   ): Unit = {
+    val dealiased = sourceItem.dealias
+    if (dealiased != sourceItem)
+      originalSourceItems.add(sourceItem)
+
     val queue = sourceItemsToBuildTarget.getOrElseUpdate(
-      sourceItem,
+      dealiased,
       new ConcurrentLinkedQueue()
     )
     queue.add(buildTarget)
@@ -355,6 +361,11 @@ final class BuildTargets() {
 
   def inverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
     sourceItems.find(item => source.toNIO.startsWith(item.toNIO))
+
+  def originalInverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
+    originalSourceItems.asScala.find(item =>
+      source.toNIO.startsWith(item.dealias.toNIO)
+    )
 
   def isInverseDependency(
       query: BuildTargetIdentifier,
