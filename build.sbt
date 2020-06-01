@@ -165,7 +165,7 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val scala212 = "2.12.11"
   val scala213 = "2.13.2"
-  val scalameta = "4.3.10"
+  val scalameta = "4.3.13"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-235-3231567a"
@@ -175,7 +175,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.1.5"
-  val scalafmt = "2.5.2"
+  val scalafmt = "2.5.3"
   val munit = "0.7.7"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -206,7 +206,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
-  val coursier = "2.0.0-RC6-16"
+  val coursier = "2.0.0-RC6-19"
   val coursierInterfaces = "0.0.22"
   val ammonite = "2.1.4"
 }
@@ -378,10 +378,10 @@ lazy val metals = project
       // for file watching
       "io.methvin" % "directory-watcher" % "0.9.10",
       // for http client
-      "io.undertow" % "undertow-core" % "2.1.1.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
+      "io.undertow" % "undertow-core" % "2.1.0.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.1.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.4.2",
+      "org.flywaydb" % "flyway-core" % "6.4.3",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.0",
@@ -418,7 +418,7 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.5.2",
+      "com.lihaoyi" %% "requests" % "0.6.2",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
