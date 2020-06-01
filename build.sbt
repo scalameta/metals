@@ -304,7 +304,7 @@ val mtagsSettings = List(
     ),
     if3 = List(
       "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.10.4",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.0",
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
