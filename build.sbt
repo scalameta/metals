@@ -418,7 +418,7 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.5.2",
+      "com.lihaoyi" %% "requests" % "0.6.2",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
