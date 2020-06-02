@@ -384,7 +384,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "6.4.3",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
-      "com.zaxxer" % "nuprocess" % "2.0.0",
+      "com.zaxxer" % "nuprocess" % "2.0.1",
       "net.java.dev.jna" % "jna" % "4.5.2",
       "net.java.dev.jna" % "jna-platform" % "4.5.2",
       // for BSP
