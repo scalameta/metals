@@ -502,8 +502,7 @@ case class ScalaPresentationCompiler(
   override def isLoaded() = compilerAccess.isLoaded()
 
   override def enclosingClass(
-      pos: Position,
-      params: VirtualFileParams
+      params: OffsetParams
   ): CompletableFuture[ju.Optional[String]] = {
     compilerAccess.withInterruptableCompiler(
       Optional.empty,
@@ -511,7 +510,9 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       driver.run(params.uri, params.text)
-      Optional.of(ClassFinder.findClassForPos(pos)(driver.currentCtx))
+      Optional.of(
+        ClassFinder.findClassForOffset(params.offset)(driver.currentCtx)
+      )
     }
   }
 }

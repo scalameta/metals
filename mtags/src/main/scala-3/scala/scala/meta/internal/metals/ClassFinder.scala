@@ -14,12 +14,11 @@ import dotty.tools.dotc.core.Flags
 
 object ClassFinder {
 
-  class SymbolTraverser(pos: Position) extends UntypedTreeTraverser {
+  class SymbolTraverser(offset: Int) extends UntypedTreeTraverser {
     var symbol = ""
     var isInnerClass: Boolean = false
     override def traverse(tree: Tree)(implicit ctx: Context): Unit = {
-
-      if (tree.sourcePos.toLSP.encloses(pos)) {
+      if (tree.sourcePos.exists && tree.sourcePos.start <= offset && offset <= tree.sourcePos.end) {
         val delimeter =
           if (symbol.endsWith("$")) ""
           else if (isInnerClass) "$"
@@ -58,10 +57,10 @@ object ClassFinder {
     }
   }
 
-  def findClassForPos(
-      pos: Position
+  def findClassForOffset(
+      offset: Int
   )(implicit ctx: Context): String = {
     val tree = ctx.run.units.head.untpdTree
-    new SymbolTraverser(pos).find(tree)
+    new SymbolTraverser(offset).find(tree)
   }
 }

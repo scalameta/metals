@@ -86,6 +86,11 @@ class DebugProvider(
             connectedToServer.trySuccess(())
             socket
           }
+          .recover {
+            case exception =>
+              connectedToServer.tryFailure(exception)
+              throw exception
+          }
       }
 
       val proxyFactory = { () =>

@@ -3,15 +3,13 @@ package scala.meta.internal.metals
 import scala.meta.Defn
 import scala.meta.Pkg
 import scala.meta.Tree
-import scala.meta.internal.mtags.MtagsEnrichments._
-
-import org.eclipse.lsp4j.Position
+import scala.meta.pc.OffsetParams
 
 object ClassFinder {
 
-  def findClassForPos(
+  def findClassForOffset(
       tree: Tree,
-      pos: Position,
+      pos: OffsetParams,
       symbol: String = "",
       isInnerClass: Boolean = false
   ): String = {
@@ -47,9 +45,11 @@ object ClassFinder {
         (symbol, isInnerClass)
     }
 
-    tree.children.find { child => child.pos.toLSP.encloses(pos) } match {
+    tree.children.find { child =>
+      child.pos.start < pos.offset && pos.offset < child.pos.end
+    } match {
       case None => fullName
-      case Some(value) => findClassForPos(value, pos, fullName, isInner)
+      case Some(value) => findClassForOffset(value, pos, fullName, isInner)
     }
 
   }

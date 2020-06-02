@@ -13,7 +13,6 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.FoldingRange;
-import org.eclipse.lsp4j.Position;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -205,5 +204,5 @@ public abstract class PresentationCompiler {
     /**
      * Returns enclosing class or object for a cursor position
      */
-    public abstract CompletableFuture<Optional<String>> enclosingClass(Position pos, VirtualFileParams params);
+    public abstract CompletableFuture<Optional<String>> enclosingClass(OffsetParams params);
 }

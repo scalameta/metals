@@ -313,14 +313,15 @@ class Compilers(
 
   def enclosingClass(
       pos: LspPosition,
-      path: AbsolutePath
+      path: AbsolutePath,
+      token: CancelToken = EmptyCancelToken
   ): Future[Option[String]] = {
     val input = path.toInputFromBuffers(buffers)
-    val params = CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
-
+    val offset = pos.toMeta(input).start
+    val params = CompilerOffsetParams(path.toURI, input.text, offset, token)
     loadCompiler(path, None) match {
       case Some(pc) =>
-        pc.enclosingClass(pos, params).asScala.map(_.asScala)
+        pc.enclosingClass(params).asScala.map(_.asScala)
       case None => Future.successful(None)
     }
   }

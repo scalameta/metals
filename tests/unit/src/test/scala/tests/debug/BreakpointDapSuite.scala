@@ -14,8 +14,6 @@ import tests.BaseDapSuite
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
 class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
-  // disabled, because finding enclosing class for the breakpoint line is not working
-  // see [[scala.meta.internal.metals.debug.SetBreakpointsRequestHandler]]
   assertBreakpoints("preceding-class")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a

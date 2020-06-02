@@ -5,10 +5,10 @@ import java.nio.file.Paths
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 
-import scala.meta.internal.metals.CompilerVirtualFileParams
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.EmptyCancelToken
 
 import munit.TestOptions
-import org.eclipse.lsp4j.Position
 import tests.BasePCSuite
 
 class ClassBreakpointSuite extends BasePCSuite {
@@ -121,16 +121,14 @@ class ClassBreakpointSuite extends BasePCSuite {
     test(name) {
       implicit val ec: ExecutionContext = ExecutionContext.global
       val filename: String = "Main.scala"
-      val line =
-        original.split('\n').indexWhere(_.contains(">>"))
-
-      val code = original.replace(">>", "")
-      val vFile = new CompilerVirtualFileParams(
-        Paths.get(filename).toUri(),
-        original.replace(">>", "")
+      val uri = Paths.get(filename).toUri()
+      val offsetParams = CompilerOffsetParams.apply(
+        uri,
+        original.replace(">>", ""),
+        original.indexOf(">>"),
+        EmptyCancelToken
       )
-      val pos = new Position(line, 0)
-      presentationCompiler.enclosingClass(pos, vFile).toScala.map { result =>
+      presentationCompiler.enclosingClass(offsetParams).toScala.map { result =>
         assert(result.isPresent())
         assertNoDiff(result.get(), expected)
       }

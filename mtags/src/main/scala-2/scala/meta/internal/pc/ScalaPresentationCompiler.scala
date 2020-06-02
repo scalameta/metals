@@ -42,7 +42,6 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 
@@ -303,13 +302,12 @@ case class ScalaPresentationCompiler(
   }
 
   override def enclosingClass(
-      pos: Position,
-      params: VirtualFileParams
+      params: OffsetParams
   ): CompletableFuture[Optional[String]] = {
     CompletableFuture.completedFuture(
       trees
         .get(params.uri(), params.text())
-        .map(tree => ClassFinder.findClassForPos(tree, pos))
+        .map(tree => ClassFinder.findClassForOffset(tree, params))
         .map(Optional.of(_))
         .getOrElse(Optional.empty())
     )
