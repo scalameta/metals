@@ -81,6 +81,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
 
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = count => ()
+  var refreshBuildHandler: () => Unit = () => ()
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
@@ -88,7 +89,13 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     clientCommands.addLast(params)
     params.getCommand match {
       case ClientCommands.RefreshModel.id =>
-        refreshModelHandler(refreshCount.getAndIncrement())
+        val buildChanged =
+          params.getArguments().asScala.head.asInstanceOf[Boolean]
+        val count = refreshCount.getAndIncrement()
+        refreshModelHandler(count)
+        if (buildChanged) {
+          refreshBuildHandler()
+        }
       case _ =>
     }
   }
