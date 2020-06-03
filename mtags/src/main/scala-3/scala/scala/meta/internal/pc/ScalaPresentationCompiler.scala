@@ -57,6 +57,7 @@ import dotty.tools.io.VirtualFile
 import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.ast.tpd
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.ClassFinder
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.pc.VirtualFileParams
@@ -500,4 +501,18 @@ case class ScalaPresentationCompiler(
 
   override def isLoaded() = compilerAccess.isLoaded()
 
+  override def enclosingClass(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[String]] = {
+    compilerAccess.withInterruptableCompiler(
+      Optional.empty,
+      params.token
+    ) { access =>
+      val driver = access.compiler()
+      driver.run(params.uri, params.text)
+      Optional.of(
+        ClassFinder.findClassForOffset(params.offset)(driver.currentCtx)
+      )
+    }
+  }
 }

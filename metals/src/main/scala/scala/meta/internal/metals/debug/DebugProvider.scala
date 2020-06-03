@@ -22,6 +22,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.DefinitionProvider
@@ -51,7 +52,8 @@ class DebugProvider(
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    compilers: Compilers
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -84,6 +86,11 @@ class DebugProvider(
             connectedToServer.trySuccess(())
             socket
           }
+          .recover {
+            case exception =>
+              connectedToServer.tryFailure(exception)
+              throw exception
+          }
       }
 
       val proxyFactory = { () =>
@@ -96,7 +103,13 @@ class DebugProvider(
           targets.toList
         )
         DebugProxy
-          .open(sessionName, sourcePathProvider, awaitClient, connectToServer)
+          .open(
+            sessionName,
+            sourcePathProvider,
+            awaitClient,
+            connectToServer,
+            compilers
+          )
       }
       val server = new DebugServer(sessionName, uri, proxyFactory)
 

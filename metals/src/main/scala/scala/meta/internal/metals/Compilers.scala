@@ -311,6 +311,21 @@ class Compilers(
       pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new SignatureHelp()))
 
+  def enclosingClass(
+      pos: LspPosition,
+      path: AbsolutePath,
+      token: CancelToken = EmptyCancelToken
+  ): Future[Option[String]] = {
+    val input = path.toInputFromBuffers(buffers)
+    val offset = pos.toMeta(input).start
+    val params = CompilerOffsetParams(path.toURI, input.text, offset, token)
+    loadCompiler(path, None) match {
+      case Some(pc) =>
+        pc.enclosingClass(params).asScala.map(_.asScala)
+      case None => Future.successful(None)
+    }
+  }
+
   def loadCompiler(
       path: AbsolutePath,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]

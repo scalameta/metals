@@ -19,6 +19,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.ClassFinder
 import scala.meta.internal.metals.DocumentSymbolProvider
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.FoldingRangeProvider
@@ -302,5 +303,17 @@ case class ScalaPresentationCompiler(
       .filterNot(_.contains("_CURSOR_"))
       .toList
       .asJava
+  }
+
+  override def enclosingClass(
+      params: OffsetParams
+  ): CompletableFuture[Optional[String]] = {
+    CompletableFuture.completedFuture(
+      trees
+        .get(params.uri(), params.text())
+        .map(tree => ClassFinder.findClassForOffset(tree, params))
+        .map(Optional.of(_))
+        .getOrElse(Optional.empty())
+    )
   }
 }

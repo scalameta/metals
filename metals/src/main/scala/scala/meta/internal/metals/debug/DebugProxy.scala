@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
@@ -24,7 +25,8 @@ private[debug] final class DebugProxy(
     sessionName: String,
     sourcePathProvider: SourcePathProvider,
     client: RemoteEndpoint,
-    server: ServerAdapter
+    server: ServerAdapter,
+    compilers: Compilers
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -34,7 +36,7 @@ private[debug] final class DebugProxy(
   private val adapters = new MetalsDebugAdapters
 
   private val handleSetBreakpointsRequest =
-    new SetBreakpointsRequestHandler(server, adapters)
+    new SetBreakpointsRequestHandler(server, adapters, compilers)
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -136,7 +138,8 @@ private[debug] object DebugProxy {
       name: String,
       sourcePathProvider: SourcePathProvider,
       awaitClient: () => Future[Socket],
-      connectToServer: () => Future[Socket]
+      connectToServer: () => Future[Socket],
+      compilers: Compilers
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -148,7 +151,7 @@ private[debug] object DebugProxy {
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, DebugProtocol.clientName))
         .map(new MessageIdAdapter(_))
-    } yield new DebugProxy(name, sourcePathProvider, client, server)
+    } yield new DebugProxy(name, sourcePathProvider, client, server, compilers)
   }
 
   private def withLogger(

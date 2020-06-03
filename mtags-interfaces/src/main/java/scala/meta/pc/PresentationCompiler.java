@@ -201,4 +201,8 @@ public abstract class PresentationCompiler {
      */
     public abstract boolean isLoaded();
 
+    /**
+     * Returns enclosing class or object for a cursor position
+     */
+    public abstract CompletableFuture<Optional<String>> enclosingClass(OffsetParams params);
 }

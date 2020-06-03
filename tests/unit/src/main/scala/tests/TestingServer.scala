@@ -449,6 +449,7 @@ final class TestingServer(
 
     executeCommand(ServerCommands.StartDebugAdapter.id, params).collect {
       case DebugSession(_, uri) =>
+        scribe.info(s"Starting debug session for $uri")
         TestDebugger(URI.create(uri), stoppageHandler)
     }
   }

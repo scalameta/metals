@@ -11,6 +11,7 @@ import scala.meta.internal.metals.debug.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -50,6 +51,44 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "FooBar")
+  }
+
+  test("broken-workspace") {
+
+    def startDebugging() = server.startDebugging(
+      "a",
+      DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+      new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava)
+    )
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    println("Hello world")
+           |    System.exit(0)
+           |  }
+           |
+           |""".stripMargin
+      )
+      failed = startDebugging()
+      debugger <- failed.recoverWith {
+        case e: ResponseErrorException =>
+          server
+            .didSave("a/src/main/scala/a/Main.scala") { text => text + "}" }
+            .flatMap(_ => startDebugging())
+      }
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "Hello world")
   }
 
   test("disconnect") {
