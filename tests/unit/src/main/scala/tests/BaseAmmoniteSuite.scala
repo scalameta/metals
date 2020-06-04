@@ -136,26 +136,24 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
                            |```""".stripMargin
       hoverRes <- assertHoverAtPos("main.sc", 10, 5)
       _ = assertNoDiff(hoverRes, expectedHoverRes)
-
       refreshedPromise = {
         val promise = Promise[Unit]()
-        server.client.refreshModelHandler = { refreshCount =>
-          if (refreshCount > 0 && !promise.isCompleted)
+        server.client.refreshBuildHandler = { () =>
+          if (!promise.isCompleted)
             promise.success(())
         }
         promise
       }
-
+      _ <- server.didSave("main.sc")(identity)
       _ <- server.didSave("main.sc") { _ =>
         s""" // scala $scalaVersion
            |import $$ivy.`com.github.alexarchambault::case-app:2.0.0-M16`
            |import caseapp.CaseApp
            |""".stripMargin
       }
-
       // wait for Ammonite build targets to be reloaded
       _ <- refreshedPromise.future
-
+      _ <- server.didSave("main.sc")(identity)
       // Hover on class defined in dependency loaded after the re-index.
       // Fails if interactive compilers were not properly discarded prior
       // to re-indexing.

@@ -1814,7 +1814,14 @@ class MetalsLanguageServer(
       "started file watcher",
       clientConfig.initialConfig.statistics.isIndex
     ) {
-      fileWatcher.restart()
+      try {
+        fileWatcher.restart()
+      } catch {
+        // note(@tgodzik) This is needed in case of ammonite
+        // where it can rarely deletes directories while we are trying to watch them
+        case NonFatal(e) =>
+          scribe.warn("File watching failed, indexes will not be updated.", e)
+      }
     }
     timedThunk(
       "indexed library classpath",
@@ -1850,7 +1857,7 @@ class MetalsLanguageServer(
     val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
-      .foreach(_ => languageClient.refreshModel())
+      .foreach(_ => languageClient.refreshModel(buildChanged = true))
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
