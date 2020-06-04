@@ -208,7 +208,7 @@ object MultilineStringFormattingProvider {
             endPosition,
             text,
             newlineAdded
-          )) indent(startToken, endToken, index)
+          )) indent(startToken, endToken, endIndex)
         else None
       case _ => None
     }
