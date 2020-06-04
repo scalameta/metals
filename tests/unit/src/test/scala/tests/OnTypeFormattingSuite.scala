@@ -12,6 +12,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   // Ensures that entering a newline at the beginning of a file doesn't
   // throw an exception
   // https://github.com/scalameta/metals/issues/1469
+
   check(
     "top-of-file",
     s"""|@@
@@ -390,6 +391,19 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = '''|
        |               |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "dont-add-stripMargin",
+    s"""
+       |object Main {
+       |  val str = s'''|@@'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = s'''|
+       |                |'''.stripMargin
        |}""".stripMargin
   )
 
