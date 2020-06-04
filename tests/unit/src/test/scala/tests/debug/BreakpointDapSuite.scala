@@ -1,13 +1,8 @@
 package tests.debug
 
-import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
-import scala.meta.internal.metals.debug.DebugWorkspaceLayout
-import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
 
-import munit.Location
-import munit.TestOptions
 import tests.BaseDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
@@ -655,42 +650,4 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
       output <- debugger.allOutput
     } yield assertNoDiff(output, "1\n2\n3\n")
   }
-
-  def assertBreakpoints(name: TestOptions)(
-      source: String
-  )(implicit loc: Location): Unit = {
-    test(name) {
-      cleanWorkspace()
-      val workspaceLayout = DebugWorkspaceLayout(source)
-      val layout =
-        s"""|/metals.json
-            |{ 
-            |  "a": {},  "b": {} 
-            |}
-            |$workspaceLayout
-            |""".stripMargin
-
-      val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
-        file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
-      }
-
-      val navigator = expectedBreakpoints.foldLeft(StepNavigator(workspace)) {
-        (navigator, breakpoint) =>
-          navigator.at(breakpoint.relativePath, breakpoint.line + 1)(Continue)
-      }
-
-      for {
-        _ <- server.initialize(layout)
-        _ = assertNoDiagnostics()
-        debugger <- debugMain("a", "a.Main", navigator)
-        _ <- debugger.initialize
-        _ <- debugger.launch
-        _ <- setBreakpoints(debugger, workspaceLayout)
-        _ <- debugger.configurationDone
-        _ <- debugger.shutdown
-      } yield ()
-    }
-  }
-
-  private final case class Breakpoint(relativePath: String, line: Int)
 }

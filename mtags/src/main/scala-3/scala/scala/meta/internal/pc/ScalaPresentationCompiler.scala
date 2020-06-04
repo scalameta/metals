@@ -510,8 +510,12 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       driver.run(params.uri, params.text)
+      val filename =
+        Paths.get(params.uri()).getFileName.toString.stripSuffix(".scala")
       Optional.of(
-        ClassFinder.findClassForOffset(params.offset)(driver.currentCtx)
+        ClassFinder.findClassForOffset(params.offset, filename)(
+          driver.currentCtx
+        )
       )
     }
   }

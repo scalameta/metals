@@ -10,6 +10,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 
 import munit.TestOptions
 import tests.BasePCSuite
+import tests.BuildInfoVersions
 
 class ClassBreakpointSuite extends BasePCSuite {
 
@@ -111,6 +112,16 @@ class ClassBreakpointSuite extends BasePCSuite {
        |}
        |""".stripMargin,
     "a.b.c.package$"
+  )
+
+  check(
+    "method-dotty".tag(RunForScalaVersion(BuildInfoVersions.scala3Versions)),
+    """|package a.b
+       |def method() = {
+       |>>  println(0)
+       |}
+       |""".stripMargin,
+    "a.b.Main$package"
   )
 
   def check(

@@ -147,6 +147,17 @@ abstract class BasePCSuite extends BaseSuite {
         if (isIgnoredScalaVersion(scalaVersion))
           test.withTags(test.tags + munit.Ignore)
         else test
+      }),
+      new TestTransform("Run for Scala version", { test =>
+        test.tags
+          .collectFirst {
+            case RunForScalaVersion(versions) =>
+              if (versions(scalaVersion))
+                test
+              else test.withTags(test.tags + munit.Ignore)
+          }
+          .getOrElse(test)
+
       })
     )
 
@@ -190,6 +201,18 @@ abstract class BasePCSuite extends BaseSuite {
 
     def apply(version: String): IgnoreScalaVersion = {
       IgnoreScalaVersion(Set(version))
+    }
+  }
+
+  case class RunForScalaVersion(versions: Set[String])
+      extends Tag("RunScalaVersion")
+
+  object RunForScalaVersion {
+    def apply(versions: Seq[String]): RunForScalaVersion =
+      RunForScalaVersion(versions.toSet)
+
+    def apply(version: String): RunForScalaVersion = {
+      RunForScalaVersion(Set(version))
     }
   }
 }
