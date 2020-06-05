@@ -248,6 +248,36 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """
       |package example
       |
+      |sealed trait Test
+      |case object Foo extends Test
+      |case object Bar extends Test
+      |
+      |object Main {
+      |  def testExhaustive[T <: Test](test: T): Boolean =
+      |    test m@@
+      |}""".stripMargin,
+    """
+      |package example
+      |
+      |sealed trait Test
+      |case object Foo extends Test
+      |case object Bar extends Test
+      |
+      |object Main {
+      |  def testExhaustive[T <: Test](test: T): Boolean =
+      |    test match {
+      |\tcase Foo => $0
+      |\tcase Bar =>
+      |}
+      |}""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
+
+  checkEdit(
+    "exhaustive-upper-type-bounds with refinement",
+    """
+      |package example
+      |
       |sealed trait TestA
       |case object Foo extends TestA
       |case object Bar extends TestA
