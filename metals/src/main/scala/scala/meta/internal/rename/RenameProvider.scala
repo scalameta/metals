@@ -423,13 +423,6 @@ final class RenameProvider(
     new MessageParams(MessageType.Error, message)
   }
 
-  private def isCompiling: MessageParams = {
-    val message =
-      s"""|Cannot rename while the code is compiling
-          |since it could produce incorrect results.""".stripMargin
-    new MessageParams(MessageType.Error, message)
-  }
-
   private def forbiddenColonRename(
       old: String,
       name: Option[String]
