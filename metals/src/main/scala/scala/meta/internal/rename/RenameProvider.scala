@@ -52,15 +52,22 @@ final class RenameProvider(
 
   private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
 
+  private def compilationFinished(
+      source: AbsolutePath
+  ): Future[Unit] = {
+    if (compilations.currentlyCompiling.isEmpty) {
+      Future(())
+    } else {
+      compilations.cascadeCompileFiles(Seq(source)).map { _ => () }
+    }
+  }
+
   def prepareRename(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[Option[LSPRange]] = {
-    if (!compilations.currentlyCompiling.isEmpty) {
-      client.showMessage(isCompiling)
-      Future.successful(None)
-    } else {
-      val source = params.getTextDocument.getUri.toAbsolutePath
+    val source = params.getTextDocument.getUri.toAbsolutePath
+    compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
         val symbolOccurrence =
           definitionProvider.symbolOccurrence(source, params.getPosition)
@@ -80,11 +87,8 @@ final class RenameProvider(
       params: RenameParams,
       token: CancelToken
   ): Future[WorkspaceEdit] = {
-    if (!compilations.currentlyCompiling.isEmpty) {
-      client.showMessage(isCompiling)
-      Future.successful(new WorkspaceEdit())
-    } else {
-      val source = params.getTextDocument.getUri.toAbsolutePath
+    val source = params.getTextDocument.getUri.toAbsolutePath
+    compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
         val textParams = new TextDocumentPositionParams(
           params.getTextDocument(),
@@ -419,13 +423,6 @@ final class RenameProvider(
     val message =
       s"""|Cannot rename from $old to $renamed since it will change the semantics
           |and might break your code""".stripMargin
-    new MessageParams(MessageType.Error, message)
-  }
-
-  private def isCompiling: MessageParams = {
-    val message =
-      s"""|Cannot rename while the code is compiling
-          |since it could produce incorrect results.""".stripMargin
     new MessageParams(MessageType.Error, message)
   }
 
