@@ -49,15 +49,22 @@ final class RenameProvider(
 
   private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
 
+  private def compilationFinished(
+      source: AbsolutePath
+  ): Future[Unit] = {
+    if (compilations.currentlyCompiling.isEmpty) {
+      Future(())
+    } else {
+      compilations.cascadeCompileFiles(Seq(source)).map { _ => () }
+    }
+  }
+
   def prepareRename(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[Option[LSPRange]] = {
-    if (!compilations.currentlyCompiling.isEmpty) {
-      client.showMessage(isCompiling)
-      Future.successful(None)
-    } else {
-      val source = params.getTextDocument.getUri.toAbsolutePath
+    val source = params.getTextDocument.getUri.toAbsolutePath
+    compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
         val symbolOccurrence =
           definitionProvider.symbolOccurrence(source, params.getPosition)
@@ -77,15 +84,6 @@ final class RenameProvider(
       params: RenameParams,
       token: CancelToken
   ): Future[WorkspaceEdit] = {
-    def compilationFinished(
-        source: AbsolutePath
-    ): Future[Unit] = {
-      if (compilations.currentlyCompiling.isEmpty) {
-        Future(())
-      } else {
-        compilations.cascadeCompileFiles(Seq(source)).map { _ => () }
-      }
-    }
     val source = params.getTextDocument.getUri.toAbsolutePath
     compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
