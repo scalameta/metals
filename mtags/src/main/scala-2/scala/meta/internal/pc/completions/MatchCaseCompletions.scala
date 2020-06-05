@@ -149,15 +149,24 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       pos: Position,
       text: String
   ) extends CompletionPosition {
+    private def getSubclassesResult(tpe: Type): List[Symbol] = {
+      val subclasses = ListBuffer.empty[Symbol]
+      if (tpe.typeSymbol.isRefinementClass) {
+        val RefinedType(parents, _) = tpe
+        parents.foreach(t =>
+          t.typeSymbol.foreachKnownDirectSubClass { sym => subclasses += sym }
+        )
+      } else {
+        tpe.typeSymbol.foreachKnownDirectSubClass { sym => subclasses += sym }
+      }
+      subclasses.result()
+    }
     override def contribute: List[Member] = {
       val tpe = prefix.widen.bounds.hi
       val members = ListBuffer.empty[TextEditMember]
       val importPos = autoImportPosition(pos, text)
       val context = doLocateImportContext(pos, importPos)
-      val subclasses = ListBuffer.empty[Symbol]
-
-      tpe.typeSymbol.foreachKnownDirectSubClass { sym => subclasses += sym }
-      val subclassesResult = subclasses.result()
+      val subclassesResult = getSubclassesResult(tpe)
 
       // sort subclasses by declaration order
       // see: https://github.com/scalameta/metals-feature-requests/issues/49
