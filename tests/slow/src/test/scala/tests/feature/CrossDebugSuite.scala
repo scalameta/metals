@@ -28,28 +28,27 @@ class CrossDebugSuite extends BaseDapSuite("cross-debug") {
     "unapply",
     main = Some("a.helloWorld")
   )(
-    source =
-      """|/a/src/main/scala/a/Main.scala
-         |package a
-         |
-         |@main 
-         |def helloWorld(): Unit = {
-         |  object Even {
-         |>>  def unapply(s: String): Boolean = s.size % 2 == 0
-         |  }
-         |
-         |  "even" match {
-         |    case s @ Even() => println(s"$s has an even number of characters")
-         |    case s          => println(s"$s has an odd number of characters")
-         |  }
-         |  System.exit(0)
-         |}
-         |
-         |""".stripMargin
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |
+                |@main 
+                |def helloWorld(): Unit = {
+                |  object Even {
+                |>>  def unapply(s: String): Boolean = s.size % 2 == 0
+                |  }
+                |
+                |  "even" match {
+                |    case Even() => 
+                |    case _      => 
+                |  }
+                |  System.exit(0)
+                |}
+                |
+                |""".stripMargin
   )
 
   assertBreakpoints(
-    "outer-object",
+    "object-in-toplevel-method",
     main = Some("a.helloWorld")
   )(
     source = """|/a/src/main/scala/a/Main.scala

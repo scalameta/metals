@@ -20,7 +20,7 @@ object ClassFinder {
       extends UntypedTreeTraverser {
     var symbol = ""
     var isInnerClass: Boolean = false
-    var isOuter: Boolean = true
+    var isToplevel: Boolean = true
     override def traverse(tree: Tree)(implicit ctx: Context): Unit = {
       if (tree.sourcePos.exists && tree.sourcePos.start <= offset && offset <= tree.sourcePos.end) {
         val delimeter =
@@ -43,27 +43,27 @@ object ClassFinder {
             val name = obj.name.show
             symbol = symbol + prefix + name + ".package" + "$"
             isInnerClass = true
-            isOuter = false
+            isToplevel = false
             super.traverseChildren(tree)
 
           case obj: ModuleDef =>
             val name = obj.name.show
             symbol = symbol + delimeter + name + "$"
             isInnerClass = true
-            isOuter = false
+            isToplevel = false
             super.traverseChildren(tree)
 
           case cls: TypeDef =>
             val name = cls.name.show
             symbol = symbol + delimeter + name
             isInnerClass = true
-            isOuter = false
+            isToplevel = false
             super.traverseChildren(tree)
 
-          case method: DefDef if isOuter =>
+          case method: DefDef if isToplevel =>
             symbol = symbol + delimeter + fileName + "$package"
             isInnerClass = true
-            isOuter = false
+            isToplevel = false
 
           case _: Template =>
             super.traverseChildren(tree)
