@@ -56,6 +56,7 @@ class BuildTargetClassesFinder(
           .sortBy {
             case (_, target) => buildTargets.buildTargetsOrder(target.getId())
           }
+          .reverse
       if (classes.nonEmpty) Success(classes)
       else
         Failure(new ClassNotFoundException(className))
