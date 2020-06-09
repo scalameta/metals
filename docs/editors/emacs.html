@@ -126,6 +126,9 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
          (<span class="hljs-name">lsp-mode</span> . lsp-lens-mode)
   <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
 
+<span class="hljs-comment">;; Add metals backend for lsp-mode</span>
+(<span class="hljs-name">use-package</span> lsp-metals)
+
 <span class="hljs-comment">;; Enable nice rendering of documentation on hover</span>
 (<span class="hljs-name">use-package</span> lsp-ui)
 
@@ -175,8 +178,8 @@ not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.9.0+196-7096d53b-SNAPSHOT</td>
-          <td>08 Jun 2020 13:35</td>
+          <td>0.9.0+197-82559c44-SNAPSHOT</td>
+          <td>09 Jun 2020 08:47</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
