@@ -67,6 +67,9 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
          (lsp-mode . lsp-lens-mode)
   :config (setq lsp-prefer-flymake nil))
 
+;; Add metals backend for lsp-mode
+(use-package lsp-metals)
+
 ;; Enable nice rendering of documentation on hover
 (use-package lsp-ui)
 
