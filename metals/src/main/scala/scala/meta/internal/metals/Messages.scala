@@ -521,7 +521,7 @@ object Messages {
     def enterName: String =
       "Enter a name or a relative path for the new project"
     def enterG8Template: String =
-      "Enter the gitter template, for example `scala/hello-world.g8`," +
+      "Enter the giter template, for example `scala/hello-world.g8`," +
         " which corresponds to a github path `github.com/scala/hello-world.g8`"
     def creationFailed(what: String, where: String) = new MessageParams(
       MessageType.Error,

@@ -1,9 +1,11 @@
 package scala.meta.internal.builds
 
-import scala.collection.mutable
+import java.io.File
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
+import scala.util.matching.Regex
 
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -18,6 +20,7 @@ import scala.meta.internal.metals.MetalsQuickPickItem
 import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
+import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 import coursierapi._
@@ -37,21 +40,19 @@ class NewProjectProvider(
   private val templatesUrl =
     "https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
   private val giterDependency = Dependency
-    .of("org.foundweekends.giter8", "giter8_2.12", "0.12.0")
+    .of("org.foundweekends.giter8", "giter8_2.12", "0.13.0-M1")
   // equal to cmd's: g8 playframework/play-scala-seed.g8 --name=../<<name>>
   private val giterMain = "giter8.Giter8"
 
-  private val allTemplates = mutable.MutableList.empty[MetalsQuickPickItem]
-
+  private var allTemplates = Seq.empty[MetalsQuickPickItem]
   def allTemplatesFromWeb: Seq[MetalsQuickPickItem] = synchronized {
     if (allTemplates.nonEmpty) {
-      allTemplates.toSeq
+      allTemplates
     } else {
       statusBar.trackBlockingTask("Fetching template information from Github") {
         // Matches:
         // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
         //(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
-        val pattern = """\[(.+)\]\s*\(.+\)\s*\((.+)\)""".r
         val all = for {
           result <- Try(requests.get(templatesUrl)).toOption.toIterable
           _ = if (result.statusCode != 200)
@@ -60,16 +61,20 @@ class NewProjectProvider(
             )
           if result.statusCode == 200
         } yield {
-          pattern.findAllIn(result.text).matchData.toList.collect {
-            case matching if matching.groupCount == 2 =>
-              MetalsQuickPickItem(
-                id = matching.group(1),
-                label = s"${icons.github} " + matching.group(1),
-                description = matching.group(2)
-              )
-          }
+          NewProjectProvider.templatePattern
+            .findAllIn(result.text)
+            .matchData
+            .toList
+            .collect {
+              case matching if matching.groupCount == 2 =>
+                MetalsQuickPickItem(
+                  id = matching.group(1),
+                  label = s"${icons.github} " + matching.group(1),
+                  description = matching.group(2)
+                )
+            }
         }
-        allTemplates ++= all.flatten
+        allTemplates = all.flatten.toSeq
       }
     }
     NewProjectProvider.back +: allTemplates.toSeq
@@ -82,7 +87,7 @@ class NewProjectProvider(
     )
     withTemplate
       .flatMapOption { template =>
-        askForPath(base).mapOptionInside { path => (template, path) }
+        askForPath(Some(base)).mapOptionInside { path => (template, path) }
       }
       .flatMapOption {
         case (template, path) =>
@@ -121,7 +126,7 @@ class NewProjectProvider(
         command
       )
       .flatMap {
-        case result if result == 0 =>
+        case ExitCodes.Success =>
           askForWindow(projectPath)
         case _ =>
           Future.successful {
@@ -140,7 +145,7 @@ class NewProjectProvider(
         new java.lang.Boolean(newWindow)
       )
       val command = new ExecuteCommandParams(
-        ClientCommands.OpenWindow.id,
+        ClientCommands.OpenFolder.id,
         List[Object](
           params.toJsonObject
         ).asJava
@@ -227,26 +232,36 @@ class NewProjectProvider(
   }
 
   private def askForPath(
-      from: AbsolutePath
+      from: Option[AbsolutePath]
   ): Future[Option[AbsolutePath]] = {
-    val paths = from.list.toList
-      .collect {
-        case path if path.isDirectory =>
-          MetalsQuickPickItem(
-            id = path.filename,
-            label = s"${icons.folder} ${path.filename}"
-          )
-      }
+
+    def quickPickDir(filename: String) = {
+      MetalsQuickPickItem(
+        id = filename,
+        label = s"${icons.folder} $filename"
+      )
+    }
+
+    val paths = from match {
+      case Some(nonRootPath) =>
+        nonRootPath.list.toList.collect {
+          case path if path.isDirectory =>
+            quickPickDir(path.filename)
+        }
+      case None =>
+        File.listRoots.map(file => quickPickDir(file.toString())).toList
+    }
     val currentDir =
       MetalsQuickPickItem(id = "ok", label = s"${icons.check} Ok")
     val parentDir =
       MetalsQuickPickItem(id = "..", label = s"${icons.folder} ..")
-    val includeUp = if (from.hasParent) List(parentDir) else Nil
+    val includeUpAndCurrent =
+      if (from.isDefined) List(currentDir, parentDir) else Nil
     client
       .metalsQuickPick(
         MetalsQuickPickParams(
-          (currentDir :: includeUp ::: paths).asJava,
-          placeHolder = from.toString()
+          (includeUpAndCurrent ::: paths).asJava,
+          placeHolder = from.map(_.toString()).getOrElse("")
         )
       )
       .asScala
@@ -254,11 +269,24 @@ class NewProjectProvider(
         case path if path.cancelled =>
           Future.successful(None)
         case path if path.itemId == currentDir.id =>
-          Future.successful(Some(from))
+          Future.successful(from)
         case path if path.itemId == parentDir.id =>
-          askForPath(from.parent)
+          askForPath(from.flatMap(_.parentOpt))
         case path =>
-          askForPath(from.resolve(path.itemId))
+          from match {
+            case Some(nonRootPath) =>
+              askForPath(Some(nonRootPath.resolve(path.itemId)))
+            case None =>
+              val newRoot = File
+                .listRoots()
+                .collect {
+                  case root if root.toString() == path.itemId =>
+                    AbsolutePath(root.toPath())
+                }
+                .headOption
+              askForPath(newRoot)
+          }
+
       }
   }
 
@@ -355,5 +383,7 @@ object NewProjectProvider {
     } ++ Seq(custom, more)
 
   }
+
+  val templatePattern: Regex = """\[(.+)\]\s*\(.+\)\s*\((.+)\)""".r
 
 }

@@ -123,9 +123,9 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val OpenWindow = new Command(
-    "metals-open-window",
-    "Open new window",
+  val OpenFolder = new Command(
+    "metals-open-folder",
+    "Open a specified folder either in the same or new window",
     """Open a new window with the specified directory.""".stripMargin,
     """|An object with `uri` and `newWindow` fields.
        |Example: 
@@ -139,7 +139,7 @@ object ClientCommands {
   )
 
   def all: List[Command] = List(
-    OpenWindow,
+    OpenFolder,
     RunDoctor,
     ReloadDoctor,
     ToggleLogs,

@@ -87,6 +87,31 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
     expectedContent = scalatestTemplate()
   )
 
+  test("template-regex") {
+    val text =
+      """|# Templates:
+         |- [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
+         |(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
+         |
+         |Some other text
+         |""".stripMargin
+
+    NewProjectProvider.templatePattern
+      .findAllIn(text)
+      .matchData
+      .foreach {
+        case matching =>
+          assert(matching.groupCount == 2)
+          assertNoDiff(matching.group(1), "jimschubert/finatra.g8")
+          assertNoDiff(
+            matching.group(2),
+            "A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager"
+          )
+
+      }
+
+  }
+
   private def check(testName: TestOptions)(
       pickedProject: Option[String],
       name: Option[String],
@@ -95,7 +120,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
       templateFromg8Site: Option[String] = None
   ): Unit = test(testName) {
 
-    val tmpDirectory = AbsolutePath(Files.createTempDirectory("metals"))
+    val tmpDirectory = AbsolutePath(Files.createTempDirectory("metals")).dealias
 
     def isSelectProject(params: ShowMessageRequestParams): Boolean =
       params.getMessage() == Messages.NewScalaProject.selectTheTemplate
@@ -133,9 +158,15 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
           val res = findAction("ok")
           res
         } else {
-          val next =
-            tmpDirectory.toRelative(path).toNIO.iterator().next().filename
-          findAction(next)
+          val tmpRoot = tmpDirectory.root
+          if (tmpRoot == path.root) {
+            val next =
+              tmpDirectory.toRelative(path).toNIO.iterator().next().filename
+            findAction(next)
+          } else {
+            findAction(tmpRoot.get.toString()).orElse(findAction(".."))
+          }
+
         }
       }
     }
@@ -168,14 +199,14 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
     }
 
     def ignoreVersions(text: String) =
-      text.replaceAll("\\d+\\.\\d+\\.\\d+", "1.0.0")
+      text.replaceAll("\\d+\\.\\d+\\.\\d+", "1.0.0").replace("\r\n", "\n")
 
     def directoryOutput(dir: AbsolutePath) = {
       dir.listRecursive.toList
         .sortBy(_.toString())
         .collect {
           case file if (file.isFile) =>
-            s"""|/${file.toRelative(tmpDirectory)}
+            s"""|/${file.toRelative(tmpDirectory).toString().replace('\\', '/')}
                 |${file.readText}
                 |""".stripMargin
         }

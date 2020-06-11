@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import scala.concurrent.Future
+import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JavaBinary
@@ -40,12 +41,13 @@ class ShellRunner(
       arguments: List[String]
   ): Future[Int] = {
 
+    val classpathSeparator = if (Properties.isWin) ";" else ":"
     val classpath = Fetch
       .create()
       .withDependencies(dependency)
       .fetch()
       .asScala
-      .mkString(":")
+      .mkString(classpathSeparator)
 
     val cmd = List(
       JavaBinary(userConfig().javaHome),
