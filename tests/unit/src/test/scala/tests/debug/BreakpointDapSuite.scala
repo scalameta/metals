@@ -416,13 +416,14 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
   )
 
   assertBreakpoints("java-static-method")(
-    source = """|/a/src/main/scala/a/Main.scala
-                |package a
-                |object Main {
-                |  def main(args: Array[String]): Unit = {
-                |    Foo.call()
-                |    System.exit(0)
-                |  }
+    source = """|/a/src/main/scala/a/Main.java
+                |package a;
+                |
+                |public class Main {
+                |    public static void main(String[] args) {
+                |        Foo.call();
+                |        System.exit(0);
+                |    }
                 |}
                 |
                 |/a/src/main/java/a/Foo.java

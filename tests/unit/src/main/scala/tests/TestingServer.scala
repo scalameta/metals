@@ -458,10 +458,10 @@ final class TestingServer(
   // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
   private def assertSystemExit(parameter: AnyRef) = {
     def check() = {
-      val workspaceScalaFiles =
-        workspace.listRecursive.filter(_.isScala).toList
+      val workspaceFiles =
+        workspace.listRecursive.filter(_.isScalaOrJava).toList
       val usesSystemExit =
-        workspaceScalaFiles.exists(_.text.contains("System.exit(0)"))
+        workspaceFiles.exists(_.text.contains("System.exit(0)"))
       if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
@@ -1246,9 +1246,9 @@ final class TestingServer(
   }
 
   def buildTarget(displayName: String): String = {
-    server.buildTargets.all
-      .find(_.displayName == displayName)
-      .map(_.id.getUri())
+    server.buildTargets
+      .findByDisplayName(displayName)
+      .map(_.getId().getUri())
       .getOrElse {
         val alternatives =
           server.buildTargets.all.map(_.displayName).mkString(" ")

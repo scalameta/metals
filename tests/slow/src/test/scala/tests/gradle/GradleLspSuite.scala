@@ -6,10 +6,13 @@ import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.GradleDigest
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
 
 class GradleLspSuite extends BaseImportSuite("gradle-import") {
@@ -66,6 +69,58 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         ).mkString("\n")
       )
     }
+  }
+
+  val javaOnlyTestName = "java-only-run"
+  test(javaOnlyTestName) {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/build.gradle
+            |plugins {
+            |    id 'java'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |/src/main/java/a/Main.java
+            |package a;
+            |
+            |public class Main {
+            |    public static void main(String[] args) {
+            |        System.out.println("Hello world!");
+            |        System.exit(0);
+            |    }
+            |}
+            |
+            |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          importBuildMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+      _ = client.messageRequests.clear()
+      _ = assertStatus(_.isInstalled)
+      _ <- server.didSave("src/main/java/a/Main.java")(identity)
+      debugger <- server.startDebugging(
+        javaOnlyTestName,
+        DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        new ScalaMainClass(
+          "a.Main",
+          Nil.asJava,
+          Nil.asJava
+        )
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "Hello world!")
   }
 
   test("transitive") {
