@@ -11,13 +11,15 @@ import org.eclipse.{lsp4j => l}
 
 final class CodeActionProvider(
     compilers: Compilers,
-    buffers: Buffers
+    buffers: Buffers,
+    scalafixProvider: ScalafixProvider
 ) {
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol(),
-    new StringActions(buffers)
+    new StringActions(buffers),
+    new OrganizeImports(scalafixProvider)
   )
 
   def codeActions(

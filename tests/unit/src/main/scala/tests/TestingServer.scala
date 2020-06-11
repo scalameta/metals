@@ -917,10 +917,11 @@ final class TestingServer(
       filename: String,
       query: String,
       expected: String,
+      kind: List[String],
       root: AbsolutePath = workspace
   )(implicit loc: munit.Location): Future[List[l.CodeAction]] =
     for {
-      (codeActions, codeActionString) <- codeAction(filename, query, root)
+      (codeActions, codeActionString) <- codeAction(filename, query, root, kind)
     } yield {
       Assertions.assertNoDiff(codeActionString, expected)
       codeActions
@@ -946,7 +947,8 @@ final class TestingServer(
   def codeAction(
       filename: String,
       query: String,
-      root: AbsolutePath
+      root: AbsolutePath,
+      kind: List[String]
   ): Future[(List[l.CodeAction], String)] =
     for {
       (_, params) <- codeActionParams(
@@ -954,7 +956,8 @@ final class TestingServer(
         query,
         root,
         new CodeActionContext(
-          client.diagnostics.getOrElse(toPath(filename), Nil).asJava
+          client.diagnostics.getOrElse(toPath(filename), Nil).asJava,
+          if (kind.nonEmpty) kind.asJava else null
         )
       )
       codeActions <- server.codeAction(params).asScala

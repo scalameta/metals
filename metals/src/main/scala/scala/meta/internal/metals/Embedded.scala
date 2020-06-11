@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.ServiceLoader
@@ -9,6 +10,8 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
+import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
@@ -73,6 +76,21 @@ final class Embedded(
     )
   }
 
+  def organizeImports(
+      scalaBinaryVersion: String,
+      scalafixClassLoader: ClassLoader
+  ): URLClassLoader = {
+    val toolClasspathJars =
+      statusBar.trackBlockingTask("Downloading organize import rule") {
+        Embedded.organizeImportRule(scalaBinaryVersion)
+      }
+    toClassLoader(
+      Classpath(toolClasspathJars.map(jar => AbsolutePath(jar))),
+      scalafixClassLoader
+    )
+
+  }
+
   private def serviceLoader[T](
       cls: Class[T],
       className: String,
@@ -91,6 +109,13 @@ final class Embedded(
     }
   }
 
+  private def toClassLoader(
+      classpath: Classpath,
+      scalafixClassLoader: ClassLoader
+  ): URLClassLoader = {
+    val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
+    new URLClassLoader(urls, scalafixClassLoader)
+  }
 }
 
 object Embedded {
@@ -214,6 +239,7 @@ object Embedded {
     downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
   def downloadMtags(scalaVersion: String): List[Path] =
     downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
+
   def downloadMdoc(
       scalaVersion: String,
       scalaBinaryVersion: String,
@@ -224,6 +250,20 @@ object Embedded {
       scalaVersion,
       resolution = resolutionParams
     )
+
+  def organizeImportRule(scalaBinaryVersion: String): List[File] = {
+    val dep = Dependency.of(
+      "com.github.liancheng",
+      s"organize-imports_$scalaBinaryVersion",
+      BuildInfo.organizeImportVersion
+    )
+    Fetch
+      .create()
+      .withDependencies(dep)
+      .fetch()
+      .asScala
+      .toList
+  }
 
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,

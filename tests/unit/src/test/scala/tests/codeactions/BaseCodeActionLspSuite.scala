@@ -15,21 +15,28 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectedActions: String,
       expectedCode: String,
       selectedActionIndex: Int = 0,
-      expectNoDiagnostics: Boolean = true
+      expectNoDiagnostics: Boolean = true,
+      kind: List[String] = Nil,
+      scalafixConf: String = "",
+      scalacOptions: List[String] = Nil
   )(implicit loc: Location): Unit = {
+    val scalacOptionsJson =
+      s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"]"""
     val path = "a/src/main/scala/a/A.scala"
     test(name) {
       cleanWorkspace()
       for {
         _ <- server.initialize(s"""/metals.json
-                                  |{"a":{}}
+                                  |{"a":{$scalacOptionsJson}}
+                                  |$scalafixConf
                                   |/$path
                                   |${input
           .replace("<<", "")
           .replace(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
-        codeActions <- server.assertCodeAction(path, input, expectedActions)
+        codeActions <-
+          server.assertCodeAction(path, input, expectedActions, kind)
         _ <- server.didSave(path) { _ =>
           if (codeActions.nonEmpty) {
             if (selectedActionIndex >= codeActions.length) {

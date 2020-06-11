@@ -95,7 +95,8 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           .replace(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
-        codeActions <- server.assertCodeAction(path, input, expectedActions)
+        codeActions <-
+          server.assertCodeAction(path, input, expectedActions, Nil)
         _ <- {
           if (selectedActionIndex >= codeActions.length) {
             fail(s"selectedActionIndex ($selectedActionIndex) is out of bounds")

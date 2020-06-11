@@ -51,7 +51,7 @@ inThisBuild(
       "-target:jvm-1.8",
       "-Yrangepos"
     ) ::: scala212CompilerOptions,
-    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.4.0",
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % V.organizeImportRule,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -186,6 +186,7 @@ lazy val V = new {
   val mdoc = "2.2.9"
   val scalafmt = "2.6.4"
   val munit = "0.7.12"
+  val scalafix = "0.9.20"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
@@ -220,6 +221,7 @@ lazy val V = new {
   val coursierInterfaces = "0.0.25"
   val ammonite = "2.2.0-4-4bd225e"
   val mill = "0.8.0"
+  val organizeImportRule = "0.4.0"
 }
 
 val genyVersion = Def.setting {
@@ -410,6 +412,7 @@ lazy val metals = project
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
+      "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
@@ -444,6 +447,7 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
+      "organizeImportVersion" -> V.organizeImportRule,
       "millVersion" -> V.mill,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
