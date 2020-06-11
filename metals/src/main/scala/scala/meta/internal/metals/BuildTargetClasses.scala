@@ -91,13 +91,8 @@ final class BuildTargetClasses(
     for {
       item <- result.getItems.asScala
       target = item.getTarget
-      buildTarget <- buildTargets.scalaTarget(target)
       aClass <- item.getClasses.asScala
-      descriptors = {
-        if (ScalaVersions.isScala3Version(buildTarget.scalaVersion))
-          List(Descriptor.Term, Descriptor.Type)
-        else List(Descriptor.Term)
-      }
+      descriptors = descriptorsForMainClasses(target)
       symbol <- createSymbols(
         aClass.getClassName,
         descriptors
@@ -118,6 +113,19 @@ final class BuildTargetClasses(
       symbol <- createSymbols(className, List(Descriptor.Term, Descriptor.Type))
     } {
       classes(target).testClasses.put(symbol, className)
+    }
+  }
+
+  private def descriptorsForMainClasses(
+      buildTarget: b.BuildTargetIdentifier
+  ): List[String => Descriptor] = {
+    buildTargets.scalaTarget(buildTarget) match {
+      case Some(scalaBuildTarget) =>
+        if (ScalaVersions.isScala3Version(scalaBuildTarget.scalaVersion))
+          List(Descriptor.Term, Descriptor.Type)
+        else List(Descriptor.Term)
+      case None =>
+        List(Descriptor.Type)
     }
   }
 
