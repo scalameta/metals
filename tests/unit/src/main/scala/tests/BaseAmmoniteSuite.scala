@@ -144,7 +144,6 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         }
         promise
       }
-      _ <- server.didSave("main.sc")(identity)
       _ <- server.didSave("main.sc") { _ =>
         s""" // scala $scalaVersion
            |import $$ivy.`com.github.alexarchambault::case-app:2.0.0-M16`
@@ -153,7 +152,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       }
       // wait for Ammonite build targets to be reloaded
       _ <- refreshedPromise.future
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc") { text => text + "\nval a = 1" }
       // Hover on class defined in dependency loaded after the re-index.
       // Fails if interactive compilers were not properly discarded prior
       // to re-indexing.
