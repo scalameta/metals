@@ -13,7 +13,9 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       base: Map[String, String]
   ): Future[Unit]
 
-  def check(name: String, input: String)(implicit loc: Location): Unit = {
+  def check(name: String, input: String, scalaVersion: Option[String] = None)(
+      implicit loc: Location
+  ): Unit = {
     val files = FileLayout.mapFromString(input)
     val (filename, edit) = files
       .find(_._2.contains("@@"))
@@ -35,6 +37,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
         fileName -> code.replaceAll("(<<|>>|@@)", "")
     }
 
+    val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
     test(name) {
       cleanWorkspace()
       for {
@@ -42,6 +45,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
           s"""/metals.json
              |{"a":
              |  {
+             |    "scalaVersion" : "$actualScalaVersion",
              |    "compilerPlugins": [
              |      "org.scalamacros:::paradise:2.1.1"
              |    ],

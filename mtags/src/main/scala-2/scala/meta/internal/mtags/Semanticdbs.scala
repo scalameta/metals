@@ -61,7 +61,7 @@ object Semanticdbs {
   ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)
-    sdocs.documents.find(_.uri == reluri) match {
+    sdocs.documents.find(_.uri.replace("\\", "/") == reluri) match {
       case None => TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
       case Some(sdoc) =>
         val text = FileIO.slurp(scalaPath, charset)
