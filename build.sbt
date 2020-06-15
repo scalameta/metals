@@ -165,7 +165,7 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val scala212 = "2.12.11"
   val scala213 = "2.13.2"
-  val scalameta = "4.3.13"
+  val scalameta = "4.3.15"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-235-3231567a"
@@ -425,7 +425,7 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.2.3"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.2.5"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
