@@ -65,7 +65,7 @@ object Icons {
     override def check: String = "$(check) "
     override def findsuper: String = "$(arrow-up)"
     override def folder: String = "$(folder)"
-    override def github: String = "$(github)"
+    override def github: String = "$(github) "
   }
   case object atom extends Icons {
     private def span(id: String) = s"<span class='icon icon-$id'></span> "

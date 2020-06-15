@@ -69,7 +69,7 @@ class NewProjectProvider(
               case matching if matching.groupCount == 2 =>
                 MetalsQuickPickItem(
                   id = matching.group(1),
-                  label = s"${icons.github} " + matching.group(1),
+                  label = s"${icons.github}" + matching.group(1),
                   description = matching.group(2)
                 )
             }
@@ -98,7 +98,7 @@ class NewProjectProvider(
         case Some((template, inputPath, Some(projectName))) =>
           createNewProject(
             inputPath,
-            template.label.replace(s"${icons.github} ", ""),
+            template.label.replace(s"${icons.github}", ""),
             projectName
           )
         // It's fine to just return if the user resigned
@@ -379,7 +379,7 @@ object NewProjectProvider {
         description = "Akka HTTP application using Kubernetes"
       )
     ).map { item =>
-      item.copy(label = s"${icons.github} " + item.label)
+      item.copy(label = s"${icons.github}" + item.label)
     } ++ Seq(custom, more)
 
   }
