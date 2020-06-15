@@ -1,6 +1,6 @@
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.7.2")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.3.7")
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.16")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.17")
 addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.3")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.2.0")
 addSbtPlugin("org.scalameta" % "sbt-munit" % "0.7.7")
