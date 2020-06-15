@@ -7,16 +7,18 @@ import scala.util.Failure
 import scala.util.Success
 
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 
 class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
-  override val experimentalCapabilities: Some[ClientExperimentalCapabilities] =
+
+  override val initializationOptions: Some[InitializationOptions] =
     Some(
       // NOTE: Default is fine here since they default to off
-      ClientExperimentalCapabilities.Default
+      InitializationOptions.Default
     )
+
   test("no-code-lenses") {
     for {
       _ <- server.initialize(

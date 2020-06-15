@@ -515,4 +515,69 @@ object Messages {
       s"Error importing $script. See the logs for more details."
     )
   }
+
+  object NewScalaProject {
+    def selectTheTemplate: String = "Select the template to use"
+    def enterName: String =
+      "Enter a name or a relative path for the new project"
+    def enterG8Template: String =
+      "Enter the giter template, for example `scala/hello-world.g8`," +
+        " which corresponds to a github path `github.com/scala/hello-world.g8`"
+    def creationFailed(what: String, where: String) = new MessageParams(
+      MessageType.Error,
+      s"Could not create $what in $where"
+    )
+    def templateDownloadFailed(why: String) = new MessageParams(
+      MessageType.Error,
+      s"Failed to download templates from the web.\n" + why
+    )
+    def yes = new MessageActionItem("Yes")
+    def no = new MessageActionItem("No")
+    def newWindowMessage =
+      "Do you want to open the new project in a new window?"
+    def newProjectCreated(path: AbsolutePath) = new MessageParams(
+      MessageType.Info,
+      s"New project has been in created in $path"
+    )
+
+    def askForNewWindowParams(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(newWindowMessage)
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          yes,
+          no
+        ).asJava
+      )
+      params
+    }
+
+  }
+
+  object NoBuildTool {
+
+    def newProject: String =
+      "No build tool detected in the current folder." +
+        " Do you want to create a new project?"
+
+    def inCurrent = new MessageActionItem("In the current directory")
+    def newWindow = new MessageActionItem("In a new directory")
+    def dismiss = new MessageActionItem("Not now")
+
+    def noBuildToolAskForTemplate(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(newProject)
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          inCurrent,
+          newWindow,
+          dismiss
+        ).asJava
+      )
+      params
+    }
+
+  }
 }

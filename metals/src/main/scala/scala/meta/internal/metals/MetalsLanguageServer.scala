@@ -26,8 +26,11 @@ import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -173,12 +176,14 @@ class MetalsLanguageServer(
   )
 
   // These can't be instantiated until we know the workspace root directory.
+  private var shellRunner: ShellRunner = _
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
   private var warnings: Warnings = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
   private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
+  private var newProjectProvider: NewProjectProvider = _
   private var semanticdbs: Semanticdbs = _
   private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
@@ -312,18 +317,25 @@ class MetalsLanguageServer(
       () => worksheetProvider,
       () => ammonite
     )
-    bloopInstall = register(
-      new BloopInstall(
-        workspace,
-        languageClient,
-        sh,
-        buildTools,
-        time,
-        tables,
-        embedded,
-        statusBar,
-        () => userConfig
-      )
+    shellRunner = register(
+      new ShellRunner(languageClient, () => userConfig, time, statusBar)
+    )
+    bloopInstall = new BloopInstall(
+      workspace,
+      languageClient,
+      buildTools,
+      tables,
+      shellRunner
+    )
+    newProjectProvider = new NewProjectProvider(
+      buildTools,
+      languageClient,
+      statusBar,
+      clientConfig,
+      time,
+      shellRunner,
+      initialConfig.icons,
+      workspace
     )
     bloopServers = new BloopServers(
       workspace,
@@ -1388,13 +1400,12 @@ class MetalsLanguageServer(
             name.getAsString()
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
-
       case ServerCommands.StartAmmoniteBuildServer() =>
         ammonite.start().asJavaObject
-
       case ServerCommands.StopAmmoniteBuildServer() =>
         ammonite.stop()
-
+      case ServerCommands.NewScalaProject() =>
+        newProjectProvider.createNewProjectFromTemplate().asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

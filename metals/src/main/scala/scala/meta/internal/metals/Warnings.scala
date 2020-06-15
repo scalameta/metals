@@ -93,8 +93,8 @@ final class Warnings(
     if (tools.isEmpty) {
       scribe.warn(
         s"no build tool detected in workspace '$workspace'. " +
-          s"The most common cause for this problem is that the editor was opened in the wrong working directory, " +
-          s"for example if you use sbt then the workspace directory should contain build.sbt. "
+          "The most common cause for this problem is that the editor was opened in the wrong working directory, " +
+          "for example if you use sbt then the workspace directory should contain build.sbt. "
       )
     } else {
       val what =

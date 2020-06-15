@@ -92,6 +92,8 @@ class ClientConfiguration(
     initializationOptions.didFocusProvider ||
       experimentalCapabilities.didFocusProvider
 
+  def isOpenNewWindowProvider(): Boolean =
+    initializationOptions.openNewWindowProvider
 }
 
 object ClientConfiguration {

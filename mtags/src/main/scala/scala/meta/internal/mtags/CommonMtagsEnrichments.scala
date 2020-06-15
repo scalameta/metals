@@ -284,9 +284,23 @@ trait CommonMtagsEnrichments {
       AbsolutePath(path.toNIO.getParent)
     }
 
+    def parentOpt: Option[AbsolutePath] = {
+      if (hasParent)
+        Some(AbsolutePath(path.toNIO.getParent))
+      else
+        None
+    }
+
+    def hasParent: Boolean = {
+      path.toNIO.getParent != null
+    }
+
     def exists: Boolean = {
       Files.exists(path.toNIO)
     }
+
+    def root: Option[AbsolutePath] =
+      Option(path.toNIO.getRoot()).map(AbsolutePath(_))
 
     def list: Generator[AbsolutePath] = {
       if (path.isDirectory) Files.list(path.toNIO).asScala.map(AbsolutePath(_))

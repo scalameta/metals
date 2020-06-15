@@ -6,7 +6,6 @@ import java.nio.file.StandardCopyOption
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.BloopInstallResult
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath

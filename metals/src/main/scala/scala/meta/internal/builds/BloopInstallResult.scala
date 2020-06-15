@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.builds
 
 import scala.meta.internal.builds.Digest.Status
 

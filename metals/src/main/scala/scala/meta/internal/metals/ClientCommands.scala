@@ -123,7 +123,23 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val OpenFolder = new Command(
+    "metals-open-folder",
+    "Open a specified folder either in the same or new window",
+    """Open a new window with the specified directory.""".stripMargin,
+    """|An object with `uri` and `newWindow` fields.
+       |Example: 
+       |```json
+       |{
+       |  "uri": "file://path/to/directory",
+       |  "newWindow": true
+       |}
+       |```
+       |""".stripMargin
+  )
+
   def all: List[Command] = List(
+    OpenFolder,
     RunDoctor,
     ReloadDoctor,
     ToggleLogs,

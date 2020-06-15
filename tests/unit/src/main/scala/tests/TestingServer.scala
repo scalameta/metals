@@ -30,12 +30,12 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
@@ -119,7 +119,7 @@ final class TestingServer(
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
     time: Time,
-    experimentalCapabilities: Option[ClientExperimentalCapabilities]
+    initializationOptions: Option[InitializationOptions]
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
@@ -388,8 +388,8 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
-    val experimental = experimentalCapabilities.getOrElse(
-      ClientExperimentalCapabilities.Default.copy(
+    val initOptions = initializationOptions.getOrElse(
+      InitializationOptions.Default.copy(
         debuggingProvider = true,
         treeViewProvider = true,
         slowTaskProvider = true
@@ -399,7 +399,7 @@ final class TestingServer(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        experimental.toJson
+        initOptions.toJson
       )
     )
     params.setWorkspaceFolders(
