@@ -63,7 +63,6 @@ jobs:
             sbt,
             maven,
             gradle,
-            pants,
             mill,
             feature,
             cross,
@@ -86,10 +85,6 @@ jobs:
           - type: gradle
             command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
             name: Gradle integration
-            os: ubuntu-latest
-          - type: pants
-            command: bin/test.sh 'slow/testOnly -- tests.pants.*'
-            name: Pants integration
             os: ubuntu-latest
           - type: mill
             command: bin/test.sh 'slow/testOnly -- tests.mill.*'

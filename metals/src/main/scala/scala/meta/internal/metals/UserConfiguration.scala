@@ -10,7 +10,6 @@ import scala.util.Try
 import scala.meta.RelativePath
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.pc.PresentationCompilerConfig
 
 import com.google.gson.JsonElement
@@ -35,7 +34,6 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
-    pantsTargets: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true
@@ -107,18 +105,6 @@ object UserConfiguration {
         """Optional custom path to the .scalafmt.conf file.
           |Should be relative to the workspace root directory and use forward slashes / for file
           |separators (even on Windows).
-          |""".stripMargin
-      ),
-      UserConfigurationOption(
-        "pants-targets",
-        """empty string `""`.""",
-        "src::",
-        "Pants targets",
-        """The pants targets to export.
-          |
-          |Space separated list of Pants targets to export, for example
-          |`src/main/scala:: src/main/java::`. Syntax such as `src/{main,test}::`
-          |is not supported.
           |""".stripMargin
       ),
       UserConfigurationOption(
@@ -267,18 +253,6 @@ object UserConfiguration {
     val worksheetCancelTimeout =
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
-    val pantsTargets =
-      getKey[List[String]](
-        "pants-targets",
-        { value =>
-          PantsConfiguration.pantsTargetsFromGson(value) match {
-            case Left(e) =>
-              errors += e
-              None
-            case Right(value) => Some(value)
-          }
-        }
-      )
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
@@ -303,7 +277,6 @@ object UserConfiguration {
           worksheetCancelTimeout,
           bloopSbtAlreadyInstalled,
           bloopVersion,
-          pantsTargets,
           superMethodLensesEnabled,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting

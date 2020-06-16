@@ -7,7 +7,6 @@ import scala.sys.process._
 
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.pantsbuild.MessageOnlyException
 import scala.meta.pc.CancelToken
 
 object SystemProcess {
@@ -24,7 +23,7 @@ object SystemProcess {
     if (exit != 0) {
       val message = s"$shortName command failed with exit code $exit, " +
         s"to reproduce run the command below:\n\t${reproduceArgs.mkString(" ")}"
-      throw MessageOnlyException(message)
+      throw new MessageOnlyException(message)
     } else {
       scribe.info(s"time: ran '$shortName' in $exportTimer")
     }

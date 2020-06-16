@@ -40,18 +40,6 @@ class DetectionSuite extends BaseSuite {
     }
   }
 
-  def checkPants(name: String, layout: String, isTrue: Boolean = true)(implicit
-      loc: Location
-  ): Unit = {
-    test(s"pants-$name") {
-      check(
-        layout,
-        p => BuildTools.default(p).isPants,
-        isTrue
-      )
-    }
-  }
-
   checkSbt(
     "build.sbt",
     """|/build.sbt
@@ -95,15 +83,6 @@ class DetectionSuite extends BaseSuite {
     "gradle",
     """|/build.gradle
        |import gradle._
-       |""".stripMargin
-  )
-
-  checkPants(
-    "pants.ini",
-    """|/pants.ini
-       |[scala]
-       |version: custom
-       |suffix_version: 2.12
        |""".stripMargin
   )
 

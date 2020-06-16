@@ -169,52 +169,6 @@ class UserConfigurationSuite extends BaseSuite {
   )
 
   checkOK(
-    "pants-targets-string",
-    """
-      |{
-      | "pants-targets": "a b"
-      |}
-    """.stripMargin
-  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
-
-  checkOK(
-    "pants-targets-string2",
-    """
-      |{
-      | "pants-targets": "a  b"
-      |}
-    """.stripMargin
-  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
-
-  checkOK(
-    "pants-targets-list",
-    """
-      |{
-      | "pants-targets": ["a  b"]
-      |}
-    """.stripMargin
-  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
-
-  checkOK(
-    "pants-targets-list2",
-    """
-      |{
-      | "pants-targets": ["a", "b"]
-      |}
-    """.stripMargin
-  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
-
-  checkError(
-    "pants-error",
-    """
-      |{
-      | "pants-targets": 42
-      |}
-    """.stripMargin,
-    """Unexpected 'pants-targets' configuration. Expected a string or a list of strings. Obtained: 42"""
-  )
-
-  checkOK(
     "strip-margin false",
     """
       |{

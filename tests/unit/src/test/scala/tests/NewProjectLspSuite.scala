@@ -11,11 +11,11 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsInputBoxParams
 import scala.meta.internal.metals.MetalsInputBoxResult
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
-import org.apache.commons.io.FileUtils
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
@@ -240,7 +240,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
 
       testFuture.onComplete {
         case _ =>
-          FileUtils.deleteDirectory(tmpDirectory.toNIO.toFile())
+          RecursivelyDelete(tmpDirectory)
       }
       testFuture
     }
