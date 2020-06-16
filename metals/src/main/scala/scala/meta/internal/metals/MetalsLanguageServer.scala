@@ -672,7 +672,7 @@ class MetalsLanguageServer(
         clientConfig.initialConfig.icons,
         time,
         sh,
-        clientConfig.initialConfig
+        clientConfig
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)

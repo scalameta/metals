@@ -51,7 +51,7 @@ final class MetalsHttpClient(
     icons: Icons,
     time: Time,
     sh: ScheduledExecutorService,
-    config: MetalsServerConfig
+    clientConfig: ClientConfiguration
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
@@ -184,7 +184,11 @@ final class MetalsHttpClient(
 
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
-  ): Unit = ()
+  ): Unit = {
+    if (clientConfig.isDecorationProvider) {
+      underlying.metalsPublishDecorations(params)
+    }
+  }
 
   // =======
   // Helpers
