@@ -52,7 +52,8 @@ case class ScalaPresentationCompiler(
     search: SymbolSearch = EmptySymbolSearch,
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
-    config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
+    config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
+    workspace: Option[Path] = None
 ) extends PresentationCompiler {
   implicit val executionContext: ExecutionContextExecutor = ec
 
@@ -66,6 +67,9 @@ case class ScalaPresentationCompiler(
 
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
+
+  override def withWorkspace(workspace: Path): PresentationCompiler =
+    copy(workspace = Some(workspace))
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -280,7 +284,8 @@ case class ScalaPresentationCompiler(
       new StoreReporter,
       search,
       buildTargetIdentifier,
-      config
+      config,
+      workspace
     )
   }
 

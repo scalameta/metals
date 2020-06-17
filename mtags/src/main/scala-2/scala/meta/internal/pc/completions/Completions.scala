@@ -7,6 +7,7 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.MemberOrdering
 import scala.meta.internal.pc.MetalsGlobal
@@ -502,6 +503,11 @@ trait Completions { this: MetalsGlobal =>
           ident.pos.start,
           _ => true
         )
+      case Import(select, selector) :: _
+          if pos.source.file.name.isAmmoniteGeneratedFile && select
+            .toString()
+            .startsWith("$file") =>
+        AmmoniteFileCompletions(select, selector, pos, editRange)
       case _ =>
         inferCompletionPosition(
           pos,

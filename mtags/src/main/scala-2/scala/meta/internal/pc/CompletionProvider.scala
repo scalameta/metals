@@ -43,9 +43,10 @@ class CompletionProvider(
   }
 
   def completions(): CompletionList = {
+    val filename = params.uri().toString()
     val unit = addCompilationUnit(
       code = params.text,
-      filename = params.uri().toString(),
+      filename = filename,
       cursor = Some(params.offset),
       cursorName = cursorName
     )
@@ -253,6 +254,7 @@ class CompletionProvider(
       editRange: l.Range,
       latestParentTrees: List[Tree]
   ): InterestingMembers = {
+    lazy val isAmmoniteScript = pos.source.file.name.isAmmoniteGeneratedFile
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
@@ -274,11 +276,22 @@ class CompletionProvider(
       def isNotLocalForwardReference: Boolean =
         !head.sym.isLocalToBlock ||
           !head.sym.pos.isAfter(pos)
+      def isFileAmmoniteCompletion() =
+        isAmmoniteScript && {
+          head match {
+            case mem: TypeMember =>
+              mem.sym.owner.fullName.contains("$file")
+            case _ =>
+              false
+          }
+        }
+
       if (
         !isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
         !isUninterestingSymbolOwner(head.sym.owner) &&
         !isIgnoredWorkspace &&
+        !isFileAmmoniteCompletion() &&
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&
         isNotLocalForwardReference
@@ -311,9 +324,9 @@ class CompletionProvider(
     )
   }
 
-  private def completionItemKind(r: Member): CompletionItemKind = {
+  private def completionItemKind(member: Member): CompletionItemKind = {
     import org.eclipse.lsp4j.{CompletionItemKind => k}
-    val symbol = r.sym.dealiased
+    val symbol = member.sym.dealiased
     val symbolIsFunction = isFunction(symbol)
     if (symbol.hasPackageFlag) k.Module
     else if (symbol.isPackageObject) k.Module
@@ -323,7 +336,12 @@ class CompletionProvider(
     else if (symbol.isClass) k.Class
     else if (symbol.isMethod) k.Method
     else if (symbol.isCaseAccessor) k.Field
-    else if (symbol.isVal && !symbolIsFunction) k.Value
+    else if (symbol.isVal && !symbolIsFunction)
+      member match {
+        case file: FileSystemMember =>
+          if (file.isDirectory) k.Folder else k.File
+        case _ => k.Value
+      }
     else if (symbol.isVar && !symbolIsFunction) k.Variable
     else if (symbol.isTypeParameterOrSkolem) k.TypeParameter
     else if (symbolIsFunction) k.Function

@@ -1687,33 +1687,35 @@ class MetalsLanguageServer(
 
     try {
       val sourceToIndex0 = sourceToIndex(source, targetOpt)
-      val reluri = source.toIdeallyRelativeURI(sourceItem)
-      val input = sourceToIndex0.toInput
-      val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-      SemanticdbDefinition.foreach(input) {
-        case SemanticdbDefinition(info, occ, owner) =>
-          if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-            occ.range.foreach { range =>
-              symbols += WorkspaceSymbolInformation(
-                info.symbol,
-                info.kind,
-                range.toLSP
-              )
+      if (sourceToIndex0.exists) {
+        val reluri = source.toIdeallyRelativeURI(sourceItem)
+        val input = sourceToIndex0.toInput
+        val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+        SemanticdbDefinition.foreach(input) {
+          case SemanticdbDefinition(info, occ, owner) =>
+            if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+              occ.range.foreach { range =>
+                symbols += WorkspaceSymbolInformation(
+                  info.symbol,
+                  info.kind,
+                  range.toLSP
+                )
+              }
             }
-          }
-          if (
-            sourceItem.isDefined &&
-            !info.symbol.isPackage &&
-            (owner.isPackage || source.isAmmoniteScript)
-          ) {
-            definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
-          }
-      }
-      workspaceSymbols.didChange(source, symbols)
+            if (
+              sourceItem.isDefined &&
+              !info.symbol.isPackage &&
+              (owner.isPackage || source.isAmmoniteScript)
+            ) {
+              definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
+            }
+        }
+        workspaceSymbols.didChange(source, symbols)
 
-      // Since the `symbols` here are toplevel symbols,
-      // we cannot use `symbols` for expiring the cache for all symbols in the source.
-      symbolDocs.expireSymbolDefinition(sourceToIndex0)
+        // Since the `symbols` here are toplevel symbols,
+        // we cannot use `symbols` for expiring the cache for all symbols in the source.
+        symbolDocs.expireSymbolDefinition(sourceToIndex0)
+      }
     } catch {
       case NonFatal(e) =>
         scribe.error(source.toString(), e)

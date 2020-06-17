@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.nio.file.Path
 import java.util
 import java.util.logging.Logger
 import java.{util => ju}
@@ -30,9 +31,11 @@ class MetalsGlobal(
     reporter: Reporter,
     val search: SymbolSearch,
     val buildTargetIdentifier: String,
-    val metalsConfig: PresentationCompilerConfig
+    val metalsConfig: PresentationCompilerConfig,
+    val workspace: Option[Path]
 ) extends Global(settings, reporter)
     with completions.Completions
+    with completions.AmmoniteCompletions
     with completions.ArgCompletions
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions

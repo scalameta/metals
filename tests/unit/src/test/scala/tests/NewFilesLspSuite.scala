@@ -27,6 +27,14 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     ""
   )
 
+  check("new-ammonite-script")(
+    Some("a/src/main/scala/"),
+    "ammonite",
+    Some("Foo"),
+    "a/src/main/scala/Foo.sc",
+    ""
+  )
+
   check("new-class")(
     Some("a/src/main/scala/foo/"),
     "class",
