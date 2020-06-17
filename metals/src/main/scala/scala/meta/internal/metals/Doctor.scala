@@ -72,7 +72,7 @@ final class Doctor(
       clientCommand: Command,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    if (clientConfig.isExecuteClientCommandProvider) {
+    if (clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled) {
       val output =
         if (clientConfig.doctorFormatIsJson)
           buildTargetsJson()
@@ -88,7 +88,7 @@ final class Doctor(
           onServer(server)
         case None =>
           scribe.warn(
-            "Unable to run doctor. To fix this problem enable -Dmetals.http=true"
+            "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
           )
       }
     }
