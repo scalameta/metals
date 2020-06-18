@@ -614,7 +614,13 @@ class MetalsLanguageServer(
       } else {
         capabilities.setCodeActionProvider(true)
       }
-      capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
+
+      val textDocumentSyncOptions = new TextDocumentSyncOptions
+      textDocumentSyncOptions.setChange(TextDocumentSyncKind.Full)
+      textDocumentSyncOptions.setSave(new SaveOptions(true))
+      textDocumentSyncOptions.setOpenClose(true)
+
+      capabilities.setTextDocumentSync(textDocumentSyncOptions)
 
       val serverInfo = new ServerInfo("Metals", BuildInfo.metalsVersion)
       new InitializeResult(capabilities, serverInfo)
