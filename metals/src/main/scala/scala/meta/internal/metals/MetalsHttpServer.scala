@@ -68,7 +68,6 @@ object MetalsHttpServer {
    * @param host the hostname of the server.
    * @param preferredPort the preferred port of the server. If the port is unavailable,
    *                      then a random free port will be chosen.
-   *
    */
   def apply(
       host: String,

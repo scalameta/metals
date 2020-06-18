@@ -13,7 +13,9 @@ class CompletionItemResolver(
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
     val gsym = inverseSemanticdbSymbol(msym)
     if (gsym != NoSymbol) {
-      symbolDocumentation(gsym).orElse(symbolDocumentation(gsym.companion)) match {
+      symbolDocumentation(gsym).orElse(
+        symbolDocumentation(gsym.companion)
+      ) match {
         case Some(info) if item.getDetail != null =>
           if (isJavaSymbol(gsym)) {
             val data = item.data.getOrElse(CompletionItemData.empty)
@@ -21,7 +23,9 @@ class CompletionItemResolver(
             if (metalsConfig.isCompletionItemDetailEnabled) {
               item.setDetail(replaceJavaParameters(info, item.getDetail))
             }
-            if (item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind) {
+            if (
+              item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind
+            ) {
               item.getTextEdit.setNewText(
                 replaceJavaParameters(info, item.getTextEdit.getNewText)
               )

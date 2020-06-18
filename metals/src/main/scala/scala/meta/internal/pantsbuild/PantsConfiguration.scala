@@ -42,7 +42,8 @@ object PantsConfiguration {
     else target.substring(0, colon)
   }
 
-  /** Returns the nearest enclosing directory of a Pants target */
+  /**
+   * Returns the nearest enclosing directory of a Pants target */
   def baseDirectory(workspace: AbsolutePath, target: String): AbsolutePath = {
     workspace.resolve(baseDirectoryString(target))
   }

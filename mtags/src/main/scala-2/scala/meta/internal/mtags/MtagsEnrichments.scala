@@ -27,22 +27,26 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
   import Trees.defaultDialect
 
   implicit class XtensionInputOffset(input: Input) {
-    def toLanguage: Language = input match {
-      case Input.VirtualFile(path, _) =>
-        filenameToLanguage(path)
-      case _ =>
-        Language.UNKNOWN_LANGUAGE
-    }
+    def toLanguage: Language =
+      input match {
+        case Input.VirtualFile(path, _) =>
+          filenameToLanguage(path)
+        case _ =>
+          Language.UNKNOWN_LANGUAGE
+      }
 
-    /** Returns offset position with end == start == offset */
+    /**
+     * Returns offset position with end == start == offset */
     def toOffsetPosition(offset: Int): Position =
       Position.Range(input, offset, offset)
 
-    /** Returns an offset for this input */
+    /**
+     * Returns an offset for this input */
     def toOffset(line: Int, column: Int): Int =
       input.lineToOffset(line) + column
 
-    /** Returns an offset position for this input */
+    /**
+     * Returns an offset position for this input */
     def toPosition(startLine: Int, startColumn: Int): Position.Range =
       toPosition(startLine, startColumn, startLine, startColumn)
 
@@ -56,7 +60,8 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       )
     }
 
-    /** Returns a range position for this input */
+    /**
+     * Returns a range position for this input */
     def toPosition(
         startLine: Int,
         startColumn: Int,
@@ -71,24 +76,25 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
-    def toLSP: l.SymbolKind = kind match {
-      case k.LOCAL => l.SymbolKind.Variable
-      case k.FIELD => l.SymbolKind.Field
-      case k.METHOD => l.SymbolKind.Method
-      case k.CONSTRUCTOR => l.SymbolKind.Constructor
-      case k.MACRO => l.SymbolKind.Method
-      case k.TYPE => l.SymbolKind.Class
-      case k.PARAMETER => l.SymbolKind.Variable
-      case k.SELF_PARAMETER => l.SymbolKind.Variable
-      case k.TYPE_PARAMETER => l.SymbolKind.TypeParameter
-      case k.OBJECT => l.SymbolKind.Object
-      case k.PACKAGE => l.SymbolKind.Module
-      case k.PACKAGE_OBJECT => l.SymbolKind.Module
-      case k.CLASS => l.SymbolKind.Class
-      case k.TRAIT => l.SymbolKind.Interface
-      case k.INTERFACE => l.SymbolKind.Interface
-      case _ => l.SymbolKind.Class
-    }
+    def toLSP: l.SymbolKind =
+      kind match {
+        case k.LOCAL => l.SymbolKind.Variable
+        case k.FIELD => l.SymbolKind.Field
+        case k.METHOD => l.SymbolKind.Method
+        case k.CONSTRUCTOR => l.SymbolKind.Constructor
+        case k.MACRO => l.SymbolKind.Method
+        case k.TYPE => l.SymbolKind.Class
+        case k.PARAMETER => l.SymbolKind.Variable
+        case k.SELF_PARAMETER => l.SymbolKind.Variable
+        case k.TYPE_PARAMETER => l.SymbolKind.TypeParameter
+        case k.OBJECT => l.SymbolKind.Object
+        case k.PACKAGE => l.SymbolKind.Module
+        case k.PACKAGE_OBJECT => l.SymbolKind.Module
+        case k.CLASS => l.SymbolKind.Class
+        case k.TRAIT => l.SymbolKind.Interface
+        case k.INTERFACE => l.SymbolKind.Interface
+        case _ => l.SymbolKind.Class
+      }
   }
   implicit class XtensionIteratorCollection[T](it: Iterator[T]) {
     def headOption: Option[T] = {
@@ -153,13 +159,14 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionToken(token: m.Token) {
-    def isWhiteSpaceOrComment: Boolean = token match {
-      case _: m.Token.Space | _: m.Token.Tab | _: m.Token.CR | _: m.Token.LF |
-          _: m.Token.LFLF | _: m.Token.FF | _: m.Token.Comment |
-          _: m.Token.BOF | _: m.Token.EOF =>
-        true
-      case _ => false
-    }
+    def isWhiteSpaceOrComment: Boolean =
+      token match {
+        case _: m.Token.Space | _: m.Token.Tab | _: m.Token.CR | _: m.Token.LF |
+            _: m.Token.LFLF | _: m.Token.FF | _: m.Token.Comment |
+            _: m.Token.BOF | _: m.Token.EOF =>
+          true
+        case _ => false
+      }
   }
 
   implicit class XtensionStringMtags(value: String) {
@@ -193,19 +200,21 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionTreeTokenStream(tree: m.Tree) {
-    def leadingTokens: Iterator[m.Token] = tree.origin match {
-      case Origin.Parsed(input, _, pos) =>
-        val tokens = input.tokenize.get
-        tokens.slice(0, pos.start - 1).reverseIterator
-      case _ => Iterator.empty
-    }
+    def leadingTokens: Iterator[m.Token] =
+      tree.origin match {
+        case Origin.Parsed(input, _, pos) =>
+          val tokens = input.tokenize.get
+          tokens.slice(0, pos.start - 1).reverseIterator
+        case _ => Iterator.empty
+      }
 
-    def trailingTokens: Iterator[m.Token] = tree.origin match {
-      case Origin.Parsed(input, _, pos) =>
-        val tokens = input.tokenize.get
-        tokens.slice(pos.end + 1, tokens.length).iterator
-      case _ => Iterator.empty
-    }
+    def trailingTokens: Iterator[m.Token] =
+      tree.origin match {
+        case Origin.Parsed(input, _, pos) =>
+          val tokens = input.tokenize.get
+          tokens.slice(pos.end + 1, tokens.length).iterator
+        case _ => Iterator.empty
+      }
 
     def findFirstLeading(predicate: m.Token => Boolean): Option[m.Token] =
       leadingTokens.find(predicate)

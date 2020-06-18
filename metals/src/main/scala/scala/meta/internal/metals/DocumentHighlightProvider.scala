@@ -38,11 +38,12 @@ final class DocumentHighlightProvider(
       if curr.symbol == occ.symbol || alternatives(curr.symbol)
       range <- curr.range
       revised <- positionOccurrence.distance.toRevised(range.toLSP)
-      kind = if (curr.role.isDefinition) {
-        DocumentHighlightKind.Write
-      } else {
-        DocumentHighlightKind.Read
-      }
+      kind =
+        if (curr.role.isDefinition) {
+          DocumentHighlightKind.Write
+        } else {
+          DocumentHighlightKind.Read
+        }
     } yield new DocumentHighlight(revised, kind)
     highlights.asJava
   }
@@ -57,8 +58,10 @@ final class DocumentHighlightProvider(
       case Some(info) =>
         if (info.isClass) Set(info.symbol.dropRight(1) + ".")
         else if (info.isObject) Set(info.symbol.dropRight(1) + "#")
-        else if (info.isParameter && (info.symbol.contains("apply") ||
-          info.symbol.contains("copy"))) {
+        else if (
+          info.isParameter && (info.symbol.contains("apply") ||
+          info.symbol.contains("copy"))
+        ) {
           parameterAlternatives(info)
         } else if (info.isMethod) {
           methodAlternatives(info)
@@ -71,16 +74,17 @@ final class DocumentHighlightProvider(
 
   private def methodAlternatives(info: SymbolInformation): Set[String] = {
 
-    def isInObject(desc: Descriptor) = desc match {
-      case Descriptor.Term(value) => true
-      case _ => false
-    }
+    def isInObject(desc: Descriptor) =
+      desc match {
+        case Descriptor.Term(value) => true
+        case _ => false
+      }
 
     val setterSuffix = "_="
     Symbol(info.symbol) match {
       case GlobalSymbol(
-          GlobalSymbol(owner, descriptor),
-          Descriptor.Method(setter, disambiguator)
+            GlobalSymbol(owner, descriptor),
+            Descriptor.Method(setter, disambiguator)
           ) =>
         generateAlternativeSymbols(
           setter.stripSuffix(setterSuffix),
@@ -89,8 +93,8 @@ final class DocumentHighlightProvider(
           isInObject(descriptor)
         )
       case GlobalSymbol(
-          GlobalSymbol(owner, descriptor),
-          Descriptor.Term(name)
+            GlobalSymbol(owner, descriptor),
+            Descriptor.Term(name)
           ) =>
         generateAlternativeSymbols(
           name,
@@ -106,11 +110,11 @@ final class DocumentHighlightProvider(
     val copyOrApply = Set("apply", "copy")
     Symbol(info.symbol) match {
       case GlobalSymbol(
-          GlobalSymbol(
-            GlobalSymbol(owner, descriptor),
-            Descriptor.Method(name, disambiguator)
-          ),
-          desc
+            GlobalSymbol(
+              GlobalSymbol(owner, descriptor),
+              Descriptor.Method(name, disambiguator)
+            ),
+            desc
           ) if copyOrApply(name) =>
         generateAlternativeSymbols(
           desc.value,

@@ -4,9 +4,9 @@ import scala.collection._
 
 /**
  * A fork of the Scaladoc comment in the Scala compiler.
- *
  */
-/** A Scaladoc comment and all its tags.
+/**
+ * A Scaladoc comment and all its tags.
  *
  * '''Note:''' the only instantiation site of this class is in model.CommentFactory.
  *
@@ -14,7 +14,8 @@ import scala.collection._
  * @author Gilles Dubochet */
 abstract class Comment {
 
-  /** The main body of the comment that describes what the entity does and is.  */
+  /**
+   * The main body of the comment that describes what the entity does and is. */
   def body: Body
 
   private def closeHtmlTags(inline: Inline): Inline = {
@@ -43,7 +44,8 @@ abstract class Comment {
     Chain(List(inline) ++ stack.reverse)
   }
 
-  /** A shorter version of the body. Either from `@shortDescription` or the
+  /**
+   * A shorter version of the body. Either from `@shortDescription` or the
    *  first sentence of the body. */
   def short: Inline = {
     shortDescription orElse body.summary match {
@@ -54,76 +56,97 @@ abstract class Comment {
     }
   }
 
-  /** A list of authors. The empty list is used when no author is defined. */
+  /**
+   * A list of authors. The empty list is used when no author is defined. */
   def authors: List[Body]
 
-  /** A list of other resources to see, including links to other entities or
+  /**
+   * A list of other resources to see, including links to other entities or
    * to external documentation. The empty list is used when no other resource
    * is mentioned. */
   def see: List[Body]
 
-  /** A description of the result of the entity. Typically, this provides additional
+  /**
+   * A description of the result of the entity. Typically, this provides additional
    * information on the domain of the result, contractual post-conditions, etc. */
   def result: Option[Body]
 
-  /** A map of exceptions that the entity can throw when accessed, and a
+  /**
+   * A map of exceptions that the entity can throw when accessed, and a
    * description of what they mean. */
   def throws: Map[String, Body]
 
-  /** A map of value parameters, and a description of what they are. Typically,
+  /**
+   * A map of value parameters, and a description of what they are. Typically,
    * this provides additional information on the domain of the parameters,
    * contractual pre-conditions, etc. */
   def valueParams: Map[String, Body]
 
-  /** A map of type parameters, and a description of what they are. Typically,
+  /**
+   * A map of type parameters, and a description of what they are. Typically,
    * this provides additional information on the domain of the parameters. */
   def typeParams: Map[String, Body]
 
-  /** The version number of the entity. There is no formatting or further
+  /**
+   * The version number of the entity. There is no formatting or further
    * meaning attached to this value. */
   def version: Option[Body]
 
-  /** A version number of a containing entity where this member-entity was introduced. */
+  /**
+   * A version number of a containing entity where this member-entity was introduced. */
   def since: Option[Body]
 
-  /** An annotation as to expected changes on this entity. */
+  /**
+   * An annotation as to expected changes on this entity. */
   def todo: List[Body]
 
-  /** Whether the entity is deprecated. Using the `@deprecated` Scala attribute
+  /**
+   * Whether the entity is deprecated. Using the `@deprecated` Scala attribute
    * is preferable to using this Scaladoc tag. */
   def deprecated: Option[Body]
 
-  /** An additional note concerning the contract of the entity. */
+  /**
+   * An additional note concerning the contract of the entity. */
   def note: List[Body]
 
-  /** A usage example related to the entity. */
+  /**
+   * A usage example related to the entity. */
   def example: List[Body]
 
-  /** A description for the primary constructor */
+  /**
+   * A description for the primary constructor */
   def constructor: Option[Body]
 
-  /** A set of diagram directives for the inheritance diagram */
+  /**
+   * A set of diagram directives for the inheritance diagram */
   def inheritDiagram: List[String]
 
-  /** A set of diagram directives for the content diagram */
+  /**
+   * A set of diagram directives for the content diagram */
   def contentDiagram: List[String]
 
-  /** The group this member is part of */
+  /**
+   * The group this member is part of */
   def group: Option[String]
 
-  /** Member group descriptions */
+  /**
+   * Member group descriptions */
   def groupDesc: Map[String, Body]
 
-  /** Member group names (overriding the short tag) */
+  /**
+   * Member group names (overriding the short tag) */
   def groupNames: Map[String, String]
 
-  /** Member group priorities */
+  /**
+   * Member group priorities */
   def groupPrio: Map[String, Int]
 
-  /** A list of implicit conversions to hide */
+  /**
+   * A list of implicit conversions to hide */
   def hideImplicitConversions: List[String]
 
-  /** A short description used in the entity-view and search results */
+  /**
+   * A short description used in the entity-view and search results */
   def shortDescription: Option[Text]
 
   override def toString: String =

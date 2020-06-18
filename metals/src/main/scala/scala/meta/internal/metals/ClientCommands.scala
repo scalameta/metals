@@ -138,13 +138,14 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  def all: List[Command] = List(
-    OpenFolder,
-    RunDoctor,
-    ReloadDoctor,
-    ToggleLogs,
-    FocusDiagnostics,
-    GotoLocation,
-    EchoCommand
-  )
+  def all: List[Command] =
+    List(
+      OpenFolder,
+      RunDoctor,
+      ReloadDoctor,
+      ToggleLogs,
+      FocusDiagnostics,
+      GotoLocation,
+      EchoCommand
+    )
 }

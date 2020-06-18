@@ -140,10 +140,11 @@ object MetalsTestEnrichments {
     }
   }
   implicit class XtensionMetaToken(token: m.Token) {
-    def isIdentifier: Boolean = token match {
-      case _: m.Token.Ident | _: m.Token.Interpolation.Id => true
-      case _ => false
-    }
+    def isIdentifier: Boolean =
+      token match {
+        case _: m.Token.Ident | _: m.Token.Interpolation.Id => true
+        case _ => false
+      }
     def toPositionParams(
         identifier: TextDocumentIdentifier
     ): TextDocumentPositionParams = {

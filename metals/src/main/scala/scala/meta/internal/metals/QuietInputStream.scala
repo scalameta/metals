@@ -10,9 +10,9 @@ import java.io.InputStream
  * This class exists to suppress lsp4j logs like this: {{{
  *   WARNING: Failed to send notification message.
  * org.eclipse.lsp4j.jsonrpc.JsonRpcException: java.io.IOException: Stream Closed
- * 	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageConsumer.consume(StreamMessageConsumer.java:72)
- * 	at org.eclipse.lsp4j.jsonrpc.Launcher$Builder.lambda$wrapMessageConsumer$0(Launcher.java:312)
- * 	at or
+ *  at org.eclipse.lsp4j.jsonrpc.json.StreamMessageConsumer.consume(StreamMessageConsumer.java:72)
+ *  at org.eclipse.lsp4j.jsonrpc.Launcher$Builder.lambda$wrapMessageConsumer$0(Launcher.java:312)
+ *  at or
  * }}}
  */
 class QuietInputStream(underlying: InputStream, name: String)

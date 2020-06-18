@@ -109,8 +109,8 @@ final class BatchedFunction[A, B](
 }
 
 object BatchedFunction {
-  def fromFuture[A, B](fn: Seq[A] => Future[B])(
-      implicit ec: ExecutionContext,
+  def fromFuture[A, B](fn: Seq[A] => Future[B])(implicit
+      ec: ExecutionContext,
       dummy: DummyImplicit
   ): BatchedFunction[A, B] =
     new BatchedFunction(fn.andThen(CancelableFuture(_)))

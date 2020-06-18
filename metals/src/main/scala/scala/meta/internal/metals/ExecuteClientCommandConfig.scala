@@ -7,7 +7,8 @@ final case class ExecuteClientCommandConfig(value: String) {
 object ExecuteClientCommandConfig {
   def on = new ExecuteClientCommandConfig("on")
   def off = new ExecuteClientCommandConfig("off")
-  def default = new ExecuteClientCommandConfig(
-    System.getProperty("metals.execute-client-command", "off")
-  )
+  def default =
+    new ExecuteClientCommandConfig(
+      System.getProperty("metals.execute-client-command", "off")
+    )
 }

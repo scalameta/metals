@@ -42,10 +42,11 @@ trait AutoImports { this: MetalsGlobal =>
   def isImportPosition(pos: Position): Boolean =
     findLastVisitedParentTree(pos).exists(_.isInstanceOf[Import])
 
-  def notPackageObject(pkg: PackageDef): Boolean = pkg.stats.exists {
-    case ModuleDef(_, name, _) => name.toString != "package"
-    case _ => true
-  }
+  def notPackageObject(pkg: PackageDef): Boolean =
+    pkg.stats.exists {
+      case ModuleDef(_, name, _) => name.toString != "package"
+      case _ => true
+    }
 
   def autoImportPosition(
       pos: Position,

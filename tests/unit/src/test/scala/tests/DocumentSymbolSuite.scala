@@ -17,7 +17,8 @@ class DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>
       ExpectTestCase(
-        file, { () =>
+        file,
+        { () =>
           val documentSymbols = documentSymbolProvider
             .documentSymbols(file.file.toURI, file.code)
             .asScala

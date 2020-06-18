@@ -23,7 +23,9 @@ object ClassFinder {
     var isInnerClass: Boolean = false
     var isToplevel: Boolean = true
     override def traverse(tree: Tree)(implicit ctx: Context): Unit = {
-      if (tree.sourcePos.exists && tree.sourcePos.start <= offset && offset <= tree.sourcePos.end) {
+      if (
+        tree.sourcePos.exists && tree.sourcePos.start <= offset && offset <= tree.sourcePos.end
+      ) {
         val delimeter =
           if (symbol.endsWith("$")) ""
           else if (isInnerClass) "$"

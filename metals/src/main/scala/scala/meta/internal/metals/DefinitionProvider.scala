@@ -111,9 +111,10 @@ final class DefinitionProvider(
       dirtyPosition: Position
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
-      currentDocument <- semanticdbs
-        .textDocument(source)
-        .documentIncludingStale
+      currentDocument <-
+        semanticdbs
+          .textDocument(source)
+          .documentIncludingStale
       posOcc = positionOccurrence(
         source,
         dirtyPosition,
@@ -142,10 +143,11 @@ final class DefinitionProvider(
     // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
       queryPosition <- snapshotPosition.toPosition(dirtyPosition)
-      occurrence <- snapshot.occurrences
-        .find(_.encloses(queryPosition, true))
-        // In case of macros we might need to get the postion from the presentation compiler
-        .orElse(fromMtags(source, queryPosition))
+      occurrence <-
+        snapshot.occurrences
+          .find(_.encloses(queryPosition, true))
+          // In case of macros we might need to get the postion from the presentation compiler
+          .orElse(fromMtags(source, queryPosition))
     } yield occurrence
 
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
@@ -196,7 +198,8 @@ case class DefinitionDestination(
     uri: String
 ) {
 
-  /** Converts snapshot position to dirty buffer position in the destination file */
+  /**
+   * Converts snapshot position to dirty buffer position in the destination file */
   def toResult: Option[DefinitionResult] =
     for {
       location <- snapshot.definition(uri, symbol)

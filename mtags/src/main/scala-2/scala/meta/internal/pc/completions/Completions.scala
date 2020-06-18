@@ -46,15 +46,17 @@ trait Completions { this: MetalsGlobal =>
   val packageSymbols: mutable.Map[String, Option[Symbol]] =
     mutable.Map.empty[String, Option[Symbol]]
   def packageSymbolFromString(symbol: String): Option[Symbol] = {
-    packageSymbols.getOrElseUpdate(symbol, {
-      val fqn = symbol.stripSuffix("/").replace('/', '.')
-      try {
-        Some(rootMirror.staticPackage(fqn))
-      } catch {
-        case NonFatal(_) =>
-          None
+    packageSymbols.getOrElseUpdate(
+      symbol, {
+        val fqn = symbol.stripSuffix("/").replace('/', '.')
+        try {
+          Some(rootMirror.staticPackage(fqn))
+        } catch {
+          case NonFatal(_) =>
+            None
+        }
       }
-    })
+    )
   }
 
   /**
@@ -65,37 +67,39 @@ trait Completions { this: MetalsGlobal =>
    * - public vs private
    * - synthetic vs non-synthetic
    */
-  def relevancePenalty(m: Member, history: ShortenedNames): Int = m match {
-    case TypeMember(sym, _, true, isInherited, _) =>
-      computeRelevancePenalty(
-        sym,
-        m.implicitlyAdded,
-        isInherited,
-        history
-      )
-    case w: WorkspaceMember =>
-      MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
-    case w: OverrideDefMember =>
-      var penalty = computeRelevancePenalty(
-        w.sym,
-        m.implicitlyAdded,
-        isInherited = false,
-        history
-      ) >>> 15
-      if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
-      penalty
-    case ScopeMember(sym, _, true, _) =>
-      computeRelevancePenalty(
-        sym,
-        m.implicitlyAdded,
-        isInherited = false,
-        history
-      )
-    case _ =>
-      Int.MaxValue
-  }
+  def relevancePenalty(m: Member, history: ShortenedNames): Int =
+    m match {
+      case TypeMember(sym, _, true, isInherited, _) =>
+        computeRelevancePenalty(
+          sym,
+          m.implicitlyAdded,
+          isInherited,
+          history
+        )
+      case w: WorkspaceMember =>
+        MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
+      case w: OverrideDefMember =>
+        var penalty = computeRelevancePenalty(
+          w.sym,
+          m.implicitlyAdded,
+          isInherited = false,
+          history
+        ) >>> 15
+        if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
+        penalty
+      case ScopeMember(sym, _, true, _) =>
+        computeRelevancePenalty(
+          sym,
+          m.implicitlyAdded,
+          isInherited = false,
+          history
+        )
+      case _ =>
+        Int.MaxValue
+    }
 
-  /** Computes the relative relevance of a symbol in the completion list
+  /**
+   * Computes the relative relevance of a symbol in the completion list
    * This is an adaptation of
    * https://github.com/scala-ide/scala-ide/blob/a17ace0ee1be1875b8992664069d8ad26162eeee/org.scala-ide.sdt.core/src/org/scalaide/core/completion/ProposalRelevanceCalculator.scala
    */
@@ -152,61 +156,67 @@ trait Completions { this: MetalsGlobal =>
       query: String,
       history: ShortenedNames,
       completion: CompletionPosition
-  ): Ordering[Member] = new Ordering[Member] {
-    val queryLower = query.toLowerCase()
-    val fuzzyCache = mutable.Map.empty[Symbol, Int]
-    def compareLocalSymbols(o1: Member, o2: Member): Int = {
-      if (o1.sym.isLocallyDefinedSymbol &&
-        o2.sym.isLocallyDefinedSymbol &&
-        !o1.isInstanceOf[NamedArgMember] &&
-        !o2.isInstanceOf[NamedArgMember]) {
-        if (o1.sym.pos.isAfter(o2.sym.pos)) -1
-        else 1
-      } else {
-        0
+  ): Ordering[Member] =
+    new Ordering[Member] {
+      val queryLower = query.toLowerCase()
+      val fuzzyCache = mutable.Map.empty[Symbol, Int]
+      def compareLocalSymbols(o1: Member, o2: Member): Int = {
+        if (
+          o1.sym.isLocallyDefinedSymbol &&
+          o2.sym.isLocallyDefinedSymbol &&
+          !o1.isInstanceOf[NamedArgMember] &&
+          !o2.isInstanceOf[NamedArgMember]
+        ) {
+          if (o1.sym.pos.isAfter(o2.sym.pos)) -1
+          else 1
+        } else {
+          0
+        }
       }
-    }
-    def fuzzyScore(o: Member): Int = {
-      fuzzyCache.getOrElseUpdate(o.sym, {
-        val name = o.sym.name.toString().toLowerCase()
-        if (name.startsWith(queryLower)) 0
-        else if (name.toLowerCase().contains(queryLower)) 1
-        else 2
-      })
-    }
-    override def compare(o1: Member, o2: Member): Int = {
-      val byCompletion = completion.compare(o1, o2)
-      if (byCompletion != 0) byCompletion
-      else {
-        val byLocalSymbol = compareLocalSymbols(o1, o2)
-        if (byLocalSymbol != 0) byLocalSymbol
+      def fuzzyScore(o: Member): Int = {
+        fuzzyCache.getOrElseUpdate(
+          o.sym, {
+            val name = o.sym.name.toString().toLowerCase()
+            if (name.startsWith(queryLower)) 0
+            else if (name.toLowerCase().contains(queryLower)) 1
+            else 2
+          }
+        )
+      }
+      override def compare(o1: Member, o2: Member): Int = {
+        val byCompletion = completion.compare(o1, o2)
+        if (byCompletion != 0) byCompletion
         else {
-          val byRelevance = Integer.compare(
-            relevancePenalty(o1, history),
-            relevancePenalty(o2, history)
-          )
-          if (byRelevance != 0) byRelevance
+          val byLocalSymbol = compareLocalSymbols(o1, o2)
+          if (byLocalSymbol != 0) byLocalSymbol
           else {
-            val byFuzzy =
-              java.lang.Integer.compare(fuzzyScore(o1), fuzzyScore(o2))
-            if (byFuzzy != 0) byFuzzy
+            val byRelevance = Integer.compare(
+              relevancePenalty(o1, history),
+              relevancePenalty(o2, history)
+            )
+            if (byRelevance != 0) byRelevance
             else {
-              val byIdentifier =
-                IdentifierComparator.compare(o1.sym.name, o2.sym.name)
-              if (byIdentifier != 0) byIdentifier
+              val byFuzzy =
+                java.lang.Integer.compare(fuzzyScore(o1), fuzzyScore(o2))
+              if (byFuzzy != 0) byFuzzy
               else {
-                val byOwner =
-                  o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
-                if (byOwner != 0) byOwner
+                val byIdentifier =
+                  IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+                if (byIdentifier != 0) byIdentifier
                 else {
-                  val byParamCount = Integer.compare(
-                    o1.sym.paramss.iterator.flatten.size,
-                    o2.sym.paramss.iterator.flatten.size
-                  )
-                  if (byParamCount != 0) byParamCount
+                  val byOwner =
+                    o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
+                  if (byOwner != 0) byOwner
                   else {
-                    detailString(o1, history)
-                      .compareTo(detailString(o2, history))
+                    val byParamCount = Integer.compare(
+                      o1.sym.paramss.iterator.flatten.size,
+                      o2.sym.paramss.iterator.flatten.size
+                    )
+                    if (byParamCount != 0) byParamCount
+                    else {
+                      detailString(o1, history)
+                        .compareTo(detailString(o2, history))
+                    }
                   }
                 }
               }
@@ -215,7 +225,6 @@ trait Completions { this: MetalsGlobal =>
         }
       }
     }
-  }
 
   def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
     sym match {
@@ -229,7 +238,9 @@ trait Completions { this: MetalsGlobal =>
           case dealiased :: _ =>
             fullName(dealiased)
           case _ =>
-            if (sym.isModuleOrModuleClass || sym.hasPackageFlag || sym.isClass) {
+            if (
+              sym.isModuleOrModuleClass || sym.hasPackageFlag || sym.isClass
+            ) {
               fullName(sym)
             } else {
               val short = shortType(info, history)
@@ -448,9 +459,9 @@ trait Completions { this: MetalsGlobal =>
               .getOrElse(NoneCompletion)
         }
       case (_: Ident) ::
-            Select(Ident(TermName("scala")), TypeName("Unit")) ::
-            (defdef: DefDef) ::
-            (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
+          Select(Ident(TermName("scala")), TypeName("Unit")) ::
+          (defdef: DefDef) ::
+          (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
         OverrideCompletion(
           defdef.name,
           t,
@@ -460,7 +471,7 @@ trait Completions { this: MetalsGlobal =>
           !_.isGetter
         )
       case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
-            (t: Template) :: _ if name.endsWith(CURSOR) =>
+          (t: Template) :: _ if name.endsWith(CURSOR) =>
         OverrideCompletion(
           name,
           t,
@@ -474,7 +485,10 @@ trait Completions { this: MetalsGlobal =>
       case Ident(name) :: (_: CaseDef) :: (m: Match) :: parent :: _
           if isCasePrefix(name) =>
         CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
-      case (ident @ Ident(name)) :: Block(_, expr) :: (_: CaseDef) :: (m: Match) :: parent :: _
+      case (ident @ Ident(name)) :: Block(
+            _,
+            expr
+          ) :: (_: CaseDef) :: (m: Match) :: parent :: _
           if ident == expr && isCasePrefix(name) =>
         CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
@@ -509,8 +523,10 @@ trait Completions { this: MetalsGlobal =>
     object ExhaustiveMatch {
       def unapply(sel: Select): Option[CompletionPosition] = {
         if (!isMatchPrefix(sel.name)) None
-        else if (sel.pos.point < 1 ||
-          text.charAt(sel.pos.point - 1) != ' ') None
+        else if (
+          sel.pos.point < 1 ||
+          text.charAt(sel.pos.point - 1) != ' '
+        ) None
         else {
           completions match {
             case t: CompletionResult.TypeMembers =>
@@ -726,20 +742,21 @@ trait Completions { this: MetalsGlobal =>
       }
       i + 1
     }
-    def loop(enclosing: List[Tree]): Int = enclosing match {
-      case Nil => fallback
-      case head :: tl =>
-        if (!treePos(head).includes(pos)) loop(tl)
-        else {
-          head match {
-            case i: Ident =>
-              treePos(i).point
-            case Select(qual, nme) if !treePos(qual).includes(pos) =>
-              treePos(head).point
-            case _ => fallback
+    def loop(enclosing: List[Tree]): Int =
+      enclosing match {
+        case Nil => fallback
+        case head :: tl =>
+          if (!treePos(head).includes(pos)) loop(tl)
+          else {
+            head match {
+              case i: Ident =>
+                treePos(i).point
+              case Select(qual, nme) if !treePos(qual).includes(pos) =>
+                treePos(head).point
+              case _ => fallback
+            }
           }
-        }
-    }
+      }
     loop(lastVisitedParentTrees)
   }
 

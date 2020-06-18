@@ -62,16 +62,18 @@ case class PantsGlobs(
       None
     }
 
-  /** Returns a source directory if this target uses rglobs("*.scala") */
-  def sourceDirectory(workspace: Path): Option[Path] = include match {
-    case head :: Nil if exclude.isEmpty =>
-      PantsGlobs.rglobsSuffixes.collectFirst {
-        case suffix if head.endsWith(suffix) =>
-          workspace.resolve(head.stripSuffix(suffix))
-      }
-    case _ =>
-      None
-  }
+  /**
+   * Returns a source directory if this target uses rglobs("*.scala") */
+  def sourceDirectory(workspace: Path): Option[Path] =
+    include match {
+      case head :: Nil if exclude.isEmpty =>
+        PantsGlobs.rglobsSuffixes.collectFirst {
+          case suffix if head.endsWith(suffix) =>
+            workspace.resolve(head.stripSuffix(suffix))
+        }
+      case _ =>
+        None
+    }
 }
 
 object PantsGlobs {
@@ -96,18 +98,19 @@ object PantsGlobs {
     }
   }
 
-  private def globsFromObject(value: Value): List[String] = value match {
-    case Obj(obj) =>
-      obj.get("globs") match {
-        case Some(arr: Arr) =>
-          arr.value.iterator.collect {
-            case Str(glob) => glob
-          }.toList
-        case _ =>
-          Nil
-      }
-    case _ => Nil
-  }
+  private def globsFromObject(value: Value): List[String] =
+    value match {
+      case Obj(obj) =>
+        obj.get("globs") match {
+          case Some(arr: Arr) =>
+            arr.value.iterator.collect {
+              case Str(glob) => glob
+            }.toList
+          case _ =>
+            Nil
+        }
+      case _ => Nil
+    }
 
   private def walkDepth(globs: List[String]): Option[Int] = {
     if (globs.isEmpty) Some(0)

@@ -22,7 +22,8 @@ class GradleDigestSuite extends BaseDigestSuite {
     """.stripMargin
   )
 
-  /** @tgodzik Currently we do not support multiline comments since regexes might be too compilacted
+  /**
+   * @tgodzik Currently we do not support multiline comments since regexes might be too compilacted
    * and we do not have tokenizer for gradle.
    */
   checkDiff(

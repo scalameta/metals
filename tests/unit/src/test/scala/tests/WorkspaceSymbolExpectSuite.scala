@@ -11,7 +11,8 @@ class WorkspaceSymbolExpectSuite
   def testCases(): List[ExpectTestCase] = {
     input.allFiles.map { file =>
       ExpectTestCase(
-        file, { () =>
+        file,
+        { () =>
           val input = file.input
           val mtags0 = Mtags.allToplevels(input)
           val symtab0 = mtags0.symbols.map(i => i.symbol -> i).toMap

@@ -14,7 +14,8 @@ final case class StatisticsConfig(value: String) {
 object StatisticsConfig {
   def all = new StatisticsConfig("all")
   def workspaceSymbol = new StatisticsConfig("workspace-symbol")
-  def default = new StatisticsConfig(
-    System.getProperty("metals.statistics", "default")
-  )
+  def default =
+    new StatisticsConfig(
+      System.getProperty("metals.statistics", "default")
+    )
 }

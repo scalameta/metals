@@ -126,7 +126,9 @@ trait Signatures { this: MetalsGlobal =>
       @annotation.tailrec
       def topPackage(s: Symbol): Symbol = {
         val owner = s.owner
-        if (s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot || s == owner) {
+        if (
+          s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot || s == owner
+        ) {
           s
         } else {
           topPackage(owner)

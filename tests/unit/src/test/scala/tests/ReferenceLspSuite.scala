@@ -108,7 +108,8 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     } yield ()
   }
 
-  /** References should be found correctly regardless of the whether or not
+  /**
+   * References should be found correctly regardless of the whether or not
    *  the declaring code and the refering share the same compilation unit.
    *
    *  This checks both cases by first placing them in the same file and then

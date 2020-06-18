@@ -27,7 +27,8 @@ class MtagsSuite extends DirectoryExpectSuite("mtags") {
   def testCases(): List[ExpectTestCase] = {
     input.allFiles.map { file =>
       ExpectTestCase(
-        file, { () =>
+        file,
+        { () =>
           val input = file.input
           val mtags = Mtags.index(input)
           val obtained = Semanticdbs.printTextDocument(mtags)

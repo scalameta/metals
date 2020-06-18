@@ -144,10 +144,11 @@ class Fuzzy {
     end + 1
   }
 
-  def isDelimiter(ch: Char): Boolean = ch match {
-    case '.' | '/' | '#' | '$' => true
-    case _ => false
-  }
+  def isDelimiter(ch: Char): Boolean =
+    ch match {
+      case '.' | '/' | '#' | '$' => true
+      case _ => false
+    }
 
   /**
    * Returns the length of the last name in this symbol.
@@ -172,8 +173,10 @@ class Fuzzy {
     else {
       var i = 0
       while (i <= a && i <= b) {
-        if (cs.charAt(a - i) !=
-            string.charAt(b - i)) return false
+        if (
+          cs.charAt(a - i) !=
+            string.charAt(b - i)
+        ) return false
         i += 1
       }
       true
@@ -312,9 +315,11 @@ class Fuzzy {
       i += 1
     }
     val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
-    if (!symbol.endsWith("/") &&
+    if (
+      !symbol.endsWith("/") &&
       !isAllNumeric(lastName) &&
-      lastName.length() < ExactSearchLimit) {
+      lastName.length() < ExactSearchLimit
+    ) {
       hasher.putCharSequence(ExactCharSequence(lastName))
     }
     TrigramSubstrings.foreach(

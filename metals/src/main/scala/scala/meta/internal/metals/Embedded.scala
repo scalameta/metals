@@ -150,20 +150,22 @@ object Embedded {
     Dependency.of("ch.epfl.lamp", s"dotty-library_$binaryVersion", scalaVersion)
   }
 
-  private def mtagsDependency(scalaVersion: String): Dependency = Dependency.of(
-    "org.scalameta",
-    s"mtags_$scalaVersion",
-    BuildInfo.metalsVersion
-  )
+  private def mtagsDependency(scalaVersion: String): Dependency =
+    Dependency.of(
+      "org.scalameta",
+      s"mtags_$scalaVersion",
+      BuildInfo.metalsVersion
+    )
 
   private def mdocDependency(
       scalaVersion: String,
       scalaBinaryVersion: String
-  ): Dependency = Dependency.of(
-    "org.scalameta",
-    s"mdoc_${scalaBinaryVersion}",
-    BuildInfo.mdocVersion
-  )
+  ): Dependency =
+    Dependency.of(
+      "org.scalameta",
+      s"mdoc_${scalaBinaryVersion}",
+      BuildInfo.mdocVersion
+    )
 
   private def semanticdbScalacDependency(scalaVersion: String): Dependency =
     Dependency.of(

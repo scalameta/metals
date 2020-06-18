@@ -6,7 +6,8 @@ import scala.meta.internal.tvp.TreeViewProvider
 
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
-  /** The libraries we expect to find for tests in this file.
+  /**
+   * The libraries we expect to find for tests in this file.
    *
    * @note this value changes depending on the JVM version in use as some JAR
    *       files have moved to become modules on JVM > 8.

@@ -159,8 +159,8 @@ class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   def assertStackFrame(
       name: TestOptions,
       disabled: Boolean = false
-  )(source: String, expectedFrames: List[Variables])(
-      implicit loc: Location
+  )(source: String, expectedFrames: List[Variables])(implicit
+      loc: Location
   ): Unit = {
     if (disabled) return
 

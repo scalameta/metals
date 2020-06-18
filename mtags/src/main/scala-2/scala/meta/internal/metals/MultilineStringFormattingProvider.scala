@@ -27,8 +27,10 @@ object MultilineStringFormattingProvider {
       tokens: Tokens
   ): Boolean = {
     var methodIndex = stringTokenIndex + 1
-    while (tokens(methodIndex).isWhiteSpaceOrComment ||
-      tokens(methodIndex).isInstanceOf[Token.Dot]) methodIndex += 1
+    while (
+      tokens(methodIndex).isWhiteSpaceOrComment ||
+      tokens(methodIndex).isInstanceOf[Token.Dot]
+    ) methodIndex += 1
     tokens(methodIndex) match {
       case token: Token.Ident if token.value == stripMargin =>
         true
@@ -86,7 +88,9 @@ object MultilineStringFormattingProvider {
     val currentLine = splitLines(position.getLine)
     val pos = position.getCharacter
     val onlyFour = 4
-    hasNQuotes(pos - 3, currentLine, onlyFour) && currentLine.count(_ == quote) == onlyFour
+    hasNQuotes(pos - 3, currentLine, onlyFour) && currentLine.count(
+      _ == quote
+    ) == onlyFour
   }
 
   private def hasNQuotes(start: Int, text: String, n: Int): Boolean =
@@ -101,7 +105,9 @@ object MultilineStringFormattingProvider {
       position: Position,
       enableStripMargin: Boolean
   ): List[TextEdit] = {
-    if (enableStripMargin && startToken.pos.startLine == position.getLine - 1 && endToken.pos.endLine == position.getLine) {
+    if (
+      enableStripMargin && startToken.pos.startLine == position.getLine - 1 && endToken.pos.endLine == position.getLine
+    ) {
       val newPos =
         new scala.meta.inputs.Position.Range(
           endToken.input,
@@ -196,19 +202,23 @@ object MultilineStringFormattingProvider {
       case startToken @ (_: Token.Constant.String | _: Interpolation.Start) =>
         val endIndex = if (startToken.isInstanceOf[Interpolation.Start]) {
           var endIndex = index + 1
-          while (!tokens(endIndex)
-              .isInstanceOf[Interpolation.End]) endIndex += 1
+          while (
+            !tokens(endIndex)
+              .isInstanceOf[Interpolation.End]
+          ) endIndex += 1
           endIndex
         } else index
         val endToken = tokens(endIndex)
-        if (inToken(startPosition, endPosition, startToken, endToken)
+        if (
+          inToken(startPosition, endPosition, startToken, endToken)
           && isMultilineString(startToken) &&
           pipeInScope(
             startPosition,
             endPosition,
             text,
             newlineAdded
-          )) indent(startToken, endToken, endIndex)
+          )
+        ) indent(startToken, endToken, endIndex)
         else None
       case _ => None
     }
@@ -331,8 +341,12 @@ object MultilineStringFormattingProvider {
     )
     val defaultIndent = previousLine.prefixLength(_ == ' ')
     val indent =
-      if (previousLineNumber > 1 && !splitLines(previousLineNumber - 1).trim.lastOption
-          .contains('+'))
+      if (
+        previousLineNumber > 1 && !splitLines(
+          previousLineNumber - 1
+        ).trim.lastOption
+          .contains('+')
+      )
         defaultIndent + 2
       else defaultIndent
     val interpolationString = getIndexOfLastQuote(previousLine)
@@ -422,10 +436,12 @@ object MultilineStringFormattingProvider {
         case None =>
           if (triggerChar == "\"" && onlyFourQuotes(splitLines, position))
             replaceWithSixQuotes(position)
-          else if (triggerChar == "\n" && doubleQuoteNotClosed(
+          else if (
+            triggerChar == "\n" && doubleQuoteNotClosed(
               splitLines,
               position
-            ))
+            )
+          )
             fixStringNewline(position, splitLines)
           else Nil
       }

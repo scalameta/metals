@@ -201,11 +201,12 @@ final class Diagnostics(
     for {
       d <- syntaxError.get(path)
       // De-duplicate only the most common and basic syntax errors.
-      isDuplicate = d.getMessage.startsWith("identifier expected but") &&
-        all.asScala.exists { other =>
-          other.getMessage.startsWith("identifier expected") &&
-          other.getRange == d.getRange
-        }
+      isDuplicate =
+        d.getMessage.startsWith("identifier expected but") &&
+          all.asScala.exists { other =>
+            other.getMessage.startsWith("identifier expected") &&
+            other.getRange == d.getRange
+          }
       if !isDuplicate
     } {
       all.add(d)

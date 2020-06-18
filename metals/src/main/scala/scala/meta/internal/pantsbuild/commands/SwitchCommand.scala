@@ -113,11 +113,13 @@ object SwitchCommand extends Command[SwitchOptions]("switch") {
       else workspace.resolve(link)
     }
     val outScalafmt = out.resolve(".scalafmt.conf")
-    if (!out.startsWith(workspace) &&
+    if (
+      !out.startsWith(workspace) &&
       Files.exists(inScalafmt) && {
         !Files.exists(outScalafmt) ||
         Files.isSymbolicLink(outScalafmt)
-      }) {
+      }
+    ) {
       Files.deleteIfExists(outScalafmt)
       Files.createSymbolicLink(outScalafmt, inScalafmt)
     }
@@ -130,8 +132,10 @@ object SwitchCommand extends Command[SwitchOptions]("switch") {
       isError: Boolean
   ): Boolean = {
     val bloopDirectory = common.bloopDirectory
-    if (Files.isDirectory(bloopDirectory) &&
-      !Files.isSymbolicLink(bloopDirectory)) {
+    if (
+      Files.isDirectory(bloopDirectory) &&
+      !Files.isSymbolicLink(bloopDirectory)
+    ) {
       val relpath = app.workingDirectory.relativize(bloopDirectory)
       val message =
         s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +

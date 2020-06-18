@@ -130,22 +130,22 @@ final class ReferenceProvider(
         info.displayName == name &&
         occ.symbol == (Symbol(info.symbol) match {
           case GlobalSymbol(
-              GlobalSymbol(
-                GlobalSymbol(owner, Descriptor.Term(obj)),
-                Descriptor.Method("apply", _)
-              ),
-              _
+                GlobalSymbol(
+                  GlobalSymbol(owner, Descriptor.Term(obj)),
+                  Descriptor.Method("apply", _)
+                ),
+                _
               ) =>
             Symbols.Global(
               Symbols.Global(owner.value, Descriptor.Type(obj)),
               Descriptor.Term(name)
             )
           case GlobalSymbol(
-              GlobalSymbol(
-                GlobalSymbol(owner, Descriptor.Type(obj)),
-                Descriptor.Method("copy", _)
-              ),
-              _
+                GlobalSymbol(
+                  GlobalSymbol(owner, Descriptor.Type(obj)),
+                  Descriptor.Method("copy", _)
+                ),
+                _
               ) =>
             Symbols.Global(
               Symbols.Global(owner.value, Descriptor.Type(obj)),
@@ -211,37 +211,40 @@ final class ReferenceProvider(
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
         if isSymbol.exists(bloom.mightContain)
-        scalaPath <- SemanticdbClasspath
-          .toScala(workspace, AbsolutePath(path))
-          .iterator
+        scalaPath <-
+          SemanticdbClasspath
+            .toScala(workspace, AbsolutePath(path))
+            .iterator
         if !visited(scalaPath)
         _ = visited.add(scalaPath)
         if scalaPath.exists
-        semanticdb <- semanticdbs
-          .textDocument(scalaPath)
-          .documentIncludingStale
-          .iterator
+        semanticdb <-
+          semanticdbs
+            .textDocument(scalaPath)
+            .documentIncludingStale
+            .iterator
         semanticdbDistance = buffers.tokenEditDistance(
           scalaPath,
           semanticdb.text
         )
         uri = scalaPath.toURI.toString
-        reference <- try {
-          referenceLocations(
-            semanticdb,
-            isSymbol,
-            semanticdbDistance,
-            uri,
-            isIncludeDeclaration,
-            canSkipExactMatchCheck,
-            includeSynthetics
-          )
-        } catch {
-          case NonFatal(e) =>
-            // Can happen for example if the SemanticDB text is empty for some reason.
-            scribe.error(s"reference: $scalaPath", e)
-            Nil
-        }
+        reference <-
+          try {
+            referenceLocations(
+              semanticdb,
+              isSymbol,
+              semanticdbDistance,
+              uri,
+              isIncludeDeclaration,
+              canSkipExactMatchCheck,
+              includeSynthetics
+            )
+          } catch {
+            case NonFatal(e) =>
+              // Can happen for example if the SemanticDB text is empty for some reason.
+              scribe.error(s"reference: $scalaPath", e)
+              Nil
+          }
       } yield reference
       results.toSeq
     }

@@ -28,12 +28,13 @@ class ClasspathTreeView[Value, Key](
     loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation]
 ) {
   val rootUri: String = scheme + ":"
-  def root: TreeViewNode = TreeViewNode(
-    viewId,
-    rootUri,
-    title + s" (${toplevels().size})",
-    collapseState = MetalsTreeItemCollapseState.collapsed
-  )
+  def root: TreeViewNode =
+    TreeViewNode(
+      viewId,
+      rootUri,
+      title + s" (${toplevels().size})",
+      collapseState = MetalsTreeItemCollapseState.collapsed
+    )
 
   def matches(uri: String): Boolean = uri.startsWith(rootUri)
 
@@ -167,7 +168,8 @@ class ClasspathTreeView[Value, Key](
     )
   }
 
-  /** URI of a tree view node that encodes a SemanticDB symbol and a Key. */
+  /**
+   * URI of a tree view node that encodes a SemanticDB symbol and a Key. */
   case class NodeUri(
       key: Key,
       symbol: String = Symbols.RootPackage

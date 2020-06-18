@@ -118,21 +118,23 @@ final class RenameProvider(
           definitionPath = definitionLoc.getUri().toAbsolutePath
           if canRenameSymbol(occurence.symbol, Option(newName)) &&
             isWorkspaceSymbol(occurence.symbol, definitionPath)
-          parentSymbols = implementationProvider
-            .topMethodParents(occurence.symbol, semanticDb)
+          parentSymbols =
+            implementationProvider
+              .topMethodParents(occurence.symbol, semanticDb)
           txtParams <- {
             if (parentSymbols.isEmpty) List(textParams)
             else parentSymbols.map(toTextParams)
           }
           isLocal = occurence.symbol.isLocal
-          currentReferences = referenceProvider
-            .references(
-              // we can't get definition by name for local symbols
-              toReferenceParams(txtParams, includeDeclaration = isLocal),
-              canSkipExactMatchCheck = false,
-              includeSynthetics = includeSynthetic
-            )
-            .locations
+          currentReferences =
+            referenceProvider
+              .references(
+                // we can't get definition by name for local symbols
+                toReferenceParams(txtParams, includeDeclaration = isLocal),
+                canSkipExactMatchCheck = false,
+                includeSynthetics = includeSynthetic
+              )
+              .locations
           definitionLocation = {
             if (parentSymbols.isEmpty)
               definition.locations.asScala
@@ -144,7 +146,8 @@ final class RenameProvider(
             txtParams,
             !occurence.symbol.desc.isType
           )
-          loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
+          loc <-
+            currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
         } yield loc
 
         def isOccurrence(fn: String => Boolean): Boolean = {
@@ -187,9 +190,10 @@ final class RenameProvider(
     }
   }
 
-  def runSave(): Unit = synchronized {
-    ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
-  }
+  def runSave(): Unit =
+    synchronized {
+      ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
+    }
 
   private def documentEdits(
       openedEdits: Map[AbsolutePath, List[TextEdit]]
@@ -229,13 +233,15 @@ final class RenameProvider(
   private def companionReferences(sym: String): Seq[Location] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
-      loc <- definitionProvider
-        .fromSymbol(companionSymbol)
-        .asScala
+      loc <-
+        definitionProvider
+          .fromSymbol(companionSymbol)
+          .asScala
       if loc.getUri().isScalaFilename
-      companionLocs <- referenceProvider
-        .references(toReferenceParams(loc, includeDeclaration = false))
-        .locations :+ loc
+      companionLocs <-
+        referenceProvider
+          .references(toReferenceParams(loc, includeDeclaration = false))
+          .locations :+ loc
     } yield companionLocs
     results.toList
   }

@@ -57,7 +57,8 @@ object IntelliJ {
     }
   }
 
-  /** The .bsp/bloop.json file is necessary for IntelliJ to automatically import the project */
+  /**
+   * The .bsp/bloop.json file is necessary for IntelliJ to automatically import the project */
   def writeBsp(
       project: Project,
       coursierBinary: Option[Path] = None,

@@ -239,8 +239,8 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       )
     }
 
-  def checkEdit(name: String, original: String, expected: String)(
-      implicit loc: Location
+  def checkEdit(name: String, original: String, expected: String)(implicit
+      loc: Location
   ): Unit =
     checkEdit(name, "A.scala", original, expected)
 
@@ -249,8 +249,8 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       filename: String,
       original: String,
       expected: String
-  )(
-      implicit loc: Location
+  )(implicit
+      loc: Location
   ): Unit =
     test(name) {
       val imports = getAutoImports(original, filename)

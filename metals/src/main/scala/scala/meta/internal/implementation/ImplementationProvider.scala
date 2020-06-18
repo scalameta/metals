@@ -56,7 +56,8 @@ final class ImplementationProvider(
 
   def onChange(docs: TextDocuments, path: Path): Unit = {
     implementationsInPath.compute(
-      path, { (_, _) => computeInheritance(docs) }
+      path,
+      { (_, _) => computeInheritance(docs) }
     )
   }
 
@@ -129,12 +130,13 @@ final class ImplementationProvider(
   ): List[Location] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val locations = for {
-      (symbolOccurrence, currentDocument) <- definitionProvider
-        .symbolOccurrence(
-          source,
-          params.getPosition
-        )
-        .toIterable
+      (symbolOccurrence, currentDocument) <-
+        definitionProvider
+          .symbolOccurrence(
+            source,
+            params.getPosition
+          )
+          .toIterable
     } yield {
       // 1. Search locally for symbol
       // 2. Search inside workspace

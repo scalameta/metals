@@ -204,11 +204,12 @@ case class ScalaPresentationCompiler(
   override def completionItemResolve(
       item: CompletionItem,
       symbol: String
-  ): CompletableFuture[CompletionItem] = CompletableFuture.completedFuture {
-    compilerAccess.withSharedCompiler(item) { pc =>
-      new CompletionItemResolver(pc.compiler).resolve(item, symbol)
+  ): CompletableFuture[CompletionItem] =
+    CompletableFuture.completedFuture {
+      compilerAccess.withSharedCompiler(item) { pc =>
+        new CompletionItemResolver(pc.compiler).resolve(item, symbol)
+      }
     }
-  }
 
   override def signatureHelp(
       params: OffsetParams
@@ -257,8 +258,10 @@ case class ScalaPresentationCompiler(
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-    if (!BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
-      BuildInfo.scalaCompilerVersion != "2.12.4") {
+    if (
+      !BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
+      BuildInfo.scalaCompilerVersion != "2.12.4"
+    ) {
       settings.processArguments(
         List("-Ycache-plugin-class-loader:last-modified"),
         processAll = true

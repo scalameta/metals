@@ -95,9 +95,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           case (head :: Nil) :: Nil =>
             symbol.info.finalResultType match {
               case TypeRef(
-                  _,
-                  definitions.OptionClass,
-                  tpe @ TypeRef(_, tuple, args) :: Nil
+                    _,
+                    definitions.OptionClass,
+                    tpe @ TypeRef(_, tuple, args) :: Nil
                   ) =>
                 val ctor = head.tpe.typeSymbol.primaryConstructor
                 val params = ctor.paramLists.headOption.getOrElse(Nil)
@@ -136,16 +136,17 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           else fromOverload
         )
     }
-    def alternatives: List[Symbol] = symbol match {
-      case o: ModuleSymbol =>
-        o.info.member(compiler.nme.apply).alternatives
-      case o: ClassSymbol =>
-        o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
-      case m: MethodSymbol =>
-        m.owner.info.member(symbol.name).alternatives
-      case _ =>
-        symbol.alternatives
-    }
+    def alternatives: List[Symbol] =
+      symbol match {
+        case o: ModuleSymbol =>
+          o.info.member(compiler.nme.apply).alternatives
+        case o: ClassSymbol =>
+          o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
+        case m: MethodSymbol =>
+          m.owner.info.member(symbol.name).alternatives
+        case _ =>
+          symbol.alternatives
+      }
     def nonOverload: Symbol =
       if (!symbol.isOverloaded) symbol
       else alternatives.headOption.getOrElse(symbol)
@@ -231,8 +232,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       text.charAt(leadingDelimiter) match {
         case '(' | '[' | ',' | '>' | '=' =>
           var trailingDelimiter = offset
-          while (trailingDelimiter < text.length &&
-            text.charAt(trailingDelimiter).isWhitespace) {
+          while (
+            trailingDelimiter < text.length &&
+            text.charAt(trailingDelimiter).isWhitespace
+          ) {
             trailingDelimiter += 1
           }
           if (trailingDelimiter < text.length) {
@@ -302,43 +305,44 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         case None =>
       }
     }
-    def visit(tree: Tree): Unit = tree match {
-      case MethodCall(call) if call.qual.pos.isRange =>
-        var start = call.qual.pos.end
-        val lastArgument = call.margss.iterator.flatten
-          .filter(_.pos.isRange)
-          .lastOption
-        for {
-          (args, i) <- call.margss.zipWithIndex
-          (arg, j) <- args.zipWithIndex
-        } {
-          val realPos = treePos(arg)
-          if (realPos.isRange) {
-            val end =
-              if (lastArgument.contains(arg)) tree.pos.end
-              else arg.pos.end
-            val extraEndOffset = unit.source.content(pos.point - 1) match {
-              case ')' | ']' => 0
-              case _ =>
-                // NOTE(olafur) Add one extra character for missing closing paren/bracket.
-                // This happens in the example "List(1, 2@@" and the compiler inferred a closing
-                // parenthesis.
-                1
+    def visit(tree: Tree): Unit =
+      tree match {
+        case MethodCall(call) if call.qual.pos.isRange =>
+          var start = call.qual.pos.end
+          val lastArgument = call.margss.iterator.flatten
+            .filter(_.pos.isRange)
+            .lastOption
+          for {
+            (args, i) <- call.margss.zipWithIndex
+            (arg, j) <- args.zipWithIndex
+          } {
+            val realPos = treePos(arg)
+            if (realPos.isRange) {
+              val end =
+                if (lastArgument.contains(arg)) tree.pos.end
+                else arg.pos.end
+              val extraEndOffset = unit.source.content(pos.point - 1) match {
+                case ')' | ']' => 0
+                case _ =>
+                  // NOTE(olafur) Add one extra character for missing closing paren/bracket.
+                  // This happens in the example "List(1, 2@@" and the compiler inferred a closing
+                  // parenthesis.
+                  1
+              }
+              val isEnclosed =
+                start <= pos.start &&
+                  pos.end < (end + extraEndOffset)
+              if (isEnclosed) {
+                activeCallsite = Some(call -> Arg(arg, i, j))
+              }
+              start = end
             }
-            val isEnclosed =
-              start <= pos.start &&
-                pos.end < (end + extraEndOffset)
-            if (isEnclosed) {
-              activeCallsite = Some(call -> Arg(arg, i, j))
-            }
-            start = end
+            traverse(arg)
           }
-          traverse(arg)
-        }
-        super.traverse(call.qual)
-      case _ =>
-        super.traverse(tree)
-    }
+          super.traverse(call.qual)
+        case _ =>
+          super.traverse(tree)
+      }
   }
 
   // Same as `tree.symbol` but tries to recover from type errors
@@ -358,26 +362,28 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     if (symbol.isDefined) {
       symbol
     } else {
-      def applyQualifier(tree: Tree): Option[RefTree] = tree match {
-        case Select(New(t: RefTree), _) => Some(t)
-        case t: RefTree => Some(t)
-        case TreeApply(qual, _) => applyQualifier(qual)
-        case _ =>
-          None
-      }
+      def applyQualifier(tree: Tree): Option[RefTree] =
+        tree match {
+          case Select(New(t: RefTree), _) => Some(t)
+          case t: RefTree => Some(t)
+          case TreeApply(qual, _) => applyQualifier(qual)
+          case _ =>
+            None
+        }
       val completionFallback = for {
         qual <- applyQualifier(tree)
-        completions = completionsAt(qual.pos.focus).results
-          .filter(_.sym.javaClassSymbol.name == qual.name)
-          .sorted(
-            memberOrdering(
-              qual.name.toString(),
-              new ShortenedNames(),
-              NoneCompletion
+        completions =
+          completionsAt(qual.pos.focus).results
+            .filter(_.sym.javaClassSymbol.name == qual.name)
+            .sorted(
+              memberOrdering(
+                qual.name.toString(),
+                new ShortenedNames(),
+                NoneCompletion
+              )
             )
-          )
-          .map(_.sym.javaClassSymbol)
-          .distinctBy(semanticdbSymbol)
+            .map(_.sym.javaClassSymbol)
+            .distinctBy(semanticdbSymbol)
         completion <- completions match {
           case Nil =>
             None
@@ -525,10 +531,12 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                 arg(i, j) match {
                   case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
                     val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
-                    if (lparam.getLabel() != null &&
+                    if (
+                      lparam.getLabel() != null &&
                       lparam.getLabel().isLeft() &&
                       !lparam.getLabel().getLeft().endsWith(tpe) &&
-                      metalsConfig.isSignatureHelpDocumentationEnabled) {
+                      metalsConfig.isSignatureHelpDocumentationEnabled
+                    ) {
                       lparam.setDocumentation(
                         ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
                       )

@@ -12,7 +12,8 @@ object StatusBarConfig {
   def on = new StatusBarConfig("on")
   def logMessage = new StatusBarConfig("log-message")
   def showMessage = new StatusBarConfig("show-message")
-  def default = new StatusBarConfig(
-    System.getProperty("metals.status-bar", "off")
-  )
+  def default =
+    new StatusBarConfig(
+      System.getProperty("metals.status-bar", "off")
+    )
 }

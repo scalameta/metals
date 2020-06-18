@@ -24,10 +24,12 @@ object ClasspathLoader {
     if (classLoader.isInstanceOf[URLClassLoader]) {
       classLoader.asInstanceOf[URLClassLoader].getURLs()
       // java9+
-    } else if (classLoader
+    } else if (
+      classLoader
         .getClass()
         .getName()
-        .startsWith("jdk.internal.loader.ClassLoaders$")) {
+        .startsWith("jdk.internal.loader.ClassLoaders$")
+    ) {
       try {
         val field = classOf[Unsafe].getDeclaredField("theUnsafe")
         field.setAccessible(true)
@@ -77,7 +79,8 @@ final class ClasspathLoader() {
     loader.addEntry(entry)
   }
 
-  /** Load a resource from the classpath. */
+  /**
+   * Load a resource from the classpath. */
   def load(path: RelativePath): Option[AbsolutePath] = {
     loader.resolve(path)
   }
@@ -86,7 +89,8 @@ final class ClasspathLoader() {
     Try(loader.loadClass(symbol)).toOption
   }
 
-  /** Load a resource from the classpath. */
+  /**
+   * Load a resource from the classpath. */
   def load(path: String): Option[AbsolutePath] = {
     loader.resolve(path)
   }

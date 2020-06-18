@@ -39,18 +39,19 @@ trait CommonMtagsEnrichments {
   protected def decodeJson[T](obj: AnyRef, cls: java.lang.Class[T]): Option[T] =
     for {
       data <- Option(obj)
-      value <- try {
-        Some(
-          new Gson().fromJson[T](
-            data.asInstanceOf[JsonElement],
-            cls
+      value <-
+        try {
+          Some(
+            new Gson().fromJson[T](
+              data.asInstanceOf[JsonElement],
+              cls
+            )
           )
-        )
-      } catch {
-        case NonFatal(e) =>
-          logger.log(Level.SEVERE, s"decode error: $cls", e)
-          None
-      }
+        } catch {
+          case NonFatal(e) =>
+            logger.log(Level.SEVERE, s"decode error: $cls", e)
+            None
+        }
     } yield value
 
   implicit class XtensionJEitherCross[A, B](either: JEither[A, B]) {
@@ -213,8 +214,10 @@ trait CommonMtagsEnrichments {
 
   protected def filenameToLanguage(filename: String): Language = {
     if (filename.endsWith(".java")) Language.JAVA
-    else if (filename.endsWith(".scala") || (filename.endsWith(".sc") && !filename
-        .endsWith(".worksheet.sc"))) Language.SCALA
+    else if (
+      filename.endsWith(".scala") || (filename.endsWith(".sc") && !filename
+        .endsWith(".worksheet.sc"))
+    ) Language.SCALA
     else Language.UNKNOWN_LANGUAGE
   }
 
@@ -385,10 +388,11 @@ trait CommonMtagsEnrichments {
     /**
      * Returns iterator that consumes the priority queue in-order using `poll()`.
      */
-    def pollingIterator: Iterator[A] = new AbstractIterator[A] {
-      override def hasNext: Boolean = !q.isEmpty
-      override def next(): A = q.poll()
-    }
+    def pollingIterator: Iterator[A] =
+      new AbstractIterator[A] {
+        override def hasNext: Boolean = !q.isEmpty
+        override def next(): A = q.poll()
+      }
 
   }
 }

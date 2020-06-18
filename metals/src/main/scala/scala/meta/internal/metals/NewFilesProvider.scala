@@ -21,8 +21,8 @@ class NewFilesProvider(
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
     focusedDocument: () => Option[AbsolutePath]
-)(
-    implicit ec: ExecutionContext
+)(implicit
+    ec: ExecutionContext
 ) {
 
   private val classPick = MetalsQuickPickItem(id = "class", label = "Class")

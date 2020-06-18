@@ -19,10 +19,10 @@ class ForComprehensions/*example.ForComprehensions#*/ {
       d/*local8*/
     ) ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
     e/*local10*/ = (
-      a/*local0*/,
-      b/*local1*/,
-      c/*local7*/,
-      d/*local8*/
+        a/*local0*/,
+        b/*local1*/,
+        c/*local7*/,
+        d/*local8*/
     )
     if e/*local10*/ ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
     f/*local11*/ <- List/*scala.collection.immutable.List.*/(e/*local10*/)

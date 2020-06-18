@@ -40,9 +40,10 @@ object Configs {
   object GlobSyntaxConfig {
     def uri = new GlobSyntaxConfig("uri")
     def vscode = new GlobSyntaxConfig("vscode")
-    def default = new GlobSyntaxConfig(
-      System.getProperty("metals.glob-syntax", uri.value)
-    )
+    def default =
+      new GlobSyntaxConfig(
+        System.getProperty("metals.glob-syntax", uri.value)
+      )
   }
 
   object CompilersConfig {

@@ -12,8 +12,8 @@ class PantsGlobsSuite extends BaseSuite {
       includes: List[String],
       expectedWalkDepth: Option[Int],
       expectedIncludes: List[String]
-  )(
-      implicit loc: munit.Location
+  )(implicit
+      loc: munit.Location
   ): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")

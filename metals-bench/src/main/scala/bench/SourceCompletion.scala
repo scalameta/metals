@@ -21,13 +21,12 @@ case class SourceCompletion(filename: String, code: String, offset: Int) {
     // Trigger re-typechecking
     val randomSuffix = s"\n/* ${Random.nextInt()} */\n"
     pc.complete(
-        CompilerOffsetParams(
-          Paths.get(filename).toUri(),
-          code + randomSuffix,
-          offset
-        )
+      CompilerOffsetParams(
+        Paths.get(filename).toUri(),
+        code + randomSuffix,
+        offset
       )
-      .get()
+    ).get()
   }
 }
 

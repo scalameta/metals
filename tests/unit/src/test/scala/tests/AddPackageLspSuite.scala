@@ -21,10 +21,11 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
            |}
         """.stripMargin
       )
-      _ = workspace
-        .resolve("a/src/main/scala/a/Main.scala")
-        .toFile
-        .createNewFile()
+      _ =
+        workspace
+          .resolve("a/src/main/scala/a/Main.scala")
+          .toFile
+          .createNewFile()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/Main.scala").readText,
@@ -49,10 +50,11 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
            |}
         """.stripMargin
       )
-      _ = workspace
-        .resolve("a/src/main/scala/a/package.scala")
-        .toFile
-        .createNewFile()
+      _ =
+        workspace
+          .resolve("a/src/main/scala/a/package.scala")
+          .toFile
+          .createNewFile()
       _ <- server.didOpen("a/src/main/scala/a/package.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/package.scala").readText,
@@ -75,10 +77,11 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
            |}
         """.stripMargin
       )
-      _ = workspace
-        .resolve("a/src/main/scala/a/b/c/package.scala")
-        .toFile
-        .createNewFile()
+      _ =
+        workspace
+          .resolve("a/src/main/scala/a/b/c/package.scala")
+          .toFile
+          .createNewFile()
       _ <- server.didOpen("a/src/main/scala/a/b/c/package.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/b/c/package.scala").readText,
@@ -106,10 +109,11 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
            |}
         """.stripMargin
       )
-      _ = workspace
-        .resolve("a/src/main/scala/a/b/c/Main.scala")
-        .toFile
-        .createNewFile()
+      _ =
+        workspace
+          .resolve("a/src/main/scala/a/b/c/Main.scala")
+          .toFile
+          .createNewFile()
       _ <- server.didOpen("a/src/main/scala/a/b/c/Main.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/b/c/Main.scala").readText,
@@ -134,10 +138,11 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
            |}
         """.stripMargin
       )
-      _ = workspace
-        .resolve("a/src/main/scala/Main.scala")
-        .toFile
-        .createNewFile()
+      _ =
+        workspace
+          .resolve("a/src/main/scala/Main.scala")
+          .toFile
+          .createNewFile()
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/Main.scala").readText,
@@ -160,10 +165,11 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
            |}
         """.stripMargin
       )
-      _ = workspace
-        .resolve("a/src/main/java/a/Main.java")
-        .toFile
-        .createNewFile()
+      _ =
+        workspace
+          .resolve("a/src/main/java/a/Main.java")
+          .toFile
+          .createNewFile()
       _ <- server.didOpen("a/src/main/java/a/Main.java")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/java/a/Main.java").readText,

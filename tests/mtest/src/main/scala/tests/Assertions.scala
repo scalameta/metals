@@ -19,14 +19,14 @@ trait Assertions extends munit.Assertions {
     }
   }
 
-  def assertContains(string: String, substring: String)(
-      implicit loc: Location
+  def assertContains(string: String, substring: String)(implicit
+      loc: Location
   ): Unit = {
     assert(string.contains(substring))
   }
 
-  def assertNotContains(string: String, substring: String)(
-      implicit loc: Location
+  def assertNotContains(string: String, substring: String)(implicit
+      loc: Location
   ): Unit = {
     assert(!string.contains(substring))
   }
@@ -43,8 +43,8 @@ trait Assertions extends munit.Assertions {
     }
   }
 
-  def assertDiffEqual[T](obtained: T, expected: T, hint: String = "")(
-      implicit loc: Location
+  def assertDiffEqual[T](obtained: T, expected: T, hint: String = "")(implicit
+      loc: Location
   ): Unit = {
     if (obtained != expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"

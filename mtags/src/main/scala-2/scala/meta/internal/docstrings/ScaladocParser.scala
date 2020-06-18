@@ -14,7 +14,6 @@ import scala.meta.Position
  * Removed features:
  * - linking to symbols
  * - reporting warnings
- *
  */
 object ScaladocParser {
 
@@ -45,135 +44,145 @@ object ScaladocParser {
       groupPrio0: Map[String, Body] = Map.empty,
       hideImplicitConversions0: List[Body] = List.empty,
       shortDescription0: List[Body] = List.empty
-  ): Comment = new Comment {
-    val body = body0 getOrElse Body(Seq.empty)
-    val authors = authors0
-    val see = see0.map { body =>
-      def convertTextToLink(inline: Inline): Inline = {
-        inline match {
-          case Chain(c) =>
-            Chain(c.map(i => convertTextToLink(i)))
-          case Summary(inline) =>
-            // Make sure Javadoc text is converted into links
-            Summary(inline match {
-              case Text(text) =>
-                text match {
-                  case LinkPattern(link, _, _, title) =>
-                    Link(link, Option(title) map (Text) getOrElse Text(link))
-                  case text =>
-                    Link(text, Text(text))
-                }
-              case x => x
-            })
+  ): Comment =
+    new Comment {
+      val body = body0 getOrElse Body(Seq.empty)
+      val authors = authors0
+      val see = see0.map { body =>
+        def convertTextToLink(inline: Inline): Inline = {
+          inline match {
+            case Chain(c) =>
+              Chain(c.map(i => convertTextToLink(i)))
+            case Summary(inline) =>
+              // Make sure Javadoc text is converted into links
+              Summary(inline match {
+                case Text(text) =>
+                  text match {
+                    case LinkPattern(link, _, _, title) =>
+                      Link(link, Option(title) map (Text) getOrElse Text(link))
+                    case text =>
+                      Link(text, Text(text))
+                  }
+                case x => x
+              })
+            case x => x
+          }
+        }
+        val blocks = body.blocks.map {
+          case Paragraph(inline) =>
+            Paragraph(convertTextToLink(inline))
           case x => x
         }
+        body.copy(blocks)
       }
-      val blocks = body.blocks.map {
-        case Paragraph(inline) =>
-          Paragraph(convertTextToLink(inline))
-        case x => x
+      val result = result0
+      val throws = throws0
+      val valueParams = valueParams0
+      val typeParams = typeParams0
+      val version = version0
+      val since = since0
+      val todo = todo0
+      val deprecated = deprecated0
+      val note = note0
+      val example = example0
+      val constructor = constructor0
+      val inheritDiagram = inheritDiagram0
+      val contentDiagram = contentDiagram0
+      val groupDesc = groupDesc0
+      val group =
+        group0 match {
+          case Some(
+                Body(List(Paragraph(Chain(List(Summary(Text(groupId)))))))
+              ) =>
+            Some(groupId.toString.trim)
+          case _ => None
+        }
+      val groupPrio = groupPrio0 flatMap {
+        case (group, body) =>
+          try {
+            body match {
+              case Body(List(Paragraph(Chain(List(Summary(Text(prio))))))) =>
+                List(group -> prio.trim.toInt)
+              case _ => List()
+            }
+          } catch {
+            case _: java.lang.NumberFormatException => List()
+          }
       }
-      body.copy(blocks)
-    }
-    val result = result0
-    val throws = throws0
-    val valueParams = valueParams0
-    val typeParams = typeParams0
-    val version = version0
-    val since = since0
-    val todo = todo0
-    val deprecated = deprecated0
-    val note = note0
-    val example = example0
-    val constructor = constructor0
-    val inheritDiagram = inheritDiagram0
-    val contentDiagram = contentDiagram0
-    val groupDesc = groupDesc0
-    val group =
-      group0 match {
-        case Some(Body(List(Paragraph(Chain(List(Summary(Text(groupId)))))))) =>
-          Some(groupId.toString.trim)
-        case _ => None
-      }
-    val groupPrio = groupPrio0 flatMap {
-      case (group, body) =>
-        try {
+      val groupNames = groupNames0 flatMap {
+        case (group, body) =>
           body match {
-            case Body(List(Paragraph(Chain(List(Summary(Text(prio))))))) =>
-              List(group -> prio.trim.toInt)
+            case Body(List(Paragraph(Chain(List(Summary(Text(name)))))))
+                if (!name.trim.contains("\n")) =>
+              List(group -> (name.trim))
             case _ => List()
           }
-        } catch {
-          case _: java.lang.NumberFormatException => List()
+      }
+
+      override val shortDescription: Option[Text] =
+        shortDescription0.lastOption collect {
+          case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
+              if !e.trim.contains("\n") =>
+            Text(e)
         }
-    }
-    val groupNames = groupNames0 flatMap {
-      case (group, body) =>
-        body match {
-          case Body(List(Paragraph(Chain(List(Summary(Text(name)))))))
-              if (!name.trim.contains("\n")) =>
-            List(group -> (name.trim))
+
+      override val hideImplicitConversions: List[String] =
+        hideImplicitConversions0 flatMap {
+          case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
+              if !e.trim.contains("\n") =>
+            List(e)
           case _ => List()
         }
     }
 
-    override val shortDescription: Option[Text] =
-      shortDescription0.lastOption collect {
-        case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
-            if !e.trim.contains("\n") =>
-          Text(e)
-      }
-
-    override val hideImplicitConversions: List[String] =
-      hideImplicitConversions0 flatMap {
-        case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
-            if !e.trim.contains("\n") =>
-          List(e)
-        case _ => List()
-      }
-  }
-
   private val endOfText = '\u0003'
   private val endOfLine = '\u000A'
 
-  /** Something that should not have happened, happened, and Scaladoc should exit. */
+  /**
+   * Something that should not have happened, happened, and Scaladoc should exit. */
   private def oops(msg: String): Nothing =
     sys.error("program logic: " + msg)
 
-  /** The body of a line, dropping the (optional) start star-marker,
+  /**
+   * The body of a line, dropping the (optional) start star-marker,
    * one leading whitespace and all trailing whitespace. */
   private val CleanCommentLine =
     new Regex("""(?:\s*\*\s?)?(.*)""")
 
-  /** Dangerous HTML tags that should be replaced by something safer,
+  /**
+   * Dangerous HTML tags that should be replaced by something safer,
    * such as wiki syntax, or that should be dropped. */
   private val DangerousTags =
     new Regex("""<(/?(div|ol|ul|li|h[1-6]|p))( [^>]*)?/?>|<!--.*-->""")
 
-  /** Maps a dangerous HTML tag to a safe wiki replacement, or an empty string
+  /**
+   * Maps a dangerous HTML tag to a safe wiki replacement, or an empty string
    * if it cannot be salvaged. */
-  private def htmlReplacement(mtch: Regex.Match): String = mtch.group(1) match {
-    case "p" | "div" => "\n\n"
-    case "h1" => "\n= "
-    case "/h1" => " =\n"
-    case "h2" => "\n== "
-    case "/h2" => " ==\n"
-    case "h3" => "\n=== "
-    case "/h3" => " ===\n"
-    case "h4" | "h5" | "h6" => "\n==== "
-    case "/h4" | "/h5" | "/h6" => " ====\n"
-    case "li" => "\n *  - "
-    case _ => ""
-  }
+  private def htmlReplacement(mtch: Regex.Match): String =
+    mtch.group(1) match {
+      case "p" | "div" => "\n\n"
+      case "h1" => "\n= "
+      case "/h1" => " =\n"
+      case "h2" => "\n== "
+      case "/h2" => " ==\n"
+      case "h3" => "\n=== "
+      case "/h3" => " ===\n"
+      case "h4" | "h5" | "h6" => "\n==== "
+      case "/h4" | "/h5" | "/h6" => " ====\n"
+      case "li" => "\n *  - "
+      case _ => ""
+    }
 
-  /** Javadoc tags that should be replaced by something useful, such as wiki
+  /**
+   * Javadoc tags that should be replaced by something useful, such as wiki
    * syntax, or that should be dropped. */
   private val JavadocTags =
     new Regex(
       """\{\@(code|docRoot|linkplain|link|literal|value)\p{Zs}*([^}]*)\}"""
     )
 
-  /** Maps a javadoc tag to a useful wiki replacement, or an empty string if it cannot be salvaged. */
+  /**
+   * Maps a javadoc tag to a useful wiki replacement, or an empty string if it cannot be salvaged. */
   private def javadocReplacement(mtch: Regex.Match): String = {
     mtch.group(1) match {
       case "code" => "`" + mtch.group(2) + "`"
@@ -186,7 +195,8 @@ object ScaladocParser {
     }
   }
 
-  /** Safe HTML tags that can be kept. */
+  /**
+   * Safe HTML tags that can be kept. */
   private val SafeTags =
     new Regex(
       """((&\w+;)|(&#\d+;)|(</?(abbr|acronym|address|area|a|bdo|big|blockquote|br|button|b|caption|cite|code|col|colgroup|dd|del|dfn|em|fieldset|form|hr|img|input|ins|i|kbd|label|legend|link|map|object|optgroup|option|param|pre|q|samp|select|small|span|strong|sub|sup|table|tbody|td|textarea|tfoot|th|thead|tr|tt|var)( [^>]*)?/?>))"""
@@ -194,30 +204,36 @@ object ScaladocParser {
 
   private val safeTagMarker = '\u000E'
 
-  /** A Scaladoc tag not linked to a symbol and not followed by text */
+  /**
+   * A Scaladoc tag not linked to a symbol and not followed by text */
   private val SingleTagRegex =
     new Regex("""\s*@(\S+)\s*""")
 
-  /** A Scaladoc tag not linked to a symbol. Returns the name of the tag, and the rest of the line. */
+  /**
+   * A Scaladoc tag not linked to a symbol. Returns the name of the tag, and the rest of the line. */
   private val SimpleTagRegex =
     new Regex("""\s*@(\S+)\s+(.*)""")
 
-  /** A Scaladoc tag linked to a symbol. Returns the name of the tag, the name
+  /**
+   * A Scaladoc tag linked to a symbol. Returns the name of the tag, the name
    * of the symbol, and the rest of the line. */
   private val SymbolTagRegex =
     new Regex(
       """\s*@(param|tparam|throws|groupdesc|groupname|groupprio)\s+(\S*)\s*(.*)"""
     )
 
-  /** The start of a Scaladoc code block */
+  /**
+   * The start of a Scaladoc code block */
   private val CodeBlockStartRegex =
     new Regex("""(.*?)((?:\{\{\{)|(?:\u000E<pre(?: [^>]*)?>\u000E))(.*)""")
 
-  /** The end of a Scaladoc code block */
+  /**
+   * The end of a Scaladoc code block */
   private val CodeBlockEndRegex =
     new Regex("""(.*?)((?:\}\}\})|(?:\u000E</pre>\u000E))(.*)""")
 
-  /** A key used for a tag map. The key is built from the name of the tag and
+  /**
+   * A key used for a tag map. The key is built from the name of the tag and
    * from the linked symbol if the tag has one.
    * Equality on tag keys is structural. */
   private sealed abstract class TagKey {
@@ -281,7 +297,8 @@ object ScaladocParser {
     }
   }
 
-  /** Parses a raw comment string into a `Comment` object.
+  /**
+   * Parses a raw comment string into a `Comment` object.
    * @param comment The expanded comment string (including start and end markers) to be parsed.
    * @param pos     The position of the comment in source. */
   def parseAtSymbol(
@@ -290,25 +307,36 @@ object ScaladocParser {
       //      site: Symbol = NoSymbol
   ): Comment = {
 
-    /** The cleaned raw comment as a list of lines. Cleaning removes comment
+    /**
+     * The cleaned raw comment as a list of lines. Cleaning removes comment
      * start and end markers, line start markers  and unnecessary whitespace. */
     def clean(comment: String): List[String] = {
       val strippedComment = comment.trim.stripPrefix("/*").stripSuffix("*/")
-      val safeComment = DangerousTags.replaceAllIn(strippedComment, { mtch =>
-        java.util.regex.Matcher.quoteReplacement(htmlReplacement(mtch))
-      })
-      val javadoclessComment = JavadocTags.replaceAllIn(safeComment, { mtch =>
-        java.util.regex.Matcher.quoteReplacement(javadocReplacement(mtch))
-      })
+      val safeComment = DangerousTags.replaceAllIn(
+        strippedComment,
+        { mtch =>
+          java.util.regex.Matcher.quoteReplacement(htmlReplacement(mtch))
+        }
+      )
+      val javadoclessComment = JavadocTags.replaceAllIn(
+        safeComment,
+        { mtch =>
+          java.util.regex.Matcher.quoteReplacement(javadocReplacement(mtch))
+        }
+      )
       val markedTagComment =
-        SafeTags.replaceAllIn(javadoclessComment, { mtch =>
-          java.util.regex.Matcher
-            .quoteReplacement(safeTagMarker + mtch.matched + safeTagMarker)
-        })
+        SafeTags.replaceAllIn(
+          javadoclessComment,
+          { mtch =>
+            java.util.regex.Matcher
+              .quoteReplacement(safeTagMarker + mtch.matched + safeTagMarker)
+          }
+        )
       markedTagComment.linesIterator.toList.map(cleanLine)
     }
 
-    /** Parses a comment (in the form of a list of lines) to a `Comment`
+    /**
+     * Parses a comment (in the form of a list of lines) to a `Comment`
      * instance, recursively on lines. To do so, it splits the whole comment
      * into main body and tag bodies, then runs the `WikiParser` on each body
      * before creating the comment instance.
@@ -325,271 +353,276 @@ object ScaladocParser {
         lastTagKey: Option[TagKey],
         remaining: List[String],
         inCodeBlock: Boolean
-    ): Comment = remaining match {
+    ): Comment =
+      remaining match {
 
-      case CodeBlockStartRegex(before, marker, after) :: ls if (!inCodeBlock) =>
-        if (!before.trim.isEmpty && !after.trim.isEmpty)
-          parse0(
-            docBody,
-            tags,
-            lastTagKey,
-            before :: marker :: after :: ls,
-            inCodeBlock = false
-          )
-        else if (!before.trim.isEmpty)
-          parse0(
-            docBody,
-            tags,
-            lastTagKey,
-            before :: marker :: ls,
-            inCodeBlock = false
-          )
-        else if (!after.trim.isEmpty)
-          parse0(
-            docBody,
-            tags,
-            lastTagKey,
-            marker :: after :: ls,
-            inCodeBlock = true
-          )
-        else
-          lastTagKey match {
-            case Some(key) =>
-              val value =
-                ((tags get key): @unchecked) match {
-                  case Some(b :: bs) => (b + endOfLine + marker) :: bs
-                  case None => oops("lastTagKey set when no tag exists for key")
-                }
-              parse0(
-                docBody,
-                tags + (key -> value),
-                lastTagKey,
-                ls,
-                inCodeBlock = true
-              )
-            case None =>
-              parse0(
-                docBody append endOfLine append marker,
-                tags,
-                lastTagKey,
-                ls,
-                inCodeBlock = true
-              )
-          }
-
-      case CodeBlockEndRegex(before, marker, after) :: ls => {
-        if (!before.trim.isEmpty && !after.trim.isEmpty)
-          parse0(
-            docBody,
-            tags,
-            lastTagKey,
-            before :: marker :: after :: ls,
-            inCodeBlock = true
-          )
-        if (!before.trim.isEmpty)
-          parse0(
-            docBody,
-            tags,
-            lastTagKey,
-            before :: marker :: ls,
-            inCodeBlock = true
-          )
-        else if (!after.trim.isEmpty)
-          parse0(
-            docBody,
-            tags,
-            lastTagKey,
-            marker :: after :: ls,
-            inCodeBlock = false
-          )
-        else
-          lastTagKey match {
-            case Some(key) =>
-              val value =
-                ((tags get key): @unchecked) match {
-                  case Some(b :: bs) => (b + endOfLine + marker) :: bs
-                  case None => oops("lastTagKey set when no tag exists for key")
-                }
-              parse0(
-                docBody,
-                tags + (key -> value),
-                lastTagKey,
-                ls,
-                inCodeBlock = false
-              )
-            case None =>
-              parse0(
-                docBody append endOfLine append marker,
-                tags,
-                lastTagKey,
-                ls,
-                inCodeBlock = false
-              )
-          }
-      }
-
-      case SymbolTagRegex(name, sym, body) :: ls if (!inCodeBlock) => {
-        val key = SymbolTagKey(name, sym)
-        val value = body :: tags.getOrElse(key, Nil)
-        parse0(docBody, tags + (key -> value), Some(key), ls, inCodeBlock)
-      }
-
-      case SimpleTagRegex(name, body) :: ls if (!inCodeBlock) => {
-        val key = SimpleTagKey(name)
-        val value = body :: tags.getOrElse(key, Nil)
-        parse0(docBody, tags + (key -> value), Some(key), ls, inCodeBlock)
-      }
-
-      case SingleTagRegex(name) :: ls if (!inCodeBlock) => {
-        val key = SimpleTagKey(name)
-        val value = "" :: tags.getOrElse(key, Nil)
-        parse0(docBody, tags + (key -> value), Some(key), ls, inCodeBlock)
-      }
-
-      case line :: ls if (lastTagKey.isDefined) => {
-        val newtags = if (!line.isEmpty || inCodeBlock) {
-          val key = lastTagKey.get
-          val value =
-            ((tags get key): @unchecked) match {
-              case Some(b :: bs) => (b + endOfLine + line) :: bs
-              case None => oops("lastTagKey set when no tag exists for key")
+        case CodeBlockStartRegex(before, marker, after) :: ls
+            if (!inCodeBlock) =>
+          if (!before.trim.isEmpty && !after.trim.isEmpty)
+            parse0(
+              docBody,
+              tags,
+              lastTagKey,
+              before :: marker :: after :: ls,
+              inCodeBlock = false
+            )
+          else if (!before.trim.isEmpty)
+            parse0(
+              docBody,
+              tags,
+              lastTagKey,
+              before :: marker :: ls,
+              inCodeBlock = false
+            )
+          else if (!after.trim.isEmpty)
+            parse0(
+              docBody,
+              tags,
+              lastTagKey,
+              marker :: after :: ls,
+              inCodeBlock = true
+            )
+          else
+            lastTagKey match {
+              case Some(key) =>
+                val value =
+                  ((tags get key): @unchecked) match {
+                    case Some(b :: bs) => (b + endOfLine + marker) :: bs
+                    case None =>
+                      oops("lastTagKey set when no tag exists for key")
+                  }
+                parse0(
+                  docBody,
+                  tags + (key -> value),
+                  lastTagKey,
+                  ls,
+                  inCodeBlock = true
+                )
+              case None =>
+                parse0(
+                  docBody append endOfLine append marker,
+                  tags,
+                  lastTagKey,
+                  ls,
+                  inCodeBlock = true
+                )
             }
-          tags + (key -> value)
-        } else tags
-        parse0(docBody, newtags, lastTagKey, ls, inCodeBlock)
-      }
 
-      case line :: ls => {
-        if (docBody.nonEmpty) docBody append endOfLine
-        docBody append line
-        parse0(docBody, tags, lastTagKey, ls, inCodeBlock)
-      }
+        case CodeBlockEndRegex(before, marker, after) :: ls => {
+          if (!before.trim.isEmpty && !after.trim.isEmpty)
+            parse0(
+              docBody,
+              tags,
+              lastTagKey,
+              before :: marker :: after :: ls,
+              inCodeBlock = true
+            )
+          if (!before.trim.isEmpty)
+            parse0(
+              docBody,
+              tags,
+              lastTagKey,
+              before :: marker :: ls,
+              inCodeBlock = true
+            )
+          else if (!after.trim.isEmpty)
+            parse0(
+              docBody,
+              tags,
+              lastTagKey,
+              marker :: after :: ls,
+              inCodeBlock = false
+            )
+          else
+            lastTagKey match {
+              case Some(key) =>
+                val value =
+                  ((tags get key): @unchecked) match {
+                    case Some(b :: bs) => (b + endOfLine + marker) :: bs
+                    case None =>
+                      oops("lastTagKey set when no tag exists for key")
+                  }
+                parse0(
+                  docBody,
+                  tags + (key -> value),
+                  lastTagKey,
+                  ls,
+                  inCodeBlock = false
+                )
+              case None =>
+                parse0(
+                  docBody append endOfLine append marker,
+                  tags,
+                  lastTagKey,
+                  ls,
+                  inCodeBlock = false
+                )
+            }
+        }
 
-      case Nil => {
-        // Take the {inheritance, content} diagram keys aside, as it doesn't need any parsing
-        val inheritDiagramTag = SimpleTagKey("inheritanceDiagram")
-        val contentDiagramTag = SimpleTagKey("contentDiagram")
+        case SymbolTagRegex(name, sym, body) :: ls if (!inCodeBlock) => {
+          val key = SymbolTagKey(name, sym)
+          val value = body :: tags.getOrElse(key, Nil)
+          parse0(docBody, tags + (key -> value), Some(key), ls, inCodeBlock)
+        }
 
-        val inheritDiagramText: List[String] =
-          tags.get(inheritDiagramTag) match {
-            case Some(list) => list
-            case None => List.empty
-          }
+        case SimpleTagRegex(name, body) :: ls if (!inCodeBlock) => {
+          val key = SimpleTagKey(name)
+          val value = body :: tags.getOrElse(key, Nil)
+          parse0(docBody, tags + (key -> value), Some(key), ls, inCodeBlock)
+        }
 
-        val contentDiagramText: List[String] =
-          tags.get(contentDiagramTag) match {
-            case Some(list) => list
-            case None => List.empty
-          }
+        case SingleTagRegex(name) :: ls if (!inCodeBlock) => {
+          val key = SimpleTagKey(name)
+          val value = "" :: tags.getOrElse(key, Nil)
+          parse0(docBody, tags + (key -> value), Some(key), ls, inCodeBlock)
+        }
 
-        val stripTags = List(
-          inheritDiagramTag,
-          contentDiagramTag,
-          SimpleTagKey("template"),
-          SimpleTagKey("documentable")
-        )
-        val tagsWithoutDiagram =
-          tags.filterNot(pair => stripTags.contains(pair._1))
+        case line :: ls if (lastTagKey.isDefined) => {
+          val newtags = if (!line.isEmpty || inCodeBlock) {
+            val key = lastTagKey.get
+            val value =
+              ((tags get key): @unchecked) match {
+                case Some(b :: bs) => (b + endOfLine + line) :: bs
+                case None => oops("lastTagKey set when no tag exists for key")
+              }
+            tags + (key -> value)
+          } else tags
+          parse0(docBody, newtags, lastTagKey, ls, inCodeBlock)
+        }
 
-        val bodyTags: mutable.Map[TagKey, List[Body]] =
-          mutable.Map(tagsWithoutDiagram.map {
-            case (key, tag) =>
-              key -> tag.map(parseWikiAtSymbol(_, pos))
-          }.toSeq: _*)
+        case line :: ls => {
+          if (docBody.nonEmpty) docBody append endOfLine
+          docBody append line
+          parse0(docBody, tags, lastTagKey, ls, inCodeBlock)
+        }
 
-        def oneTag(
-            key: SimpleTagKey,
-            filterEmpty: Boolean = true
-        ): Option[Body] =
-          (bodyTags.remove(key): @unchecked) match {
-            case Some(r :: rs) if !(filterEmpty && r.blocks.isEmpty) =>
-              //              if (rs.nonEmpty)
-              //                reporter.warning(pos, s"Only one '@${key.name}' tag is allowed")
-              Some(r)
-            case _ => None
-          }
+        case Nil => {
+          // Take the {inheritance, content} diagram keys aside, as it doesn't need any parsing
+          val inheritDiagramTag = SimpleTagKey("inheritanceDiagram")
+          val contentDiagramTag = SimpleTagKey("contentDiagram")
 
-        def allTags(key: SimpleTagKey): List[Body] =
-          (bodyTags remove key)
-            .getOrElse(Nil)
-            .filterNot(_.blocks.isEmpty)
-            .reverse
+          val inheritDiagramText: List[String] =
+            tags.get(inheritDiagramTag) match {
+              case Some(list) => list
+              case None => List.empty
+            }
 
-        def allSymsOneTag(
-            key: TagKey,
-            filterEmpty: Boolean = true
-        ): Map[String, Body] = {
-          val keys: Seq[SymbolTagKey] =
-            bodyTags.keys.toSeq flatMap {
-              case stk: SymbolTagKey if (stk.name == key.name) => Some(stk)
-              case stk: SimpleTagKey if (stk.name == key.name) =>
-                //                reporter.warning(
-                //                  pos,
-                //                  s"Tag '@${stk.name}' must be followed by a symbol name"
-                //                )
-                None
+          val contentDiagramText: List[String] =
+            tags.get(contentDiagramTag) match {
+              case Some(list) => list
+              case None => List.empty
+            }
+
+          val stripTags = List(
+            inheritDiagramTag,
+            contentDiagramTag,
+            SimpleTagKey("template"),
+            SimpleTagKey("documentable")
+          )
+          val tagsWithoutDiagram =
+            tags.filterNot(pair => stripTags.contains(pair._1))
+
+          val bodyTags: mutable.Map[TagKey, List[Body]] =
+            mutable.Map(tagsWithoutDiagram.map {
+              case (key, tag) =>
+                key -> tag.map(parseWikiAtSymbol(_, pos))
+            }.toSeq: _*)
+
+          def oneTag(
+              key: SimpleTagKey,
+              filterEmpty: Boolean = true
+          ): Option[Body] =
+            (bodyTags.remove(key): @unchecked) match {
+              case Some(r :: rs) if !(filterEmpty && r.blocks.isEmpty) =>
+                //              if (rs.nonEmpty)
+                //                reporter.warning(pos, s"Only one '@${key.name}' tag is allowed")
+                Some(r)
               case _ => None
             }
-          val pairs: Seq[(String, Body)] =
-            for (key <- keys) yield {
-              val bs = (bodyTags remove key).get
-              //              if (bs.length > 1)
-              //                reporter.warning(
-              //                  pos,
-              //                  s"Only one '@${key.name}' tag for symbol ${key.symbol} is allowed"
-              //                )
-              (key.symbol, bs.head)
-            }
-          Map.empty[String, Body] ++ (if (filterEmpty)
-                                        pairs.filterNot(_._2.blocks.isEmpty)
-                                      else pairs)
-        }
 
-        def linkedExceptions: Map[String, Body] = {
-          val m = allSymsOneTag(SimpleTagKey("throws"), filterEmpty = false)
+          def allTags(key: SimpleTagKey): List[Body] =
+            (bodyTags remove key)
+              .getOrElse(Nil)
+              .filterNot(_.blocks.isEmpty)
+              .reverse
 
-          m.map {
-            case (name, body) =>
-              val newBody = body match {
-                case Body(List(Paragraph(Chain(content)))) =>
-                  //                  val link = memberLookup(pos, name, site)
-                  //                  val descr = Text(" ") +: content
-                  //                  val entityLink = EntityLink(Monospace(Text(name)), link)
-                  //                  Body(List(Paragraph(Chain(entityLink +: descr))))
-                  Body(List())
-                case _ => body
+          def allSymsOneTag(
+              key: TagKey,
+              filterEmpty: Boolean = true
+          ): Map[String, Body] = {
+            val keys: Seq[SymbolTagKey] =
+              bodyTags.keys.toSeq flatMap {
+                case stk: SymbolTagKey if (stk.name == key.name) => Some(stk)
+                case stk: SimpleTagKey if (stk.name == key.name) =>
+                  //                reporter.warning(
+                  //                  pos,
+                  //                  s"Tag '@${stk.name}' must be followed by a symbol name"
+                  //                )
+                  None
+                case _ => None
               }
-              (name, newBody)
+            val pairs: Seq[(String, Body)] =
+              for (key <- keys) yield {
+                val bs = (bodyTags remove key).get
+                //              if (bs.length > 1)
+                //                reporter.warning(
+                //                  pos,
+                //                  s"Only one '@${key.name}' tag for symbol ${key.symbol} is allowed"
+                //                )
+                (key.symbol, bs.head)
+              }
+            Map.empty[String, Body] ++ (if (filterEmpty)
+                                          pairs.filterNot(_._2.blocks.isEmpty)
+                                        else pairs)
           }
-        }
 
-        createComment(
-          body0 = Some(parseWikiAtSymbol(docBody.toString, pos)),
-          authors0 = allTags(SimpleTagKey("author")),
-          see0 = allTags(SimpleTagKey("see")),
-          result0 = oneTag(SimpleTagKey("return")),
-          throws0 = linkedExceptions,
-          valueParams0 = allSymsOneTag(SimpleTagKey("param")),
-          typeParams0 = allSymsOneTag(SimpleTagKey("tparam")),
-          version0 = oneTag(SimpleTagKey("version")),
-          since0 = oneTag(SimpleTagKey("since")),
-          todo0 = allTags(SimpleTagKey("todo")),
-          deprecated0 = oneTag(SimpleTagKey("deprecated"), filterEmpty = false),
-          note0 = allTags(SimpleTagKey("note")),
-          example0 = allTags(SimpleTagKey("example")),
-          constructor0 = oneTag(SimpleTagKey("constructor")),
-          inheritDiagram0 = inheritDiagramText,
-          contentDiagram0 = contentDiagramText,
-          group0 = oneTag(SimpleTagKey("group")),
-          groupDesc0 = allSymsOneTag(SimpleTagKey("groupdesc")),
-          groupNames0 = allSymsOneTag(SimpleTagKey("groupname")),
-          groupPrio0 = allSymsOneTag(SimpleTagKey("groupprio")),
-          hideImplicitConversions0 =
-            allTags(SimpleTagKey("hideImplicitConversion")),
-          shortDescription0 = allTags(SimpleTagKey("shortDescription"))
-        )
+          def linkedExceptions: Map[String, Body] = {
+            val m = allSymsOneTag(SimpleTagKey("throws"), filterEmpty = false)
+
+            m.map {
+              case (name, body) =>
+                val newBody = body match {
+                  case Body(List(Paragraph(Chain(content)))) =>
+                    //                  val link = memberLookup(pos, name, site)
+                    //                  val descr = Text(" ") +: content
+                    //                  val entityLink = EntityLink(Monospace(Text(name)), link)
+                    //                  Body(List(Paragraph(Chain(entityLink +: descr))))
+                    Body(List())
+                  case _ => body
+                }
+                (name, newBody)
+            }
+          }
+
+          createComment(
+            body0 = Some(parseWikiAtSymbol(docBody.toString, pos)),
+            authors0 = allTags(SimpleTagKey("author")),
+            see0 = allTags(SimpleTagKey("see")),
+            result0 = oneTag(SimpleTagKey("return")),
+            throws0 = linkedExceptions,
+            valueParams0 = allSymsOneTag(SimpleTagKey("param")),
+            typeParams0 = allSymsOneTag(SimpleTagKey("tparam")),
+            version0 = oneTag(SimpleTagKey("version")),
+            since0 = oneTag(SimpleTagKey("since")),
+            todo0 = allTags(SimpleTagKey("todo")),
+            deprecated0 =
+              oneTag(SimpleTagKey("deprecated"), filterEmpty = false),
+            note0 = allTags(SimpleTagKey("note")),
+            example0 = allTags(SimpleTagKey("example")),
+            constructor0 = oneTag(SimpleTagKey("constructor")),
+            inheritDiagram0 = inheritDiagramText,
+            contentDiagram0 = contentDiagramText,
+            group0 = oneTag(SimpleTagKey("group")),
+            groupDesc0 = allSymsOneTag(SimpleTagKey("groupdesc")),
+            groupNames0 = allSymsOneTag(SimpleTagKey("groupname")),
+            groupPrio0 = allSymsOneTag(SimpleTagKey("groupprio")),
+            hideImplicitConversions0 =
+              allTags(SimpleTagKey("hideImplicitConversion")),
+            shortDescription0 = allTags(SimpleTagKey("shortDescription"))
+          )
+        }
       }
-    }
 
     parse0(
       new StringBuilder(comment.size),
@@ -601,7 +634,8 @@ object ScaladocParser {
 
   }
 
-  /** Parses a string containing wiki syntax into a `Comment` object.
+  /**
+   * Parses a string containing wiki syntax into a `Comment` object.
    * Note that the string is assumed to be clean:
    *  - Removed Scaladoc start and end markers.
    *  - Removed start-of-line star and one whitespace afterwards (if present).
@@ -618,7 +652,8 @@ object ScaladocParser {
       //      site
     ).document()
 
-  /** TODO
+  /**
+   * TODO
    *
    * @author Ingo Maier
    * @author Manohar Jonnalagedda
@@ -641,7 +676,8 @@ object ScaladocParser {
 
     /* BLOCKS */
 
-    /** {{{ block ::= code | title | hrule | listBlock | table | para  }}} */
+    /**
+     * {{{ block ::= code | title | hrule | listBlock | table | para  }}} */
     def block(): Block = {
       if (checkSkipInitWhitespace("{{{"))
         code()
@@ -658,7 +694,8 @@ object ScaladocParser {
       }
     }
 
-    /** listStyle ::= '-' spc | '1.' spc | 'I.' spc | 'i.' spc | 'A.' spc | 'a.' spc
+    /**
+     * listStyle ::= '-' spc | '1.' spc | 'I.' spc | 'i.' spc | 'A.' spc | 'a.' spc
      * Characters used to build lists and their constructors */
     val listStyles: Map[String, Seq[Block] => Block] =
       Map[
@@ -673,20 +710,23 @@ object ScaladocParser {
         "a. " -> (OrderedList(_, "lowerAlpha"))
       )
 
-    /** Checks if the current line is formed with more than one space and one the listStyles */
+    /**
+     * Checks if the current line is formed with more than one space and one the listStyles */
     def checkList: Boolean =
       (countWhitespace > 0) && (listStyles.keys exists {
         checkSkipInitWhitespace(_)
       })
 
-    /** {{{
+    /**
+     * {{{
      * nListBlock ::= nLine { mListBlock }
      *      nLine ::= nSpc listStyle para '\n'
      * }}}
      * Where n and m stand for the number of spaces. When `m > n`, a new list is nested. */
     def listBlock(): Block = {
 
-      /** Consumes one list item block and returns it, or None if the block is
+      /**
+       * Consumes one list item block and returns it, or None if the block is
        * not a list or a different list. */
       def listLine(indent: Int, style: String): Option[Block] =
         if (countWhitespace > indent && checkList)
@@ -701,7 +741,8 @@ object ScaladocParser {
           Some(p)
         }
 
-      /** Consumes all list item blocks (possibly with nested lists) of the
+      /**
+       * Consumes all list item blocks (possibly with nested lists) of the
        * same list and returns the list block. */
       def listLevel(indent: Int, style: String): Block = {
         val lines = mutable.ListBuffer.empty[Block]
@@ -732,7 +773,8 @@ object ScaladocParser {
       Code(normalizeIndentation(str))
     }
 
-    /** {{{ title ::= ('=' inline '=' | "==" inline "==" | ...) '\n' }}} */
+    /**
+     * {{{ title ::= ('=' inline '=' | "==" inline "==" | ...) '\n' }}} */
     def title(): Block = {
       jumpWhitespace()
       val inLevel = repeatJump('=')
@@ -744,7 +786,8 @@ object ScaladocParser {
       Title(text, inLevel)
     }
 
-    /** {{{ hrule ::= "----" { '-' } '\n' }}} */
+    /**
+     * {{{ hrule ::= "----" { '-' } '\n' }}} */
     def hrule(): Block = {
       jumpWhitespace()
       repeatJump('-')
@@ -752,7 +795,8 @@ object ScaladocParser {
       HorizontalRule()
     }
 
-    /** Starts and end with a cell separator matching the minimal row || and all other possible rows */
+    /**
+     * Starts and end with a cell separator matching the minimal row || and all other possible rows */
     private val TableRow = """^\|.*\|$""".r
 
     /* Checks for a well-formed table row */
@@ -764,7 +808,8 @@ object ScaladocParser {
       }
     }
 
-    /** {{{
+    /**
+     * {{{
      * table         ::= headerRow '\n' delimiterRow '\n' dataRows '\n'
      * content       ::= inline-content
      * row           ::= '|' { content '|' }+
@@ -1050,7 +1095,8 @@ object ScaladocParser {
       Table(header.get, columnOptions, constrainedDataRows)
     }
 
-    /** {{{ para ::= inline '\n' }}} */
+    /**
+     * {{{ para ::= inline '\n' }}} */
     def para(): Block = {
       val p =
         if (summaryParsed)
@@ -1124,9 +1170,13 @@ object ScaladocParser {
         else if (check("[[")) link()
         else {
           val str = readUntil {
-            char == safeTagMarker || check("''") || char == '`' || check("__") || char == '^' || check(
+            char == safeTagMarker || check("''") || char == '`' || check(
+              "__"
+            ) || char == '^' || check(
               ",,"
-            ) || check("[[") || isInlineEnd || checkParaEnded || char == endOfLine
+            ) || check(
+              "[["
+            ) || isInlineEnd || checkParaEnded || char == endOfLine
           }
           Text(textTransform(str))
         }
@@ -1242,7 +1292,8 @@ object ScaladocParser {
 
     /* UTILITY */
 
-    /** {{{ eol ::= { whitespace } '\n' }}} */
+    /**
+     * {{{ eol ::= { whitespace } '\n' }}} */
     def blockEnded(blockType: String): Unit = {
       if (char != endOfLine && char != endOfText) {
         reportError(
@@ -1267,7 +1318,10 @@ object ScaladocParser {
      */
     def normalizeIndentation(_code: String): String = {
 
-      val code = _code.replaceAll("\\s+$", "").dropWhile(_ == '\n') // right-trim + remove all leading '\n'
+      val code =
+        _code
+          .replaceAll("\\s+$", "")
+          .dropWhile(_ == '\n') // right-trim + remove all leading '\n'
       val lines = code.split("\n")
 
       // maxSkip - size of the longest common whitespace prefix of non-empty lines
@@ -1379,7 +1433,8 @@ object ScaladocParser {
 
     /* JUMPERS */
 
-    /** jumps a character and consumes it
+    /**
+     * jumps a character and consumes it
      * @return true only if the correct character has been jumped */
     final def jump(ch: Char): Boolean = {
       if (char == ch) {
@@ -1388,11 +1443,14 @@ object ScaladocParser {
       } else false
     }
 
-    /** jumps all the characters in chars, consuming them in the process.
+    /**
+     * jumps all the characters in chars, consuming them in the process.
      * @return true only if the correct characters have been jumped */
     final def jump(chars: String): Boolean = {
       var index = 0
-      while (index < chars.length && char == chars.charAt(index) && char != endOfText) {
+      while (
+        index < chars.length && char == chars.charAt(index) && char != endOfText
+      ) {
         nextChar()
         index += 1
       }

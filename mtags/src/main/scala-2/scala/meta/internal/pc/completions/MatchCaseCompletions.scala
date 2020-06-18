@@ -295,7 +295,8 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     name.endsWith(CURSOR) &&
       "match".startsWith(name.toString().stripSuffix(CURSOR))
 
-  /** Returns true if the identifier comes after an opening brace character '{' */
+  /**
+   * Returns true if the identifier comes after an opening brace character '{' */
   def hasLeadingBrace(ident: Ident, text: String): Boolean = {
     val openDelim: Int = {
       var start = ident.pos.start - 1
@@ -331,9 +332,11 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         context.symbolIsInScope(sym) ||
           autoImports.nonEmpty
       val infixPattern: Option[String] =
-        if (isInfixEligible &&
+        if (
+          isInfixEligible &&
           sym.isCase &&
-          !Character.isUnicodeIdentifierStart(sym.decodedName.head)) {
+          !Character.isUnicodeIdentifierStart(sym.decodedName.head)
+        ) {
           sym.primaryConstructor.paramss match {
             case (a :: b :: Nil) :: _ =>
               Some(
@@ -393,13 +396,14 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
 
   class Parents(val selector: Type) {
     def this(pos: Position) = this(typedTreeAt(pos).tpe)
-    def this(tpes: List[Type]) = this(
-      tpes match {
-        case Nil => NoType
-        case head :: Nil => head
-        case _ => definitions.tupleType(tpes)
-      }
-    )
+    def this(tpes: List[Type]) =
+      this(
+        tpes match {
+          case Nil => NoType
+          case head :: Nil => head
+          case _ => definitions.tupleType(tpes)
+        }
+      )
     val isParent: Set[Symbol] =
       Set(selector.typeSymbol, selector.typeSymbol.companion)
         .filterNot(_ == NoSymbol)

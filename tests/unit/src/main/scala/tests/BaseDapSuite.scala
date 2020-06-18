@@ -45,18 +45,21 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
 
   override def munitTestTransforms: List[TestTransform] =
     super.munitTestTransforms :+
-      new TestTransform("Print DAP traces", { test =>
-        test.withBody(() =>
-          test
-            .body()
-            .andThen {
-              case Failure(exception) =>
-                logDapTraces()
-                exception
-              case Success(value) => value
-            }(munitExecutionContext)
-        )
-      })
+      new TestTransform(
+        "Print DAP traces",
+        { test =>
+          test.withBody(() =>
+            test
+              .body()
+              .andThen {
+                case Failure(exception) =>
+                  logDapTraces()
+                  exception
+                case Success(value) => value
+              }(munitExecutionContext)
+          )
+        }
+      )
 
   def debugMain(
       buildTarget: String,

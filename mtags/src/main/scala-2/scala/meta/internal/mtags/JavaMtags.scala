@@ -49,7 +49,8 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
     }
   }
 
-  /** Computes the start/end offsets from a name in a line number.
+  /**
+   * Computes the start/end offsets from a name in a line number.
    *
    * Applies a simple heuristic to find the name: the first occurence of
    * name in that line. If the name does not appear in the line then

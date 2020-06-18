@@ -2,11 +2,13 @@ package scala.meta.internal.docstrings
 
 import scala.meta.internal.tokenizers.Chars._
 
-/** Utility methods for doc comment strings
+/**
+ * Utility methods for doc comment strings
  */
 object ScaladocUtils {
 
-  /** Returns index of string `str` following `start` skipping longest
+  /**
+   * Returns index of string `str` following `start` skipping longest
    *  sequence of whitespace characters characters (but no newlines)
    */
   def skipWhitespace(str: String, start: Int): Int =
@@ -14,7 +16,8 @@ object ScaladocUtils {
       skipWhitespace(str, start + 1)
     else start
 
-  /** Returns index of string `str` following `start` skipping
+  /**
+   * Returns index of string `str` following `start` skipping
    *  sequence of identifier characters.
    */
   def skipIdent(str: String, start: Int): Int =
@@ -22,7 +25,8 @@ object ScaladocUtils {
       skipIdent(str, start + 1)
     else start
 
-  /** Returns index of string `str` following `start` skipping
+  /**
+   * Returns index of string `str` following `start` skipping
    *  sequence of identifier characters.
    */
   def skipTag(str: String, start: Int): Int =
@@ -30,7 +34,8 @@ object ScaladocUtils {
       skipIdent(str, start + 1)
     else start
 
-  /** Returns index of string `str` after `start` skipping longest
+  /**
+   * Returns index of string `str` after `start` skipping longest
    *  sequence of space and tab characters, possibly also containing
    *  a single `*` character or the `/``**` sequence.
    *  @pre  start == str.length || str(start) == `\n`
@@ -41,21 +46,27 @@ object ScaladocUtils {
       val idx = skipWhitespace(str, start + 1)
       if (idx < str.length && (str charAt idx) == '*')
         skipWhitespace(str, idx + 1)
-      else if (idx + 2 < str.length && (str charAt idx) == '/' && (str charAt (idx + 1)) == '*' && (str charAt (idx + 2)) == '*')
+      else if (
+        idx + 2 < str.length && (str charAt idx) == '/' && (str charAt (idx + 1)) == '*' && (str charAt (idx + 2)) == '*'
+      )
         skipWhitespace(str, idx + 3)
       else idx
     }
 
-  /** Skips to next occurrence of `\n` or to the position after the `/``**` sequence following index `start`.
+  /**
+   * Skips to next occurrence of `\n` or to the position after the `/``**` sequence following index `start`.
    */
   def skipToEol(str: String, start: Int): Int =
-    if (start + 2 < str.length && (str charAt start) == '/' && (str charAt (start + 1)) == '*' && (str charAt (start + 2)) == '*')
+    if (
+      start + 2 < str.length && (str charAt start) == '/' && (str charAt (start + 1)) == '*' && (str charAt (start + 2)) == '*'
+    )
       start + 3
     else if (start < str.length && (str charAt start) != '\n')
       skipToEol(str, start + 1)
     else start
 
-  /** Returns first index following `start` and starting a line (i.e. after skipLineLead) or starting the comment
+  /**
+   * Returns first index following `start` and starting a line (i.e. after skipLineLead) or starting the comment
    *  which satisfies predicate `p`.
    */
   def findNext(str: String, start: Int)(p: Int => Boolean): Int = {
@@ -64,7 +75,8 @@ object ScaladocUtils {
     else idx
   }
 
-  /** Return first index following `start` and starting a line (i.e. after skipLineLead)
+  /**
+   * Return first index following `start` and starting a line (i.e. after skipLineLead)
    *  which satisfies predicate `p`.
    */
   def findAll(str: String, start: Int)(p: Int => Boolean): List[Int] = {
@@ -73,7 +85,8 @@ object ScaladocUtils {
     else idx :: findAll(str, idx)(p)
   }
 
-  /** Produces a string index, which is a list of `sections`, i.e
+  /**
+   * Produces a string index, which is a list of `sections`, i.e
    *  pairs of start/end positions of all tagged sections in the string.
    *  Every section starts with an at sign and extends to the next at sign,
    *  or to the end of the comment string, but excluding the final two
@@ -119,7 +132,8 @@ object ScaladocUtils {
   def mergeInheritdocSections(str: String, idxs: List[Int]): List[Int] =
     idxs.filterNot(str.startsWith("@inheritdoc", _))
 
-  /** Does interval `iv` start with given `tag`?
+  /**
+   * Does interval `iv` start with given `tag`?
    */
   def startsWithTag(str: String, section: (Int, Int), tag: String): Boolean =
     startsWithTag(str, section._1, tag)
@@ -129,15 +143,18 @@ object ScaladocUtils {
       str charAt (start + tag.length)
     )
 
-  /** The first start tag of a list of tag intervals,
+  /**
+   * The first start tag of a list of tag intervals,
    *  or the end of the whole comment string - 2 if list is empty
    */
-  def startTag(str: String, sections: List[(Int, Int)]): Int = sections match {
-    case Nil => str.length - 2
-    case (start, _) :: _ => start
-  }
+  def startTag(str: String, sections: List[(Int, Int)]): Int =
+    sections match {
+      case Nil => str.length - 2
+      case (start, _) :: _ => start
+    }
 
-  /** A map from parameter names to start/end indices describing all parameter
+  /**
+   * A map from parameter names to start/end indices describing all parameter
    *  sections in `str` tagged with `tag`, where `sections` is the index of `str`.
    */
   def paramDocs(
@@ -152,25 +169,31 @@ object ScaladocUtils {
       }
     }
 
-  /** Optionally start and end index of return section in `str`, or `None`
+  /**
+   * Optionally start and end index of return section in `str`, or `None`
    *  if `str` does not have a @group. */
   def groupDoc(str: String, sections: List[(Int, Int)]): Option[(Int, Int)] =
     sections find (startsWithTag(str, _, "@group"))
 
-  /** Optionally start and end index of return section in `str`, or `None`
+  /**
+   * Optionally start and end index of return section in `str`, or `None`
    *  if `str` does not have a @return.
    */
   def returnDoc(str: String, sections: List[(Int, Int)]): Option[(Int, Int)] =
     sections find (startsWithTag(str, _, "@return"))
 
-  /** Extracts variable name from a string, stripping any pair of surrounding braces */
+  /**
+   * Extracts variable name from a string, stripping any pair of surrounding braces */
   def variableName(str: String): String =
-    if (str.length >= 2 && (str charAt 0) == '{' && (str charAt (str.length - 1)) == '}')
+    if (
+      str.length >= 2 && (str charAt 0) == '{' && (str charAt (str.length - 1)) == '}'
+    )
       str.substring(1, str.length - 1)
     else
       str
 
-  /** Returns index following variable, or start index if no variable was recognized
+  /**
+   * Returns index following variable, or start index if no variable was recognized
    */
   def skipVariable(str: String, start: Int): Int = {
     var idx = start
@@ -183,7 +206,8 @@ object ScaladocUtils {
     }
   }
 
-  /** A map from the section tag to section parameters */
+  /**
+   * A map from the section tag to section parameters */
   def sectionTagMap(
       str: String,
       sections: List[(Int, Int)]
@@ -192,11 +216,13 @@ object ScaladocUtils {
       for (section <- sections) yield extractSectionTag(str, section) -> section
     }
 
-  /** Extract the section tag, treating the section tag as an identifier */
+  /**
+   * Extract the section tag, treating the section tag as an identifier */
   def extractSectionTag(str: String, section: (Int, Int)): String =
     str.substring(section._1, skipTag(str, section._1))
 
-  /** Extract the section parameter */
+  /**
+   * Extract the section parameter */
   def extractSectionParam(str: String, section: (Int, Int)): String = {
     val (beg, _) = section
     assert(
@@ -211,12 +237,15 @@ object ScaladocUtils {
     str.substring(start, finish)
   }
 
-  /** Extract the section text, except for the tag and comment newlines */
+  /**
+   * Extract the section text, except for the tag and comment newlines */
   def extractSectionText(str: String, section: (Int, Int)): (Int, Int) = {
     val (beg, end) = section
-    if (str.startsWith("@param", beg) ||
+    if (
+      str.startsWith("@param", beg) ||
       str.startsWith("@tparam", beg) ||
-      str.startsWith("@throws", beg))
+      str.startsWith("@throws", beg)
+    )
       (
         skipWhitespace(
           str,
@@ -228,7 +257,8 @@ object ScaladocUtils {
       (skipWhitespace(str, skipTag(str, beg)), end)
   }
 
-  /** Cleanup section text */
+  /**
+   * Cleanup section text */
   def cleanupSectionText(str: String): String = {
     var result = str.trim.replaceAll("\n\\s+\\*\\s+", " \n")
     while (result.endsWith("\n")) result = result.substring(0, str.length - 1)

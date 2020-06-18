@@ -257,9 +257,10 @@ class WorksheetProvider(
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
-        isSupported = ScalaVersions
-          .isSupportedScalaVersion(scalaVersion) && !ScalaVersions
-          .isScala3Version(scalaVersion)
+        isSupported =
+          ScalaVersions
+            .isSupportedScalaVersion(scalaVersion) && !ScalaVersions
+            .isScala3Version(scalaVersion)
         _ = {
           if (!isSupported) {
             scribe.warn(

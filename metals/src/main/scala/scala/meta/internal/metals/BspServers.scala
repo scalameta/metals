@@ -42,7 +42,8 @@ final class BspServers(
     }
   }
 
-  /** Runs "Switch build server" command, returns true if build server was changed */
+  /**
+   * Runs "Switch build server" command, returns true if build server was changed */
   def switchBuildServer(): Future[Boolean] = {
     findAvailableServers() match {
       case Nil =>

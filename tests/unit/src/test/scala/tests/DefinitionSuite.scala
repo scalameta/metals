@@ -42,7 +42,8 @@ class DefinitionSuite extends DirectoryExpectSuite("definition") {
     }
     input.scalaFiles.map { file =>
       ExpectTestCase(
-        file, { () =>
+        file,
+        { () =>
           val input = file.input
           val tokens = Trees.defaultDialect(input).tokenize.get
           val sb = new StringBuilder
@@ -87,8 +88,10 @@ class DefinitionSuite extends DirectoryExpectSuite("definition") {
                         case Some(defn) =>
                           val fallback =
                             if (defn.querySymbol == defn.definitionSymbol) ""
-                            else if (defn.querySymbol.value.stripSuffix(".") ==
-                                defn.definitionSymbol.value.stripSuffix("#")) {
+                            else if (
+                              defn.querySymbol.value.stripSuffix(".") ==
+                                defn.definitionSymbol.value.stripSuffix("#")
+                            ) {
                               // Ignore fallback from companion object to class.
                               ""
                             } else {

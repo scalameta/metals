@@ -91,11 +91,12 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
           "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.4\")"
         )
       }
-      _ <- server
-        .didSave("foo/src/reload/Main.scala") { text =>
-          text.replaceAll("\"", "")
-        }
-        .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("foo/src/reload/Main.scala") { text =>
+            text.replaceAll("\"", "")
+          }
+          .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }

@@ -197,8 +197,8 @@ object RemoteServer {
     def onTerminated(): Unit
   }
 
-  def apply(socket: Socket, listener: Listener)(
-      implicit ec: ExecutionContext
+  def apply(socket: Socket, listener: Listener)(implicit
+      ec: ExecutionContext
   ): RemoteServer = {
     val server = new RemoteServer(socket, listener)
     server.listening.onComplete(_ => server.cancel())

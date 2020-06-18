@@ -8,7 +8,8 @@ final case class DoctorFormatConfig(value: String) {
 object DoctorFormatConfig {
   def html = new DoctorFormatConfig("html")
   def json = new DoctorFormatConfig("json")
-  def default = new DoctorFormatConfig(
-    System.getProperty("metals.doctor-format", "html")
-  )
+  def default =
+    new DoctorFormatConfig(
+      System.getProperty("metals.doctor-format", "html")
+    )
 }

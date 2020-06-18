@@ -1350,7 +1350,10 @@ class MetalsLanguageServer(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
               List(
-                new Location(log.toURI.toString(), new l.Range(pos, pos)): Object
+                new Location(
+                  log.toURI.toString(),
+                  new l.Range(pos, pos)
+                ): Object
               ).asJava
             )
           )
@@ -1596,18 +1599,17 @@ class MetalsLanguageServer(
         }
       } yield result
     }.recover {
-        case NonFatal(e) =>
-          disconnectOldBuildServer()
-          val message =
-            "Failed to connect with build server, no functionality will work."
-          val details = " See logs for more details."
-          languageClient.showMessage(
-            new MessageParams(MessageType.Error, message + details)
-          )
-          scribe.error(message, e)
-          BuildChange.Failed
-      }
-      .flatMap(compileAllOpenFiles)
+      case NonFatal(e) =>
+        disconnectOldBuildServer()
+        val message =
+          "Failed to connect with build server, no functionality will work."
+        val details = " See logs for more details."
+        languageClient.showMessage(
+          new MessageParams(MessageType.Error, message + details)
+        )
+        scribe.error(message, e)
+        BuildChange.Failed
+    }.flatMap(compileAllOpenFiles)
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
@@ -1699,9 +1701,11 @@ class MetalsLanguageServer(
               )
             }
           }
-          if (sourceItem.isDefined &&
+          if (
+            sourceItem.isDefined &&
             !info.symbol.isPackage &&
-            (owner.isPackage || source.isAmmoniteScript)) {
+            (owner.isPackage || source.isAmmoniteScript)
+          ) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
           }
       }
@@ -1732,7 +1736,9 @@ class MetalsLanguageServer(
   )(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk
-    if (onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)) {
+    if (
+      onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)
+    ) {
       scribe.info(s"time: $didWhat in $elapsed")
     }
     result
@@ -2140,12 +2146,15 @@ object MetalsLanguageServer {
     for {
       workspaceBuildTargets <- build.workspaceBuildTargets()
       ids = workspaceBuildTargets.getTargets.map(_.getId)
-      scalacOptions <- build
-        .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-      sources <- build
-        .buildTargetSources(new b.SourcesParams(ids))
-      dependencySources <- build
-        .buildTargetDependencySources(new b.DependencySourcesParams(ids))
+      scalacOptions <-
+        build
+          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
+      sources <-
+        build
+          .buildTargetSources(new b.SourcesParams(ids))
+      dependencySources <-
+        build
+          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
     } yield {
       ImportedBuild(
         workspaceBuildTargets,

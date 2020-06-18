@@ -55,11 +55,12 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
 
   test("broken-workspace") {
 
-    def startDebugging() = server.startDebugging(
-      "a",
-      DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-      new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava)
-    )
+    def startDebugging() =
+      server.startDebugging(
+        "a",
+        DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava)
+      )
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -273,18 +274,19 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |  val a : Int = ""
            |}""".stripMargin
       }
-      result <- server
-        .startDebuggingUnresolved(
-          new DebugUnresolvedMainClassParams(
-            "a.Main",
-            "a",
-            singletonList("Foo")
-          ).toJson
-        )
-        .recover {
-          case WorkspaceErrorsException =>
-            WorkspaceErrorsException
-        }
+      result <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedMainClassParams(
+              "a.Main",
+              "a",
+              singletonList("Foo")
+            ).toJson
+          )
+          .recover {
+            case WorkspaceErrorsException =>
+              WorkspaceErrorsException
+          }
     } yield assertDiffEqual(
       result.toString(),
       WorkspaceErrorsException.toString()
@@ -349,16 +351,17 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |  }
            |}""".stripMargin
       }
-      result <- server
-        .startDebuggingUnresolved(
-          new DebugUnresolvedTestClassParams(
-            "a.Foo"
-          ).toJson
-        )
-        .recover {
-          case WorkspaceErrorsException =>
-            WorkspaceErrorsException
-        }
+      result <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedTestClassParams(
+              "a.Foo"
+            ).toJson
+          )
+          .recover {
+            case WorkspaceErrorsException =>
+              WorkspaceErrorsException
+          }
     } yield assertContains(
       result.toString(),
       WorkspaceErrorsException.toString()

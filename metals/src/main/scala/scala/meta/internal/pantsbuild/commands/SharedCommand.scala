@@ -182,7 +182,8 @@ object SharedCommand {
     }
   }
 
-  /** Upgrades the Bloop server if it's known to be an old version. */
+  /**
+   * Upgrades the Bloop server if it's known to be an old version. */
   private def restartOldBloopServer(): Unit = {
     val isOutdated = Set[String](
       "1.4.0-RC1-190-ef7d8dba",

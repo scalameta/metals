@@ -418,10 +418,11 @@ private class BloopPants(
       classpathEntries ++= (for {
         dependency <- transitiveDependencies
         if dependency.isTargetRoot
-        acyclicDependency = cycles.parents
-          .get(dependency.name)
-          .flatMap(export.targets.get)
-          .getOrElse(dependency)
+        acyclicDependency =
+          cycles.parents
+            .get(dependency.name)
+            .flatMap(export.targets.get)
+            .getOrElse(dependency)
       } yield acyclicDependency.classesDir(bloopDir))
       classpathEntries ++= libraries.iterator.flatMap(library =>
         library.nonSources.map(path => toImmutableJar(library, path))

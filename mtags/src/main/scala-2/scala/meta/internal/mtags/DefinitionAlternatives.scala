@@ -4,7 +4,8 @@ import scala.meta.internal.semanticdb.Scala._
 
 object DefinitionAlternatives {
 
-  /** Returns a list of fallback symbols that can act instead of given symbol. */
+  /**
+   * Returns a list of fallback symbols that can act instead of given symbol. */
   def apply(symbol: Symbol): List[Symbol] = {
     List(
       caseClassCompanionToType(symbol),
@@ -22,7 +23,8 @@ object DefinitionAlternatives {
       Some(sym.owner -> sym.value.desc)
   }
 
-  /** If `case class A(a: Int)` and there is no companion object, resolve
+  /**
+   * If `case class A(a: Int)` and there is no companion object, resolve
    * `A` in `A(1)` to the class definition.
    */
   private def caseClassCompanionToType(symbol: Symbol): Option[Symbol] =
@@ -31,7 +33,8 @@ object DefinitionAlternatives {
         GlobalSymbol(owner, Descriptor.Type(name))
     }
 
-  /** If `case class Foo(a: Int)`, then resolve
+  /**
+   * If `case class Foo(a: Int)`, then resolve
    * `a` in `Foo.apply(a = 1)`, and
    * `a` in `Foo(1).copy(a = 2)`
    * to the `Foo.a` primary constructor definition.
@@ -39,11 +42,11 @@ object DefinitionAlternatives {
   private def caseClassApplyOrCopyParams(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(
-          GlobalSymbol(
-            GlobalSymbol(owner, signature),
-            Descriptor.Method("copy" | "apply", _)
-          ),
-          Descriptor.Parameter(param)
+            GlobalSymbol(
+              GlobalSymbol(owner, signature),
+              Descriptor.Method("copy" | "apply", _)
+            ),
+            Descriptor.Parameter(param)
           ) =>
         GlobalSymbol(
           GlobalSymbol(owner, Descriptor.Type(signature.name.value)),
@@ -51,7 +54,8 @@ object DefinitionAlternatives {
         )
     }
 
-  /** If `case class Foo(a: Int)`, then resolve
+  /**
+   * If `case class Foo(a: Int)`, then resolve
    * `apply` in `Foo.apply(1)`, and
    * `copy` in `Foo(1).copy(a = 2)`
    * to the `Foo` class definition.
@@ -59,13 +63,14 @@ object DefinitionAlternatives {
   private def caseClassApplyOrCopy(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(
-          GlobalSymbol(owner, signature),
-          Descriptor.Method("apply" | "copy", _)
+            GlobalSymbol(owner, signature),
+            Descriptor.Method("apply" | "copy", _)
           ) =>
         GlobalSymbol(owner, Descriptor.Type(signature.name.value))
     }
 
-  /** Convert reference to var setter to var getter. */
+  /**
+   * Convert reference to var setter to var getter. */
   private def varGetter(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(owner, Descriptor.Method(name, disambiguator))

@@ -16,7 +16,8 @@ import io.github.soc.directories.ProjectDirectories
  */
 object GlobalTrace {
 
-  /** Returns a printer to trace JSON messages if the user opts into it. */
+  /**
+   * Returns a printer to trace JSON messages if the user opts into it. */
   def setup(protocolName: String): PrintWriter = {
     MetalsLogger.redirectSystemOut(globalLog)
     setupTracePrinter(protocolName)

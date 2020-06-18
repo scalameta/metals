@@ -37,13 +37,14 @@ object TestRanges extends RangeReplace {
       workspaceEdit: WorkspaceEdit
   ): Option[String] = {
     for {
-      validLocations <- workspaceEdit
-        .getDocumentChanges()
-        .asScala
-        .find(change =>
-          change.isLeft &&
-            change.getLeft.getTextDocument.getUri.contains(file)
-        )
+      validLocations <-
+        workspaceEdit
+          .getDocumentChanges()
+          .asScala
+          .find(change =>
+            change.isLeft &&
+              change.getLeft.getTextDocument.getUri.contains(file)
+          )
     } yield TextEdits.applyEdits(
       code,
       validLocations.getLeft.getEdits.asScala.toList

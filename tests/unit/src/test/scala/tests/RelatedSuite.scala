@@ -27,12 +27,13 @@ class RelatedSuite extends BaseSuite {
     else assert(!isRelated(workspace, path))
   }
 
-  /**------------ SBT ------------**/
+  /**
+   * ------------ SBT ------------* */
   def checkIsNotSbtRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsSbtRelated(relpath, isTrue = false)
   }
-  def checkIsSbtRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsSbtRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}SbtRelated - $relpath") {
       checkRelated(relpath, SbtBuildTool.isSbtRelatedPath, isTrue)
@@ -48,12 +49,13 @@ class RelatedSuite extends BaseSuite {
   checkIsSbtRelated("build.sbt")
   checkIsNotSbtRelated("src/main/scala/Main.scala")
 
-  /**------------ Gradle ------------**/
+  /**
+   * ------------ Gradle ------------* */
   def checkIsNotGradleRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsGradleRelated(relpath, isTrue = false)
   }
-  def checkIsGradleRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsGradleRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}GradleRelated - $relpath") {
       checkRelated(relpath, GradleBuildTool.isGradleRelatedPath, isTrue)
@@ -69,12 +71,13 @@ class RelatedSuite extends BaseSuite {
   checkIsNotGradleRelated("/ab/c/A.groovy")
   checkIsNotGradleRelated("/ab/c/A.kts")
 
-  /**------------ Maven ------------**/
+  /**
+   * ------------ Maven ------------* */
   def checkIsNotMavenRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsMavenRelated(relpath, isTrue = false)
   }
-  def checkIsMavenRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsMavenRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}MavenRelated - $relpath") {
       checkRelated(relpath, MavenBuildTool.isMavenRelatedPath, isTrue)
@@ -85,12 +88,13 @@ class RelatedSuite extends BaseSuite {
   checkIsNotMavenRelated("a/b/c/settings.xml")
   checkIsNotMavenRelated("other.xml")
 
-  /**------------ Mill ------------**/
+  /**
+   * ------------ Mill ------------* */
   def checkIsNotMillRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsMillRelated(relpath, isTrue = false)
   }
-  def checkIsMillRelated(relpath: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkIsMillRelated(relpath: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}MillRelated - $relpath") {
       checkRelated(relpath, MillBuildTool.isMillRelatedPath, isTrue)

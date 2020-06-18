@@ -300,24 +300,25 @@ object ServerCommands {
     "Something"
   )
 
-  def all: List[Command] = List(
-    ImportBuild,
-    RestartBuildServer,
-    ConnectBuildServer,
-    ScanWorkspaceSources,
-    RunDoctor,
-    CascadeCompile,
-    CancelCompile,
-    BspSwitch,
-    StartDebugAdapter,
-    GotoLocation,
-    NewScalaFile,
-    NewScalaProject,
-    GotoSuperMethod,
-    SuperMethodHierarchy,
-    StartAmmoniteBuildServer,
-    StopAmmoniteBuildServer
-  )
+  def all: List[Command] =
+    List(
+      ImportBuild,
+      RestartBuildServer,
+      ConnectBuildServer,
+      ScanWorkspaceSources,
+      RunDoctor,
+      CascadeCompile,
+      CancelCompile,
+      BspSwitch,
+      StartDebugAdapter,
+      GotoLocation,
+      NewScalaFile,
+      NewScalaProject,
+      GotoSuperMethod,
+      SuperMethodHierarchy,
+      StartAmmoniteBuildServer,
+      StopAmmoniteBuildServer
+    )
 }
 
 case class DebugUnresolvedMainClassParams(
