@@ -8,6 +8,8 @@ jobs:
   unit:
     name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests
     runs-on: ${{ matrix.os }}
+    needs:
+      - formatting
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +55,8 @@ jobs:
         shell: bash
   integration:
     name: ${{ matrix.name }}
+    needs:
+      - formatting
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -66,9 +70,7 @@ jobs:
             pants,
             mill,
             feature,
-            cross,
-            scalafmt,
-            scalafix,
+            cross
           ]
         include:
           - type: gradle-mac
@@ -103,14 +105,6 @@ jobs:
             command: sbt +cross/test
             name: Scala cross tests
             os: ubuntu-latest
-          - type: scalafix
-            command: sbt scalafixCheck docs/docusaurusCreateSite
-            name: Scalafix and docs
-            os: ubuntu-latest
-          - type: scalafmt
-            command: ./bin/scalafmt --test
-            name: Formatting
-            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: olafurpg/setup-scala@v7
@@ -135,3 +129,40 @@ jobs:
             ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON:
             ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+  formatting:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        type:
+          [
+            scalafmt,
+            scalafix,
+          ]
+        include:
+          - type: scalafix
+            command: sbt scalafixCheck docs/docusaurusCreateSite
+            name: Scalafix and docs
+          - type: scalafmt
+            command: ./bin/scalafmt --test
+            name: Formatting
+    steps:
+      - uses: actions/checkout@v2
+      - uses: olafurpg/setup-scala@v7
+        with:
+          java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: ${{ runner.os }}-coursier-
+      - uses: actions/cache@v1
+        with:
+          path: ~/.sbt
+          key:
+            ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties')
+            }}-${{ hashFiles('project/plugins.sbt') }}
+          restore-keys: ${{ runner.os }}-sbt-
+      - name: ${{ matrix.command }}
+        run: ${{ matrix.command }}
