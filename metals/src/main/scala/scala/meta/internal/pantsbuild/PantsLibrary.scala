@@ -8,8 +8,9 @@ case class PantsLibrary(
 ) {
   def default: Option[Path] = values.get("default")
   def sources: Option[Path] = values.get("sources")
-  def nonSources: Iterable[Path] = values.collect {
-    case (key, path) if key != "sources" =>
-      path
-  }
+  def nonSources: Iterable[Path] =
+    values.collect {
+      case (key, path) if key != "sources" =>
+        path
+    }
 }

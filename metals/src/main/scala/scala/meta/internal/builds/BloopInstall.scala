@@ -105,31 +105,32 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BuildTool,
       digest: String
-  ): Future[BloopInstallResult] = synchronized {
-    oldInstallResult(digest) match {
-      case Some(result) =>
-        scribe.info(s"skipping build import with status '${result.name}'")
-        Future.successful(result)
-      case None =>
-        for {
-          userResponse <- requestImport(
-            buildTools,
-            buildTool,
-            languageClient,
-            digest
-          )
-          installResult <- {
-            if (userResponse.isYes) {
-              runUnconditionally(buildTool)
-            } else {
-              // Don't spam the user with requests during rapid build changes.
-              notification.dismiss(2, TimeUnit.MINUTES)
-              Future.successful(BloopInstallResult.Rejected)
+  ): Future[BloopInstallResult] =
+    synchronized {
+      oldInstallResult(digest) match {
+        case Some(result) =>
+          scribe.info(s"skipping build import with status '${result.name}'")
+          Future.successful(result)
+        case None =>
+          for {
+            userResponse <- requestImport(
+              buildTools,
+              buildTool,
+              languageClient,
+              digest
+            )
+            installResult <- {
+              if (userResponse.isYes) {
+                runUnconditionally(buildTool)
+              } else {
+                // Don't spam the user with requests during rapid build changes.
+                notification.dismiss(2, TimeUnit.MINUTES)
+                Future.successful(BloopInstallResult.Rejected)
+              }
             }
-          }
-        } yield installResult
+          } yield installResult
+      }
     }
-  }
 
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]

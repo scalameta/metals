@@ -42,9 +42,10 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
         path,
         messages.textSnapshot
       )
-      snapshotPosition <- distance
-        .toOriginal(position.getLine(), position.getCharacter())
-        .toPosition(position)
+      snapshotPosition <-
+        distance
+          .toOriginal(position.getLine(), position.getCharacter())
+          .toPosition(position)
       message <- getHoverMessage(snapshotPosition, messages.hovers)
     } yield new Hover(
       new MarkupContent(
@@ -124,7 +125,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   ): Option[Position] = {
     val editPattern = """\A\s*/\*>.*?\*/""".r
     val offset =
-      source.lineToOffset(statement.position.endLine) + statement.position.endColumn
+      source.lineToOffset(
+        statement.position.endLine
+      ) + statement.position.endColumn
     val text = source.text.drop(offset)
     editPattern
       .findFirstMatchIn(text)

@@ -4,7 +4,8 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
-/** Helper class file build tools that have a Bloop plugin */
+/**
+ * Helper class file build tools that have a Bloop plugin */
 abstract class BloopPluginBuildTool extends BuildTool {
 
   def bloopInstall(

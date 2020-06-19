@@ -97,9 +97,10 @@ class ClientConfiguration(
 }
 
 object ClientConfiguration {
-  def Default() = new ClientConfiguration(
-    MetalsServerConfig(),
-    ClientExperimentalCapabilities.Default,
-    InitializationOptions.Default
-  )
+  def Default() =
+    new ClientConfiguration(
+      MetalsServerConfig(),
+      ClientExperimentalCapabilities.Default,
+      InitializationOptions.Default
+    )
 }

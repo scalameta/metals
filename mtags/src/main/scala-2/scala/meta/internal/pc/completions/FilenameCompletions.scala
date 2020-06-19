@@ -47,9 +47,11 @@ trait FilenameCompletions { this: MetalsGlobal =>
               d.name.isTermName == isTermName
           case _ => false
         }
-        if (!name.isEmpty &&
+        if (
+          !name.isEmpty &&
           CompletionFuzzy.matches(query, name) &&
-          siblings == 0) {
+          siblings == 0
+        ) {
           List(
             new TextEditMember(
               name,

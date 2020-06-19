@@ -257,13 +257,13 @@ final class BuildTargets() {
    * By default, we rely on carefully recording what build target produced what
    * files in the `.metals/readonly/` directory. This approach has the problem
    * that navigation failed to work in `readonly/` sources if
-
+   *
    * - a new metals feature forgot to record the build target
    * - a user removes `.metals/metals.h2.db`
-
+   *
    * When encountering an unknown `readonly/` file we do the following steps to
    * infer what build target it belongs to:
-
+   *
    * - extract toplevel symbol definitions from the source code.
    * - find a jar file from any classfile that defines one of the toplevel
    *   symbols.
@@ -423,21 +423,22 @@ object BuildTargets {
   ): Boolean = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     @tailrec
-    def loop(toVisit: List[BuildTargetIdentifier]): Boolean = toVisit match {
-      case Nil => false
-      case head :: tail =>
-        if (head == query) true
-        else if (isVisited(head)) false
-        else {
-          isVisited += head
-          inverseDeps(head) match {
-            case Some(next) =>
-              loop(next.toList ++ tail)
-            case None =>
-              loop(tail)
+    def loop(toVisit: List[BuildTargetIdentifier]): Boolean =
+      toVisit match {
+        case Nil => false
+        case head :: tail =>
+          if (head == query) true
+          else if (isVisited(head)) false
+          else {
+            isVisited += head
+            inverseDeps(head) match {
+              case Some(next) =>
+                loop(next.toList ++ tail)
+              case None =>
+                loop(tail)
+            }
           }
-        }
-    }
+      }
     loop(roots)
   }
 
@@ -460,23 +461,24 @@ object BuildTargets {
   ): InverseDependencies = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val leaves = mutable.Set.empty[BuildTargetIdentifier]
-    def loop(toVisit: List[BuildTargetIdentifier]): Unit = toVisit match {
-      case Nil => ()
-      case head :: tail =>
-        if (!isVisited(head)) {
-          isVisited += head
-          inverseDeps(head) match {
-            case Some(next) =>
-              loop(next.toList)
-            case None =>
-              // Only add leaves of the tree to the result to minimize the number
-              // of targets that we compile. If `B` depends on `A`, it's faster
-              // in Bloop to compile only `B` than `A+B`.
-              leaves += head
+    def loop(toVisit: List[BuildTargetIdentifier]): Unit =
+      toVisit match {
+        case Nil => ()
+        case head :: tail =>
+          if (!isVisited(head)) {
+            isVisited += head
+            inverseDeps(head) match {
+              case Some(next) =>
+                loop(next.toList)
+              case None =>
+                // Only add leaves of the tree to the result to minimize the number
+                // of targets that we compile. If `B` depends on `A`, it's faster
+                // in Bloop to compile only `B` than `A+B`.
+                leaves += head
+            }
+            loop(tail)
           }
-          loop(tail)
-        }
-    }
+      }
     loop(root)
     InverseDependencies(isVisited, leaves)
   }

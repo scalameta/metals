@@ -46,14 +46,15 @@ object Digest {
     case object Installed extends Status(4)
     case object Cancelled extends Status(5)
     case class Unknown(n: Int) extends Status(n)
-    def all: List[Status] = List(
-      Requested,
-      Started,
-      Rejected,
-      Failed,
-      Installed,
-      Cancelled
-    )
+    def all: List[Status] =
+      List(
+        Requested,
+        Started,
+        Rejected,
+        Failed,
+        Installed,
+        Cancelled
+      )
   }
 
   def digestDirectory(

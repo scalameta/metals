@@ -139,9 +139,8 @@ class Compilers(
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     val input = path.toInputFromBuffers(buffers)
     pc.foldingRange(
-        CompilerVirtualFileParams(path.toNIO.toUri, input.value)
-      )
-      .asScala
+      CompilerVirtualFileParams(path.toNIO.toUri, input.value)
+    ).asScala
   }
 
   def onTypeFormatting(
@@ -169,9 +168,8 @@ class Compilers(
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     val input = path.toInputFromBuffers(buffers)
     pc.documentSymbols(
-        CompilerVirtualFileParams(path.toNIO.toUri, input.value)
-      )
-      .asScala
+      CompilerVirtualFileParams(path.toNIO.toUri, input.value)
+    ).asScala
   }
 
   def didClose(path: AbsolutePath): Unit = {
@@ -183,9 +181,10 @@ class Compilers(
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     val input = path.toInputFromBuffers(buffers)
     for {
-      ds <- pc
-        .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
-        .asScala
+      ds <-
+        pc
+          .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
+          .asScala
     } yield {
       ds.asScala.headOption match {
         case None =>
@@ -356,7 +355,8 @@ class Compilers(
       scalac <- buildTargets.scalacOptions(target)
     } yield {
       jcache.computeIfAbsent(
-        target, { _ =>
+        target,
+        { _ =>
           statusBar.trackBlockingTask(
             s"${config.icons.sync}Loading presentation compiler"
           ) {
@@ -374,9 +374,10 @@ class Compilers(
   ): Option[(Input.VirtualFile, LspPosition)] =
     if (path.isAmmoniteScript)
       for {
-        target <- buildTargets
-          .inverseSources(path)
-          .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+        target <-
+          buildTargets
+            .inverseSources(path)
+            .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
         res <- ammonite().generatedScalaInputForPc(
           target,
           path,

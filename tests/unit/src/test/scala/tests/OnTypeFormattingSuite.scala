@@ -459,14 +459,15 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
              |/a/src/main/scala/a/Main.scala
       """.stripMargin + base
         )
-        _ <- if (!stripMarginEnabled)
-          server.didChangeConfiguration(
-            """{
-              |  "enable-strip-margin-on-type-formatting": false
-              |}
-              |""".stripMargin
-          )
-        else Future.successful(())
+        _ <-
+          if (!stripMarginEnabled)
+            server.didChangeConfiguration(
+              """{
+                |  "enable-strip-margin-on-type-formatting": false
+                |}
+                |""".stripMargin
+            )
+          else Future.successful(())
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",

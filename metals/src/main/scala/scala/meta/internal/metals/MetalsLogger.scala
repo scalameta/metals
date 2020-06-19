@@ -64,7 +64,11 @@ object MetalsLogger {
     override def id = "MetalsFilter"
     override def priority: Priority = Priority.Normal
     override def apply[M](record: LogRecord[M]): Option[LogRecord[M]] = {
-      if (record.className.startsWith("org.flywaydb") && record.level < scribe.Level.Warn.value) {
+      if (
+        record.className.startsWith(
+          "org.flywaydb"
+        ) && record.level < scribe.Level.Warn.value
+      ) {
         None
       } else {
         Some(record)
@@ -102,9 +106,10 @@ object MetalsLogger {
 
   def defaultFormat: Formatter = formatter"$date $levelPaddedRight $message"
 
-  def silent: LoggerSupport = new LoggerSupport {
-    override def log[M](record: LogRecord[M]): Unit = ()
-  }
+  def silent: LoggerSupport =
+    new LoggerSupport {
+      override def log[M](record: LogRecord[M]): Unit = ()
+    }
   def default: LoggerSupport = scribe.Logger.root
   def silentInTests: LoggerSupport =
     if (MetalsServerConfig.isTesting) silent

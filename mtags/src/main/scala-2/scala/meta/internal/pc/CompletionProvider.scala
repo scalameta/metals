@@ -103,8 +103,10 @@ class CompletionProvider(
         }
         val templateSuffix =
           if (!isSnippet || !clientSupportsSnippets) ""
-          else if (completion.isNew &&
-            member.sym.dealiased.requiresTemplateCurlyBraces) " {}"
+          else if (
+            completion.isNew &&
+            member.sym.dealiased.requiresTemplateCurlyBraces
+          ) " {}"
           else ""
 
         val typeSuffix =
@@ -272,13 +274,15 @@ class CompletionProvider(
       def isNotLocalForwardReference: Boolean =
         !head.sym.isLocalToBlock ||
           !head.sym.pos.isAfter(pos)
-      if (!isSeen(id) &&
+      if (
+        !isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
         !isUninterestingSymbolOwner(head.sym.owner) &&
         !isIgnoredWorkspace &&
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&
-        isNotLocalForwardReference) {
+        isNotLocalForwardReference
+      ) {
         isSeen += id
         buf += head
         isIgnored ++= dealiasedValForwarder(head.sym)
@@ -388,7 +392,8 @@ class CompletionProvider(
       val matchingResults = completions.matchingResults { entered => name =>
         val decoded = entered.decoded
 
-        /** NOTE(tgodzik): presentation compiler bug https://github.com/scala/scala/pull/8193
+        /**
+         * NOTE(tgodzik): presentation compiler bug https://github.com/scala/scala/pull/8193
          *  should be removed once we drop support for 2.12.8 and 2.13.0
          *  in case we have a comment presentation compiler will see it as the name
          *  CompletionIssueSuite.issue-813 for more details

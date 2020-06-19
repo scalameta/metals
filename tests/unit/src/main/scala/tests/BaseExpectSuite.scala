@@ -5,7 +5,8 @@ import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
-/** Base class for all expect tests.
+/**
+ * Base class for all expect tests.
  *
  * Exposes useful methods to lookup metadata about the input project.
  */

@@ -49,27 +49,29 @@ class RemoteLanguageServer(
   }
   def references(
       params: l.ReferenceParams
-  ): Future[Option[ReferencesResult]] = blockingRequest { url =>
-    for {
-      locations <- postLocationRequest(
-        url,
-        params.toJsonObject,
-        "textDocument/references"
-      )
-    } yield ReferencesResult(Symbols.None, locations.asScala)
-  }
+  ): Future[Option[ReferencesResult]] =
+    blockingRequest { url =>
+      for {
+        locations <- postLocationRequest(
+          url,
+          params.toJsonObject,
+          "textDocument/references"
+        )
+      } yield ReferencesResult(Symbols.None, locations.asScala)
+    }
 
   def definition(
       params: l.TextDocumentPositionParams
-  ): Future[Option[DefinitionResult]] = blockingRequest { url =>
-    for {
-      locations <- postLocationRequest(
-        url,
-        params.toJsonObject,
-        "textDocument/definition"
-      )
-    } yield DefinitionResult(locations, Symbols.None, None, None)
-  }
+  ): Future[Option[DefinitionResult]] =
+    blockingRequest { url =>
+      for {
+        locations <- postLocationRequest(
+          url,
+          params.toJsonObject,
+          "textDocument/definition"
+        )
+      } yield DefinitionResult(locations, Symbols.None, None, None)
+    }
 
   private def blockingRequest[T](fn: String => Option[T]): Future[Option[T]] = {
     userConfig().remoteLanguageServer match {
@@ -108,7 +110,8 @@ class RemoteLanguageServer(
     }
   }
 
-  /** Creates a JSON request according to https://scalameta.org/metals/docs/contributors/remote-language-server.html */
+  /**
+   * Creates a JSON request according to https://scalameta.org/metals/docs/contributors/remote-language-server.html */
   private def asRemoteParameters(
       params: JsonObject,
       method: String

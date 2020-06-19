@@ -103,8 +103,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     path
   }
 
-  def assertNoDiagnostics()(
-      implicit loc: Location
+  def assertNoDiagnostics()(implicit
+      loc: Location
   ): Unit = {
     assertNoDiff(client.workspaceDiagnostics, "")
   }

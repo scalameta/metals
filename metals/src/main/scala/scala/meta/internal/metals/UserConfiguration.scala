@@ -50,113 +50,114 @@ object UserConfiguration {
 
   def default: UserConfiguration = UserConfiguration()
 
-  def options: List[UserConfigurationOption] = List(
-    UserConfigurationOption(
-      "java-home",
-      "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
-      "/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home",
-      "Java Home directory",
-      "The Java Home directory used for indexing JDK sources and locating the `java` binary."
-    ),
-    UserConfigurationOption(
-      "sbt-script",
-      """empty string `""`.""",
-      "/usr/local/bin/sbt",
-      "sbt script",
-      """Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`.
-        |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
-        |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
-        |like using environment variables.
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "gradle-script",
-      """empty string `""`.""",
-      "/usr/local/bin/gradle",
-      "gradle script",
-      """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
-        |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
-        |like using environment variables.
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "maven-script",
-      """empty string `""`.""",
-      "/usr/local/bin/mvn",
-      "maven script",
-      """Optional absolute path to a `maven` executable to use for generating bloop config.
-        |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "mill-script",
-      """empty string `""`.""",
-      "/usr/local/bin/mill",
-      "mill script",
-      """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
-        |By default, Metals uses mill wrapper script with 0.5.0 mill version. Update this setting if your `mill` script requires more customizations
-        |like using environment variables.
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "scalafmt-config-path",
-      default.scalafmtConfigPath.toString,
-      "project/.scalafmt.conf",
-      "Scalafmt config path",
-      """Optional custom path to the .scalafmt.conf file.
-        |Should be relative to the workspace root directory and use forward slashes / for file
-        |separators (even on Windows).
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "pants-targets",
-      """empty string `""`.""",
-      "src::",
-      "Pants targets",
-      """The pants targets to export.
-        |
-        |Space separated list of Pants targets to export, for example
-        |`src/main/scala:: src/main/java::`. Syntax such as `src/{main,test}::`
-        |is not supported.
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "bloop-sbt-already-installed",
-      "false",
-      "false",
-      "Don't generate Bloop plugin file for sbt",
-      "If true, Metals will not generate a `project/metals.sbt` file under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
-    ),
-    UserConfigurationOption(
-      "bloop-version",
-      BuildInfo.bloopVersion,
-      "1.4.0-RC1",
-      "Version of Bloop",
-      """|This version will be used for the Bloop build tool plugin, for any supported build tool,
-         |while importing in Metals as well as for running the embedded server""".stripMargin
-    ),
-    UserConfigurationOption(
-      "super-method-lenses-enabled",
-      "false",
-      "false",
-      "Should display lenses with links to super methods",
-      """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
-         |Disabled lenses are not calculated for opened documents which might speed up document processing.
-         |
-         |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "remote-language-server",
-      """empty string `""`.""",
-      "https://language-server.company.com/message",
-      "Remote language server",
-      """A URL pointing to an endpoint that implements a remote language server.
-        |
-        |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
-        |documentation on remote language servers.
-        |""".stripMargin
+  def options: List[UserConfigurationOption] =
+    List(
+      UserConfigurationOption(
+        "java-home",
+        "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
+        "/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home",
+        "Java Home directory",
+        "The Java Home directory used for indexing JDK sources and locating the `java` binary."
+      ),
+      UserConfigurationOption(
+        "sbt-script",
+        """empty string `""`.""",
+        "/usr/local/bin/sbt",
+        "sbt script",
+        """Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`.
+          |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
+          |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
+          |like using environment variables.
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "gradle-script",
+        """empty string `""`.""",
+        "/usr/local/bin/gradle",
+        "gradle script",
+        """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
+          |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
+          |like using environment variables.
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "maven-script",
+        """empty string `""`.""",
+        "/usr/local/bin/mvn",
+        "maven script",
+        """Optional absolute path to a `maven` executable to use for generating bloop config.
+          |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "mill-script",
+        """empty string `""`.""",
+        "/usr/local/bin/mill",
+        "mill script",
+        """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
+          |By default, Metals uses mill wrapper script with 0.5.0 mill version. Update this setting if your `mill` script requires more customizations
+          |like using environment variables.
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "scalafmt-config-path",
+        default.scalafmtConfigPath.toString,
+        "project/.scalafmt.conf",
+        "Scalafmt config path",
+        """Optional custom path to the .scalafmt.conf file.
+          |Should be relative to the workspace root directory and use forward slashes / for file
+          |separators (even on Windows).
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "pants-targets",
+        """empty string `""`.""",
+        "src::",
+        "Pants targets",
+        """The pants targets to export.
+          |
+          |Space separated list of Pants targets to export, for example
+          |`src/main/scala:: src/main/java::`. Syntax such as `src/{main,test}::`
+          |is not supported.
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "bloop-sbt-already-installed",
+        "false",
+        "false",
+        "Don't generate Bloop plugin file for sbt",
+        "If true, Metals will not generate a `project/metals.sbt` file under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
+      ),
+      UserConfigurationOption(
+        "bloop-version",
+        BuildInfo.bloopVersion,
+        "1.4.0-RC1",
+        "Version of Bloop",
+        """|This version will be used for the Bloop build tool plugin, for any supported build tool,
+           |while importing in Metals as well as for running the embedded server""".stripMargin
+      ),
+      UserConfigurationOption(
+        "super-method-lenses-enabled",
+        "false",
+        "false",
+        "Should display lenses with links to super methods",
+        """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
+           |Disabled lenses are not calculated for opened documents which might speed up document processing.
+           |
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "remote-language-server",
+        """empty string `""`.""",
+        "https://language-server.company.com/message",
+        "Remote language server",
+        """A URL pointing to an endpoint that implements a remote language server.
+          |
+          |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
+          |documentation on remote language servers.
+          |""".stripMargin
+      )
     )
-  )
 
   def fromJson(
       json: JsonObject,
@@ -180,24 +181,32 @@ object UserConfiguration {
 
     def getStringKey(key: String): Option[String] =
       getKey(
-        key, { value =>
+        key,
+        { value =>
           Try(value.getAsString)
-            .fold(_ => {
-              errors += s"json error: key '$key' should have value of type string but obtained $value"
-              None
-            }, Some(_))
+            .fold(
+              _ => {
+                errors += s"json error: key '$key' should have value of type string but obtained $value"
+                None
+              },
+              Some(_)
+            )
             .filter(_.nonEmpty)
         }
       )
 
     def getBooleanKey(key: String): Option[Boolean] =
       getKey(
-        key, { value =>
+        key,
+        { value =>
           Try(value.getAsBoolean())
-            .fold(_ => {
-              errors += s"json error: key '$key' should have value of type boolean but obtained $value"
-              None
-            }, Some(_))
+            .fold(
+              _ => {
+                errors += s"json error: key '$key' should have value of type boolean but obtained $value"
+                None
+              },
+              Some(_)
+            )
         }
       )
     def getIntKey(key: String): Option[Int] =
@@ -212,7 +221,8 @@ object UserConfiguration {
       }
     def getStringMap(key: String): Option[Map[String, String]] =
       getKey(
-        key, { value =>
+        key,
+        { value =>
           Try {
             for {
               entry <- value.getAsJsonObject.entrySet().asScala.iterator
@@ -221,11 +231,13 @@ object UserConfiguration {
             } yield {
               entry.getKey -> entry.getValue.getAsJsonPrimitive.getAsString
             }
-          }.fold(_ => {
+          }.fold(
+            _ => {
               errors += s"json error: key '$key' should have be object with string values but obtained $value"
               None
-            }, entries => Some(entries.toMap))
-            .filter(_.nonEmpty)
+            },
+            entries => Some(entries.toMap)
+          ).filter(_.nonEmpty)
         }
       )
 
@@ -257,7 +269,8 @@ object UserConfiguration {
         .getOrElse(default.worksheetCancelTimeout)
     val pantsTargets =
       getKey[List[String]](
-        "pants-targets", { value =>
+        "pants-targets",
+        { value =>
           PantsConfiguration.pantsTargetsFromGson(value) match {
             case Left(e) =>
               errors += e

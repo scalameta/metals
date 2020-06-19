@@ -91,8 +91,8 @@ class MessageIdAdapterSuite extends BaseSuite {
     request
   }
 
-  def assertId(obtained: Message, expected: Int)(
-      implicit loc: Location
+  def assertId(obtained: Message, expected: Int)(implicit
+      loc: Location
   ): Unit = {
     obtained match {
       case message: IdentifiableMessage =>

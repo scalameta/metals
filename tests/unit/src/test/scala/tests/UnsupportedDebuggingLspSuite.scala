@@ -31,10 +31,11 @@ class UnsupportedDebuggingLspSuite
            |}
            |""".stripMargin
       )
-      codeLenses <- server
-        .codeLenses("a/src/main/scala/Main.scala")(maxRetries = 3)
-        .withTimeout(5, TimeUnit.SECONDS)
-        .transform(Success(_))
+      codeLenses <-
+        server
+          .codeLenses("a/src/main/scala/Main.scala")(maxRetries = 3)
+          .withTimeout(5, TimeUnit.SECONDS)
+          .transform(Success(_))
     } yield {
       codeLenses match {
         case Failure(_: TimeoutException) =>
@@ -59,8 +60,9 @@ class UnsupportedDebuggingLspSuite
            |}
            |""".stripMargin
       )
-      _ <- server.server.compilations
-        .compileFile(server.toPath("a/src/main/scala/Main.scala"))
+      _ <-
+        server.server.compilations
+          .compileFile(server.toPath("a/src/main/scala/Main.scala"))
     } yield {
       val clientCommands = client.clientCommands.asScala.map(_.getCommand).toSet
       assert(!clientCommands.contains(ClientCommands.RefreshModel.id))

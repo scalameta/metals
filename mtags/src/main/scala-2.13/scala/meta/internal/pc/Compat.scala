@@ -9,8 +9,9 @@ trait Compat { this: MetalsGlobal =>
 
   val AssignOrNamedArg: NamedArgExtractor = NamedArg
 
-  def storeReporter(r: Reporter): Option[StoreReporter] = r match {
-    case s: StoreReporter => Some(s)
-    case _ => None
-  }
+  def storeReporter(r: Reporter): Option[StoreReporter] =
+    r match {
+      case s: StoreReporter => Some(s)
+      case _ => None
+    }
 }

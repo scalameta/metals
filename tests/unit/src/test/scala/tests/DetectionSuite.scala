@@ -19,15 +19,16 @@ class DetectionSuite extends BaseSuite {
     else assert(!isSbt)
   }
 
-  /**------------ SBT ------------**/
-  def checkNotSbt(name: String, layout: String)(
-      implicit loc: Location
+  /**
+   * ------------ SBT ------------* */
+  def checkNotSbt(name: String, layout: String)(implicit
+      loc: Location
   ): Unit = {
     checkSbt(name, layout, isTrue = false)
   }
 
-  def checkSbt(name: String, layout: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkSbt(name: String, layout: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"sbt-$name") {
       check(
@@ -38,8 +39,8 @@ class DetectionSuite extends BaseSuite {
     }
   }
 
-  def checkPants(name: String, layout: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  def checkPants(name: String, layout: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"pants-$name") {
       check(
@@ -114,9 +115,10 @@ class DetectionSuite extends BaseSuite {
        |""".stripMargin
   )
 
-  /**------------ Gradle ------------**/
-  def checkNotGradle(name: String, layout: String)(
-      implicit loc: Location
+  /**
+   * ------------ Gradle ------------* */
+  def checkNotGradle(name: String, layout: String)(implicit
+      loc: Location
   ): Unit = {
     checkGradle(name, layout, isTrue = false)
   }
@@ -162,9 +164,10 @@ class DetectionSuite extends BaseSuite {
        |""".stripMargin
   )
 
-  /**------------ Maven ------------**/
-  def checkNotMaven(name: String, layout: String)(
-      implicit loc: Location
+  /**
+   * ------------ Maven ------------* */
+  def checkNotMaven(name: String, layout: String)(implicit
+      loc: Location
   ): Unit = {
     checkMaven(name, layout, isTrue = false)
   }
@@ -208,9 +211,10 @@ class DetectionSuite extends BaseSuite {
        |""".stripMargin
   )
 
-  /**------------ Multiple Build Files ------------**/
-  def checkMulti(name: String, layout: String, isTrue: Boolean = true)(
-      implicit loc: Location
+  /**
+   * ------------ Multiple Build Files ------------* */
+  def checkMulti(name: String, layout: String, isTrue: Boolean = true)(implicit
+      loc: Location
   ): Unit = {
     test(s"sbt-$name") {
       check(

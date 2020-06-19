@@ -126,12 +126,15 @@ object PantsExport {
     val allLibraries = output.obj(PantsKeys.libraries).obj
     val libraries: Map[String, PantsLibrary] = allLibraries.iterator.map {
       case (name, valueObj) =>
-        name -> PantsLibrary(name, valueObj.obj.flatMap {
-          case (key, value) =>
-            val path = Paths.get(value.str)
-            if (Files.exists(path)) Some(key -> path)
-            else None
-        })
+        name -> PantsLibrary(
+          name,
+          valueObj.obj.flatMap {
+            case (key, value) =>
+              val path = Paths.get(value.str)
+              if (Files.exists(path)) Some(key -> path)
+              else None
+          }
+        )
     }.toMap
 
     val cycles = Cycles.findConnectedComponents(targets)

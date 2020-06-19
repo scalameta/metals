@@ -263,16 +263,17 @@ object QuickBuild {
       module: String,
       scalaVersion: String,
       scalaBinaryVersion: String
-  ): Dependency = module match {
-    case Full(org, name, version) =>
-      Dependency.of(org, s"${name}_$scalaVersion", version)
-    case Half(org, name, version) =>
-      Dependency.of(org, s"${name}_$scalaBinaryVersion", version)
-    case Java(org, name, version) =>
-      Dependency.of(org, name, version)
-    case _ =>
-      throw new IllegalArgumentException(module)
-  }
+  ): Dependency =
+    module match {
+      case Full(org, name, version) =>
+        Dependency.of(org, s"${name}_$scalaVersion", version)
+      case Half(org, name, version) =>
+        Dependency.of(org, s"${name}_$scalaBinaryVersion", version)
+      case Java(org, name, version) =>
+        Dependency.of(org, name, version)
+      case _ =>
+        throw new IllegalArgumentException(module)
+    }
   def fetch(
       dependencies: Array[String],
       scalaVersion: String,

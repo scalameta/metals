@@ -22,8 +22,10 @@ final class FileSystemSemanticdbs(
 ) extends Semanticdbs {
 
   override def textDocument(file: AbsolutePath): TextDocumentLookup = {
-    if (!file.toLanguage.isScala ||
-      file.toNIO.getFileSystem != workspace.toNIO.getFileSystem) {
+    if (
+      !file.toLanguage.isScala ||
+      file.toNIO.getFileSystem != workspace.toNIO.getFileSystem
+    ) {
       TextDocumentLookup.NotFound(file)
     } else {
       semanticdbTargetroot(file) match {

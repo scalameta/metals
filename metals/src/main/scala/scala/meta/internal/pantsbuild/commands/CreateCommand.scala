@@ -73,8 +73,10 @@ object CreateCommand extends Command[CreateOptions]("create") {
         case (dir, name) => dir.resolve(name)
       }
     val toList =
-      if (context.last.isEmpty ||
-        context.last.endsWith(File.separator)) path
+      if (
+        context.last.isEmpty ||
+        context.last.endsWith(File.separator)
+      ) path
       else path.parent
     toList.list
       .filter(_.isDirectory)

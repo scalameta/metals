@@ -89,7 +89,8 @@ object CompilerJobQueue {
     })
   }
 
-  /** Runnable with a timestamp and attached completable future. */
+  /**
+   * Runnable with a timestamp and attached completable future. */
   private class Job(result: CompletableFuture[_], _run: () => Unit)
       extends Runnable {
     def reject(): Unit = {
@@ -103,18 +104,22 @@ object CompilerJobQueue {
     }
   }
 
-  /** Priority queue that runs the most recently submitted task first. */
+  /**
+   * Priority queue that runs the most recently submitted task first. */
   private class LastInFirstOutBlockingQueue
-      extends PriorityBlockingQueue[Runnable](10, new ju.Comparator[Runnable] {
-        def compare(o1: Runnable, o2: Runnable): Int = {
-          // Downcast is safe because we only submit `Job` runnables into this
-          // threadpool via `CompilerJobQueue.submit`. We can't make the queue
-          // `PriorityBlockingQueue[Job]` because `new ThreadPoolExecutor` requires
-          // a `BlockingQueue[Runnable]` and Java queues are invariant.
-          -java.lang.Long.compare(
-            o1.asInstanceOf[Job].start,
-            o2.asInstanceOf[Job].start
-          )
+      extends PriorityBlockingQueue[Runnable](
+        10,
+        new ju.Comparator[Runnable] {
+          def compare(o1: Runnable, o2: Runnable): Int = {
+            // Downcast is safe because we only submit `Job` runnables into this
+            // threadpool via `CompilerJobQueue.submit`. We can't make the queue
+            // `PriorityBlockingQueue[Job]` because `new ThreadPoolExecutor` requires
+            // a `BlockingQueue[Runnable]` and Java queues are invariant.
+            -java.lang.Long.compare(
+              o1.asInstanceOf[Job].start,
+              o2.asInstanceOf[Job].start
+            )
+          }
         }
-      })
+      )
 }

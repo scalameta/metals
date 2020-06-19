@@ -69,8 +69,10 @@ final class InteractiveSemanticdbs(
   }
 
   override def textDocument(source: AbsolutePath): TextDocumentLookup = {
-    if (!source.toLanguage.isScala ||
-      !source.isDependencySource(workspace)) {
+    if (
+      !source.toLanguage.isScala ||
+      !source.isDependencySource(workspace)
+    ) {
       TextDocumentLookup.NotFound(source)
     } else {
       val result =
@@ -79,7 +81,8 @@ final class InteractiveSemanticdbs(
     }
   }
 
-  /** Persist relationship between this dependency source and its enclosing build target */
+  /**
+   * Persist relationship between this dependency source and its enclosing build target */
   def didDefinition(source: AbsolutePath, result: DefinitionResult): Unit = {
     for {
       destination <- result.definition

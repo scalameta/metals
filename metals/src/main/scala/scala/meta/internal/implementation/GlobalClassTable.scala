@@ -36,18 +36,19 @@ final class GlobalClassTable(
 
   def globalSymbolTableFor(
       source: AbsolutePath
-  ): Option[GlobalSymbolTable] = synchronized {
-    for {
-      buildTargetId <- buildTargets.inverseSources(source)
-      scalaTarget <- buildTargets.scalaTarget(buildTargetId)
-      classpath = new Classpath(scalaTarget.jarClasspath)
-    } yield {
-      buildTargetsIndexes.getOrElseUpdate(
-        buildTargetId,
-        GlobalSymbolTable(classpath, includeJdk = true)
-      )
+  ): Option[GlobalSymbolTable] =
+    synchronized {
+      for {
+        buildTargetId <- buildTargets.inverseSources(source)
+        scalaTarget <- buildTargets.scalaTarget(buildTargetId)
+        classpath = new Classpath(scalaTarget.jarClasspath)
+      } yield {
+        buildTargetsIndexes.getOrElseUpdate(
+          buildTargetId,
+          GlobalSymbolTable(classpath, includeJdk = true)
+        )
+      }
     }
-  }
 
   private def calculateIndex(
       symTab: GlobalSymbolTable,

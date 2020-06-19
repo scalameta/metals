@@ -6,8 +6,8 @@ import scala.meta.internal.metals.SbtOpts
 import munit.Location
 
 class SbtOptsSuite extends BaseSuite {
-  def check(name: String, original: String, expected: String)(
-      implicit loc: Location
+  def check(name: String, original: String, expected: String)(implicit
+      loc: Location
   ): Unit = {
     test(name) {
       val root = FileLayout.fromString(original)

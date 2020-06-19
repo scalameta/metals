@@ -19,10 +19,10 @@ class ForComprehensions/*ForComprehensions.scala*/ {
       d/*ForComprehensions.semanticdb*/
     ) ==/*Object.java fallback to java.lang.Object#*/ (1, 2, 3, 4)
     e/*ForComprehensions.semanticdb*/ = (
-      a/*ForComprehensions.semanticdb*/,
-      b/*ForComprehensions.semanticdb*/,
-      c/*ForComprehensions.semanticdb*/,
-      d/*ForComprehensions.semanticdb*/
+        a/*ForComprehensions.semanticdb*/,
+        b/*ForComprehensions.semanticdb*/,
+        c/*ForComprehensions.semanticdb*/,
+        d/*ForComprehensions.semanticdb*/
     )
     if e/*ForComprehensions.semanticdb*/ ==/*Object.java fallback to java.lang.Object#*/ (1, 2, 3, 4)
     f/*ForComprehensions.semanticdb*/ <- List/*List.scala*/(e/*ForComprehensions.semanticdb*/)

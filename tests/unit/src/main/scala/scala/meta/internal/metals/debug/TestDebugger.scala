@@ -197,7 +197,7 @@ final class TestDebugger(
           case Success(value) =>
             failure match {
               case Some(
-                  error
+                    error
                   ) => // propagate failure that occurred while processing action
                 Future.failed(error)
               case None =>
@@ -220,8 +220,8 @@ final class TestDebugger(
 object TestDebugger {
   private val timeout = TimeUnit.SECONDS.toMillis(60).toInt
 
-  def apply(uri: URI, stoppageHandler: Stoppage.Handler)(
-      implicit ec: ExecutionContext
+  def apply(uri: URI, stoppageHandler: Stoppage.Handler)(implicit
+      ec: ExecutionContext
   ): TestDebugger = {
     def connect(listener: RemoteServer.Listener): Debugger = {
       val socket = new Socket()

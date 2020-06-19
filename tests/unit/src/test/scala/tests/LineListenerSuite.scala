@@ -22,7 +22,8 @@ class LineListenerSuite extends BaseSuite {
   }
 
   check(
-    "flush", { out =>
+    "flush",
+    { out =>
       out.appendString("a")
       out.appendString("b")
     },
@@ -30,32 +31,38 @@ class LineListenerSuite extends BaseSuite {
   )
 
   check(
-    "loop", { out => out.appendString("a\nb") },
+    "loop",
+    { out => out.appendString("a\nb") },
     List("a", "b")
   )
 
   check(
-    "eol", { out => out.appendString("a\n") },
+    "eol",
+    { out => out.appendString("a\n") },
     List("a")
   )
 
   check(
-    "eol2", { out => out.appendString("a\n\n") },
+    "eol2",
+    { out => out.appendString("a\n\n") },
     List("a", "")
   )
 
   check(
-    "ansi", { out => out.appendString(fansi.Color.Blue("blue").toString()) },
+    "ansi",
+    { out => out.appendString(fansi.Color.Blue("blue").toString()) },
     List("blue")
   )
 
   check(
-    "windows", { out => out.appendString("a\r\nb") },
+    "windows",
+    { out => out.appendString("a\r\nb") },
     List("a", "b")
   )
 
   check(
-    "emoji", { out => out.appendString("🇮🇸🇵🇱") },
+    "emoji",
+    { out => out.appendString("🇮🇸🇵🇱") },
     List("🇮🇸🇵🇱")
   )
 }

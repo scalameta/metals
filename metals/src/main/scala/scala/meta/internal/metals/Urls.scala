@@ -24,8 +24,10 @@ object Urls {
         // `open` is preferred over Desktop.getDesktop.browse because it starts a Java application stays open
         // until you manually quit it.
         s"open $url".!!
-      } else if (Desktop.isDesktopSupported &&
-        Desktop.getDesktop.isSupported(BROWSE)) {
+      } else if (
+        Desktop.isDesktopSupported &&
+        Desktop.getDesktop.isSupported(BROWSE)
+      ) {
         Desktop.getDesktop.browse(URI.create(url))
       } else if (Properties.isLinux) {
         s"xdg-open $url".!!

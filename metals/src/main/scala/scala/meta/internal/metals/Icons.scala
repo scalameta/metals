@@ -9,16 +9,17 @@ abstract class Icons {
   def findsuper: String
   def folder: String
   def github: String
-  final def all: List[String] = List(
-    rocket,
-    sync,
-    alert,
-    info,
-    check,
-    findsuper,
-    folder,
-    github
-  )
+  final def all: List[String] =
+    List(
+      rocket,
+      sync,
+      alert,
+      info,
+      check,
+      findsuper,
+      folder,
+      github
+    )
 }
 object Icons {
   def translate(from: Icons, to: Icons, message: String): String = {

@@ -10,7 +10,8 @@ import munit.Tag
 
 class BaseSuite extends munit.FunSuite with Assertions {
 
-  /** Tests that are only flaky on Windows */
+  /**
+   * Tests that are only flaky on Windows */
   val FlakyWindows = new Tag("FlakyWindows")
 
   def isJava8: Boolean =

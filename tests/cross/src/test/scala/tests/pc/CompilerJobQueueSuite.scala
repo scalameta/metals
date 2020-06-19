@@ -29,9 +29,12 @@ class CompilerJobQueueSuite extends BaseSuite {
   test("cancel") {
     val cancelled = new CompletableFuture[Unit]()
     cancelled.cancel(false)
-    jobs.submit(cancelled, () => {
-      Thread.sleep(50)
-    })
+    jobs.submit(
+      cancelled,
+      () => {
+        Thread.sleep(50)
+      }
+    )
     jobs.executor().shutdown()
     // Assert that cancelled task never execute.
     jobs.executor().awaitTermination(10, TimeUnit.MILLISECONDS)

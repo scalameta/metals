@@ -60,11 +60,13 @@ class MetalsTreeViewProvider(
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
     _.displayName,
-    _.baseDirectory, { () =>
+    _.baseDirectory,
+    { () =>
       buildTargets.all.filter(target =>
         buildTargets.buildTargetSources(target.id).nonEmpty
       )
-    }, { (id, symbol) =>
+    },
+    { (id, symbol) =>
       doCompile(id)
       buildTargets.scalacOptions(id) match {
         case None =>

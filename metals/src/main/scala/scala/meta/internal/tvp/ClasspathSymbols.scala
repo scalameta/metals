@@ -107,11 +107,20 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
         case path if isClassfile(path.toNIO) =>
           try {
             val node = path.toClassNode
-            classfileSymbols(path.toNIO, node, index, { i =>
-              if (isRelevant(i)) {
-                buf += TreeViewSymbolInformation(i.symbol, i.kind, i.properties)
+            classfileSymbols(
+              path.toNIO,
+              node,
+              index,
+              { i =>
+                if (isRelevant(i)) {
+                  buf += TreeViewSymbolInformation(
+                    i.symbol,
+                    i.kind,
+                    i.properties
+                  )
+                }
               }
-            })
+            )
           } catch {
             case NonFatal(ex) =>
               scribe.warn(s"error: can't convert $path in $in", ex)

@@ -52,9 +52,12 @@ object Project {
       common: SharedOptions
   ): Option[Project] = {
     val fuzzyName = PantsConfiguration.outputFilename(name)
-    fromCommon(common, { candidate =>
-      matchesFuzzyName(candidate, name, fuzzyName)
-    }).headOption
+    fromCommon(
+      common,
+      { candidate =>
+        matchesFuzzyName(candidate, name, fuzzyName)
+      }
+    ).headOption
   }
   def fromCommon(
       common: SharedOptions,

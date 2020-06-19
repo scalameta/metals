@@ -54,66 +54,70 @@ final class OnDemandSymbolIndex(
     catch onErrorOption
   }
 
-  override def addSourceDirectory(dir: AbsolutePath): Unit = tryRun {
-    if (sourceJars.addEntry(dir)) {
-      dir.listRecursive.foreach {
-        case source if source.isScala =>
-          try addSourceFile(source, Some(dir))
-          catch {
-            case NonFatal(e) => onError.lift(IndexError(source, e))
-          }
-        case _ =>
+  override def addSourceDirectory(dir: AbsolutePath): Unit =
+    tryRun {
+      if (sourceJars.addEntry(dir)) {
+        dir.listRecursive.foreach {
+          case source if source.isScala =>
+            try addSourceFile(source, Some(dir))
+            catch {
+              case NonFatal(e) => onError.lift(IndexError(source, e))
+            }
+          case _ =>
+        }
       }
     }
-  }
 
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
-  override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
-    try {
-      if (sourceJars.addEntry(jar)) {
-        FileIO.withJarFileSystem(jar, create = false) { root =>
-          root.listRecursive.foreach {
-            case source if source.isScala =>
-              try addSourceFile(source, None)
-              catch {
-                case NonFatal(e) => onError.lift(IndexError(source, e))
-              }
-            case _ =>
+  override def addSourceJar(jar: AbsolutePath): Unit =
+    tryRun {
+      try {
+        if (sourceJars.addEntry(jar)) {
+          FileIO.withJarFileSystem(jar, create = false) { root =>
+            root.listRecursive.foreach {
+              case source if source.isScala =>
+                try addSourceFile(source, None)
+                catch {
+                  case NonFatal(e) => onError.lift(IndexError(source, e))
+                }
+              case _ =>
+            }
           }
         }
+      } catch {
+        case e: ZipError =>
+          onError(InvalidJarException(jar, e))
       }
-    } catch {
-      case e: ZipError =>
-        onError(InvalidJarException(jar, e))
     }
-  }
 
   // Used to add cached toplevel symbols to index
   def addSourceJarTopLevels(
       jar: AbsolutePath,
       loadTopLevels: () => TrieMap[String, AbsolutePath]
-  ): Unit = tryRun {
-    if (sourceJars.addEntry(jar)) {
-      this.toplevels ++= loadTopLevels()
+  ): Unit =
+    tryRun {
+      if (sourceJars.addEntry(jar)) {
+        this.toplevels ++= loadTopLevels()
+      }
     }
-  }
 
   // Enters nontrivial toplevel symbols for Scala source files.
   // All other symbols can be inferred on the fly.
   override def addSourceFile(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath]
-  ): Unit = tryRun {
-    indexedSources += 1
-    val path = source.toIdeallyRelativeURI(sourceDirectory)
-    val text = FileIO.slurp(source, StandardCharsets.UTF_8)
-    val input = Input.VirtualFile(path, text)
-    val sourceToplevels = mtags.toplevels(input)
-    sourceToplevels.foreach { toplevel =>
-      addToplevelSymbol(path, source, toplevel)
+  ): Unit =
+    tryRun {
+      indexedSources += 1
+      val path = source.toIdeallyRelativeURI(sourceDirectory)
+      val text = FileIO.slurp(source, StandardCharsets.UTF_8)
+      val input = Input.VirtualFile(path, text)
+      val sourceToplevels = mtags.toplevels(input)
+      sourceToplevels.foreach { toplevel =>
+        addToplevelSymbol(path, source, toplevel)
+      }
     }
-  }
 
   def addToplevelSymbol(
       path: String,
@@ -250,7 +254,9 @@ final class OnDemandSymbolIndex(
         for {
           cls <- sourceJars.loadClass(javaSymbol).toList
           // note(@tgodzik) Modules are only available in Java 9+, so we need to invoke this reflectively
-          module <- Option(cls.getClass().getMethod("getModule").invoke(cls)).toList
+          module <- Option(
+            cls.getClass().getMethod("getModule").invoke(cls)
+          ).toList
           moduleName <- Option(
             module.getClass().getMethod("getName").invoke(module)
           ).toList

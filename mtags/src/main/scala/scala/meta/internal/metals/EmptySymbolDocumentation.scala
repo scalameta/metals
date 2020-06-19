@@ -5,7 +5,8 @@ import java.util.Collections
 
 import scala.meta.pc.SymbolDocumentation
 
-/** A symbol documenation with all empty values */
+/**
+ * A symbol documenation with all empty values */
 object EmptySymbolDocumentation extends SymbolDocumentation {
   override def symbol(): String = ""
   override def displayName(): String = ""

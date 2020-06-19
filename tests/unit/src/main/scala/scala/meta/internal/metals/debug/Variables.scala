@@ -16,10 +16,11 @@ final case class Variables(scopes: Map[String, List[Variable]]) {
 }
 
 final case class Variable(name: String, `type`: String, value: Variable.Value) {
-  override def toString: String = value match {
-    case Variable.MemoryReference => s"$name: ${`type`}"
-    case Variable.Stringified(value) => s"$name: ${`type`} = $value"
-  }
+  override def toString: String =
+    value match {
+      case Variable.MemoryReference => s"$name: ${`type`}"
+      case Variable.Stringified(value) => s"$name: ${`type`} = $value"
+    }
 }
 
 object Scope {

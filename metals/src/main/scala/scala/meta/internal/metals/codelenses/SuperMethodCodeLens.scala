@@ -52,9 +52,10 @@ final class SuperMethodCodeLens(
         emptyLensGoSuperCache(),
         search
       ).toIterable
-      range <- occurrence.range
-        .flatMap(r => distance.toRevised(r.toLSP))
-        .toList
+      range <-
+        occurrence.range
+          .flatMap(r => distance.toRevised(r.toLSP))
+          .toList
     } yield new l.CodeLens(range, gotoSuperMethod, null)
   }
 

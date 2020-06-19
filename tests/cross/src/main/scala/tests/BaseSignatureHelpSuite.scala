@@ -48,8 +48,10 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
             out
               .append(signature.getLabel)
               .append("\n")
-            if (result.getActiveSignature == i && result.getActiveParameter != null && signature.getParameters
-                .size() > 0) {
+            if (
+              result.getActiveSignature == i && result.getActiveParameter != null && signature.getParameters
+                .size() > 0
+            ) {
               val param = signature.getParameters.get(result.getActiveParameter)
               val column = signature.getLabel.indexOf(param.getLabel.getLeft())
               if (column < 0) {

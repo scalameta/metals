@@ -76,11 +76,12 @@ object VSCode {
         AbsolutePath(project.common.workspace),
         project.targets
       )
-      file <- root.listRecursive
-        .filter(_.isScala)
-        .filter(!_.toNIO.startsWith(readonly))
-        .take(1)
-        .headOption
+      file <-
+        root.listRecursive
+          .filter(_.isScala)
+          .filter(!_.toNIO.startsWith(readonly))
+          .take(1)
+          .headOption
     } yield file
   }
   private def readSettings(settings: AbsolutePath): Obj = {

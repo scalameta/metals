@@ -5,7 +5,8 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags
 
-/** Symbol index that delegates all methods to an underlying implementation */
+/**
+ * Symbol index that delegates all methods to an underlying implementation */
 class DelegatingGlobalSymbolIndex() extends GlobalSymbolIndex {
   def definition(symbol: mtags.Symbol): Option[SymbolDefinition] = None
 

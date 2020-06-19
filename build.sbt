@@ -503,21 +503,22 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   }
 )
 
-def crossPublishLocal(scalaV: String) = Def.task[Unit] {
-  // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
-  val newState = Project
-    .extract(state.value)
-    .appendWithSession(
-      List(
-        scalaVersion.in(mtags) := scalaV,
-        useSuperShell.in(ThisBuild) := false
-      ),
-      state.value
-    )
-  val (s, _) = Project
-    .extract(newState)
-    .runTask(publishLocal.in(mtags), newState)
-}
+def crossPublishLocal(scalaV: String) =
+  Def.task[Unit] {
+    // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
+    val newState = Project
+      .extract(state.value)
+      .appendWithSession(
+        List(
+          scalaVersion.in(mtags) := scalaV,
+          useSuperShell.in(ThisBuild) := false
+        ),
+        state.value
+      )
+    val (s, _) = Project
+      .extract(newState)
+      .runTask(publishLocal.in(mtags), newState)
+  }
 
 def publishAllMtags(
     all: List[String]

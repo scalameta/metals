@@ -5,8 +5,8 @@ import scala.meta.internal.metals.TrigramSubstrings
 import munit.Location
 
 class TrigramSubstringsSuite extends BaseSuite {
-  def check(original: String, expected: String)(
-      implicit loc: Location
+  def check(original: String, expected: String)(implicit
+      loc: Location
   ): Unit = {
     test(original) {
       val obtained = TrigramSubstrings.seq(original).mkString("\n")
@@ -14,8 +14,8 @@ class TrigramSubstringsSuite extends BaseSuite {
     }
   }
 
-  def checkUppercase(original: String, expected: String)(
-      implicit loc: Location
+  def checkUppercase(original: String, expected: String)(implicit
+      loc: Location
   ): Unit = {
     test(original) {
       val uppercased = TrigramSubstrings.uppercased(original).toList

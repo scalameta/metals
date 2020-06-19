@@ -45,40 +45,43 @@ class NewProjectProvider(
   private val giterMain = "giter8.Giter8"
 
   private var allTemplates = Seq.empty[MetalsQuickPickItem]
-  def allTemplatesFromWeb: Seq[MetalsQuickPickItem] = synchronized {
-    if (allTemplates.nonEmpty) {
-      allTemplates
-    } else {
-      statusBar.trackBlockingTask("Fetching template information from Github") {
-        // Matches:
-        // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
-        //(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
-        val all = for {
-          result <- Try(requests.get(templatesUrl)).toOption.toIterable
-          _ = if (result.statusCode != 200)
-            client.showMessage(
-              NewScalaProject.templateDownloadFailed(result.statusMessage)
-            )
-          if result.statusCode == 200
-        } yield {
-          NewProjectProvider.templatePattern
-            .findAllIn(result.text)
-            .matchData
-            .toList
-            .collect {
-              case matching if matching.groupCount == 2 =>
-                MetalsQuickPickItem(
-                  id = matching.group(1),
-                  label = s"${icons.github}" + matching.group(1),
-                  description = matching.group(2)
-                )
-            }
+  def allTemplatesFromWeb: Seq[MetalsQuickPickItem] =
+    synchronized {
+      if (allTemplates.nonEmpty) {
+        allTemplates
+      } else {
+        statusBar.trackBlockingTask(
+          "Fetching template information from Github"
+        ) {
+          // Matches:
+          // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
+          //(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
+          val all = for {
+            result <- Try(requests.get(templatesUrl)).toOption.toIterable
+            _ = if (result.statusCode != 200)
+              client.showMessage(
+                NewScalaProject.templateDownloadFailed(result.statusMessage)
+              )
+            if result.statusCode == 200
+          } yield {
+            NewProjectProvider.templatePattern
+              .findAllIn(result.text)
+              .matchData
+              .toList
+              .collect {
+                case matching if matching.groupCount == 2 =>
+                  MetalsQuickPickItem(
+                    id = matching.group(1),
+                    label = s"${icons.github}" + matching.group(1),
+                    description = matching.group(2)
+                  )
+              }
+          }
+          allTemplates = all.flatten.toSeq
         }
-        allTemplates = all.flatten.toSeq
       }
+      NewProjectProvider.back +: allTemplates.toSeq
     }
-    NewProjectProvider.back +: allTemplates.toSeq
-  }
 
   def createNewProjectFromTemplate(): Future[Unit] = {
     val base = workspace.parent

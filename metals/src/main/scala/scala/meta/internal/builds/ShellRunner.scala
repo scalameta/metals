@@ -25,8 +25,8 @@ class ShellRunner(
     userConfig: () => UserConfiguration,
     time: Time,
     statusBar: StatusBar
-)(
-    implicit executionContext: scala.concurrent.ExecutionContext
+)(implicit
+    executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()

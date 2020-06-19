@@ -96,10 +96,11 @@ object Symbol {
     // parser that reports positioned error messages with actionable feedback
     // on how to write correct SemanticDB symbols. This here is better than nothing
     // at least.
-    def fail(message: String) = Left(
-      s"invalid SemanticDB symbol '$sym': ${message} (to learn the syntax " +
-        s"see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
-    )
+    def fail(message: String) =
+      Left(
+        s"invalid SemanticDB symbol '$sym': ${message} (to learn the syntax " +
+          s"see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
+      )
     def errorMessage(s: String): Option[String] = {
       if (s.isNone) {
         scala.None

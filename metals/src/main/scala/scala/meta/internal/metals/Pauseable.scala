@@ -23,10 +23,12 @@ trait Pauseable {
 
 object Pauseable {
 
-  /** Merges a list of Pausables into a single Pauseable. */
-  def fromPausables(all: Iterable[Pauseable]): Pauseable = new Pauseable {
-    override def doPause(): Unit = Cancelable.cancelEach(all)(_.pause())
-    override def doUnpause(): Unit = Cancelable.cancelEach(all)(_.unpause())
-  }
+  /**
+   * Merges a list of Pausables into a single Pauseable. */
+  def fromPausables(all: Iterable[Pauseable]): Pauseable =
+    new Pauseable {
+      override def doPause(): Unit = Cancelable.cancelEach(all)(_.pause())
+      override def doUnpause(): Unit = Cancelable.cancelEach(all)(_.unpause())
+    }
 
 }

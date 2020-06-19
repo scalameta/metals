@@ -224,10 +224,11 @@ final class ForwardingMetalsBuildClient(
     }
   }
 
-  def ongoingCompilations(): TreeViewCompilations = new TreeViewCompilations {
-    override def get(id: BuildTargetIdentifier) = compilations.get(id)
-    override def isEmpty = compilations.isEmpty
-    override def size = compilations.size
-    override def buildTargets = compilations.keysIterator
-  }
+  def ongoingCompilations(): TreeViewCompilations =
+    new TreeViewCompilations {
+      override def get(id: BuildTargetIdentifier) = compilations.get(id)
+      override def isEmpty = compilations.isEmpty
+      override def size = compilations.size
+      override def buildTargets = compilations.keysIterator
+    }
 }

@@ -6,7 +6,8 @@ import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.io.AbsolutePath
 
-/** Symbol index that delegates all methods to an underlying implementation */
+/**
+ * Symbol index that delegates all methods to an underlying implementation */
 class DelegatingGlobalSymbolIndex(
     var underlying: GlobalSymbolIndex = OnDemandSymbolIndex()
 ) extends GlobalSymbolIndex {

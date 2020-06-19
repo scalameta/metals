@@ -94,9 +94,11 @@ class PackageIndex() {
       val entries = jar.entries()
       while (entries.hasMoreElements) {
         val element = entries.nextElement()
-        if (!element.isDirectory &&
+        if (
+          !element.isDirectory &&
           !element.getName.startsWith("META-INF") &&
-          element.getName.endsWith(".class")) {
+          element.getName.endsWith(".class")
+        ) {
           val pkg = PathIO.dirname(element.getName)
           val member = PathIO.basename(element.getName)
           addMember(pkg, member)

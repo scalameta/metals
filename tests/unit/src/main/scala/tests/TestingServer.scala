@@ -174,9 +174,10 @@ final class TestingServer(
     for {
       sourceItem <- server.buildTargets.sourceItems.toSeq
       if sourceItem.exists
-      source <- if (sourceItem.isScalaOrJava)
-        Seq(sourceItem)
-      else FileIO.listAllFilesRecursively(sourceItem)
+      source <-
+        if (sourceItem.isScalaOrJava)
+          Seq(sourceItem)
+        else FileIO.listAllFilesRecursively(sourceItem)
     } yield source
   }
 
@@ -185,14 +186,16 @@ final class TestingServer(
       case Some(build) =>
         for {
           workspaceBuildTargets <- build.workspaceBuildTargets()
-          ids = workspaceBuildTargets.getTargets
-            .map(_.getId)
-            .asScala
-            .filter(_.getUri().contains(s"?id=$buildTarget"))
-          dependencySources <- build
-            .buildTargetDependencySources(
-              new b.DependencySourcesParams(ids.asJava)
-            )
+          ids =
+            workspaceBuildTargets.getTargets
+              .map(_.getId)
+              .asScala
+              .filter(_.getUri().contains(s"?id=$buildTarget"))
+          dependencySources <-
+            build
+              .buildTargetDependencySources(
+                new b.DependencySourcesParams(ids.asJava)
+              )
         } yield {
           dependencySources
             .getItems()
@@ -297,8 +300,8 @@ final class TestingServer(
     }
   }
 
-  def assertReferenceDefinitionBijection()(
-      implicit loc: munit.Location
+  def assertReferenceDefinitionBijection()(implicit
+      loc: munit.Location
   ): Unit = {
     val compare = workspaceReferences()
     assert(compare.definition.nonEmpty)
@@ -595,8 +598,8 @@ final class TestingServer(
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
-  def assertFolded(filename: String, expected: String)(
-      implicit loc: munit.Location
+  def assertFolded(filename: String, expected: String)(implicit
+      loc: munit.Location
   ): Future[Unit] =
     for {
       folded <- foldingRange(filename)
@@ -696,9 +699,10 @@ final class TestingServer(
     }
 
     for {
-      _ <- server
-        .didFocus(uri)
-        .asScala // model is refreshed only for focused document
+      _ <-
+        server
+          .didFocus(uri)
+          .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFile(path)
@@ -995,11 +999,12 @@ final class TestingServer(
       _ = renameParams.setNewName(newName)
       _ = renameParams.setPosition(params.getPosition())
       _ = renameParams.setTextDocument(params.getTextDocument())
-      renames <- if (prepare != null) {
-        server.rename(renameParams).asScala
-      } else {
-        Future.successful(new WorkspaceEdit)
-      }
+      renames <-
+        if (prepare != null) {
+          server.rename(renameParams).asScala
+        } else {
+          Future.successful(new WorkspaceEdit)
+        }
       // save current file to simulate user saving in the editor
       _ <- didSave(filename)(identity)
     } yield {

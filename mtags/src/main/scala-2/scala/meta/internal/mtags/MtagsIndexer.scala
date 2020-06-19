@@ -116,13 +116,14 @@ trait MtagsIndexer {
   def pkg(name: String, pos: m.Position): Unit = {
     addSignature(Descriptor.Package(name), pos, Kind.PACKAGE, 0)
   }
-  def pkg(ref: Term): Unit = ref match {
-    case Name(name) =>
-      currentOwner = symbol(Descriptor.Package(name))
-    case Term.Select(qual, Name(name)) =>
-      pkg(qual)
-      currentOwner = symbol(Descriptor.Package(name))
-  }
+  def pkg(ref: Term): Unit =
+    ref match {
+      case Name(name) =>
+        currentOwner = symbol(Descriptor.Package(name))
+      case Term.Select(qual, Name(name)) =>
+        pkg(qual)
+        currentOwner = symbol(Descriptor.Package(name))
+    }
   private def addSignature(
       signature: Descriptor,
       definition: m.Position,

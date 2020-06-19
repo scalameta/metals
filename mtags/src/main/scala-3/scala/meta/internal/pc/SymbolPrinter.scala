@@ -23,12 +23,13 @@ class SymbolPrinter(implicit ctx: Context) extends RefinedPrinter(ctx) {
 
   def fullDefinition(sym: Symbol, tpe: Type): String = {
 
-    def isNullary = tpe match {
-      case tpe: (MethodType | PolyType) =>
-        false
-      case other =>
-        true
-    }
+    def isNullary =
+      tpe match {
+        case tpe: (MethodType | PolyType) =>
+          false
+        case other =>
+          true
+      }
 
     val isImplicit = sym.is(Flags.Implicit)
     val name = nameString(sym)

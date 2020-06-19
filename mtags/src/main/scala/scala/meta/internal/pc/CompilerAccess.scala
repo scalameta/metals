@@ -59,11 +59,15 @@ abstract class CompilerAccess[Reporter, Compiler](
       compiler.askShutdown()
       _compiler = null
       sh.foreach { scheduler =>
-        scheduler.schedule[Unit](() => {
-          if (compiler.isAlive()) {
-            compiler.stop()
-          }
-        }, 2, TimeUnit.SECONDS)
+        scheduler.schedule[Unit](
+          () => {
+            if (compiler.isAlive()) {
+              compiler.stop()
+            }
+          },
+          2,
+          TimeUnit.SECONDS
+        )
       }
     }
   }
@@ -89,12 +93,16 @@ abstract class CompilerAccess[Reporter, Compiler](
     token.onCancel.whenCompleteAsync(
       (isCancelled, _) => {
         queueThread.foreach { thread =>
-          if (isCancelled &&
+          if (
+            isCancelled &&
             isFinished.compareAndSet(false, true) &&
-            isDefined) {
+            isDefined
+          ) {
             _compiler.presentationCompilerThread.foreach(_.interrupt())
-            if (_compiler.presentationCompilerThread.isEmpty || !_compiler.presentationCompilerThread
-                .contains(thread)) {
+            if (
+              _compiler.presentationCompilerThread.isEmpty || !_compiler.presentationCompilerThread
+                .contains(thread)
+            ) {
               thread.interrupt()
             }
           }
@@ -181,19 +189,25 @@ abstract class CompilerAccess[Reporter, Compiler](
       token: CancelToken
   ): CompletableFuture[T] = {
     val result = new CompletableFuture[T]()
-    jobs.submit(result, { () =>
-      token.checkCanceled()
-      Thread.interrupted() // clear interrupt bit
-      result.complete(thunk())
-      ()
-    })
+    jobs.submit(
+      result,
+      { () =>
+        token.checkCanceled()
+        Thread.interrupted() // clear interrupt bit
+        result.complete(thunk())
+        ()
+      }
+    )
 
     // User cancelled task.
-    token.onCancel.whenCompleteAsync((isCancelled, ex) => {
-      if (isCancelled && !result.isDone()) {
-        result.cancel(false)
-      }
-    }, ec)
+    token.onCancel.whenCompleteAsync(
+      (isCancelled, ex) => {
+        if (isCancelled && !result.isDone()) {
+          result.cancel(false)
+        }
+      },
+      ec
+    )
     // Task has timed out, cancel this request and shutdown the current compiler.
     sh.foreach { scheduler =>
       scheduler.schedule[Unit](

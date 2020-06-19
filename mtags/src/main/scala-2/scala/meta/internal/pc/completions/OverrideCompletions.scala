@@ -249,32 +249,34 @@ trait OverrideCompletions { this: MetalsGlobal =>
         s"${overrideKeyword}${modifs}${keyword}${name}$signature"
 
       // if we had no val or def then filter will be empty
-      def toMember = new OverrideDefMember(
-        label,
-        edit,
-        filterText,
-        sym,
-        history.autoImports(
-          pos,
-          importContext,
-          autoImport.offset,
-          autoImport.indent,
-          autoImport.padTop
-        ),
-        details
-      )
+      def toMember =
+        new OverrideDefMember(
+          label,
+          edit,
+          filterText,
+          sym,
+          history.autoImports(
+            pos,
+            importContext,
+            autoImport.offset,
+            autoImport.indent,
+            autoImport.padTop
+          ),
+          details
+        )
 
       private def label = overrideDef + name + signature
       private def details = asciOverrideDef + name + signature
       private def signature = printer.defaultMethodSignature()
-      private def edit = new l.TextEdit(
-        range,
-        if (clientSupportsSnippets && shouldMoveCursor) {
-          s"$insertText = $${0:???}"
-        } else {
-          s"$insertText = ???"
-        }
-      )
+      private def edit =
+        new l.TextEdit(
+          range,
+          if (clientSupportsSnippets && shouldMoveCursor) {
+            s"$insertText = $${0:???}"
+          } else {
+            s"$insertText = ???"
+          }
+        )
     }
 
     typed.tpe.members.iterator.toList
@@ -339,14 +341,14 @@ trait OverrideCompletions { this: MetalsGlobal =>
       // new Foo {}
       //     ~~~~~~
       case (_: Ident) ::
-            (t: Template) :: _ =>
+          (t: Template) :: _ =>
         implementAllFor(t)
 
       // new Foo[T] {}
       //     ~~~~~~~~~
       case (_: Ident) ::
-            (_: AppliedTypeTree) ::
-            (t: Template) :: _ =>
+          (_: AppliedTypeTree) ::
+          (t: Template) :: _ =>
         implementAllFor(t)
 
       case _ =>
@@ -436,8 +438,10 @@ trait OverrideCompletions { this: MetalsGlobal =>
       //   }
       // }
       val lastIndent =
-        if (t.pos.source.offsetToLine(t.pos.start) ==
-            t.pos.source.offsetToLine(t.pos.end) || shouldCompleteBraces)
+        if (
+          t.pos.source.offsetToLine(t.pos.start) ==
+            t.pos.source.offsetToLine(t.pos.end) || shouldCompleteBraces
+        )
           "\n" + " " * necessaryIndent
         else ""
 

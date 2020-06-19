@@ -5,7 +5,8 @@ import scala.meta.internal.semver.SemVer
 
 object ScalaVersions {
 
-  /** Non-Lightbend compilers often use a suffix, such as `-bin-typelevel-4` */
+  /**
+   * Non-Lightbend compilers often use a suffix, such as `-bin-typelevel-4` */
   def dropVendorSuffix(version: String): String =
     version.replaceAll("-bin-.*", "")
 
@@ -65,7 +66,9 @@ object ScalaVersions {
   }
 
   def isCurrentScalaCompilerVersion(version: String): Boolean =
-    ScalaVersions.dropVendorSuffix(version) == mtags.BuildInfo.scalaCompilerVersion
+    ScalaVersions.dropVendorSuffix(
+      version
+    ) == mtags.BuildInfo.scalaCompilerVersion
 
   def scalaBinaryVersionFromFullVersion(scalaVersion: String): String =
     scalaVersion.split('.').take(2).mkString(".")

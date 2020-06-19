@@ -35,20 +35,22 @@ object PositionSyntax {
     def formatMessage(severity: String, message: String): String =
       PositionSyntax.formatMessage(pos, severity, message)
 
-    /** Returns a formatted string of this position including filename/line/caret. */
+    /**
+     * Returns a formatted string of this position including filename/line/caret. */
     def lineInput: String =
       s"${pos.input.syntax}:${pos.startLine + 1}:${pos.startColumn + 1}:"
 
     def rangeNumber: String =
       s"${pos.startLine + 1}:${pos.startColumn + 1}..${pos.endLine + 1}:${pos.endColumn + 1}"
 
-    def rangeText: String = pos match {
-      case Position.None =>
-        ""
-      case _ =>
-        if (pos.startLine != pos.endLine) multilines
-        else lineTextAndCaret
-    }
+    def rangeText: String =
+      pos match {
+        case Position.None =>
+          ""
+        case _ =>
+          if (pos.startLine != pos.endLine) multilines
+          else lineTextAndCaret
+      }
     def lineTextAndCaret: String = {
       new StringBuilder()
         .append("\n")
@@ -79,20 +81,21 @@ object PositionSyntax {
       }
       sb.toString()
     }
-    def lineCaret: String = pos match {
-      case Position.None =>
-        ""
-      case _ =>
-        val caret =
-          if (pos.start == pos.end) {
-            "^"
-          } else if (pos.startLine == pos.endLine) {
-            "^" * math.max(1, pos.end - pos.start)
-          } else {
-            "^"
-          }
-        (" " * pos.startColumn) + caret
-    }
+    def lineCaret: String =
+      pos match {
+        case Position.None =>
+          ""
+        case _ =>
+          val caret =
+            if (pos.start == pos.end) {
+              "^"
+            } else if (pos.startLine == pos.endLine) {
+              "^" * math.max(1, pos.end - pos.start)
+            } else {
+              "^"
+            }
+          (" " * pos.startColumn) + caret
+      }
 
     def lineContent(
         line: Int,
@@ -107,11 +110,12 @@ object PositionSyntax {
         endColumn = endColumn
       )
 
-    def lineContent: String = pos match {
-      case Position.None => ""
-      case range: Position.Range =>
-        lineContent(range.startLine).text
-    }
+    def lineContent: String =
+      pos match {
+        case Position.None => ""
+        case range: Position.Range =>
+          lineContent(range.startLine).text
+      }
   }
 
 }

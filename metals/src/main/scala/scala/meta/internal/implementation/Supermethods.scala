@@ -24,8 +24,8 @@ class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider
-)(
-    implicit ec: ExecutionContext
+)(implicit
+    ec: ExecutionContext
 ) {
 
   def getGoToSuperMethodCommand(
@@ -166,9 +166,10 @@ class Supermethods(
     for {
       args <- Option(commandParams.getArguments)
       argObject <- args.asScala.headOption
-      superMethodParams <- argObject.toJsonObject
-        .as[GoToSuperMethodParams]
-        .toOption
+      superMethodParams <-
+        argObject.toJsonObject
+          .as[GoToSuperMethodParams]
+          .toOption
     } yield superMethodParams
   }
 }

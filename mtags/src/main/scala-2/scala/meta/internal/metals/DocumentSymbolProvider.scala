@@ -125,10 +125,12 @@ class DocumentSymbolProvider(trees: Trees) {
             continue()
           }
         case t: Case =>
-          if (owner.getName() == "try" && owner
+          if (
+            owner.getName() == "try" && owner
               .getChildren()
               .asScala
-              .forall(_.getName() != "catch"))
+              .forall(_.getName() != "catch")
+          )
             addChild("catch", SymbolKind.Struct, t.pos, t.pos, "")
         case t: Term
             if t.isInstanceOf[Term.Try] || t

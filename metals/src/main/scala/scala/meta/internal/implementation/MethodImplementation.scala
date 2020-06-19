@@ -218,8 +218,8 @@ object MethodImplementation {
   )(implicit context: Context): Boolean = {
     (parentSignature, childSignature) match {
       case (
-          methodParentSignature: MethodSignature,
-          methodChildSignature: MethodSignature
+            methodParentSignature: MethodSignature,
+            methodChildSignature: MethodSignature
           ) =>
         val newContext = context.addAsSeenFrom(
           typeMappingFromMethodScope(

@@ -193,8 +193,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           .append(label)
           .append({
             val detailIsDefined = Option(item.getDetail).isDefined
-            if (includeDetail && detailIsDefined && !item.getLabel
-                .contains(item.getDetail)) {
+            if (
+              includeDetail && detailIsDefined && !item.getLabel
+                .contains(item.getDetail)
+            ) {
               item.getDetail
             } else {
               ""

@@ -8,12 +8,13 @@ case class CompilerInitializationOptions(
     isSignatureHelpDocumentationEnabled: Boolean,
     isCompletionItemResolve: Boolean
 ) {
-  def this() = this(
-    isCompletionItemDetailEnabled = true,
-    isCompletionItemDocumentationEnabled = true,
-    isHoverDocumentationEnabled = true,
-    snippetAutoIndent = true,
-    isSignatureHelpDocumentationEnabled = true,
-    isCompletionItemResolve = true
-  )
+  def this() =
+    this(
+      isCompletionItemDetailEnabled = true,
+      isCompletionItemDocumentationEnabled = true,
+      isHoverDocumentationEnabled = true,
+      snippetAutoIndent = true,
+      isSignatureHelpDocumentationEnabled = true,
+      isCompletionItemResolve = true
+    )
 }

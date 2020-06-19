@@ -56,7 +56,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |  }
              |}
              |${input
-               .replaceAll("(<<|>>|@@)", "")}""".stripMargin
+            .replaceAll("(<<|>>|@@)", "")}""".stripMargin
         )
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))

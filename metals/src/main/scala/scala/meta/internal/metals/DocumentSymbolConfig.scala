@@ -11,7 +11,8 @@ object DocumentSymbolConfig {
     new DocumentSymbolConfig("symbol-information")
   def documentSymbol: DocumentSymbolConfig =
     new DocumentSymbolConfig("document-symbol")
-  def default = new DocumentSymbolConfig(
-    System.getProperty("metals.document-symbol", documentSymbol.value)
-  )
+  def default =
+    new DocumentSymbolConfig(
+      System.getProperty("metals.document-symbol", documentSymbol.value)
+    )
 }

@@ -65,28 +65,30 @@ class BuildServerConnection private (
     onReconnection.set(index)
   }
 
-  /** Run build/shutdown procedure */
-  def shutdown(): Future[Unit] = connection.map { conn =>
-    try {
-      if (isShuttingDown.compareAndSet(false, true)) {
-        conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
-        conn.server.onBuildExit()
-        // Cancel pending compilations on our side, this is not needed for Bloop.
-        cancel()
+  /**
+   * Run build/shutdown procedure */
+  def shutdown(): Future[Unit] =
+    connection.map { conn =>
+      try {
+        if (isShuttingDown.compareAndSet(false, true)) {
+          conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
+          conn.server.onBuildExit()
+          // Cancel pending compilations on our side, this is not needed for Bloop.
+          cancel()
+        }
+      } catch {
+        case e: TimeoutException =>
+          scribe.error(
+            s"timeout: build server '${conn.displayName}' during shutdown"
+          )
+        case InterruptException() =>
+        case e: Throwable =>
+          scribe.error(
+            s"build shutdown: ${conn.displayName}",
+            e
+          )
       }
-    } catch {
-      case e: TimeoutException =>
-        scribe.error(
-          s"timeout: build server '${conn.displayName}' during shutdown"
-        )
-      case InterruptException() =>
-      case e: Throwable =>
-        scribe.error(
-          s"build shutdown: ${conn.displayName}",
-          e
-        )
     }
-  }
 
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(server => server.buildTargetCompile(params))
@@ -225,8 +227,8 @@ object BuildServerConnection {
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig
-  )(
-      implicit ec: ExecutionContextExecutorService
+  )(implicit
+      ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
 
     def setupServer(): Future[LauncherConnection] = {
@@ -272,7 +274,8 @@ object BuildServerConnection {
       supportedScalaVersions: java.util.List[String]
   )
 
-  /** Run build/initialize handshake */
+  /**
+   * Run build/initialize handshake */
   private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer

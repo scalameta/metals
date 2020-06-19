@@ -44,7 +44,11 @@ class ScalaCompilerAccess(
     sh: Option[ScheduledExecutorService],
     newCompiler: () => ScalaCompilerWrapper
 )(implicit ec: ExecutionContextExecutor)
-    extends CompilerAccess[StoreReporter, MetalsGlobal](config, sh, newCompiler) {
+    extends CompilerAccess[StoreReporter, MetalsGlobal](
+      config,
+      sh,
+      newCompiler
+    ) {
 
   def newReporter() = new StoreReporter
 
@@ -80,7 +84,8 @@ class ScalaCompilerAccess(
     }
   }
 
-  protected def ignoreException(t: Throwable): Boolean = t match {
-    case ShutdownReq => true
-  }
+  protected def ignoreException(t: Throwable): Boolean =
+    t match {
+      case ShutdownReq => true
+    }
 }

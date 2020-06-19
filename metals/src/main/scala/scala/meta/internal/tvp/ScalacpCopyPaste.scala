@@ -201,30 +201,32 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
 
   implicit class XtensionSymbol(sym: Symbol) {
     def ssym: String = sym.toSemantic
-    def self: Type = sym match {
-      case sym: ClassSymbol =>
-        sym.selfType
-          .map {
-            case RefinedType(_, List(_, self)) => self
-            case _ => NoType
-          }
-          .getOrElse(NoType)
-      case _ =>
-        NoType
-    }
+    def self: Type =
+      sym match {
+        case sym: ClassSymbol =>
+          sym.selfType
+            .map {
+              case RefinedType(_, List(_, self)) => self
+              case _ => NoType
+            }
+            .getOrElse(NoType)
+        case _ =>
+          NoType
+      }
     def isRootPackage: Boolean = sym.path == "<root>"
     def isEmptyPackage: Boolean = sym.path == "<empty>"
     def isToplevelPackage: Boolean = sym.parent.isEmpty
     def isModuleClass: Boolean = sym.isInstanceOf[ClassSymbol] && sym.isModule
-    def moduleClass: Symbol = sym match {
-      case sym: SymbolInfoSymbol if sym.isModule =>
-        sym.infoType match {
-          case TypeRefType(_, moduleClass, _) => moduleClass
-          case _ => NoSymbol
-        }
-      case _ =>
-        NoSymbol
-    }
+    def moduleClass: Symbol =
+      sym match {
+        case sym: SymbolInfoSymbol if sym.isModule =>
+          sym.infoType match {
+            case TypeRefType(_, moduleClass, _) => moduleClass
+            case _ => NoSymbol
+          }
+        case _ =>
+          NoSymbol
+      }
     def isClass: Boolean = sym.isInstanceOf[ClassSymbol] && !sym.isModule
     def isObject: Boolean = sym.isInstanceOf[ObjectSymbol]
     def isType: Boolean = sym.isInstanceOf[TypeSymbol]
@@ -236,13 +238,14 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
     def isTypeParam: Boolean = sym.isType && sym.isParam
     def isAnonymousClass: Boolean = sym.name.contains("$anon")
     def isAnonymousFunction: Boolean = sym.name.contains("$anonfun")
-    def isSyntheticConstructor: Boolean = sym match {
-      case sym: SymbolInfoSymbol =>
-        val owner = sym.symbolInfo.owner
-        sym.isConstructor && (owner.isModuleClass || owner.isTrait)
-      case _ =>
-        false
-    }
+    def isSyntheticConstructor: Boolean =
+      sym match {
+        case sym: SymbolInfoSymbol =>
+          val owner = sym.symbolInfo.owner
+          sym.isConstructor && (owner.isModuleClass || owner.isTrait)
+        case _ =>
+          false
+      }
     def isLocalChild: Boolean = sym.name == "<local child>"
     def isExtensionMethod: Boolean = sym.name.contains("$extension")
     def isSyntheticValueClassCompanion: Boolean = {

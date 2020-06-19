@@ -201,13 +201,15 @@ object SuperMethodProvider {
     val methodName = msi.displayName
     val result = for {
       classSymbolInformation <- classSymbolInformationOption.toIterable
-      bottomClassSig = classSymbolInformation.signature
-        .asInstanceOf[ClassSignature]
-      ClassHierarchyItem(superClass, asSeenFrom) <- calculateClassSuperHierarchyWithCache(
-        classSymbolInformation,
-        cache,
-        findSymbol
-      )
+      bottomClassSig =
+        classSymbolInformation.signature
+          .asInstanceOf[ClassSignature]
+      ClassHierarchyItem(superClass, asSeenFrom) <-
+        calculateClassSuperHierarchyWithCache(
+          classSymbolInformation,
+          cache,
+          findSymbol
+        )
       classSig <- List(superClass.signature).collect {
         case cs: ClassSignature => cs
       }

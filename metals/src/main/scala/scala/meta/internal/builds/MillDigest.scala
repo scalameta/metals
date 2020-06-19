@@ -64,8 +64,10 @@ object MillDigest extends Digestable {
             if (!acc.insideBraces) {
               acc.hadFile = false
             }
-            if (token.isInstanceOf[Token.LF] || token
-                .isInstanceOf[Token.LFLF]) {
+            if (
+              token.isInstanceOf[Token.LF] || token
+                .isInstanceOf[Token.LFLF]
+            ) {
               acc.hadImport = false
             }
           // if we are after => and haven't encountered `,`, `}` or newline
