@@ -8,6 +8,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -77,6 +78,8 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
             |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
+      projectVersion = workspace.resolve("project/build.properties").readText
+      _ = assertNoDiff(projectVersion, s"sbt.version=${V.sbtVersion}")
     } yield ()
   }
 
