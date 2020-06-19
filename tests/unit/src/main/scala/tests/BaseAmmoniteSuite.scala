@@ -9,6 +9,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.Position
@@ -353,7 +354,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |  }
            |}
            |/project/build.properties
-           |sbt.version=1.3.8
+           |sbt.version=${V.sbtVersion}
            |/build.sbt
            | // dummy sbt project, metals assumes a mill project else, and mill import seems flaky
            |lazy val a = project

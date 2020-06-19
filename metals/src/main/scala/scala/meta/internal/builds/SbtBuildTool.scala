@@ -43,8 +43,11 @@ case class SbtBuildTool(
           "-jar",
           embeddedSbtLauncher.toString()
         )
+        val sbtVersion =
+          if (workspaceVersion.isEmpty) List(s"-Dsbt.version=$version") else Nil
         List(
           javaArgs,
+          sbtVersion,
           SbtOpts.fromWorkspace(workspace),
           JvmOpts.fromWorkspace(workspace),
           jarArgs,
