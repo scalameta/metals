@@ -195,6 +195,27 @@ object Messages {
     }
   }
 
+  object AmmoniteJvmParametersChange {
+    def restart: MessageActionItem =
+      new MessageActionItem("Restart Ammonite")
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Ammonite JVM parameters have been updated, do you want to restart the ammonite BSP server? (the changes will only be picked up after the restart)"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          restart,
+          notNow
+        ).asJava
+      )
+      params
+    }
+  }
+
   object IncompatibleBloopVersion {
     def manually: MessageActionItem =
       new MessageActionItem("I'll update manually")

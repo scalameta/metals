@@ -34,6 +34,7 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
+    ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true
@@ -106,6 +107,15 @@ object UserConfiguration {
           |Should be relative to the workspace root directory and use forward slashes / for file
           |separators (even on Windows).
           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "ammonite-jvm-properties",
+        """`[]`.""",
+        """["-Xmx1G"]""",
+        "Ammonite JVM Properties",
+        """|Optional list of JVM properties to pass along to the Ammonite server. 
+           |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`" 
+           |""".stripMargin
       ),
       UserConfigurationOption(
         "bloop-sbt-already-installed",
@@ -205,6 +215,29 @@ object UserConfiguration {
             Some(value)
         }
       }
+
+    def getStringListKey(key: String): Option[List[String]] =
+      getKey[List[String]](
+        key,
+        { elem =>
+          if (elem.isJsonArray()) {
+            val parsed = elem.getAsJsonArray().asScala.flatMap { value =>
+              Try(value.getAsJsonPrimitive().getAsString()) match {
+                case Failure(exception) =>
+                  errors += s"json error: values in '$key' should have value of type string but obtained $value"
+                  None
+                case Success(value) =>
+                  Some(value)
+              }
+            }
+            Some(parsed.toList)
+          } else {
+            errors += s"json error: key '$key' should have value of type array but obtained $elem"
+            None
+          }
+        }
+      )
+
     def getStringMap(key: String): Option[Map[String, String]] =
       getKey(
         key,
@@ -253,6 +286,7 @@ object UserConfiguration {
     val worksheetCancelTimeout =
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
+    val ammoniteProperties = getStringListKey("ammonite-jvm-properties")
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
@@ -277,6 +311,7 @@ object UserConfiguration {
           worksheetCancelTimeout,
           bloopSbtAlreadyInstalled,
           bloopVersion,
+          ammoniteProperties,
           superMethodLensesEnabled,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting

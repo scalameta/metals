@@ -34,6 +34,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
@@ -952,6 +953,24 @@ class MetalsLanguageServer(
                 case item if item == Messages.BloopVersionChange.reconnect =>
                   bloopServers.shutdownServer()
                   autoConnectToBuildServer().ignoreValue
+                case _ =>
+                  Future.successful(())
+              }
+          } else if (
+            userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+              .exists(Ammonite.isAmmBuildTarget)
+          ) {
+            languageClient
+              .showMessageRequest(AmmoniteJvmParametersChange.params())
+              .asScala
+              .flatMap {
+                case item if item == AmmoniteJvmParametersChange.restart =>
+                  ammonite
+                    .stop()
+                    .asScala
+                    .flatMap { _ =>
+                      ammonite.start()
+                    }
                 case _ =>
                   Future.successful(())
               }
