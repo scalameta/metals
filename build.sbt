@@ -6,8 +6,6 @@ def isCI = System.getenv("CI") != null
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
 def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
-def isScala023(v: Option[(Long, Long)]): Boolean = v.contains((0, 23))
-def isScala024(v: Option[(Long, Long)]): Boolean = v.contains((0, 24))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean =
   v.exists(_._1 == 0) || v.exists(_._1 == 3)
@@ -259,20 +257,9 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   val base = root / "src" / "main"
   val result = mutable.ListBuffer.empty[File]
   val partialVersion = CrossVersion.partialVersion(scalaVersion)
-  if (isScala211(partialVersion)) {
-    result += base / "scala-2.11"
-  }
-  if (isScala212(partialVersion)) {
-    result += base / "scala-2.12"
-  }
-  if (isScala213(partialVersion)) {
-    result += base / "scala-2.13"
-  }
-  if (isScala023(partialVersion)) {
-    result += base / "scala-0.23"
-  }
-  if (isScala024(partialVersion)) {
-    result += base / "scala-0.24"
+  partialVersion.collect {
+    case (major, minor) =>
+      result += base / s"scala-$major.$minor"
   }
   if (isScala2(partialVersion)) {
     result += base / "scala-2"
@@ -338,6 +325,7 @@ val mtagsSettings = List(
 lazy val mtags3 = project
   .in(file(".mtags"))
   .settings(
+    unmanagedSourceDirectories.in(Compile) := Seq(),
     sharedSettings,
     mtagsSettings,
     unmanagedSourceDirectories.in(Compile) += baseDirectory
