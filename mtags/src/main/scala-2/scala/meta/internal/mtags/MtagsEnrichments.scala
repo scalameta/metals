@@ -36,17 +36,20 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       }
 
     /**
-     * Returns offset position with end == start == offset */
+     * Returns offset position with end == start == offset
+     */
     def toOffsetPosition(offset: Int): Position =
       Position.Range(input, offset, offset)
 
     /**
-     * Returns an offset for this input */
+     * Returns an offset for this input
+     */
     def toOffset(line: Int, column: Int): Int =
       input.lineToOffset(line) + column
 
     /**
-     * Returns an offset position for this input */
+     * Returns an offset position for this input
+     */
     def toPosition(startLine: Int, startColumn: Int): Position.Range =
       toPosition(startLine, startColumn, startLine, startColumn)
 
@@ -61,7 +64,8 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
     }
 
     /**
-     * Returns a range position for this input */
+     * Returns a range position for this input
+     */
     def toPosition(
         startLine: Int,
         startColumn: Int,

@@ -80,7 +80,8 @@ final class ClasspathLoader() {
   }
 
   /**
-   * Load a resource from the classpath. */
+   * Load a resource from the classpath.
+   */
   def load(path: RelativePath): Option[AbsolutePath] = {
     loader.resolve(path)
   }
@@ -90,7 +91,8 @@ final class ClasspathLoader() {
   }
 
   /**
-   * Load a resource from the classpath. */
+   * Load a resource from the classpath.
+   */
   def load(path: String): Option[AbsolutePath] = {
     loader.resolve(path)
   }

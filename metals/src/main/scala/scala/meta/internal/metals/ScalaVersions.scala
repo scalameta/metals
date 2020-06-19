@@ -6,7 +6,8 @@ import scala.meta.internal.semver.SemVer
 object ScalaVersions {
 
   /**
-   * Non-Lightbend compilers often use a suffix, such as `-bin-typelevel-4` */
+   * Non-Lightbend compilers often use a suffix, such as `-bin-typelevel-4`
+   */
   def dropVendorSuffix(version: String): String =
     version.replaceAll("-bin-.*", "")
 

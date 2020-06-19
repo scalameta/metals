@@ -63,7 +63,8 @@ case class PantsGlobs(
     }
 
   /**
-   * Returns a source directory if this target uses rglobs("*.scala") */
+   * Returns a source directory if this target uses rglobs("*.scala")
+   */
   def sourceDirectory(workspace: Path): Option[Path] =
     include match {
       case head :: Nil if exclude.isEmpty =>

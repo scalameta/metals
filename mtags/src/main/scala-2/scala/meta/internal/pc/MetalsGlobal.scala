@@ -489,7 +489,8 @@ class MetalsGlobal(
   implicit class XtensionDefTreeMetals(defn: DefTree) {
 
     /**
-     * Returns the position of the name/identifier of this definition. */
+     * Returns the position of the name/identifier of this definition.
+     */
     def namePos: Position = {
       val start = defn.pos.point
       val end = start + defn.name.length() - 1

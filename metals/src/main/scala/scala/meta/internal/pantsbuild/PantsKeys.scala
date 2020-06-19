@@ -1,7 +1,8 @@
 package scala.meta.internal.pantsbuild
 
 /**
- * Key names from the output of `./pants export` */
+ * Key names from the output of `./pants export`
+ */
 object PantsKeys {
   val targets = "targets"
   val excludes = "excludes"

@@ -478,7 +478,8 @@ object MetalsEnrichments
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
 
     /**
-     * Returns true if the symbol is defined in this document */
+     * Returns true if the symbol is defined in this document
+     */
     def definesSymbol(symbol: String): Boolean = {
       textDocument.occurrences.exists { localOccurrence =>
         localOccurrence.role.isDefinition &&
@@ -592,7 +593,8 @@ object MetalsEnrichments
     }
 
     /**
-     * Returns the value of a -P:semanticdb:$option:$value compiler flag. */
+     * Returns the value of a -P:semanticdb:$option:$value compiler flag.
+     */
     def semanticdbFlag(name: String): Option[String] = {
       val flag = s"-P:semanticdb:$name:"
       item.getOptions.asScala

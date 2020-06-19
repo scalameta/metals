@@ -5,7 +5,8 @@ import scala.meta.internal.semanticdb.Scala._
 object DefinitionAlternatives {
 
   /**
-   * Returns a list of fallback symbols that can act instead of given symbol. */
+   * Returns a list of fallback symbols that can act instead of given symbol.
+   */
   def apply(symbol: Symbol): List[Symbol] = {
     List(
       caseClassCompanionToType(symbol),
@@ -70,7 +71,8 @@ object DefinitionAlternatives {
     }
 
   /**
-   * Convert reference to var setter to var getter. */
+   * Convert reference to var setter to var getter.
+   */
   private def varGetter(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(owner, Descriptor.Method(name, disambiguator))

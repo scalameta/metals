@@ -114,7 +114,8 @@ class ScalaToplevelMtags(
   }
 
   /**
-   * Enters a toplevel symbol such as class, trait or object */
+   * Enters a toplevel symbol such as class, trait or object
+   */
   def emitMember(isPackageObject: Boolean): Unit = {
     val kind = scanner.curr.token
     acceptTrivia()
@@ -138,7 +139,8 @@ class ScalaToplevelMtags(
   }
 
   /**
-   * Returns position of the current token */
+   * Returns position of the current token
+   */
   def newPosition: Position = {
     val start = scanner.curr.offset
     val end = scanner.curr.endOffset + 1
@@ -146,7 +148,8 @@ class ScalaToplevelMtags(
   }
 
   /**
-   * Returns a name and position for the current identifier token */
+   * Returns a name and position for the current identifier token
+   */
   def newIdentifier: Identifier = {
     scanner.curr.token match {
       case IDENTIFIER | BACKQUOTED_IDENT => // OK
@@ -158,7 +161,8 @@ class ScalaToplevelMtags(
   }
 
   /**
-   * Consume token stream like "a.b.c" and return List(a, b, c) */
+   * Consume token stream like "a.b.c" and return List(a, b, c)
+   */
   def parsePath(): List[Identifier] = {
     val buf = List.newBuilder[Identifier]
     def loop(): Unit = {
@@ -176,7 +180,8 @@ class ScalaToplevelMtags(
   }
 
   /**
-   * Consumes the token stream until the matching closing delimiter */
+   * Consumes the token stream until the matching closing delimiter
+   */
   def acceptBalancedDelimeters(Open: Int, Close: Int): Unit = {
     require(scanner.curr.token == Open, "open delimeter { or (")
     var count = 1
@@ -216,7 +221,8 @@ class ScalaToplevelMtags(
   }
 
   /**
-   * Consumes the token stream until the next non-trivia token */
+   * Consumes the token stream until the next non-trivia token
+   */
   def acceptTrivia(): Unit = {
     scanner.nextToken()
     while (

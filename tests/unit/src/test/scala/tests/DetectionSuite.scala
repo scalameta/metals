@@ -20,7 +20,8 @@ class DetectionSuite extends BaseSuite {
   }
 
   /**
-   * ------------ SBT ------------* */
+   * ------------ SBT ------------*
+   */
   def checkNotSbt(name: String, layout: String)(implicit
       loc: Location
   ): Unit = {
@@ -116,7 +117,8 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**
-   * ------------ Gradle ------------* */
+   * ------------ Gradle ------------*
+   */
   def checkNotGradle(name: String, layout: String)(implicit
       loc: Location
   ): Unit = {
@@ -165,7 +167,8 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**
-   * ------------ Maven ------------* */
+   * ------------ Maven ------------*
+   */
   def checkNotMaven(name: String, layout: String)(implicit
       loc: Location
   ): Unit = {
@@ -212,7 +215,8 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**
-   * ------------ Multiple Build Files ------------* */
+   * ------------ Multiple Build Files ------------*
+   */
   def checkMulti(name: String, layout: String, isTrue: Boolean = true)(implicit
       loc: Location
   ): Unit = {

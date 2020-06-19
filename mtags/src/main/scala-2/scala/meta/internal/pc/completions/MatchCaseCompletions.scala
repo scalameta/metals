@@ -296,7 +296,8 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       "match".startsWith(name.toString().stripSuffix(CURSOR))
 
   /**
-   * Returns true if the identifier comes after an opening brace character '{' */
+   * Returns true if the identifier comes after an opening brace character '{'
+   */
   def hasLeadingBrace(ident: Ident, text: String): Boolean = {
     val openDelim: Int = {
       var start = ident.pos.start - 1

@@ -139,25 +139,29 @@ object ScaladocParser {
   private val endOfLine = '\u000A'
 
   /**
-   * Something that should not have happened, happened, and Scaladoc should exit. */
+   * Something that should not have happened, happened, and Scaladoc should exit.
+   */
   private def oops(msg: String): Nothing =
     sys.error("program logic: " + msg)
 
   /**
    * The body of a line, dropping the (optional) start star-marker,
-   * one leading whitespace and all trailing whitespace. */
+   * one leading whitespace and all trailing whitespace.
+   */
   private val CleanCommentLine =
     new Regex("""(?:\s*\*\s?)?(.*)""")
 
   /**
    * Dangerous HTML tags that should be replaced by something safer,
-   * such as wiki syntax, or that should be dropped. */
+   * such as wiki syntax, or that should be dropped.
+   */
   private val DangerousTags =
     new Regex("""<(/?(div|ol|ul|li|h[1-6]|p))( [^>]*)?/?>|<!--.*-->""")
 
   /**
    * Maps a dangerous HTML tag to a safe wiki replacement, or an empty string
-   * if it cannot be salvaged. */
+   * if it cannot be salvaged.
+   */
   private def htmlReplacement(mtch: Regex.Match): String =
     mtch.group(1) match {
       case "p" | "div" => "\n\n"
@@ -175,14 +179,16 @@ object ScaladocParser {
 
   /**
    * Javadoc tags that should be replaced by something useful, such as wiki
-   * syntax, or that should be dropped. */
+   * syntax, or that should be dropped.
+   */
   private val JavadocTags =
     new Regex(
       """\{\@(code|docRoot|linkplain|link|literal|value)\p{Zs}*([^}]*)\}"""
     )
 
   /**
-   * Maps a javadoc tag to a useful wiki replacement, or an empty string if it cannot be salvaged. */
+   * Maps a javadoc tag to a useful wiki replacement, or an empty string if it cannot be salvaged.
+   */
   private def javadocReplacement(mtch: Regex.Match): String = {
     mtch.group(1) match {
       case "code" => "`" + mtch.group(2) + "`"
@@ -196,7 +202,8 @@ object ScaladocParser {
   }
 
   /**
-   * Safe HTML tags that can be kept. */
+   * Safe HTML tags that can be kept.
+   */
   private val SafeTags =
     new Regex(
       """((&\w+;)|(&#\d+;)|(</?(abbr|acronym|address|area|a|bdo|big|blockquote|br|button|b|caption|cite|code|col|colgroup|dd|del|dfn|em|fieldset|form|hr|img|input|ins|i|kbd|label|legend|link|map|object|optgroup|option|param|pre|q|samp|select|small|span|strong|sub|sup|table|tbody|td|textarea|tfoot|th|thead|tr|tt|var)( [^>]*)?/?>))"""
@@ -205,37 +212,43 @@ object ScaladocParser {
   private val safeTagMarker = '\u000E'
 
   /**
-   * A Scaladoc tag not linked to a symbol and not followed by text */
+   * A Scaladoc tag not linked to a symbol and not followed by text
+   */
   private val SingleTagRegex =
     new Regex("""\s*@(\S+)\s*""")
 
   /**
-   * A Scaladoc tag not linked to a symbol. Returns the name of the tag, and the rest of the line. */
+   * A Scaladoc tag not linked to a symbol. Returns the name of the tag, and the rest of the line.
+   */
   private val SimpleTagRegex =
     new Regex("""\s*@(\S+)\s+(.*)""")
 
   /**
    * A Scaladoc tag linked to a symbol. Returns the name of the tag, the name
-   * of the symbol, and the rest of the line. */
+   * of the symbol, and the rest of the line.
+   */
   private val SymbolTagRegex =
     new Regex(
       """\s*@(param|tparam|throws|groupdesc|groupname|groupprio)\s+(\S*)\s*(.*)"""
     )
 
   /**
-   * The start of a Scaladoc code block */
+   * The start of a Scaladoc code block
+   */
   private val CodeBlockStartRegex =
     new Regex("""(.*?)((?:\{\{\{)|(?:\u000E<pre(?: [^>]*)?>\u000E))(.*)""")
 
   /**
-   * The end of a Scaladoc code block */
+   * The end of a Scaladoc code block
+   */
   private val CodeBlockEndRegex =
     new Regex("""(.*?)((?:\}\}\})|(?:\u000E</pre>\u000E))(.*)""")
 
   /**
    * A key used for a tag map. The key is built from the name of the tag and
    * from the linked symbol if the tag has one.
-   * Equality on tag keys is structural. */
+   * Equality on tag keys is structural.
+   */
   private sealed abstract class TagKey {
     def name: String
   }
@@ -300,7 +313,8 @@ object ScaladocParser {
   /**
    * Parses a raw comment string into a `Comment` object.
    * @param comment The expanded comment string (including start and end markers) to be parsed.
-   * @param pos     The position of the comment in source. */
+   * @param pos     The position of the comment in source.
+   */
   def parseAtSymbol(
       comment: String,
       pos: Position = Position.None
@@ -309,7 +323,8 @@ object ScaladocParser {
 
     /**
      * The cleaned raw comment as a list of lines. Cleaning removes comment
-     * start and end markers, line start markers  and unnecessary whitespace. */
+     * start and end markers, line start markers  and unnecessary whitespace.
+     */
     def clean(comment: String): List[String] = {
       val strippedComment = comment.trim.stripPrefix("/*").stripSuffix("*/")
       val safeComment = DangerousTags.replaceAllIn(
@@ -346,7 +361,8 @@ object ScaladocParser {
      * @param lastTagKey  The last parsed tag, or `None` if the tag section hasn't started. Lines that are not tagged
      *                    are part of the previous tag or, if none exists, of the body.
      * @param remaining   The lines that must still recursively be parsed.
-     * @param inCodeBlock Whether the next line is part of a code block (in which no tags must be read). */
+     * @param inCodeBlock Whether the next line is part of a code block (in which no tags must be read).
+     */
     def parse0(
         docBody: StringBuilder,
         tags: Map[TagKey, List[String]],
@@ -640,7 +656,8 @@ object ScaladocParser {
    *  - Removed Scaladoc start and end markers.
    *  - Removed start-of-line star and one whitespace afterwards (if present).
    *  - Removed all end-of-line whitespace.
-   *  - Only `endOfLine` is used to mark line endings. */
+   *  - Only `endOfLine` is used to mark line endings.
+   */
   def parseWikiAtSymbol(
       string: String,
       pos: Position
@@ -657,7 +674,8 @@ object ScaladocParser {
    *
    * @author Ingo Maier
    * @author Manohar Jonnalagedda
-   * @author Gilles Dubochet */
+   * @author Gilles Dubochet
+   */
   final class WikiParser(
       val buffer: String,
       pos: Position
@@ -677,7 +695,8 @@ object ScaladocParser {
     /* BLOCKS */
 
     /**
-     * {{{ block ::= code | title | hrule | listBlock | table | para  }}} */
+     * {{{ block ::= code | title | hrule | listBlock | table | para  }}}
+     */
     def block(): Block = {
       if (checkSkipInitWhitespace("{{{"))
         code()
@@ -696,7 +715,8 @@ object ScaladocParser {
 
     /**
      * listStyle ::= '-' spc | '1.' spc | 'I.' spc | 'i.' spc | 'A.' spc | 'a.' spc
-     * Characters used to build lists and their constructors */
+     * Characters used to build lists and their constructors
+     */
     val listStyles: Map[String, Seq[Block] => Block] =
       Map[
         String,
@@ -711,7 +731,8 @@ object ScaladocParser {
       )
 
     /**
-     * Checks if the current line is formed with more than one space and one the listStyles */
+     * Checks if the current line is formed with more than one space and one the listStyles
+     */
     def checkList: Boolean =
       (countWhitespace > 0) && (listStyles.keys exists {
         checkSkipInitWhitespace(_)
@@ -722,12 +743,14 @@ object ScaladocParser {
      * nListBlock ::= nLine { mListBlock }
      *      nLine ::= nSpc listStyle para '\n'
      * }}}
-     * Where n and m stand for the number of spaces. When `m > n`, a new list is nested. */
+     * Where n and m stand for the number of spaces. When `m > n`, a new list is nested.
+     */
     def listBlock(): Block = {
 
       /**
        * Consumes one list item block and returns it, or None if the block is
-       * not a list or a different list. */
+       * not a list or a different list.
+       */
       def listLine(indent: Int, style: String): Option[Block] =
         if (countWhitespace > indent && checkList)
           Some(listBlock)
@@ -743,7 +766,8 @@ object ScaladocParser {
 
       /**
        * Consumes all list item blocks (possibly with nested lists) of the
-       * same list and returns the list block. */
+       * same list and returns the list block.
+       */
       def listLevel(indent: Int, style: String): Block = {
         val lines = mutable.ListBuffer.empty[Block]
         var line: Option[Block] = listLine(indent, style)
@@ -774,7 +798,8 @@ object ScaladocParser {
     }
 
     /**
-     * {{{ title ::= ('=' inline '=' | "==" inline "==" | ...) '\n' }}} */
+     * {{{ title ::= ('=' inline '=' | "==" inline "==" | ...) '\n' }}}
+     */
     def title(): Block = {
       jumpWhitespace()
       val inLevel = repeatJump('=')
@@ -787,7 +812,8 @@ object ScaladocParser {
     }
 
     /**
-     * {{{ hrule ::= "----" { '-' } '\n' }}} */
+     * {{{ hrule ::= "----" { '-' } '\n' }}}
+     */
     def hrule(): Block = {
       jumpWhitespace()
       repeatJump('-')
@@ -796,7 +822,8 @@ object ScaladocParser {
     }
 
     /**
-     * Starts and end with a cell separator matching the minimal row || and all other possible rows */
+     * Starts and end with a cell separator matching the minimal row || and all other possible rows
+     */
     private val TableRow = """^\|.*\|$""".r
 
     /* Checks for a well-formed table row */
@@ -1096,7 +1123,8 @@ object ScaladocParser {
     }
 
     /**
-     * {{{ para ::= inline '\n' }}} */
+     * {{{ para ::= inline '\n' }}}
+     */
     def para(): Block = {
       val p =
         if (summaryParsed)
@@ -1293,7 +1321,8 @@ object ScaladocParser {
     /* UTILITY */
 
     /**
-     * {{{ eol ::= { whitespace } '\n' }}} */
+     * {{{ eol ::= { whitespace } '\n' }}}
+     */
     def blockEnded(blockType: String): Unit = {
       if (char != endOfLine && char != endOfText) {
         reportError(
@@ -1435,7 +1464,8 @@ object ScaladocParser {
 
     /**
      * jumps a character and consumes it
-     * @return true only if the correct character has been jumped */
+     * @return true only if the correct character has been jumped
+     */
     final def jump(ch: Char): Boolean = {
       if (char == ch) {
         nextChar()
@@ -1445,7 +1475,8 @@ object ScaladocParser {
 
     /**
      * jumps all the characters in chars, consuming them in the process.
-     * @return true only if the correct characters have been jumped */
+     * @return true only if the correct characters have been jumped
+     */
     final def jump(chars: String): Boolean = {
       var index = 0
       while (

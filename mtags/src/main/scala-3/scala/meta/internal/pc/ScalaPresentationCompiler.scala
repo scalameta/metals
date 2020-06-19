@@ -490,7 +490,8 @@ case class ScalaPresentationCompiler(
   }
 
   /**
-   * Convert `param` to `ParameterInformation` */
+   * Convert `param` to `ParameterInformation`
+   */
   private def paramToParameterInformation(
       param: Signatures.Param
   ): ParameterInformation = {

@@ -171,7 +171,8 @@ object ScaladocUtils {
 
   /**
    * Optionally start and end index of return section in `str`, or `None`
-   *  if `str` does not have a @group. */
+   *  if `str` does not have a @group.
+   */
   def groupDoc(str: String, sections: List[(Int, Int)]): Option[(Int, Int)] =
     sections find (startsWithTag(str, _, "@group"))
 
@@ -183,7 +184,8 @@ object ScaladocUtils {
     sections find (startsWithTag(str, _, "@return"))
 
   /**
-   * Extracts variable name from a string, stripping any pair of surrounding braces */
+   * Extracts variable name from a string, stripping any pair of surrounding braces
+   */
   def variableName(str: String): String =
     if (
       str.length >= 2 && (str charAt 0) == '{' && (str charAt (str.length - 1)) == '}'
@@ -207,7 +209,8 @@ object ScaladocUtils {
   }
 
   /**
-   * A map from the section tag to section parameters */
+   * A map from the section tag to section parameters
+   */
   def sectionTagMap(
       str: String,
       sections: List[(Int, Int)]
@@ -217,12 +220,14 @@ object ScaladocUtils {
     }
 
   /**
-   * Extract the section tag, treating the section tag as an identifier */
+   * Extract the section tag, treating the section tag as an identifier
+   */
   def extractSectionTag(str: String, section: (Int, Int)): String =
     str.substring(section._1, skipTag(str, section._1))
 
   /**
-   * Extract the section parameter */
+   * Extract the section parameter
+   */
   def extractSectionParam(str: String, section: (Int, Int)): String = {
     val (beg, _) = section
     assert(
@@ -238,7 +243,8 @@ object ScaladocUtils {
   }
 
   /**
-   * Extract the section text, except for the tag and comment newlines */
+   * Extract the section text, except for the tag and comment newlines
+   */
   def extractSectionText(str: String, section: (Int, Int)): (Int, Int) = {
     val (beg, end) = section
     if (
@@ -258,7 +264,8 @@ object ScaladocUtils {
   }
 
   /**
-   * Cleanup section text */
+   * Cleanup section text
+   */
   def cleanupSectionText(str: String): String = {
     var result = str.trim.replaceAll("\n\\s+\\*\\s+", " \n")
     while (result.endsWith("\n")) result = result.substring(0, str.length - 1)

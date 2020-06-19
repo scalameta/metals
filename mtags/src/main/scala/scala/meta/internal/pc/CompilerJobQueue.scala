@@ -90,7 +90,8 @@ object CompilerJobQueue {
   }
 
   /**
-   * Runnable with a timestamp and attached completable future. */
+   * Runnable with a timestamp and attached completable future.
+   */
   private class Job(result: CompletableFuture[_], _run: () => Unit)
       extends Runnable {
     def reject(): Unit = {
@@ -105,7 +106,8 @@ object CompilerJobQueue {
   }
 
   /**
-   * Priority queue that runs the most recently submitted task first. */
+   * Priority queue that runs the most recently submitted task first.
+   */
   private class LastInFirstOutBlockingQueue
       extends PriorityBlockingQueue[Runnable](
         10,

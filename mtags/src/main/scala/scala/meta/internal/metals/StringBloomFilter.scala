@@ -51,11 +51,13 @@ class StringBloomFilter(estimatedSize: Int) {
   private val buffer = new Array[Byte](2)
 
   /**
-   * Resets the hash value. */
+   * Resets the hash value.
+   */
   def reset(): Unit = streamingHash.reset()
 
   /**
-   * Returns the current hash value. */
+   * Returns the current hash value.
+   */
   def value(): Long = streamingHash.getValue()
 
   /**
@@ -85,13 +87,15 @@ class StringBloomFilter(estimatedSize: Int) {
   }
 
   /**
-   * Insert a single string into the bloom filter. */
+   * Insert a single string into the bloom filter.
+   */
   def putCharSequence(chars: CharSequence): Boolean = {
     bloom.put(computeHashCode(chars))
   }
 
   /**
-   * Computes the hascode of a single string that can be later passed to `mightContain(Long)`. */
+   * Computes the hascode of a single string that can be later passed to `mightContain(Long)`.
+   */
   def computeHashCode(chars: CharSequence): Long = {
     streamingHash.reset()
     var i = 0
@@ -104,7 +108,8 @@ class StringBloomFilter(estimatedSize: Int) {
   }
 
   /**
-   * Returns true if the bloom filter contains the given string. */
+   * Returns true if the bloom filter contains the given string.
+   */
   def mightContain(chars: CharSequence): Boolean = {
     bloom.mightContain(computeHashCode(chars))
   }

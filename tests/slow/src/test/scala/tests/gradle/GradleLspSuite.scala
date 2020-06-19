@@ -217,11 +217,12 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
            |}
            |""".stripMargin
       }
-      _ <- server
-        .didSave("src/main/scala/reload/Main.scala") { text =>
-          text.replaceAll("\"", "")
-        }
-        .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("src/main/scala/reload/Main.scala") { text =>
+            text.replaceAll("\"", "")
+          }
+          .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
