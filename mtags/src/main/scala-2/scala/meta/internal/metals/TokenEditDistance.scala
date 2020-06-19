@@ -15,7 +15,8 @@ import difflib.myers.Equalizer
 import org.eclipse.{lsp4j => l}
 
 /**
- * Helper to map between position between two similar strings. */
+ * Helper to map between position between two similar strings.
+ */
 final class TokenEditDistance private (
     matching: Array[MatchingToken],
     empty: Option[EmptyResult]
@@ -153,7 +154,8 @@ final class TokenEditDistance private (
   }
 
   /**
-   * Convert from offset in original string to offset in revised string */
+   * Convert from offset in original string to offset in revised string
+   */
   def toRevised(originalOffset: Int): Either[EmptyResult, Position] = {
     if (isUnchanged) EmptyResult.unchanged
     else if (isNoMatch) EmptyResult.noMatch
@@ -177,7 +179,8 @@ final class TokenEditDistance private (
   }
 
   /**
-   * Convert from offset in revised string to offset in original string */
+   * Convert from offset in revised string to offset in original string
+   */
   def toOriginal(revisedOffset: Int): Either[EmptyResult, Position] = {
     if (isUnchanged) EmptyResult.unchanged
     else if (isNoMatch) EmptyResult.noMatch
@@ -302,7 +305,8 @@ object TokenEditDistance {
   }
 
   /**
-   * Compare tokens only by their text and token category. */
+   * Compare tokens only by their text and token category.
+   */
   private object TokenEqualizer extends Equalizer[Token] {
     override def equals(original: Token, revised: Token): Boolean =
       original.productPrefix == revised.productPrefix &&

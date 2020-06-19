@@ -111,7 +111,8 @@ class RemoteLanguageServer(
   }
 
   /**
-   * Creates a JSON request according to https://scalameta.org/metals/docs/contributors/remote-language-server.html */
+   * Creates a JSON request according to https://scalameta.org/metals/docs/contributors/remote-language-server.html
+   */
   private def asRemoteParameters(
       params: JsonObject,
       method: String

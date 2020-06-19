@@ -14,7 +14,8 @@ import scala.collection._
 final case class Body(blocks: Seq[Block]) {
 
   /**
-   * The summary text of the comment body. */
+   * The summary text of the comment body.
+   */
   lazy val summary: Option[Inline] = {
     def summaryInBlock(block: Block): Seq[Inline] =
       block match {
@@ -46,7 +47,8 @@ final case class Body(blocks: Seq[Block]) {
 }
 
 /**
- * A block-level element of text, such as a paragraph or code block. */
+ * A block-level element of text, such as a paragraph or code block.
+ */
 sealed abstract class Block
 
 final case class Title(text: Inline, level: Int) extends Block
@@ -73,7 +75,8 @@ final case class Row(cells: Seq[Cell])
 final case class Cell(blocks: Seq[Block])
 
 /**
- * An section of text inside a block, possibly with formatting. */
+ * An section of text inside a block, possibly with formatting.
+ */
 sealed abstract class Inline
 
 final case class Chain(items: Seq[Inline]) extends Inline
@@ -118,5 +121,6 @@ object HtmlTag {
 }
 
 /**
- * The summary of a comment, usually its first sentence. There must be exactly one summary per body. */
+ * The summary of a comment, usually its first sentence. There must be exactly one summary per body.
+ */
 final case class Summary(text: Inline) extends Inline

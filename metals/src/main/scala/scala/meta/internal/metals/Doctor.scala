@@ -39,7 +39,8 @@ final class Doctor(
   }
 
   /**
-   * Returns a full HTML page for the HTTP client. */
+   * Returns a full HTML page for the HTTP client.
+   */
   def problemsHtmlPage(url: String): String = {
     val livereload = Urls.livereload(url)
     new HtmlBuilder()
@@ -50,7 +51,8 @@ final class Doctor(
   }
 
   /**
-   * Executes the "Run doctor" server command. */
+   * Executes the "Run doctor" server command.
+   */
   def executeRunDoctor(): Unit = {
     executeDoctor(
       ClientCommands.RunDoctor,
@@ -61,7 +63,8 @@ final class Doctor(
   }
 
   /**
-   * Executes the "Reload doctor" server command. */
+   * Executes the "Reload doctor" server command.
+   */
   private def executeReloadDoctor(summary: Option[String]): Unit = {
     val hasProblemsNow = summary.isDefined
     if (hasProblems.get() && !hasProblemsNow) {
@@ -105,7 +108,8 @@ final class Doctor(
   }
 
   /**
-   * Checks if there are any potential problems and if any, notifies the user. */
+   * Checks if there are any potential problems and if any, notifies the user.
+   */
   def check(serverName: String, serverVersion: String): Unit = {
     bspServerName = Some(serverName)
     bspServerVersion = Some(serverVersion)

@@ -3,7 +3,8 @@ package scala.meta.internal.mtags
 import scala.meta.internal.tokenizers.LegacyToken._
 
 /**
- * Utility to print helpful messages for parse errors. */
+ * Utility to print helpful messages for parse errors.
+ */
 object InverseLegacyToken {
   val category: Map[Int, String] = Map[Int, String](
     EMPTY -> "EMPTY",
@@ -11,7 +12,8 @@ object InverseLegacyToken {
     ERROR -> "ERROR",
     EOF -> "EOF",
     /**
-     * literals */
+     * literals
+     */
     CHARLIT -> "CHARLIT",
     INTLIT -> "INTLIT",
     LONGLIT -> "LONGLIT",
@@ -24,11 +26,13 @@ object InverseLegacyToken {
     XMLLIT -> "XMLLIT",
     XMLLITEND -> "XMLLITEND",
     /**
-     * identifiers */
+     * identifiers
+     */
     IDENTIFIER -> "IDENTIFIER",
     BACKQUOTED_IDENT -> "BACKQUOTED_IDENT",
     /**
-     * keywords */
+     * keywords
+     */
     NEW -> "NEW",
     THIS -> "THIS",
     SUPER -> "SUPER",
@@ -36,7 +40,8 @@ object InverseLegacyToken {
     TRUE -> "TRUE",
     FALSE -> "FALSE",
     /**
-     * modifiers */
+     * modifiers
+     */
     IMPLICIT -> "IMPLICIT",
     OVERRIDE -> "OVERRIDE",
     PROTECTED -> "PROTECTED",
@@ -47,7 +52,8 @@ object InverseLegacyToken {
     LAZY -> "LAZY",
     MACRO -> "MACRO",
     /**
-     * templates */
+     * templates
+     */
     PACKAGE -> "PACKAGE",
     IMPORT -> "IMPORT",
     CLASS -> "CLASS",
@@ -64,7 +70,8 @@ object InverseLegacyToken {
     VAR -> "VAR",
     ENUM -> "ENUM",
     /**
-     * control structures */
+     * control structures
+     */
     IF -> "IF",
     THEN -> "THEN",
     ELSE -> "ELSE",
@@ -80,7 +87,8 @@ object InverseLegacyToken {
     RETURN -> "RETURN",
     MATCH -> "MATCH",
     /**
-     * parenthesis */
+     * parenthesis
+     */
     LPAREN -> "LPAREN",
     RPAREN -> "RPAREN",
     LBRACKET -> "LBRACKET",
@@ -88,7 +96,8 @@ object InverseLegacyToken {
     LBRACE -> "LBRACE",
     RBRACE -> "RBRACE",
     /**
-     * special symbols */
+     * special symbols
+     */
     COMMA -> "COMMA",
     SEMI -> "SEMI",
     DOT -> "DOT",
@@ -96,7 +105,8 @@ object InverseLegacyToken {
     EQUALS -> "EQUALS",
     AT -> "AT",
     /**
-     * special symbols */
+     * special symbols
+     */
     HASH -> "HASH",
     USCORE -> "USCORE",
     ARROW -> "ARROW",

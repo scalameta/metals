@@ -424,7 +424,8 @@ object Bill {
   }
 
   /**
-   * Installed this build tool only for the local workspace */
+   * Installed this build tool only for the local workspace
+   */
   def installWorkspace(
       directory: Path,
       name: String = "Bill"
@@ -433,7 +434,8 @@ object Bill {
   }
 
   /**
-   * Installed this build server globally for the machine */
+   * Installed this build server globally for the machine
+   */
   def installGlobal(
       directory: Path,
       name: String = "Bill"

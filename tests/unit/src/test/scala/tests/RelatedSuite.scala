@@ -28,7 +28,8 @@ class RelatedSuite extends BaseSuite {
   }
 
   /**
-   * ------------ SBT ------------* */
+   * ------------ SBT ------------*
+   */
   def checkIsNotSbtRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsSbtRelated(relpath, isTrue = false)
   }
@@ -50,7 +51,8 @@ class RelatedSuite extends BaseSuite {
   checkIsNotSbtRelated("src/main/scala/Main.scala")
 
   /**
-   * ------------ Gradle ------------* */
+   * ------------ Gradle ------------*
+   */
   def checkIsNotGradleRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsGradleRelated(relpath, isTrue = false)
   }
@@ -72,7 +74,8 @@ class RelatedSuite extends BaseSuite {
   checkIsNotGradleRelated("/ab/c/A.kts")
 
   /**
-   * ------------ Maven ------------* */
+   * ------------ Maven ------------*
+   */
   def checkIsNotMavenRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsMavenRelated(relpath, isTrue = false)
   }
@@ -89,7 +92,8 @@ class RelatedSuite extends BaseSuite {
   checkIsNotMavenRelated("other.xml")
 
   /**
-   * ------------ Mill ------------* */
+   * ------------ Mill ------------*
+   */
   def checkIsNotMillRelated(relpath: String)(implicit loc: Location): Unit = {
     checkIsMillRelated(relpath, isTrue = false)
   }

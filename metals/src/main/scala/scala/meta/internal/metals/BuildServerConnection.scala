@@ -66,7 +66,8 @@ class BuildServerConnection private (
   }
 
   /**
-   * Run build/shutdown procedure */
+   * Run build/shutdown procedure
+   */
   def shutdown(): Future[Unit] =
     connection.map { conn =>
       try {
@@ -275,7 +276,8 @@ object BuildServerConnection {
   )
 
   /**
-   * Run build/initialize handshake */
+   * Run build/initialize handshake
+   */
   private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer

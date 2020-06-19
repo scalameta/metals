@@ -24,14 +24,16 @@ class LineListener(onLine: String => Unit) {
   private var state = AnsiStateMachine.Start
 
   /**
-   * Clear buffered output. */
+   * Clear buffered output.
+   */
   def flush(): Unit = {
     onLine(buffer.toString())
     buffer = new StringBuilder()
   }
 
   /**
-   * Clear buffered output, if there exists any. */
+   * Clear buffered output, if there exists any.
+   */
   def flushIfNonEmpty(): Unit = {
     if (buffer.length() > 0) {
       flush()

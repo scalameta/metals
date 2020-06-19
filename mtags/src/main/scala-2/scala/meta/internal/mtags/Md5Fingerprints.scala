@@ -2,7 +2,8 @@ package scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
 /**
- * Maps MD5 fingerprints to full text contents. */
+ * Maps MD5 fingerprints to full text contents.
+ */
 trait Md5Fingerprints {
   def lookupText(path: AbsolutePath, md5: String): Option[String]
 }

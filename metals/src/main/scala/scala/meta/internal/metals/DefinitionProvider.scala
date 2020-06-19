@@ -199,7 +199,8 @@ case class DefinitionDestination(
 ) {
 
   /**
-   * Converts snapshot position to dirty buffer position in the destination file */
+   * Converts snapshot position to dirty buffer position in the destination file
+   */
   def toResult: Option[DefinitionResult] =
     for {
       location <- snapshot.definition(uri, symbol)
