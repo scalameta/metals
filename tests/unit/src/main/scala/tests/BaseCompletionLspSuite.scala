@@ -97,35 +97,35 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       _ <- assertCompletion(
         "Stream@@",
         getExpected(
-          """|Stream scala.collection.immutable
-             |Stream - java.util.stream
+          """|BaseStream - java.util.stream
+             |DoubleStream - java.util.stream
+             |InputStream - java.io
              |IntStream - java.util.stream
              |LogStream - java.rmi.server
-             |StreamView - scala.collection.immutable
-             |Streamable - scala.reflect.io
-             |BaseStream - java.util.stream
              |LongStream - java.util.stream
-             |InputStream - java.io
-             |PrintStream - java.io
-             |DoubleStream - java.util.stream
              |OutputStream - java.io
+             |PrintStream - java.io
+             |Stream - java.util.stream
+             |Stream scala.collection.immutable
              |StreamBuilder - scala.collection.immutable.Stream
              |StreamCanBuildFrom - scala.collection.immutable.Stream
+             |StreamView - scala.collection.immutable
+             |Streamable - scala.reflect.io
              |""".stripMargin,
           Map(
             "2.13" ->
-              """|Stream scala.collection.immutable
-                 |Stream - java.util.stream
+              """|BaseStream - java.util.stream
+                 |DoubleStream - java.util.stream
+                 |InputStream - java.io
                  |IntStream - java.util.stream
                  |LogStream - java.rmi.server
-                 |Streamable - scala.reflect.io
-                 |BaseStream - java.util.stream
                  |LongStream - java.util.stream
-                 |StreamShape - scala.collection.convert.StreamExtensions
-                 |InputStream - java.io
-                 |PrintStream - java.io
-                 |DoubleStream - java.util.stream
                  |OutputStream - java.io
+                 |PrintStream - java.io
+                 |Stream - java.util.stream
+                 |Stream scala.collection.immutable
+                 |StreamShape - scala.collection.convert.StreamExtensions
+                 |Streamable - scala.reflect.io
                  |""".stripMargin
           ),
           scalaVersion
@@ -134,11 +134,11 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       _ <- assertCompletion(
         "TrieMap@@",
         getExpected(
-          """|TrieMap - scala.collection.concurrent
+          """|HashTrieMap - scala.collection.immutable.HashMap
              |ParTrieMap - scala.collection.parallel.mutable
-             |HashTrieMap - scala.collection.immutable.HashMap
              |ParTrieMapCombiner - scala.collection.parallel.mutable
              |ParTrieMapSplitter - scala.collection.parallel.mutable
+             |TrieMap - scala.collection.concurrent
              |TrieMapSerializationEnd - scala.collection.concurrent
              |""".stripMargin,
           Map(

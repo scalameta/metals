@@ -718,6 +718,7 @@ final class TestingServer(
   ): String = {
     val items =
       completion.getItems.asScala
+        .sortBy(_.getLabel())
         .map(item => server.completionItemResolve(item).get())
     items.iterator
       .filter(item => filter(item.getLabel()))

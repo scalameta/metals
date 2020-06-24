@@ -416,6 +416,7 @@ class Compilers(
   ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
+      .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withConfiguration(
         initializeParams

@@ -73,7 +73,8 @@ case class ScalaPresentationCompiler(
     search: SymbolSearch = EmptySymbolSearch,
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
-    config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
+    config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
+    workspace: Option[Path] = None
 ) extends PresentationCompiler {
 
   def this() = this(Nil, Nil)
@@ -361,6 +362,10 @@ case class ScalaPresentationCompiler(
 
   def withSearch(search: SymbolSearch): PresentationCompiler = {
     copy(search = search)
+  }
+
+  def withWorkspace(workspace: Path): PresentationCompiler = {
+    copy(workspace = Some(workspace))
   }
 
   private def location(p: SourcePosition): Option[Location] = {

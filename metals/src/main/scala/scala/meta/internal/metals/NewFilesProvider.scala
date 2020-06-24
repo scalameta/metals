@@ -34,6 +34,8 @@ class NewFilesProvider(
     MetalsQuickPickItem(id = "package-object", label = "Package Object")
   private val worksheetPick =
     MetalsQuickPickItem(id = "worksheet", label = "Worksheet")
+  private val ammonitePick =
+    MetalsQuickPickItem(id = "ammonite", label = "Ammonite script")
 
   def createNewFileDialog(
       directoryUri: Option[URI],
@@ -61,7 +63,12 @@ class NewFilesProvider(
           case worksheetPick.id =>
             getName(worksheetPick.id, name)
               .mapOption(
-                createWorksheet(directory, _)
+                createEmptyFile(directory, _, ".worksheet.sc")
+              )
+          case ammonitePick.id =>
+            getName(ammonitePick.id, name)
+              .mapOption(
+                createEmptyFile(directory, _, ".sc")
               )
           case packageObjectPick.id =>
             createPackageObject(directory).liftOption
@@ -86,7 +93,8 @@ class NewFilesProvider(
             objectPick,
             traitPick,
             packageObjectPick,
-            worksheetPick
+            worksheetPick,
+            ammonitePick
           ).asJava,
           placeHolder = NewScalaFile.selectTheKindOfFileMessage
         )
@@ -163,11 +171,12 @@ class NewFilesProvider(
       )
   }
 
-  private def createWorksheet(
+  private def createEmptyFile(
       directory: Option[AbsolutePath],
-      name: String
+      name: String,
+      extension: String
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.getOrElse(workspace).resolve(name + ".worksheet.sc")
+    val path = directory.getOrElse(workspace).resolve(name + extension)
     createFileAndWriteText(path, NewFileTemplate.empty)
   }
 
