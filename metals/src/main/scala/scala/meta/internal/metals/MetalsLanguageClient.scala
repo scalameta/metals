@@ -103,7 +103,7 @@ case class MetalsStatusParams(
 
 case class MetalsSlowTaskParams(
     message: String,
-    quietLogs: java.lang.Boolean = null,
+    quietLogs: java.lang.Boolean,
     secondsElapsed: java.lang.Integer = null
 )
 case class MetalsSlowTaskResult(cancel: Boolean)

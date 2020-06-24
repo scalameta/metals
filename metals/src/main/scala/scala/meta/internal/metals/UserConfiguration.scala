@@ -38,7 +38,8 @@ case class UserConfiguration(
     pantsTargets: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None,
-    enableStripMarginOnTypeFormatting: Boolean = true
+    enableStripMarginOnTypeFormatting: Boolean = true,
+    quietLogs: Boolean = false
 ) {
 
   def currentBloopVersion: String =
@@ -143,6 +144,15 @@ object UserConfiguration {
         "Should display lenses with links to super methods",
         """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
            |Disabled lenses are not calculated for opened documents which might speed up document processing.
+           |
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "quiet-logs",
+        "false",
+        "false",
+        "Should not display logs from long running tasks",
+        """|If true, Metals will not automatically show logs for any running slow tasks. User can still check Metals output manually to see them.
            |
            |""".stripMargin
       ),
@@ -289,6 +299,8 @@ object UserConfiguration {
       getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
+    val quietLogs =
+      getBooleanKey("quiet-logs").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -306,7 +318,8 @@ object UserConfiguration {
           pantsTargets,
           superMethodLensesEnabled,
           remoteLanguageServer,
-          enableStripMarginOnTypeFormatting
+          enableStripMarginOnTypeFormatting,
+          quietLogs
         )
       )
     } else {

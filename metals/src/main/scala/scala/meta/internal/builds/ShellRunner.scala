@@ -83,7 +83,7 @@ class ShellRunner(
     // VS Code versions the message is hidden after a delay.
     val taskResponse =
       languageClient.metalsSlowTask(
-        new MetalsSlowTaskParams(commandRun)
+        new MetalsSlowTaskParams(commandRun, userConfig().quietLogs)
       )
     handler.response = Some(taskResponse)
     val processFuture = handler.completeProcess.future.map { result =>

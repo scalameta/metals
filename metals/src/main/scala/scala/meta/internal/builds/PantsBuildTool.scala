@@ -80,7 +80,10 @@ case class PantsBuildTool(
         Future {
           val timer = new Timer(Time.system)
           val response = languageClient.metalsSlowTask(
-            Messages.bloopInstallProgress(executableName)
+            Messages.bloopInstallProgress(
+              executableName,
+              userConfig().quietLogs
+            )
           )
           val token = FutureCancelToken(response.asScala.map(_.cancel))
           try {

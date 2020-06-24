@@ -48,11 +48,12 @@ final class StatusBar(
     }
   }
 
-  def trackSlowTask[T](message: String)(thunk: => T): T = {
+  def trackSlowTask[T](message: String, quietLogs: Boolean)(thunk: => T): T = {
     if (clientConfig.statusBarIsOff)
       trackBlockingTask(message)(thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task =
+        client().metalsSlowTask(MetalsSlowTaskParams(message, quietLogs))
       val future = task.asScala
       try {
         thunk
@@ -66,11 +67,16 @@ final class StatusBar(
     }
   }
 
-  def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
+  def trackSlowFuture[T](
+      message: String,
+      quietLogs: Boolean,
+      thunk: Future[T]
+  ): Unit = {
     if (clientConfig.statusBarIsOff)
       trackFuture(message, thunk)
     else {
-      val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+      val task =
+        client().metalsSlowTask(MetalsSlowTaskParams(message, quietLogs))
       val future = task.asScala
       thunk.onComplete {
         case Failure(exception) =>

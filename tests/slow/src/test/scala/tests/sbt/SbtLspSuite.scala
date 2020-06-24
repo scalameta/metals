@@ -146,7 +146,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
 
   test("cancel") {
     client.slowTaskHandler = params => {
-      if (params == bloopInstallProgress("sbt")) {
+      if (params == bloopInstallProgress("sbt", quietLogs = false)) {
         Thread.sleep(TimeUnit.SECONDS.toMillis(2))
         Some(MetalsSlowTaskResult(cancel = true))
       } else {

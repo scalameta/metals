@@ -19,7 +19,7 @@ abstract class BaseImportSuite(suiteName: String)
     ImportBuildChanges.params(buildTool.toString()).getMessage
 
   def progressMessage: String =
-    bloopInstallProgress(buildTool.executableName).message
+    bloopInstallProgress(buildTool.executableName, false).message
 
   def currentDigest(workspace: AbsolutePath): Option[String]
 

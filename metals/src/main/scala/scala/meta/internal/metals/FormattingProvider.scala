@@ -271,6 +271,7 @@ final class FormattingProvider(
       downloadingScalafmt = Promise()
       statusBar.trackSlowFuture(
         "Loading Scalafmt",
+        quietLogs = true,
         downloadingScalafmt.future
       )
       System.out

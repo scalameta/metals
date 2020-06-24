@@ -45,7 +45,7 @@ final class Embedded(
   def mdoc(scalaVersion: String, scalaBinaryVersion: String): Mdoc = {
     val classloader = mdocs.getOrElseUpdate(
       scalaBinaryVersion,
-      statusBar.trackSlowTask("Preparing worksheets") {
+      statusBar.trackSlowTask("Preparing worksheets", quietLogs = true) {
         Embedded.newMdocClassLoader(scalaVersion, scalaBinaryVersion)
       }
     )
@@ -62,9 +62,10 @@ final class Embedded(
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
-      statusBar.trackSlowTask("Preparing presentation compiler") {
-        Embedded.newPresentationCompilerClassLoader(info, scalac)
-      }
+      statusBar
+        .trackSlowTask("Preparing presentation compiler", quietLogs = true) {
+          Embedded.newPresentationCompilerClassLoader(info, scalac)
+        }
     )
     serviceLoader(
       classOf[PresentationCompiler],

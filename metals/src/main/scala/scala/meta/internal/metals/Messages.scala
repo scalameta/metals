@@ -27,8 +27,8 @@ object Messages {
       "See the logs for more details. "
   )
 
-  def bloopInstallProgress(buildToolExecName: String) =
-    new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
+  def bloopInstallProgress(buildToolExecName: String, quietLogs: Boolean) =
+    new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall", quietLogs)
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
   def notNow: MessageActionItem =
