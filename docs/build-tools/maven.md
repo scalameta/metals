@@ -20,7 +20,7 @@ all the needed Bloop config files and all the features should work properly.
 
 Currently, all you need to run the manual installation is:
 
-`mvn ch.epfl.scala:maven-bloop_2.10:@BLOOP_VERSION@:bloopInstall -DdownloadSources=true`
+`mvn ch.epfl.scala:maven-bloop_2.12:@BLOOP_VERSION@:bloopInstall -DdownloadSources=true`
 
 If you choose this option though you should select "Don't show again" when
 Metals prompts to import the build.

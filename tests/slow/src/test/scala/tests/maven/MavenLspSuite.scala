@@ -6,9 +6,12 @@ import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MavenDigest
 import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
 
 class MavenLspSuite extends BaseImportSuite("maven-import") {
@@ -92,6 +95,48 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         ).mkString("\n")
       )
     } yield ()
+  }
+
+  test("run") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/pom.xml
+            |$defaultPom
+            |/src/main/scala/a/Main.scala
+            |package a
+            |object Main {
+            |  def main(args: Array[String]) = {
+            |    val foo = sys.props.getOrElse("property", "")
+            |    val bar = args(0)
+            |    print(foo + bar)
+            |    System.exit(0)
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+      debugger <- server.startDebugging(
+        "maven-test-repo",
+        DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        new ScalaMainClass(
+          "a.Main",
+          List("Bar").asJava,
+          List("-Dproperty=Foo").asJava
+        )
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "FooBar")
   }
 
   test("new-dependency") {
