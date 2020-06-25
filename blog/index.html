@@ -1273,7 +1273,6 @@ give Metals a try!</p>
 <li>rename symbol</li>
 <li>first code action - import missing symbol</li>
 <li>worksheet support</li>
-<li>experimental support for the Pants build tool</li>
 <li>improvements for Bloop integration</li>
 <li>better support for Vim via coc-metals</li>
 <li>completion to add all abstract members</li>
@@ -1371,8 +1370,7 @@ with hover for larger results.</p>
 several new improvements are included in this release. There're based on
 feedback from users as well us our own experiences while working with Metals and
 should make the overall experience of importing the build and compiling much
-better. Additionally, we implemented experimental support for the Pants build
-tool.</p>
+better.</p>
 <h3><a class="anchor" aria-hidden="true" id="semanticdb-is-resolved-inside-bloop"></a><a href="#semanticdb-is-resolved-inside-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>SemanticDB is resolved inside Bloop</h3>
 <p>Metals requires the SemanticDB compiler plugin for a number of features to
 function properly. Because of that it was quite difficult to add it
@@ -1397,8 +1395,8 @@ via automatically generated <code>./project/metals.sbt</code> file and ran when 
 automatically. Thanks to this solution it should be possible to reuse Metals
 compilation in the upcoming feature for offloading compilation in Sbt.</li>
 <li>Mill - logic for adding semanticDB plugin is removed from Mill.</li>
-<li>Pants, Fury, Seed - no changes were needed for the semanticDB integration and
-should work out of the box.</li>
+<li>Fury, Seed - no changes were needed for the semanticDB integration and should
+work out of the box.</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="switch-to-to-using-bloop-launcher"></a><a href="#switch-to-to-using-bloop-launcher" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Switch to to using Bloop Launcher</h3>
 <p>Instead of using internal Metals logic, we now use the Bloop Launcher, which
@@ -1418,11 +1416,6 @@ being run. To solve this, we now detect if the connection is closed and offer
 the user the option of automatic reconnection. This works both when the build
 server was down and when the connection was just interrupted. It should also
 solve the issues on MacOs with dropped connection.</p>
-<h3><a class="anchor" aria-hidden="true" id="experimental-build-tool-support-for-pants"></a><a href="#experimental-build-tool-support-for-pants" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Experimental build tool support for Pants</h3>
-<p>Thanks to the recent work by <a href="https://github.com/olafurpg">@olafurpg</a>, there's
-now experimental support for the Pants build tool. The Pants integration is
-still evolving so it's not yet documented. The end goal is to support Pants in
-the same way as other build tools like sbt, Maven and Gradle.</p>
 <h2><a class="anchor" aria-hidden="true" id="completions"></a><a href="#completions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Completions</h2>
 <h3><a class="anchor" aria-hidden="true" id="completion-to-add-all-abstract-members"></a><a href="#completion-to-add-all-abstract-members" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Completion to add all abstract members</h3>
 <p>In the past when you were implementing an abstract member in a concrete class,
