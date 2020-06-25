@@ -85,23 +85,23 @@ class Compilers(
   private val worksheetsCache = jworksheetsCache.asScala
 
   // The "rambo" compiler is used for source files that don't belong to a build target.
-  lazy val ramboCompiler: PresentationCompiler = createRamboCompiler(
+  lazy val ramboCompiler: PresentationCompiler = createStandaloneCompiler(
     PackageIndex.scalaLibrary,
     "metals-default"
   )
 
-  def createRamboCompiler(
+  def createStandaloneCompiler(
       classpath: Seq[Path],
       name: String
   ): PresentationCompiler = {
     scribe.info(
       "no build target: using presentation compiler with only scala-library"
     )
-    val ramboSearch =
-      Try(new RamboSymbolSearch(workspace, buffers))
+    val standaloneSearch =
+      Try(StandaloneSymbolSearch(workspace, buffers))
         .getOrElse(EmptySymbolSearch)
     val compiler =
-      configure(new ScalaPresentationCompiler(), ramboSearch).newInstance(
+      configure(new ScalaPresentationCompiler(), standaloneSearch).newInstance(
         s"$name-${mtags.BuildInfo.scalaCompilerVersion}",
         classpath.asJava,
         Nil.asJava
@@ -389,7 +389,14 @@ class Compilers(
         statusBar.trackBlockingTask(
           s"${config.icons.sync}Loading worksheet presentation compiler"
         ) {
-          newCompiler(scalac, info.scalaInfo, classpath)
+          val worksheetSearch = new StandaloneSymbolSearch(
+            workspace,
+            classpath.map(AbsolutePath(_)),
+            Nil,
+            buffers,
+            fallback = Some(search)
+          )
+          newCompiler(scalac, info.scalaInfo, classpath, worksheetSearch)
         }
       )
     }
@@ -397,7 +404,7 @@ class Compilers(
     created.getOrElse {
       jworksheetsCache.put(
         path,
-        createRamboCompiler(classpath, path.toString())
+        createStandaloneCompiler(classpath, path.toString())
       )
     }
   }
@@ -422,7 +429,7 @@ class Compilers(
           statusBar.trackBlockingTask(
             s"${config.icons.sync}Loading presentation compiler"
           ) {
-            newCompiler(scalac, info.scalaInfo)
+            newCompiler(scalac, info.scalaInfo, search)
           }
         }
       )
@@ -499,16 +506,18 @@ class Compilers(
 
   def newCompiler(
       scalac: ScalacOptionsItem,
-      info: ScalaBuildTarget
+      info: ScalaBuildTarget,
+      search: SymbolSearch
   ): PresentationCompiler = {
     val classpath = scalac.classpath.map(_.toNIO).toSeq
-    newCompiler(scalac, info, classpath)
+    newCompiler(scalac, info, classpath, search)
   }
 
   def newCompiler(
       scalac: ScalacOptionsItem,
       info: ScalaBuildTarget,
-      classpath: Seq[Path]
+      classpath: Seq[Path],
+      search: SymbolSearch
   ): PresentationCompiler = {
     // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
     // `mtags.BuildInfo.scalaCompilerVersion`. In the case when

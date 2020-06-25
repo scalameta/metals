@@ -133,6 +133,12 @@ trait CommonMtagsEnrichments {
       else None
   }
 
+  implicit class XtensionOptionScala[T](opt: Option[T]) {
+    def asJava: ju.Optional[T] =
+      if (opt.isDefined) ju.Optional.of(opt.get)
+      else ju.Optional.empty()
+  }
+
   implicit class XtensionCompletionItemData(item: CompletionItem) {
     def data: Option[CompletionItemData] =
       item.getData match {

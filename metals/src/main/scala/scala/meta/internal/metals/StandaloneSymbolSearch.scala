@@ -16,24 +16,17 @@ import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.lsp4j.Location
 
-class RamboSymbolSearch(
+class StandaloneSymbolSearch(
     workspace: AbsolutePath,
-    buffers: Buffers
+    classpath: Seq[AbsolutePath],
+    sources: Seq[AbsolutePath],
+    buffers: Buffers,
+    fallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
-  private val dependencySourceCache =
+  val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
-
-  private val scalaVersion = BuildInfo.scala212
-
-  private val jars = Embedded
-    .downloadScalaSources(scalaVersion)
-    .map(path => AbsolutePath(path))
-
-  private val (sources, classpath) =
-    jars.partition(_.toString.endsWith("-sources.jar"))
-
-  private val scalaDependency =
+  private val classpathSearch =
     ClasspathSearch.fromClasspath(classpath.toList.map(_.toNIO))
 
   private val index = OnDemandSymbolIndex()
@@ -51,13 +44,18 @@ class RamboSymbolSearch(
     )
 
   def documentation(symbol: String): ju.Optional[SymbolDocumentation] =
-    docs.documentation(symbol)
+    docs
+      .documentation(symbol)
+      .asScala
+      .orElse(fallback.flatMap(_.documentation(symbol).asScala))
+      .asJava
 
   def definition(x: String): ju.List[Location] = {
     destinationProvider
       .fromSymbol(x)
       .flatMap(_.toResult)
       .map(_.locations)
+      .orElse(fallback.map(_.definition(x)))
       .getOrElse(ju.Collections.emptyList())
   }
 
@@ -71,12 +69,34 @@ class RamboSymbolSearch(
           mtags.toplevels(input).asJava
         )
       }
+      .orElse(fallback.map(_.definitionSourceToplevels(sym)))
       .getOrElse(ju.Collections.emptyList())
 
   def search(
       query: String,
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
-  ): Result =
-    scalaDependency.search(WorkspaceSymbolQuery.exact(query), visitor)
+  ): Result = {
+    val res = classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
+    fallback.map(_.search(query, buildTargetIdentifier, visitor)).getOrElse(res)
+  }
+}
+
+object StandaloneSymbolSearch {
+  def apply(
+      workspace: AbsolutePath,
+      buffers: Buffers
+  ): StandaloneSymbolSearch = {
+
+    val scalaVersion = BuildInfo.scala212
+
+    val jars = Embedded
+      .downloadScalaSources(scalaVersion)
+      .map(path => AbsolutePath(path))
+
+    val (sources, classpath) =
+      jars.partition(_.toString.endsWith("-sources.jar"))
+
+    new StandaloneSymbolSearch(workspace, classpath, sources, buffers)
+  }
 }

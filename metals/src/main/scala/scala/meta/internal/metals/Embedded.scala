@@ -114,6 +114,9 @@ object Embedded {
     val resolutionParams = ResolutionParams
       .create()
 
+    /* note(@tgodzik) we add an exclusion so that the mdoc classlaoder does not try to
+     * load coursierapi.Logger and instead will use the already loaded one
+     */
     resolutionParams.addExclusion("io.get-coursier", "interface")
     val jars = downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
 
