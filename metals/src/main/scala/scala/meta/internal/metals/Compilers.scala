@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
@@ -74,10 +75,25 @@ class Compilers(
     Collections.synchronizedMap(
       new java.util.HashMap[BuildTargetIdentifier, PresentationCompiler]
     )
+  private val jworksheetsCache: ju.Map[AbsolutePath, PresentationCompiler] =
+    Collections.synchronizedMap(
+      new java.util.HashMap[AbsolutePath, PresentationCompiler]
+    )
+
   private val cache = jcache.asScala
 
+  private val worksheetsCache = jworksheetsCache.asScala
+
   // The "rambo" compiler is used for source files that don't belong to a build target.
-  lazy val ramboCompiler: PresentationCompiler = {
+  lazy val ramboCompiler: PresentationCompiler = createRamboCompiler(
+    PackageIndex.scalaLibrary,
+    "metals-default"
+  )
+
+  def createRamboCompiler(
+      classpath: Seq[Path],
+      name: String
+  ): PresentationCompiler = {
     scribe.info(
       "no build target: using presentation compiler with only scala-library"
     )
@@ -86,8 +102,8 @@ class Compilers(
         .getOrElse(EmptySymbolSearch)
     val compiler =
       configure(new ScalaPresentationCompiler(), ramboSearch).newInstance(
-        s"metals-default-${mtags.BuildInfo.scalaCompilerVersion}",
-        PackageIndex.scalaLibrary.asJava,
+        s"$name-${mtags.BuildInfo.scalaCompilerVersion}",
+        classpath.asJava,
         Nil.asJava
       )
     ramboCancelable = Cancelable(() => compiler.shutdown())
@@ -329,14 +345,60 @@ class Compilers(
       path: AbsolutePath,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   ): Option[PresentationCompiler] = {
-    val target = buildTargets
-      .inverseSources(path)
-      .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
-    target match {
-      case None =>
-        if (path.isScalaFilename) Some(ramboCompiler)
-        else None
-      case Some(value) => loadCompiler(value)
+
+    def fromBuildTarget: Option[PresentationCompiler] = {
+      val target = buildTargets
+        .inverseSources(path)
+        .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+      target match {
+        case None =>
+          if (path.isScalaFilename) Some(ramboCompiler)
+          else None
+        case Some(value) => loadCompiler(value)
+      }
+    }
+
+    if (path.isWorksheet) loadWorksheetCompiler(path).orElse(fromBuildTarget)
+    else fromBuildTarget
+  }
+
+  def loadWorksheetCompiler(
+      path: AbsolutePath
+  ): Option[PresentationCompiler] = {
+    worksheetsCache.get(path)
+  }
+
+  def restartWorksheetPresentationCompiler(
+      path: AbsolutePath,
+      classpath: List[Path]
+  ): Unit = {
+    val created = for {
+      targetId <- buildTargets.inverseSources(path)
+      info <- buildTargets.scalaTarget(targetId)
+      isSupported = ScalaVersions.isSupportedScalaVersion(info.scalaVersion)
+      _ = {
+        if (!isSupported) {
+          scribe.warn(s"unsupported Scala ${info.scalaVersion}")
+        }
+      }
+      if isSupported
+      scalac <- buildTargets.scalacOptions(targetId)
+    } yield {
+      jworksheetsCache.put(
+        path,
+        statusBar.trackBlockingTask(
+          s"${config.icons.sync}Loading worksheet presentation compiler"
+        ) {
+          newCompiler(scalac, info.scalaInfo, classpath)
+        }
+      )
+    }
+
+    created.getOrElse {
+      jworksheetsCache.put(
+        path,
+        createRamboCompiler(classpath, path.toString())
+      )
     }
   }
 
@@ -440,6 +502,14 @@ class Compilers(
       info: ScalaBuildTarget
   ): PresentationCompiler = {
     val classpath = scalac.classpath.map(_.toNIO).toSeq
+    newCompiler(scalac, info, classpath)
+  }
+
+  def newCompiler(
+      scalac: ScalacOptionsItem,
+      info: ScalaBuildTarget,
+      classpath: Seq[Path]
+  ): PresentationCompiler = {
     // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
     // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
     // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we

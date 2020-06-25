@@ -111,7 +111,12 @@ object Embedded {
       scalaVersion: String,
       scalaBinaryVersion: String
   ): URLClassLoader = {
-    val jars = downloadMdoc(scalaVersion, scalaBinaryVersion)
+    val resolutionParams = ResolutionParams
+      .create()
+
+    resolutionParams.addExclusion("io.get-coursier", "interface")
+    val jars = downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
+
     val parent = new MdocClassLoader(this.getClass.getClassLoader)
     val urls = jars.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
@@ -177,10 +182,12 @@ object Embedded {
   private def downloadDependency(
       dep: Dependency,
       scalaVersion: String,
-      classfiers: Seq[String] = Seq.empty
+      classfiers: Seq[String] = Seq.empty,
+      resolution: ResolutionParams = ResolutionParams.create()
   ): List[Path] =
     fetchSettings(dep, scalaVersion)
       .addClassifiers(classfiers: _*)
+      .withResolutionParams(resolution)
       .fetch()
       .asScala
       .toList
@@ -206,11 +213,13 @@ object Embedded {
     downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
   def downloadMdoc(
       scalaVersion: String,
-      scalaBinaryVersion: String
+      scalaBinaryVersion: String,
+      resolutionParams: ResolutionParams = ResolutionParams.create()
   ): List[Path] =
     downloadDependency(
       mdocDependency(scalaVersion, scalaBinaryVersion),
-      scalaVersion
+      scalaVersion,
+      resolution = resolutionParams
     )
 
   def newPresentationCompilerClassLoader(
