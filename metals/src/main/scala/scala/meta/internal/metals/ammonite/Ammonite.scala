@@ -246,13 +246,20 @@ final class Ammonite(
       case (command, script) =>
         val extraScripts = buffers.open.toVector
           .filter(path => path.isAmmoniteScript && path != script)
+        val jvmOpts = userConfig().ammoniteJvmProperties.getOrElse(Nil)
+        val commandWithJVMOpts =
+          command.addJvmArgs(jvmOpts: _*)
         val futureConn = BuildServerConnection.fromSockets(
           workspace(),
           buildClient,
           languageClient,
           () =>
             Ammonite
-              .socketConn(command, script +: extraScripts, workspace()),
+              .socketConn(
+                commandWithJVMOpts,
+                script +: extraScripts,
+                workspace()
+              ),
           tables().dismissedNotifications.ReconnectAmmonite,
           config
         )
