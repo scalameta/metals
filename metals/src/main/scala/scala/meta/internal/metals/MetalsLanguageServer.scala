@@ -955,8 +955,6 @@ class MetalsLanguageServer(
                 case _ =>
                   Future.successful(())
               }
-          } else if (userConfig.pantsTargets != old.pantsTargets) {
-            slowConnectToBuildServer(forceImport = false).ignoreValue
           } else {
             Future.successful(())
           }

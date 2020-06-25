@@ -403,10 +403,8 @@ lazy val metals = project
       "com.outr" %% "scribe-slf4j" % "2.7.12", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.9",
-      // For exporting Pants builds.
+      // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "1.1.0",
-      "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.6.2",
       // for producing SemanticDB from Scala source files
@@ -441,32 +439,10 @@ lazy val metals = project
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3
-    ),
-    mainClass in GraalVMNativeImage := Some(
-      "scala.meta.internal.pantsbuild.BloopPants"
-    ),
-    graalVMNativeImageOptions ++= {
-      val reflectionFile =
-        Keys.sourceDirectory.in(Compile).value./("graal")./("reflection.json")
-      assert(reflectionFile.exists, "no such file: " + reflectionFile)
-      List(
-        "-H:+ReportUnsupportedElementsAtRuntime",
-        "--initialize-at-build-time",
-        "--initialize-at-run-time=scala.meta.internal.pantsbuild,metaconfig",
-        "--no-server",
-        "--enable-http",
-        "--enable-https",
-        "-H:EnableURLProtocols=http,https",
-        "--enable-all-security-services",
-        "--no-fallback",
-        s"-H:ReflectionConfigurationFiles=$reflectionFile",
-        "--allow-incomplete-classpath",
-        "-H:+ReportExceptionStackTraces"
-      )
-    }
+    )
   )
   .dependsOn(mtags)
-  .enablePlugins(BuildInfoPlugin, GraalVMNativeImagePlugin)
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val input = project
   .in(file("tests/input"))
