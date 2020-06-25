@@ -37,6 +37,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import coursierapi.Dependency
+import coursierapi.Fetch
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
@@ -230,6 +232,20 @@ class WorksheetProvider(
     )
   }
 
+  private def fetchDependencySources(
+      dependencies: Seq[Dependency]
+  ): List[Path] = {
+    Fetch
+      .create()
+      .withDependencies(dependencies: _*)
+      .addClassifiers("sources")
+      .fetchResult()
+      .getFiles()
+      .map(_.toPath())
+      .asScala
+      .toList
+  }
+
   private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
@@ -244,9 +260,11 @@ class WorksheetProvider(
 
     if (newDigest != previousDigest) {
       worksheetsDigests.put(path, newDigest)
+      val sourceDeps = fetchDependencySources(worksheet.dependencies().asScala)
       compilers.restartWorksheetPresentationCompiler(
         path,
-        classpath
+        classpath,
+        sourceDeps.filter(_.toString().endsWith("-sources.jar"))
       )
     }
 

@@ -370,9 +370,10 @@ class Compilers(
 
   def restartWorksheetPresentationCompiler(
       path: AbsolutePath,
-      classpath: List[Path]
+      classpath: List[Path],
+      sources: List[Path]
   ): Unit = {
-    val created = for {
+    val created: Option[Unit] = for {
       targetId <- buildTargets.inverseSources(path)
       info <- buildTargets.scalaTarget(targetId)
       isSupported = ScalaVersions.isSupportedScalaVersion(info.scalaVersion)
@@ -392,9 +393,9 @@ class Compilers(
           val worksheetSearch = new StandaloneSymbolSearch(
             workspace,
             classpath.map(AbsolutePath(_)),
-            Nil,
+            sources.map(AbsolutePath(_)),
             buffers,
-            fallback = Some(search)
+            workspaceFallback = Some(search)
           )
           newCompiler(scalac, info.scalaInfo, classpath, worksheetSearch)
         }

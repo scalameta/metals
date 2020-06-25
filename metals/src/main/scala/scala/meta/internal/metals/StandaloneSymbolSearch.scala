@@ -21,10 +21,10 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
-    fallback: Option[SymbolSearch] = None
+    workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
-  val dependencySourceCache =
+  private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
   private val classpathSearch =
     ClasspathSearch.fromClasspath(classpath.toList.map(_.toNIO))
@@ -47,7 +47,7 @@ class StandaloneSymbolSearch(
     docs
       .documentation(symbol)
       .asScala
-      .orElse(fallback.flatMap(_.documentation(symbol).asScala))
+      .orElse(workspaceFallback.flatMap(_.documentation(symbol).asScala))
       .asJava
 
   def definition(x: String): ju.List[Location] = {
@@ -55,7 +55,7 @@ class StandaloneSymbolSearch(
       .fromSymbol(x)
       .flatMap(_.toResult)
       .map(_.locations)
-      .orElse(fallback.map(_.definition(x)))
+      .orElse(workspaceFallback.map(_.definition(x)))
       .getOrElse(ju.Collections.emptyList())
   }
 
@@ -69,7 +69,7 @@ class StandaloneSymbolSearch(
           mtags.toplevels(input).asJava
         )
       }
-      .orElse(fallback.map(_.definitionSourceToplevels(sym)))
+      .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym)))
       .getOrElse(ju.Collections.emptyList())
 
   def search(
@@ -78,7 +78,9 @@ class StandaloneSymbolSearch(
       visitor: SymbolSearchVisitor
   ): Result = {
     val res = classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
-    fallback.map(_.search(query, buildTargetIdentifier, visitor)).getOrElse(res)
+    workspaceFallback
+      .map(_.search(query, buildTargetIdentifier, visitor))
+      .getOrElse(res)
   }
 }
 
