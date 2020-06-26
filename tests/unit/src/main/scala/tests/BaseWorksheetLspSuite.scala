@@ -55,6 +55,52 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("completion-imports") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |import $$dep.`com.lihaoyi::scalatags:0.9.0`
+           |import scalatags.Text.all._
+           |
+           |val htmlFile = html(
+           |  body(
+           |    p("This is a big paragraph of text")
+           |  )
+           |)
+           |
+           |htmlFile.render
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      identity <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "htmlFile.render@@"
+      )
+      _ = assertNoDiff(identity, "render: String")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|import $dep.`com.lihaoyi::scalatags:0.9.0`
+           |import scalatags.Text.all._
+           |
+           |val htmlFile = html(
+           |  body(
+           |    p("This is a big paragraph of text")
+           |  )
+           |) // TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p", List(WrappedArray(StringFrag("This is…
+           |
+           |htmlFile.render // "<html><body><p>This is a big paragraph of text</p></body></html>"
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
   test("outside-target") {
     for {
       _ <- server.initialize(
@@ -201,8 +247,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-           |	at repl.Session$App.<init>(Main.worksheet.sc:11)
-           |	at repl.Session$.app(Main.worksheet.sc:3)
+           |	at repl.MdocSession$App.<init>(Main.worksheet.sc:11)
+           |	at repl.MdocSession$.app(Main.worksheet.sc:3)
            |
            |throw new RuntimeException("boom")
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -426,20 +472,20 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
-           |	at repl.Session$App.<init>(IncompatibleClassChangeError.worksheet.sc:8)
-           |	at repl.Session$.app(IncompatibleClassChangeError.worksheet.sc:3)
+           |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:8)
+           |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
            |
            |throw new IncompatibleClassChangeError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
-           |	at repl.Session$App.<init>(NoSuchMethodError.worksheet.sc:8)
-           |	at repl.Session$.app(NoSuchMethodError.worksheet.sc:3)
+           |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:8)
+           |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
            |
            |throw new NoSuchMethodError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
-           |	at repl.Session$App.<init>(StackOverflowError.worksheet.sc:8)
-           |	at repl.Session$.app(StackOverflowError.worksheet.sc:3)
+           |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:8)
+           |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
            |
            |throw new StackOverflowError()
            |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

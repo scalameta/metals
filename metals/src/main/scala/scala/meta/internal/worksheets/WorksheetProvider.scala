@@ -1,5 +1,8 @@
 package scala.meta.internal.worksheets
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.security.MessageDigest
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -14,6 +17,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -25,6 +29,7 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.worksheets.MdocEnrichments._
@@ -32,6 +37,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import coursierapi.Dependency
+import coursierapi.Fetch
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
@@ -51,7 +58,8 @@ class WorksheetProvider(
     statusBar: StatusBar,
     diagnostics: Diagnostics,
     embedded: Embedded,
-    publisher: WorksheetPublisher
+    publisher: WorksheetPublisher,
+    compilers: Compilers
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -66,6 +74,7 @@ class WorksheetProvider(
     Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
   private val mdocs = new TrieMap[BuildTargetIdentifier, Mdoc]()
+  private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
   private val currentScalaVersion =
     scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
   private val currentBinaryVersion =
@@ -223,13 +232,42 @@ class WorksheetProvider(
     )
   }
 
+  private def fetchDependencySources(
+      dependencies: Seq[Dependency]
+  ): List[Path] = {
+    Fetch
+      .create()
+      .withDependencies(dependencies: _*)
+      .addClassifiers("sources")
+      .fetchResult()
+      .getFiles()
+      .map(_.toPath())
+      .asScala
+      .toList
+  }
+
   private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
   ): EvaluatedWorksheet = {
     val mdoc = getMdoc(path)
     val input = path.toInputFromBuffers(buffers)
-    val worksheet = mdoc.evaluateWorksheet(input.path, input.value)
+    val relativePath = path.toRelative(workspace)
+    val worksheet = mdoc.evaluateWorksheet(relativePath.toString(), input.value)
+    val classpath = worksheet.classpath().asScala.toList
+    val previousDigest = worksheetsDigests.getOrElse(path, "")
+    val newDigest = calculateDigest(classpath)
+
+    if (newDigest != previousDigest) {
+      worksheetsDigests.put(path, newDigest)
+      val sourceDeps = fetchDependencySources(worksheet.dependencies().asScala)
+      compilers.restartWorksheetPresentationCompiler(
+        path,
+        classpath,
+        sourceDeps.filter(_.toString().endsWith("-sources.jar"))
+      )
+    }
+
     val toPublish = worksheet
       .diagnostics()
       .iterator()
@@ -284,4 +322,11 @@ class WorksheetProvider(
     }
   }
 
+  private def calculateDigest(classpath: List[Path]): String = {
+    val digest = MessageDigest.getInstance("MD5")
+    classpath.foreach { path =>
+      digest.update(path.toString.getBytes(StandardCharsets.UTF_8))
+    }
+    MD5.bytesToHex(digest.digest())
+  }
 }

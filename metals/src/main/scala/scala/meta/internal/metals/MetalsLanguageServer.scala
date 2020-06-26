@@ -517,7 +517,8 @@ class MetalsLanguageServer(
         statusBar,
         diagnostics,
         embedded,
-        worksheetPublisher
+        worksheetPublisher,
+        compilers
       )
     )
     ammonite = register(
