@@ -59,7 +59,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "0.6.2"
+  override def version: String = "0.7.3"
 
   override def toString(): String = "Mill"
 
