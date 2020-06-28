@@ -46,3 +46,6 @@ website/i18n/*
 !website/i18n/en.json
 
 project/metals.sbt
+
+# Created if you run ./bin/test.sh locally
+coursier

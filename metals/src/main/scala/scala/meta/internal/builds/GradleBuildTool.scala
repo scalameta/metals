@@ -87,10 +87,10 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     }
   }
 
-  // @tgodzik This this is the wrapper version we specify it as such,
+  // @tgodzik This is the wrapper version we specify it as such,
   // since it's hard to determine which version will be used as gradle
   // doesn't save it in any settings
-  override def version: String = "5.3.1"
+  override def version: String = BuildInfo.gradleVersion
 
   override def minimumVersion: String = "4.3.0"
 

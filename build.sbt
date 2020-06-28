@@ -207,6 +207,9 @@ lazy val V = new {
   val coursier = "2.0.0-RC6-21"
   val coursierInterfaces = "0.0.22"
   val ammonite = "2.1.4-6-2179b35"
+  val mill = "0.7.3"
+  val gradle = "6.1.0"
+  val maven = "3.6.3"
 }
 
 val genyVersion = Def.setting {
@@ -423,8 +426,11 @@ lazy val metals = project
       "bloopVersion" -> V.bloop,
       "bloopNightlyVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
+      "gradleVersion" -> V.gradle,
       "gradleBloopVersion" -> V.gradleBloop,
+      "mavenVersion" -> V.maven,
       "mavenBloopVersion" -> V.mavenBloop,
+      "millVersion" -> V.mill,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,

@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -56,7 +57,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "3.6.1"
+  override def version: String = BuildInfo.mavenVersion
 
   override def toString(): String = "Maven"
 
