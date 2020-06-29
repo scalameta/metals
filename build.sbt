@@ -1,4 +1,5 @@
 import scala.collection.mutable
+import scala.sys.process._
 
 def localSnapshotVersion = "0.9.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
@@ -150,8 +151,17 @@ onLoad.in(Global) ~= { old =>
 cancelable.in(Global) := true
 crossScalaVersions := Nil
 
+lazy val execScalafmt = taskKey[Unit]("Execute scalafmt executable in /bin")
+execScalafmt := {
+  "bin/scalafmt" !
+}
+
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
+addCommandAlias(
+  "preparePr",
+  "scalafixAll ; execScalafmt"
+)
 
 commands += Command.command("save-expect") { s =>
   "unit/test:runMain tests.SaveExpect" ::
