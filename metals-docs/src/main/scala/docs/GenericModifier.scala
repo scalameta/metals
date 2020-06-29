@@ -10,18 +10,21 @@ class GenericModifier extends StringModifier {
 
   override def process(info: String, code: Input, reporter: Reporter): String =
     s"""
-       |## Gitignore `project/metals.sbt` `.metals/` and `.bloop/`
+       |## Files and Directories to include in your Gitignore
        |
-       |The Metals server places logs and other files in the `.metals/` directory. The
+       |The Metals server places logs and other files in the `.metals` directory. The
        |Bloop compile server places logs and compilation artifacts in the `.bloop`
        |directory. Bloop plugin that generates Bloop configuration is added in the 
-       |`project/metals.sbt` file. It's recommended to ignore these directories and file
+       |`project/metals.sbt` file. Working with Ammonite scripts will place
+       |compiled scripts into the `.ammonite` directory.
+       |It's recommended to exclude these directories and file
        |from version control systems like git.
        |
        |```sh
        |# ~/.gitignore
        |.metals/
        |.bloop/
+       |.ammonite/
        |project/metals.sbt
        |```
        |
