@@ -268,7 +268,13 @@ class Compilers(
       token: CancelToken
   ): Future[ju.List[AutoImportsResult]] = {
     withPC(params, None) { (pc, pos) =>
-      pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token)).asScala
+      pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token))
+        .asScala
+        .map { list =>
+          if (params.getTextDocument.getUri.isAmmoniteScript)
+            list.map(Ammonite.adjustImportResult(_, pos.input.text))
+          list
+        }
     }.getOrElse(Future.successful(new ju.ArrayList))
   }
 
