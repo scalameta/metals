@@ -1900,7 +1900,7 @@ class MetalsLanguageServer(
     val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
-      .foreach(_ => languageClient.refreshModel(buildChanged = true))
+      .foreach(_ => languageClient.refreshModel())
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
