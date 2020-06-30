@@ -22,6 +22,7 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.AutoImportsResult
 
 import ammrunner.AmmoniteFetcher
 import ammrunner.AmmoniteFetcherException
@@ -406,6 +407,16 @@ object Ammonite {
         textEdit.setRange(adjustRange(textEdit.getRange, adjustPos))
       for (l <- Option(item.getAdditionalTextEdits); textEdit <- l.asScala)
         textEdit.setRange(adjustRange(textEdit.getRange, adjustPos))
+    }
+  }
+
+  def adjustImportResult(
+      autoImportResult: AutoImportsResult,
+      scalaCode: String
+  ): Unit = {
+    val adjustPos = adjustPosition(scalaCode)
+    for (textEdit <- autoImportResult.edits.asScala) {
+      textEdit.setRange(adjustRange(textEdit.getRange, adjustPos))
     }
   }
 
