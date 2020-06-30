@@ -206,7 +206,7 @@ final class Compilations(
           // See https://github.com/scalacenter/bloop/issues/1067
           classes.rebuildIndex(targets).foreach { _ =>
             if (targets.exists(isCurrentlyFocused)) {
-              languageClient.refreshModel(buildChanged = false)
+              languageClient.refreshModel()
             }
           }
       }

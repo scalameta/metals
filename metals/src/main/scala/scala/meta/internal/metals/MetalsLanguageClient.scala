@@ -43,12 +43,9 @@ trait MetalsLanguageClient
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
-  final def refreshModel(buildChanged: Boolean): Unit = {
+  final def refreshModel(): Unit = {
     val command = ClientCommands.RefreshModel.id
-    val params = new ExecuteCommandParams(
-      command,
-      List(buildChanged.asInstanceOf[Object]).asJava
-    )
+    val params = new ExecuteCommandParams(command, Nil.asJava)
     metalsExecuteClientCommand(params)
   }
 

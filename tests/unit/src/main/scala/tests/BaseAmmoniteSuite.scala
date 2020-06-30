@@ -138,10 +138,11 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
                            |```""".stripMargin
       hoverRes <- assertHoverAtPos("main.sc", 10, 5)
       _ = assertNoDiff(hoverRes, expectedHoverRes)
+
       refreshedPromise = {
         val promise = Promise[Unit]()
-        server.client.refreshBuildHandler = { () =>
-          if (!promise.isCompleted)
+        server.client.refreshModelHandler = { refreshCount =>
+          if (refreshCount > 0 && !promise.isCompleted)
             promise.success(())
         }
         promise
