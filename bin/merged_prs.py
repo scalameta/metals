@@ -15,7 +15,7 @@ org = gh.get_organization('scalameta')
 repo = org.get_repo('metals')
 
 tag_range = "%s..%s" % (first_tag, last_tag)
-command = ['git', 'log', tag_range, "--first-parent", "master", "--pretty=format:\"%s\""]
+command = ['git', 'log', tag_range, "--first-parent", "main", "--pretty=format:\"%s\""]
 process = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
 stdoutput, stderroutput = process.communicate()
 

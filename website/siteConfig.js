@@ -63,7 +63,7 @@ const siteConfig = {
   ogImage: "img/scalameta-logo.png",
   twitterImage: "img/scalameta-logo.png",
 
-  editUrl: `${repoUrl}/edit/master/docs/`,
+  editUrl: `${repoUrl}/edit/main/docs/`,
 
   repoUrl
 };
