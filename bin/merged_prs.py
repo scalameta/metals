@@ -7,8 +7,8 @@ PIPE = subprocess.PIPE
 gh = Github()
 
 # Needed data
-first_tag = "v0.8.4"
-last_tag = "v0.9.0"
+first_tag = "v0.9.0"
+last_tag = "v0.9.1"
 
 # Running
 org = gh.get_organization('scalameta')
@@ -22,7 +22,8 @@ stdoutput, stderroutput = process.communicate()
 all_prs = []
 for line in stdoutput.split("\n"):
     pr_num = re.findall("#\d+", line)
-    all_prs.append(int(pr_num[0][1:]))
+    if len(pr_num) > 0:
+      all_prs.append(int(pr_num[0][1:]))
 
 for pr in all_prs:
     try:
