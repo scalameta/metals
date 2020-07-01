@@ -15,9 +15,9 @@ capabilities exposed by the client.
 ### Via code lenses
 
 The editor needs to handle two commands in its language client extension:
-[`metals-run-session-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L56)
+[`metals-run-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L56)
 and
-[`metals-debug-session-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L78).
+[`metals-debug-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L78).
 Those commands should get executed automatically by the lsp client once the user
 activates a code lens. The difference between them is that the former ignores
 all breakpoints being set while the latter respects them. The procedure of

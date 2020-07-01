@@ -140,7 +140,7 @@ onLoad.in(Global) ~= { old =>
       prePush,
       """#!/bin/sh
         |set -eux
-        |bin/scalafmt --diff
+        |bin/scalafmt --diff --diff-branch main
         |git diff --exit-code
         |""".stripMargin.getBytes()
     )

@@ -1,7 +1,7 @@
 # Metals
 
 <a href="https://travis-ci.org/scalameta/metals">
-<img src="https://img.shields.io/travis/scalameta/metals/master.svg?style=flat-square" />
+<img src="https://img.shields.io/travis/scalameta/metals/main.svg?style=flat-square" />
 </a>
 <a href="https://gitter.im/scalameta/metals">
 <img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&style=flat-square&color=F71263" />
