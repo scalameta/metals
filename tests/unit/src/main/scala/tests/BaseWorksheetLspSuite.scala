@@ -5,6 +5,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.{BuildInfo => V}
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
     extends BaseLspSuite("worksheet") {
@@ -438,7 +439,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |^
              |""".stripMargin,
           compat = Map(
-            "2.13.2" ->
+            V.scala213 ->
               """|a/src/main/scala/Main.worksheet.sc:1:1: warning: 1 feature warning; re-run with -feature for details
                  |type Structural = {
                  |^

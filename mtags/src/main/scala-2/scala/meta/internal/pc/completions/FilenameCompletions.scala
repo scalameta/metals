@@ -7,11 +7,8 @@ import scala.collection.immutable.Nil
 import scala.util.control.NonFatal
 
 import scala.meta.internal.pc.CompletionFuzzy
-import scala.meta.internal.pc.CompletionFuzzy
-import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.internal.pc.MetalsGlobal
 
-import org.eclipse.{lsp4j => l}
 import org.eclipse.{lsp4j => l}
 
 trait FilenameCompletions { this: MetalsGlobal =>
