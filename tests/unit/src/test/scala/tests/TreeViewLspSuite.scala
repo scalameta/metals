@@ -32,10 +32,14 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       "scala-library", "scala-reflect", "sourcecode_2.12"
     )
 
-    if (scala.util.Properties.isJavaAtLeast(9.toString)) {
-      otherLibraries
-    } else {
-      otherLibraries ++ jdk8Libraries
+    (
+      scala.util.Properties.isJavaAtLeast(9.toString),
+      scala.util.Properties.javaVmVendor
+    ) match {
+      case (true, _) => otherLibraries
+      case (false, "Oracle Corporation") =>
+        otherLibraries ++ jdk8Libraries + "jfr"
+      case _ => otherLibraries ++ jdk8Libraries
     }
   }
 
