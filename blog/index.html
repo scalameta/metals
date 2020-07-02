@@ -162,7 +162,7 @@ based on the filesystem information</li>
 pprint.log(<span class="hljs-type">Properties</span>.releaseVersion)
 </code></pre>
 <p>The Scala version is independent from any build tool used in the workspace and
-without specifying the exact version it will used the default Ammonite Scala
+without specifying the exact version it will use the default Ammonite Scala
 version.</p>
 <p>To learn more about Ammonite please visit the documentation website at
 <a href="https://ammonite.io">https://ammonite.io</a>.</p>
@@ -175,10 +175,10 @@ to import dependencies directly inside of their Scala worksheet with completions
 and diagnostics working right from the start.</p>
 <p><img src="https://i.imgur.com/qXgdNWM.gif" alt="worksheet-imports"></p>
 <p>You can add them using the following syntax:</p>
-<pre><code class="hljs"><span class="hljs-symbol">$dep</span>.<span class="hljs-string">`organisation::artifact:version`</span>
+<pre><code class="hljs"><span class="hljs-symbol">$ivy</span>.<span class="hljs-string">`organisation::artifact:version`</span>
 </code></pre>
 <p>For example:</p>
-<pre><code class="hljs">$dep.`com.lihaoyi::scalatags:<span class="hljs-number">0.9</span><span class="hljs-number">.0</span>`
+<pre><code class="hljs">$ivy.`com.lihaoyi::scalatags:<span class="hljs-number">0.9</span><span class="hljs-number">.0</span>`
 </code></pre>
 <p><code>::</code> is the same as <code>%%</code> in sbt, which will append the current Scala binary
 version to the artifact name.</p>
@@ -205,7 +205,7 @@ create the project and offer to open that new project.</p>
 <p>The command is also available as a button in the welcome view of the Visual
 Studio Code Metals extension, which means it will be visible in case there are
 no imported projects in the current workspace.</p>
-<p>The first curated templates were choosen by the team, however we are happy to
+<p>The first curated templates were chosen by the team, however we are happy to
 include more so that it's easier for people to discover new amazing libraries or
 frameworks.</p>
 <h2><a class="anchor" aria-hidden="true" id="multiline-string-improvements"></a><a href="#multiline-string-improvements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multiline string improvements</h2>
@@ -256,7 +256,7 @@ definitions.</li>
 underscore numeric literals (<code>val num = 100_000</code>).</li>
 <li>Always run Mill in interactive mode.</li>
 <li>Improvements to hover in Scala 3 files.</li>
-<li>make sure auto imports are correct for Ammonite scripts</li>
+<li>Make sure auto imports are correct for Ammonite scripts</li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
 <p>Big thanks to everybody who contributed to this release or reported an issue!</p>
