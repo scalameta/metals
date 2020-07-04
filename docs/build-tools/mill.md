@@ -3,18 +3,14 @@ id: mill
 title: Mill
 ---
 
-Mill is one of the newest build tools developed by Li Haoyi in order to create
-something simpler and more intuitive than most of the other build tools today.
-There is an extensive documentation on the
-[Mill website](http://www.lihaoyi.com/mill/).
+Mill is a build tool developed by Li Haoyi in order to create something simpler
+and more intuitive than most of the other build tools today.  There is extensive
+documentation on the [Mill website](http://www.lihaoyi.com/mill/).
 
-## Automatic installation
+```scala mdoc:automatic-installation:Mill
+```
 
-The first time you open Metals in a new workspace it prompts you to import the
-build. Select "Import build" to start automatic installation. After it's
-finished you should be able edit and compile your code.
-
-To force a mill version you can write it to a file named `.mill-version`
+To force a Mill version you can write it to a file named `.mill-version`
 in the workspace directory.
 
 ## Manual installation
@@ -27,7 +23,7 @@ depends on:
 
 `` import $ivy.`com.lihaoyi::mill-contrib-bloop:VERSION` ``
 
-Remember to replace the `VERSION` with your mill version.
+Remember to replace the `VERSION` with your Mill version.
 
 After adding the line you should be able to generate the Bloop config files needed
 to work with Metals using the below command:

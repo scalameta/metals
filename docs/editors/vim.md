@@ -30,7 +30,7 @@ VIM - Vi IMproved 8.2
 nvim --version | head
 NVIM v0.4.3
 ```
-## Installing yarn
+## Installing Node
 
 `coc.nvim` requires [Node.js](https://nodejs.org/en/download/) in order to work.
 It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage
@@ -163,12 +163,10 @@ augroup mygroup
   autocmd User CocJumpPlaceholder call CocActionAsync('showSignatureHelp')
 augroup end
 
-" Remap for do codeAction of selected region, ex: `<leader>aap` for current paragraph
-xmap <leader>a  <Plug>(coc-codeaction-selected)
-nmap <leader>a  <Plug>(coc-codeaction-selected)
-
 " Remap for do codeAction of current line
-nmap <leader>ac  <Plug>(coc-codeaction)
+xmap <leader>a  <Plug>(coc-codeaction-line)
+nmap <leader>a  <Plug>(coc-codeaction-line)
+
 " Fix autofix problem of current line
 nmap <leader>qf  <Plug>(coc-fix-current)
 
@@ -225,30 +223,28 @@ ways. The easiest is by running:
 :CocInstall coc-metals
 ```
 
+If you are using the latest stable release of coc.nvim, then this will
+automatically check for updates each day. However, if you're on the master
+branch of coc.nvim, this will no longer happen by default. You can read more
+about this [here](https://github.com/neoclide/coc.nvim/issues/1937).
+
 If you'd like to use the latest changes on master, you can also just build from
-source by using `:CocInstall` with the repository url.
-
-```vim
-:CocInstall https://github.com/scalameta/coc-metals
-```
-If you'd like to use the latest changes on master, but would prefer managing the
-plugin using a plugin manager to download the extension, make sure you run the
-below snippet to uninstall the old version first.
-
-```vim
-:CocUninstall coc-metals
-```
-
-Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
-for example, enter the following into where you manage your plugins:
+source by using your vim plugin manager. Here is an example using `vim-plug`:
 
 ```vim
 Plug 'scalameta/coc-metals', {'do': 'yarn install --frozen-lockfile'}
 ```
+
 Then, issue a `:PlugInstall` to install the extension, and regularly a
-`:PlugUpdate` to update it and pull in the latest changes. If you're relying on
-`coc.nvim` to install the extension, it will automatically pull in the latest
-versions when published.
+`:PlugUpdate` to update it and pull in the latest changes.
+
+**NOTE*** Make sure you don't have the extension installed both ways. So if you
+have installed it with the built-in extension management of coc.nvim first and
+are not switching, make sure to uninstall the old version first.
+
+```vim
+:CocUninstall coc-metals
+```
 
 ```scala mdoc:editor:vim
 Update the `metals.sbtScript` setting to use a custom `sbt` script instead of the
@@ -362,7 +358,7 @@ Configuration Options](#tree-view-protocol-configuration-options).
 
 Depending on whether you're using Vim or Neovim, you'll have a slightly
 different behavior with this feature. If you're using Neovim, you'll want to
-ensure that you have `codeLens.enable` set to `true` in your Coc Config since
+ensure that you have `codeLens.enable` set to `true` in your `:CocConfig` since
 you'll be able to quickly see via code lenses which members are overridden.
 Then, you'll be able to simply trigger a code lens action on the line of the
 member that is overridden. The default mapping for this is `<leader> cl`.
@@ -392,20 +388,10 @@ having multiple windows, you can use `<C-w> + w` to jump into it.
 
 ![Embedded Doctor](https://i.imgur.com/McaAFv5.png)
 
-## Other Available Command
+## Other Available Commands
 
-  - `metals.restartServer`
-  - `metals.build-import`
-  - `metals.build-connect`
-  - `metals.build-restart`
-  - `metals.sources-scan`
-  - `metals.compile-cascade`
-  - `metals.compile-cancel`
-  - `metals.doctor-run`
-  - `metals.logs-toggle`
-  - `metals.new-scala-file`
-  - `metals.go-to-super-method`
-  - `metals.super-method-hierarchy`
+You can see a full list of the Metals server commands
+[here](https://scalameta.org/metals/docs/editors/new-editor.html#metals-server-commands).
 
 ## Show document symbols
 
@@ -429,9 +415,9 @@ install [coc-json](https://github.com/neoclide/coc-json).
 
 ![on-type](https://i.imgur.com/astTOKu.gif)
 
-To properly support adding `|` in multiline strings we are using the
-`onTypeFormatting` method. To enable the functionality you need to enable
-`coc.preferences.formatOnType` setting.
+To properly support some of the multiline string options like adding `|` in
+the multiline string, we are using the `onTypeFormatting` method. To enable the
+functionality you need to enable `coc.preferences.formatOnType` setting.
 
 ![coc-preferences-formatOnType](https://i.imgur.com/RWPHt2q.png)
 

@@ -4,7 +4,7 @@ title: Build Tools Overview
 sidebar_label: Overview
 ---
 
-Metals works with the following build tools with varying degree of
+Metals works with the following build tools with varying degrees of
 functionality.
 
 | Build tool |    Installation     | Goto library dependencies | Find references |
@@ -46,7 +46,7 @@ are populated with `*-sources.jar`.
 
 ## Find references
 
-**Automatic**: it is possible to find all references to a symbol in the project
+**Automatic**: it is possible to find all references to a symbol in the project.
 
 **Semi-automatic**: it is possible to 'Find symbol references' as soon the
 SemanticDB compiler plugin is manually enabled in the build, check separate

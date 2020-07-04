@@ -9,12 +9,13 @@ Fury and Seed. If your workspace contains a `.bloop/` directory with Bloop JSON
 files then Metals will automatically connect to it.
 
 To manually tell Metals to connect with Bloop, run the "Connect to build server"
-(id: `build.connect`) command. In VS Code, open the the "Command palette"
+(id: `build.connect`) command. In VS Code, open the "Command palette"
 (`Cmd + Shift + P`) and search "connect to build server".
 
 ![Import connect to build server command](https://i.imgur.com/mIR0WTe.png)
 
-In case of any issues, it's also possible to restart a running Bloop server using the `Restart Bloop server` command (id: `build-restart`).
+In case of any issues, it's also possible to restart a running Bloop server
+using the `Restart Bloop server` command (id: `build-restart`).
 
 ## Installing Bloop CLI
 

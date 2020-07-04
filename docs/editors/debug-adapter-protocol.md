@@ -24,7 +24,7 @@ all breakpoints being set while the latter respects them. The procedure of
 starting the run/debug session is as follows:
 
 Then we can request the debug adapter uri from the metals server using the
-[`debug-adapter-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala#L95)
+[`debug-adapter-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala#L108)
 command.
 
 ### Via simple commands
