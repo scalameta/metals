@@ -95,7 +95,7 @@ const Features = props => {
     {
       title: "Accurate diagnostics",
       content:
-        "Compile on file save and see errors from the build tool inside the editor, no more switching focus to the console.",
+        "Compile on file save and see errors from the build tool directly inside the editor. No more switching focus to the console.",
       image: "https://i.imgur.com/JYLQGrc.gif",
       imageAlign: "right"
     },

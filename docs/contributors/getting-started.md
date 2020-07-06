@@ -45,6 +45,9 @@ The CI also uses Scalafix to assert that there a no unused imports. To
 automatically remove unused imports run `sbt scalafixAll`. We don't run Scalafix
 as a pre-push git hook since starting sbt takes a long time.
 
+Before sending in a pr you can use the `preparePr` sbt alias to ensure that both
+Scalafix and Scalafmt have ran.
+
 ## Related projects
 
 The improvement you are looking to contribute may belong in a separate
@@ -137,18 +140,31 @@ a full cross publish with `sbt +publishLocal`.
 
 First, follow the [`vim` installation instruction](../editors/vim.md).
 
-Next, write a `new-metals-vim` script that builds a new `metals-vim` bootstrap
-script using the locally published version.
+If you're using coc-metals:
+  - run `sbt publishLocal`
+  - open `:CocConfig` and put your new snapshot version in
+      `metals.serverVersion`.
+  - you will then be prompted to reload, which will restart the server.
+
+If you publish again, you then just need to execute the `metals.restartServer
+command`.
+
+If you are using another Vim client, write a `new-metals-vim` script that builds
+a new `metals-vim` bootstrap script using the locally published version.
 
 ```sh
 coursier bootstrap \
-  --java-opt -Dmetals.client=coc.nvim \
+  --java-opt -Dmetals.client=vim-lsc \
   org.scalameta:metals_2.12:@LOCAL_VERSION@ \ # double-check version here
   -r bintray:scalacenter/releases \
   -o /usr/local/bin/metals-vim -f
 ```
 
-Finally, start vim with the local Metals version
+**NOTE** if you're able to configure your client using initialization options,
+then the `client` property is not necessary. You can see all the options
+[here](https://scalameta.org/metals/docs/editors/new-editor.html#initializationoptions-and-experimental).
+
+Finally, start Vim with the local Metals version
 
 ```sh
 cd test-workspace # any directory you want to manually test Metals

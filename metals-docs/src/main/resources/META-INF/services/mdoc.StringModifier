@@ -9,3 +9,4 @@ docs.CommandsModifiers
 docs.BootstrapModifier
 docs.RequirementsModifier
 docs.VersionedDocsModifier
+docs.AutomaticInstallationModifier

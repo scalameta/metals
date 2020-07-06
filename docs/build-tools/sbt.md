@@ -6,10 +6,8 @@ title: sbt
 sbt is most commonly used build tool in the Scala community and works with
 Metals out-of-the-box.
 
-## Automatic installation
-
-The first time you open Metals in a new workspace it prompts you to import the
-build. Select "Import build" to start automatic installation.
+```scala mdoc:automatic-installation:sbt
+```
 
 ![Import build](https://i.imgur.com/t5RJ3q6.png)
 
@@ -26,7 +24,7 @@ sbt builds without Bloop.
 ## Manual installation
 
 > It's recommended to use automatic installation over manual installation since
-> manual installation requires several independent steps that makes it harder to
+> manual installation requires several independent steps that make it harder to
 > stay up-to-date with the latest Metals version.
 
 Instead of using automatic build import, you can manually install sbt-bloop and
@@ -57,7 +55,7 @@ to generate the Bloop JSON configuration files. You can also set the
 the above command will do it automatically for you in the current sbt session.
 
 Finally, once `bloopInstall` is finished, execute the "Connect to build server"
-command (id: `build.connect`) command to tell Metals to establish a connections
+command (id: `build.connect`) command to tell Metals to establish a connection
 with the Bloop build server.
 
 ### For versions up to 0.7.6
