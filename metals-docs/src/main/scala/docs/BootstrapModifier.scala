@@ -35,6 +35,8 @@ class BootstrapModifier extends StringModifier {
            |```
            |Make sure the generated `$binary` binary is available on your `$$PATH`.
            |
+           |You can check version of your binary by executing `$binary -version`.
+           |
            |Configure the system properties `-Dhttps.proxyHost=… -Dhttps.proxyPort=…`
            |if you are behind an HTTP proxy.
            |""".stripMargin

@@ -253,8 +253,12 @@ class MetalsLanguageServer(
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri))).dealias
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+    val clientInfo = MetalsServerConfig.metalsClientType match {
+      case Some(clientType) => s"for client ${clientType}"
+      case None => ""
+    }
     scribe.info(
-      s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace'"
+      s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
     )
 
     clientConfig.experimentalCapabilities =
