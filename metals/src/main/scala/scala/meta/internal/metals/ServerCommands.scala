@@ -210,6 +210,19 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val ResetChoicePopup = new Command(
+    "reset-choice",
+    "Reset Choice Popup",
+    """|ResetChoicePopup command allows you to reset a decision you made about different settings.
+       |E.g. If you choose to import workspace with sbt you can decide to reset and change it again.
+       |
+       |Provided string is optional but if present it must be one of defined in `PopupChoiceReset.scala`
+       |If a choice is not provided it will execute interactive mode where user is prompt to select
+       |which choice to reset.
+       |""".stripMargin,
+    "[string?], where string is a choice value."
+  )
+
   val NewScalaFile = new Command(
     "new-scala-file",
     "Create new scala file",
@@ -316,6 +329,7 @@ object ServerCommands {
       NewScalaProject,
       GotoSuperMethod,
       SuperMethodHierarchy,
+      ResetChoicePopup,
       StartAmmoniteBuildServer,
       StopAmmoniteBuildServer
     )

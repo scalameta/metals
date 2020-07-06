@@ -13,8 +13,10 @@ final case class DoctorResults(
       "title" -> title,
       "headerText" -> headerText
     )
-    messages.map(messageList => json("messages") = messageList.map(_.toJson))
-    targets.map(targetList => json("targets") = targetList.map(_.toJson))
+    messages.foreach(messageList =>
+      json("messages") = messageList.map(_.toJson)
+    )
+    targets.foreach(targetList => json("targets") = targetList.map(_.toJson))
     json
   }
 }

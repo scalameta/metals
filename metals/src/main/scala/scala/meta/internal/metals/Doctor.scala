@@ -13,6 +13,7 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
+import java.net.URLEncoder
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -71,6 +72,10 @@ final class Doctor(
       hasProblems.set(false)
       languageClient.showMessage(CheckDoctor.problemsFixed)
     }
+    executeRefreshDoctor()
+  }
+
+  def executeRefreshDoctor(): Unit = {
     executeDoctor(
       ClientCommands.ReloadDoctor,
       server => {
@@ -257,6 +262,22 @@ final class Doctor(
 
   def allTargets(): List[ScalaTarget] = buildTargets.all.toList
 
+  private def selectedBuildToolMessage(): Option[String] = {
+    tables.buildTool.selectedBuildTool().map { value =>
+      s"Your ${value} build definition has been imported "
+    }
+  }
+
+  private def selectedImportBuildMessage(): Option[String] = {
+    import scala.concurrent.duration._
+    tables.dismissedNotifications.ImportChanges.whenExpires().map { expire =>
+      val toWhen =
+        if (expire > 1000.days.toMillis) "forever"
+        else "temporairly"
+      s"You dismissed ${toWhen} to re-import your build on configuration changes popup "
+    }
+  }
+
   private def buildTargetsHtml(): String = {
     new HtmlBuilder()
       .element("h1")(_.text(doctorTitle))
@@ -266,11 +287,12 @@ final class Doctor(
 
   private def buildTargetsJson(): String = {
     val targets = allTargets()
-    val heading = tables.buildTool.selectedBuildTool() match {
-      case Some(value) =>
-        doctorHeading + s"\n\nYour ${value} build definition has been imported."
-      case None => doctorHeading
-    }
+    val buildToolHeading = selectedBuildToolMessage()
+    val importBuildHeading = selectedImportBuildMessage()
+
+    val heading =
+      List(buildToolHeading, importBuildHeading, Some(doctorHeading)).flatten
+        .mkString("\n\n")
 
     val results = if (targets.isEmpty) {
       DoctorResults(
@@ -295,19 +317,34 @@ final class Doctor(
     ujson.write(results)
   }
 
+  private def resetChoiceCommand(choice: String): String = {
+    val param = s"""["$choice"]"""
+    s"command:metals.reset-choice?${URLEncoder.encode(param)}"
+  }
+
   private def buildTargetsTable(html: HtmlBuilder): Unit = {
+    selectedBuildToolMessage().foreach { msg =>
+      html.element("p")(
+        _.text(msg)
+          .text("(")
+          .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
+          .text(")")
+      )
+    }
+
+    selectedImportBuildMessage().foreach { msg =>
+      html.element("p")(
+        _.text(msg)
+          .text("(")
+          .link(resetChoiceCommand(PopupChoiceReset.BuildImport), "Reset")
+          .text(")")
+      )
+    }
+
     html
       .element("p")(
         _.text(doctorHeading)
       )
-
-    tables.buildTool.selectedBuildTool() match {
-      case Some(value) =>
-        html.element("p")(
-          _.text(s"Your ${value} build definition has been imported.")
-        )
-      case None => ()
-    }
 
     val targets = allTargets()
     if (targets.isEmpty) {

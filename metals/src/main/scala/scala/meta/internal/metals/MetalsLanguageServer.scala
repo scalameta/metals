@@ -217,6 +217,7 @@ class MetalsLanguageServer(
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
   var ammonite: Ammonite = _
+  var popupChoiceReset: PopupChoiceReset = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -502,6 +503,13 @@ class MetalsLanguageServer(
       tables,
       clientConfig
     )
+    popupChoiceReset = new PopupChoiceReset(
+      tables,
+      languageClient,
+      doctor,
+      () => slowConnectToBuildServer(forceImport = true).map(_ => ())
+    )
+
     val worksheetPublisher =
       if (clientConfig.isDecorationProvider)
         new DecorationWorksheetPublisher()
@@ -1415,6 +1423,29 @@ class MetalsLanguageServer(
       case ServerCommands.SuperMethodHierarchy() =>
         scribe.debug(s"Executing SuperMethodHierarchy ${command}")
         supermethods.jumpToSelectedSuperMethod(params).asJavaObject
+
+      case ServerCommands.ResetChoicePopup() =>
+        val argsMaybe = Option(params.getArguments())
+        (argsMaybe
+          .map { args =>
+            args.asScala.headOption match {
+              case Some(argObject: JsonPrimitive) =>
+                val arg = argObject.asInstanceOf[JsonPrimitive]
+                val value = arg.getAsString()
+                scribe.info(
+                  s"Executing ResetChoicePopup ${command} for choice ${value}"
+                )
+                popupChoiceReset.reset(value)
+
+              case _ =>
+                scribe.info(
+                  s"Executing ResetChoicePopup ${command} in interactive mode."
+                )
+                popupChoiceReset.interactiveReset()
+            }
+          })
+          .getOrElse(Future.successful(()))
+          .asJavaObject
 
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala

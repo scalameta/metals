@@ -105,6 +105,14 @@ final class HtmlBuilder() {
     sb.append(string)
     this
   }
+  def link(url: String, name: String): this.type = {
+    sb.append("<a href='")
+      .append(url)
+      .append("'>")
+      .append(name)
+      .append("</a>")
+    this
+  }
   def text(string: String): this.type = {
     sb.append(escape(string))
     this

@@ -17,4 +17,8 @@ class ChosenBuildTool(conn: () => Connection) {
       "insert into chosen_build_tool values (?);"
     } { stmt => stmt.setString(1, buildTool) }
   }
+
+  def reset(): Unit = {
+    conn().update("delete from chosen_build_tool") { _ => () }
+  }
 }
