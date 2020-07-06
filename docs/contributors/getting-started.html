@@ -99,6 +99,8 @@ Metals website.</li>
 <p>The CI also uses Scalafix to assert that there a no unused imports. To
 automatically remove unused imports run <code>sbt scalafixAll</code>. We don't run Scalafix
 as a pre-push git hook since starting sbt takes a long time.</p>
+<p>Before sending in a pr you can use the <code>preparePr</code> sbt alias to ensure that both
+Scalafix and Scalafmt have ran.</p>
 <h2><a class="anchor" aria-hidden="true" id="related-projects"></a><a href="#related-projects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Related projects</h2>
 <p>The improvement you are looking to contribute may belong in a separate
 repository:</p>
@@ -171,15 +173,26 @@ version with any other Scala version will not work. In that case you need to run
 a full cross publish with <code>sbt +publishLocal</code>.</p>
 <h3><a class="anchor" aria-hidden="true" id="vim"></a><a href="#vim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Vim</h3>
 <p>First, follow the <a href="/metals/docs/editors/vim.html"><code>vim</code> installation instruction</a>.</p>
-<p>Next, write a <code>new-metals-vim</code> script that builds a new <code>metals-vim</code> bootstrap
-script using the locally published version.</p>
+<p>If you're using coc-metals:</p>
+<ul>
+<li>run <code>sbt publishLocal</code></li>
+<li>open <code>:CocConfig</code> and put your new snapshot version in
+<code>metals.serverVersion</code>.</li>
+<li>you will then be prompted to reload, which will restart the server.</li>
+</ul>
+<p>If you publish again, you then just need to execute the <code>metals.restartServer command</code>.</p>
+<p>If you are using another Vim client, write a <code>new-metals-vim</code> script that builds
+a new <code>metals-vim</code> bootstrap script using the locally published version.</p>
 <pre><code class="hljs css language-sh">coursier bootstrap \
-  --java-opt -Dmetals.client=coc.nvim \
+  --java-opt -Dmetals.client=vim-lsc \
   org.scalameta:metals_2.12:0.9.2-SNAPSHOT \ <span class="hljs-comment"># double-check version here</span>
   -r bintray:scalacenter/releases \
   -o /usr/<span class="hljs-built_in">local</span>/bin/metals-vim -f
 </code></pre>
-<p>Finally, start vim with the local Metals version</p>
+<p><strong>NOTE</strong> if you're able to configure your client using initialization options,
+then the <code>client</code> property is not necessary. You can see all the options
+<a href="https://scalameta.org/metals/docs/editors/new-editor.html#initializationoptions-and-experimental">here</a>.</p>
+<p>Finally, start Vim with the local Metals version</p>
 <pre><code class="hljs css language-sh"><span class="hljs-built_in">cd</span> <span class="hljs-built_in">test</span>-workspace <span class="hljs-comment"># any directory you want to manually test Metals</span>
 new-metals-vim &amp;&amp; vim build.sbt <span class="hljs-comment"># remember to have the script in your $PATH</span>
 </code></pre>

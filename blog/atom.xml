@@ -16,7 +16,6 @@
         <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.1, which focused on fixing issues with the recently released Scala 3 support, Ammonite support and a couple of new features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">287</td> </tr> <tr> <td>Merged PRs</td> <td align="center">106</td> </tr> <tr> <td>Contributors</td> <td align="center">16</td> </tr> <tr> <td>Clo...</td></tr></tbody></table>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -28,7 +27,6 @@
         <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.9.0, codename &quot;Lithium&quot;, which main focus is introducing support for Scala 3 starting with versions 0.23.0 and 0.24.0-RC1. We also added support for Scala 2.13.2 and a number of other useful...</p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -40,7 +38,6 @@
         <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.8.4, which will most likely be the last 0.8.x version.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">174</td> </tr> <tr> <td>Merged PRs</td> <td align="center">55</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Closed issues</td> <td align="center">13</td> </tr> <tr> <td>New features</td> <td align="center">3</td> </tr> </tbody> </table> <p>For full details: <a href="https://github.com/scalameta/metals/milestone/22?closed=1">https://github.com/sc...</a></p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -52,7 +49,6 @@
         <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.8.3, which main purpose is adding support for the new Scala version, 2.12.11. Additionally, we included a couple of recent fixes.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">61</td> </tr> <tr> <td>Merged PRs</td> <td align="center">18</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Cl...</td></tr></tbody></table>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -64,7 +60,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.8.1. This release includes a large number of bug fixes and some new features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">313</td> </tr> <tr> <td>Merged PRs</td> <td align="center">100</td> </tr> <tr> <td>Contributors</td> <td align="center">19</td> </tr> <tr> <td>Closed issues</td> <td align="center">52</td> </tr> <tr> <td>New features</td> <td align="center">2</td> </tr> </tbody> </table> <p>For full det...</p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -76,7 +71,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.8.0, codename Cobalt. This release includes a large number of new features and improvements, which have been under development since September 2019.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">772</td> </tr> <tr> <td>Merged PRs</td> <td align="center">21...</td></tr></tbody></table>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -88,7 +82,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.6, which will most likely be the last release before the v0.8.0 one. This release includes support for new Scala versions (2.12.10, 2.13.1) and a couple of fixes. It also adds a new formatting on ...</p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -100,7 +93,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.5 - codename &quot;Thorium&quot; 🎉 The release includes couple of bug fixes for 0.7.2, which were present in some rare scenarios. We also added a new experimental feature, which we would be happy ...</p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -112,7 +104,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.2 - codename &quot;Thorium&quot; 🎉 The release includes mostly bug fixes with some smaller new features. We are skipping over 0.7.1 due to a critical bug we discovered</p> <p>Metals is a language server ...</p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/TomekGodzik</uri>
         </author>
     </entry>
@@ -124,7 +115,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.0 - codename &quot;Thorium&quot; 🎉 The release includes several new features along with bug fixes.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, Sublime Text and Emacs....</p>]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -136,7 +126,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.6.1, codename &quot;Radium&quot; 🎉 The release mostly focused on adding support for the build tools Gradle, Maven and Mill.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, ...</p>]]></summary>
         <author>
             <name>Tomasz Godzik</name>
-            <email/>
             <uri>https://twitter.com/tomekgodzik</uri>
         </author>
     </entry>
@@ -148,7 +137,6 @@
         <summary type="html"><![CDATA[<p>This release introduces minor improvements and bug fixes with highlights including:</p> <ul> <li>auto-imports are inserted at the toplevel instead of locally</li> <li>document symbol lists inner methods and anonymous classes</li> <li>the recommended Vim client is now coc.nvim</li> <li>dia...</li></ul>]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -160,7 +148,6 @@
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code fo...</li></ul>]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -176,7 +163,6 @@ community.</p>
 ]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -192,7 +178,6 @@ with contributors from the community.</p>
 ]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -216,7 +201,6 @@ filters. Finally, we evaluate these new features on a real-world project: the
 ]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -232,7 +216,6 @@ contributors from the community.</p>
 ]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -253,7 +236,6 @@ the result on a real-world project.</p>
 ]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
@@ -276,7 +258,6 @@ is a language server for Scala.</p>
 ]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
-            <email/>
             <uri>https://twitter.com/olafurpg</uri>
         </author>
     </entry>
