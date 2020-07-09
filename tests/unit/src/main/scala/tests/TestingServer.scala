@@ -393,9 +393,9 @@ final class TestingServer(
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     val initOptions = initializationOptions.getOrElse(
       InitializationOptions.Default.copy(
-        debuggingProvider = true,
-        treeViewProvider = true,
-        slowTaskProvider = true
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
       )
     )
     params.setCapabilities(

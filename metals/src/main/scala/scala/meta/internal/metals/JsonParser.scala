@@ -34,6 +34,20 @@ object JsonParser {
     }
   }
 
+  implicit class XtensionSerializedAsOption(json: JsonObject) {
+    def getStringOption(key: String): Option[String] = {
+      Try(json.get(key).getAsString()).toOption
+    }
+
+    def getBooleanOption(key: String): Option[Boolean] = {
+      Try(json.get(key).getAsBoolean()).toOption
+    }
+
+    def getObjectOption(key: String): Option[JsonObject] = {
+      Try(json.get(key).toJsonObject).toOption
+    }
+  }
+
   // NOTE(alekseiAlefirov): one cannot do type parameterized extractor, unfortunately (https://github.com/scala/bug/issues/884)
   // so instantiating this class is a workaround
   class Of[A: ClassTag] {

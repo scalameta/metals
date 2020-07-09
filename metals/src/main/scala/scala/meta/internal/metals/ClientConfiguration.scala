@@ -15,6 +15,10 @@ class ClientConfiguration(
     var initializationOptions: InitializationOptions
 ) {
 
+  def extract(a: Option[Boolean], b: Option[Boolean], c: Boolean): Boolean = {
+    a.orElse(b).getOrElse(c)
+  }
+
   def statusBarIsOn(): Boolean =
     initializationOptions.statusBarIsOn ||
       experimentalCapabilities.statusBarIsOn ||
@@ -36,28 +40,39 @@ class ClientConfiguration(
       initialConfig.statusBar.isOff
 
   def slowTaskIsOn(): Boolean =
-    initializationOptions.slowTaskProvider ||
-      experimentalCapabilities.slowTaskProvider ||
+    extract(
+      initializationOptions.slowTaskProvider,
+      experimentalCapabilities.slowTaskProvider,
       initialConfig.slowTask.isOn
+    )
 
   def isExecuteClientCommandProvider(): Boolean =
-    initializationOptions.executeClientCommandProvider ||
-      experimentalCapabilities.executeClientCommandProvider ||
+    extract(
+      initializationOptions.executeClientCommandProvider,
+      experimentalCapabilities.executeClientCommandProvider,
       initialConfig.executeClientCommand.isOn
+    )
 
   def isInputBoxEnabled(): Boolean =
-    initializationOptions.inputBoxProvider ||
-      experimentalCapabilities.inputBoxProvider ||
+    extract(
+      initializationOptions.inputBoxProvider,
+      experimentalCapabilities.inputBoxProvider,
       initialConfig.isInputBoxEnabled
+    )
 
   def isQuickPickProvider(): Boolean =
-    initializationOptions.quickPickProvider ||
-      experimentalCapabilities.quickPickProvider
+    extract(
+      initializationOptions.quickPickProvider,
+      experimentalCapabilities.quickPickProvider,
+      false
+    )
 
   def isOpenFilesOnRenameProvider(): Boolean =
-    initializationOptions.openFilesOnRenameProvider ||
-      experimentalCapabilities.openFilesOnRenameProvider ||
+    extract(
+      initializationOptions.openFilesOnRenameProvider,
+      experimentalCapabilities.openFilesOnRenameProvider,
       initialConfig.openFilesOnRenames
+    )
 
   def doctorFormatIsJson(): Boolean =
     initializationOptions.doctorFormatIsJson ||
@@ -65,35 +80,48 @@ class ClientConfiguration(
       initialConfig.doctorFormat.isJson
 
   def isHttpEnabled(): Boolean =
-    initializationOptions.isHttpEnabled ||
-      initialConfig.isHttpEnabled
+    initializationOptions.isHttpEnabled.getOrElse(initialConfig.isHttpEnabled)
 
   def isExitOnShutdown(): Boolean =
-    initializationOptions.isExitOnShutdown ||
+    initializationOptions.isExitOnShutdown.getOrElse(
       initialConfig.isExitOnShutdown
+    )
 
   def isCompletionItemResolve(): Boolean =
-    initializationOptions.compilerOptions.isCompletionItemResolve &&
+    initializationOptions.compilerOptions.isCompletionItemResolve.getOrElse(
       initialConfig.compilers.isCompletionItemResolve
+    )
 
   def isDebuggingProvider(): Boolean =
-    initializationOptions.debuggingProvider ||
-      experimentalCapabilities.debuggingProvider
+    extract(
+      initializationOptions.debuggingProvider,
+      experimentalCapabilities.debuggingProvider,
+      false
+    )
 
   def isDecorationProvider(): Boolean =
-    initializationOptions.decorationProvider ||
-      experimentalCapabilities.decorationProvider
+    extract(
+      initializationOptions.decorationProvider,
+      experimentalCapabilities.decorationProvider,
+      false
+    )
 
   def isTreeViewProvider(): Boolean =
-    initializationOptions.treeViewProvider ||
-      experimentalCapabilities.treeViewProvider
+    extract(
+      initializationOptions.treeViewProvider,
+      experimentalCapabilities.treeViewProvider,
+      false
+    )
 
   def isDidFocusProvider(): Boolean =
-    initializationOptions.didFocusProvider ||
-      experimentalCapabilities.didFocusProvider
+    extract(
+      initializationOptions.didFocusProvider,
+      experimentalCapabilities.didFocusProvider,
+      false
+    )
 
   def isOpenNewWindowProvider(): Boolean =
-    initializationOptions.openNewWindowProvider
+    initializationOptions.openNewWindowProvider.getOrElse(false)
 }
 
 object ClientConfiguration {
