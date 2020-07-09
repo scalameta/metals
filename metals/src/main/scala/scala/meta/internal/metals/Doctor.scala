@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -13,7 +14,6 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
-import java.net.URLEncoder
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -264,17 +264,18 @@ final class Doctor(
 
   private def selectedBuildToolMessage(): Option[String] = {
     tables.buildTool.selectedBuildTool().map { value =>
-      s"Your ${value} build definition has been imported "
+      s"Build definition is coming from ${value}"
     }
   }
 
   private def selectedImportBuildMessage(): Option[String] = {
     import scala.concurrent.duration._
-    tables.dismissedNotifications.ImportChanges.whenExpires().map { expire =>
-      val toWhen =
-        if (expire > 1000.days.toMillis) "forever"
-        else "temporairly"
-      s"You dismissed ${toWhen} to re-import your build on configuration changes popup "
+    tables.dismissedNotifications.ImportChanges.whenExpires().map {
+      expiration =>
+        val whenString =
+          if (expiration > 1000.days.toMillis) "forever"
+          else "temporarily"
+        s"Build import popup on configuration changes has been dismissed $whenString"
     }
   }
 
@@ -326,18 +327,22 @@ final class Doctor(
     selectedBuildToolMessage().foreach { msg =>
       html.element("p")(
         _.text(msg)
-          .text("(")
-          .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
-          .text(")")
+          .optionally(!clientConfig.isHttpEnabled)(
+            _.text("(")
+              .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
+              .text(")")
+          )
       )
     }
 
     selectedImportBuildMessage().foreach { msg =>
       html.element("p")(
         _.text(msg)
-          .text("(")
-          .link(resetChoiceCommand(PopupChoiceReset.BuildImport), "Reset")
-          .text(")")
+          .optionally(!clientConfig.isHttpEnabled)(
+            _.text("(")
+              .link(resetChoiceCommand(PopupChoiceReset.BuildImport), "Reset")
+              .text(")")
+          )
       )
     }
 
