@@ -80,41 +80,24 @@ object InitializationOptions {
       json: JsonObject
   ): InitializationOptions = {
     val jsonObj = json.toJsonObject
-    val compilerOptions = extractCompilerOptions(jsonObj)
-    val debuggingProvider = jsonObj.getBooleanOption("debuggingProvider")
-    val decorationProvider =
-      jsonObj.getBooleanOption("decorationProvider")
-    val didFocusProvider = jsonObj.getBooleanOption("didFocusProvider")
-    val doctorProvider = jsonObj.getStringOption("doctorProvider")
-    val executeClientCommandProvider =
-      jsonObj.getBooleanOption("executeClientCommandProvider")
-    val inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider")
-    val isExitOnShutdown = jsonObj.getBooleanOption("isExitOnShutdown")
-    val isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled")
-    val openFilesOnRenameProvider =
-      jsonObj.getBooleanOption("openFilesOnRenameProvider")
-    val quickPickProvider = jsonObj.getBooleanOption("quickPickProvider")
-    val slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider")
-    val statusBarProvider = jsonObj.getStringOption("statusBarProvider")
-    val treeViewProvider = jsonObj.getBooleanOption("treeViewProvider")
-    val openNewWindowProvider =
-      jsonObj.getBooleanOption("openNewWindowProvider")
     InitializationOptions(
-      compilerOptions,
-      debuggingProvider,
-      decorationProvider,
-      didFocusProvider,
-      doctorProvider,
-      executeClientCommandProvider,
-      inputBoxProvider,
-      isExitOnShutdown,
-      isHttpEnabled,
-      openFilesOnRenameProvider,
-      quickPickProvider,
-      slowTaskProvider,
-      statusBarProvider,
-      treeViewProvider,
-      openNewWindowProvider
+      compilerOptions = extractCompilerOptions(jsonObj),
+      debuggingProvider = jsonObj.getBooleanOption("debuggingProvider"),
+      decorationProvider = jsonObj.getBooleanOption("decorationProvider"),
+      didFocusProvider = jsonObj.getBooleanOption("didFocusProvider"),
+      doctorProvider = jsonObj.getStringOption("doctorProvider"),
+      executeClientCommandProvider =
+        jsonObj.getBooleanOption("executeClientCommandProvider"),
+      inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
+      isExitOnShutdown = jsonObj.getBooleanOption("isExitOnShutdown"),
+      isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled"),
+      openFilesOnRenameProvider =
+        jsonObj.getBooleanOption("openFilesOnRenameProvider"),
+      quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
+      slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
+      statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
+      treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
+      openNewWindowProvider = jsonObj.getBooleanOption("openNewWindowProvider")
     )
   }
 

@@ -180,7 +180,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         if (isSelectProject(params)) {
           onSelectProject(findAction)
         } else if (isOpenWindow(params)) {
-          findAction("yes")
+          findAction("Yes")
         } else {
           onDirectorySelect(params, findAction)
         }

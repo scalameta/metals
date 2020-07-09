@@ -68,32 +68,20 @@ object ClientExperimentalCapabilities {
       json: JsonObject
   ): ClientExperimentalCapabilities = {
     val jsonObj = json.toJsonObject
-    val debuggingProvider = jsonObj.getBooleanOption("debuggingProvider")
-    val decorationProvider =
-      jsonObj.getBooleanOption("decorationProvider")
-    val didFocusProvider = jsonObj.getBooleanOption("didFocusProvider")
-    val doctorProvider = jsonObj.getStringOption("doctorProvider")
-    val executeClientCommandProvider =
-      jsonObj.getBooleanOption("executeClientCommandProvider")
-    val inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider")
-    val openFilesOnRenameProvider =
-      jsonObj.getBooleanOption("openFilesOnRenameProvider")
-    val quickPickProvider = jsonObj.getBooleanOption("quickPickProvider")
-    val slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider")
-    val statusBarProvider = jsonObj.getStringOption("statusBarProvider")
-    val treeViewProvider = jsonObj.getBooleanOption("treeViewProvider")
     ClientExperimentalCapabilities(
-      debuggingProvider,
-      decorationProvider,
-      didFocusProvider,
-      doctorProvider,
-      executeClientCommandProvider,
-      inputBoxProvider,
-      openFilesOnRenameProvider,
-      quickPickProvider,
-      slowTaskProvider,
-      statusBarProvider,
-      treeViewProvider
+      debuggingProvider = jsonObj.getBooleanOption("debuggingProvider"),
+      decorationProvider = jsonObj.getBooleanOption("decorationProvider"),
+      didFocusProvider = jsonObj.getBooleanOption("didFocusProvider"),
+      doctorProvider = jsonObj.getStringOption("doctorProvider"),
+      executeClientCommandProvider =
+        jsonObj.getBooleanOption("executeClientCommandProvider"),
+      inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
+      openFilesOnRenameProvider =
+        jsonObj.getBooleanOption("openFilesOnRenameProvider"),
+      quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
+      slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
+      statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
+      treeViewProvider = jsonObj.getBooleanOption("treeViewProvider")
     )
   }
 }

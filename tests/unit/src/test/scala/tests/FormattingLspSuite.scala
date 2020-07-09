@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
@@ -10,6 +11,11 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 
 class FormattingLspSuite extends BaseLspSuite("formatting") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(slowTaskProvider = Some(false))
+    )
 
   test("basic") {
     for {

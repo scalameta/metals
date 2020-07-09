@@ -416,11 +416,12 @@ final class TestingServer(
         .toMap
         .asJava
 
+    params.setInitializationOptions(existingInitOptions.toJson)
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        existingInitOptions.toJson
+        Map.empty.asJava.toJson
       )
     )
     params.setWorkspaceFolders(
