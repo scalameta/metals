@@ -113,6 +113,10 @@ final class HtmlBuilder() {
       .append("</a>")
     this
   }
+  def optionally(condition: Boolean)(fn: HtmlBuilder => Unit): this.type = {
+    if (condition) fn(this)
+    this
+  }
   def text(string: String): this.type = {
     sb.append(escape(string))
     this

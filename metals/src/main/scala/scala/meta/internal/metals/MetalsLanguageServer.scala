@@ -1430,26 +1430,20 @@ class MetalsLanguageServer(
 
       case ServerCommands.ResetChoicePopup() =>
         val argsMaybe = Option(params.getArguments())
-        (argsMaybe
-          .map { args =>
-            args.asScala.headOption match {
-              case Some(argObject: JsonPrimitive) =>
-                val arg = argObject.asInstanceOf[JsonPrimitive]
-                val value = arg.getAsString()
-                scribe.info(
-                  s"Executing ResetChoicePopup ${command} for choice ${value}"
-                )
-                popupChoiceReset.reset(value)
-
-              case _ =>
-                scribe.info(
-                  s"Executing ResetChoicePopup ${command} in interactive mode."
-                )
-                popupChoiceReset.interactiveReset()
-            }
-          })
-          .getOrElse(Future.successful(()))
-          .asJavaObject
+        (argsMaybe.flatMap(_.asScala.headOption) match {
+          case Some(argObject: JsonPrimitive) =>
+            val arg = argObject.asInstanceOf[JsonPrimitive]
+            val value = arg.getAsString().replace("+", " ")
+            scribe.debug(
+              s"Executing ResetChoicePopup ${command} for choice ${value}"
+            )
+            popupChoiceReset.reset(value)
+          case _ =>
+            scribe.debug(
+              s"Executing ResetChoicePopup ${command} in interactive mode."
+            )
+            popupChoiceReset.interactiveReset()
+        }).asJavaObject
 
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala

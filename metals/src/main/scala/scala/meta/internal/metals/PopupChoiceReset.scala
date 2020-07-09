@@ -1,11 +1,13 @@
 package scala.meta.internal.metals
 
-import scala.concurrent.Future
-import org.eclipse.lsp4j.ShowMessageRequestParams
-import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.MessageActionItem
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.MetalsEnrichments._
+
+import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class PopupChoiceReset(
     tables: Tables,
@@ -61,6 +63,6 @@ class PopupChoiceReset(
 }
 
 object PopupChoiceReset {
-  final val BuildTool = "buildtool"
-  final val BuildImport = "buildimport"
+  final val BuildTool = "build tool selection"
+  final val BuildImport = "build import"
 }
