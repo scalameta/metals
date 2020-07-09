@@ -64,18 +64,7 @@ class NewProjectProvider(
               )
             if result.statusCode == 200
           } yield {
-            NewProjectProvider.templatePattern
-              .findAllIn(result.text)
-              .matchData
-              .toList
-              .collect {
-                case matching if matching.groupCount == 2 =>
-                  MetalsQuickPickItem(
-                    id = matching.group(1),
-                    label = s"${icons.github}" + matching.group(1),
-                    description = matching.group(2)
-                  )
-              }
+            NewProjectProvider.templatesFromText(result.text(), icons.github)
           }
           allTemplates = all.flatten.toSeq
         }
@@ -387,6 +376,29 @@ object NewProjectProvider {
 
   }
 
-  val templatePattern: Regex = """\[(.+)\]\s*\(.+\)\s*\((.+)\)""".r
+  private val templatePattern: Regex = {
+    val markdownLink = """- \[([^\[]+)\]\s*\([^\(]+\)"""
+    val whitespacesWithSingleNewline = """[ \t]*\r?\n?[ \t]*"""
+    val optionalDescription = """\(?([^\n]*)\)?"""
+    s"${markdownLink}${whitespacesWithSingleNewline}${optionalDescription}".r
+  }
 
+  def templatesFromText(
+      text: String,
+      icon: String
+  ): List[MetalsQuickPickItem] = {
+    NewProjectProvider.templatePattern
+      .findAllIn(text)
+      .matchData
+      .toList
+      .collect {
+        case matching if matching.groupCount == 2 =>
+          MetalsQuickPickItem(
+            id = matching.group(1),
+            label = icon + matching.group(1),
+            description =
+              matching.group(2).trim.stripPrefix("(").stripSuffix(")")
+          )
+      }
+  }
 }
