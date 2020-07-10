@@ -203,6 +203,19 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
+    "arg14",
+    s"""|object Main {
+        |  val isLargeBanana = true
+        |  processFile(isResourceFil@@)
+        |  def processFile(isResourceFile: Boolean): Unit = ()
+        |}
+        |""".stripMargin,
+    """|isResourceFile = : Boolean
+       |isResourceFile = isLargeBanana : Boolean
+       |""".stripMargin
+  )
+
+  check(
     "priority",
     s"""|object Main {
         |  def foo(argument : Int) : Int = argument
