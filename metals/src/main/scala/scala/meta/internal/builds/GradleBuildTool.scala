@@ -12,23 +12,10 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     extends BloopPluginBuildTool {
 
   private val initScriptName = "init-script.gradle"
-
-  private def additionalRepos: String = {
-    val isSnapshotVersion = BuildInfo.gradleBloopVersion.contains("+")
-    if (isSnapshotVersion)
-      """|maven{
-         |  url 'https://dl.bintray.com/scalacenter/releases'
-         |}""".stripMargin
-    else {
-      ""
-    }
-  }
-
   private def initScript(versionToUse: String) =
     s"""
        |initscript {
        |  repositories{
-       |    $additionalRepos
        |    mavenCentral()
        |  }
        |  dependencies {
