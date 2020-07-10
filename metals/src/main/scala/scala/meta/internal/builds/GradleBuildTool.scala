@@ -19,7 +19,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
        |    mavenCentral()
        |  }
        |  dependencies {
-       |    classpath 'ch.epfl.scala:gradle-bloop_2.11:$versionToUse'
+       |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$versionToUse'
        |  }
        |}
        |allprojects {
