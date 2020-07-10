@@ -31,12 +31,8 @@ final case class InitializationOptions(
     openNewWindowProvider: Option[Boolean]
 ) {
   def doctorFormatIsJson: Boolean = doctorProvider.exists(_ == "json")
-  def statusBarIsOn: Boolean = statusBarProvider.exists(_ == "on")
-  def statusBarIsOff: Boolean = statusBarProvider.exists(_ == "off")
-  def statusBarIsShowMessage: Boolean =
-    statusBarProvider.exists(_ == "show-message")
-  def statusBarIsLogMessage: Boolean =
-    statusBarProvider.exists(_ == "log-message")
+  def statusBarState: Option[StatusBarState.StatusBarState] =
+    statusBarProvider.flatMap(StatusBarState.fromString)
 }
 
 object InitializationOptions {

@@ -49,7 +49,7 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (clientConfig.statusBarIsOff)
+    if (clientConfig.statusBarState == StatusBarState.Off)
       trackBlockingTask(message)(thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
@@ -67,7 +67,7 @@ final class StatusBar(
   }
 
   def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
-    if (clientConfig.statusBarIsOff)
+    if (clientConfig.statusBarState == StatusBarState.Off)
       trackFuture(message, thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))

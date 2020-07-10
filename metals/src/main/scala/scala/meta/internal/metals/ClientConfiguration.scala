@@ -15,29 +15,16 @@ class ClientConfiguration(
     var initializationOptions: InitializationOptions
 ) {
 
-  def extract(a: Option[Boolean], b: Option[Boolean], c: Boolean): Boolean = {
-    a.orElse(b).getOrElse(c)
+  def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
+    primary.orElse(secondary).getOrElse(default)
   }
 
-  def statusBarIsOn(): Boolean =
-    initializationOptions.statusBarIsOn ||
-      experimentalCapabilities.statusBarIsOn ||
-      initialConfig.statusBar.isOn
-
-  def statusBarIsShow(): Boolean =
-    initializationOptions.statusBarIsShowMessage ||
-      experimentalCapabilities.statusBarIsShowMessage ||
-      initialConfig.statusBar.isShowMessage
-
-  def statusBarIsLog(): Boolean =
-    initializationOptions.statusBarIsLogMessage ||
-      experimentalCapabilities.statusBarIsLogMessage ||
-      initialConfig.statusBar.isLogMessage
-
-  def statusBarIsOff(): Boolean =
-    initializationOptions.statusBarIsOff ||
-      experimentalCapabilities.statusBarIsOff ||
-      initialConfig.statusBar.isOff
+  def statusBarState(): StatusBarState.StatusBarState =
+    extract(
+      initializationOptions.statusBarState,
+      experimentalCapabilities.statusBarState,
+      StatusBarState.Off
+    )
 
   def slowTaskIsOn(): Boolean =
     extract(
