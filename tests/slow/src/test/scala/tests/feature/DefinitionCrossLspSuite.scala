@@ -12,8 +12,8 @@ class DefinitionCrossLspSuite
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
-      InitializationOptions.Default.copy(statusBarProvider =
-        Some("show-message")
+      InitializationOptions.Default.copy(
+        statusBarProvider = Some("show-message")
       )
     )
 

@@ -37,7 +37,7 @@ case class PresentationCompilerConfigImpl(
   /**
    * Used to update the compiler config after we recieve the InitializationOptions.
    * If the user sets a value in the InitializationOptions, then the value will be
-   * captures and set here. If not, we just resort back tot he default that already
+   * captures and set here. If not, we just resort back to the default that already
    * exists.
    */
   def update(
@@ -45,22 +45,21 @@ case class PresentationCompilerConfigImpl(
   ): PresentationCompilerConfigImpl =
     copy(
       isCompletionItemDetailEnabled = options.isCompletionItemDetailEnabled
-        .fold(this.isCompletionItemDetailEnabled)(identity),
+        .getOrElse(this.isCompletionItemDetailEnabled),
       isCompletionItemDocumentationEnabled =
-        options.isCompletionItemDocumentationEnabled.fold(
+        options.isCompletionItemDocumentationEnabled.getOrElse(
           this.isCompletionItemDocumentationEnabled
-        )(identity),
-      isHoverDocumentationEnabled = options.isHoverDocumentationEnabled.fold(
-        this.isHoverDocumentationEnabled
-      )(identity),
+        ),
+      isHoverDocumentationEnabled = options.isHoverDocumentationEnabled
+        .getOrElse(this.isHoverDocumentationEnabled),
       snippetAutoIndent =
-        options.snippetAutoIndent.fold(this.snippetAutoIndent)(identity),
+        options.snippetAutoIndent.getOrElse(this.snippetAutoIndent),
       isSignatureHelpDocumentationEnabled =
-        options.isSignatureHelpDocumentationEnabled.fold(
+        options.isSignatureHelpDocumentationEnabled.getOrElse(
           this.isSignatureHelpDocumentationEnabled
-        )(identity),
-      isCompletionItemResolve = options.isCompletionItemResolve.fold(
+        ),
+      isCompletionItemResolve = options.isCompletionItemResolve.getOrElse(
         this.isCompletionItemResolve
-      )(identity)
+      )
     )
 }

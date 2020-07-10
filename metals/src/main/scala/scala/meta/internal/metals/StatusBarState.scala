@@ -10,7 +10,7 @@ object StatusBarState {
   def fromString(value: String): Option[StatusBarState] =
     value match {
       case "on" => Some(On)
-      case "Off" => Some(Off)
+      case "off" => Some(Off)
       case "show-message" => Some(ShowMessage)
       case "log-message" => Some(LogMessage)
       case _ => None
