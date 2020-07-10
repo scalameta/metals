@@ -35,8 +35,8 @@ class ClientConfiguration(
       initialConfig.statusBar.isLogMessage
 
   def statusBarIsOff(): Boolean =
-    initializationOptions.statusBarIsOff &&
-      experimentalCapabilities.statusBarIsOff &&
+    initializationOptions.statusBarIsOff ||
+      experimentalCapabilities.statusBarIsOff ||
       initialConfig.statusBar.isOff
 
   def slowTaskIsOn(): Boolean =
