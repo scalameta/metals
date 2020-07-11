@@ -3,11 +3,19 @@ package tests.feature
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.InitializationOptions
 
 import tests.BaseCompletionLspSuite
 
 class DefinitionCrossLspSuite
     extends BaseCompletionLspSuite("definition-cross") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        statusBarProvider = Some("show-message")
+      )
+    )
 
   if (super.isValidScalaVersionForEnv(BuildInfo.scala211)) {
     test("2.11") {
@@ -77,7 +85,7 @@ class DefinitionCrossLspSuite
       _ <- server.didOpen("scala/Predef.scala")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        ""
+        "Preparing presentation compiler"
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()

@@ -707,7 +707,7 @@ to be set via `InitializationOptions`, which is preferable.
       "openFilesOnRenameProvider": boolean,
       "quickPickProvider": boolean,
       "slowTaskProvider": boolean,
-      "statusBarProvider": boolean,
+      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
       "treeViewProvider": boolean
       "openNewWindowProvider": boolean
     }

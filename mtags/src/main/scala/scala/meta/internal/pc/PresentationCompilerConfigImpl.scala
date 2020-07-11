@@ -34,20 +34,32 @@ case class PresentationCompilerConfigImpl(
   override def completionCommand: Optional[String] =
     Optional.ofNullable(_completionCommand.orNull)
 
+  /**
+   * Used to update the compiler config after we recieve the InitializationOptions.
+   * If the user sets a value in the InitializationOptions, then the value will be
+   * captures and set here. If not, we just resort back to the default that already
+   * exists.
+   */
   def update(
       options: CompilerInitializationOptions
   ): PresentationCompilerConfigImpl =
     copy(
-      isCompletionItemDetailEnabled =
-        isCompletionItemDetailEnabled || options.isCompletionItemDetailEnabled,
+      isCompletionItemDetailEnabled = options.isCompletionItemDetailEnabled
+        .getOrElse(this.isCompletionItemDetailEnabled),
       isCompletionItemDocumentationEnabled =
-        isCompletionItemDocumentationEnabled || options.isCompletionItemDocumentationEnabled,
-      isHoverDocumentationEnabled =
-        isHoverDocumentationEnabled || options.isHoverDocumentationEnabled,
-      snippetAutoIndent = snippetAutoIndent || options.snippetAutoIndent,
+        options.isCompletionItemDocumentationEnabled.getOrElse(
+          this.isCompletionItemDocumentationEnabled
+        ),
+      isHoverDocumentationEnabled = options.isHoverDocumentationEnabled
+        .getOrElse(this.isHoverDocumentationEnabled),
+      snippetAutoIndent =
+        options.snippetAutoIndent.getOrElse(this.snippetAutoIndent),
       isSignatureHelpDocumentationEnabled =
-        isSignatureHelpDocumentationEnabled || options.isSignatureHelpDocumentationEnabled,
-      isCompletionItemResolve =
-        isCompletionItemResolve || options.isCompletionItemResolve
+        options.isSignatureHelpDocumentationEnabled.getOrElse(
+          this.isSignatureHelpDocumentationEnabled
+        ),
+      isCompletionItemResolve = options.isCompletionItemResolve.getOrElse(
+        this.isCompletionItemResolve
+      )
     )
 }

@@ -17,7 +17,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   override def initializationOptions: Option[InitializationOptions] =
-    Some(InitializationOptions.Default.copy(inputBoxProvider = true))
+    Some(InitializationOptions.Default.copy(inputBoxProvider = Some(true)))
 
   check("new-worksheet")(
     Some("a/src/main/scala/"),

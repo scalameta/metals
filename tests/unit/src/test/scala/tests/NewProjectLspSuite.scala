@@ -25,7 +25,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
   override def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default
-        .copy(inputBoxProvider = true, openNewWindowProvider = true)
+        .copy(inputBoxProvider = Some(true), openNewWindowProvider = Some(true))
     )
 
   def scalatestTemplate(name: String = "scalatest-example"): String =
@@ -238,7 +238,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         if (isSelectProject(params)) {
           onSelectProject(findAction)
         } else if (isOpenWindow(params)) {
-          findAction("yes")
+          findAction("Yes")
         } else {
           onDirectorySelect(params, findAction)
         }

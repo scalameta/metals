@@ -393,16 +393,35 @@ final class TestingServer(
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     val initOptions = initializationOptions.getOrElse(
       InitializationOptions.Default.copy(
-        debuggingProvider = true,
-        treeViewProvider = true,
-        slowTaskProvider = true
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
       )
     )
+
+    // Yes, this is a bit gross :/
+    // However, I want to only get the existing fields that are being set
+    // much like it'd be when a client actually sends this. This will just
+    // collect the fields that are set, get the values, and then make them into
+    // a map that will become a JsonObject to pass in as the InitializationOptions
+    val existingInitOptions =
+      initOptions.getClass.getDeclaredFields
+        .map { field =>
+          field.setAccessible(true)
+          field.getName -> field.get(initOptions)
+        }
+        .collect {
+          case (key, Some(value)) => key -> value
+        }
+        .toMap
+        .asJava
+
+    params.setInitializationOptions(existingInitOptions.toJson)
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        initOptions.toJson
+        Map.empty.asJava.toJson
       )
     )
     params.setWorkspaceFolders(
