@@ -28,14 +28,15 @@ object Icons {
         b + message.stripPrefix(a)
     }
   }.getOrElse(message)
-  def default: Icons = {
-    System.getProperty("metals.icons") match {
+  def default: Icons = none
+  def fromString(value: String): Icons =
+    value match {
       case "octicons" | "vscode" => vscode
       case "unicode" => unicode
       case "atom" => atom
       case _ => none
     }
-  }
+
   case object unicode extends Icons {
     override def rocket: String = "🚀 "
     override def sync: String = "🔄 "

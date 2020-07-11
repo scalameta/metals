@@ -6,12 +6,32 @@ import com.google.gson.JsonObject
 import org.eclipse.{lsp4j => l}
 
 /**
- * Whever possible, this is the preferred way to configure Metals from the client.
+ * This is the preferred way to configure Metals from the client.
  * Eventually this will be accumulated in the ClientConfiguration along with
  * ClientExperimentalCapabilities and the InitialConfig. If the values aren't directly
  * passed in here, we default everything to None to signify that the client didn't
  * directly set the value. The defaults will then be handled by the ClientConfiguration
  * so we don't need to worry about them here.
+ *
+ * @param compilerOptions configuration for the `PresentationCompilerConfig`.
+ * @param debuggingProvider if the client supports debugging.
+ * @param decorationProvider if the client implements the Metals Decoration Protocol.
+ * @param didFocusProvider if the client implements the `metals/didFocusTextDocument` command.
+ * @param doctorProvider format that the client would like the Doctor to be returned in.
+ * @param executeClientCommandProvider if the client implements `metals/executeClientCommand`.
+ * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
+ * @param icons which icons will be used for messages.
+ * @param inputBoxProvider if the client implements `metals/inputBox`.
+ * @param isExitOnShutdown whether the client needs Metals to shut down manually on exit.
+ * @param isHttpEnabled whether the client needs Metals to start an HTTP client interface.
+ * @param openFilesOnRenameProvider whether or not the client supports opening files on rename.
+ * @param quickPickProvider if the client implements `metals/quickPick`.
+ * @param renameFileThreshold amount of files that should be opened during rename if client
+ *                            is a `openFilesOnRenameProvider`.
+ * @param slowTaskProvider if the client implements `metals/slowTask`.
+ * @param statusBarProvider if the client implements `metals/status`.
+ * @param treeViewProvider if the client implements the Metals Tree View Protocol.
+ * @param openNewWindowProvider if the client can open a new window after new project creation.
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -20,11 +40,14 @@ final case class InitializationOptions(
     didFocusProvider: Option[Boolean],
     doctorProvider: Option[String],
     executeClientCommandProvider: Option[Boolean],
+    globSyntax: Option[String],
+    icons: Option[String],
     inputBoxProvider: Option[Boolean],
     isExitOnShutdown: Option[Boolean],
     isHttpEnabled: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
+    renameFileThreshold: Option[Int],
     slowTaskProvider: Option[Boolean],
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean],
@@ -40,6 +63,9 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
+    None,
+    None,
     None,
     None,
     None,
@@ -84,12 +110,15 @@ object InitializationOptions {
       doctorProvider = jsonObj.getStringOption("doctorProvider"),
       executeClientCommandProvider =
         jsonObj.getBooleanOption("executeClientCommandProvider"),
+      globSyntax = jsonObj.getStringOption("globSyntax"),
+      icons = jsonObj.getStringOption("icons"),
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
       isExitOnShutdown = jsonObj.getBooleanOption("isExitOnShutdown"),
       isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
+      renameFileThreshold = jsonObj.getIntOption("renameFileThreshold"),
       slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
@@ -102,22 +131,31 @@ object InitializationOptions {
   ): CompilerInitializationOptions = {
     val compilerObj = json.getObjectOption("compilerOptions")
     CompilerInitializationOptions(
+      completionCommand = compilerObj.flatMap(
+        _.getStringOption("completionCommand")
+      ),
       isCompletionItemDetailEnabled = compilerObj.flatMap(
         _.getBooleanOption("isCompletionItemDetailEnabled")
       ),
       isCompletionItemDocumentationEnabled = compilerObj.flatMap(
         _.getBooleanOption("isCompletionItemDocumentationEnabled")
       ),
+      isCompletionItemResolve =
+        compilerObj.flatMap(_.getBooleanOption("isCompletionItemResolve")),
       isHoverDocumentationEnabled = compilerObj.flatMap(
         _.getBooleanOption("isHoverDocumentationEnabled")
       ),
-      snippetAutoIndent =
-        compilerObj.flatMap(_.getBooleanOption("snippetAutoIndent")),
       isSignatureHelpDocumentationEnabled = compilerObj.flatMap(
         _.getBooleanOption("isSignatureHelpDocumentationEnabled")
       ),
-      isCompletionItemResolve =
-        compilerObj.flatMap(_.getBooleanOption("isCompletionItemResolve"))
+      overrideDefFormat = compilerObj.flatMap(
+        _.getStringOption("overrideDefFormat")
+      ),
+      parameterHintsCommand = compilerObj.flatMap(
+        _.getStringOption("parameterHintsCommand")
+      ),
+      snippetAutoIndent =
+        compilerObj.flatMap(_.getBooleanOption("snippetAutoIndent"))
     )
   }
 

@@ -60,6 +60,19 @@ case class PresentationCompilerConfigImpl(
         ),
       isCompletionItemResolve = options.isCompletionItemResolve.getOrElse(
         this.isCompletionItemResolve
-      )
+      ),
+      _parameterHintsCommand = options.parameterHintsCommand.orElse(
+        this._parameterHintsCommand
+      ),
+      _completionCommand = options.parameterHintsCommand.orElse(
+        this._completionCommand
+      ),
+      overrideDefFormat = options.overrideDefFormat
+        .flatMap {
+          case "unicode" => Some(OverrideDefFormat.Unicode)
+          case "ascii" => Some(OverrideDefFormat.Ascii)
+          case _ => None
+        }
+        .getOrElse(this.overrideDefFormat)
     )
 }

@@ -6,20 +6,40 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 /**
  * Configuration parameters for the Metals language server.
- * If possible, use a field in ClientExperimentalCapabilities instead.
+ * While these can be used to configure Metals, it's preferable
+ * that instead you configure Metals via `InitializationOptions`.
  *
- * @param bloopProtocol the protocol to communicate with Bloop.
- * @param fileWatcher whether to start an embedded file watcher in case the editor
- *                    does not support file watching.
+ * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
  * @param statusBar how to handle metals/status notifications.
- * @param doctorFormat the format that you'd like doctor to return
  * @param slowTask how to handle metals/slowTask requests.
- * @param snippetAutoIndent if the client defaults to adding the identation of the reference
- *                          line that the operation started on (relevant for multiline textEdits)
- * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
- *                      for clients with limited support for UI dialogues
- *                      that don't implement window/showMessageRequest yet.
+ * @param doctorFormat the format that you'd like doctor to return
+ * @param executeClientCommand whether client provides the ability to support the
+ *                             `metals/executeClientCommand` command.
+ * @param snippetAutoIndent if the client defaults to adding the identation of
+ *                          the reference line that the operation started on
+ *                          (relevant for multiline textEdits)
+ * @param isExitOnShutdown whether the client needs Metals to shut down manually on exit.
+ * @param isHttpEnabled whether to start the Metals HTTP client interface.
+ *                      This is needed for clients with limited support for UI
+ *                      dialogues that don't implement window/showMessageRequest yet.
+ * @param isInputBoxEnabled whether the client supports the `metals/inputBox` extension.
+ * @param isVerbose turn on verbose logging.
+ * @param isAutoServer whether or not `AUTO_SERVER` should be set for h2.
+ * `*                    http://www.h2database.com/html/features.html#auto_mixed_mode
+ * @param remoteTimeout timeout period for retrieving references while using `RemoteLanguageServer`.
+ * @param openFilesOnRenames whether or not file should be opened when a rename occurs
+ *                           in an unopened file.
+ * @param renameFileThreshold amount of files that should be opened during a rename
+ *                            if the `openFilesOnRenames` is enabled.
+ * @param askToReconnect whether the user should be prompted to reconnect after a
+ *                       BuildServer connection is lost.
  * @param icons what icon set to use for messages.
+ * @param statistics if all statistics in Metals should be enabled.
+ * @param compilers configuration for the `PresentationCompilerConfig`.
+ * @param allowMultilineStringFormatting whether or not `multilineStringFormatting` should
+ *                                       be turned off. By default this is on, but Metals only
+ *                                       supports a small subset of this, so it may be problematic
+ *                                       for certain clients.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -52,25 +72,17 @@ final case class MetalsServerConfig(
       "metals.h2.auto-server",
       default = true
     ),
-    isWarningsEnabled: Boolean = MetalsServerConfig.binaryOption(
-      "metals.warnings",
-      default = true
-    ),
     remoteTimeout: String = System.getProperty(
       "metals.timeout",
       "1 minute"
     ),
     openFilesOnRenames: Boolean = false,
     renameFileThreshold: Int = 300,
-    bloopEmbeddedVersion: String = System.getProperty(
-      "bloop.embedded.version",
-      BuildInfo.bloopVersion
-    ),
     askToReconnect: Boolean = MetalsServerConfig.binaryOption(
       "metals.ask-to-reconnect",
       default = false
     ),
-    icons: Icons = Icons.default,
+    icons: Icons = Icons.fromString(System.getProperty("metals.icons")),
     statistics: StatisticsConfig = StatisticsConfig.default,
     compilers: PresentationCompilerConfigImpl = CompilersConfig(),
     allowMultilineStringFormatting: Boolean = MetalsServerConfig.binaryOption(

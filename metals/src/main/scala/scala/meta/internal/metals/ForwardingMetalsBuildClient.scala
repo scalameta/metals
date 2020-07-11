@@ -164,8 +164,8 @@ final class ForwardingMetalsBuildClient(
           }
           val isSuccess = report.getErrors == 0
           val icon =
-            if (isSuccess) clientConfig.initialConfig.icons.check
-            else clientConfig.initialConfig.icons.alert
+            if (isSuccess) clientConfig.icons.check
+            else clientConfig.icons.alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
           if (!compilation.isNoOp) {
             scribe.info(s"time: compiled $name in ${compilation.timer}")

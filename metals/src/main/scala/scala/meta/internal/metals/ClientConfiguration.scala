@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.metals.Configs.GlobSyntaxConfig
+
 /**
  * This class provides a uniform way to know how the client is configured
  * using a combination of server properties, `clientExperimentalCapabilities`
@@ -25,6 +27,21 @@ class ClientConfiguration(
       experimentalCapabilities.statusBarState,
       StatusBarState.Off
     )
+
+  def globSyntax(): GlobSyntaxConfig =
+    initializationOptions.globSyntax
+      .flatMap(GlobSyntaxConfig.fromString)
+      .getOrElse(initialConfig.globSyntax)
+
+  def renameFileThreshold(): Int =
+    initializationOptions.renameFileThreshold.getOrElse(
+      initialConfig.renameFileThreshold
+    )
+
+  def icons(): Icons =
+    initializationOptions.icons
+      .map(Icons.fromString)
+      .getOrElse(initialConfig.icons)
 
   def slowTaskIsOn(): Boolean =
     extract(

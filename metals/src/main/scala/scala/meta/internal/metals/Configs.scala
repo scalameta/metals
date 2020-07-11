@@ -44,6 +44,12 @@ object Configs {
       new GlobSyntaxConfig(
         System.getProperty("metals.glob-syntax", uri.value)
       )
+    def fromString(value: String): Option[GlobSyntaxConfig] =
+      value match {
+        case "vscode" => Some(vscode)
+        case "uri" => Some(uri)
+        case _ => None
+      }
   }
 
   object CompilersConfig {
@@ -58,9 +64,9 @@ object Configs {
         _completionCommand =
           Option(props.getProperty("metals.completion.command")),
         overrideDefFormat =
-          Option(props.getProperty("metals.override-def-format")) match {
-            case Some("unicode") => OverrideDefFormat.Unicode
-            case Some("ascii") => OverrideDefFormat.Ascii
+          props.getProperty("metals.override-def-format") match {
+            case "unicode" => OverrideDefFormat.Unicode
+            case "ascii" => OverrideDefFormat.Ascii
             case _ => OverrideDefFormat.Ascii
           },
         isCompletionItemDetailEnabled = MetalsServerConfig.binaryOption(
