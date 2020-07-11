@@ -1,10 +1,11 @@
 package scala.meta.internal.builds
+import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.util.Properties
 
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
@@ -47,6 +48,17 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     AbsolutePath(out)
   }
 
+  private def isBloopConfigured(workspace: AbsolutePath): Boolean = {
+    val gradlePropsFile = workspace.resolve("gradle.properties")
+    try {
+      val contents =
+        new String(gradlePropsFile.readAllBytes, StandardCharsets.UTF_8)
+      contents.linesIterator.exists(_.startsWith("bloop.configured=true"))
+    } catch {
+      case err: IOException => false
+    }
+  }
+
   private def workspaceGradleLauncher(workspace: AbsolutePath): AbsolutePath = {
     workspace.resolve(gradleWrapper)
   }
@@ -55,12 +67,17 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     GradleDigest.current(workspace)
 
   override def args(workspace: AbsolutePath): List[String] = {
-    val cmd = List(
-      "--console=plain",
-      "--init-script",
-      initScriptPath.toString,
-      "bloopInstall"
-    )
+    val cmd = {
+      if (isBloopConfigured(workspace)) List("--console=plain", "bloopInstall")
+      else {
+        List(
+          "--console=plain",
+          "--init-script",
+          initScriptPath.toString,
+          "bloopInstall"
+        )
+      }
+    }
 
     userConfig().gradleScript match {
       case Some(script) =>

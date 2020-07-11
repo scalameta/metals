@@ -71,6 +71,66 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     }
   }
 
+  test("basic-configured") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/gradle.properties
+            |# Signals that bloop is configured in the project
+            |bloop.configured=true
+            |/build.gradle
+            |buildscript {
+            |    repositories {
+            |        mavenCentral()
+            |    }
+            |
+            |    dependencies {
+            |        classpath 'ch.epfl.scala:gradle-bloop_2.12:1.4.3'
+            |    }
+            |}
+            |
+            |apply plugin: 'scala'
+            |apply plugin: 'bloop'
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |}
+            |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          importBuildMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+      _ = client.messageRequests.clear() // restart
+      _ = assertStatus(_.isInstalled)
+      _ <- server.didChange("build.gradle")(_ + "\n// comment")
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didSave("build.gradle")(identity)
+      // Comment changes do not trigger "re-import project" request
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didChange("build.gradle") { text =>
+        text + "\ndef version = \"1.0.0\"\n"
+      }
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didSave("build.gradle")(identity)
+    } yield {
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has .bloop directory so user is asked to "re-import project"
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+    }
+  }
+
   val javaOnlyTestName = "java-only-run"
   test(javaOnlyTestName) {
     cleanWorkspace()
