@@ -275,7 +275,9 @@ class CompletionProvider(
           (isIgnored(head.sym) || isIgnored(head.sym.companion))
       def isNotLocalForwardReference: Boolean =
         !head.sym.isLocalToBlock ||
-          !head.sym.pos.isAfter(pos)
+          !head.sym.pos.isAfter(pos) ||
+          head.sym.isParameter
+
       def isFileAmmoniteCompletion() =
         isAmmoniteScript && {
           head match {
