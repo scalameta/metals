@@ -8,6 +8,7 @@ import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
@@ -18,12 +19,12 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
 
   val buildTool: MavenBuildTool = MavenBuildTool(() => userConfig)
 
-  val defaultPom = new String(
+  val defaultPom: String = new String(
     InputStreamIO.readBytes(
       this.getClass.getResourceAsStream("/test-pom.xml")
     ),
     StandardCharsets.UTF_8
-  )
+  ).replace("<<>>", V.scala212)
 
   override def currentDigest(
       workspace: AbsolutePath

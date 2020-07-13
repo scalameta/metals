@@ -27,6 +27,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.reflect.macros.NonemptyAttachments Class
        |scala.tools.nsc.backend.jvm.opt.LocalOptImpls.RemoveHandlersResult.NoneRemoved Object
        |scala.tools.nsc.settings.ScalaSettings#CachePolicy.None Object
+       |scala.tools.nsc.transform.async.ExprBuilder#StateTransitionStyle.None Object
        |""".stripMargin
   )
   check(
