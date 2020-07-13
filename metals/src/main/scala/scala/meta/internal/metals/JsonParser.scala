@@ -43,6 +43,10 @@ object JsonParser {
       Try(json.get(key).getAsBoolean()).toOption
     }
 
+    def getIntOption(key: String): Option[Int] = {
+      Try(json.get(key).getAsInt()).toOption
+    }
+
     def getObjectOption(key: String): Option[JsonObject] = {
       Try(json.get(key).toJsonObject).toOption
     }

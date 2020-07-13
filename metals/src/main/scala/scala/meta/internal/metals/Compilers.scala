@@ -53,7 +53,7 @@ import org.eclipse.lsp4j.{Position => LspPosition}
  */
 class Compilers(
     workspace: AbsolutePath,
-    config: MetalsServerConfig,
+    config: ClientConfiguration,
     userConfig: () => UserConfiguration,
     ammonite: () => Ammonite,
     buildTargets: BuildTargets,
@@ -237,7 +237,7 @@ class Compilers(
   }.getOrElse(Future.successful(item))
 
   def log: List[String] =
-    if (config.compilers.debug) {
+    if (config.initialConfig.compilers.debug) {
       List(
         "-Ypresentation-debug",
         "-Ypresentation-verbose",
@@ -498,9 +498,9 @@ class Compilers(
         initializeParams
           .map(params => {
             val options = InitializationOptions.from(params).compilerOptions
-            config.compilers.update(options)
+            config.initialConfig.compilers.update(options)
           })
-          .getOrElse(config.compilers)
+          .getOrElse(config.initialConfig.compilers)
           .copy(
             _symbolPrefixes = userConfig().symbolPrefixes,
             isCompletionSnippetsEnabled =

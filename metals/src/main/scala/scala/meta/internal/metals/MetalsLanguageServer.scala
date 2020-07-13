@@ -237,7 +237,7 @@ class MetalsLanguageServer(
     )
     embedded = register(
       new Embedded(
-        clientConfig.initialConfig.icons,
+        clientConfig.icons,
         statusBar,
         () => userConfig
       )
@@ -296,7 +296,7 @@ class MetalsLanguageServer(
       workspace,
       buildTargets,
       statusBar,
-      clientConfig.initialConfig.icons,
+      clientConfig.icons,
       buildTools,
       compilations.isCurrentlyCompiling
     )
@@ -340,7 +340,7 @@ class MetalsLanguageServer(
       clientConfig,
       time,
       shellRunner,
-      initialConfig.icons,
+      clientConfig.icons,
       workspace
     )
     bloopServers = new BloopServers(
@@ -382,7 +382,7 @@ class MetalsLanguageServer(
       languageClient,
       clientConfig,
       statusBar,
-      clientConfig.initialConfig.icons,
+      clientConfig.icons,
       Option(params.getWorkspaceFolders) match {
         case Some(folders) =>
           folders.asScala.map(_.getUri.toAbsolutePath).toList
@@ -471,7 +471,7 @@ class MetalsLanguageServer(
     compilers = register(
       new Compilers(
         workspace,
-        clientConfig.initialConfig,
+        clientConfig,
         () => userConfig,
         () => ammonite,
         buildTargets,
@@ -655,7 +655,7 @@ class MetalsLanguageServer(
             new Registration(
               "1",
               "workspace/didChangeWatchedFiles",
-              clientConfig.initialConfig.globSyntax.registrationOptions(
+              clientConfig.globSyntax.registrationOptions(
                 this.workspace
               )
             )
@@ -689,7 +689,7 @@ class MetalsLanguageServer(
         languageClient.underlying,
         () => server.reload(),
         charset,
-        clientConfig.initialConfig.icons,
+        clientConfig.icons,
         time,
         sh,
         clientConfig
@@ -1212,7 +1212,7 @@ class MetalsLanguageServer(
               s"Found new symbol references for '$name', try running again."
             scribe.info(message)
             statusBar
-              .addMessage(clientConfig.initialConfig.icons.info + message)
+              .addMessage(clientConfig.icons.info + message)
           }
       }
     }
@@ -1820,7 +1820,7 @@ class MetalsLanguageServer(
     )
     tracked.foreach { _ =>
       statusBar.addMessage(
-        s"${clientConfig.initialConfig.icons.rocket}Indexing complete!"
+        s"${clientConfig.icons.rocket}Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {
         logMemory(

@@ -86,7 +86,7 @@ final class SuperMethodCodeLens(
       name: String
   ): l.Command = {
     new l.Command(
-      s"${clientConfig.initialConfig.icons.findsuper} ${name}",
+      s"${clientConfig.icons.findsuper} ${name}",
       ServerCommands.GotoLocation.id,
       singletonList(symbol)
     )

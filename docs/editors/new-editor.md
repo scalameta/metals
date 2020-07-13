@@ -73,12 +73,10 @@ java -Dmetals.statistics=all ...
 coursier bootstrap --java-opt -Dmetals.statistics=all ...
 ```
 
-The system properties control how Metals handles certain LSP endpoints. For
-example, in vim-lsc the `window/logMessage` notification is always displayed in
-the UI so `-Dmetals.status-bar=log-message` can be configured to direct
-higher-priority messages to the logs. However, whenever possible, if the client
-supports the ability to add in `InitializationOptions`, this is preferable as it
-doesn't require any properties to be passed into the server.
+Many of the server properties that relate to how Metals is bootstrapped for a
+specific client have been moved over to
+[`InitializationOptions`](#initializationoptions). Whenever possible, this is
+the preferred way to configure Metals instead of the usage of server properties.
 
 ### `-Dmetals.verbose`
 
@@ -107,6 +105,8 @@ Possible values:
   For example, `C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}`.
   This mode is used by the VS Code client.
 
+*Usage of `globSyntax` in `InitializationOptions` is preferable.*
+
 ### `-Dmetals.status-bar`
 
 Possible values:
@@ -119,8 +119,7 @@ Possible values:
   `window/showMessage` notifications. Used by coc.nvim and sublime at the
   moment.
 
-*Usage of `statusBarProvider` in `InitializationOptions` is
-preferable.*
+*Usage of `statusBarProvider` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.slow-task`
 
@@ -131,8 +130,7 @@ Possible values:
 - `status-bar`: the `metals/slowTask` request is not supported, but send updates
   about slow tasks via `metals/status`.
 
-*Usage of `slowTaskProvider` in `InitializationOptions` is
-preferable.*
+*Usage of `slowTaskProvider` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.input-box`
 
@@ -180,6 +178,8 @@ Possible values:
   by the Atom status bar.
 - `unicode`: use unicode emojis like 🚀 for status bar messages.
 
+*Usage of `icons` in `InitializationOptions` is preferable.*
+
 ### `-Dmetals.exit-on-shutdown`
 
 Possible values:
@@ -193,15 +193,11 @@ Possible values:
   when the editor has quit. See
   [LSP#410](https://github.com/tomv564/LSP/issues/410) for more details.
 
-  *Usage of `isExitOnShutdown` in `InitializationOptions` is preferable.*
+*Usage of `isExitOnShutdown` in `InitializationOptions` is preferable.*
 
 ### `-Dmetals.bloop-protocol`
 
-Possible values:
-
-- `auto` (default): use local unix domain sockets on macOS/Linux and TPC sockets
-  on Windows for communicating with the Bloop build server.
-- `tcp`: use TCP sockets for communicating with the Bloop build server.
+This option is no longer used by Metals.
 
 ### `-Dmetals.statistics`
 
@@ -252,6 +248,9 @@ Default value:
   Code or coc.nvim.
 - empty: for all other editors.
 
+*Usage of `compilerOptions.parameterHintsCommand` in `InitializationOptions` is
+preferable.*
+
 ### `-Dmetals.completion.command`
 
 An optional string value for a command identifier to trigger completion
@@ -262,6 +261,22 @@ Default value:
 - `"editor.action.triggerSuggest"`: when editor client is Visual Studio Code or
   coc.nvim.
 - empty: for all other editors.
+
+*Usage of `compilerOptions.completionCommand` in `InitializationOptions` is
+preferable.*
+
+### `-Dmetals.override-def-format`
+
+Whether or no the presentation compiler overrides should show unicode icon or
+just be in ascii format.
+
+Possible Values:
+
+- `"ascii"` (default)
+- `unicode` show the "🔼" icon in overrides.
+
+*Usage of `compilerOptions.overrideDefFormat` in `InitializationOptions` is
+preferable.*
 
 ### `-Dmetals.pc.debug`
 
@@ -284,7 +299,8 @@ Possible values:
 - `off`: the client does not add any indentation when receiving a multi-line
   textEdit
 
-*Usage of `doctorProvider` in `InitializationOptions.compilerOptions.snippetAutoIndent` is preferable.*
+*Usage of `compilerOptions.snippetAutoIndent` in `InitializationOptions` is
+preferable.*
 
 
 ### `-Dmetals.doctor-format`
@@ -301,8 +317,7 @@ Possible values:
 
 ### `-Dbloop.embedded.version`
 
-Version number of the embedded Bloop server. Default value is
-`-Dbloop.embedded.version=@BLOOP_VERSION@`.
+This option is no longer used by Metals.
 
 ### `-Dbloop.sbt.version`
 
@@ -652,6 +667,7 @@ specification.
 - `didChangeWatchedFiles` client capability is used to determine whether to
   register file watchers.
 
+
 #### `InitializationOptions` and `experimental`
 
 During `initialize` we also have the ability to pass in `InitializationOptions`
@@ -668,23 +684,29 @@ The currently available settings for `InitializationOptions` are listed below.
 ```js
     "InitializationOptions": {
       "compilerOptions":{
+        "completionCommand": string,
         "isCompletionItemDetailEnabled": boolean,
         "isCompletionItemDocumentationEnabled": boolean,
+        "isCompletionItemResolve": boolean,
         "isHoverDocumentationEnabled": boolean,
-        "snippetAutoIndent": boolean,
         "isSignatureHelpDocumentationEnabled": boolean,
-        "isCompletionItemResolve": boolean
+        "overrideDefFormat": "ascii" | "unicode",
+        "parameterHintsCommand": string,
+        "snippetAutoIndent": boolean,
       }
       "debuggingProvider": boolean,
       "decorationProvider": boolean,
       "didFocusProvider": boolean,
       "doctorProvider": "json" | "html",
       "executeClientCommandProvider": boolean,
+      "globSyntax": "vscode" | "uri"
+      "icons": "octicons" | "vscode" | "unicode" | "atom",
       "inputBoxProvider": boolean,
       "isExitOnShutdown" : boolean,
       "isHttpEnabled": boolean,
       "openFilesOnRenameProvider": boolean,
       "quickPickProvider": boolean,
+      "renameFileThreshold": number,
       "slowTaskProvider": boolean,
       "statusBarProvider": "on" | "off" | "show-message" | "log-message",
       "treeViewProvider": boolean
