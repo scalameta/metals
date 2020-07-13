@@ -12,7 +12,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
  * @param statusBar how to handle metals/status notifications.
  * @param slowTask how to handle metals/slowTask requests.
- * @param doctorFormat the format that you'd like doctor to return
  * @param executeClientCommand whether client provides the ability to support the
  *                             `metals/executeClientCommand` command.
  * @param snippetAutoIndent if the client defaults to adding the identation of
@@ -45,7 +44,6 @@ final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
-    doctorFormat: DoctorFormatConfig = DoctorFormatConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
@@ -103,8 +101,7 @@ final case class MetalsServerConfig(
       s"input-box=$isInputBoxEnabled",
       s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
-      s"statistics=$statistics",
-      s"doctor-format=$doctorFormat"
+      s"statistics=$statistics"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

@@ -14,6 +14,7 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType

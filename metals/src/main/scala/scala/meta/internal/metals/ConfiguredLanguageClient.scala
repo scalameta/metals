@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
