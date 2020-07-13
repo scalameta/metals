@@ -1,4 +1,7 @@
 package scala.meta.internal.metals
+import scala.meta.internal.metals.config.DoctorFormat
+import scala.meta.internal.metals.config.StatusBarState
+
 import com.google.gson.JsonObject
 import org.eclipse.{lsp4j => l}
 
@@ -23,7 +26,9 @@ final case class ClientExperimentalCapabilities(
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean]
 ) {
-  def doctorFormatIsJson: Boolean = doctorProvider.exists(_ == "json")
+  def doctorFormat: Option[DoctorFormat.DoctorFormat] =
+    doctorProvider.flatMap(DoctorFormat.fromString)
+
   def statusBarState: Option[StatusBarState.StatusBarState] =
     statusBarProvider.flatMap(StatusBarState.fromString)
 }

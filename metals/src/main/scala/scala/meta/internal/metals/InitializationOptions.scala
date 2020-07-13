@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.metals.config.DoctorFormat
+import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.pc.CompilerInitializationOptions
 
 import com.google.gson.JsonObject
@@ -53,7 +55,9 @@ final case class InitializationOptions(
     treeViewProvider: Option[Boolean],
     openNewWindowProvider: Option[Boolean]
 ) {
-  def doctorFormatIsJson: Boolean = doctorProvider.exists(_ == "json")
+  def doctorFormat: Option[DoctorFormat.DoctorFormat] =
+    doctorProvider.flatMap(DoctorFormat.fromString)
+
   def statusBarState: Option[StatusBarState.StatusBarState] =
     statusBarProvider.flatMap(StatusBarState.fromString)
 }

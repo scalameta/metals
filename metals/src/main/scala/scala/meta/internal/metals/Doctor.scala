@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
+import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -91,10 +92,10 @@ final class Doctor(
     if (
       clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
     ) {
-      val output =
-        if (clientConfig.doctorFormatIsJson)
-          buildTargetsJson()
-        else buildTargetsHtml()
+      val output = clientConfig.doctorFormat match {
+        case DoctorFormat.Json => buildTargetsJson()
+        case DoctorFormat.Html => buildTargetsHtml()
+      }
       val params = new ExecuteCommandParams(
         clientCommand.id,
         List(output: AnyRef).asJava
@@ -149,11 +150,12 @@ final class Doctor(
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
       if (isMaven) {
-        val website =
-          if (clientConfig.doctorFormatIsJson)
+        val website = clientConfig.doctorFormat match {
+          case DoctorFormat.Json =>
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
-          else
+          case DoctorFormat.Html =>
             "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
+        }
         "enable SemanticDB following instructions on the " + website
       } else s"run 'Build import' to enable code navigation."
 
