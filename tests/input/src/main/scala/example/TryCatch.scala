@@ -8,5 +8,6 @@ class TryCatch {
     case t: Throwable =>
   } finally {
     val text = ""
+    text + ""
   }
 }

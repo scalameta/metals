@@ -42,7 +42,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       name: TestOptions,
       input: String,
       newName: String,
-      notRenamed: Boolean = false,
+      notRenamed: Boolean,
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty,

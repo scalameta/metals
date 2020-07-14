@@ -117,7 +117,6 @@ class DocumentSymbolProvider(trees: Trees) {
             if (owner.getChildren().isEmpty()) {
               continue()
             } else {
-              val blockPos = block.stats.head.pos
               addChild("finally", SymbolKind.Struct, block.pos, block.pos, "")
               newOwner()
             }

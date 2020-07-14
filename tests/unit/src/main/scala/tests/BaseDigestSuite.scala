@@ -29,7 +29,7 @@ trait BaseDigestSuite extends BaseSuite {
       name: String,
       layout: String,
       altLayout: String,
-      isEqual: Boolean = true
+      isEqual: Boolean
   )(implicit loc: Location): Unit = {
     test(name) {
       val root = FileLayout.fromString(layout)

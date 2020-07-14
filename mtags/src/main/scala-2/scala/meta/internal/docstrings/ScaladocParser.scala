@@ -893,11 +893,7 @@ object ScaladocParser {
         text.replace(escapeChar + TableCellStart, TableCellStart)
 
       def isEndOfText = char == endOfText
-
-      def isNewline = char == endOfLine
-
-      def skipNewline() = jump(endOfLine)
-
+      
       def isStartMarkNewline = check(TableCellStart + endOfLine)
 
       def skipStartMarkNewline() = jump(TableCellStart + endOfLine)

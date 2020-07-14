@@ -4,7 +4,9 @@ trait LocalDeclarations {
   def foo(): Unit
 }
 
-trait Foo {}
+trait Foo {
+  val y = 3
+}
 
 object LocalDeclarations {
   def create(): LocalDeclarations = {
@@ -16,6 +18,8 @@ object LocalDeclarations {
 
     val y = new Foo {}
 
+    x.x + y.y
+    
     new LocalDeclarations with Foo {
       override def foo(): Unit = bar()
     }

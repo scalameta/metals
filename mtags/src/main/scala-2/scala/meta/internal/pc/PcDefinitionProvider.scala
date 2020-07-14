@@ -106,11 +106,6 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case pt: PolyType => isImplicitMethodType(pt.resultType)
       case _ => false
     }
-    def selectQual(tree: Tree): Tree =
-      tree match {
-        case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
-        case t => t
-      }
     // TODO: guard with try/catch to deal with ill-typed qualifiers.
     val tree =
       if (shouldTypeQualifier) analyzer.newTyper(context).typedQualifier(tree0)

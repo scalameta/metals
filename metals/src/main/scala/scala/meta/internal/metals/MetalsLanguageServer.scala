@@ -1764,7 +1764,7 @@ class MetalsLanguageServer(
     result
   }
 
-  private def withTimer[T](didWhat: String, reportStatus: Boolean = false)(
+  private def withTimer[T](didWhat: String, reportStatus: Boolean)(
       thunk: => Future[T]
   ): Future[(Timer, T)] = {
     val elapsed = new Timer(time)

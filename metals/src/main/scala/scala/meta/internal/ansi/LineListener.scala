@@ -20,7 +20,7 @@ object LineListener {
 class LineListener(onLine: String => Unit) {
 
   private var buffer = new StringBuilder()
-  private var stack = mutable.ListBuffer.empty[Char]
+  private val stack = mutable.ListBuffer.empty[Char]
   private var state = AnsiStateMachine.Start
 
   /**

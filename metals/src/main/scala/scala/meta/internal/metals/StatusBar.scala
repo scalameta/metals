@@ -53,7 +53,6 @@ final class StatusBar(
       trackBlockingTask(message)(thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
-      val future = task.asScala
       try {
         thunk
       } catch {
@@ -71,7 +70,6 @@ final class StatusBar(
       trackFuture(message, thunk)
     else {
       val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
-      val future = task.asScala
       thunk.onComplete {
         case Failure(exception) =>
           slowTaskFailed(message, exception)

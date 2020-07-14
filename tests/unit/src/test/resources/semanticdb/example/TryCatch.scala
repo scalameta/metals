@@ -8,5 +8,6 @@ class TryCatch/*example.TryCatch#*/ {
     case t/*local1*/: Throwable/*scala.package.Throwable#*/ =>
   } finally {
     val text/*local2*/ = ""
+    text/*local2*/ +/*java.lang.String#`+`().*/ ""
   }
 }

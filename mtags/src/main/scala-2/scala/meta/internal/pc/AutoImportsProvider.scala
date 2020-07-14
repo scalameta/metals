@@ -48,7 +48,6 @@ final class AutoImportsProvider(
 
     symbols.result.collect {
       case sym if isExactMatch(sym, name) =>
-        val ident = Identifier.backtickWrap(sym.name.dropLocal.decoded)
         val pkg = sym.owner.fullName
         val edits = importPosition match {
           case None =>

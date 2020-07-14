@@ -499,7 +499,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
    */
   private def hasBody(text: String, t: Template): Option[Int] = {
     val start = t.pos.start
-    val end = t.pos.end
     val offset = text.indexOf('{', start)
     if (offset > 0 && offset < t.pos.end) Some(offset)
     else None

@@ -41,7 +41,10 @@ inThisBuild(
       "-Yrangepos",
       // -Xlint is unusable because of
       // https://github.com/scala/bug/issues/10448
-      "-Ywarn-unused:imports"
+      "-Ywarn-unused:imports",
+      "-Ywarn-unused:privates",
+      "-Ywarn-unused:patvars",
+      "-Ywarn-unused:locals"
     ),
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.2.1-RC1",
     organization := "org.scalameta",
@@ -241,7 +244,13 @@ val sharedSettings = List(
   ),
   scalacOptions --= crossSetting(
     scalaVersion.value,
-    if3 = List("-Yrangepos", "-Ywarn-unused:imports"),
+    if3 = List(
+      "-Yrangepos",
+      "-Ywarn-unused:imports",
+      "-Ywarn-unused:privates",
+      "-Ywarn-unused:locals",
+      "-Ywarn-unused:patvars"
+    ),
     if211 = List("-Ywarn-unused:imports")
   )
 )

@@ -57,7 +57,7 @@ object Semanticdbs {
       scalaRelativePath: RelativePath,
       semanticdbPath: AbsolutePath,
       charset: Charset,
-      fingerprints: Md5Fingerprints = Md5Fingerprints.empty
+      fingerprints: Md5Fingerprints
   ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)

@@ -132,7 +132,6 @@ class PackageIndex() {
   private def expandJrtClasspath(): Unit = {
     val fs = FileSystems.getFileSystem(URI.create("jrt:/"))
     val dir = fs.getPath("/packages")
-    val start = System.nanoTime()
     for {
       pkg <- Files.newDirectoryStream(dir).iterator().asScala
       symbol = pkg.toString.stripPrefix("/packages/").replace('.', '/') + "/"

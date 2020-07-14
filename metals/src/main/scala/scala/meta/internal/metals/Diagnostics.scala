@@ -255,19 +255,4 @@ final class Diagnostics(
     toPublish
   }
 
-  private def logStatistics(
-      path: AbsolutePath,
-      prefix: String,
-      suffix: String
-  ): Unit = {
-    if (statistics.isDiagnostics) {
-      for {
-        target <- buildTargets.inverseSources(path)
-        timer <- compileTimer.get(target)
-      } {
-        scribe.info(s"$prefix: $timer $suffix")
-      }
-    }
-  }
-
 }

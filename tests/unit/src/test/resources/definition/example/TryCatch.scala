@@ -8,5 +8,6 @@ class TryCatch/*TryCatch.scala*/ {
     case t/*TryCatch.semanticdb*/: Throwable/*package.scala*/ =>
   } finally {
     val text/*TryCatch.semanticdb*/ = ""
+    text/*TryCatch.semanticdb*/ +/*String.java fallback to java.lang.String#*/ ""
   }
 }

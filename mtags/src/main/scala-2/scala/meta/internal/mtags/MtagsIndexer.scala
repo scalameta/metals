@@ -37,8 +37,6 @@ trait MtagsIndexer {
   private val names = List.newBuilder[s.SymbolOccurrence]
   private val symbols = List.newBuilder[s.SymbolInformation]
 
-  private val root: String =
-    Symbols.RootPackage
   var currentOwner: String = Symbols.EmptyPackage
   private var myLastCurrentOwner: String = currentOwner
   def lastCurrentOwner: String = myLastCurrentOwner
