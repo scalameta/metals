@@ -35,7 +35,7 @@ See [Metals server properties](#metals-server-properties) for additional system
 properties that are supported by the server.
 
 JSON-RPC communication takes place over standard input/output so the Metals
-server does not print anything to the console when it starts. Instead, before
+server doesn't print anything to the console when it starts. Instead, before
 establishing a connection with the client, Metals logs notifications to a global
 directory:
 
@@ -61,35 +61,205 @@ Metals supports two kinds of JSON-RPC endpoints:
 - [Metals extensions](#metals-lsp-extensions): for additional functionality that
   is missing in LSP but improves the user experience.
 
-## Metals server properties
+## Configuring the server
 
-The Metals language server is able to be configured through JVM system
-properties. A system property is passed to the server like this:
+Over time the recommended way to configure Metals has shifted from heavily
+relying on the [Metals server properties](#metals-server-properties) to being
+fully able to be configured via `InitializationOptions` which are exchanged
+during the
+[`initialize`](https://microsoft.github.io/language-server-protocol/specification#initialize)
+process. While Metals will still work being fully configured by server
+properties, we strongly recommend that instead you rely on the
+`InitializationOptions` which are thoroughly covered below in the
+(`initialize`)[#initialize] section.
 
-```sh
-# with `java` binary
-java -Dmetals.statistics=all ...
-# with `coursier bootstrap`
-coursier bootstrap --java-opt -Dmetals.statistics=all ...
+## Language Server Protocol
+
+Consult the
+[LSP specification](https://microsoft.github.io/language-server-protocol/specification)
+to learn more more how LSP works. Metals uses the following endpoints from the
+specification.
+
+### `initialize`
+
+- the `rootUri` field is used to configure Metals for that workspace directory.
+  The working directory for where server is started has no significant meaning.
+- at this point, Metals uses only full text synchronization. In the future, it
+  will be able to use incremental text synchronization.
+- `didChangeWatchedFiles` client capability is used to determine whether to
+  register file watchers.
+
+#### `InitializationOptions`
+
+During `initialize` we also have the ability to pass in `InitializationOptions`.
+This is the primary way to configure Metals. In Metals we have a few different
+"providers".  Some are LSP extensions, such as `metals/inputBox` which you
+read about below, and others used to be server properties that have been
+migrated to `InitializationOptions`. M
+
+The currently available settings for `InitializationOptions` are listed below.
+
+```js
+    "InitializationOptions": {
+      "compilerOptions":{
+        "completionCommand": string,
+        "isCompletionItemDetailEnabled": boolean,
+        "isCompletionItemDocumentationEnabled": boolean,
+        "isCompletionItemResolve": boolean,
+        "isHoverDocumentationEnabled": boolean,
+        "isSignatureHelpDocumentationEnabled": boolean,
+        "overrideDefFormat": "ascii" | "unicode",
+        "parameterHintsCommand": string,
+        "snippetAutoIndent": boolean,
+      }
+      "debuggingProvider": boolean,
+      "decorationProvider": boolean,
+      "didFocusProvider": boolean,
+      "doctorProvider": "json" | "html",
+      "executeClientCommandProvider": boolean,
+      "globSyntax": "vscode" | "uri"
+      "icons": "octicons" | "vscode" | "unicode" | "atom",
+      "inputBoxProvider": boolean,
+      "isExitOnShutdown" : boolean,
+      "isHttpEnabled": boolean,
+      "openFilesOnRenameProvider": boolean,
+      "quickPickProvider": boolean,
+      "renameFileThreshold": number,
+      "slowTaskProvider": boolean,
+      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
+      "treeViewProvider": boolean
+      "openNewWindowProvider": boolean
+    }
 ```
 
-Many of the server properties that relate to how Metals is bootstrapped for a
-specific client have been moved over to
-[`InitializationOptions`](#initializationoptions). Whenever possible, this is
-the preferred way to configure Metals instead of the usage of server properties.
+##### `compilerOptions.completionCommand`
 
-### `-Dmetals.verbose`
+An optional string value for a command identifier to trigger completion
+(`textDocument/signatureHelp`) in the editor.
 
 Possible values:
 
-- `off` (default): don't log unnecessary details.
-- `on`: emit very detailed logs, should only be used when debugging problems.
+- `"editor.action.triggerSuggest"`: currently used by Visual Studio Code and
+    coc.nvim.
+- empty: for all other editors.
 
-### `-Dmetals.file-watcher`
+##### `compilerOptions.isCompletionItemDetailEnabled`
 
-This option is no longer used by Metals.
+Boolean value signifying whether or not the `CompletionItem.detail` field should
+be populated.
 
-### `-Dmetals.glob-syntax`
+Default value: `true`
+
+##### `compilerOptions.isCompletionItemDocumentationEnabled`
+
+Boolean value signifying whether or not the `CompletionItem.documentation` field
+should be populated.
+
+Default value: `true`
+
+##### `compilerOptions.isCompletionItemResolve`
+
+Boolean value signifying whether the client wants Metals to handle the
+`completionItem/resolve` request.
+
+[https://microsoft.github.io/language-server-protocol/specification#completionItem_resolve](https://microsoft.github.io/language-server-protocol/specification#completionItem_resolve)
+
+Default value: `true`
+
+##### `compilerOptions.isHoverDocumentationEnabled`
+
+Boolean value signifying whether to include docstrings in a `textDocument/hover`
+request.
+
+Default value: `true`
+
+##### `compilerOptions.isSignatureHelpDocumentationEnabled`
+
+Boolean value signifying whether or not the `SignatureHelp.documentation` field
+should be populated.
+
+Default value: `true`
+
+##### `compilerOptions.overrideDefFormat`
+
+Whether or not the presentation compiler overrides should show unicode icon or
+just be in ascii format.
+
+Possible Values:
+
+- `"ascii"` (default)
+- `unicode` show the "🔼" icon in overrides.
+
+##### `compilerOptions.parameterHintsCommand`
+
+An optional string value for a command identifier to trigger parameter hints
+(`textDocument/signatureHelp`) in the editor. Metals uses this setting to
+populate `CompletionItem.command` for completion items that move the cursor
+inside an argument list. For example, when completing `"".stripSu@@` into
+`"".stripSuffix(@@)`, Metals will automatically trigger parameter hints if this
+setting is provided by the editor.
+
+Possible values:
+
+- `"editor.action.triggerParameterHints"`: Used by Visual Studio
+    Code and coc.nvim.
+- empty: for all other editors.
+
+##### `compilerOptions.snippetAutoIndent`
+
+Certain editors will automatically insert indentation equal to that of the
+reference line that the operation started on. This is relevant in the case of
+multiline textEdits such as the "implement all methods" completion.
+
+Possible values:
+
+- `on`: (default): the client automatically adds in the indentation. This is the
+    case for VS Code, Atom, Sublime, and coc.nvim.
+- `off`: the client does not add any indentation when receiving a multi-line
+    textEdit
+
+##### `debuggingProvider`
+
+Boolean value to signify that the client supports the [Debug Adapter
+Protocol](debug-adapter-protocol.md).
+
+Default value: `false`
+
+##### `decorationProvider`
+
+Boolean value to signify that the client supports the [Decoration
+Protocol](decoration-protocol.md).
+
+Default value: `false`
+
+##### `didFocusProvider`
+
+Boolean value to signify that the client supports the
+[`metals/didFocusTextDocument`](#metalsdid-focus-text-document) extension.
+
+Default value: `false`
+
+##### `doctorProvider`
+
+Format that you'd like Doctor to return information in.
+
+Possible values:
+
+- `html`: (default): Metals will return html that can be rendered directly in
+  the browser or web view
+- `json`: json representation of the information returned by Doctor
+
+##### `executeClientCommandProvider`
+
+Possible values:
+
+- `off` (default): the `metals/executeClientCommand` notification is not
+    supported. Client commands can still be handled by enabling
+    `-Dmetals.http=on`.
+- `on`: the `metals/executeClientCommand` notification is supported and all
+    [Metals client commands](#metals-client-commands) are handled.
+
+##### `globSyntax`
 
 Controls the glob syntax for registering file watchers on absolute directories.
 Registration happens via `client/registerCapability` for the
@@ -105,99 +275,272 @@ Possible values:
   For example, `C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}`.
   This mode is used by the VS Code client.
 
-*Usage of `globSyntax` in `InitializationOptions` is preferable.*
-
-### `-Dmetals.status-bar`
+##### `icons`
 
 Possible values:
 
-- `off` (default): the `metals/status` notification is not supported.
-- `on`: the `metals/status` notification is supported.
-- `log-message`: translate `metals/status` notifications to `window/logMessage`
-  notifications. Used by vim-lsc at the moment.
-- `show-message`: translate `metals/status` notifications to
-  `window/showMessage` notifications. Used by coc.nvim and sublime at the
-  moment.
+- `none` (default): don't display icons in messages.
+- `vscode`: use [Octicons](https://octicons.github.com) such as `$(rocket)` for
+    status bar messages, as supported by th
+    [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
+- `atom`: use HTML-formatted [Octicons](https://octicons.github.com) such as
+    `<span class='icon icon-rocket'></span>` for status bar messages, as supported
+    by the Atom status bar.
+- `unicode`: use unicode emojis like 🚀 for status bar messages.
 
-*Usage of `statusBarProvider` in `InitializationOptions` is preferable.*
+##### `inputBoxProvider`
 
-### `-Dmetals.slow-task`
+Possible values:
+
+- `off` (default): the `metals/inputBox` request is not supported. In this case,
+    Metals tries to fallback to `window/showMessageRequest` when possible.
+- `on`: the `metals/inputBox` request is fully supported.
+
+##### `isExitOnShutdown`
+
+Possible values:
+
+- `off` (default): run `System.exit` only on the `exit` notification, as
+    required by the LSP specification.
+- `on`: run `System.exit` after the `shutdown` request, going against the LSP
+    specification. This option is enabled by default for Sublime Text to prevent
+    the Metals process from staying alive after Sublime Text has quit with
+    `Cmd+Q`.  It's not possible for Sublime Text packages to register a callback
+    when the editor has quit. See
+    [LSP#410](https://github.com/tomv564/LSP/issues/410) for more details.
+
+##### `isHttpEnabled`
+
+Possible values:
+
+- `off` (default): don't start a server with the Metals HTTP client.
+- `on`: start a server with the [Metals HTTP client] to interact with the server
+    through a basic web UI. This option is needed for editor clients that don't
+    support necessary requests such as `window/showMessageRequest`.
+
+##### `openFilesOnRenameProvider`
+
+Boolean value to signify whether or not the client opens files when doing a
+rename.
+
+Default: `false`
+
+##### `quickPickProvider`
+
+Boolean value to signify whether or not the client implements the
+[`metals/quickPick`](#metalsquick-pick) extensions.
+
+Default value: `false`
+
+##### `renameFileThreshold`
+
+The max amount of files that you would like the client to open if the client is
+a `openFilesOnRenameProvider`.
+
+Default value: `300`
+
+##### `slowTaskProvider`
 
 Possible values:
 
 - `off` (default): the `metals/slowTask` request is not supported.
 - `on`: the `metals/slowTask` request is fully supported.
 - `status-bar`: the `metals/slowTask` request is not supported, but send updates
-  about slow tasks via `metals/status`.
+    about slow tasks via `metals/status`.
 
-*Usage of `slowTaskProvider` in `InitializationOptions` is preferable.*
-
-### `-Dmetals.input-box`
+##### `statusBarProvider`
 
 Possible values:
 
-- `off` (default): the `metals/inputBox` request is not supported. In this case,
-  Metals tries to fallback to `window/showMessageRequest` when possible.
-- `on`: the `metals/inputBox` request is fully supported.
+- `off` (default): the `metals/status` notification is not supported.
+- `on`: the `metals/status` notification is supported.
+- `log-message`: translate `metals/status` notifications to `window/logMessage`
+    notifications.
+- `show-message`: translate `metals/status` notifications to
+    `window/showMessage` show notifications however the client displays messages
+    to the user.
 
-*Usage of `inputBoxProvider` in `InitializationOptions` is preferable.*
+##### `treeViewProvider`
 
-### `-Dmetals.execute-client-command`
+Boolean value signifying whether or not the client supports the [Tree View
+Protocol](tree-view-protocol.md).
+
+Default value: `false`
+
+##### `openNewWindowProvider`
+
+Boolean value signifying whether or not the client supports opening up a new
+window with the newly created project. Used in conjunction with the New Project
+Provider.
+
+Default value: `false`
+
+#### Experimental Capabilities
+
+All of the features that used to be set with `experimental` can now all be set
+via `InitializationOptions`. This is the preferred way to configure Metals.
+
+### `initialized`
+
+Triggers build server initialization and workspace indexing. The `initialized`
+notification is critical for any Metals functionality to work.
+
+### `shutdown`
+
+It is very important that the client sends a shutdown request in order for
+Metals to clean up open resources.
+
+- persists incremental compilation analysis files. Without a `shutdown` hook,
+  Metals will need to re-compile the entire workspace on next startup.
+- stops ongoing processes such as `sbt bloopInstall`
+- closes database connections
+
+### `exit`
+
+Kills the process using `System.exit`.
+
+### `$/cancelRequest`
+
+Used by `metals/slowTask` to notify when a long-running process has finished.
+
+### `client/registerCapability`
+
+If the client declares the `workspace.didChangeWatchedFiles` capability during
+the `initialize` request, then Metals follows up with a
+`client/registerCapability` request to register file watchers for certain glob
+patterns.
+
+### `textDocument/didOpen`
+
+Triggers compilation in the build server for the build target containing the
+opened document. Related, see `metals/didFocusTextDocument`.
+
+### `textDocument/didChange`
+
+Required to know the text contents of the current unsaved buffer.
+
+### `textDocument/didClose`
+
+Cleans up resources.
+
+### `textDocument/didSave`
+
+Triggers compilation in the build server and analyses if the build needs to be
+re-imported.
+
+### `textDocument/publishDiagnostics`
+
+Metals forwards diagnostics from the build server to the editor client.
+Additionally, Metals publishes `Information` diagnostics for unexpected
+compilation errors when navigating external library sources.
+
+### `textDocument/definition`
+
+Metals supports goto definition for workspace sources in addition to external
+library sources.
+
+- Library sources live under the directory `.metals/readonly` and they are
+  marked as read-only to prevent the user from editing them.
+- The destination location can either be a Scala or Java source file. It is
+  recommended to have a Java language server installed to navigate Java sources.
+
+### `textDocument/references`
+
+Metals finds symbol references for workspace sources but not external library
+dependencies.
+
+LSP does not support streaming references so when project sources have not been
+compiled at the point of a request, Metals returns immediately with potentially
+incomplete results and triggers a background cascade compilation to find new
+symbol references. If new symbol references are discovered after the background
+compilation completes, Metals sends a notification via `metals/status` and
+`window/logMessage` asking the user to run "find references" again.
+
+### `textDocument/documentSymbol`
+
+Returns `DocumentSymbol[]` if the client declares support for hierarchical
+document symbol or `SymbolInformation[]` otherwise.
+
+### `textDocument/formatting`
+
+Formats the sources with the [Scalafmt](https://scalameta.org/scalafmt/) version
+that is declared in `.scalafmt.conf`.
+
+- when `.scalafmt.conf` is missing, Metals sends a `window/showMessageRequest`
+  to create the file.
+- when `.scalafmt.conf` exists but doesn't declare a `version` setting, Metals
+  sends a `metals/inputBox` when supported (with fallback to
+  `window/showMessageRequest` when unsupported) to prepend `version=$VERSION` to
+  the `.scalafmt.conf` file.
+- the first format request is usually slow because Metals needs to download
+  Scalafmt artifacts from Maven Central. While the download happens, Metals adds
+  a message in the status bar via `metals/status` and detailed download progress
+  information is logged to `.metals/metals.log`.
+
+### `workspace/didChangeWatchedFiles`
+
+Optional. Metals uses a built-in file watcher for critical functionality such as
+Goto Definition so it is OK if an editor does not send
+`workspace/didChangeWatchedFiles` notifications.
+
+Metals listens to `workspace/didChangeWatchedFiles` notifications from the
+editor for nice-to-have but non-critical file watching events. Metals
+automatically registers for the following glob patterns if the editor supports
+dynamic registration for file watching.
+
+```scala mdoc:file-watcher
+
+```
+
+The editor is responsible for manually watching these file patterns if the
+editor does not support dynamic file watching registration but can still send
+`workspace/didChangeWatchedFiles` notifications.
+
+### `workspace/executeCommands`
+
+Used to trigger a [Metals server command](#metals-server-commands).
+
+### `workspace/didChangeConfiguration`
+
+Used to update [Metals user configuration](#metals-user-configuration).
+
+### `window/logMessage`
+
+Used to log non-critical and non-actionable information. The user is only
+expected to use the logs for troubleshooting or finding metrics for how long
+certain events take.
+
+### `window/showMessage`
+
+Used to send critical but non-actionable notifications to the user. For
+non-critical notifications, see `metals/status`.
+
+### `window/showMessageRequest`
+
+Used to send critical and actionable notifications to the user. To notify the
+user about long running tasks that can be cancelled, the extension
+`metals/slowTask` is used instead.
+
+## Metals server properties
+
+There are various Metals server properties that can be configured through JVM
+system properties. A system property is passed to the server like this:
+
+```sh
+# with `java` binary
+java -Dmetals.statistics=all ...
+# with `coursier bootstrap`
+coursier bootstrap --java-opt -Dmetals.statistics=all ...
+```
+
+Below are the available server properties:
+
+### `-Dmetals.verbose`
 
 Possible values:
 
-- `off` (default): the `metals/executeClientCommand` notification is not
-  supported. Client commands can still be handled by enabling
-  `-Dmetals.http=on`.
-- `on`: the `metals/executeClientCommand` notification is supported and all
-  [Metals client commands](#metals-client-commands) are handled.
-
-*Usage of `executeClientCommandProvider` in `InitializationOptions` is preferable.*
-
-### `-Dmetals.http`
-
-Possible values:
-
-- `off` (default): don't start a server with the Metals HTTP client.
-- `on`: start a server with the [Metals HTTP client] to interact with the server
-  through a basic web UI. This option is needed for editor clients that don't
-  support necessary requests such as `window/showMessageRequest`.
-
-*Usage of `isHttpEnabled` in `InitializationOptions` is preferable.*
-
-### `-Dmetals.icons`
-
-Possible values:
-
-- `none` (default): don't display icons in messages.
-- `vscode`: use [Octicons](https://octicons.github.com) such as `$(rocket)` for
-  status bar messages, as supported by th
-  [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
-- `atom`: use HTML-formatted [Octicons](https://octicons.github.com) such as
-  `<span class='icon icon-rocket'></span>` for status bar messages, as supported
-  by the Atom status bar.
-- `unicode`: use unicode emojis like 🚀 for status bar messages.
-
-*Usage of `icons` in `InitializationOptions` is preferable.*
-
-### `-Dmetals.exit-on-shutdown`
-
-Possible values:
-
-- `off` (default): run `System.exit` only on the `exit` notification, as
-  required by the LSP specification.
-- `on`: run `System.exit` after the `shutdown` request, going against the LSP
-  specification. This option is enabled by default for Sublime Text to prevent
-  the Metals process from staying alive after Sublime Text has quit with
-  `Cmd+Q`.  It's not possible for Sublime Text packages to register a callback
-  when the editor has quit. See
-  [LSP#410](https://github.com/tomv564/LSP/issues/410) for more details.
-
-*Usage of `isExitOnShutdown` in `InitializationOptions` is preferable.*
-
-### `-Dmetals.bloop-protocol`
-
-This option is no longer used by Metals.
+- `off` (default): don't log unnecessary details.
+- `on`: emit very detailed logs, should only be used when debugging problems.
 
 ### `-Dmetals.statistics`
 
@@ -229,55 +572,6 @@ Possible values:
   running in the same workspace directory, Metals falls back to using an
   in-memory database resulting in a degraded user experience.
 
-```scala mdoc:user-config:system-property
-
-```
-
-### `-Dmetals.signature-help.command`
-
-An optional string value for a command identifier to trigger parameter hints
-(`textDocument/signatureHelp`) in the editor. Metals uses this setting to
-populate `CompletionItem.command` for completion items that move the cursor
-inside an argument list. For example, when completing `"".stripSu@@` into
-`"".stripSuffix(@@)`, Metals will automatically trigger parameter hints if this
-setting is provided by the editor.
-
-Default value:
-
-- `"editor.action.triggerParameterHints"`: when editor client is Visual Studio
-  Code or coc.nvim.
-- empty: for all other editors.
-
-*Usage of `compilerOptions.parameterHintsCommand` in `InitializationOptions` is
-preferable.*
-
-### `-Dmetals.completion.command`
-
-An optional string value for a command identifier to trigger completion
-(`textDocument/signatureHelp`) in the editor.
-
-Default value:
-
-- `"editor.action.triggerSuggest"`: when editor client is Visual Studio Code or
-  coc.nvim.
-- empty: for all other editors.
-
-*Usage of `compilerOptions.completionCommand` in `InitializationOptions` is
-preferable.*
-
-### `-Dmetals.override-def-format`
-
-Whether or no the presentation compiler overrides should show unicode icon or
-just be in ascii format.
-
-Possible Values:
-
-- `"ascii"` (default)
-- `unicode` show the "🔼" icon in overrides.
-
-*Usage of `compilerOptions.overrideDefFormat` in `InitializationOptions` is
-preferable.*
-
 ### `-Dmetals.pc.debug`
 
 Possible values:
@@ -286,43 +580,17 @@ Possible values:
   compiler.
 - `on`: log verbose debugging information for the presentation compiler.
 
-### `-Dmetals.snippet-auto-indent`
-
-Certain editors will automatically insert indentation equal to that of the
-reference line that the operation started on. This is relevant in the case of
-multiline textEdits such as the "implement all methods" completion.
-
-Possible values:
-
-- `on`: (default): the client automatically adds in the indentation. This is the
-  case for VS Code, Atom, Sublime, and coc.nvim.
-- `off`: the client does not add any indentation when receiving a multi-line
-  textEdit
-
-*Usage of `compilerOptions.snippetAutoIndent` in `InitializationOptions` is
-preferable.*
-
-
-### `-Dmetals.doctor-format`
-
-Format that you'd like Doctor to return information in.
-
-Possible values:
-
-- `html`: (default): Metals will return html that can be rendered directly in
-  the browser or web view
-- `json`: json representation of the information returned by Doctor
-
-*Usage of `doctorProvider` in `InitializationOptions` is preferable.*
-
-### `-Dbloop.embedded.version`
-
-This option is no longer used by Metals.
-
 ### `-Dbloop.sbt.version`
 
 Version number of the sbt-bloop plugin to use for the "Install build" command.
 Default value is `-Dbloop.sbt.version=@SBT_BLOOP_VERSION@`.
+
+The below properties are also available as user configuration options. It's
+preferable to set these there:
+
+```scala mdoc:user-config:system-property
+```
+
 
 ## Metals user configuration
 
@@ -568,12 +836,20 @@ export interface MetalsInputBoxResult {
 ### `metals/quickPick`
 
 The Metals quick pick request is sent from the server to the client to let the
-user provide a string value by picking one out of a number of given options. It is similar to `window/showMessageRequest`, but the `metals/quickPick` request has richer parameters, that can be used to filter items to pick, like `description` and `detail`.
+user provide a string value by picking one out of a number of given options. It
+is similar to `window/showMessageRequest`, but the `metals/quickPick` request
+has richer parameters, that can be used to filter items to pick, like
+`description` and `detail`.
 
 _Request_:
 
 - method: `metals/quickPick`
-- params: `MetalsQuickInputParams` defined as follows. It partially matches [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions) in the Visual Studio Code API, but it also contains `items` of [`MetalsQuickPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem), which, in it's turn, partially matches `QuickPickItem`, but these interfaces do not contain options for picking many items:
+- params: `MetalsQuickInputParams` defined as follows. It partially matches
+    [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions)
+    in the Visual Studio Code API, but it also contains `items` of
+    [`MetalsQuickPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem),
+    which, in it's turn, partially matches `QuickPickItem`, but these interfaces
+    do not contain options for picking many items:
 
 ```ts
 export interface MetalsQuickPickParams {
@@ -651,227 +927,3 @@ interface WindowStateDidChangeParams( {
 }
 ```
 
-## Language Server Protocol
-
-Consult the
-[LSP specification](https://microsoft.github.io/language-server-protocol/specification)
-to learn more more how LSP works. Metals uses the following endpoints from the
-specification.
-
-### `initialize`
-
-- the `rootUri` field is used to configure Metals for that workspace directory.
-  The working directory for where server is started has no significant meaning.
-- at this point, Metals uses only full text synchronization. In the future, it
-  will be able to use incremental text synchronization.
-- `didChangeWatchedFiles` client capability is used to determine whether to
-  register file watchers.
-
-
-#### `InitializationOptions` and `experimental`
-
-During `initialize` we also have the ability to pass in `InitializationOptions`
-and `experimental` capabilities.  In Metals we have a few different "providers".
-Some are also LSP extensions, such as `metals/inputBox` which you read about
-above, and others used to be server properties that have been migrated to
-`clientCapabilities` and `InitializationOptions`.  Whenever possible, instead of
-introducing a new server property, try to introduce it here. The main reason for
-this is that it allows clients to initialize and define their "support" for
-certain things solely through LSP rather then using server properties.
-
-The currently available settings for `InitializationOptions` are listed below.
-
-```js
-    "InitializationOptions": {
-      "compilerOptions":{
-        "completionCommand": string,
-        "isCompletionItemDetailEnabled": boolean,
-        "isCompletionItemDocumentationEnabled": boolean,
-        "isCompletionItemResolve": boolean,
-        "isHoverDocumentationEnabled": boolean,
-        "isSignatureHelpDocumentationEnabled": boolean,
-        "overrideDefFormat": "ascii" | "unicode",
-        "parameterHintsCommand": string,
-        "snippetAutoIndent": boolean,
-      }
-      "debuggingProvider": boolean,
-      "decorationProvider": boolean,
-      "didFocusProvider": boolean,
-      "doctorProvider": "json" | "html",
-      "executeClientCommandProvider": boolean,
-      "globSyntax": "vscode" | "uri"
-      "icons": "octicons" | "vscode" | "unicode" | "atom",
-      "inputBoxProvider": boolean,
-      "isExitOnShutdown" : boolean,
-      "isHttpEnabled": boolean,
-      "openFilesOnRenameProvider": boolean,
-      "quickPickProvider": boolean,
-      "renameFileThreshold": number,
-      "slowTaskProvider": boolean,
-      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
-      "treeViewProvider": boolean
-      "openNewWindowProvider": boolean
-    }
-```
-
-The currently available settings for `experimental` are listed below.
-While these will work to correctly configure the server, they are all available
-to be set via `InitializationOptions`, which is preferable.
-
-```js
-    "experimental": {
-      "debuggingProvider": boolean,
-      "decorationProvider": boolean,
-      "didFocusProvider": boolean,
-      "doctorProvider": boolean,
-      "executeClientCommandProvider": boolean,
-      "inputBoxProvider": boolean,
-      "openFilesOnRenameProvider": boolean,
-      "quickPickProvider": boolean,
-      "slowTaskProvider": boolean,
-      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
-      "treeViewProvider": boolean
-      "openNewWindowProvider": boolean
-    }
-```
-
-### `initialized`
-
-Triggers build server initialization and workspace indexing. The `initialized`
-notification is critical for any Metals functionality to work.
-
-### `shutdown`
-
-It is very important that the client sends a shutdown request in order for
-Metals to clean up open resources.
-
-- persists incremental compilation analysis files. Without a `shutdown` hook,
-  Metals will need to re-compile the entire workspace on next startup.
-- stops ongoing processes such as `sbt bloopInstall`
-- closes database connections
-
-### `exit`
-
-Kills the process using `System.exit`.
-
-### `$/cancelRequest`
-
-Used by `metals/slowTask` to notify when a long-running process has finished.
-
-### `client/registerCapability`
-
-If the client declares the `workspace.didChangeWatchedFiles` capability during
-the `initialize` request, then Metals follows up with a
-`client/registerCapability` request to register file watchers for certain glob
-patterns.
-
-### `textDocument/didOpen`
-
-Triggers compilation in the build server for the build target containing the
-opened document. Related, see `metals/didFocusTextDocument`.
-
-### `textDocument/didChange`
-
-Required to know the text contents of the current unsaved buffer.
-
-### `textDocument/didClose`
-
-Cleans up resources.
-
-### `textDocument/didSave`
-
-Triggers compilation in the build server and analyses if the build needs to be
-re-imported.
-
-### `textDocument/publishDiagnostics`
-
-Metals forwards diagnostics from the build server to the editor client.
-Additionally, Metals publishes `Information` diagnostics for unexpected
-compilation errors when navigating external library sources.
-
-### `textDocument/definition`
-
-Metals supports goto definition for workspace sources in addition to external
-library sources.
-
-- Library sources live under the directory `.metals/readonly` and they are
-  marked as read-only to prevent the user from editing them.
-- The destination location can either be a Scala or Java source file. It is
-  recommended to have a Java language server installed to navigate Java sources.
-
-### `textDocument/references`
-
-Metals finds symbol references for workspace sources but not external library
-dependencies.
-
-LSP does not support streaming references so when project sources have not been
-compiled at the point of a request, Metals returns immediately with potentially
-incomplete results and triggers a background cascade compilation to find new
-symbol references. If new symbol references are discovered after the background
-compilation completes, Metals sends a notification via `metals/status` and
-`window/logMessage` asking the user to run "find references" again.
-
-### `textDocument/documentSymbol`
-
-Returns `DocumentSymbol[]` if the client declares support for hierarchical
-document symbol or `SymbolInformation[]` otherwise.
-
-### `textDocument/formatting`
-
-Formats the sources with the [Scalafmt](https://scalameta.org/scalafmt/) version
-that is declared in `.scalafmt.conf`.
-
-- when `.scalafmt.conf` is missing, Metals sends a `window/showMessageRequest`
-  to create the file.
-- when `.scalafmt.conf` exists but doesn't declare a `version` setting, Metals
-  sends a `metals/inputBox` when supported (with fallback to
-  `window/showMessageRequest` when unsupported) to prepend `version=$VERSION` to
-  the `.scalafmt.conf` file.
-- the first format request is usually slow because Metals needs to download
-  Scalafmt artifacts from Maven Central. While the download happens, Metals adds
-  a message in the status bar via `metals/status` and detailed download progress
-  information is logged to `.metals/metals.log`.
-
-### `workspace/didChangeWatchedFiles`
-
-Optional. Metals uses a built-in file watcher for critical functionality such as
-Goto Definition so it is OK if an editor does not send
-`workspace/didChangeWatchedFiles` notifications.
-
-Metals listens to `workspace/didChangeWatchedFiles` notifications from the
-editor for nice-to-have but non-critical file watching events. Metals
-automatically registers for the following glob patterns if the editor supports
-dynamic registration for file watching.
-
-```scala mdoc:file-watcher
-
-```
-
-The editor is responsible for manually watching these file patterns if the
-editor does not support dynamic file watching registration but can still send
-`workspace/didChangeWatchedFiles` notifications.
-
-### `workspace/executeCommands`
-
-Used to trigger a [Metals server command](#metals-server-commands).
-
-### `workspace/didChangeConfiguration`
-
-Used to update [Metals user configuration](#metals-user-configuration).
-
-### `window/logMessage`
-
-Used to log non-critical and non-actionable information. The user is only
-expected to use the logs for troubleshooting or finding metrics for how long
-certain events take.
-
-### `window/showMessage`
-
-Used to send critical but non-actionable notifications to the user. For
-non-critical notifications, see `metals/status`.
-
-### `window/showMessageRequest`
-
-Used to send critical and actionable notifications to the user. To notify the
-user about long running tasks that can be cancelled, the extension
-`metals/slowTask` is used instead.
