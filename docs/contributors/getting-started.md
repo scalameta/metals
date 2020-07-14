@@ -45,9 +45,6 @@ The CI also uses Scalafix to assert that there a no unused imports. To
 automatically remove unused imports run `sbt scalafixAll`. We don't run Scalafix
 as a pre-push git hook since starting sbt takes a long time.
 
-Before sending in a pr you can use the `preparePr` sbt alias to ensure that both
-Scalafix and Scalafmt have ran.
-
 ## Related projects
 
 The improvement you are looking to contribute may belong in a separate

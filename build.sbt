@@ -151,17 +151,8 @@ onLoad.in(Global) ~= { old =>
 cancelable.in(Global) := true
 crossScalaVersions := Nil
 
-lazy val execScalafmt = taskKey[Unit]("Execute scalafmt executable in /bin")
-execScalafmt := {
-  "bin/scalafmt" !
-}
-
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
-addCommandAlias(
-  "preparePr",
-  "scalafixAll ; execScalafmt"
-)
 
 commands += Command.command("save-expect") { s =>
   "unit/test:runMain tests.SaveExpect" ::
@@ -634,13 +625,3 @@ lazy val docs = project
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin, MUnitReportPlugin)
-
-addCommandAlias(
-  "fastpass-link",
-  "; metals/graalvm-native-image:packageBin ; taskready"
-)
-commands += Command.command("taskready") { s =>
-  import scala.sys.process._
-  "say 'native-image ready'".!
-  s
-}
