@@ -33,9 +33,14 @@ title: Making a release
 - While waiting for Travis, draft the release notes:
 
   - Copy `website/blog/2018-12-06-iron.md` as a template
-  - You might use `.bin/release_notes.py` script to generate merged PRs list. It
-    requires the official Github library (`pip install PyGithub`) and you will
-    also need to fill in tag names.
+  - You might use `.bin/release_notes.sc` script to generate merged PRs list. It
+    can be run using ammonite:
+
+  ```
+  cs install ammonite
+  amm bin/release_notes.sc
+  ```
+
   - Update Metals SNAPSHOT version in `build.sbt` and the default version in
     Github issue templates.
   - Open a PR to the repo.

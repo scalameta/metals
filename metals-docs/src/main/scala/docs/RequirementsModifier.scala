@@ -28,7 +28,7 @@ class RequirementsModifier extends StringModifier {
        |**macOS, Linux or Windows**. Metals is developed on macOS and every PR is
        |tested on Ubuntu+Windows.
        |
-       |**Scala 2.13, 2.12 and 2.11**. Metals supports these Scala versions $supportedScalaVersions.
+       |**Scala 2.13, 2.12, 2.11 and Scala 3**. Metals supports these Scala versions $supportedScalaVersions.
        |Note that 2.11.x support is deprecated and it will be removed in future releases.
        |It's recommended to upgrade to Scala 2.12 or Scala 2.13
        |""".stripMargin
