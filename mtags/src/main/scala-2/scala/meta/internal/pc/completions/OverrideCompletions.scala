@@ -292,8 +292,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       (List.empty[l.TextEdit], Set.empty[l.TextEdit])
     ) { (editsAndImports, overrideDefMember) =>
       val edits = overrideDefMember.edit :: editsAndImports._1
-      val imports = overrideDefMember.autoImports.toSet ++ editsAndImports
-        ._2
+      val imports = overrideDefMember.autoImports.toSet ++ editsAndImports._2
       (edits, imports)
     }
   }
