@@ -64,7 +64,7 @@ case class PresentationCompilerConfigImpl(
       _parameterHintsCommand = options.parameterHintsCommand.orElse(
         this._parameterHintsCommand
       ),
-      _completionCommand = options.parameterHintsCommand.orElse(
+      _completionCommand = options.completionCommand.orElse(
         this._completionCommand
       ),
       overrideDefFormat = options.overrideDefFormat
