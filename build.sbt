@@ -162,9 +162,9 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.11"
+  val scala212 = "2.12.12"
   val scala213 = "2.13.3"
-  val scalameta = "4.3.18"
+  val scalameta = "4.3.20"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.3"
@@ -188,7 +188,7 @@ lazy val V = new {
   // Scala 2
   def deprecatedScala2Versions = Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.10", "2.13.1", "2.13.2")
+    Seq(scala213, scala212, "2.12.11", "2.12.10", "2.13.1", "2.13.2")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
@@ -208,7 +208,7 @@ lazy val V = new {
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-21"
   val coursierInterfaces = "0.0.22"
-  val ammonite = "2.1.4-8-5d0c097"
+  val ammonite = "2.1.4-11-307f3d8"
 }
 
 val genyVersion = Def.setting {
@@ -515,7 +515,9 @@ def publishBinaryMtags =
   publishLocal
     .in(interfaces)
     .dependsOn(
-      publishAllMtags(List(V.scala211, V.scala212, V.scala213, V.scala3))
+      publishAllMtags(
+        List(V.scala211, V.scala212, V.scala213, V.scala3)
+      )
     )
 
 lazy val mtest = project

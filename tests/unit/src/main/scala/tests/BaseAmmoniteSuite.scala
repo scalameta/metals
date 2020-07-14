@@ -183,15 +183,19 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |import $$file.other
            |
            |/b/otherScript.sc
+           | // scala $scalaVersion
            |val a = ""
            |           
            |/b/other.sc
+           | // scala $scalaVersion
            |val a = ""
            |
            |/b/others/Script.sc
+           | // scala $scalaVersion
            |val a = ""
            |
            |/b/notThis.sc
+           | // scala $scalaVersion
            |val a = ""
            |
            |""".stripMargin
@@ -230,6 +234,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |  }
            |}
            |/foos/Script.sc
+           | // scala $scalaVersion
            |val a = ""
            |
            |/foo.sc
