@@ -19,7 +19,7 @@ object LocalDeclarations/*LocalDeclarations.scala*/ {
     val y/*LocalDeclarations.semanticdb*/ = new Foo/*LocalDeclarations.scala*/ {}
 
     x/*LocalDeclarations.semanticdb*/.x/*<no symbol>*/ +/*Int.scala*/ y/*LocalDeclarations.semanticdb*/.y/*LocalDeclarations.scala*/
-    
+
     new LocalDeclarations/*LocalDeclarations.scala*/ with Foo/*LocalDeclarations.scala*/ {
       override def foo/*LocalDeclarations.semanticdb*/(): Unit/*Unit.scala*/ = bar/*LocalDeclarations.semanticdb*/()
     }

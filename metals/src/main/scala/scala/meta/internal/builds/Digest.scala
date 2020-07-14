@@ -167,7 +167,7 @@ object Digest {
       }
       true
     } catch {
-      case NonFatal(e) =>
+      case NonFatal(_) =>
         false
     }
   }

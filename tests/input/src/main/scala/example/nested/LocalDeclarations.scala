@@ -19,7 +19,7 @@ object LocalDeclarations {
     val y = new Foo {}
 
     x.x + y.y
-    
+
     new LocalDeclarations with Foo {
       override def foo(): Unit = bar()
     }

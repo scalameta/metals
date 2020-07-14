@@ -67,7 +67,7 @@ trait FilenameCompletions { this: MetalsGlobal =>
           Nil
         }
       } catch {
-        case NonFatal(e) =>
+        case NonFatal(_) =>
           Nil
       }
     }

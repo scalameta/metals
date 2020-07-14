@@ -74,7 +74,7 @@ final class StatusBar(
         case Failure(exception) =>
           slowTaskFailed(message, exception)
           task.cancel(true)
-        case Success(value) =>
+        case Success(_) =>
           task.cancel(true)
       }
     }

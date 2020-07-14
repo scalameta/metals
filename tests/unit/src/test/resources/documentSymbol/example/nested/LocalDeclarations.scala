@@ -19,7 +19,7 @@
     /*example.nested.LocalDeclarations.create.y(Constant):19*/val y = new Foo {}
 
     x.x + y.y
-    
+
     /*example.nested.LocalDeclarations.create.new LocalDeclarations with Foo(Interface):25*/new LocalDeclarations with Foo {
       /*example.nested.LocalDeclarations.create.`new LocalDeclarations with Foo`#foo(Method):24*/override def foo(): Unit = bar()
     }

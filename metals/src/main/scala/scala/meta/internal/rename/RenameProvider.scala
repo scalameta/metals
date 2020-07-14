@@ -252,7 +252,7 @@ final class RenameProvider(
         Some(Descriptor.Term(name))
       case Descriptor.Term(name) =>
         Some(Descriptor.Type(name))
-      case other =>
+      case _ =>
         None
     }
 

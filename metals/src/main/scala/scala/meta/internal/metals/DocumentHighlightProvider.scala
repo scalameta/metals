@@ -76,7 +76,7 @@ final class DocumentHighlightProvider(
 
     def isInObject(desc: Descriptor) =
       desc match {
-        case Descriptor.Term(value) => true
+        case Descriptor.Term(_) => true
         case _ => false
       }
 
@@ -84,7 +84,7 @@ final class DocumentHighlightProvider(
     Symbol(info.symbol) match {
       case GlobalSymbol(
             GlobalSymbol(owner, descriptor),
-            Descriptor.Method(setter, disambiguator)
+            Descriptor.Method(setter, _)
           ) =>
         generateAlternativeSymbols(
           setter.stripSuffix(setterSuffix),
@@ -112,7 +112,7 @@ final class DocumentHighlightProvider(
       case GlobalSymbol(
             GlobalSymbol(
               GlobalSymbol(owner, descriptor),
-              Descriptor.Method(name, disambiguator)
+              Descriptor.Method(name, _)
             ),
             desc
           ) if copyOrApply(name) =>

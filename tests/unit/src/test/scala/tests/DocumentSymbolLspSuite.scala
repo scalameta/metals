@@ -29,7 +29,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
            |}""".stripMargin
       )
       // fix the code to make it parse
-      _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
+      _ <- server.didChange("a/src/main/scala/a/Main.scala") { _ =>
         """|
            |object Outer {
            |  class Inner
@@ -45,7 +45,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
            |}""".stripMargin
       )
       // make the code unparseable again
-      _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
+      _ <- server.didChange("a/src/main/scala/a/Main.scala") { _ =>
         """|} // <- parse error
            |object Outer {
            |  class Inner

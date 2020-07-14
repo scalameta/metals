@@ -253,7 +253,7 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
         case sym: SymbolInfoSymbol =>
           if (sym.isModuleClass) {
             sym.infoType match {
-              case ClassInfoType(_, List(TypeRefType(_, anyRef, _))) =>
+              case ClassInfoType(_, List(TypeRefType(_, _, _))) =>
                 sym.isSynthetic && sym.semanticdbDecls.syms.isEmpty
               case _ =>
                 false

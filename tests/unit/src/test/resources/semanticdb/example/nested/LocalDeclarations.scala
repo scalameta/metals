@@ -19,7 +19,7 @@ object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
     val y/*local4*/ = new /*local5*/Foo/*example.nested.Foo#*/ /*java.lang.Object#`<init>`().*/{}
 
     x/*local1*/.x +/*scala.Int#`+`(+4).*/ y/*local4*/.y/*example.nested.Foo#y.*/
-    
+
     new /*local6*/LocalDeclarations/*example.nested.LocalDeclarations#*/ /*java.lang.Object#`<init>`().*/with Foo/*example.nested.Foo#*/ {
       override def foo/*local7*/(): Unit/*scala.Unit#*/ = bar/*local0*/()
     }

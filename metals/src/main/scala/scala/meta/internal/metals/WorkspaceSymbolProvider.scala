@@ -4,7 +4,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -28,7 +27,7 @@ final class WorkspaceSymbolProvider(
     val index: GlobalSymbolIndex,
     fileOnDisk: AbsolutePath => AbsolutePath,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
-)(implicit ec: ExecutionContext) {
+) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
   var inDependencies: ClasspathSearch =

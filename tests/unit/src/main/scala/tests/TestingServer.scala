@@ -284,7 +284,7 @@ final class TestingServer(
       base: Map[String, String]
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      referenceLocations <- getReferenceLocations(filename, query, base)
+      referenceLocations <- getReferenceLocations(filename, query)
     } yield {
       Assertions.assertSimpleLocationOrdering(referenceLocations)
       val references =
@@ -1084,8 +1084,7 @@ final class TestingServer(
 
   def getReferenceLocations(
       filename: String,
-      query: String,
-      base: Map[String, String]
+      query: String
   ): Future[List[Location]] = {
     for {
       (_, params) <- offsetParams(filename, query, workspace)
@@ -1281,7 +1280,7 @@ final class TestingServer(
       filename: String,
       linePattern: String,
       isIgnored: String => Boolean = _ => true
-  )(implicit loc: munit.Location): String = {
+  ): String = {
     val path = toPath(filename)
     val line = path.toInput.value.linesIterator.zipWithIndex
       .collectFirst {

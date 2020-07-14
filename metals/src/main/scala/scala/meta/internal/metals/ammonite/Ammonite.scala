@@ -472,7 +472,7 @@ object Ammonite {
         ()
       }.onComplete {
         case Success(()) =>
-        case f @ Failure(exception) => finished.tryComplete(f)
+        case f @ Failure(_) => finished.tryComplete(f)
       }
       SocketConnection(
         "Ammonite",

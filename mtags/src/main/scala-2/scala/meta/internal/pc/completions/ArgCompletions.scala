@@ -80,7 +80,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       }
 
       completions match {
-        case CompletionResult.ScopeMembers(positionDelta, results, name) =>
+        case CompletionResult.ScopeMembers(_, results, _) =>
           results
             .collect {
               case mem

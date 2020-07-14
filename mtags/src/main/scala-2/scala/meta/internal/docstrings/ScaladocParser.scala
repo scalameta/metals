@@ -269,8 +269,8 @@ object ScaladocParser {
       docstring: String
   ): Iterator[(String, String)] = {
     for {
-      section @ (start, end) <- ScaladocUtils.tagIndex(docstring).iterator
-      if ScaladocUtils.startsWithTag(docstring, section, "@define")
+      (start, end) <- ScaladocUtils.tagIndex(docstring).iterator
+      if ScaladocUtils.startsWithTag(docstring, start, "@define")
       List("@define", key, value) <- List(
         docstring
           .substring(start, end)
@@ -550,9 +550,7 @@ object ScaladocParser {
               filterEmpty: Boolean = true
           ): Option[Body] =
             (bodyTags.remove(key): @unchecked) match {
-              case Some(r :: rs) if !(filterEmpty && r.blocks.isEmpty) =>
-                //              if (rs.nonEmpty)
-                //                reporter.warning(pos, s"Only one '@${key.name}' tag is allowed")
+              case Some(r :: _) if !(filterEmpty && r.blocks.isEmpty) =>
                 Some(r)
               case _ => None
             }
@@ -571,21 +569,12 @@ object ScaladocParser {
               bodyTags.keys.toSeq flatMap {
                 case stk: SymbolTagKey if (stk.name == key.name) => Some(stk)
                 case stk: SimpleTagKey if (stk.name == key.name) =>
-                  //                reporter.warning(
-                  //                  pos,
-                  //                  s"Tag '@${stk.name}' must be followed by a symbol name"
-                  //                )
                   None
                 case _ => None
               }
             val pairs: Seq[(String, Body)] =
               for (key <- keys) yield {
                 val bs = (bodyTags remove key).get
-                //              if (bs.length > 1)
-                //                reporter.warning(
-                //                  pos,
-                //                  s"Only one '@${key.name}' tag for symbol ${key.symbol} is allowed"
-                //                )
                 (key.symbol, bs.head)
               }
             Map.empty[String, Body] ++ (if (filterEmpty)
@@ -599,11 +588,7 @@ object ScaladocParser {
             m.map {
               case (name, body) =>
                 val newBody = body match {
-                  case Body(List(Paragraph(Chain(content)))) =>
-                    //                  val link = memberLookup(pos, name, site)
-                    //                  val descr = Text(" ") +: content
-                    //                  val entityLink = EntityLink(Monospace(Text(name)), link)
-                    //                  Body(List(Paragraph(Chain(entityLink +: descr))))
+                  case Body(List(Paragraph(Chain(_)))) =>
                     Body(List())
                   case _ => body
                 }
@@ -893,7 +878,7 @@ object ScaladocParser {
         text.replace(escapeChar + TableCellStart, TableCellStart)
 
       def isEndOfText = char == endOfText
-      
+
       def isStartMarkNewline = check(TableCellStart + endOfLine)
 
       def skipStartMarkNewline() = jump(TableCellStart + endOfLine)
@@ -1221,7 +1206,7 @@ object ScaladocParser {
           (iss.last, current) match {
             case (Text(t1), Text(t2)) if skipEndOfLine =>
               iss.update(iss.length - 1, Text(t1 + endOfLine + t2))
-            case (i1, i2) if skipEndOfLine =>
+            case (_, i2) if skipEndOfLine =>
               iss ++= List(Text(endOfLine.toString), i2)
             case _ => iss += current
           }
@@ -1389,10 +1374,7 @@ object ScaladocParser {
       }
     }
 
-    def reportError(pos: Position, message: String): Unit = {
-      //pprint.log(message)
-      //      reporter.warning(pos, message)
-    }
+    def reportError(pos: Position, message: String): Unit = {}
   }
 
   sealed class CharReader(buffer: String) { reader =>

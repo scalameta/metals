@@ -10,7 +10,6 @@ object Debug {
     e.printStackTrace()
   }
   def printEnclosing()(implicit
-      line: sourcecode.Line,
       enclosing: sourcecode.Enclosing
   ): Unit = {
     val enclosingTrimmed =

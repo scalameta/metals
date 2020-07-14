@@ -97,7 +97,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               case TypeRef(
                     _,
                     definitions.OptionClass,
-                    tpe @ TypeRef(_, tuple, args) :: Nil
+                    tpe @ TypeRef(_, _, args) :: Nil
                   ) =>
                 val ctor = head.tpe.typeSymbol.primaryConstructor
                 val params = ctor.paramLists.headOption.getOrElse(Nil)
@@ -402,7 +402,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       completionFallback
         .orElse {
           tree match {
-            case UnApply(q, a) =>
+            case UnApply(q, _) =>
               Option(compiler.typedTreeAt(q.pos).symbol)
             case TreeApply(q @ Select(New(_), _), _) =>
               Option(compiler.typedTreeAt(q.pos).symbol)

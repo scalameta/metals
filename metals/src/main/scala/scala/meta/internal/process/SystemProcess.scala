@@ -2,7 +2,6 @@ package scala.meta.internal.process
 
 import java.nio.file.Path
 
-import scala.concurrent.ExecutionContext
 import scala.sys.process._
 
 import scala.meta.internal.metals.Time
@@ -16,7 +15,7 @@ object SystemProcess {
       reproduceArgs: List[String],
       cwd: Path,
       token: CancelToken
-  )(implicit ec: ExecutionContext): Unit = {
+  ): Unit = {
     val exportTimer = new Timer(Time.system)
     scribe.info(args.mkString("process: ", " ", ""))
     val exit = Process(args, cwd = Some(cwd.toFile())).!

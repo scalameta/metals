@@ -162,7 +162,7 @@ final class ImplementationProvider(
           )
         // symbol is in workspace,
         // we might need to search different places for related symbols
-        case Some(textDocument) =>
+        case Some(_) =>
           Some(
             InheritanceContext.fromDefinitions(
               symbolSearch,
@@ -530,7 +530,7 @@ object ImplementationProvider {
         fromClassSignature(classSig)
       case ts: TypeSignature =>
         fromTypeSignature(ts)
-      case other =>
+      case _ =>
         Seq.empty
     }
   }

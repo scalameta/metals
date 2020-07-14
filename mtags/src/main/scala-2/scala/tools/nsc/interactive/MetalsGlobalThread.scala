@@ -29,13 +29,13 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
         try {
           compiler.backgroundCompile()
         } catch {
-          case ex: FreshRunReq =>
+          case _: FreshRunReq =>
             compiler.debugLog("fresh run req caught, starting new pass")
         }
         compiler.log.flush()
       }
     } catch {
-      case ex @ ShutdownReq =>
+      case ShutdownReq =>
         compiler.debugLog("exiting presentation compiler")
         compiler.log.close()
 
@@ -51,7 +51,7 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
           case _: ThreadDeath =>
             compiler = null
           // - scalac deviation
-          case ex: FreshRunReq =>
+          case _: FreshRunReq =>
             compiler.debugLog(
               "fresh run req caught outside presentation compiler loop; ignored"
             ) // This shouldn't be reported

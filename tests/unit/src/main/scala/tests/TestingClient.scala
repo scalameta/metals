@@ -76,11 +76,11 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: ShowMessageRequestParams => None
   }
   var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = {
-    params: MetalsInputBoxParams => None
+    _: MetalsInputBoxParams => None
   }
 
   private val refreshCount = new AtomicInteger
-  var refreshModelHandler: Int => Unit = count => ()
+  var refreshModelHandler: Int => Unit = (_) => ()
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams

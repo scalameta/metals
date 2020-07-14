@@ -329,11 +329,9 @@ class MetalsLanguageServer(
       shellRunner
     )
     newProjectProvider = new NewProjectProvider(
-      buildTools,
       languageClient,
       statusBar,
       clientConfig,
-      time,
       shellRunner,
       initialConfig.icons,
       workspace
@@ -659,7 +657,7 @@ class MetalsLanguageServer(
       val port = 5031
       var url = s"http://$host:$port"
       var render: () => String = () => ""
-      var completeCommand: HttpServerExchange => Unit = e => ()
+      var completeCommand: HttpServerExchange => Unit = (_) => ()
       val server = register(
         MetalsHttpServer(
           host,
@@ -1129,13 +1127,13 @@ class MetalsLanguageServer(
   def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens.future { token => compilers.onTypeFormatting(params) }
+    CancelTokens.future { _ => compilers.onTypeFormatting(params) }
 
   @JsonRequest("textDocument/rangeFormatting")
   def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens.future { token => compilers.rangeFormatting(params) }
+    CancelTokens.future { _ => compilers.rangeFormatting(params) }
 
   @JsonRequest("textDocument/prepareRename")
   def prepareRename(
@@ -1851,7 +1849,6 @@ class MetalsLanguageServer(
       check()
       buildTools
         .loadSupported()
-        .foreach(_.onBuildTargets(workspace, buildTargets))
     }
     timedThunk(
       "started file watcher",

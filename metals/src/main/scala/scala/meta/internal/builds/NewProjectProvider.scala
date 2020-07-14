@@ -19,7 +19,6 @@ import scala.meta.internal.metals.MetalsOpenWindowParams
 import scala.meta.internal.metals.MetalsQuickPickItem
 import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.Time
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
@@ -27,11 +26,9 @@ import coursierapi._
 import org.eclipse.lsp4j.ExecuteCommandParams
 
 class NewProjectProvider(
-    buildTools: BuildTools,
     client: MetalsLanguageClient,
     statusBar: StatusBar,
     config: ClientConfiguration,
-    time: Time,
     shell: ShellRunner,
     icons: Icons,
     workspace: AbsolutePath

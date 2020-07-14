@@ -201,7 +201,7 @@ abstract class CompilerAccess[Reporter, Compiler](
 
     // User cancelled task.
     token.onCancel.whenCompleteAsync(
-      (isCancelled, ex) => {
+      (isCancelled, _) => {
         if (isCancelled && !result.isDone()) {
           result.cancel(false)
         }

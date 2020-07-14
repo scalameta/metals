@@ -250,8 +250,7 @@ class Fuzzy {
   }
 
   def bloomFilterSymbolStrings(
-      symbols: Iterable[String],
-      pkg: String = ""
+      symbols: Iterable[String]
   ): StringBloomFilter = {
     val estimatedSize = symbols.foldLeft(0) {
       case (accum, string) =>

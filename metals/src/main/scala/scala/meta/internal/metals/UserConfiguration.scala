@@ -208,7 +208,7 @@ object UserConfiguration {
     def getIntKey(key: String): Option[Int] =
       getStringKey(key).flatMap { value =>
         Try(value.toInt) match {
-          case Failure(exception) =>
+          case Failure(_) =>
             errors += s"Not a number: '$value'"
             None
           case Success(value) =>
@@ -223,7 +223,7 @@ object UserConfiguration {
           if (elem.isJsonArray()) {
             val parsed = elem.getAsJsonArray().asScala.flatMap { value =>
               Try(value.getAsJsonPrimitive().getAsString()) match {
-                case Failure(exception) =>
+                case Failure(_) =>
                   errors += s"json error: values in '$key' should have value of type string but obtained $value"
                   None
                 case Success(value) =>
