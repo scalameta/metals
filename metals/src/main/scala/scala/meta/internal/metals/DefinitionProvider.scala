@@ -251,6 +251,7 @@ class DestinationProvider(
   def fromSymbol(symbol: String): Option[DefinitionDestination] = {
     for {
       symbolDefinition <- index.definition(Symbol(symbol))
+      if symbolDefinition.path.exists
       destinationDoc = bestTextDocument(symbolDefinition)
       defnPathInput = symbolDefinition.path.toInputFromBuffers(buffers)
       defnOriginalInput = Input.VirtualFile(
