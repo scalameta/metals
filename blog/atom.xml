@@ -2,12 +2,23 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-07-01T06:00:00.000Z</updated>
+    <updated>2020-07-15T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.9.2 - Lithium]]></title>
+        <id>http://scalameta.org/metals/blog/2020/07/15/lithium.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/07/15/lithium.html"/>
+        <updated>2020-07-15T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.2, which mostly adds support for Scala 2.12.12.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">50</td> </tr> <tr> <td>Merged PRs</td> <td align="center">24</td> </tr> <tr> <td>Contributors</td> <td align="center">6</td> </tr> <tr> <td>Closed issues</td> <td align="center">14</td> </tr> <tr> <td>New features</td> <td align="center">2</td> </tr> </tbody> </table> <p>For full details: <a href="https://github.com/scalameta/metals/milestone/25?closed=1">https://github.com/scalameta...</a></p>]]></summary>
+        <author>
+            <name>Tomasz Godzik</name>
+            <uri>https://twitter.com/TomekGodzik</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.1 - Lithium]]></title>
         <id>http://scalameta.org/metals/blog/2020/07/01/lithium.html</id>
