@@ -26,7 +26,7 @@ Steps to reproduce the behavior:
 **Installation:**
 - Operating system: macOS/Windows/Linux
 - Editor: Visual Studio Code/Atom/Vim/Sublime/Emacs
-- Metals version: v0.9.1
+- Metals version: v0.9.2
 
 **Additional context**
 <!-- Add any other context about the problem here. -->
