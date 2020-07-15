@@ -58,7 +58,6 @@ abstract class BasePCSuite extends BaseSuite {
       JdkSources().foreach(jdk => index.addSourceJar(jdk))
     if (requiresScalaLibrarySources)
       indexScalaLibrary(index, scalaVersion)
-    val indexer = new Docstrings(index)
     val search = new TestingSymbolSearch(
       ClasspathSearch.fromClasspath(myclasspath),
       new Docstrings(index),

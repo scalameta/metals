@@ -41,7 +41,7 @@ private[implementation] case class ClassLocation(
       case clsSig: ClassSignature =>
         val newASF = AsSeenFrom.toRealNames(clsSig, translateKey, asSeenFrom)
         ClassLocation(symbol, file, newASF.toMap)
-      case other => this
+      case _ => this
     }
   }
 }
@@ -98,7 +98,7 @@ object AsSeenFrom {
           case None => None
         }
 
-      case other => None
+      case _ => None
     }.toMap
   }
 

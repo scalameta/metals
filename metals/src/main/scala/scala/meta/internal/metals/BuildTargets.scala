@@ -323,7 +323,7 @@ final class BuildTargets() {
       all.map(i => i.id -> i.scalac.classpath.toSeq).toSeq
     try {
       toplevels.foldLeft(Option.empty[InferredBuildTarget]) {
-        case (Some(x), toplevel) => Some(x)
+        case (Some(x), _) => Some(x)
         case (None, toplevel) =>
           val classfile = toplevel.owner.value + toplevel.displayName + ".class"
           val resource = classloader

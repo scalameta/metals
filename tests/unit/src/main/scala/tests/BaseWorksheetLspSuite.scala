@@ -193,7 +193,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("cancel") {
     val cancelled = Promise[Unit]()
-    client.slowTaskHandler = { params =>
+    client.slowTaskHandler = { _ =>
       cancelled.trySuccess(())
       Some(MetalsSlowTaskResult(cancel = true))
     }

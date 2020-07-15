@@ -98,7 +98,7 @@ object ScaladocUtils {
    */
   def tagIndex(
       str: String,
-      p: Int => Boolean = (idx => true)
+      p: Int => Boolean = (_ => true)
   ): List[(Int, Int)] = {
     var indices = findAll(str, 0)(idx => str(idx) == '@' && p(idx))
     indices = mergeUsecaseSections(str, indices)

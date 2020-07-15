@@ -7,7 +7,6 @@ import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
@@ -41,8 +40,7 @@ final class InteractiveSemanticdbs(
     statusBar: StatusBar,
     compilers: () => Compilers,
     clientConfig: ClientConfiguration
-)(implicit ec: ExecutionContext)
-    extends Cancelable
+) extends Cancelable
     with Semanticdbs {
   private val activeDocument = new AtomicReference[Option[String]](None)
   private val textDocumentCache = Collections.synchronizedMap(

@@ -18,7 +18,7 @@ case class FutureCancelToken(f: Future[Boolean])(implicit ec: ExecutionContext)
     extends CancelToken {
   var isCancelled: Boolean = false
   f.onComplete {
-    case Failure(exception) =>
+    case Failure(_) =>
       isCancelled = true
     case Success(cancel) =>
       isCancelled = cancel

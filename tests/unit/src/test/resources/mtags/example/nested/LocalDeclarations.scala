@@ -4,7 +4,9 @@ trait LocalDeclarations/*example.nested.LocalDeclarations#*/ {
   def foo/*example.nested.LocalDeclarations#foo().*/(): Unit
 }
 
-trait Foo/*example.nested.Foo#*/ {}
+trait Foo/*example.nested.Foo#*/ {
+  val y/*example.nested.Foo#y.*/ = 3
+}
 
 object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
   def create/*example.nested.LocalDeclarations.create().*/(): LocalDeclarations = {
@@ -15,6 +17,8 @@ object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
     }
 
     val y = new Foo {}
+
+    x.x + y.y
 
     new LocalDeclarations with Foo {
       override def foo(): Unit = bar()

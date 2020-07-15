@@ -50,7 +50,7 @@ final class RenameProvider(
     clientConfig: ClientConfiguration
 )(implicit executionContext: ExecutionContext) {
 
-  private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
+  private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
 
   private def compilationFinished(
       source: AbsolutePath
@@ -252,7 +252,7 @@ final class RenameProvider(
         Some(Descriptor.Term(name))
       case Descriptor.Term(name) =>
         Some(Descriptor.Type(name))
-      case other =>
+      case _ =>
         None
     }
 

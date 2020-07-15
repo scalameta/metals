@@ -40,9 +40,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
     // In some environments (such as WSL or cygwin), mill must be run using interactive mode (-i)
     val iOption = if (Properties.isWin) List("-i") else Nil
     val cmd =
-      iOption ::: "--predef" :: predefScriptPath(
-        millVersion
-      ).toString :: "mill.contrib.Bloop/install" :: Nil
+      iOption ::: "--predef" :: predefScriptPath.toString :: "mill.contrib.Bloop/install" :: Nil
 
     userConfig().millScript match {
       case Some(script) =>
@@ -65,11 +63,11 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   def executableName = "mill"
 
-  private def predefScript(millVersion: String) =
+  private def predefScript =
     "import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`".getBytes()
 
-  private def predefScriptPath(millVersion: String): Path = {
-    Files.write(tempDir.resolve(predefScriptName), predefScript(millVersion))
+  private def predefScriptPath: Path = {
+    Files.write(tempDir.resolve(predefScriptName), predefScript)
   }
 
 }

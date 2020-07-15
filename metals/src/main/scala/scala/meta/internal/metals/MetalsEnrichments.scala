@@ -418,7 +418,7 @@ object MetalsEnrichments
       indicesOf(str) match {
         case Nil => Some(-1)
         case List(idx) => Some(idx)
-        case indices => None
+        case _ => None
       }
 
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption

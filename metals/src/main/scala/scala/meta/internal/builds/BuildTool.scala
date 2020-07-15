@@ -6,7 +6,6 @@ import java.nio.file.StandardCopyOption
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -32,8 +31,6 @@ abstract class BuildTool {
   def minimumVersion: String
 
   def recommendedVersion: String
-
-  def onBuildTargets(workspace: AbsolutePath, targets: BuildTargets): Unit = ()
 
   protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")

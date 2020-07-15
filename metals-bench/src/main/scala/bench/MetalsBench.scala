@@ -109,7 +109,7 @@ class MetalsBench {
   def scalametaParse(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       import scala.meta._
-      val tree = Trees.defaultDialect(input).parse[Source].get
+      Trees.defaultDialect(input).parse[Source].get
     }
   }
 

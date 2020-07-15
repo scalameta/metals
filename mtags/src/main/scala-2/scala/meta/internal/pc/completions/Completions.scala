@@ -68,14 +68,13 @@ trait Completions { this: MetalsGlobal =>
    * - public vs private
    * - synthetic vs non-synthetic
    */
-  def relevancePenalty(m: Member, history: ShortenedNames): Int =
+  def relevancePenalty(m: Member): Int =
     m match {
       case TypeMember(sym, _, true, isInherited, _) =>
         computeRelevancePenalty(
           sym,
           m.implicitlyAdded,
-          isInherited,
-          history
+          isInherited
         )
       case w: WorkspaceMember =>
         MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
@@ -83,8 +82,7 @@ trait Completions { this: MetalsGlobal =>
         var penalty = computeRelevancePenalty(
           w.sym,
           m.implicitlyAdded,
-          isInherited = false,
-          history
+          isInherited = false
         ) >>> 15
         if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
         penalty
@@ -92,8 +90,7 @@ trait Completions { this: MetalsGlobal =>
         computeRelevancePenalty(
           sym,
           m.implicitlyAdded,
-          isInherited = false,
-          history
+          isInherited = false
         )
       case _ =>
         Int.MaxValue
@@ -107,8 +104,7 @@ trait Completions { this: MetalsGlobal =>
   private def computeRelevancePenalty(
       sym: Symbol,
       viaImplicitConversion: Boolean,
-      isInherited: Boolean,
-      history: ShortenedNames
+      isInherited: Boolean
   ): Int = {
     import MemberOrdering._
     var relevance = 0
@@ -192,8 +188,8 @@ trait Completions { this: MetalsGlobal =>
           if (byLocalSymbol != 0) byLocalSymbol
           else {
             val byRelevance = Integer.compare(
-              relevancePenalty(o1, history),
-              relevancePenalty(o2, history)
+              relevancePenalty(o1),
+              relevancePenalty(o2)
             )
             if (byRelevance != 0) byRelevance
             else {
@@ -552,9 +548,9 @@ trait Completions { this: MetalsGlobal =>
       }
     }
     enclosing match {
-      case ExhaustiveMatch(pos) :: tail =>
+      case ExhaustiveMatch(pos) :: _ =>
         pos
-      case (head @ (_: Ident | _: Select)) :: tail =>
+      case (_: Ident | _: Select) :: tail =>
         tail match {
           case (v: ValOrDefDef) :: _ =>
             if (v.tpt.pos.includes(pos)) {
@@ -757,7 +753,7 @@ trait Completions { this: MetalsGlobal =>
             head match {
               case i: Ident =>
                 treePos(i).point
-              case Select(qual, nme) if !treePos(qual).includes(pos) =>
+              case Select(qual, _) if !treePos(qual).includes(pos) =>
                 treePos(head).point
               case _ => fallback
             }

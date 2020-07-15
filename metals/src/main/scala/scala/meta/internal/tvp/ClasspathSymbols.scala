@@ -146,7 +146,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
       root: Path,
       path: Path
   ): Seq[TreeViewSymbolInformation] = {
-    var result = mutable.ListBuffer.empty[TreeViewSymbolInformation]
+    val result = mutable.ListBuffer.empty[TreeViewSymbolInformation]
     def isDone = result.lengthCompare(1) > 0
     Files.walkFileTree(
       path,

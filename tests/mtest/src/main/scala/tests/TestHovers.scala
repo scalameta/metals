@@ -58,9 +58,6 @@ trait TestHovers {
 
   }
 
-  private def toScala(hover: Hover) = {
-    hover.getContents
-  }
   private def codeFence(code: String, language: String): String = {
     val trimmed = code.trim
     if (trimmed.isEmpty) ""

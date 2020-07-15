@@ -68,7 +68,7 @@ object SemanticdbDefinition {
         }
         try mtags.indexRoot()
         catch {
-          case NonFatal(e) =>
+          case NonFatal(_) =>
         }
       case _ =>
     }

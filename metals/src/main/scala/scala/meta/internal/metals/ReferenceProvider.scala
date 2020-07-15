@@ -115,7 +115,6 @@ final class ReferenceProvider(
       occ: SymbolOccurrence
   ): Set[String] = {
     val name = occ.symbol.desc.name.value
-    val isCopyOrApply = Set("apply", "copy")
     // Returns true if `info` is the companion object matching the occurrence class symbol.
     def isCompanionObject(info: SymbolInformation): Boolean =
       info.isObject &&

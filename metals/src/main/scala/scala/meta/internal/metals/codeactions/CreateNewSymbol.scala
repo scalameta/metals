@@ -1,8 +1,5 @@
 package scala.meta.internal.metals.codeactions
 
-import java.net.URI
-import java.nio.file.Paths
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -28,10 +25,6 @@ class CreateNewSymbol() extends CodeAction {
       codeAction.setTitle(CreateNewSymbol.title(name))
       codeAction.setKind(l.CodeActionKind.QuickFix)
       codeAction.setDiagnostics(List(diagnostic).asJava)
-      val directory = Paths
-        .get(URI.create(params.getTextDocument().getUri()))
-        .getParent()
-        .toString()
       codeAction.setCommand(ServerCommands.NewScalaFile.toLSP(List(null, name)))
       codeAction
     }

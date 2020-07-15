@@ -14,7 +14,6 @@ class RangeFormattingWhenSelectingSuite
        |                  |third line
        |          |fourth line'''.stripMargin>>
        |}""".stripMargin,
-    None,
     s"""
        |object Main {
        |  val str = '''
@@ -35,7 +34,6 @@ class RangeFormattingWhenSelectingSuite
        |                  |third line
        |          |fourth line'''.stripMargin>>
        |}""".stripMargin,
-    None,
     s"""
        |object Main {
        |  val str = '''
@@ -55,7 +53,6 @@ class RangeFormattingWhenSelectingSuite
        |                  |third line
        |          |fourth line'''.stripMargin>>
        |}""".stripMargin,
-    None,
     s"""
        |object Main {
        |  val str = '''first line
@@ -74,7 +71,6 @@ class RangeFormattingWhenSelectingSuite
        |                  |third line
        |          |fourth line'''.stripMargin>>
        |}""".stripMargin,
-    None,
     s"""
        |object Main {
        |  val str = '''|first line
@@ -93,7 +89,6 @@ class RangeFormattingWhenSelectingSuite
        |                  |third line
        |          |fourth line'''.stripMargin>>
        |}""".stripMargin,
-    None,
     s"""
        |object Main {
        |  val str = '''|first line
@@ -117,7 +112,6 @@ class RangeFormattingWhenSelectingSuite
        |               |first line
        |               |second line'''.stripMargin>>
        |}""".stripMargin,
-    None,
     s"""
        |object Main {
        |  val firstString = '''
@@ -133,7 +127,6 @@ class RangeFormattingWhenSelectingSuite
   def check(
       name: String,
       testCase: String,
-      paste: Option[String],
       expectedCase: String
   )(implicit loc: Location): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""

@@ -11,7 +11,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
 
   def withCompletion(query: String, project: Char = 'a')(
       fn: CompletionList => Unit
-  )(implicit loc: Location): Future[Unit] = {
+  ): Future[Unit] = {
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
       .textContentsOnDisk(filename)

@@ -315,7 +315,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
         inferEditPosition(text, t).toLSP,
         t,
         text,
-        true,
         _ => true
       )
     }
@@ -371,7 +370,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
       range: l.Range,
       t: Template,
       text: String,
-      shouldAddOverrideKwd: Boolean,
       isCandidate: Symbol => Boolean
   ): List[l.TextEdit] = {
     val overrideMembers = getMembers(
@@ -498,7 +496,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
    */
   private def hasBody(text: String, t: Template): Option[Int] = {
     val start = t.pos.start
-    val end = t.pos.end
     val offset = text.indexOf('{', start)
     if (offset > 0 && offset < t.pos.end) Some(offset)
     else None

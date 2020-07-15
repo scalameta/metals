@@ -78,7 +78,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           } else {
             tree
           }
-        case Apply(sel @ Select(New(_), termNames.CONSTRUCTOR), args)
+        case Apply(sel @ Select(New(_), termNames.CONSTRUCTOR), _)
             if sel.pos != null &&
               sel.pos.isRange &&
               !sel.pos.includes(pos) =>
@@ -106,17 +106,12 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case pt: PolyType => isImplicitMethodType(pt.resultType)
       case _ => false
     }
-    def selectQual(tree: Tree): Tree =
-      tree match {
-        case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
-        case t => t
-      }
     // TODO: guard with try/catch to deal with ill-typed qualifiers.
     val tree =
       if (shouldTypeQualifier) analyzer.newTyper(context).typedQualifier(tree0)
       else tree0
     typedTree match {
-      case i @ Import(expr, selectors) =>
+      case i @ Import(expr, _) =>
         if (expr.pos.includes(pos)) {
           expr.findSubtree(pos)
         } else {
@@ -125,7 +120,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             case Some(sym) => Ident(sym.name).setSymbol(sym)
           }
         }
-      case sel @ Select(qualifier, name) if sel.tpe == ErrorType =>
+      case sel @ Select(_, name) if sel.tpe == ErrorType =>
         val symbols = tree.tpe.member(name)
         typedTree.setSymbol(symbols)
       case defn: DefTree if !defn.namePos.metalsIncludes(pos) =>

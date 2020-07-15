@@ -13,7 +13,7 @@ class LineListenerSuite extends BaseSuite {
       expected: List[String]
   )(implicit loc: Location): Unit = {
     test(name) {
-      var buf = mutable.ListBuffer.empty[String]
+      val buf = mutable.ListBuffer.empty[String]
       val output = new LineListener(line => buf += line)
       act(output)
       output.flushIfNonEmpty()

@@ -71,7 +71,7 @@ object MillDigest extends Digestable {
               acc.hadImport = false
             }
           // if we are after => and haven't encountered `,`, `}` or newline
-          case other if acc.skip =>
+          case _ if acc.skip =>
           // recognize $file import
           case ident: Token.Ident if ident.pos.text == "$file" =>
             acc.hadFile = true
@@ -94,7 +94,7 @@ object MillDigest extends Digestable {
       }
       acc.allPaths.toList
     } catch {
-      case NonFatal(e) =>
+      case NonFatal(_) =>
         Nil
     }
   }

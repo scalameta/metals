@@ -157,5 +157,4 @@ object SbtBuildTool {
     SbtBuildTool(version, userConfig)
   }
 
-  private def unknown = "<unknown>"
 }

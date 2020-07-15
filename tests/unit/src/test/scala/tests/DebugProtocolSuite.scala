@@ -79,7 +79,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       )
       failed = startDebugging()
       debugger <- failed.recoverWith {
-        case e: ResponseErrorException =>
+        case _: ResponseErrorException =>
           server
             .didSave("a/src/main/scala/a/Main.scala") { text => text + "}" }
             .flatMap(_ => startDebugging())

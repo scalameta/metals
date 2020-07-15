@@ -24,7 +24,7 @@ object Cancelable {
   }
 
   def cancelAll(iterable: Iterable[Cancelable]): Unit = {
-    var errors = ListBuffer.empty[Throwable]
+    val errors = ListBuffer.empty[Throwable]
     iterable.foreach { cancelable =>
       try cancelable.cancel()
       catch { case ex if NonFatal(ex) => errors += ex }

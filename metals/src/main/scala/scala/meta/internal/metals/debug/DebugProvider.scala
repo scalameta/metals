@@ -130,8 +130,7 @@ class DebugProvider(
           Option(params.buildTarget)
         )
     ).flatMap {
-      case (clazz, target) :: others
-          if buildClient.buildHasErrors(target.getId()) =>
+      case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
         Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
         if (others.nonEmpty) {
@@ -171,8 +170,7 @@ class DebugProvider(
           Option(params.buildTarget)
         )
     }).flatMap {
-      case (clazz, target) :: others
-          if buildClient.buildHasErrors(target.getId()) =>
+      case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
         Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
         if (others.nonEmpty) {
@@ -199,7 +197,7 @@ class DebugProvider(
   }
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
-    case t if buildClient.buildHasErrors =>
+    case _ if buildClient.buildHasErrors =>
       statusBar.addMessage(Messages.DebugErrorsPresent)
       languageClient.metalsExecuteClientCommand(
         new ExecuteCommandParams(
@@ -211,12 +209,12 @@ class DebugProvider(
       languageClient.showMessage(
         Messages.DebugClassNotFound.invalidClass(t.getMessage())
       )
-    case t @ ClassNotFoundInBuildTargetException(cls, buildTarget) =>
+    case ClassNotFoundInBuildTargetException(cls, buildTarget) =>
       languageClient.showMessage(
         Messages.DebugClassNotFound
           .invalidTargetClass(cls, buildTarget.getDisplayName())
       )
-    case t @ BuildTargetNotFoundException(target) =>
+    case BuildTargetNotFoundException(target) =>
       languageClient.showMessage(
         Messages.DebugClassNotFound
           .invalidTarget(target)
@@ -257,7 +255,7 @@ class DebugProvider(
           parameters.setData(main.toJsonObject)
         }
         parameters
-      case data =>
+      case _ =>
         parameters
     }
   }

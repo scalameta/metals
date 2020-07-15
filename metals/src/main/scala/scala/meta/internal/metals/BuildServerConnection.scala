@@ -78,7 +78,7 @@ class BuildServerConnection private (
           cancel()
         }
       } catch {
-        case e: TimeoutException =>
+        case _: TimeoutException =>
           scribe.error(
             s"timeout: build server '${conn.displayName}' during shutdown"
           )
@@ -234,7 +234,7 @@ object BuildServerConnection {
 
     def setupServer(): Future[LauncherConnection] = {
       connect().map {
-        case conn @ SocketConnection(name, output, input, _, _) =>
+        case conn @ SocketConnection(_, output, input, _, _) =>
           val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
           val launcher = new Launcher.Builder[MetalsBuildServer]()
             .traceMessages(tracePrinter)

@@ -43,9 +43,6 @@ class BaseSuite extends munit.FunSuite with Assertions {
       munitFlakyTransform
     )
 
-  private def scalaBinary(scalaVersion: String): String =
-    scalaVersion.split("\\.").take(2).mkString(".")
-
   val compatProcess: Map[String, String => String] =
     Map.empty[String, String => String]
 

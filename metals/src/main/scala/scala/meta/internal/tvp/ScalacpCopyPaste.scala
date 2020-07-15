@@ -253,7 +253,7 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
         case sym: SymbolInfoSymbol =>
           if (sym.isModuleClass) {
             sym.infoType match {
-              case ClassInfoType(_, List(TypeRefType(_, anyRef, _))) =>
+              case ClassInfoType(_, List(TypeRefType(_, _, _))) =>
                 sym.isSynthetic && sym.semanticdbDecls.syms.isEmpty
               case _ =>
                 false
@@ -457,17 +457,6 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
 
     private def sig(linkMode: LinkMode): s.Signature =
       s.NoSignature // scalacp deviation
-
-    private val syntheticAnnotationsSymbols = Set(
-      "scala/reflect/macros/internal/macroImpl#"
-    )
-
-    private def syntheticAnnotations(annot: s.Annotation): Boolean = {
-      annot.tpe match {
-        case s.TypeRef(_, sym, _) => syntheticAnnotationsSymbols.contains(sym)
-        case _ => false
-      }
-    }
 
     private def annotations: List[s.Annotation] = {
       Nil // scalacp deviation
