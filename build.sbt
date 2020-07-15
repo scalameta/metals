@@ -377,8 +377,8 @@ lazy val metals = project
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.1",
-      "net.java.dev.jna" % "jna" % "4.5.2",
-      "net.java.dev.jna" % "jna-platform" % "4.5.2",
+      "net.java.dev.jna" % "jna" % "5.6.0",
+      "net.java.dev.jna" % "jna-platform" % "5.6.0",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.1.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
