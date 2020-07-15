@@ -85,7 +85,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    }
             |
             |    dependencies {
-            |        classpath 'ch.epfl.scala:gradle-bloop_2.12:1.4.3'
+            |        classpath 'ch.epfl.scala:gradle-bloop_2.12:121807cc'
             |    }
             |}
             |
