@@ -206,7 +206,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
-  val coursier = "2.0.0-RC6-21"
+  val coursier = "2.0.0-RC6-23"
   val coursierInterfaces = "0.0.24"
   val ammonite = "2.1.4-11-307f3d8"
 }
@@ -373,12 +373,12 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.1.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.1.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.5.0",
+      "org.flywaydb" % "flyway-core" % "6.5.1",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.1",
-      "net.java.dev.jna" % "jna" % "4.5.2",
-      "net.java.dev.jna" % "jna-platform" % "4.5.2",
+      "net.java.dev.jna" % "jna" % "5.6.0",
+      "net.java.dev.jna" % "jna-platform" % "5.6.0",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.1.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -413,7 +413,7 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.2.6"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.2.7"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
