@@ -37,7 +37,6 @@ import scala.meta.internal.metals.StatusBar
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
-import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.ExecuteCommandParams

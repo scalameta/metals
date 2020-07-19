@@ -16,7 +16,6 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 

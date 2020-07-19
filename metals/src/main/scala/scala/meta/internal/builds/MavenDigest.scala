@@ -4,7 +4,6 @@ import java.security.MessageDigest
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.meta.io.AbsolutePath
 
 object MavenDigest extends Digestable {
   override protected def digestWorkspace(
