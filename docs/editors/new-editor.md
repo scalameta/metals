@@ -235,7 +235,7 @@ Default value: `false`
 ##### `didFocusProvider`
 
 Boolean value to signify that the client supports the
-[`metals/didFocusTextDocument`](#metalsdid-focus-text-document) extension.
+[`metals/didFocusTextDocument`](#metalsdidfocustextdocument) extension.
 
 Default value: `false`
 
@@ -328,7 +328,7 @@ Default: `false`
 ##### `quickPickProvider`
 
 Boolean value to signify whether or not the client implements the
-[`metals/quickPick`](#metalsquick-pick) extensions.
+[`metals/quickPick`](#metalsquickpick) extensions.
 
 Default value: `false`
 

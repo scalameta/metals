@@ -323,7 +323,7 @@ Then, when on the line that you'd like to expand the decoration to get the hover
 
 coc-metals has a built-in implementation of the [Tree View
 Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html).
-If you have the [recommended mappings](coc-mappings.vim) copied, you'll notice
+If you have the [recommended mappings](vim.md#recommended-cocnvim-mappings) copied, you'll notice
 that in the bottom you'll have some TVP related settings. You can start by
 opening the TVP panel by using the default `<space> t`. Once open, you'll see
 there are three parts to the panel. The first being the `MetalsCompile` window
@@ -409,6 +409,10 @@ If you'd like to get autocompletion help for the configuration values you can
 install [coc-json](https://github.com/neoclide/coc-json).
 
 ```scala mdoc:user-config:lsp-config-coc
+```
+
+```scala mdoc:new-project:vim
+
 ```
 
 ## Enable on type formatting for multiline string formatting

@@ -238,6 +238,9 @@ object ServerCommands {
     "New Scala Project",
     """|Create a new Scala project using one of the available g8 templates. 
        |This includes simple projects as well as samples for most of the popular Scala frameworks.
+       |The command reuses the Metals quick pick extension to work and can function with `window/showMessageRequest`, 
+       |however the experience will not be optimal in that case. Some editors might also offer to open the newly created
+       |project via `openNewWindowProvider`, but it is not necessary for the main functionality to work. 
        |""".stripMargin
   )
 

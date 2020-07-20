@@ -4,6 +4,18 @@ title: Text Editors
 sidebar_label: Overview
 ---
 
+## Latest Metals server versions
+
+To find out how to set the version in your editor please check out the editor
+specific sections.
+
+```scala mdoc:releases
+
+```
+
+
+## Editor support
+
 Metals works with the following text editors with varying degree of
 functionality.
 
@@ -187,8 +199,8 @@ functionality.
     <td>Metals Extensions</td>
     <td align="center">✅</td>
     <td align="center">Status bar</td>
-    <td align="center">Status bar</td>
-    <td align="center">Status bar</td>
+    <td align="center">Status bar, Quick pick</td>
+    <td align="center">Status bar, Input box</td>
     <td align="center">Status bar</td>
     <td align="center">Status bar, Slow task</td>
   </tr>
@@ -372,7 +384,8 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 **Tree view**: Editor client implements the
 [Tree View Protocol](tree-view-protocol.md).
 
-**Did focus**: Editor client implements the `metals/didFocusTextDocument` notification.
+**Did focus**: Editor client implements the `metals/didFocusTextDocument`
+notification.
 
 **Slow task**: Editor client implements the `metals/slowTask` request.
 
