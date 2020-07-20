@@ -27,7 +27,9 @@ class ClientConfiguration(
     extract(
       initializationOptions.statusBarState,
       experimentalCapabilities.statusBarState,
-      StatusBarState.Off
+      StatusBarState
+        .fromString(initialConfig.statusBar.value)
+        .getOrElse(StatusBarState.Off)
     )
 
   def globSyntax(): GlobSyntaxConfig =
