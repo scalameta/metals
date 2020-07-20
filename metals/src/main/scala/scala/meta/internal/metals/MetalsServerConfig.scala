@@ -171,7 +171,7 @@ object MetalsServerConfig {
       case "sublime" =>
         base.copy(
           isHttpEnabled = true,
-          statusBar = StatusBarConfig.showMessage,
+          statusBar = StatusBarConfig.on,
           icons = Icons.unicode,
           isExitOnShutdown = true,
           compilers = base.compilers.copy(
