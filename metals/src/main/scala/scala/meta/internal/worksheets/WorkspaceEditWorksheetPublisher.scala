@@ -13,7 +13,6 @@ import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.Position

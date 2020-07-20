@@ -3,7 +3,6 @@ package scala.meta.internal.tvp
 import java.{util => ju}
 
 import scala.collection.mutable
-import scala.collection.mutable
 import scala.reflect.NameTransformer
 import scala.tools.scalap.scalax.rules.scalasig._
 
@@ -14,10 +13,8 @@ import scala.meta.internal.semanticdb.Scala.{Descriptor => d}
 import scala.meta.internal.semanticdb.Scala.{DisplayNames => dn}
 import scala.meta.internal.semanticdb.Scala.{Names => n}
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
-import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.internal.semanticdb.{Language => l}
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.{semanticdb => s}
 
 /**
