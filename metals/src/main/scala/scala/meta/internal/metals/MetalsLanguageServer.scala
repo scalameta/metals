@@ -606,7 +606,7 @@ class MetalsLanguageServer(
         initialConfig.allowMultilineStringFormatting
       )
       capabilities.setSignatureHelpProvider(
-        new SignatureHelpOptions(List("(", "[").asJava)
+        new SignatureHelpOptions(List("(", "[", ",").asJava)
       )
       capabilities.setCompletionProvider(
         new CompletionOptions(
