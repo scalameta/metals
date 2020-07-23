@@ -55,7 +55,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
         new String(gradlePropsFile.readAllBytes, StandardCharsets.UTF_8)
       contents.linesIterator.exists(_.startsWith("bloop.configured=true"))
     } catch {
-      case err: IOException => false
+      case _: IOException => false
     }
   }
 

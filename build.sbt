@@ -340,6 +340,9 @@ lazy val mtags3 = project
     unmanagedSourceDirectories.in(Compile) += baseDirectory
       .in(ThisBuild)
       .value / "mtags" / "src" / "main" / "scala",
+    managedSourceDirectories.in(Compile) += baseDirectory
+      .in(ThisBuild)
+      .value / "mtags" / "target" / ("scala-" + scalaVersion.value) / "src_managed" / "main",
     moduleName := "mtags3",
     scalaVersion := V.scala3,
     target := baseDirectory

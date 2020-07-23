@@ -34,6 +34,7 @@ import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.DiagnosticSeverity
+
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.Completion
@@ -56,8 +57,11 @@ import dotty.tools.dotc.printing.PlainPrinter
 import dotty.tools.io.VirtualFile
 import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.ast.tpd
+
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.ClassFinder
+import scala.meta.internal.semver.SemVer
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.pc.VirtualFileParams
@@ -92,11 +96,17 @@ case class ScalaPresentationCompiler(
   }
 
   def newDriver: InteractiveDriver = {
+    val implicitSuggestionTimeout =
+      if (SemVer.isCompatibleVersion("0.25.0", BuildInfo.scalaCompilerVersion))
+        List("-Ximport-suggestion-timeout", "0")
+      else Nil
+
     val defaultFlags = List("-color:never")
     val settings =
-      options ::: defaultFlags ::: "-classpath" :: classpath.mkString(
-        File.pathSeparator
-      ) :: Nil
+      options ::: defaultFlags ::: implicitSuggestionTimeout ::: "-classpath" :: classpath
+        .mkString(
+          File.pathSeparator
+        ) :: Nil
     new InteractiveDriver(settings)
   }
 
