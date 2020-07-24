@@ -505,8 +505,8 @@ class Compilers(
             isCompletionSnippetsEnabled =
               initializeParams.supportsCompletionSnippets,
             isFoldOnlyLines = initializeParams.foldOnlyLines,
-            isStripMarginOnTypeFormattingEnabled =
-              userConfig().enableStripMarginOnTypeFormatting
+            _isStripMarginOnTypeFormattingEnabled =
+              () => userConfig().enableStripMarginOnTypeFormatting
           )
       )
 

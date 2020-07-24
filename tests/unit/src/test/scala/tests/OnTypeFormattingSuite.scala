@@ -3,6 +3,7 @@ package tests
 import scala.concurrent.Future
 
 import munit.Location
+import munit.TestOptions
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   private val indent = "  "
@@ -422,6 +423,28 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
+    "add-stripMargin-with-config",
+    s"""
+       |object Main {
+       |  val str = '''|@@'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |'''.stripMargin
+       |}""".stripMargin,
+    stripMarginEnabled = false,
+    additionalRequests = { server =>
+      server.didChangeConfiguration(
+        """{
+          |  "enable-strip-margin-on-type-formatting": true
+          |}
+          |""".stripMargin
+      )
+    }
+  )
+
+  check(
     "no-stripMargin",
     s"""
        |object Main {
@@ -437,12 +460,13 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   def check(
-      name: String,
+      name: TestOptions,
       testCase: String,
       expectedCase: String,
       autoIndent: String = indent,
       triggerCharacter: String = "\n",
-      stripMarginEnabled: Boolean = true
+      stripMarginEnabled: Boolean = true,
+      additionalRequests: TestingServer => Future[Unit] = server => Future {}
   )(implicit loc: Location): Unit = {
     val quote = """\u0022"""
     def unmangle(string: String): String =
@@ -468,6 +492,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
                 |""".stripMargin
             )
           else Future.successful(())
+        _ <- additionalRequests(server)
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",
