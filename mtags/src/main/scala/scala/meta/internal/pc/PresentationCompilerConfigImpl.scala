@@ -23,10 +23,13 @@ case class PresentationCompilerConfigImpl(
     isSignatureHelpDocumentationEnabled: Boolean = true,
     isCompletionSnippetsEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,
-    isStripMarginOnTypeFormattingEnabled: Boolean = true,
+    _isStripMarginOnTypeFormattingEnabled: () => Boolean = () => true,
     timeoutDelay: Long = 20,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS
 ) extends PresentationCompilerConfig {
+
+  override def isStripMarginOnTypeFormattingEnabled(): Boolean =
+    _isStripMarginOnTypeFormattingEnabled()
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava
   override def parameterHintsCommand: Optional[String] =
