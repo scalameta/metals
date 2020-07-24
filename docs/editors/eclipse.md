@@ -39,3 +39,6 @@ These features currently still need some polishing, but are usable.
 ```scala mdoc:generic
 
 ```
+
+```scala mdoc:worksheet
+```

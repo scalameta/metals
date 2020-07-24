@@ -298,23 +298,8 @@ open buffer.
 
 ![Diagnostics](https://i.imgur.com/cer22HW.png)
 
-## Worksheets
-
-Metals allows users to create a `*.worksheet.sc` file and see evaluations right
-in the file. In Vim, this is done using comments that are inserted which will
-allow you to hover on them to expand. In Neovim, this is done using Neovim's
-[virtual text](https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text())
-to implement Metal's [Decoration
-Protocol](https://scalameta.org/metals/docs/editors/decoration-protocol.html).
-If using Neovim, make sure to have the following line in included in your
-`.vimrc` along with your `coc.nvim` mappings.
-
-```vim
-nmap <Leader>ws <Plug>(coc-metals-expand-decoration)
+```scala mdoc:worksheet:vim
 ```
-Then, when on the line that you'd like to expand the decoration to get the hover information, execute a
-`<leader>ws` in order to see the expanded text for that line.
-
 ![Decorations with worksheets](https://i.imgur.com/Bt6DMtH.png)
 
 ## Tree View Protocol
