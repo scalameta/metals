@@ -29,14 +29,23 @@ class CreateNewSymbol() extends CodeAction {
       codeAction
     }
 
-    val codeActions = params.getContext().getDiagnostics().asScala.collect {
-      case d @ ScalacDiagnostic.SymbolNotFound(name)
-          if params.getRange().overlapsWith(d.getRange()) =>
-        createNewSymbol(d, name)
-    }
+    val codeActions = params
+      .getContext()
+      .getDiagnostics()
+      .asScala
+      .groupBy {
+        case ScalacDiagnostic.SymbolNotFound(name) => Some(name)
+        case _ => None
+      }
+      .collect {
+        case (Some(name), diags)
+            if params.getRange().overlapsWith(diags.head.getRange()) =>
+          createNewSymbol(diags.head, name)
+      }
+      .toSeq
+      .sorted
 
     Future.successful(codeActions)
-
   }
 }
 

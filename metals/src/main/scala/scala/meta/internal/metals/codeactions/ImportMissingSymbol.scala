@@ -18,6 +18,21 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
+    val uri = params.getTextDocument().getUri()
+
+    def joinActionEdits(actions: Seq[l.CodeAction]) = {
+      actions
+        .flatMap(_.getEdit().getChanges().get(uri).asScala)
+        .distinct
+        .groupBy(_.getRange())
+        .values
+        .map(_.sortBy(_.getNewText()).reduceLeft { (l, r) =>
+          l.setNewText((l.getNewText() + r.getNewText()).replace("\n\n", "\n"))
+          l
+        })
+        .toSeq
+    }
+
     def importMissingSymbol(
         diagnostic: l.Diagnostic,
         name: String
@@ -58,18 +73,8 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
       if (uniqueCodeActions.length > 1) {
         val allSymbols: l.CodeAction = new l.CodeAction()
 
-        val uri = params.getTextDocument().getUri()
         val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
-        val edits = uniqueCodeActions
-          .flatMap(_.getEdit().getChanges().get(uri).asScala)
-          .distinct
-          .groupBy(_.getRange())
-          .values
-          .map(_.sortBy(_.getNewText()).reduceLeft { (l, r) =>
-            l.setNewText(l.getNewText() + r.getNewText() replace ("\n\n", "\n"))
-            l
-          })
-          .toSeq
+        val edits = joinActionEdits(uniqueCodeActions)
 
         allSymbols.setTitle(ImportMissingSymbol.allSymbolsTitle)
         allSymbols.setKind(l.CodeActionKind.QuickFix)
@@ -83,12 +88,35 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
     }
 
     Future
-      .sequence(params.getContext().getDiagnostics().asScala.collect {
-        case d @ ScalacDiagnostic.SymbolNotFound(name)
-            if params.getRange().overlapsWith(d.getRange()) =>
-          importMissingSymbol(d, name)
-      })
-      .map(actions => importMissingSymbols(actions.flatten.toSeq))
+      .sequence(
+        params
+          .getContext()
+          .getDiagnostics()
+          .asScala
+          .collect {
+            case diag @ ScalacDiagnostic.SymbolNotFound(name)
+                if params.getRange().overlapsWith(diag.getRange()) =>
+              importMissingSymbol(diag, name)
+          }
+      )
+      .map { actions =>
+        val deduplicated = actions.flatten
+          .groupBy(_.getTitle())
+          .map {
+            case (_, actions) =>
+              val mainAction = actions.head
+              val allDiagnostics =
+                actions.flatMap(_.getDiagnostics().asScala).asJava
+              val edits = joinActionEdits(actions)
+              mainAction.setDiagnostics(allDiagnostics)
+              mainAction
+                .setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
+              mainAction
+          }
+          .toSeq
+          .sorted
+        importMissingSymbols(deduplicated.toSeq)
+      }
   }
 
 }
