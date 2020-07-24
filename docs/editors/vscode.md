@@ -155,6 +155,9 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 
 ![format-on-paste-setting](https://i.imgur.com/rMrk27F.png)
 
+```scala mdoc:worksheet:vscode
+```
+
 ## Coming from IntelliJ
 
 Install the

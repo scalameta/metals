@@ -49,3 +49,6 @@ to take effect.
 ```scala mdoc:generic
 
 ```
+
+```scala mdoc:worksheet
+```

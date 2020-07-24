@@ -177,3 +177,6 @@ features by accessing `Preferences > Package Settings > LSP > Servers > LSP-meta
 ```scala mdoc:generic
 
 ```
+
+```scala mdoc:worksheet
+```

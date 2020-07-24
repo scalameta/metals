@@ -185,3 +185,6 @@ To configure Eglot with Metals:
 ```scala mdoc:generic
 
 ```
+
+```scala mdoc:worksheet
+```
