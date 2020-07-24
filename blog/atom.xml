@@ -2,12 +2,23 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-07-15T06:00:00.000Z</updated>
+    <updated>2020-07-23T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[A Dive into Configuring Metals]]></title>
+        <id>http://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html"/>
+        <updated>2020-07-23T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>As of this last Metals release, it's now 100% possible to fully configure Metals without any need to pass in server properties. Depending on your editor of choice, the process to configure Metals may be completely abstracted away. You simply click in...</p>]]></summary>
+        <author>
+            <name>Chris Kipp</name>
+            <uri>https://twitter.com/ckipp01</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.2 - Lithium]]></title>
         <id>http://scalameta.org/metals/blog/2020/07/15/lithium.html</id>

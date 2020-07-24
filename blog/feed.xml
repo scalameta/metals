@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Wed, 15 Jul 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 23 Jul 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[A Dive into Configuring Metals]]></title>
+            <link>http://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html</guid>
+            <pubDate>Thu, 23 Jul 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>As of this last Metals release, it's now 100% possible to fully configure Metals without any need to pass in server properties. Depending on your editor of choice, the process to configure Metals may be completely abstracted away. You simply click in...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.9.2 - Lithium]]></title>
             <link>http://scalameta.org/metals/blog/2020/07/15/lithium.html</link>
