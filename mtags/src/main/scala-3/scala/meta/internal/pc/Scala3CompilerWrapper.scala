@@ -11,8 +11,8 @@ class Scala3CompilerWrapper(driver: InteractiveDriver)
   override def compiler(): InteractiveDriver = driver
 
   override def resetReporter(): Unit = {
-    val ctx = driver.currentCtx
-    ctx.reporter.removeBufferedMessages(ctx)
+    implicit val ctx = driver.currentCtx
+    ctx.reporter.removeBufferedMessages
   }
 
   override def reporterAccess: ReporterAccess[StoreReporter] =

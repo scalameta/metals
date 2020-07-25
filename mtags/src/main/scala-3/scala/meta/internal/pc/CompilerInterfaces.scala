@@ -31,8 +31,8 @@ object CompilerInterfaces {
     val sourceFile = toSource(uri, text)
     // we need to have a separate reporter otherwise errors are not cleared
     val parsingReporter = new StoreReporter(null)
-    val freshContext = driver.currentCtx.fresh.setReporter(parsingReporter)
-    val parser = new Parser(sourceFile)(freshContext)
+    implicit val freshContext = driver.currentCtx.fresh.setReporter(parsingReporter)
+    val parser = new Parser(sourceFile)
     parser.parse()
     val diags = parsingReporter.allErrors
     diags.flatMap(diagnostic).asJava

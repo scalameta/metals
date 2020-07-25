@@ -123,7 +123,7 @@ case class ScalaPresentationCompiler(
       val pos = sourcePosition(driver, params, uri)
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
-          Completion.completions(pos)(ctx.fresh.setCompilationUnit(unit))._2
+          implicit val freshContext =           Completion.completions(pos)._2
         case None => Nil
       }
 
