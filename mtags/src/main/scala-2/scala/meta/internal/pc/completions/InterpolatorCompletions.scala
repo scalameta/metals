@@ -48,13 +48,12 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
         .append('}')
         .toString
     }
-    val filter: String =
-      text.substring(ident.pos.start - 1, cursor.point - query.length)
+
     override def contribute: List[Member] = {
       metalsTypeMembers(ident.pos).collect {
         case m if CompletionFuzzy.matches(query, m.sym.name) =>
           val edit = new l.TextEdit(pos, newText(m.sym))
-          val filterText = filter + m.sym.name.decoded
+          val filterText = m.sym.getterName.decoded
           new TextEditMember(filterText, edit, m.sym)
       }
     }
@@ -127,15 +126,12 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       out.toString
     }
 
-    val filter: String =
-      text.substring(lit.pos.start, pos.point - interpolator.name.length)
-
     override def contribute: List[Member] = {
       metalsScopeMembers(pos).collect {
         case s: ScopeMember
             if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
           val edit = new l.TextEdit(nameRange, newText(s.sym))
-          val filterText = filter + s.sym.name.decoded
+          val filterText = s.sym.getterName.decoded
           new TextEditMember(
             filterText,
             edit,
