@@ -21,7 +21,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"Hello $myName$0, you are welcome"
        |}
        |""".stripMargin,
-    filterText = "\"Hello $myName"
+    filterText = "myName"
   )
 
   checkEdit(
@@ -36,7 +36,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"$myName$0"
        |}
        |""".stripMargin,
-    filterText = "\"$myName"
+    filterText = "myName"
   )
 
   checkEdit(
@@ -51,7 +51,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"${myName$0}me"
        |}
        |""".stripMargin,
-    filterText = "\"$myName"
+    filterText = "myName"
   )
 
   checkEdit(
@@ -66,7 +66,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s'''${myName$0}me'''
        |}
        |""".stripMargin.triplequoted,
-    filterText = "'''$myName".triplequoted
+    filterText = "myName"
   )
 
   checkEdit(
@@ -85,7 +85,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |    |'''.stripMargin
        |}
        |""".stripMargin.triplequoted,
-    filterText = "'''\n    |$myName".triplequoted
+    filterText = "myName".triplequoted
   )
 
   checkEdit(
@@ -100,7 +100,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"$myName$0 $$"
        |}
        |""".stripMargin.triplequoted,
-    filterText = "\"$myName"
+    filterText = "myName"
   )
 
   checkEdit(
@@ -423,7 +423,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|member: String
        |""".stripMargin,
-    filterText = "$Main.member"
+    filterText = "member"
   )
 
   checkEditLine(
@@ -512,7 +512,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"Hello ${`type`$0}"
        |}
        |""".stripMargin,
-    filterText = "\"Hello $type"
+    filterText = "type"
   )
 
   checkEdit(
@@ -527,6 +527,6 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"Hello ${`hello world`$0}"
        |}
        |""".stripMargin,
-    filterText = "\"Hello $hello world"
+    filterText = "hello world"
   )
 }
