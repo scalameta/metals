@@ -6,6 +6,7 @@ import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 import munit.Location
+import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
@@ -74,7 +75,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
   private def indent = "  "
 
   def checkNewSymbol(
-      name: String,
+      name: TestOptions,
       input: String,
       expectedActions: String,
       pickedKind: String,
@@ -115,7 +116,10 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         _ = {
           val (path, content) = newFile
           val absolutePath = workspace.resolve(path)
-          assert(absolutePath.exists)
+          assert(
+            absolutePath.exists,
+            s"File $absolutePath should have been created"
+          )
           assertNoDiff(absolutePath.readText, content)
         }
       } yield ()

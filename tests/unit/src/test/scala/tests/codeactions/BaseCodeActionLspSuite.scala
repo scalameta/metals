@@ -3,13 +3,14 @@ package tests.codeactions
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import munit.Location
+import munit.TestOptions
 import tests.BaseLspSuite
 
 abstract class BaseCodeActionLspSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
 
   def check(
-      name: String,
+      name: TestOptions,
       input: String,
       expectedActions: String,
       expectedCode: String,

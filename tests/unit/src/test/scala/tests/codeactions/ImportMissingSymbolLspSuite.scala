@@ -14,8 +14,8 @@ class ImportMissingSymbolLspSuite
        |  val f = <<Future>>.successful(2)
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+    s"""|${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     """|package a
@@ -25,7 +25,8 @@ class ImportMissingSymbolLspSuite
        |object A {
        |  val f = Future.successful(2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    selectedActionIndex = 1
   )
 
   check(
@@ -36,8 +37,8 @@ class ImportMissingSymbolLspSuite
        |  val f = Fu<<tu>>re.successful(2)
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+    s"""|${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     """|package a
@@ -46,6 +47,30 @@ class ImportMissingSymbolLspSuite
        |
        |object A {
        |  val f = Future.successful(2)
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
+  )
+
+  check(
+    "multiple-tries",
+    """|package a
+       |
+       |object A {
+       |  val f = <<Try{}
+       |  val g = Try{}>>
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Try", "scala.util")}
+        |${CreateNewSymbol.title("Try")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.util.Try
+       |
+       |object A {
+       |  val f = Try{}
+       |  val g = Try{}
        |}
        |""".stripMargin
   )
@@ -59,8 +84,9 @@ class ImportMissingSymbolLspSuite
        |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+    s"""|
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
@@ -74,7 +100,8 @@ class ImportMissingSymbolLspSuite
        |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
-    expectNoDiagnostics = false
+    expectNoDiagnostics = false,
+    selectedActionIndex = 1
   )
 
   check(
@@ -118,8 +145,8 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.allSymbolsTitle}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
         |${CreateNewSymbol.title("Future")}
@@ -150,17 +177,12 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.allSymbolsTitle}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
-        |${CreateNewSymbol.title("ListBuffer")}
-        |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("ListBuffer")}
         |""".stripMargin,
     """|package a
