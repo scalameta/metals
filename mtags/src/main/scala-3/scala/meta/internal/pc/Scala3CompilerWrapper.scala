@@ -4,6 +4,7 @@ import scala.meta.internal.pc.CompilerWrapper
 import scala.meta.internal.pc.ReporterAccess
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
+import dotty.tools.dotc.core.Contexts.Context
 
 class Scala3CompilerWrapper(driver: InteractiveDriver)
     extends CompilerWrapper[StoreReporter, InteractiveDriver] {
@@ -11,8 +12,8 @@ class Scala3CompilerWrapper(driver: InteractiveDriver)
   override def compiler(): InteractiveDriver = driver
 
   override def resetReporter(): Unit = {
-    val ctx = driver.currentCtx
-    ctx.reporter.removeBufferedMessages(ctx)
+    given ctx as Context = driver.currentCtx
+    ctx.reporter.removeBufferedMessages
   }
 
   override def reporterAccess: ReporterAccess[StoreReporter] =

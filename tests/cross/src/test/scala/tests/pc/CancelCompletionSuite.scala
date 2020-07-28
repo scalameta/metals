@@ -90,9 +90,13 @@ class CancelCompletionSuite extends BaseCompletionSuite {
        |assert(assertion: Boolean, message: => Any): Unit
        |""".stripMargin,
     compat = Map(
-      "0.2" ->
+      "0.25" ->
         """|assert(assertion: Boolean @InlineParam): Unit
            |assertFail(message: => Any): Nothing
+           |""".stripMargin,
+      "0.26" ->
+        """|assertFail(message: => Any): Nothing
+           |assert(assertion: Boolean @InlineParam): Unit
            |""".stripMargin
     )
   )

@@ -47,7 +47,6 @@ import dotty.tools.dotc.core.SymDenotations._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.NameKinds._
 import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Annotations.AnnotInfo
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.ParsedComment
@@ -118,12 +117,12 @@ case class ScalaPresentationCompiler(
       val driver = access.compiler()
       val uri = params.uri
       driver.run(uri, params.text)
-      implicit def ctx: Context = driver.currentCtx
 
+      given ctx as Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
-          Completion.completions(pos)(ctx.fresh.setCompilationUnit(unit))._2
+          Completion.completions(pos)(using ctx.fresh.setCompilationUnit(unit))._2
         case None => Nil
       }
 
@@ -446,7 +445,8 @@ case class ScalaPresentationCompiler(
     if (documentation.nonEmpty) {
       item.setDocumentation(hoverContent(None, None, documentation))
     }
-    item.setDeprecated(completion.symbols.forall(_.isDeprecated))
+
+    item.setDeprecated(completion.symbols.forall(Symbols.isDeprecated))
     completion.symbols.headOption
       .foreach(s => item.setKind(completionItemKind(s)))
     item
