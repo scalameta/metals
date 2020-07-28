@@ -124,7 +124,7 @@ from the bloom filter are not a problem because they only slow down the response
 but don't compromise the correctness of the final result.</p>
 <p>Concretely, Metals keeps an in-memory map where keys are paths to source files
 in the workspace.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> references: <span class="hljs-type">Map</span>[<span class="hljs-type">Path</span>, <span class="hljs-type">BloomFilter</span>[<span class="hljs-type">Symbol</span>]]
+<pre><code class="hljs css language-scala">val references: <span class="hljs-built_in">Map</span>[Path, BloomFilter[<span class="hljs-built_in">Symbol</span>]]
 </code></pre>
 <p>The values represent the set of
 <a href="https://scalameta.org/docs/semanticdb/specification.html">SemanticDB symbols</a>
@@ -135,13 +135,13 @@ new one from scratch.</p>
 <p>To implement the search, we iterate through all entries of the map and only read
 SemanticDB files from disk when their accompanying bloom filter contains the
 query symbol (recap: false positives are OK).</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> query = <span class="hljs-comment">// ...</span>
-<span class="hljs-keyword">for</span> {
-  (path, bloom) &lt;- references
-  <span class="hljs-keyword">if</span> bloom.mightContain(query)
-  symbolOccurrence &lt;- readSemanticdbOccurrences(path) <span class="hljs-comment">// read from disk</span>
-  <span class="hljs-keyword">if</span> isSameSymbol(query, symbolOccurrence)
-} <span class="hljs-keyword">yield</span> symbolOccurrence
+<pre><code class="hljs css language-scala"><span class="hljs-attr">val</span> <span class="hljs-string">query = // ...</span>
+<span class="hljs-attr">for</span> <span class="hljs-string">{</span>
+  <span class="hljs-meta">(path,</span> <span class="hljs-string">bloom) &lt;- references</span>
+  <span class="hljs-attr">if</span> <span class="hljs-string">bloom.mightContain(query)</span>
+  <span class="hljs-attr">symbolOccurrence</span> <span class="hljs-string">&lt;- readSemanticdbOccurrences(path) // read from disk</span>
+  <span class="hljs-attr">if</span> <span class="hljs-string">isSameSymbol(query, symbolOccurrence)</span>
+<span class="hljs-meta">}</span> <span class="hljs-string">yield symbolOccurrence</span>
 </code></pre>
 <p>In the actual Metals implementation, we additionally take care of adjusting
 positions of the results in case the source file contents have changed since the
@@ -164,26 +164,26 @@ places that are likely to contain matches for the query. We have two different
 indexes, one for workspace sources and another one for the library classpath.</p>
 <h3><a class="anchor" aria-hidden="true" id="workspace-sources"></a><a href="#workspace-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Workspace sources</h3>
 <p>The first index is a map keyed by source files in the workspace.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> inWorkspace: <span class="hljs-type">Map</span>[<span class="hljs-type">Path</span>, <span class="hljs-type">BloomFilter</span>[<span class="hljs-type">String</span>]]
+<pre><code class="hljs css language-scala">val inWorkspace: <span class="hljs-built_in">Map</span>[Path, BloomFilter[<span class="hljs-built_in">String</span>]]
 </code></pre>
 <p>The values of the map is the set of all possible sub-queries that match symbols
 defined in that source file. For example, consider the code below.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">package</span> data
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">package</span> <span class="hljs-keyword">data</span>
 <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NonEmptyListSpec</span> </span>{ ... }
-<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Props</span> </span>{ ... }
+<span class="hljs-keyword">object</span> Props { ... }
 </code></pre>
 <p>For this source file, we insert the following sub-queries into the index.</p>
-<pre><code class="hljs css language-txt"><span class="hljs-keyword">d</span>
+<pre><code class="hljs css language-txt"><span class="hljs-attribute">d</span>
 da
 dat
 data
-<span class="hljs-keyword">N</span>
-<span class="hljs-keyword">No</span>
-Non
-<span class="hljs-keyword">L</span>
-<span class="hljs-keyword">Li</span>
-<span class="hljs-keyword">Lis</span>
-<span class="hljs-keyword">List</span>
+N
+No
+N<span class="hljs-literal">on</span>
+L
+Li
+Lis
+List
 S
 Sp
 Spe
@@ -192,9 +192,9 @@ NEL
 NES
 ELS
 P
-<span class="hljs-keyword">Pr</span>
-<span class="hljs-keyword">Pro</span>
-<span class="hljs-keyword">Prop</span>
+Pr
+Pro
+Prop
 Props
 </code></pre>
 <p>When searching for a query like <code>NoLi</code>, we split the query into the words <code>No</code>
@@ -205,7 +205,7 @@ the search space for queries like <code>NELS</code> that have few lowercase char
 capitalization combinations in order to support case-insensitive searches. For
 example, the query <code>neli</code> returns all results matching any of the following
 queries.</p>
-<pre><code class="hljs css language-txt"><span class="hljs-attribute">neli
+<pre><code class="hljs css language-txt"><span class="hljs-attribute">neli</span>
 Neli
 NEli
 NeLi
@@ -213,18 +213,18 @@ NelI
 NELi
 NElI
 NeLI
-NELI</span>
+NELI
 </code></pre>
 <p>To implement the search, we iterate through all entries of the in-memory map and
 only visit the source files on disk whose bloom filter contain a match for the
 query.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> query = ...
-<span class="hljs-keyword">for</span> {
-  (file, bloom) &lt;- inWorkspace
-  <span class="hljs-keyword">if</span> bloom.mightContain(query)
-  symbol &lt;- parseSymbols(file) <span class="hljs-comment">// reads from disk</span>
-  <span class="hljs-keyword">if</span> isFuzzyMatch(query, symbol)
-} <span class="hljs-keyword">yield</span> symbol
+<pre><code class="hljs css language-scala"><span class="hljs-attr">val</span> <span class="hljs-string">query = ...</span>
+<span class="hljs-attr">for</span> <span class="hljs-string">{</span>
+  <span class="hljs-meta">(file,</span> <span class="hljs-string">bloom) &lt;- inWorkspace</span>
+  <span class="hljs-attr">if</span> <span class="hljs-string">bloom.mightContain(query)</span>
+  <span class="hljs-attr">symbol</span> <span class="hljs-string">&lt;- parseSymbols(file) // reads from disk</span>
+  <span class="hljs-attr">if</span> <span class="hljs-string">isFuzzyMatch(query, symbol)</span>
+<span class="hljs-meta">}</span> <span class="hljs-string">yield symbol</span>
 </code></pre>
 <p>Like with find symbol references, false positive results from the bloom filter
 slow down the response but don't compromise the correctness of the result. Also,
@@ -234,7 +234,7 @@ entries and compute a new bloom filter for the updated source file.</p>
 <p>The library classpath index is similar to the workspace sources index except the
 keys of the map are package symbols (example <code>scala/collection/</code>) instead of
 file paths.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> inClasspath: <span class="hljs-type">Map</span>[<span class="hljs-type">Symbol</span>, (<span class="hljs-type">BloomFilter</span>[<span class="hljs-type">String</span>], <span class="hljs-type">Seq</span>[<span class="hljs-type">Symbol</span>])]
+<pre><code class="hljs css language-scala">val inClasspath: Map[Symbol, (BloomFilter[String], Se<span class="hljs-string">q[Symbol]</span>)]
 </code></pre>
 <p>Unlike the workspace sources index, the library classpath index does not need to
 be incrementally updated when files re-compile. The bloom filters in the values
@@ -242,14 +242,14 @@ of the map use the same sub-query technique as the bloom filters in the
 workspace sources index. For each bloom filter, we additionally store a listing
 of all members of that package. If a query matches a given bloom filter, we test
 the fuzzy search against all members of the package.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> query = ...
-<span class="hljs-keyword">for</span> {
-  (pkg, (bloom, packageMembers)) &lt;- inClasspath
-  <span class="hljs-keyword">if</span> bloom.mightContain(query)
-  member &lt;- packageMembers
-  <span class="hljs-keyword">if</span> isFuzzyMatch(query, symbol(pkg, member))
-  definitionOnDisk &lt;- findDefinition(member) <span class="hljs-comment">// writes to disk</span>
-} <span class="hljs-keyword">yield</span> definitionOnDisk
+<pre><code class="hljs css language-scala"><span class="hljs-attr">val</span> <span class="hljs-string">query = ...</span>
+<span class="hljs-attr">for</span> <span class="hljs-string">{</span>
+  <span class="hljs-meta">(pkg,</span> <span class="hljs-string">(bloom, packageMembers)) &lt;- inClasspath</span>
+  <span class="hljs-attr">if</span> <span class="hljs-string">bloom.mightContain(query)</span>
+  <span class="hljs-attr">member</span> <span class="hljs-string">&lt;- packageMembers</span>
+  <span class="hljs-attr">if</span> <span class="hljs-string">isFuzzyMatch(query, symbol(pkg, member))</span>
+  <span class="hljs-attr">definitionOnDisk</span> <span class="hljs-string">&lt;- findDefinition(member) // writes to disk</span>
+<span class="hljs-meta">}</span> <span class="hljs-string">yield definitionOnDisk</span>
 </code></pre>
 <p>Due to how the Language Server Protocol works, the <code>findDefinition</code> method
 writes sources of library dependencies to disk so the editor can find the symbol
@@ -266,12 +266,12 @@ concurrent, distributed, and resilient message-driven applications on the JVM.</
 <p>The Akka codebase has 300-600k lines of code depending on whether you include
 comments and/or Java sources. Metals indexes both Java and Scala sources for
 fuzzy symbol search but only Scala sources for find symbol references.</p>
-<pre><code class="hljs">$ git clone https:<span class="hljs-comment">//github.com/akka/akka.git</span>
-$ cd akka
-$ loc
-Language  Files    Lines   Blank  Comment     Code
-Scala     <span class="hljs-number">1</span>,<span class="hljs-number">951</span>  <span class="hljs-number">358</span>,<span class="hljs-number">149</span>  <span class="hljs-number">57</span>,<span class="hljs-number">528</span>   <span class="hljs-number">76</span>,<span class="hljs-number">605</span>  <span class="hljs-number">224</span>,<span class="hljs-number">016</span>
-Java        <span class="hljs-number">486</span>  <span class="hljs-number">250</span>,<span class="hljs-number">609</span>  <span class="hljs-number">19</span>,<span class="hljs-number">838</span>   <span class="hljs-number">51</span>,<span class="hljs-number">291</span>  <span class="hljs-number">179</span>,<span class="hljs-number">480</span>
+<pre><code class="hljs"><span class="hljs-string">$</span> <span class="hljs-string">git</span> <span class="hljs-string">clone</span> <span class="hljs-string">https://github.com/akka/akka.git</span>
+<span class="hljs-string">$</span> <span class="hljs-string">cd</span> <span class="hljs-string">akka</span>
+<span class="hljs-string">$</span> <span class="hljs-string">loc</span>
+<span class="hljs-string">Language</span>  <span class="hljs-string">Files</span>    <span class="hljs-string">Lines</span>   <span class="hljs-string">Blank</span>  <span class="hljs-string">Comment</span>     <span class="hljs-string">Code</span>
+<span class="hljs-string">Scala</span>     <span class="hljs-number">1</span><span class="hljs-string">,951</span>  <span class="hljs-number">358</span><span class="hljs-string">,149</span>  <span class="hljs-number">57</span><span class="hljs-string">,528</span>   <span class="hljs-number">76</span><span class="hljs-string">,605</span>  <span class="hljs-number">224</span><span class="hljs-string">,016</span>
+<span class="hljs-string">Java</span>        <span class="hljs-number">486</span>  <span class="hljs-number">250</span><span class="hljs-string">,609</span>  <span class="hljs-number">19</span><span class="hljs-string">,838</span>   <span class="hljs-number">51</span><span class="hljs-string">,291</span>  <span class="hljs-number">179</span><span class="hljs-string">,480</span>
 </code></pre>
 <p>We open the base directory with Visual Studio Code and update the &quot;Metals Server
 Properties&quot; setting to <code>-Dmetals.statistics=all</code> to enable additional
@@ -280,13 +280,13 @@ compilation has finished. It is normal if this step takes several minutes to
 complete.</p>
 <h3><a class="anchor" aria-hidden="true" id="response-times"></a><a href="#response-times" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Response times</h3>
 <p>First, we measure the response times for find symbol references.</p>
-<pre><code class="hljs"><span class="hljs-keyword">time:</span> found 8 references to symbol 'akka/actor/ActorCell.contextStack.' in 8ms
-<span class="hljs-keyword">time:</span> found 11 references to symbol 'akka/actor/Actor#postRestart().' in 17ms
-<span class="hljs-keyword">time:</span> found 146 references to symbol 'akka/actor/PoisonPill.' in 0.16s
-<span class="hljs-keyword">time:</span> found 163 references to symbol 'scala/collection/IterableLike#head().' in 0.23s
-<span class="hljs-keyword">time:</span> found 1027 references to symbol 'akka/actor/Actor#' in 0.5s
-<span class="hljs-keyword">time:</span> found 816 references to symbol 'scala/package.Throwable#' in 0.63s
-<span class="hljs-keyword">time:</span> found 6103 references to symbol 'scala/Predef.String#' in 1.54s
+<pre><code class="hljs"><span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">8</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'akka/actor/ActorCell.contextStack.'</span> <span class="hljs-string">in</span> <span class="hljs-string">8ms</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">11</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'akka/actor/Actor#postRestart().'</span> <span class="hljs-string">in</span> <span class="hljs-string">17ms</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">146</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'akka/actor/PoisonPill.'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">16s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">163</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'scala/collection/IterableLike#head().'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">23s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">1027</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'akka/actor/Actor#'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">5s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">816</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'scala/package.Throwable#'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">63s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">6103</span> <span class="hljs-string">references</span> <span class="hljs-string">to</span> <span class="hljs-string">symbol</span> <span class="hljs-string">'scala/Predef.String#'</span> <span class="hljs-string">in</span> <span class="hljs-number">1.</span><span class="hljs-string">54s</span>
 </code></pre>
 <p>Response times range from 8ms up to 1.6s depending on the number of results. The
 6103 references to <code>String</code> origin from 913 source files, which is almost half
@@ -295,12 +295,12 @@ account the delay in the editor to display the results in the UI. For large
 results like <code>String</code>, this delay can be several seconds depending on the
 editor.</p>
 <p>Next, we measure the response times for fuzzy symbol search.</p>
-<pre><code class="hljs"><span class="hljs-keyword">time:</span> found 0 results for query 'ConfigSEr' in 13ms
-<span class="hljs-keyword">time:</span> found 10 results for query 'ConfigSer' in 0.1s
-<span class="hljs-keyword">time:</span> found 105 results for query 'ActorRef' in 0.21s
-<span class="hljs-keyword">time:</span> found 105 results for query 'actorref' in 0.31s
-<span class="hljs-keyword">time:</span> found 1002 results for query 'actor' in 0.54s
-<span class="hljs-keyword">time:</span> found 3974 results for query 'S' in 1.98s
+<pre><code class="hljs"><span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">0</span> <span class="hljs-string">results</span> <span class="hljs-string">for</span> <span class="hljs-string">query</span> <span class="hljs-string">'ConfigSEr'</span> <span class="hljs-string">in</span> <span class="hljs-string">13ms</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">10</span> <span class="hljs-string">results</span> <span class="hljs-string">for</span> <span class="hljs-string">query</span> <span class="hljs-string">'ConfigSer'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">1s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">105</span> <span class="hljs-string">results</span> <span class="hljs-string">for</span> <span class="hljs-string">query</span> <span class="hljs-string">'ActorRef'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">21s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">105</span> <span class="hljs-string">results</span> <span class="hljs-string">for</span> <span class="hljs-string">query</span> <span class="hljs-string">'actorref'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">31s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">1002</span> <span class="hljs-string">results</span> <span class="hljs-string">for</span> <span class="hljs-string">query</span> <span class="hljs-string">'actor'</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">54s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">found</span> <span class="hljs-number">3974</span> <span class="hljs-string">results</span> <span class="hljs-string">for</span> <span class="hljs-string">query</span> <span class="hljs-string">'S'</span> <span class="hljs-string">in</span> <span class="hljs-number">1.</span><span class="hljs-string">98s</span>
 </code></pre>
 <p>Response times range from 13ms up to 2s depending on the query and number of
 results. Queries with typos like <code>ConfigSEr</code> have 0 results and respond
@@ -313,26 +313,26 @@ capitalization combinations for case-insensitive searches.</p>
 computed with <a href="https://openjdk.java.net/projects/code-tools/jol/">JOL</a>
 <code>GraphLayout</code> and the element counts are approximate number of insertions into
 the bloom filters.</p>
-<pre><code class="hljs">memory: <span class="hljs-built_in">ref</span>erences index using <span class="hljs-number">3.72</span>M (<span class="hljs-number">274</span>,<span class="hljs-number">747</span> elements)
-memory: workspace symbol index using <span class="hljs-number">1.89</span>M (<span class="hljs-number">173</span>,<span class="hljs-number">419</span> elements)
-memory: classpath symbol index using <span class="hljs-number">1.72</span>M (<span class="hljs-number">382</span>,<span class="hljs-number">243</span> elements)
+<pre><code class="hljs"><span class="hljs-attr">memory:</span> <span class="hljs-string">references</span> <span class="hljs-string">index</span> <span class="hljs-string">using</span> <span class="hljs-number">3.</span><span class="hljs-string">72M</span> <span class="hljs-string">(274,747</span> <span class="hljs-string">elements)</span>
+<span class="hljs-attr">memory:</span> <span class="hljs-string">workspace</span> <span class="hljs-string">symbol</span> <span class="hljs-string">index</span> <span class="hljs-string">using</span> <span class="hljs-number">1.</span><span class="hljs-string">89M</span> <span class="hljs-string">(173,419</span> <span class="hljs-string">elements)</span>
+<span class="hljs-attr">memory:</span> <span class="hljs-string">classpath</span> <span class="hljs-string">symbol</span> <span class="hljs-string">index</span> <span class="hljs-string">using</span> <span class="hljs-number">1.</span><span class="hljs-string">72M</span> <span class="hljs-string">(382,243</span> <span class="hljs-string">elements)</span>
 </code></pre>
 <p>The three bloom filter indexes use 8Mb combined for the entire Akka build. The
 8Mb include the maps with file/symbol keys and also a GZIP compressed listing of
 package members for the classpath symbol index. For comparison, the
 <a href="https://scalameta.org/metals/blog/2018/12/12/fast-goto-definition.html">goto definition index</a>
 that does not use bloom filters requires 16Mb alone.</p>
-<pre><code class="hljs">memory: definition index using <span class="hljs-number">15.9</span>M (<span class="hljs-number">337</span>,<span class="hljs-number">532</span> lines Scala)
+<pre><code class="hljs"><span class="hljs-attr">memory:</span> <span class="hljs-string">definition</span> <span class="hljs-string">index</span> <span class="hljs-string">using</span> <span class="hljs-number">15.</span><span class="hljs-string">9M</span> <span class="hljs-string">(337,532</span> <span class="hljs-string">lines</span> <span class="hljs-string">Scala)</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="indexing-time"></a><a href="#indexing-time" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Indexing time</h3>
 <p>Next, we look at the time it takes to construct the indexes after build import.</p>
-<pre><code class="hljs"><span class="hljs-keyword">time:</span> imported build in 2.41s
-<span class="hljs-keyword">time:</span> updated build targets in 0.12s
-<span class="hljs-keyword">time:</span> started file watcher in 4.36s
-<span class="hljs-keyword">time:</span> indexed library classpath in 0.8s
-<span class="hljs-keyword">time:</span> indexed workspace SemanticDBs in 2.18s
-<span class="hljs-keyword">time:</span> indexed workspace sources in 3.35s
-<span class="hljs-keyword">time:</span> indexed library sources in 1.59s
+<pre><code class="hljs"><span class="hljs-attr">time:</span> <span class="hljs-string">imported</span> <span class="hljs-string">build</span> <span class="hljs-string">in</span> <span class="hljs-number">2.</span><span class="hljs-string">41s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">updated</span> <span class="hljs-string">build</span> <span class="hljs-string">targets</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">12s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">started</span> <span class="hljs-string">file</span> <span class="hljs-string">watcher</span> <span class="hljs-string">in</span> <span class="hljs-number">4.</span><span class="hljs-string">36s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">indexed</span> <span class="hljs-string">library</span> <span class="hljs-string">classpath</span> <span class="hljs-string">in</span> <span class="hljs-number">0.</span><span class="hljs-string">8s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">indexed</span> <span class="hljs-string">workspace</span> <span class="hljs-string">SemanticDBs</span> <span class="hljs-string">in</span> <span class="hljs-number">2.</span><span class="hljs-string">18s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">indexed</span> <span class="hljs-string">workspace</span> <span class="hljs-string">sources</span> <span class="hljs-string">in</span> <span class="hljs-number">3.</span><span class="hljs-string">35s</span>
+<span class="hljs-attr">time:</span> <span class="hljs-string">indexed</span> <span class="hljs-string">library</span> <span class="hljs-string">sources</span> <span class="hljs-string">in</span> <span class="hljs-number">1.</span><span class="hljs-string">59s</span>
 </code></pre>
 <p>The Akka build contains many source files but few library dependencies. The
 bottle-neck appears to be starting the file watcher and parsing all <code>*.scala</code>
