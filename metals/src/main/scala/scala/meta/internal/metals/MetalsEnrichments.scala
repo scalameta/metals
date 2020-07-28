@@ -486,10 +486,6 @@ object MetalsEnrichments
         localOccurrence.symbol == symbol
       }
     }
-
-    def toInput: Input = {
-      Input.VirtualFile(textDocument.uri, textDocument.text)
-    }
     def definition(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
