@@ -169,6 +169,7 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
+  val `scala2.12.10` = "2.12.10"
   val scala212 = "2.12.12"
   val scala213 = "2.13.3"
   val scalameta = "4.3.20"
@@ -491,12 +492,14 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
 
 def crossPublishLocal(scalaV: String) =
   Def.task[Unit] {
+    val versionValue = version.in(ThisBuild).value
     // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
     val newState = Project
       .extract(state.value)
       .appendWithSession(
         List(
           scalaVersion.in(mtags) := scalaV,
+          version.in(ThisBuild) := versionValue,
           useSuperShell.in(ThisBuild) := false
         ),
         state.value
@@ -524,7 +527,7 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        List(V.scala211, V.scala212, V.scala213, V.scala3)
+        List(V.scala211, V.`scala2.12.10`, V.scala212, V.scala213, V.scala3)
       )
     )
 
