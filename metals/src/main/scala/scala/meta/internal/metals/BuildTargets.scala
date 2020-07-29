@@ -264,9 +264,7 @@ final class BuildTargets(
   def workspaceDirectory(
       buildTarget: BuildTargetIdentifier
   ): Option[AbsolutePath] =
-    targetToConnection
-      .get(buildTarget)
-      .map(_.workspaceDirectory)
+    buildServerOf(buildTarget).map(_.workspaceDirectory)
 
   /**
    * Returns the first build target containing this source file.
