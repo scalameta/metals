@@ -1665,6 +1665,7 @@ class MetalsLanguageServer(
       case Some(value) =>
         bspSession = None
         diagnostics.reset()
+        buildTargets.resetConnections(List.empty)
         value.shutdown()
     }
   }
