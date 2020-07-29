@@ -169,7 +169,7 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val `scala2.12.10` = "2.12.10"
+  val sbtScala = "2.12.10"
   val scala212 = "2.12.12"
   val scala213 = "2.13.3"
   val scalameta = "4.3.20"
@@ -527,7 +527,7 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        List(V.scala211, V.`scala2.12.10`, V.scala212, V.scala213, V.scala3)
+        List(V.scala211, V.sbtScala, V.scala212, V.scala213, V.scala3)
       )
     )
 

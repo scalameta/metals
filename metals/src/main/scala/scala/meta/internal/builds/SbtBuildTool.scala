@@ -93,19 +93,20 @@ case class SbtBuildTool(
         acc: List[AbsolutePath]
     ): List[AbsolutePath] = {
 
+      val next = dir.resolve("project")
       if (dir.exists) {
-        val (hasScalaSrc, hasSbtSrc) = dir.list.foldLeft((false, false)) {
-          case ((_, sbtFlag), f) if f.isScala => (true, sbtFlag)
-          case ((scalaFlag, _), f) if f.isSbt && f.filename != "metals.sbt" =>
-            (scalaFlag, true)
-          case (acc, _) => acc
-        }
+        val files = dir.list.toList
+        val hasScalaSrc = files.exists(_.isScala)
+        val hasSbtSrc = files.exists(f => f.isSbt && f.filename != "metals.sbt")
         val goNext = hasScalaSrc || hasSbtSrc || parentHasSbtSrc
 
-        if (goNext) {
-          val next = dir.resolve("project")
+        if (goNext)
           sbtMetaDirs(next, hasSbtSrc, dir :: acc)
-        } else acc
+        else
+          acc
+
+      } else if (parentHasSbtSrc) {
+        next :: acc
       } else {
         acc
       }
@@ -125,7 +126,7 @@ case class SbtBuildTool(
     val bytes = SbtBuildTool
       .sbtPlugin(versionToUse)
       .getBytes(StandardCharsets.UTF_8)
-    projectDir.toFile.mkdir()
+    projectDir.toFile.mkdirs()
     val metalsPluginFile = projectDir.resolve("metals.sbt")
     val pluginFileShouldChange = !metalsPluginFile.isFile ||
       !metalsPluginFile.readAllBytes.sameElements(bytes)

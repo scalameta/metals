@@ -461,10 +461,11 @@ class Compilers(
       None
 
   private def sbtInputPosAdjustmentOpt(
-      path: AbsolutePath,
+      uri: String,
       position: LspPosition
   ): Option[(Input.VirtualFile, LspPosition, AdjustLspData)] = {
 
+    val path = uri.toAbsolutePath
     buildTargets
       .sbtBuildScalaTarget(path)
       .flatMap(_.autoImports)
@@ -472,7 +473,9 @@ class Compilers(
         val appendStr = imports.mkString("", "\n", "\n")
         val appendLineSize = imports.size
 
-        val originInput = path.toInputFromBuffers(buffers)
+        val originInput = path
+          .toInputFromBuffers(buffers)
+          .copy(path = uri)
 
         val modifiedInput =
           originInput.copy(value = appendStr + originInput.value)
@@ -514,11 +517,15 @@ class Compilers(
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   ): (Input.VirtualFile, LspPosition, AdjustLspData) = {
 
-    val path = params.getTextDocument.getUri.toAbsolutePath
+    val uri = params.getTextDocument.getUri
+    val path = uri.toAbsolutePath
     val position = params.getPosition
 
     def default = {
-      val input = path.toInputFromBuffers(buffers)
+      val input = path
+        .toInputFromBuffers(buffers)
+        .copy(path = params.getTextDocument.getUri)
+
       (input, position, AdjustLspData.default)
     }
 
@@ -530,7 +537,7 @@ class Compilers(
               (input, pos, Ammonite.adjustLspData(input.text))
           }
       } else if (path.isSbt) {
-        sbtInputPosAdjustmentOpt(path, position)
+        sbtInputPosAdjustmentOpt(uri, position)
       } else None
 
     forScripts.getOrElse(default)
