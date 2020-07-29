@@ -87,34 +87,32 @@ case class SbtBuildTool(
       workspace: AbsolutePath
   ): Unit = {
 
-    def containsScalaOrSbtFiles(dir: AbsolutePath): Boolean =
-      dir.list.exists { f =>
-        val name = f.filename
-        f.isFile && (f.isScala || f.isSbt) && name != "metals.sbt"
-      }
-
     def sbtMetaDirs(
         dir: AbsolutePath,
+        parentHasSbtSrc: Boolean,
         acc: List[AbsolutePath]
     ): List[AbsolutePath] = {
-      if (dir.exists && containsScalaOrSbtFiles(dir)) {
-        val nextMeta = dir.resolve("project")
-        sbtMetaDirs(nextMeta, nextMeta :: acc)
+
+      if (dir.exists) {
+        val (hasScalaSrc, hasSbtSrc) = dir.list.foldLeft((false, false)) {
+          case ((_, sbtFlag), f) if f.isScala => (true, sbtFlag)
+          case ((scalaFlag, _), f) if f.isSbt && f.filename != "metals.sbt" =>
+            (scalaFlag, true)
+          case (acc, _) => acc
+        }
+        val goNext = hasScalaSrc || hasSbtSrc || parentHasSbtSrc
+
+        if (goNext) {
+          val next = dir.resolve("project")
+          sbtMetaDirs(next, hasSbtSrc, dir :: acc)
+        } else acc
       } else {
         acc
       }
     }
 
-    // by default create the following directory structure
-    //  workspace/
-    //     project/
-    //       metals.sbt
-    //       project/
-    //          metals.sbt
-    // and check if there are more inner meta projects
     val mainMeta = workspace.resolve("project")
-    val metaMeta = mainMeta.resolve("project")
-    val dirs = sbtMetaDirs(metaMeta, List(mainMeta, metaMeta))
+    val dirs = sbtMetaDirs(mainMeta, true, List(mainMeta))
 
     dirs.foreach(writeSbtMetalsPlugin0)
   }
