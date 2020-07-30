@@ -284,7 +284,7 @@ final class ReferenceProvider(
        */
       if (canSkipExactMatchCheck) {
         add(range)
-      } else {
+      } else if (snapshot.text.nonEmpty) {
         findRealRange(range, snapshot.text, reference.symbol).foreach(add)
       }
     }

@@ -11,6 +11,7 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -417,6 +418,20 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
           .params(SbtBuildTool(Some("0.13.15"), () => userConfig))
           .getMessage
       )
+    } yield ()
+  }
+
+  test("min-sbt-version") {
+    val minimal =
+      SbtBuildTool(None, () => UserConfiguration.default).minimumVersion
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/project/build.properties
+            |sbt.version=$minimal
+            |""".stripMargin
+      )
+      _ = assertStatus(_.isInstalled)
     } yield ()
   }
 }

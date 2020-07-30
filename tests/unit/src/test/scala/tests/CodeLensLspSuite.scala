@@ -171,6 +171,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
            |  def main(args: Array[String]): Unit = ???
            |}""".stripMargin
       )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- assertCodeLenses(
         "a/src/main/scala/Main.scala",
         """<<run>><<debug>>

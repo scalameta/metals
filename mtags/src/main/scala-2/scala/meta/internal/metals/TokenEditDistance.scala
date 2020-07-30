@@ -228,7 +228,7 @@ object TokenEditDistance {
    * @param revised The current snapshot of a string, for example open buffer
    *                in an editor.
    */
-  def fromTokens(
+  private def fromTokens(
       original: Tokens,
       revised: Tokens
   ): TokenEditDistance = {
@@ -289,6 +289,8 @@ object TokenEditDistance {
     if (!isScala) {
       // Ignore non-scala Files.
       unchanged
+    } else if (originalInput.value.isEmpty() || revisedInput.value.isEmpty()) {
+      noMatch
     } else {
       val result = for {
         revised <- Trees.defaultDialect(revisedInput).tokenize.toOption
