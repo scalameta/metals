@@ -87,9 +87,9 @@ parameter.</p>
 <p><img src="https://i.imgur.com/8pCiMqE.gif" alt="auto-fill"></p>
 <p>This algorithm checks if there exists a value in scope with the same type as the
 parameters' and then works according to the rules below:</p>
-<pre><code class="hljs">1. If there is only one candidate, <span class="hljs-keyword">use</span> it.
-<span class="hljs-number">2.</span> <span class="hljs-keyword">If</span> there <span class="hljs-keyword">is</span> more <span class="hljs-keyword">than</span> one, give <span class="hljs-keyword">user</span> an alternative <span class="hljs-keyword">to</span> <span class="hljs-keyword">choose</span> one <span class="hljs-keyword">of</span> them.
-<span class="hljs-number">3.</span> Otherwise <span class="hljs-keyword">use</span> <span class="hljs-keyword">use</span> <span class="hljs-string">"???"</span>.
+<pre><code class="hljs">1. <span class="hljs-keyword">If</span> there is only one candidate, use it.
+2. <span class="hljs-keyword">If</span> there is more than one, give<span class="hljs-built_in"> user </span>an alternative <span class="hljs-keyword">to</span> choose one of them.
+3. Otherwise use use <span class="hljs-string">"???"</span>.
 </code></pre>
 <p>This feature also uses the snippets syntax to allow to quickly go over the
 auto-filled parameters and choose or replace the auto-filled values.</p>
@@ -117,11 +117,11 @@ string contained <code>|</code>, but it was not only used for formatting.</p>
 was missing in the previous release.</p>
 <h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
 <p>Big thanks to everybody who contributed to this release!</p>
-<pre><code class="hljs"><span class="hljs-meta">$</span> <span class="hljs-string">git shortlog -sn --no-merges v0.7.2..v0.7.5</span>
-<span class="hljs-attr">Tomasz</span> <span class="hljs-string">Godzik</span>
-<span class="hljs-attr">Gabriele</span> <span class="hljs-string">Petronella</span>
-<span class="hljs-meta">Łukasz</span> <span class="hljs-string">Byczyński</span>
-<span class="hljs-attr">Olafur</span> <span class="hljs-string">Pall Geirsson</span>
+<pre><code class="hljs">$ git shortlog -sn --no-merges v0<span class="hljs-number">.7</span><span class="hljs-number">.2</span>..v0<span class="hljs-number">.7</span><span class="hljs-number">.5</span>
+Tomasz Godzik
+Gabriele Petronella
+Łukasz Byczyński
+Olafur Pall Geirsson
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
 <h2><a class="anchor" aria-hidden="true" id="v075httpsgithubcomscalametametalstreev075-2019-09-12"></a><a href="#v075httpsgithubcomscalametametalstreev075-2019-09-12" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a href="https://github.com/scalameta/metals/tree/v0.7.5">v0.7.5</a> (2019-09-12)</h2>

@@ -147,19 +147,19 @@ based on the filesystem information</li>
 <ul>
 <li>Import dependencies:</li>
 </ul>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> $ivy.`com.lihaoyi::scalatags:0.7.0`
-<span class="hljs-keyword">import</span> scalatags.Text.all._
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> $ivy.`com.lihaoyi::scalatags:<span class="hljs-number">0.7</span><span class="hljs-number">.0</span>`
+<span class="hljs-keyword">import</span> scalatags.<span class="hljs-type">Text</span>.all._
 
-val rendered = div(<span class="hljs-string">"Moo"</span>).render
+<span class="hljs-keyword">val</span> rendered = div(<span class="hljs-string">"Moo"</span>).render
 </code></pre>
 <ul>
 <li>Set Scala version:</li>
 </ul>
 <pre><code class="hljs css language-scala"><span class="hljs-comment">// scala $scalaVersion</span>
 
-<span class="hljs-keyword">import</span> scala.util.Properties
+<span class="hljs-keyword">import</span> scala.util.<span class="hljs-type">Properties</span>
 
-pprint.<span class="hljs-built_in">log</span>(Properties.releaseVersion)
+pprint.log(<span class="hljs-type">Properties</span>.releaseVersion)
 </code></pre>
 <p>The Scala version is independent from any build tool used in the workspace and
 without specifying the exact version it will use the default Ammonite Scala
@@ -175,10 +175,10 @@ to import dependencies directly inside of their Scala worksheet with completions
 and diagnostics working right from the start.</p>
 <p><img src="https://i.imgur.com/qXgdNWM.gif" alt="worksheet-imports"></p>
 <p>You can add them using the following syntax:</p>
-<pre><code class="hljs">$ivy.<span class="hljs-string">`organisation::artifact:version`</span>
+<pre><code class="hljs"><span class="hljs-symbol">$ivy</span>.<span class="hljs-string">`organisation::artifact:version`</span>
 </code></pre>
 <p>For example:</p>
-<pre><code class="hljs">$ivy.<span class="hljs-string">`com.lihaoyi::scalatags:0.9.0`</span>
+<pre><code class="hljs">$ivy.`com.lihaoyi::scalatags:<span class="hljs-number">0.9</span><span class="hljs-number">.0</span>`
 </code></pre>
 <p><code>::</code> is the same as <code>%%</code> in sbt, which will append the current Scala binary
 version to the artifact name.</p>

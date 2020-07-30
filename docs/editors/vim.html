@@ -113,151 +113,151 @@ installed, be sure to update to the latest version with <code>:PlugUpdate</code>
 <p><code>coc.nvim</code> uses <a href="https://code.visualstudio.com/docs/languages/json">jsonc</a> as a
 configuration file format. It's basically json with comment support.</p>
 <p>In order to get comment highlighting, please add:</p>
-<pre><code class="hljs css language-vim">autocmd FileType json syntax <span class="hljs-built_in">match</span> Comment +\/\/.\+$+
+<pre><code class="hljs css language-vim"><span class="hljs-keyword">autocmd</span> FileType json <span class="hljs-keyword">syntax</span> <span class="hljs-keyword">match</span> Comment +\/\/.\+$+
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="recommended-cocnvim-mappings"></a><a href="#recommended-cocnvim-mappings" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Recommended coc.nvim mappings</h3>
 <p><code>coc.nvim</code> doesn't come with a default key mapping for LSP commands, so you need
 to configure it yourself.</p>
 <p>Here's a recommended configuration:</p>
-<pre><code class="hljs css language-vim">" ~/.vimrc
-" Configuration for coc.nvim
+<pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
+<span class="hljs-comment">" Configuration for coc.nvim</span>
 
-" If hidden is not set, TextEdit might fail.
-set hidden
+<span class="hljs-comment">" If hidden is not set, TextEdit might fail.</span>
+<span class="hljs-keyword">set</span> hidden
 
-" Some servers have issues with backup files
-set nobackup
-set nowritebackup
+<span class="hljs-comment">" Some servers have issues with backup files</span>
+<span class="hljs-keyword">set</span> nobackup
+<span class="hljs-keyword">set</span> nowritebackup
 
-" You will have a bad experience with diagnostic messages with the default 4000.
-set updatetime=300
+<span class="hljs-comment">" You will have a bad experience with diagnostic messages with the default 4000.</span>
+<span class="hljs-keyword">set</span> updatetime=<span class="hljs-number">300</span>
 
-" Don't give |ins-completion-menu| messages.
-set shortmess+=c
+<span class="hljs-comment">" Don't give |ins-completion-menu| messages.</span>
+<span class="hljs-keyword">set</span> shortmess+=<span class="hljs-keyword">c</span>
 
-" Always show signcolumns
-set signcolumn=yes
+<span class="hljs-comment">" Always show signcolumns</span>
+<span class="hljs-keyword">set</span> signcolumn=yes
 
-" Help Vim recognize *.sbt and *.sc as Scala files
-au BufRead,BufNewFile *.sbt,*.sc set filetype=scala
+<span class="hljs-comment">" Help Vim recognize *.sbt and *.sc as Scala files</span>
+<span class="hljs-keyword">au</span> BufRead,BufNewFile *.sbt,*.sc <span class="hljs-keyword">set</span> <span class="hljs-keyword">filetype</span>=scala
 
-" Use tab for trigger completion with characters ahead and navigate.
-" Use command ':verbose imap <span class="hljs-tag">&lt;<span class="hljs-name">tab</span>&gt;</span>' to make sure tab is not mapped by other plugin.
-inoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">expr</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">TAB</span>&gt;</span>
-      \ pumvisible() ? "\<span class="hljs-tag">&lt;<span class="hljs-name">C-n</span>&gt;</span>" :
-      \ <span class="hljs-tag">&lt;<span class="hljs-name">SID</span>&gt;</span>check_back_space() ? "\<span class="hljs-tag">&lt;<span class="hljs-name">TAB</span>&gt;</span>" :
+<span class="hljs-comment">" Use tab for trigger completion with characters ahead and navigate.</span>
+<span class="hljs-comment">" Use command ':verbose imap &lt;tab&gt;' to make sure tab is not mapped by other plugin.</span>
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span><span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;TAB&gt;</span>
+      \ <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-n&gt;"</span> :
+      \ <span class="hljs-symbol">&lt;SID&gt;</span>check_back_space() ? <span class="hljs-string">"\&lt;TAB&gt;"</span> :
       \ coc#refresh()
-inoremap <span class="hljs-tag">&lt;<span class="hljs-name">expr</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">S-TAB</span>&gt;</span> pumvisible() ? "\<span class="hljs-tag">&lt;<span class="hljs-name">C-p</span>&gt;</span>" : "\<span class="hljs-tag">&lt;<span class="hljs-name">C-h</span>&gt;</span>"
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;expr&gt;</span><span class="hljs-symbol">&lt;S-TAB&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-p&gt;"</span> : <span class="hljs-string">"\&lt;C-h&gt;"</span>
 
-" Used in the tab autocompletion for coc
-function! s:check_back_space() abort
-  let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
-endfunction
+<span class="hljs-comment">" Used in the tab autocompletion for coc</span>
+<span class="hljs-function"><span class="hljs-keyword">function</span>! <span class="hljs-title">s</span>:<span class="hljs-title">check_back_space</span><span class="hljs-params">()</span> <span class="hljs-title">abort</span></span>
+  <span class="hljs-keyword">let</span> <span class="hljs-keyword">col</span> = <span class="hljs-keyword">col</span>(<span class="hljs-string">'.'</span>) - <span class="hljs-number">1</span>
+  <span class="hljs-keyword">return</span> !col || <span class="hljs-built_in">getline</span>(<span class="hljs-string">'.'</span>)[<span class="hljs-keyword">col</span> - <span class="hljs-number">1</span>]  =~# <span class="hljs-string">'\s'</span>
+<span class="hljs-keyword">endfunction</span>
 
-" Use <span class="hljs-tag">&lt;<span class="hljs-name">c-space</span>&gt;</span> to trigger completion.
-inoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">expr</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">c-space</span>&gt;</span> coc#refresh()
+<span class="hljs-comment">" Use &lt;c-space&gt; to trigger completion.</span>
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span><span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;c-space&gt;</span> coc#refresh()
 
-" Use <span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span> to confirm completion, `<span class="hljs-tag">&lt;<span class="hljs-name">C-g</span>&gt;</span>u` means break undo chain at current position.
-" Coc only does snippet and additional edit on confirm.
-inoremap <span class="hljs-tag">&lt;<span class="hljs-name">expr</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span> pumvisible() ? "\<span class="hljs-tag">&lt;<span class="hljs-name">C-y</span>&gt;</span>" : "\<span class="hljs-tag">&lt;<span class="hljs-name">C-g</span>&gt;</span>u\<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>"
+<span class="hljs-comment">" Use &lt;cr&gt; to confirm completion, `&lt;C-g&gt;u` means break undo chain at current position.</span>
+<span class="hljs-comment">" Coc only does snippet and additional edit on confirm.</span>
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;cr&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-y&gt;"</span> : <span class="hljs-string">"\&lt;C-g&gt;u\&lt;CR&gt;"</span>
 
-" Use `[g` and `]g` to navigate diagnostics
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> [g <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-diagnostic-prev)
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> ]g <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-diagnostic-next)
+<span class="hljs-comment">" Use `[g` and `]g` to navigate diagnostics</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> [g <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">prev</span>)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> ]g <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">next</span>)
 
-" Remap keys for gotos
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> gd <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-definition)
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> gy <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-type-definition)
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> gi <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-implementation)
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> gr <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-references)
+<span class="hljs-comment">" Remap keys for gotos</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> gd <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-definition)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> gy <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-<span class="hljs-built_in">type</span>-definition)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> gi <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-implementation)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-keyword">gr</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-references)
 
-" Used to expand decorations in worksheets
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">Leader</span>&gt;</span>ws <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-metals-expand-decoration)
+<span class="hljs-comment">" Used to expand decorations in worksheets</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;Leader&gt;</span><span class="hljs-keyword">ws</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-metals-<span class="hljs-built_in">expand</span>-decoration)
 
-" Use K to either doHover or show documentation in preview window
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> K :call <span class="hljs-tag">&lt;<span class="hljs-name">SID</span>&gt;</span>show_documentation()<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
+<span class="hljs-comment">" Use K to either doHover or show documentation in preview window</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> K :<span class="hljs-keyword">call</span> <span class="hljs-symbol">&lt;SID&gt;</span>show_documentation()<span class="hljs-symbol">&lt;CR&gt;</span>
 
-function! s:show_documentation()
-  if (index(['vim','help'], &amp;filetype) &gt;= 0)
-    execute 'h '.expand('<span class="hljs-tag">&lt;<span class="hljs-name">cword</span>&gt;</span>')
-  else
-    call CocAction('doHover')
-  endif
-endfunction
+<span class="hljs-function"><span class="hljs-keyword">function</span>! <span class="hljs-title">s</span>:<span class="hljs-title">show_documentation</span><span class="hljs-params">()</span></span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">index</span>([<span class="hljs-string">'vim'</span>,<span class="hljs-string">'help'</span>], &amp;<span class="hljs-keyword">filetype</span>) &gt;= <span class="hljs-number">0</span>)
+    <span class="hljs-keyword">execute</span> <span class="hljs-string">'h '</span>.<span class="hljs-built_in">expand</span>(<span class="hljs-string">'&lt;cword&gt;'</span>)
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">call</span> CocAction(<span class="hljs-string">'doHover'</span>)
+  <span class="hljs-keyword">endif</span>
+<span class="hljs-keyword">endfunction</span>
 
-" Highlight symbol under cursor on CursorHold
-autocmd CursorHold * silent call CocActionAsync('highlight')
+<span class="hljs-comment">" Highlight symbol under cursor on CursorHold</span>
+<span class="hljs-keyword">autocmd</span> CursorHold * <span class="hljs-keyword">silent</span> <span class="hljs-keyword">call</span> CocActionAsync(<span class="hljs-string">'highlight'</span>)
 
-" Remap for rename current word
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>rn <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-rename)
+<span class="hljs-comment">" Remap for rename current word</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span>rn <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-<span class="hljs-built_in">rename</span>)
 
-" Remap for format selected region
-xmap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>f  <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-format-selected)
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>f  <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-format-selected)
+<span class="hljs-comment">" Remap for format selected region</span>
+<span class="hljs-keyword">xmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">f</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-format-selected)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">f</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-format-selected)
 
-augroup mygroup
+<span class="hljs-keyword">augroup</span> mygroup
   autocmd!
-  " Setup formatexpr specified filetype(s).
-  autocmd FileType scala setl formatexpr=CocAction('formatSelected')
-  " Update signature help on jump placeholder
-  autocmd User CocJumpPlaceholder call CocActionAsync('showSignatureHelp')
-augroup end
+  <span class="hljs-comment">" Setup formatexpr specified filetype(s).</span>
+  <span class="hljs-keyword">autocmd</span> FileType scala <span class="hljs-keyword">setl</span> formatexpr=CocAction(<span class="hljs-string">'formatSelected'</span>)
+  <span class="hljs-comment">" Update signature help on jump placeholder</span>
+  <span class="hljs-keyword">autocmd</span> User CocJumpPlaceholder <span class="hljs-keyword">call</span> CocActionAsync(<span class="hljs-string">'showSignatureHelp'</span>)
+<span class="hljs-keyword">augroup</span> end
 
-" Remap for do codeAction of current line
-xmap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>a  <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-codeaction-line)
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>a  <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-codeaction-line)
+<span class="hljs-comment">" Remap for do codeAction of current line</span>
+<span class="hljs-keyword">xmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">a</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-codeaction-<span class="hljs-built_in">line</span>)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">a</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-codeaction-<span class="hljs-built_in">line</span>)
 
-" Fix autofix problem of current line
-nmap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>qf  <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-fix-current)
+<span class="hljs-comment">" Fix autofix problem of current line</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span>qf  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-<span class="hljs-keyword">fix</span>-current)
 
-" Use `:Format` to format current buffer
-command! -nargs=0 Format :call CocAction('format')
+<span class="hljs-comment">" Use `:Format` to format current buffer</span>
+command! -nargs=<span class="hljs-number">0</span> Format :<span class="hljs-keyword">call</span> CocAction(<span class="hljs-string">'format'</span>)
 
-" Use `:Fold` to fold current buffer
-command! -nargs=? Fold :call     CocAction('fold', <span class="hljs-tag">&lt;<span class="hljs-name">f-args</span>&gt;</span>)
+<span class="hljs-comment">" Use `:Fold` to fold current buffer</span>
+command! -nargs=? Fold :<span class="hljs-keyword">call</span>     CocAction(<span class="hljs-string">'fold'</span>, <span class="hljs-symbol">&lt;f-args&gt;</span>)
 
-" Trigger for code actions
-" Make sure `"codeLens.enable": true` is set in your coc config
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">leader</span>&gt;</span>cl :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>call CocActionAsync('codeLensAction')<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
+<span class="hljs-comment">" Trigger for code actions</span>
+<span class="hljs-string">" Make sure `"</span>codeLens.enable<span class="hljs-comment">": true` is set in your coc config</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">cl</span> :<span class="hljs-symbol">&lt;C-u&gt;</span><span class="hljs-keyword">call</span> CocActionAsync(<span class="hljs-string">'codeLensAction'</span>)<span class="hljs-symbol">&lt;CR&gt;</span>
 
-" Show all diagnostics
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>a  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocList diagnostics<span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span>
-" Manage extensions
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>e  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocList extensions<span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span>
-" Show commands
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>c  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocList commands<span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span>
-" Find symbol of current document
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>o  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocList outline<span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span>
-" Search workspace symbols
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>s  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocList -I symbols<span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span>
-" Do default action for next item.
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>j  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocNext<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
-" Do default action for previous item.
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>k  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocPrev<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
-" Resume latest coc list
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>p  :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocListResume<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
+<span class="hljs-comment">" Show all diagnostics</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">a</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList diagnostics<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Manage extensions</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">e</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList extensions<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Show commands</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">c</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList commands<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Find symbol of current document</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">o</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList outline<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Search workspace symbols</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span>s  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList -I symbols<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Do default action for next item.</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">j</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocNext<span class="hljs-symbol">&lt;CR&gt;</span>
+<span class="hljs-comment">" Do default action for previous item.</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">k</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocPrev<span class="hljs-symbol">&lt;CR&gt;</span>
+<span class="hljs-comment">" Resume latest coc list</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">p</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocListResume<span class="hljs-symbol">&lt;CR&gt;</span>
 
-" Notify coc.nvim that <span class="hljs-tag">&lt;<span class="hljs-name">enter</span>&gt;</span> has been pressed.
-" Currently used for the formatOnType feature.
-inoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">expr</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">cr</span>&gt;</span> pumvisible() ? coc#_select_confirm()
-      \: "\<span class="hljs-tag">&lt;<span class="hljs-name">C-g</span>&gt;</span>u\<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>\<span class="hljs-tag">&lt;<span class="hljs-name">c-r</span>&gt;</span>=coc#on_enter()\<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>"
+<span class="hljs-comment">" Notify coc.nvim that &lt;enter&gt; has been pressed.</span>
+<span class="hljs-comment">" Currently used for the formatOnType feature.</span>
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span><span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;cr&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? coc#_select_confirm()
+      \: <span class="hljs-string">"\&lt;C-g&gt;u\&lt;CR&gt;\&lt;c-r&gt;=coc#on_enter()\&lt;CR&gt;"</span>
 
-" Toggle panel with Tree Views
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>t :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocCommand metals.tvp<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
-" Toggle Tree View 'metalsPackages'
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>tp :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocCommand metals.tvp metalsPackages<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
-" Toggle Tree View 'metalsCompile'
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>tc :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocCommand metals.tvp metalsCompile<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
-" Toggle Tree View 'metalsBuild'
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>tb :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocCommand metals.tvp metalsBuild<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
-" Reveal current current class (trait or object) in Tree View 'metalsPackages'
-nnoremap <span class="hljs-tag">&lt;<span class="hljs-name">silent</span>&gt;</span> <span class="hljs-tag">&lt;<span class="hljs-name">space</span>&gt;</span>tf :<span class="hljs-tag">&lt;<span class="hljs-name">C-u</span>&gt;</span>CocCommand metals.revealInTreeView metalsPackages<span class="hljs-tag">&lt;<span class="hljs-name">CR</span>&gt;</span>
+<span class="hljs-comment">" Toggle panel with Tree Views</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span>t :<span class="hljs-symbol">&lt;C-u&gt;</span>CocCommand metals.tvp<span class="hljs-symbol">&lt;CR&gt;</span>
+<span class="hljs-comment">" Toggle Tree View 'metalsPackages'</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">tp</span> :<span class="hljs-symbol">&lt;C-u&gt;</span>CocCommand metals.tvp metalsPackages<span class="hljs-symbol">&lt;CR&gt;</span>
+<span class="hljs-comment">" Toggle Tree View 'metalsCompile'</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">tc</span> :<span class="hljs-symbol">&lt;C-u&gt;</span>CocCommand metals.tvp metalsCompile<span class="hljs-symbol">&lt;CR&gt;</span>
+<span class="hljs-comment">" Toggle Tree View 'metalsBuild'</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span>tb :<span class="hljs-symbol">&lt;C-u&gt;</span>CocCommand metals.tvp metalsBuild<span class="hljs-symbol">&lt;CR&gt;</span>
+<span class="hljs-comment">" Reveal current current class (trait or object) in Tree View 'metalsPackages'</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">tf</span> :<span class="hljs-symbol">&lt;C-u&gt;</span>CocCommand metals.revealInTreeView metalsPackages<span class="hljs-symbol">&lt;CR&gt;</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="installing-coc-metals"></a><a href="#installing-coc-metals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing coc-metals</h3>
 <p>Once you have <code>coc.nvim</code> installed, you can then install Metals a few different
 ways. The easiest is by running:</p>
-<pre><code class="hljs css language-vim"><span class="hljs-selector-pseudo">:CocInstall</span> <span class="hljs-selector-tag">coc-metals</span>
+<pre><code class="hljs css language-vim">:CocInstall coc-metals
 </code></pre>
 <p>If you are using the latest stable release of coc.nvim, then this will
 automatically check for updates each day. However, if you're on the master
@@ -272,7 +272,7 @@ source by using your vim plugin manager. Here is an example using <code>vim-plug
 <p><strong>NOTE</strong>* Make sure you don't have the extension installed both ways. So if you
 have installed it with the built-in extension management of coc.nvim first and
 are not switching, make sure to uninstall the old version first.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-selector-pseudo">:CocUninstall</span> <span class="hljs-selector-tag">coc-metals</span>
+<pre><code class="hljs css language-vim">:CocUninstall coc-metals
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="importing-a-build"></a><a href="#importing-a-build" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Importing a build</h2>
 <p>The first time you open Metals in a new workspace it prompts you to import the build.
@@ -333,8 +333,8 @@ features.</p>
           <td>15 Jul 2020 09:28</td>
         </tr>
         <tr>
-          <td>0.9.2+39-f36a4141-SNAPSHOT</td>
-          <td>28 Jul 2020 19:59</td>
+          <td>0.9.2+41-cfe00f41-SNAPSHOT</td>
+          <td>30 Jul 2020 09:08</td>
         </tr>
       </tbody>
     </table>
@@ -344,7 +344,7 @@ This will be necessary before the new version will be downloaded and used.
 <h2><a class="anchor" aria-hidden="true" id="list-all-workspace-compile-errors"></a><a href="#list-all-workspace-compile-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>List all workspace compile errors</h2>
 <p>To list all compilation errors and warnings in the workspace, run the following
 command.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-selector-pseudo">:CocList</span> <span class="hljs-selector-tag">diagnostics</span>
+<pre><code class="hljs css language-vim">:CocList diagnostics
 </code></pre>
 <p>Or use the default recommended mapping <code>&lt;space&gt; a</code>.</p>
 <p>This is helpful to see compilation errors in different files from your current
@@ -374,7 +374,7 @@ You may not see the full result for example if it's too long, so you are also
 able to hover on the comment if you're in Vim or expand the virtual text by
 using the <code>coc-metals-expand-decoration</code> command. The default for this
 is:</p>
-<pre><code class="hljs css language-vim">nmap <span class="hljs-tag">&lt;<span class="hljs-name">Leader</span>&gt;</span>ws <span class="hljs-tag">&lt;<span class="hljs-name">Plug</span>&gt;</span>(coc-metals-expand-decoration)
+<pre><code class="hljs css language-vim"><span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;Leader&gt;</span><span class="hljs-keyword">ws</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-metals-<span class="hljs-built_in">expand</span>-decoration)
 </code></pre>
 <p>Keep in mind that you don't need to wrap your code in an <code>object</code>. In worksheets
 everything can be evaluated at the top level.</p>
@@ -540,7 +540,7 @@ Each property needs to be a separate item.\n\nExample: <code>-Xmx1G</code> or <c
 <h3><a class="anchor" aria-hidden="true" id="version-of-bloop"></a><a href="#version-of-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Version of Bloop</h3>
 <p>This version will be used for the Bloop build tool plugin, for any supported build tool,
 while importing in Metals as well as for running the embedded server</p>
-<p><strong>Default</strong>: 1.4.3</p>
+<p><strong>Default</strong>: 1.4.3-23-550c6c0a</p>
 <p><strong>Example</strong>:</p>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"metals.bloopVersion"</span>: <span class="hljs-string">"1.4.0-RC1"</span>
@@ -591,12 +591,12 @@ functionality you need to enable <code>coc.preferences.formatOnType</code> setti
 <p><img src="https://i.imgur.com/RWPHt2q.png" alt="coc-preferences-formatOnType"></p>
 <h2><a class="anchor" aria-hidden="true" id="close-buffer-without-exiting"></a><a href="#close-buffer-without-exiting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Close buffer without exiting</h2>
 <p>To close a buffer and return to the previous buffer, run the following command.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-selector-pseudo">:bd</span>
+<pre><code class="hljs css language-vim">:<span class="hljs-keyword">bd</span>
 </code></pre>
 <p>This command is helpful when navigating in library dependency sources in the .metals/readonly directory.</p>
 <h2><a class="anchor" aria-hidden="true" id="shut-down-the-language-server"></a><a href="#shut-down-the-language-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Shut down the language server</h2>
 <p>The Metals server is shutdown when you exit vim as usual.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-selector-pseudo">:wq</span>
+<pre><code class="hljs css language-vim">:<span class="hljs-keyword">wq</span>
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="statusline-integration"></a><a href="#statusline-integration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Statusline integration</h2>
 <p>It's recommended to use a statusline integration with <code>coc-metals</code> in order to
@@ -627,7 +627,7 @@ information on the far right of your screen.</p>
 <p>If you don't use a statusline plugin, but would still like to see this
 information, the easiest way is to make sure you have the following in your
 <code>.vimrc</code>.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-keyword">set</span> statusline^=%{coc#status()}%{<span class="hljs-keyword">get</span>(b:,<span class="hljs-string">'coc_current_function'</span>,<span class="hljs-string">''</span>)}
+<pre><code class="hljs css language-vim"><span class="hljs-keyword">set</span> statusline^=%{coc#status()}%{<span class="hljs-built_in">get</span>(<span class="hljs-variable">b:</span>,<span class="hljs-string">'coc_current_function'</span>,<span class="hljs-string">''</span>)}
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="formatting-on-save"></a><a href="#formatting-on-save" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Formatting on save</h2>
 <p>Add the following configuration to <code>:CocConfig</code> if you'd like to have <code>:w</code> format using Metals and
@@ -676,8 +676,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.9.2+39-f36a4141-SNAPSHOT</td>
-          <td>28 Jul 2020 19:59</td>
+          <td>0.9.2+41-cfe00f41-SNAPSHOT</td>
+          <td>30 Jul 2020 09:08</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>

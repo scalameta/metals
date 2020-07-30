@@ -92,8 +92,8 @@ way to fix this.</p>
 <p>There are different ways to setup mirrors:</p>
 <h3><a class="anchor" aria-hidden="true" id="via-global-properties-file"></a><a href="#via-global-properties-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via global properties file</h3>
 <p>Create <code>mirror.properties</code> file with the contents:</p>
-<pre><code class="hljs"><span class="hljs-attr">central.from</span>=https://repo1.maven.org/maven2
-<span class="hljs-attr">central.to</span>=http://exmaple.com:<span class="hljs-number">8080</span>/nexus/content/groups/public
+<pre><code class="hljs">central.from=<span class="hljs-string">https:</span><span class="hljs-comment">//repo1.maven.org/maven2</span>
+central.to=<span class="hljs-string">http:</span><span class="hljs-comment">//exmaple.com:8080/nexus/content/groups/public</span>
 </code></pre>
 <p>You need to replace the uri after <code>central.to=</code> with your private repository.</p>
 <p>The location of the mirror file varies depending on the operating system:</p>
@@ -115,8 +115,8 @@ line with that variable in scope.</p>
 <h3><a class="anchor" aria-hidden="true" id="via-properties"></a><a href="#via-properties" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via properties</h3>
 <p>You can also use properties to specify the location of the mirror file, for
 example:</p>
-<pre><code class="hljs"><span class="hljs-attr">-Dcoursier.mirrors</span>=~/.config/coursier/mirror.properties
-</code></pre>
+<pre><code class="hljs">-<span class="ruby">Dcoursier.mirrors=~<span class="hljs-regexp">/.config/coursier</span><span class="hljs-regexp">/mirror.properties
+</span></span></code></pre>
 <p>This property needs to be added to the Metals server and Coursier invocation.
 However, this solution will not work for Bloop, because properties are not
 forwarded to the invocation of the Bloop server. You will need to use a
@@ -154,48 +154,48 @@ still having issues you can take a look at some of them:</p>
 <li><a href="https://github.com/scalameta/metals/issues/1362">https://github.com/scalameta/metals/issues/1362</a></li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="the-server-did-not-start-got-failedtoopenbspconnection"></a><a href="#the-server-did-not-start-got-failedtoopenbspconnection" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The server did not start, got FailedToOpenBspConnection</h3>
-<pre><code class="hljs"><span class="hljs-attr">error</span>: <span class="hljs-string">The command bsp --protocol tcp --port 44559 returned with an error</span>
-<span class="hljs-attr">&gt;</span>
-<span class="hljs-attr">error</span>: <span class="hljs-string">The launcher failed to establish a bsp connection, aborting...</span>
-<span class="hljs-attr">ERROR</span> <span class="hljs-string">Failed to connect with build server, no functionality will work.</span>
-<span class="hljs-meta">java.lang.RuntimeException</span>: <span class="hljs-string">The server did not start, got FailedToOpenBspConnection</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">bloop.launcher.LauncherMain.failPromise$1(Launcher.scala:92)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">bloop.launcher.LauncherMain.runLauncher(Launcher.scala:119)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">scala.meta.internal.metals.BloopServers$$anon$1.run(BloopServers.scala:101)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">java.util.concurrent.FutureTask.run(FutureTask.java:264)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)</span>
-    <span class="hljs-attr">at</span> <span class="hljs-string">java.lang.Thread.run(Thread.java:834)</span>
+<pre><code class="hljs">error: The command bsp --protocol tcp --port <span class="hljs-number">44559</span> returned <span class="hljs-keyword">with</span> an error
+&gt;
+error: The launcher failed <span class="hljs-keyword">to</span> establish a bsp connection, aborting...
+ERROR Failed <span class="hljs-keyword">to</span> connect <span class="hljs-keyword">with</span> build server, no functionality will work.
+java.lang.RuntimeException: The server did not start, got FailedToOpenBspConnection
+    at bloop.launcher.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">LauncherMain</span>.</span></span>fail<span class="hljs-constructor">Promise$1(Launcher.<span class="hljs-params">scala</span>:92)</span>
+    at bloop.launcher.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">LauncherMain</span>.</span></span>run<span class="hljs-constructor">Launcher(Launcher.<span class="hljs-params">scala</span>:119)</span>
+    at scala.meta.internal.metals.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">BloopServers$$anon$1</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">BloopServers</span>.</span></span>scala:<span class="hljs-number">101</span>)
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Executors$RunnableAdapter</span>.</span></span>call(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Executors</span>.</span></span>java:<span class="hljs-number">515</span>)
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">FutureTask</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">FutureTask</span>.</span></span>java:<span class="hljs-number">264</span>)
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">ThreadPoolExecutor</span>.</span></span>run<span class="hljs-constructor">Worker(ThreadPoolExecutor.<span class="hljs-params">java</span>:1128)</span>
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">ThreadPoolExecutor$Worker</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">ThreadPoolExecutor</span>.</span></span>java:<span class="hljs-number">628</span>)
+    at java.lang.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Thread</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Thread</span>.</span></span>java:<span class="hljs-number">834</span>)
 </code></pre>
-<pre><code class="hljs">Exception <span class="hljs-keyword">in</span> thread <span class="hljs-string">"bloop-server-background"</span> java.<span class="hljs-built_in">io</span>.IOException: Cannot run program <span class="hljs-string">"java"</span> (<span class="hljs-keyword">in</span> directory <span class="hljs-string">"&lt;some path here ...&gt;"</span>): <span class="hljs-built_in">error</span>=<span class="hljs-number">2</span>, No such file <span class="hljs-keyword">or</span> directory
-        at java.lang.ProcessBuilder.start(ProcessBuilder.java:<span class="hljs-number">1048</span>)
-</code></pre>
+<pre><code class="hljs">Exception in thread <span class="hljs-string">"bloop-server-background"</span> <span class="hljs-keyword">java.io.IOException: </span>Cannot run program <span class="hljs-string">"java"</span> (in <span class="hljs-keyword">directory </span><span class="hljs-string">"&lt;some path here ...&gt;"</span>): error=<span class="hljs-number">2</span>, No such file <span class="hljs-keyword">or </span><span class="hljs-keyword">directory
+</span>        <span class="hljs-built_in">at</span> <span class="hljs-keyword">java.lang.ProcessBuilder.start(ProcessBuilder.java:1048)
+</span></code></pre>
 <p>This might mean that you don't have your java installation on your PATH and
 Bloop was unable to start.</p>
 <h3><a class="anchor" aria-hidden="true" id="timeout-waiting-for-buildinitialize-response"></a><a href="#timeout-waiting-for-buildinitialize-response" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Timeout waiting for 'build/initialize' response</h3>
-<pre><code class="hljs">INFO  tracing is disabled for protocol BSP, to enable tracing of incoming and outgoing JSON messages <span class="hljs-keyword">create</span> an <span class="hljs-keyword">empty</span> <span class="hljs-keyword">file</span> <span class="hljs-keyword">at</span> C:\<span class="hljs-keyword">Users</span>\tgodzik\AppData\<span class="hljs-keyword">Local</span>\scalameta\metals\<span class="hljs-keyword">cache</span>\bsp.trace.json
-<span class="hljs-keyword">ERROR</span> <span class="hljs-keyword">Timeout</span> waiting <span class="hljs-keyword">for</span> <span class="hljs-string">'build/initialize'</span> response
-<span class="hljs-keyword">ERROR</span> <span class="hljs-keyword">Failed</span> <span class="hljs-keyword">to</span> <span class="hljs-keyword">connect</span> <span class="hljs-keyword">with</span> <span class="hljs-keyword">build</span> <span class="hljs-keyword">server</span>, <span class="hljs-keyword">no</span> functionality will work.
-java.util.concurrent.TimeoutException
-    <span class="hljs-keyword">at</span> java.util.concurrent.CompletableFuture.timedGet(CompletableFuture.java:<span class="hljs-number">1886</span>)
-    <span class="hljs-keyword">at</span> java.util.concurrent.CompletableFuture.get(CompletableFuture.java:<span class="hljs-number">2021</span>)
-    <span class="hljs-keyword">at</span> scala.meta.internal.metals.BuildServerConnection$.initialize(BuildServerConnection.scala:<span class="hljs-number">259</span>)
-    <span class="hljs-keyword">at</span> scala.meta.internal.metals.BuildServerConnection$.$anonfun$fromSockets$<span class="hljs-number">1</span>(BuildServerConnection.scala:<span class="hljs-number">203</span>)
-    <span class="hljs-keyword">at</span> scala.util.Success.$anonfun$<span class="hljs-keyword">map</span>$<span class="hljs-number">1</span>(Try.scala:<span class="hljs-number">255</span>)
-    <span class="hljs-keyword">at</span> scala.util.Success.map(Try.scala:<span class="hljs-number">213</span>)
-    <span class="hljs-keyword">at</span> scala.concurrent.Future.$anonfun$<span class="hljs-keyword">map</span>$<span class="hljs-number">1</span>(Future.scala:<span class="hljs-number">292</span>)
-    <span class="hljs-keyword">at</span> scala.concurrent.impl.Promise.liftedTree1$<span class="hljs-number">1</span>(Promise.scala:<span class="hljs-number">33</span>)
-    <span class="hljs-keyword">at</span> scala.concurrent.impl.Promise.$anonfun$transform$<span class="hljs-number">1</span>(Promise.scala:<span class="hljs-number">33</span>)
-    <span class="hljs-keyword">at</span> scala.concurrent.impl.CallbackRunnable.run(Promise.scala:<span class="hljs-number">64</span>)
-    <span class="hljs-keyword">at</span> java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:<span class="hljs-number">1128</span>)
-    <span class="hljs-keyword">at</span> java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:<span class="hljs-number">628</span>)
-    <span class="hljs-keyword">at</span> java.lang.Thread.run(Thread.java:<span class="hljs-number">834</span>)
+<pre><code class="hljs">INFO  tracing is disabled <span class="hljs-keyword">for</span> protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at C:\Users\tgodzik\AppData\Local\scalameta\metals\cache\bsp<span class="hljs-selector-class">.trace</span><span class="hljs-selector-class">.json</span>
+ERROR Timeout waiting <span class="hljs-keyword">for</span> <span class="hljs-string">'build/initialize'</span> response
+ERROR Failed to connect with build server, no functionality will work.
+java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.TimeoutException</span>
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.CompletableFuture</span>.timedGet(CompletableFuture<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1886</span>)
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.CompletableFuture</span>.get(CompletableFuture<span class="hljs-selector-class">.java</span>:<span class="hljs-number">2021</span>)
+    at scala<span class="hljs-selector-class">.meta</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.metals</span>.BuildServerConnection$.initialize(BuildServerConnection<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">259</span>)
+    at scala<span class="hljs-selector-class">.meta</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.metals</span>.BuildServerConnection$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$fromSockets</span>$<span class="hljs-number">1</span>(BuildServerConnection<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">203</span>)
+    at scala<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.Success</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$map</span>$<span class="hljs-number">1</span>(Try<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">255</span>)
+    at scala<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.Success</span>.map(Try<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">213</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.Future</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$map</span>$<span class="hljs-number">1</span>(Future<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">292</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.impl</span><span class="hljs-selector-class">.Promise</span>.liftedTree1$<span class="hljs-number">1</span>(Promise<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">33</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.impl</span><span class="hljs-selector-class">.Promise</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$transform</span>$<span class="hljs-number">1</span>(Promise<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">33</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.impl</span><span class="hljs-selector-class">.CallbackRunnable</span>.run(Promise<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">64</span>)
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.ThreadPoolExecutor</span>.runWorker(ThreadPoolExecutor<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1128</span>)
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span>.ThreadPoolExecutor<span class="hljs-variable">$Worker</span>.run(ThreadPoolExecutor<span class="hljs-selector-class">.java</span>:<span class="hljs-number">628</span>)
+    at java<span class="hljs-selector-class">.lang</span><span class="hljs-selector-class">.Thread</span>.run(Thread<span class="hljs-selector-class">.java</span>:<span class="hljs-number">834</span>)
 
-WARN  Stopped configuration <span class="hljs-keyword">of</span> SemanticDB <span class="hljs-keyword">in</span> Scala <span class="hljs-number">2.13</span><span class="hljs-number">.1</span> projects: <span class="hljs-keyword">Error</span> downloading org.scalameta:semanticdb-scalac_2<span class="hljs-number">.13</span><span class="hljs-number">.1</span>:<span class="hljs-number">4.3</span><span class="hljs-number">.0</span>
-  <span class="hljs-keyword">not</span> <span class="hljs-keyword">found</span>: C:\<span class="hljs-keyword">Users</span>\tgodzik\.ivy2\<span class="hljs-keyword">local</span>\org.scalameta\semanticdb-scalac_2<span class="hljs-number">.13</span><span class="hljs-number">.1</span>\<span class="hljs-number">4.3</span><span class="hljs-number">.0</span>\ivys\ivy.xml
-  download <span class="hljs-keyword">error</span>: Caught java.net.ConnectException: <span class="hljs-keyword">Connection</span> timed <span class="hljs-keyword">out</span>: <span class="hljs-keyword">connect</span> (<span class="hljs-keyword">Connection</span> timed <span class="hljs-keyword">out</span>: <span class="hljs-keyword">connect</span>) <span class="hljs-keyword">while</span> downloading https://repo1.maven.org/maven2/org/scalameta/semanticdb-scalac_2<span class="hljs-number">.13</span><span class="hljs-number">.1</span>/<span class="hljs-number">4.3</span><span class="hljs-number">.0</span>/semanticdb-scalac_2<span class="hljs-number">.13</span><span class="hljs-number">.1</span><span class="hljs-number">-4.3</span><span class="hljs-number">.0</span>.pom
-  <span class="hljs-keyword">not</span> <span class="hljs-keyword">found</span>: https://dl.bintray.com/scalacenter/releases/org/scalameta/semanticdb-scalac_2<span class="hljs-number">.13</span><span class="hljs-number">.1</span>/<span class="hljs-number">4.3</span><span class="hljs-number">.0</span>/semanticdb-scalac_2<span class="hljs-number">.13</span><span class="hljs-number">.1</span><span class="hljs-number">-4.3</span><span class="hljs-number">.0</span>.pom
+WARN  Stopped configuration of SemanticDB <span class="hljs-keyword">in</span> Scala <span class="hljs-number">2.13</span>.<span class="hljs-number">1</span> projects: Error downloading org<span class="hljs-selector-class">.scalameta</span>:semanticdb-scalac_2.<span class="hljs-number">13.1</span>:<span class="hljs-number">4.3</span>.<span class="hljs-number">0</span>
+  not found: C:\Users\tgodzik\.ivy2\local\org.scalameta\semanticdb-scalac_2.<span class="hljs-number">13.1</span>\<span class="hljs-number">4.3</span>.<span class="hljs-number">0</span>\ivys\ivy<span class="hljs-selector-class">.xml</span>
+  download error: Caught java<span class="hljs-selector-class">.net</span><span class="hljs-selector-class">.ConnectException</span>: Connection timed out: connect (Connection timed out: connect) while downloading https:<span class="hljs-comment">//repo1.maven.org/maven2/org/scalameta/semanticdb-scalac_2.13.1/4.3.0/semanticdb-scalac_2.13.1-4.3.0.pom</span>
+  not found: https:<span class="hljs-comment">//dl.bintray.com/scalacenter/releases/org/scalameta/semanticdb-scalac_2.13.1/4.3.0/semanticdb-scalac_2.13.1-4.3.0.pom</span>
 </code></pre>
 <p>This might mean you need to specify proxy settings for Bloop or add custom
 repositories as specified above.</p>

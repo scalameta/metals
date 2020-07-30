@@ -78,19 +78,19 @@ import. In such cases it's quite simple to add the capability to generate the
 needed Bloop config.</p>
 <p>First we need to add the Bloop plugin dependency to the project. It should be
 included in the buildscript section:</p>
-<pre><code class="hljs css language-groovy"><span class="hljs-attr">buildscript</span> <span class="hljs-string">{</span>
-    <span class="hljs-attr">repositories</span> <span class="hljs-string">{</span>
-        <span class="hljs-attr">mavenCentral()</span>
-    <span class="hljs-attr">}</span>
-    <span class="hljs-attr">dependencies</span> <span class="hljs-string">{</span>
-        <span class="hljs-attr">classpath</span> <span class="hljs-string">'ch.epfl.scala:gradle-bloop_2.12:1.4.3'</span>
-    <span class="hljs-attr">}</span>
-<span class="hljs-attr">}</span>
+<pre><code class="hljs css language-groovy">buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath <span class="hljs-string">'ch.epfl.scala:gradle-bloop_2.12:1.4.3-23-550c6c0a'</span>
+    }
+}
 </code></pre>
 <p>Secondly, we need to enable the plugin for all the projects we want to include.
 It's easiest to define it for <code>allprojects</code>:</p>
-<pre><code class="hljs css language-groovy"><span class="hljs-section">allprojects</span> {
-   <span class="hljs-attribute">apply</span> plugin: bloop.integrations.gradle.BloopPlugin
+<pre><code class="hljs css language-groovy">allprojects {
+   apply <span class="hljs-string">plugin:</span> bloop.integrations.gradle.BloopPlugin
 }
 </code></pre>
 <p>Now we can run <code>gradle bloopInstall</code>, which will create all of the Bloop
