@@ -57,6 +57,8 @@ case class ScalaPresentationCompiler(
 ) extends PresentationCompiler {
   implicit val executionContext: ExecutionContextExecutor = ec
 
+  val scalaVersion = BuildInfo.scalaCompilerVersion
+
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 

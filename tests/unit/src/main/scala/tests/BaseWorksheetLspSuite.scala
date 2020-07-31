@@ -45,7 +45,14 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         "a/src/main/scala/foo/Main.worksheet.sc",
         "generate@@"
       )
-      _ = assertNoDiff(generate, "generate: Name")
+      _ = assertNoDiff(
+        generate,
+        getExpected(
+          "generate: Name",
+          Map(V.scala3 -> "generate=> sourcecode.Name"),
+          scalaVersion
+        )
+      )
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
@@ -56,50 +63,52 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  test("completion-imports") {
-    for {
-      _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/a/src/main/scala/foo/Main.worksheet.sc
-           |import $$dep.`com.lihaoyi::scalatags:0.9.0`
-           |import scalatags.Text.all._
-           |
-           |val htmlFile = html(
-           |  body(
-           |    p("This is a big paragraph of text")
-           |  )
-           |)
-           |
-           |htmlFile.render
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
-      identity <- server.completion(
-        "a/src/main/scala/foo/Main.worksheet.sc",
-        "htmlFile.render@@"
-      )
-      _ = assertNoDiff(identity, "render: String")
-      _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|import $dep.`com.lihaoyi::scalatags:0.9.0`
-           |import scalatags.Text.all._
-           |
-           |val htmlFile = html(
-           |  body(
-           |    p("This is a big paragraph of text")
-           |  )
-           |) // TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p", List(WrappedArray(StringFrag("This is…
-           |
-           |htmlFile.render // "<html><body><p>This is a big paragraph of text</p></body></html>"
-           |""".stripMargin
-      )
-    } yield ()
+  if (scalaVersion == V.scala212) {
+    test("completion-imports") {
+      for {
+        _ <- server.initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": {}
+             |}
+             |/a/src/main/scala/foo/Main.worksheet.sc
+             |import $$dep.`com.lihaoyi::scalatags:0.9.0`
+             |import scalatags.Text.all._
+             |
+             |val htmlFile = html(
+             |  body(
+             |    p("This is a big paragraph of text")
+             |  )
+             |)
+             |
+             |htmlFile.render
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+        identity <- server.completion(
+          "a/src/main/scala/foo/Main.worksheet.sc",
+          "htmlFile.render@@"
+        )
+        _ = assertNoDiff(identity, "render: String")
+        _ = assertNoDiagnostics()
+        _ = assertNoDiff(
+          client.workspaceDecorations,
+          """|import $dep.`com.lihaoyi::scalatags:0.9.0`
+             |import scalatags.Text.all._
+             |
+             |val htmlFile = html(
+             |  body(
+             |    p("This is a big paragraph of text")
+             |  )
+             |) // TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p", List(WrappedArray(StringFrag("This is…
+             |
+             |htmlFile.render // "<html><body><p>This is a big paragraph of text</p></body></html>"
+             |""".stripMargin
+        )
+      } yield ()
+    }
   }
 
   test("outside-target") {
@@ -247,13 +256,26 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-           |	at repl.MdocSession$App.<init>(Main.worksheet.sc:11)
-           |	at repl.MdocSession$.app(Main.worksheet.sc:3)
-           |
-           |throw new RuntimeException("boom")
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin
+        getExpected(
+          """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
+             |	at repl.MdocSession$App.<init>(Main.worksheet.sc:11)
+             |	at repl.MdocSession$.app(Main.worksheet.sc:3)
+             |
+             |throw new RuntimeException("boom")
+             |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
+                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:13)
+                 |	at repl.MdocSession$.app(Main.worksheet.sc:3)
+                 |
+                 |throw new RuntimeException("boom")
+                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }
@@ -364,27 +386,52 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Main.worksheet.sc:1:14: error: type mismatch;
-           | found   : String("")
-           | required: Int
-           |val x: Int = ""
-           |             ^^
-           |""".stripMargin
+        getExpected(
+          """|a/src/main/scala/a/Main.worksheet.sc:1:14: error: type mismatch;
+             | found   : String("")
+             | required: Int
+             |val x: Int = ""
+             |             ^^
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|a/src/main/scala/a/Main.worksheet.sc:1:14: error: Found:    ("" : String)
+                 |Required: Int
+                 |val x: Int = ""
+                 |             ^^
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
       _ <- server.didChange("a/src/main/scala/a/Main.worksheet.sc")(
         _.replace("val x", "def y = \nval x")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Main.worksheet.sc:2:1: error: illegal start of simple expression
-           |val x: Int = ""
-           |^^^
-           |a/src/main/scala/a/Main.worksheet.sc:2:14: error: type mismatch;
-           | found   : String("")
-           | required: Int
-           |val x: Int = ""
-           |             ^^
-           |""".stripMargin
+        getExpected(
+          """|a/src/main/scala/a/Main.worksheet.sc:2:1: error: illegal start of simple expression
+             |val x: Int = ""
+             |^^^
+             |a/src/main/scala/a/Main.worksheet.sc:2:14: error: type mismatch;
+             | found   : String("")
+             | required: Int
+             |val x: Int = ""
+             |             ^^
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|a/src/main/scala/a/Main.worksheet.sc:2:5: error: ';' expected, but identifier found
+                 |val x: Int = ""
+                 |    ^
+                 |a/src/main/scala/a/Main.worksheet.sc:2:14: error: Found:    ("" : String)
+                 |Required: Int
+                 |val x: Int = ""
+                 |             ^^
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }
@@ -408,10 +455,20 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """|/a/src/main/scala/Main.worksheet.sc
-           |val message/*L0*/ = "Hello World!"
-           |println/*Predef.scala*/(message/*L0*/)
-           |""".stripMargin
+        getExpected(
+          """|/a/src/main/scala/Main.worksheet.sc
+             |val message/*L0*/ = "Hello World!"
+             |println/*Predef.scala*/(message/*L0*/)
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|/a/src/main/scala/Main.worksheet.sc
+                 |val message/*L0*/ = "Hello World!"
+                 |println/*<no symbol>*/(message/*L0*/)
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }
@@ -443,6 +500,12 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
               """|a/src/main/scala/Main.worksheet.sc:1:1: warning: 1 feature warning; re-run with -feature for details
                  |type Structural = {
                  |^
+                 |""".stripMargin,
+            V.scala3 ->
+              """|a/src/main/scala/Main.worksheet.sc:5:1: error: Found:    App.this.Structural
+                 |Required: Selectable
+                 |new Foo().asInstanceOf[Structural].foo()
+                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                  |""".stripMargin
           ),
           scalaVersion

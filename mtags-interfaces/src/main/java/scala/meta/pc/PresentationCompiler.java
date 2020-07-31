@@ -208,6 +208,11 @@ public abstract class PresentationCompiler {
     public abstract boolean isLoaded();
 
     /**
+     * Scala version for the current presentation compiler
+     */
+    public abstract String scalaVersion();
+
+    /**
      * Returns enclosing class or object for a cursor position
      */
     public abstract CompletableFuture<Optional<String>> enclosingClass(OffsetParams params);

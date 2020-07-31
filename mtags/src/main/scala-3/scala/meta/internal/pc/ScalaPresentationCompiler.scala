@@ -52,6 +52,7 @@ import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.util.ScriptSourceFile
 import dotty.tools.dotc.printing.PlainPrinter
 import dotty.tools.io.VirtualFile
 import dotty.tools.dotc.reporting.StoreReporter
@@ -83,6 +84,8 @@ case class ScalaPresentationCompiler(
   def this() = this(Nil, Nil)
 
   import InteractiveDriver._
+
+  val scalaVersion = BuildInfo.scalaCompilerVersion
 
   val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] = {
     Scala3CompilerAccess(
@@ -116,7 +119,8 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      driver.run(uri, params.text)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+      driver.run(uri, sourceFile)
 
       given ctx as Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
@@ -141,7 +145,8 @@ case class ScalaPresentationCompiler(
       val driver = access.compiler()
       given ctx as Context = driver.currentCtx
       val uri = params.uri
-      driver.run(uri, params.text)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+      driver.run(uri, sourceFile)
       val pos = sourcePosition(driver, params, uri)
       val path = Interactive.pathTo(driver.openedTrees(uri), pos)
       val definitions = Interactive.findDefinitions(path, pos, driver).toList
@@ -249,7 +254,8 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      driver.run(uri, params.text)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+      driver.run(uri, sourceFile)
 
       given ctx as Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
@@ -310,7 +316,8 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      driver.run(uri, params.text)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+      driver.run(uri, sourceFile)
 
       given ctx as Context = driver.currentCtx
 
@@ -526,7 +533,8 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      driver.run(params.uri, params.text)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+      driver.run(params.uri, sourceFile)
       val filename =
         Paths.get(params.uri()).getFileName.toString.stripSuffix(".scala")
       Optional.of(

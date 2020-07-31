@@ -404,6 +404,7 @@ class MetalsGlobal(
       case _ => code
     }
     val unit = newCompilationUnit(codeWithCursor, filename)
+
     val source =
       if (filename.isScalaScript || filename.isSbt)
         ScriptSourceFile(unit.source.file, unit.source.content)

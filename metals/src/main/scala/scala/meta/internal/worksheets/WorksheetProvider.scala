@@ -297,8 +297,7 @@ class WorksheetProvider(
         scalaVersion = info.scalaVersion
         isSupported =
           ScalaVersions
-            .isSupportedScalaVersion(scalaVersion) && !ScalaVersions
-            .isScala3Version(scalaVersion)
+            .isSupportedScalaVersion(scalaVersion)
         _ = {
           if (!isSupported) {
             scribe.warn(

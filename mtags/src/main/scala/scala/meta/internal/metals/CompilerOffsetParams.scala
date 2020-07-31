@@ -19,15 +19,16 @@ case class CompilerOffsetParams(
 object CompilerOffsetParams {
 
   def fromPos(pos: Position, token: CancelToken): CompilerOffsetParams = {
-
     val syntax = pos.input.syntax
     val uri =
-      try new URI(syntax)
-      catch {
-        case _: URISyntaxException =>
+      try {
+        val uri = URI.create(syntax)
+        Paths.get(uri)
+        uri
+      } catch {
+        case _: IllegalArgumentException | _: URISyntaxException =>
           Paths.get(syntax).toUri
       }
-
     CompilerOffsetParams(
       uri,
       pos.input.text,
