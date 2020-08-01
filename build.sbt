@@ -216,6 +216,7 @@ lazy val V = new {
   val coursier = "2.0.0-RC6-24"
   val coursierInterfaces = "0.0.22"
   val ammonite = "2.1.4-11-307f3d8"
+  val mill = "0.8.0"
 }
 
 val genyVersion = Def.setting {
@@ -439,6 +440,7 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
+      "millVersion" -> V.mill,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "supportedScala3Versions" -> V.scala3Versions,
@@ -574,9 +576,10 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "org.scalameta" %% "munit" % V.munit,
-      // Only here to have scala-steward update V.ammonite.
-      // Not actually used in tests.
-      "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive ()
+      // The dependencies listed below are only listed so Scala Steward
+      // will pick them up and update them. They aren't actually used.
+      "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive (),
+      "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive ()
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
