@@ -318,9 +318,9 @@ val mtagsSettings = List(
       crossSetting(
         scalaVersion.value,
         if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.5.9"),
+        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.0"),
         if3 = List(
-          ("com.lihaoyi" %% "pprint" % "0.5.9")
+          ("com.lihaoyi" %% "pprint" % "0.6.0")
             .withDottyCompat(scalaVersion.value)
         )
       )
@@ -412,7 +412,7 @@ lazy val metals = project
       "com.outr" %% "scribe" % "2.7.12",
       "com.outr" %% "scribe-slf4j" % "2.7.12", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.9",
+      "com.lihaoyi" %% "pprint" % "0.6.0",
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "1.1.0",
       // For remote language server
