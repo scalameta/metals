@@ -213,9 +213,10 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
-  val coursier = "2.0.0-RC6-23"
+  val coursier = "2.0.0-RC6-24"
   val coursierInterfaces = "0.0.22"
-  val ammonite = "2.1.4-13-fb16e4e"
+  val ammonite = "2.1.4-11-307f3d8"
+  val mill = "0.8.0"
 }
 
 val genyVersion = Def.setting {
@@ -318,9 +319,9 @@ val mtagsSettings = List(
       crossSetting(
         scalaVersion.value,
         if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.5.9"),
+        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.0"),
         if3 = List(
-          ("com.lihaoyi" %% "pprint" % "0.5.9")
+          ("com.lihaoyi" %% "pprint" % "0.6.0")
             .withDottyCompat(scalaVersion.value)
         )
       )
@@ -374,14 +375,14 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.9.10",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.10",
+      "org.openjdk.jol" % "jol-core" % "0.11",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.9.10",
       // for http client
       "io.undertow" % "undertow-core" % "2.1.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.1.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.5.1",
+      "org.flywaydb" % "flyway-core" % "6.5.3",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -412,16 +413,16 @@ lazy val metals = project
       "com.outr" %% "scribe" % "2.7.12",
       "com.outr" %% "scribe-slf4j" % "2.7.12", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.9",
+      "com.lihaoyi" %% "pprint" % "0.6.0",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.1.0",
+      "com.lihaoyi" %% "ujson" % "1.2.0",
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.6.2",
+      "com.lihaoyi" %% "requests" % "0.6.5",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.2.7"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.0"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -439,6 +440,7 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
+      "millVersion" -> V.mill,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "supportedScala3Versions" -> V.scala3Versions,
@@ -574,9 +576,10 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "org.scalameta" %% "munit" % V.munit,
-      // Only here to have scala-steward update V.ammonite.
-      // Not actually used in tests.
-      "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive ()
+      // The dependencies listed below are only listed so Scala Steward
+      // will pick them up and update them. They aren't actually used.
+      "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive (),
+      "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive ()
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),

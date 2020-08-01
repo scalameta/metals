@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 import scala.util.Properties
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
@@ -57,7 +58,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "0.7.3"
+  override def version: String = BuildInfo.millVersion
 
   override def toString(): String = "Mill"
 
