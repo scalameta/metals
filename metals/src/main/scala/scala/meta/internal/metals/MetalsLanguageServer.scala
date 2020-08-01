@@ -214,6 +214,7 @@ class MetalsLanguageServer(
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
+  var stacktraceAnalyzer: StacktraceAnalyzer = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -431,9 +432,17 @@ class MetalsLanguageServer(
       () => userConfig,
       clientConfig
     )
+
+    stacktraceAnalyzer = new StacktraceAnalyzer(
+      workspace,
+      definitionProvider,
+      clientConfig.icons.findsuper
+    )
+
     codeLensProvider = new CodeLensProvider(
       List(runTestLensProvider, goSuperLensProvider),
-      semanticdbs
+      semanticdbs,
+      stacktraceAnalyzer
     )
     renameProvider = new RenameProvider(
       referencesProvider,
@@ -781,6 +790,8 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    if (stacktraceAnalyzer.matches(path))
+      return CompletableFuture.completedFuture(())
     focusedDocument = Some(path)
     openedFiles.add(path)
 
@@ -1071,7 +1082,14 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
-      definitionOrReferences(position, token).map(_.locations)
+      val path = position.getTextDocument.getUri.toAbsolutePath
+      if (stacktraceAnalyzer.matches(path)) {
+        Future.successful {
+          stacktraceAnalyzer.definition(path, position.getPosition())
+        }
+      } else {
+        definitionOrReferences(position, token).map(_.locations)
+      }
     }
 
   @JsonRequest("textDocument/typeDefinition")
@@ -1111,7 +1129,14 @@ class MetalsLanguageServer(
   def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens { _ => documentHighlightProvider.documentHighlight(params) }
+    CancelTokens { _ =>
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (stacktraceAnalyzer.matches(path)) {
+        stacktraceAnalyzer.highlight(path, params.getPosition().getLine())
+      } else {
+        documentHighlightProvider.documentHighlight(params)
+      }
+    }
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
@@ -1359,7 +1384,18 @@ class MetalsLanguageServer(
         Future {
           compilers.restartAll()
         }.asJavaObject
-      case ServerCommands.GotoLocation() =>
+      case ServerCommands.GotoLocationForPosition() =>
+        Future {
+          // arguments are not checked but are of format singletonList(location: Location)
+          languageClient.metalsExecuteClientCommand(
+            new ExecuteCommandParams(
+              ClientCommands.GotoLocation.id,
+              params.getArguments()
+            )
+          )
+        }.asJavaObject
+
+      case ServerCommands.GotoLocationForSymbol() =>
         Future {
           for {
             args <- Option(params.getArguments())
@@ -1422,6 +1458,13 @@ class MetalsLanguageServer(
           DebugSession(server.sessionName, server.uri.toString)
         }
         session.asJavaObject
+
+      case ServerCommands.AnalyzeStacktrace() =>
+        Future {
+          val command = stacktraceAnalyzer.analyzeCommand(params)
+          command.foreach(languageClient.metalsExecuteClientCommand)
+          scribe.debug(s"Executing AnalyzeStacktrace ${command}")
+        }.asJavaObject
 
       case ServerCommands.GotoSuperMethod() =>
         Future {
