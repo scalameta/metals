@@ -215,7 +215,7 @@ lazy val V = new {
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-23"
   val coursierInterfaces = "0.0.22"
-  val ammonite = "2.1.4-11-307f3d8"
+  val ammonite = "2.1.4-13-fb16e4e"
 }
 
 val genyVersion = Def.setting {
