@@ -555,6 +555,10 @@ final class TestingServer(
       .asScala
   }
 
+  def analyzeStacktrace(stacktrace: String): Seq[l.CodeLens] = {
+    server.stacktraceAnalyzer.stacktraceLenses(stacktrace.split('\n').toList)
+  }
+
   def didOpen(filename: String): Future[Unit] = {
     Debug.printEnclosing()
     val abspath = toPath(filename)

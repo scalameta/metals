@@ -154,13 +154,32 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val GotoLocation = new Command(
+  val AnalyzeStacktrace = new Command(
+    "analyze-stacktrace",
+    "Analyze stacktrace",
+    """|<TODO>
+       |
+       |""".stripMargin,
+    "[string], where the string is a stacktrace."
+  )
+
+  val GotoLocationForSymbol = new Command(
     "goto",
-    "Goto location",
+    "Goto location for symbol",
     """|Move the cursor to the definition of the argument symbol.
        |
        |""".stripMargin,
     "[string], where the string is a SemanticDB symbol."
+  )
+
+  val GotoLocationForPosition = new Command(
+    "goto-position",
+    "Goto location for position",
+    """|Move the cursor to the location provided in arguments.
+       |It simply forwards request to client.
+       |
+       |""".stripMargin,
+    "[location], where the location is a lsp location object."
   )
 
   val GotoSuperMethod = new Command(
@@ -328,10 +347,12 @@ object ServerCommands {
       CleanCompile,
       BspSwitch,
       StartDebugAdapter,
-      GotoLocation,
+      GotoLocationForSymbol,
+      GotoLocationForPosition,
       NewScalaFile,
       NewScalaProject,
       GotoSuperMethod,
+      AnalyzeStacktrace,
       SuperMethodHierarchy,
       ResetChoicePopup,
       StartAmmoniteBuildServer,
