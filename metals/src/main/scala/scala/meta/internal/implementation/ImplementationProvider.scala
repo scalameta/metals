@@ -368,13 +368,13 @@ final class ImplementationProvider(
   ): Map[Path, Set[ClassLocation]] = {
 
     def loop(symbol: String, currentPath: Option[Path]): Set[ClassLocation] = {
-      val directImplementations = classContext.getLocations(symbol).filterNot {
-        loc =>
+      val directImplementations =
+        classContext.getLocations(symbol).filterNot { loc =>
           // we are not interested in local symbols from outside the workspace
           (loc.symbol.isLocal && loc.file.isEmpty) ||
           // local symbols inheritance should only be picked up in the same file
           (loc.symbol.isLocal && loc.file != currentPath)
-      }
+        }
       directImplementations ++ directImplementations
         .flatMap { loc =>
           val allPossible = loop(loc.symbol, loc.file)
