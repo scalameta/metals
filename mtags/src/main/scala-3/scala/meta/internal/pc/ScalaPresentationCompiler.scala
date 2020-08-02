@@ -90,7 +90,7 @@ case class ScalaPresentationCompiler(
       sh,
       () => new Scala3CompilerWrapper(newDriver)
     )(
-      ec
+      using ec
     )
   }
 
@@ -139,7 +139,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      implicit def ctx: Context = driver.currentCtx
+      given ctx as Context = driver.currentCtx
       val uri = params.uri
       driver.run(uri, params.text)
       val pos = sourcePosition(driver, params, uri)
@@ -251,7 +251,7 @@ case class ScalaPresentationCompiler(
       val uri = params.uri
       driver.run(uri, params.text)
 
-      implicit def ctx: Context = driver.currentCtx
+      given ctx as Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
       val path = Interactive.pathTo(trees, pos)
@@ -312,7 +312,7 @@ case class ScalaPresentationCompiler(
       val uri = params.uri
       driver.run(uri, params.text)
 
-      implicit def ctx: Context = driver.currentCtx
+      given ctx as Context = driver.currentCtx
 
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
@@ -412,10 +412,10 @@ case class ScalaPresentationCompiler(
 
   private def completionItem(
       completion: Completion
-  )(implicit ctx: Context): CompletionItem = {
+  )(using ctx: Context): CompletionItem = {
     def completionItemKind(
         sym: Symbol
-    )(implicit ctx: Context): CompletionItemKind = {
+    )(using ctx: Context): CompletionItemKind = {
       if (sym.is(Package) || sym.is(Module))
         CompletionItemKind.Module // No CompletionItemKind.Package (https://github.com/Microsoft/language-server-protocol/issues/155)
       else if (sym.isConstructor)
@@ -456,7 +456,7 @@ case class ScalaPresentationCompiler(
       keywordName: Option[String],
       typeInfo: Option[String],
       comments: List[ParsedComment]
-  )(implicit ctx: Context): MarkupContent = {
+  )(using ctx: Context): MarkupContent = {
     val buf = new StringBuilder
     typeInfo.foreach { info =>
       val keyName = keywordName.getOrElse("")
@@ -531,7 +531,7 @@ case class ScalaPresentationCompiler(
         Paths.get(params.uri()).getFileName.toString.stripSuffix(".scala")
       Optional.of(
         ClassFinder.findClassForOffset(params.offset, filename)(
-          driver.currentCtx
+          using driver.currentCtx
         )
       )
     }

@@ -22,7 +22,7 @@ object ClassFinder {
     var symbol = ""
     var isInnerClass: Boolean = false
     var isToplevel: Boolean = true
-    override def traverse(tree: Tree)(implicit ctx: Context): Unit = {
+    override def traverse(tree: Tree)(using ctx: Context): Unit = {
       if (
         tree.sourcePos.exists && tree.sourcePos.start <= offset && offset <= tree.sourcePos.end
       ) {
@@ -76,7 +76,7 @@ object ClassFinder {
       }
     }
 
-    def find(tree: Tree)(implicit ctx: Context): String = {
+    def find(tree: Tree)(using ctx: Context): String = {
       traverse(tree)
       symbol
     }
@@ -85,7 +85,7 @@ object ClassFinder {
   def findClassForOffset(
       offset: Int,
       fileName: String
-  )(implicit ctx: Context): String = {
+  )(using ctx: Context): String = {
     val tree = ctx.run.units.head.untpdTree
     new SymbolTraverser(offset, fileName).find(tree)
   }
