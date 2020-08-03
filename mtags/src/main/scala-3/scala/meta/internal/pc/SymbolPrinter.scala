@@ -7,9 +7,8 @@ import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.core.Flags
-import scala.language.implicitConversions
 
-class SymbolPrinter(implicit ctx: Context) extends RefinedPrinter(ctx) {
+class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
 
   private val defaultWidth = 1000
 
