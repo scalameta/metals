@@ -42,6 +42,11 @@ class ClientConfiguration(
       initialConfig.renameFileThreshold
     )
 
+  def isCommandInHtmlSupported(): Boolean =
+    extract(initializationOptions.isCommandInHtmlSupported,
+      experimentalCapabilities.isCommandInHtmlSupported,
+      initialConfig.isCommandInHtmlSupported)
+
   def icons(): Icons =
     initializationOptions.icons
       .map(Icons.fromString)
