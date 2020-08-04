@@ -40,7 +40,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
-import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider

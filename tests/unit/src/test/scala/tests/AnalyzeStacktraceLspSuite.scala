@@ -1,7 +1,8 @@
 package tests
 
-import org.eclipse.{lsp4j => l}
 import scala.collection.mutable
+
+import org.eclipse.{lsp4j => l}
 
 class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
 

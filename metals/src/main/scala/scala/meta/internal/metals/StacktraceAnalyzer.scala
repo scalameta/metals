@@ -13,21 +13,12 @@ import scala.meta.io.AbsolutePath
 import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.Location
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.metals.MetalsEnrichments._
-import org.eclipse.{lsp4j => l}
-import com.google.gson.JsonPrimitive
-import org.eclipse.lsp4j.Location
-import scala.meta.io.AbsolutePath
-import java.io.FileWriter
-import scala.io.Source
-
-import java.util.Collections.singletonList
-import scala.util.Try
 
 class StacktraceAnalyzer(
     workspace: AbsolutePath,
     definitionProvider: DefinitionProvider,
-    gotoicon: String
+    gotoicon: String,
+    commandsInHtmlSupported: Boolean
 ) {
 
   def analyzeCommand(
@@ -76,32 +67,26 @@ class StacktraceAnalyzer(
       path: AbsolutePath,
       position: l.Position
   ): java.util.List[Location] = {
-    val lineOpt = readStacktraceFileLine(path, position.getLine())
+    val lineOpt = readStacktraceFileLine(path, position.getLine)
     lineOpt match {
       case Some(line) =>
-        val symbol = getSymbolFromLine(line)
-        val lineNumber = tryGetLineNumberFromStacktrace(line)
-        val result = definitionProvider.fromSymbol(convert(symbol))
-        result.forEach { r =>
-          lineNumber.foreach { ln =>
-            adjustPosition(ln, r.getRange().getStart())
-            adjustPosition(ln, r.getRange().getEnd())
-          }
-        }
-        result
+        getSymbolLocationFromLine(line).toList.asJava
       case None =>
         java.util.Collections.emptyList()
     }
   }
 
   private def adjustPosition(lineNumber: Int, pos: l.Position): Unit = {
-    pos.setLine(lineNumber - 1)
+    pos.setLine(lineNumber)
     pos.setCharacter(0)
   }
 
   private def tryGetLineNumberFromStacktrace(line: String): Try[Int] = {
     Try(
-      Integer.valueOf(line.substring(line.indexOf(":") + 1, line.indexOf(")")))
+      // number is 1-based, but editors are 0-based
+      Integer.valueOf(
+        line.substring(line.indexOf(":") + 1, line.indexOf(")"))
+      ) - 1
     )
   }
 
@@ -113,22 +98,11 @@ class StacktraceAnalyzer(
     scope.mkString("/") ++ "." ++ method ++ "()."
   }
 
-  private def getSymbolFromLine(line: String): String = {
-    line.substring(line.indexOf("at ") + 3, line.indexOf("("))
-  }
-
   def stacktraceLenses(content: List[String]): Seq[l.CodeLens] = {
     (for {
       (line, row) <- content.zipWithIndex
       if line.trim.startsWith("at ")
-      symbol = getSymbolFromLine(line)
-      location <-
-        definitionProvider.fromSymbol(convert(symbol)).asScala.headOption
-      lineNumber = tryGetLineNumberFromStacktrace(line)
-      _ = lineNumber.foreach { ln =>
-        adjustPosition(ln, location.getRange().getStart())
-        adjustPosition(ln, location.getRange().getEnd())
-      }
+      location <- getSymbolLocationFromLine(line)
       range = new l.Range(new l.Position(row, 0), new l.Position(row, 0))
     } yield makeGotoLocationCodeLens(location, range)).toSeq
   }
@@ -151,26 +125,92 @@ class StacktraceAnalyzer(
   private def analyzeStackTrace(
       stacktrace: String
   ): Option[l.ExecuteCommandParams] = {
-    val path = workspace.resolve(Directories.stacktrace)
-    val pathStr = path.toFile.toString
+    if (commandsInHtmlSupported) {
+      Some(makeHtmlCommandParams(stacktrace))
+    } else {
+      val path = workspace.resolve(Directories.stacktrace)
+      val pathStr = path.toFile.toString
 
-    path.toFile.createNewFile()
-    val fw = new FileWriter(pathStr)
-    try {
-      fw.write(stacktrace)
-    } finally {
-      fw.close()
+      path.toFile.createNewFile()
+      val fw = new FileWriter(pathStr)
+      try {
+        fw.write(stacktrace)
+      } finally {
+        fw.close()
+      }
+      val pos = new l.Position(0, 0)
+      val range = new l.Range(pos, pos)
+      val location = new l.Location(pathStr, range)
+      Some(makeGotoCommandParams(location))
     }
-    val pos = new l.Position(0, 0)
-    val range = new l.Range(pos, pos)
-    Some(makeCommandParams(new Location(pathStr, range)))
   }
 
-  private def makeCommandParams(location: Location): l.ExecuteCommandParams = {
+  private def makeGotoCommandParams(
+      location: Location
+  ): l.ExecuteCommandParams = {
     new l.ExecuteCommandParams(
       ClientCommands.GotoLocation.id,
       List[Object](location, java.lang.Boolean.TRUE).asJava
     )
+  }
+
+  private def getSymbolLocationFromLine(line: String): Option[l.Location] = {
+    val symbol = getSymbolFromLine(line)
+    definitionProvider.fromSymbol(convert(symbol)).asScala.headOption.map {
+      location =>
+        val lineNumberOpt = tryGetLineNumberFromStacktrace(line)
+        lineNumberOpt.foreach { lineNumber =>
+          adjustPosition(lineNumber, location.getRange().getStart())
+          adjustPosition(lineNumber, location.getRange().getEnd())
+        }
+        location
+    }
+  }
+
+  private def getSymbolFromLine(line: String): String = {
+    line.substring(line.indexOf("at ") + 3, line.indexOf("("))
+  }
+
+  private def makeHtmlCommandParams(
+      stacktrace: String
+  ): l.ExecuteCommandParams = {
+    def htmlStack(builder: HtmlBuilder): Unit = {
+      for (line <- stacktrace.split('\n')) {
+        if (line.contains("at ")) {
+          getSymbolLocationFromLine(line) match {
+            case Some(location) =>
+              builder
+                .text("at ")
+                .link(
+                  gotoLocationUsingUri(
+                    location.getUri,
+                    location.getRange.getStart.getLine
+                  ),
+                  line.substring(line.indexOf("at ") + 3)
+                )
+            case None =>
+              builder.raw(line)
+          }
+        } else {
+          builder.raw(line)
+        }
+        builder.raw("<br>")
+      }
+    }
+
+    val output = new HtmlBuilder()
+      .element("h3")(_.text(s"Stacktrace"))
+      .call(htmlStack)
+      .render
+    new l.ExecuteCommandParams(
+      "metals-show-stacktrace",
+      List[Object](output).asJava
+    )
+  }
+
+  private def gotoLocationUsingUri(uri: String, line: Int): String = {
+    val param = s"""["${uri}",${line},true]"""
+    s"command:metals.goto-path-uri?${URLEncoder.encode(param)}"
   }
 
   private def parseJsonParams(
