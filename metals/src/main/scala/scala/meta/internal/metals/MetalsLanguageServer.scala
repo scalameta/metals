@@ -41,6 +41,7 @@ import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.mtags._
@@ -436,7 +437,8 @@ class MetalsLanguageServer(
     stacktraceAnalyzer = new StacktraceAnalyzer(
       workspace,
       definitionProvider,
-      clientConfig.icons.findsuper
+      clientConfig.icons.findsuper,
+      clientConfig.isCommandInHtmlSupported
     )
 
     codeLensProvider = new CodeLensProvider(
@@ -790,8 +792,9 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (stacktraceAnalyzer.matches(path))
-      return CompletableFuture.completedFuture(())
+    if (stacktraceAnalyzer.matches(path)) {
+      CompletableFuture.completedFuture(())
+    } else {
     focusedDocument = Some(path)
     openedFiles.add(path)
 
@@ -826,6 +829,8 @@ class MetalsLanguageServer(
         .asJava
     }
   }
+  }
+
   @JsonNotification("metals/didFocusTextDocument")
   def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
@@ -1386,7 +1391,8 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.GotoLocationForPosition() =>
         Future {
-          // arguments are not checked but are of format singletonList(location: Location)
+          // arguments are not checked but are of format:
+          // singletonList(location: Location, otherWindow: Boolean)
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,

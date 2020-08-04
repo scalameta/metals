@@ -47,6 +47,7 @@ final case class InitializationOptions(
     inputBoxProvider: Option[Boolean],
     isExitOnShutdown: Option[Boolean],
     isHttpEnabled: Option[Boolean],
+    isCommandInHtmlSupported: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     renameFileThreshold: Option[Int],
@@ -67,6 +68,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -119,6 +121,7 @@ object InitializationOptions {
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
       isExitOnShutdown = jsonObj.getBooleanOption("isExitOnShutdown"),
       isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled"),
+      isCommandInHtmlSupported = jsonObj.getBooleanOption("isCommandInHtmlSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),

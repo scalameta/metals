@@ -157,7 +157,14 @@ object ServerCommands {
   val AnalyzeStacktrace = new Command(
     "analyze-stacktrace",
     "Analyze stacktrace",
-    """|<TODO>
+    """|Converts provided stacktrace in parameter to a format that contains links to locations
+       |of places where exception was raised.
+       |
+       |Depending on a configuration parameter of a client(support-commands-in-html)
+       |if parametes is true then client is requested to display html with links
+       |already pointing to proper locations in user codebase.
+       |if parameter is false then client is requested to display simple scala file
+       |but with code lenses that on action move user to proper location in codebase.
        |
        |""".stripMargin,
     "[string], where the string is a stacktrace."
