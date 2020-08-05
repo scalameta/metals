@@ -325,6 +325,7 @@ object ServerCommands {
       RunDoctor,
       CascadeCompile,
       CancelCompile,
+      CleanCompile,
       BspSwitch,
       StartDebugAdapter,
       GotoLocation,
