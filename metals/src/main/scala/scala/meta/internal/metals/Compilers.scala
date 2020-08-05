@@ -303,10 +303,11 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[DefinitionResult] =
-    withPC(params, None) { (pc, pos) =>
+    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
       pc.definition(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { c =>
+          adjust.adjustLocations(c.locations())
           DefinitionResult(
             c.locations(),
             c.symbol(),
@@ -358,8 +359,6 @@ class Compilers(
     }
 
     if (path.isWorksheet) loadWorksheetCompiler(path).orElse(fromBuildTarget)
-    else if (path.isSbt)
-      buildTargets.sbtBuildScalaTarget(path).flatMap(loadCompilerForTarget)
     else fromBuildTarget
   }
 
@@ -467,7 +466,8 @@ class Compilers(
 
     val path = uri.toAbsolutePath
     buildTargets
-      .sbtBuildScalaTarget(path)
+      .inverseSources(path)
+      .flatMap(buildTargets.scalaTarget)
       .flatMap(_.autoImports)
       .map { imports =>
         val appendStr = imports.mkString("", "\n", "\n")
