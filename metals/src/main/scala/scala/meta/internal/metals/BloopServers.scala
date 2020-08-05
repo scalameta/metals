@@ -56,6 +56,7 @@ final class BloopServers(
   }
 
   def newServer(
+      workspace: AbsolutePath,
       userConfiguration: UserConfiguration
   ): Future[Option[BuildServerConnection]] = {
     val bloopVersion = userConfiguration.currentBloopVersion

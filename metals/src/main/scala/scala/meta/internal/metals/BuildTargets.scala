@@ -15,6 +15,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
@@ -29,7 +30,9 @@ import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 /**
  * In-memory cache for looking up build server metadata.
  */
-final class BuildTargets() {
+final class BuildTargets(
+    ammoniteBuildServer: BuildTargetIdentifier => Option[BuildServerConnection]
+) {
   private var workspace = PathIO.workingDirectory
   def setWorkspaceDirectory(newWorkspace: AbsolutePath): Unit = {
     workspace = newWorkspace
@@ -53,6 +56,9 @@ final class BuildTargets() {
     new ConcurrentLinkedQueue[AbsolutePath => Seq[BuildTargetIdentifier]]()
   // if workspace contains symlinks, original source items are kept here and source items dealiased
   private val originalSourceItems = ConcurrentHashSet.empty[AbsolutePath]
+
+  private val targetToConnection =
+    new mutable.HashMap[BuildTargetIdentifier, BuildServerConnection]
 
   val buildTargetsOrder: BuildTargetIdentifier => Int = {
     (t: BuildTargetIdentifier) =>
@@ -102,17 +108,25 @@ final class BuildTargets() {
     all.toSeq.map(_.info.getId())
   def all: Iterator[ScalaTarget] =
     for {
-      (id, target) <- buildTargetInfo.iterator
-      scalac <- scalacTargetInfo.get(id)
-      scalaTarget <- target.asScalaBuildTarget
-    } yield ScalaTarget(target, scalaTarget, scalac)
+      (_, target) <- buildTargetInfo.iterator
+      scalaTarget <- toScalaTarget(target)
+    } yield scalaTarget
 
   def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
     for {
-      info <- buildTargetInfo.get(id)
-      scalac <- scalacTargetInfo.get(id)
-      scalaTarget <- info.asScalaBuildTarget
-    } yield ScalaTarget(info, scalaTarget, scalac)
+      target <- buildTargetInfo.get(id)
+      scalaTarget <- toScalaTarget(target)
+    } yield scalaTarget
+
+  private def toScalaTarget(target: BuildTarget): Option[ScalaTarget] = {
+    for {
+      scalac <- scalacTargetInfo.get(target.getId)
+      scalaTarget <- target.asScalaBuildTarget
+    } yield {
+      val autoImports = target.asSbtBuildTarget.map(_.getAutoImports.asScala)
+      ScalaTarget(target, scalaTarget, scalac, autoImports)
+    }
+  }
 
   def allWorkspaceJars: Iterator[AbsolutePath] = {
     val isVisited = new ju.HashSet[AbsolutePath]()
@@ -225,6 +239,32 @@ final class BuildTargets() {
       buildTarget: BuildTargetIdentifier
   ): Option[ScalacOptionsItem] =
     scalacTargetInfo.get(buildTarget)
+
+  /**
+   * Returns meta build target for `*.sbt`  files.
+   * It selects build target by directory of its connection
+   *   because `*.sbt` aren't included in `sourceFiles` set
+   */
+  def sbtBuildScalaTarget(file: AbsolutePath): Option[ScalaTarget] = {
+    val targetMetaBuildDir = file.parent.resolve("project")
+    buildTargetInfo.values
+      .find { target =>
+        val isMetaBuild = target.getDataKind == "sbt"
+        if (isMetaBuild) {
+          workspaceDirectory(target.getId)
+            .map(_ == targetMetaBuildDir)
+            .getOrElse(false)
+        } else {
+          false
+        }
+      }
+      .flatMap(toScalaTarget)
+  }
+
+  def workspaceDirectory(
+      buildTarget: BuildTargetIdentifier
+  ): Option[AbsolutePath] =
+    buildServerOf(buildTarget).map(_.workspaceDirectory)
 
   /**
    * Returns the first build target containing this source file.
@@ -413,9 +453,35 @@ final class BuildTargets() {
     !isSourceRoot.contains(path) &&
     isSourceRoot.asScala.exists { root => path.toNIO.startsWith(root.toNIO) }
   }
+
+  def resetConnections(
+      idToConn: List[(BuildTargetIdentifier, BuildServerConnection)]
+  ): Unit = {
+    targetToConnection.clear()
+    idToConn.foreach { case (id, conn) => targetToConnection.put(id, conn) }
+  }
+
+  def buildServerOf(
+      id: BuildTargetIdentifier
+  ): Option[BuildServerConnection] = {
+    ammoniteBuildServer(id).orElse(targetToConnection.get(id))
+  }
 }
 
 object BuildTargets {
+
+  def withAmmonite(ammonite: () => Ammonite): BuildTargets = {
+    val ammoniteBuildServerF =
+      (id: BuildTargetIdentifier) =>
+        if (Ammonite.isAmmBuildTarget(id)) ammonite().buildServer
+        else None
+
+    new BuildTargets(ammoniteBuildServerF)
+  }
+
+  def withoutAmmonite: BuildTargets =
+    new BuildTargets(_ => None)
+
   def isInverseDependency(
       query: BuildTargetIdentifier,
       roots: List[BuildTargetIdentifier],

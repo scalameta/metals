@@ -17,7 +17,6 @@ final class Compilations(
     buildTargets: BuildTargets,
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
-    buildServer: BuildTargetIdentifier => Option[BuildServerConnection],
     languageClient: MetalsLanguageClient,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
@@ -125,7 +124,7 @@ final class Compilations(
     }
 
     val groupedTargetIds = buildTargets.allBuildTargetIds
-      .groupBy(buildServer(_))
+      .groupBy(buildTargets.buildServerOf(_))
     Future
       .traverse(groupedTargetIds) {
         case (connectionOpt, targetIds) =>
@@ -158,7 +157,9 @@ final class Compilations(
   ): CancelableFuture[Map[BuildTargetIdentifier, b.CompileResult]] = {
 
     val targetsByBuildServer = targets
-      .flatMap(target => buildServer(target).map(_ -> target).toSeq)
+      .flatMap(target =>
+        buildTargets.buildServerOf(target).map(_ -> target).toSeq
+      )
       .groupBy {
         case (buildServer, _) =>
           buildServer

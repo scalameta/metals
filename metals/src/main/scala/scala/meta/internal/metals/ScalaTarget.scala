@@ -14,7 +14,8 @@ import ch.epfl.scala.bsp4j.ScalacOptionsItem
 case class ScalaTarget(
     info: BuildTarget,
     scalaInfo: ScalaBuildTarget,
-    scalac: ScalacOptionsItem
+    scalac: ScalacOptionsItem,
+    autoImports: Option[Seq[String]]
 ) {
 
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)

@@ -251,11 +251,14 @@ trait CommonMtagsEnrichments {
   }
 
   implicit class XtensionStringDoc(doc: String) {
+    def isScala: Boolean =
+      doc.endsWith(".scala")
+    def isSbt: Boolean =
+      doc.endsWith(".sbt")
     def isScalaScript: Boolean =
       doc.endsWith(".sc")
     def isScalaFilename: Boolean =
-      doc.endsWith(".scala") ||
-        doc.endsWith(".sc")
+      doc.isScala || isScalaScript || isSbt
     def isAmmoniteGeneratedFile: Boolean =
       doc.endsWith(".sc.scala")
     def isAmmoniteScript: Boolean =
@@ -358,6 +361,9 @@ trait CommonMtagsEnrichments {
         case Language.SCALA | Language.JAVA => true
         case _ => false
       }
+    }
+    def isSbt: Boolean = {
+      filename.endsWith(".sbt")
     }
     def isScalaScript: Boolean = {
       filename.endsWith(".sc")

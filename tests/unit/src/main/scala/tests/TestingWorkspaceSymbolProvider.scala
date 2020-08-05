@@ -18,7 +18,7 @@ object TestingWorkspaceSymbolProvider {
     new WorkspaceSymbolProvider(
       workspace = workspace,
       statistics = statistics,
-      buildTargets = new BuildTargets,
+      buildTargets = BuildTargets.withoutAmmonite,
       index = index,
       _.toFileOnDisk(workspace),
       bucketSize = bucketSize

@@ -54,7 +54,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   def assertConnectedToBuildServer(
       expectedName: String
   )(implicit loc: Location): Unit = {
-    val obtained = server.server.buildServer.get.name
+    val obtained = server.server.bspSession.get.mainConnection.name
     assertNoDiff(obtained, expectedName)
   }
 

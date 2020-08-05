@@ -18,10 +18,12 @@ import scala.meta.io.AbsolutePath
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
+import tests.ScriptsAssertions
 
-class SbtLspSuite extends BaseImportSuite("sbt-import") {
+class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
 
   val sbtVersion = V.sbtVersion
+  val scalaVersion = V.scala212
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
   override def currentDigest(
@@ -433,5 +435,114 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
+  }
+
+  test("sbt-file-definition") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/build.sbt
+           |scalaVersion := "$scalaVersion"
+         """.stripMargin
+      )
+      _ <- assertDefinitionAtLocation(
+        "build.sbt",
+        "sc@@alaVersion := \"2.12.11\"",
+        ".metals/readonly/sbt/Keys.scala"
+      )
+    } yield ()
+  }
+
+  test("sbt-file-hover") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/build.sbt
+           |scalaVersion := "$scalaVersion"
+         """.stripMargin
+      )
+
+      hoverRes <- assertHoverAtPos("build.sbt", 0, 2)
+      expectedHoverRes = """```scala
+                           |val scalaVersion: SettingKey[String]
+                           |```
+                           |```range
+                           |scalaVersion
+                           |```""".stripMargin
+      _ = assertNoDiff(hoverRes, expectedHoverRes)
+    } yield ()
+
+  }
+
+  test("sbt-file-autocomplete") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/build.sbt
+           |scalaVersion := "$scalaVersion"
+           |libraryDependencies ++= Seq()
+         """.stripMargin
+      )
+
+      completionList <- server.completion("build.sbt", "libraryDependencies@@")
+      expectedCompletionList = "libraryDependencies: SettingKey[Seq[ModuleID]]"
+      _ = assertNoDiff(completionList, expectedCompletionList)
+    } yield ()
+
+  }
+
+  test("sbt-meta-scala-source-basics") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/build.sbt
+           |scalaVersion := MetaValues.scalaVersion
+           |/project/MetaValues.scala
+           |import scala.util.Success
+           |object MetaValues {
+           |  val scalaVersion = "$scalaVersion"
+           |}
+         """.stripMargin
+      )
+      _ <- server.didOpen("project/MetaValues.scala")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/project/MetaValues.scala
+           |import scala.util.Success/*Try.scala*/
+           |object MetaValues/*L1*/ {
+           |  val scalaVersion/*L2*/ = "2.12.12"
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+
   }
 }

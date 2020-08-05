@@ -26,7 +26,6 @@ import scala.meta.pc.SymbolSearch
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -100,11 +99,12 @@ class Compilers(
       Try(StandaloneSymbolSearch(workspace, buffers))
         .getOrElse(EmptySymbolSearch)
     val compiler =
-      configure(new ScalaPresentationCompiler(), standaloneSearch).newInstance(
-        s"$name-${mtags.BuildInfo.scalaCompilerVersion}",
-        classpath.asJava,
-        Nil.asJava
-      )
+      configure(new ScalaPresentationCompiler(), standaloneSearch)
+        .newInstance(
+          s"$name-${mtags.BuildInfo.scalaCompilerVersion}",
+          classpath.asJava,
+          Nil.asJava
+        )
     ramboCancelable = Cancelable(() => compiler.shutdown())
     compiler
   }
@@ -251,12 +251,11 @@ class Compilers(
       params: CompletionParams,
       token: CancelToken
   ): Future[CompletionList] =
-    withPC(params, None) { (pc, pos) =>
+    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
       pc.complete(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { list =>
-          if (params.getTextDocument.getUri.isAmmoniteScript)
-            Ammonite.adjustCompletionListInPlace(list, pos.input.text)
+          adjust.adjustCompletionListInPlace(list)
           list
         }
     }.getOrElse(Future.successful(new CompletionList()))
@@ -266,12 +265,11 @@ class Compilers(
       name: String,
       token: CancelToken
   ): Future[ju.List[AutoImportsResult]] = {
-    withPC(params, None) { (pc, pos) =>
+    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
       pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { list =>
-          if (params.getTextDocument.getUri.isAmmoniteScript)
-            list.map(Ammonite.adjustImportResult(_, pos.input.text))
+          list.map(adjust.adjustImportResult)
           list
         }
     }.getOrElse(Future.successful(new ju.ArrayList))
@@ -292,15 +290,11 @@ class Compilers(
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Future[Option[Hover]] =
-    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.hover(CompilerOffsetParams.fromPos(pos, token))
-        .asScala
-        .map(_.asScala.map { hover =>
-          if (params.getTextDocument.getUri.isAmmoniteScript)
-            Ammonite.adjustHoverResp(hover, pos.input.text)
-          else
-            hover
-        })
+    withPCAndAdjustLsp(params, Some(interactiveSemanticdbs)) {
+      (pc, pos, adjust) =>
+        pc.hover(CompilerOffsetParams.fromPos(pos, token))
+          .asScala
+          .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }.getOrElse {
       Future.successful(Option.empty)
     }
@@ -364,6 +358,8 @@ class Compilers(
     }
 
     if (path.isWorksheet) loadWorksheetCompiler(path).orElse(fromBuildTarget)
+    else if (path.isSbt)
+      buildTargets.sbtBuildScalaTarget(path).flatMap(loadCompilerForTarget)
     else fromBuildTarget
   }
 
@@ -380,11 +376,12 @@ class Compilers(
   ): Unit = {
     val created: Option[Unit] = for {
       targetId <- buildTargets.inverseSources(path)
-      info <- buildTargets.scalaTarget(targetId)
-      isSupported = ScalaVersions.isSupportedScalaVersion(info.scalaVersion)
+      scalaTarget <- buildTargets.scalaTarget(targetId)
+      isSupported =
+        ScalaVersions.isSupportedScalaVersion(scalaTarget.scalaVersion)
       _ = {
         if (!isSupported) {
-          scribe.warn(s"unsupported Scala ${info.scalaVersion}")
+          scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
         }
       }
       if isSupported
@@ -402,7 +399,7 @@ class Compilers(
             buffers,
             workspaceFallback = Some(search)
           )
-          newCompiler(scalac, info.scalaInfo, classpath, worksheetSearch)
+          newCompiler(scalac, scalaTarget, classpath, worksheetSearch)
         }
       )
     }
@@ -417,28 +414,29 @@ class Compilers(
 
   def loadCompiler(
       target: BuildTargetIdentifier
+  ): Option[PresentationCompiler] =
+    buildTargets.scalaTarget(target).flatMap(loadCompilerForTarget)
+
+  def loadCompilerForTarget(
+      scalaTarget: ScalaTarget
   ): Option[PresentationCompiler] = {
-    for {
-      info <- buildTargets.scalaTarget(target)
-      isSupported = ScalaVersions.isSupportedScalaVersion(info.scalaVersion)
-      _ = {
-        if (!isSupported) {
-          scribe.warn(s"unsupported Scala ${info.scalaVersion}")
-        }
-      }
-      if isSupported
-      scalac <- buildTargets.scalacOptions(target)
-    } yield {
-      jcache.computeIfAbsent(
-        target,
+    val isSupported =
+      ScalaVersions.isSupportedScalaVersion(scalaTarget.scalaVersion)
+    if (!isSupported) {
+      scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
+      None
+    } else {
+      val out = jcache.computeIfAbsent(
+        scalaTarget.info.getId,
         { _ =>
           statusBar.trackBlockingTask(
             s"${config.icons.sync}Loading presentation compiler"
           ) {
-            newCompiler(scalac, info.scalaInfo, search)
+            newCompiler(scalaTarget.scalac, scalaTarget, search)
           }
         }
       )
+      Some(out)
     }
   }
 
@@ -462,27 +460,87 @@ class Compilers(
     else
       None
 
+  private def sbtInputPosAdjustmentOpt(
+      uri: String,
+      position: LspPosition
+  ): Option[(Input.VirtualFile, LspPosition, AdjustLspData)] = {
+
+    val path = uri.toAbsolutePath
+    buildTargets
+      .sbtBuildScalaTarget(path)
+      .flatMap(_.autoImports)
+      .map { imports =>
+        val appendStr = imports.mkString("", "\n", "\n")
+        val appendLineSize = imports.size
+
+        val originInput = path
+          .toInputFromBuffers(buffers)
+          .copy(path = uri)
+
+        val modifiedInput =
+          originInput.copy(value = appendStr + originInput.value)
+        val pos = new LspPosition(
+          appendLineSize + position.getLine(),
+          position.getCharacter()
+        )
+        val adjustLspData = AdjustLspData.create(pos => {
+          new LspPosition(pos.getLine() - appendLineSize, pos.getCharacter())
+        })
+        (modifiedInput, pos, adjustLspData)
+      }
+  }
+
   private def withPC[T](
       params: TextDocumentPositionParams,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   )(fn: (PresentationCompiler, Position) => T): Option[T] = {
+    withPCAndAdjustLsp(params, interactiveSemanticdbs)((compiler, pos, _) =>
+      fn(compiler, pos)
+    )
+  }
+
+  private def withPCAndAdjustLsp[T](
+      params: TextDocumentPositionParams,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     loadCompiler(path, interactiveSemanticdbs).map { compiler =>
-      def defaultInputPos = {
-        val input = path
-          .toInputFromBuffers(buffers)
-          .copy(path = params.getTextDocument.getUri())
-        val pos = params.getPosition
-        (input, pos)
-      }
-
-      val (input, paramsPos) =
-        ammoniteInputPosOpt(path, params.getPosition, interactiveSemanticdbs)
-          .getOrElse(defaultInputPos)
-      val pos = paramsPos.toMeta(input)
-
-      fn(compiler, pos)
+      val (input, pos, adjust) =
+        sourceAdjustments(params, interactiveSemanticdbs)
+      val metaPos = pos.toMeta(input)
+      fn(compiler, metaPos, adjust)
     }
+  }
+
+  private def sourceAdjustments(
+      params: TextDocumentPositionParams,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+  ): (Input.VirtualFile, LspPosition, AdjustLspData) = {
+
+    val uri = params.getTextDocument.getUri
+    val path = uri.toAbsolutePath
+    val position = params.getPosition
+
+    def default = {
+      val input = path
+        .toInputFromBuffers(buffers)
+        .copy(path = params.getTextDocument.getUri)
+
+      (input, position, AdjustLspData.default)
+    }
+
+    val forScripts =
+      if (path.isAmmoniteScript) {
+        ammoniteInputPosOpt(path, position, interactiveSemanticdbs)
+          .map {
+            case (input, pos) =>
+              (input, pos, Ammonite.adjustLspData(input.text))
+          }
+      } else if (path.isSbt) {
+        sbtInputPosAdjustmentOpt(uri, position)
+      } else None
+
+    forScripts.getOrElse(default)
   }
 
   private def configure(
@@ -512,16 +570,16 @@ class Compilers(
 
   def newCompiler(
       scalac: ScalacOptionsItem,
-      info: ScalaBuildTarget,
+      target: ScalaTarget,
       search: SymbolSearch
   ): PresentationCompiler = {
     val classpath = scalac.classpath.map(_.toNIO).toSeq
-    newCompiler(scalac, info, classpath, search)
+    newCompiler(scalac, target, classpath, search)
   }
 
   def newCompiler(
       scalac: ScalacOptionsItem,
-      info: ScalaBuildTarget,
+      target: ScalaTarget,
       classpath: Seq[Path],
       search: SymbolSearch
   ): PresentationCompiler = {
@@ -530,10 +588,14 @@ class Compilers(
     // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
     // skip fetching the mtags module from Maven.
     val pc: PresentationCompiler =
-      if (ScalaVersions.isCurrentScalaCompilerVersion(info.getScalaVersion())) {
+      if (
+        ScalaVersions.isCurrentScalaCompilerVersion(
+          target.scalaInfo.getScalaVersion()
+        )
+      ) {
         new ScalaPresentationCompiler()
       } else {
-        embedded.presentationCompiler(info, scalac)
+        embedded.presentationCompiler(target.scalaInfo, scalac)
       }
     val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
     configure(pc, search).newInstance(

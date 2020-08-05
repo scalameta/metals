@@ -182,17 +182,18 @@ final class TestingServer(
   }
 
   def buildTargetSourceJars(buildTarget: String): Future[Seq[String]] = {
-    server.buildServer match {
-      case Some(build) =>
+    server.bspSession match {
+      case Some(session) =>
+        val main = session.mainConnection
         for {
-          workspaceBuildTargets <- build.workspaceBuildTargets()
+          workspaceBuildTargets <- main.workspaceBuildTargets()
           ids =
             workspaceBuildTargets.getTargets
               .map(_.getId)
               .asScala
               .filter(_.getUri().contains(s"?id=$buildTarget"))
           dependencySources <-
-            build
+            main
               .buildTargetDependencySources(
                 new b.DependencySourcesParams(ids.asJava)
               )
@@ -442,7 +443,7 @@ final class TestingServer(
   }
 
   def assertBuildServerConnection(): Unit = {
-    require(server.buildServer.isDefined, "Build server did not initialize")
+    require(server.bspSession.isDefined, "Build server did not initialize")
   }
 
   def toPath(filename: String): AbsolutePath =

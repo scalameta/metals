@@ -36,7 +36,8 @@ class BuildServerConnection private (
     initialConnection: BuildServerConnection.LauncherConnection,
     languageClient: LanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
-    config: MetalsServerConfig
+    config: MetalsServerConfig,
+    workspace: AbsolutePath
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -58,6 +59,8 @@ class BuildServerConnection private (
 
   // the name is set before when establishing conenction
   def name: String = initialConnection.socketConnection.serverName
+
+  def workspaceDirectory: AbsolutePath = workspace
 
   def onReconnection(
       index: BuildServerConnection => Future[Unit]
@@ -265,7 +268,8 @@ object BuildServerConnection {
         connection,
         languageClient,
         reconnectNotification,
-        config
+        config,
+        workspace
       )
     }
   }

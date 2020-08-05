@@ -88,8 +88,8 @@ class MetalsLanguageServer(
   val isCancelled = new AtomicBoolean(false)
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
-      val buildShutdown = buildServer match {
-        case Some(build) => build.shutdown()
+      val buildShutdown = bspSession match {
+        case Some(session) => session.shutdown()
         case None => Future.successful(())
       }
       try cancelables.cancel()
@@ -123,20 +123,16 @@ class MetalsLanguageServer(
     new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
-  var buildServer: Option[BuildServerConnection] =
-    Option.empty[BuildServerConnection]
-  private def buildServerOf(
-      target: b.BuildTargetIdentifier
-  ): Option[BuildServerConnection] =
-    if (Ammonite.isAmmBuildTarget(target)) ammonite.buildServer
-    else buildServer
+  var bspSession: Option[BspSession] =
+    Option.empty[BspSession]
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
-  val buildTargets: BuildTargets = new BuildTargets()
+  var ammonite: Ammonite = _
+  val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
   private val buildTargetClasses =
-    new BuildTargetClasses(buildServerOf, buildTargets)
+    new BuildTargetClasses(buildTargets)
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
@@ -148,7 +144,6 @@ class MetalsLanguageServer(
     buildTargets,
     buildTargetClasses,
     () => workspace,
-    buildServerOf,
     languageClient,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
@@ -189,6 +184,7 @@ class MetalsLanguageServer(
   private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
+  private var bspConnector: BspConnector = _
   private var codeLensProvider: CodeLensProvider = _
   private var supermethods: Supermethods = _
   private var codeActionProvider: CodeActionProvider = _
@@ -216,7 +212,6 @@ class MetalsLanguageServer(
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
-  var ammonite: Ammonite = _
   var popupChoiceReset: PopupChoiceReset = _
 
   private val clientConfig: ClientConfiguration =
@@ -357,6 +352,10 @@ class MetalsLanguageServer(
       bspGlobalDirectories,
       clientConfig.initialConfig
     )
+    bspConnector = new BspConnector(
+      bloopServers,
+      bspServers
+    )
     semanticdbs = AggregateSemanticdbs(
       List(
         fileSystemSemanticdbs,
@@ -484,7 +483,7 @@ class MetalsLanguageServer(
     )
     debugProvider = new DebugProvider(
       definitionProvider,
-      buildServer,
+      () => bspSession.map(_.mainConnection),
       buildTargets,
       buildTargetClasses,
       compilations,
@@ -946,9 +945,9 @@ class MetalsLanguageServer(
           }
           val expectedBloopVersion = userConfig.currentBloopVersion
           val correctVersionRunning =
-            buildServer.map(_.version).contains(expectedBloopVersion)
+            bspSession.map(_.version).contains(expectedBloopVersion)
           val allVersionsDefined =
-            buildServer.nonEmpty && userConfig.bloopVersion.nonEmpty
+            bspSession.nonEmpty && userConfig.bloopVersion.nonEmpty
           val changedToNoVersion =
             old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
           val versionChanged = allVersionsDefined && !correctVersionRunning
@@ -1623,15 +1622,15 @@ class MetalsLanguageServer(
     {
       for {
         _ <- disconnectOldBuildServer()
-        maybeBuild <- timed("connected to build server") {
-          if (buildTools.isBloop) bloopServers.newServer(userConfig)
-          else bspServers.newServer()
+        maybeSession <- timed("connected to build server") {
+          bspConnector.connect(workspace, userConfig, buildTools)
         }
-        result <- maybeBuild match {
-          case Some(build) =>
-            val result = connectToNewBuildServer(build)
-            build.onReconnection { reconnected =>
-              connectToNewBuildServer(reconnected)
+        result <- maybeSession match {
+          case Some(session) =>
+            val result = connectToNewBuildServer(session)
+            session.mainConnection.onReconnection { newMainConn =>
+              val updSession = session.copy(main = newMainConn)
+              connectToNewBuildServer(updSession)
                 .flatMap(compileAllOpenFiles)
                 .ignoreValue
             }
@@ -1658,35 +1657,45 @@ class MetalsLanguageServer(
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
-    if (buildServer.isDefined) {
+    if (bspSession.isDefined) {
       scribe.info("disconnected: build server")
     }
-    buildServer match {
+    bspSession match {
       case None => Future.successful(())
       case Some(value) =>
-        buildServer = None
+        bspSession = None
         diagnostics.reset()
+        buildTargets.resetConnections(List.empty)
         value.shutdown()
     }
   }
 
   private def connectToNewBuildServer(
-      build: BuildServerConnection
+      session: BspSession
   ): Future[BuildChange] = {
-    scribe.info(s"Connected to Build server v${build.version}")
-    cancelables.add(build)
+    scribe.info(s"Connected to Build server v${session.version}")
+    cancelables.add(session)
     compilers.cancel()
-    buildServer = Some(build)
-    val importedBuild0 = timed("imported build") {
-      MetalsLanguageServer.importedBuild(build)
+    bspSession = Some(session)
+    val importedBuilds0 = timed("imported build") {
+      session.importBuilds()
     }
     for {
-      i <- statusBar.trackFuture("Importing build", importedBuild0)
+      i <- statusBar.trackFuture("Importing build", importedBuilds0)
       _ = {
-        lastImportedBuild = i
+        val idToConnection = i.flatMap { bspBuild =>
+          val targets =
+            bspBuild.build.workspaceBuildTargets.getTargets().asScala
+          targets.map(t => (t.getId(), bspBuild.connection))
+        }
+        buildTargets.resetConnections(idToConnection)
+        lastImportedBuilds = i.map(_.build)
       }
-      _ <- profiledIndexWorkspace(() => doctor.check(build.name, build.version))
-      _ = checkRunningBloopVersion(build.version)
+      _ <- profiledIndexWorkspace(() => {
+        val main = session.mainConnection
+        doctor.check(main.name, main.version)
+      })
+      _ = checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
     }
@@ -1851,10 +1860,10 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  private var lastImportedBuild = ImportedBuild.empty
+  private var lastImportedBuilds = List.empty[ImportedBuild]
 
   private def indexWorkspace(check: () => Unit): Unit = {
-    val i = lastImportedBuild ++ ammonite.lastImportedBuild
+    val i = (ammonite.lastImportedBuild :: lastImportedBuilds).reduce(_ ++ _)
     timedThunk(
       "updated build targets",
       clientConfig.initialConfig.statistics.isIndex

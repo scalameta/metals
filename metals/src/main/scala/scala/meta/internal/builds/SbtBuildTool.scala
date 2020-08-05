@@ -3,6 +3,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Properties
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
@@ -85,13 +86,47 @@ case class SbtBuildTool(
   private def writeSbtMetalsPlugin(
       workspace: AbsolutePath
   ): Unit = {
+
+    def sbtMetaDirs(
+        dir: AbsolutePath,
+        parentHasSbtSrc: Boolean,
+        acc: List[AbsolutePath]
+    ): List[AbsolutePath] = {
+
+      val next = dir.resolve("project")
+      if (dir.exists) {
+        val files = dir.list.toList
+        val hasScalaSrc = files.exists(_.isScala)
+        val hasSbtSrc = files.exists(f => f.isSbt && f.filename != "metals.sbt")
+        val goNext = hasScalaSrc || hasSbtSrc || parentHasSbtSrc
+
+        if (goNext)
+          sbtMetaDirs(next, hasSbtSrc, dir :: acc)
+        else
+          acc
+
+      } else if (parentHasSbtSrc) {
+        next :: acc
+      } else {
+        acc
+      }
+    }
+
+    val mainMeta = workspace.resolve("project")
+    val dirs = sbtMetaDirs(mainMeta, true, List(mainMeta))
+
+    dirs.foreach(writeSbtMetalsPlugin0)
+  }
+
+  private def writeSbtMetalsPlugin0(
+      projectDir: AbsolutePath
+  ): Unit = {
     if (userConfig().bloopSbtAlreadyInstalled) return
     val versionToUse = userConfig().currentBloopVersion
     val bytes = SbtBuildTool
       .sbtPlugin(versionToUse)
       .getBytes(StandardCharsets.UTF_8)
-    val projectDir = workspace.resolve("project")
-    projectDir.toFile.mkdir()
+    projectDir.toFile.mkdirs()
     val metalsPluginFile = projectDir.resolve("metals.sbt")
     val pluginFileShouldChange = !metalsPluginFile.isFile ||
       !metalsPluginFile.readAllBytes.sameElements(bytes)
