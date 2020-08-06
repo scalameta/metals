@@ -437,7 +437,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     } yield ()
   }
 
-  test("sbt-file-definition") {
+  test("definition-deps") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -456,6 +456,28 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
         ".metals/readonly/sbt/Keys.scala"
+      )
+    } yield ()
+  }
+
+  test("definition-local") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/build.sbt
+           |scalaVersion := "$scalaVersion"
+           |val hello = "Hello"
+           |
+           |
+           |val bye = hello
+         """.stripMargin
+      )
+      _ <- assertDefinitionAtLocation(
+        "build.sbt",
+        "val bye = hel@@lo",
+        "build.sbt",
+        1
       )
     } yield ()
   }

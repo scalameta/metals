@@ -240,27 +240,6 @@ final class BuildTargets(
   ): Option[ScalacOptionsItem] =
     scalacTargetInfo.get(buildTarget)
 
-  /**
-   * Returns meta build target for `*.sbt`  files.
-   * It selects build target by directory of its connection
-   *   because `*.sbt` aren't included in `sourceFiles` set
-   */
-  def sbtBuildScalaTarget(file: AbsolutePath): Option[ScalaTarget] = {
-    val targetMetaBuildDir = file.parent.resolve("project")
-    buildTargetInfo.values
-      .find { target =>
-        val isMetaBuild = target.getDataKind == "sbt"
-        if (isMetaBuild) {
-          workspaceDirectory(target.getId)
-            .map(_ == targetMetaBuildDir)
-            .getOrElse(false)
-        } else {
-          false
-        }
-      }
-      .flatMap(toScalaTarget)
-  }
-
   def workspaceDirectory(
       buildTarget: BuildTargetIdentifier
   ): Option[AbsolutePath] =
@@ -272,13 +251,17 @@ final class BuildTargets(
   def inverseSources(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    val buildTargets = sourceBuildTargets(source)
-    if (buildTargets.isEmpty) {
-      tables
-        .flatMap(_.dependencySources.getBuildTarget(source))
-        .orElse(inferBuildTarget(source))
+    if (source.isSbt) {
+      sbtBuildScalaTarget(source)
     } else {
-      Some(buildTargets.maxBy(buildTargetsOrder))
+      val buildTargets = sourceBuildTargets(source)
+      if (buildTargets.isEmpty) {
+        tables
+          .flatMap(_.dependencySources.getBuildTarget(source))
+          .orElse(inferBuildTarget(source))
+      } else {
+        Some(buildTargets.maxBy(buildTargetsOrder))
+      }
     }
   }
 
@@ -330,6 +313,29 @@ final class BuildTargets(
 
   def findByDisplayName(name: String): Option[BuildTarget] = {
     buildTargetInfo.values.find(_.getDisplayName() == name)
+  }
+
+  /**
+   * Returns meta build target for `*.sbt`  files.
+   * It selects build target by directory of its connection
+   *   because `*.sbt` aren't included in `sourceFiles` set
+   */
+  private def sbtBuildScalaTarget(
+      file: AbsolutePath
+  ): Option[BuildTargetIdentifier] = {
+    val targetMetaBuildDir = file.parent.resolve("project")
+    buildTargetInfo.values
+      .find { target =>
+        val isMetaBuild = target.getDataKind == "sbt"
+        if (isMetaBuild) {
+          workspaceDirectory(target.getId)
+            .map(_ == targetMetaBuildDir)
+            .getOrElse(false)
+        } else {
+          false
+        }
+      }
+      .map(_.getId())
   }
 
   private def unsafeInferBuildTarget(

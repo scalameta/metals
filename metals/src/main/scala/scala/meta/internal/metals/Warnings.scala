@@ -64,7 +64,7 @@ final class Warnings(
             s"$doesntWorkBecause the build target ${info.displayName} is being compiled. $tryAgain."
           )
           statusBar.addMessage(icons.info + tryAgain)
-        } else {
+        } else if (!path.isSbt && !path.isWorksheet) {
           val targetfile = info.classDirectory.toAbsolutePath
             .resolve(SemanticdbClasspath.fromScala(path.toRelative(workspace)))
           logger.error(
