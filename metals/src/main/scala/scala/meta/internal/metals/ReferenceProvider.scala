@@ -314,7 +314,7 @@ final class ReferenceProvider(
     val realName =
       if (isBackticked) name.substring(1, name.length() - 1)
       else name
-    if (symbol.isLocal || symbol.contains(realName)) {
+    if (symbol.isLocal || symbol.desc.name.toString == realName) {
       val realRange = if (isBackticked) {
         range
           .withStartCharacter(range.startCharacter + 1)

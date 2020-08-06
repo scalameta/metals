@@ -240,7 +240,10 @@ final class RenameProvider(
       if loc.getUri().isScalaFilename
       companionLocs <-
         referenceProvider
-          .references(toReferenceParams(loc, includeDeclaration = false))
+          .references(
+            toReferenceParams(loc, includeDeclaration = false),
+            canSkipExactMatchCheck = false
+          )
           .locations :+ loc
     } yield companionLocs
     results.toList
@@ -283,7 +286,10 @@ final class RenameProvider(
       for {
         implLoc <- implementationProvider.implementations(textParams)
         locParams = toReferenceParams(implLoc, includeDeclaration = true)
-        loc <- referenceProvider.references(locParams).locations
+        loc <-
+          referenceProvider
+            .references(locParams, canSkipExactMatchCheck = false)
+            .locations
       } yield loc
     } else {
       Nil

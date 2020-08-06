@@ -463,7 +463,18 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
-    "macro",
+    "macro1",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |@JsonCodec
+       |final case class <<Ma@@in2>>(name: String)
+       |""".stripMargin,
+    "Tree"
+  )
+
+  renamed(
+    "macro2",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
