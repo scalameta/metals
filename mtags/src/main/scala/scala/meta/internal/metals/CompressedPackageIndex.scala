@@ -29,26 +29,6 @@ case class CompressedPackageIndex(
 }
 
 object CompressedPackageIndex {
-  def isExcludedPackage(pkg: String): Boolean = {
-    // NOTE(olafur) At some point we may consider making this list configurable, I can
-    // imagine that some people wouldn't mind excluding more packages or including for
-    // example javax._.
-    pkg.startsWith("META-INF/") ||
-    pkg.startsWith("images/") ||
-    pkg.startsWith("toolbarButtonGraphics/") ||
-    pkg.startsWith("jdk/") ||
-    pkg.startsWith("sun/") ||
-    pkg.startsWith("javax/") ||
-    pkg.startsWith("oracle/") ||
-    pkg.startsWith("java/awt/desktop/") ||
-    pkg.startsWith("org/jcp/") ||
-    pkg.startsWith("org/omg/") ||
-    pkg.startsWith("org/graalvm/") ||
-    pkg.startsWith("com/oracle/") ||
-    pkg.startsWith("com/sun/") ||
-    pkg.startsWith("com/apple/") ||
-    pkg.startsWith("apple/")
-  }
 
   /**
    * The default size of bloom filters that are used for fuzzy symbol search.
@@ -140,7 +120,6 @@ object CompressedPackageIndex {
 
     for {
       (pkg, packageMembers) <- packages.packages.asScala.iterator
-      if !isExcludedPackage(pkg)
     } {
       enterPackage(pkg)
 
