@@ -193,8 +193,22 @@ class Compilers(
   }
 
   def didChange(path: AbsolutePath): Future[Unit] = {
+
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
-    val input = path.toInputFromBuffers(buffers)
+    val inputAndAdjust =
+      if (
+        path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
+      ) {
+        worksheet3InputPosAdjustmentOpt(path)
+      } else {
+        None
+      }
+
+    val (input, adjust) = inputAndAdjust.getOrElse(
+      path
+        .toInputFromBuffers(buffers),
+      AdjustLspData.default
+    )
     for {
       ds <-
         pc
@@ -205,7 +219,7 @@ class Compilers(
         case None =>
           diagnostics.onNoSyntaxError(path)
         case Some(diagnostic) =>
-          diagnostics.onSyntaxError(path, diagnostic)
+          diagnostics.onSyntaxError(path, adjust.adjustDiagnostic(diagnostic))
       }
     }
   }
@@ -258,7 +272,7 @@ class Compilers(
           adjust.adjustCompletionListInPlace(list)
           list
         }
-    }.getOrElse(Future.successful(new CompletionList()))
+    }
 
   def autoImports(
       params: TextDocumentPositionParams,
@@ -272,17 +286,20 @@ class Compilers(
           list.map(adjust.adjustImportResult)
           list
         }
-    }.getOrElse(Future.successful(new ju.ArrayList))
+    }
   }
 
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[ju.List[TextEdit]] = {
-    withPC(params, None) { (pc, pos) =>
+    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
       pc.implementAbstractMembers(CompilerOffsetParams.fromPos(pos, token))
         .asScala
-    }.getOrElse(Future.successful(new ju.ArrayList))
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
   }
 
   def hover(
@@ -295,8 +312,6 @@ class Compilers(
         pc.hover(CompilerOffsetParams.fromPos(pos, token))
           .asScala
           .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
-    }.getOrElse {
-      Future.successful(Option.empty)
     }
 
   def definition(
@@ -315,16 +330,17 @@ class Compilers(
             None
           )
         }
-    }.getOrElse(Future.successful(DefinitionResult.empty))
+    }
 
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Future[SignatureHelp] =
-    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
-    }.getOrElse(Future.successful(new SignatureHelp()))
+    withPCAndAdjustLsp(params, Some(interactiveSemanticdbs)) {
+      (pc, pos, adjust) =>
+        pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
+    }
 
   def enclosingClass(
       pos: LspPosition,
@@ -459,6 +475,40 @@ class Compilers(
     else
       None
 
+  private def worksheet3InputPosAdjustmentOpt(
+      path: AbsolutePath
+  ): Option[(Input.VirtualFile, AdjustLspData)] = {
+
+    val originInput = path
+      .toInputFromBuffers(buffers)
+
+    val ident = "  "
+    val withOuter = s"""|object worksheet{
+                        |$ident${originInput.value.replace("\n", "\n" + ident)}
+                        |}""".stripMargin
+    val modifiedInput =
+      originInput.copy(value = withOuter)
+    val adjustLspData = AdjustLspData.create(pos => {
+      new LspPosition(pos.getLine() - 1, pos.getCharacter() - ident.size)
+    })
+    Some((modifiedInput, adjustLspData))
+  }
+
+  private def worksheet3InputPosAdjustmentOpt(
+      uri: String,
+      position: LspPosition
+  ): Option[(Input.VirtualFile, LspPosition, AdjustLspData)] = {
+    worksheet3InputPosAdjustmentOpt(uri.toAbsolutePath).map {
+      case (input, adjust) =>
+        val pos = new LspPosition(
+          position.getLine() + 1,
+          position.getCharacter() + 2
+        )
+        (input, pos, adjust)
+
+    }
+  }
+
   private def sbtInputPosAdjustmentOpt(
       uri: String,
       position: LspPosition
@@ -475,7 +525,6 @@ class Compilers(
 
         val originInput = path
           .toInputFromBuffers(buffers)
-          .copy(path = uri)
 
         val modifiedInput =
           originInput.copy(value = appendStr + originInput.value)
@@ -490,31 +539,29 @@ class Compilers(
       }
   }
 
-  private def withPC[T](
-      params: TextDocumentPositionParams,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
-  )(fn: (PresentationCompiler, Position) => T): Option[T] = {
-    withPCAndAdjustLsp(params, interactiveSemanticdbs)((compiler, pos, _) =>
-      fn(compiler, pos)
-    )
-  }
-
   private def withPCAndAdjustLsp[T](
       params: TextDocumentPositionParams,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path, interactiveSemanticdbs).map { compiler =>
-      val (input, pos, adjust) =
-        sourceAdjustments(params, interactiveSemanticdbs)
-      val metaPos = pos.toMeta(input)
-      fn(compiler, metaPos, adjust)
-    }
+    val compiler =
+      loadCompiler(path, interactiveSemanticdbs).getOrElse(ramboCompiler)
+
+    val (input, pos, adjust) =
+      sourceAdjustments(
+        params,
+        interactiveSemanticdbs,
+        compiler.scalaVersion()
+      )
+    val metaPos = pos.toMeta(input)
+    fn(compiler, metaPos, adjust)
+
   }
 
   private def sourceAdjustments(
       params: TextDocumentPositionParams,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs],
+      scalaVersion: String
   ): (Input.VirtualFile, LspPosition, AdjustLspData) = {
 
     val uri = params.getTextDocument.getUri
@@ -524,7 +571,6 @@ class Compilers(
     def default = {
       val input = path
         .toInputFromBuffers(buffers)
-        .copy(path = params.getTextDocument.getUri)
 
       (input, position, AdjustLspData.default)
     }
@@ -538,6 +584,10 @@ class Compilers(
           }
       } else if (path.isSbt) {
         sbtInputPosAdjustmentOpt(uri, position)
+      } else if (
+        path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)
+      ) {
+        worksheet3InputPosAdjustmentOpt(uri, position)
       } else None
 
     forScripts.getOrElse(default)

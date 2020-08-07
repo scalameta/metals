@@ -10,14 +10,18 @@ import scala.io.Codec
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.parsing.Parsers.Parser
+import dotty.tools.dotc.parsing.ScriptParsers.ScriptParser
 import dotty.tools.dotc.reporting.Message
 import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.reporting.Diagnostic.Error
 import dotty.tools.dotc.interfaces.Diagnostic
 import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.util.ScriptSourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.io.VirtualFile
 import org.eclipse.{lsp4j => l}
+
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 // note(@tgodzik) the plan is to be able to move the methods here back to Dotty compiler
 // so that we can provide easier compatibility with multiple Scala 3 versions
@@ -31,7 +35,8 @@ object CompilerInterfaces {
     val sourceFile = toSource(uri, text)
     // we need to have a separate reporter otherwise errors are not cleared
     val parsingReporter = new StoreReporter(null)
-    val parser = new Parser(sourceFile)(using driver.currentCtx.fresh.setReporter(parsingReporter))
+    val freshContext = driver.currentCtx.fresh.setReporter(parsingReporter)
+    val parser = new Parser(sourceFile)(using freshContext)
     parser.parse()
     val diags = parsingReporter.allErrors
     diags.flatMap(diagnostic).asJava
@@ -64,15 +69,9 @@ object CompilerInterfaces {
       )
     }
 
-  private def toSource(uri: URI, sourceCode: String): SourceFile = {
-    val path = Paths.get(uri)
-    val virtualFile = new VirtualFile(path.getFileName.toString, path.toString)
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(virtualFile.output, "UTF-8")
-    )
-    writer.write(sourceCode)
-    writer.close()
-    new SourceFile(virtualFile, Codec.UTF8)
+  def toSource(uri: URI, sourceCode: String): SourceFile = {
+    val path = Paths.get(uri).toString
+    SourceFile.virtual(path, sourceCode)
   }
 
   private def range(p: SourcePosition): Option[l.Range] = {
