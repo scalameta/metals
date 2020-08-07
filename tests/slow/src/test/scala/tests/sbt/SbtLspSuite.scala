@@ -441,21 +441,36 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/build.sbt
-           |scalaVersion := "$scalaVersion"
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |
+            |/build.sbt
+            |scalaVersion := "$scalaVersion"
          """.stripMargin
       )
       _ <- assertDefinitionAtLocation(
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
         ".metals/readonly/sbt/Keys.scala"
+      )
+    } yield ()
+  }
+
+  test("definition-meta") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/project/plugins.sbt
+            |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.19")
+            |
+            |/build.sbt
+            |scalaVersion := "$scalaVersion"
+         """.stripMargin
+      )
+      _ <- assertDefinitionAtLocation(
+        "project/plugins.sbt",
+        "addSbt@@Plugin(\"ch.epfl.scala\" % \"sbt-scalafix\" % \"0.9.19\")",
+        ".metals/readonly/sbt/Defaults.scala"
       )
     } yield ()
   }
@@ -486,18 +501,10 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/build.sbt
-           |scalaVersion := "$scalaVersion"
+        s"""|/build.sbt
+            |scalaVersion := "$scalaVersion"
          """.stripMargin
       )
-
       hoverRes <- assertHoverAtPos("build.sbt", 0, 2)
       expectedHoverRes = """```scala
                            |val scalaVersion: SettingKey[String]
@@ -514,19 +521,11 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/build.sbt
-           |scalaVersion := "$scalaVersion"
-           |libraryDependencies ++= Seq()
+        s"""|/build.sbt
+            |scalaVersion := "$scalaVersion"
+            |libraryDependencies ++= Seq()
          """.stripMargin
       )
-
       completionList <- server.completion("build.sbt", "libraryDependencies@@")
       expectedCompletionList = "libraryDependencies: SettingKey[Seq[ModuleID]]"
       _ = assertNoDiff(completionList, expectedCompletionList)
@@ -538,20 +537,13 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion"
-           |  }
-           |}
-           |/build.sbt
-           |scalaVersion := MetaValues.scalaVersion
-           |/project/MetaValues.scala
-           |import scala.util.Success
-           |object MetaValues {
-           |  val scalaVersion = "$scalaVersion"
-           |}
+        s"""|/build.sbt
+            |scalaVersion := MetaValues.scalaVersion
+            |/project/MetaValues.scala
+            |import scala.util.Success
+            |object MetaValues {
+            |  val scalaVersion = "$scalaVersion"
+            |}
          """.stripMargin
       )
       _ <- server.didOpen("project/MetaValues.scala")

@@ -56,7 +56,7 @@ case class SbtBuildTool(
         ).flatten
     }
     removeLegacyGlobalPlugin()
-    writeSbtMetalsPlugin(workspace)
+    writeSbtMetalsPlugins(workspace)
     allArgs
   }
 
@@ -83,42 +83,36 @@ case class SbtBuildTool(
     Files.deleteIfExists(metalsFile.toNIO)
   }
 
-  private def writeSbtMetalsPlugin(
+  private def writeSbtMetalsPlugins(
       workspace: AbsolutePath
   ): Unit = {
 
     def sbtMetaDirs(
-        dir: AbsolutePath,
-        parentHasSbtSrc: Boolean,
-        acc: List[AbsolutePath]
-    ): List[AbsolutePath] = {
-
-      val next = dir.resolve("project")
-      if (dir.exists) {
-        val files = dir.list.toList
-        val hasScalaSrc = files.exists(_.isScala)
+        meta: AbsolutePath,
+        acc: Set[AbsolutePath]
+    ): Set[AbsolutePath] = {
+      if (meta.exists) {
+        val files = meta.list.toList
         val hasSbtSrc = files.exists(f => f.isSbt && f.filename != "metals.sbt")
-        val goNext = hasScalaSrc || hasSbtSrc || parentHasSbtSrc
-
-        if (goNext)
-          sbtMetaDirs(next, hasSbtSrc, dir :: acc)
-        else
+        if (hasSbtSrc) {
+          val forSbtSupport = meta.resolve("project/project")
+          sbtMetaDirs(meta.resolve("project"), acc + forSbtSupport)
+        } else {
           acc
-
-      } else if (parentHasSbtSrc) {
-        next :: acc
+        }
       } else {
         acc
       }
     }
 
     val mainMeta = workspace.resolve("project")
-    val dirs = sbtMetaDirs(mainMeta, true, List(mainMeta))
-
-    dirs.foreach(writeSbtMetalsPlugin0)
+    val metaMeta = workspace.resolve("project").resolve("project")
+    sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(
+      writeSingleSbtMetalsPlugin
+    )
   }
 
-  private def writeSbtMetalsPlugin0(
+  private def writeSingleSbtMetalsPlugin(
       projectDir: AbsolutePath
   ): Unit = {
     if (userConfig().bloopSbtAlreadyInstalled) return
