@@ -306,14 +306,14 @@ object ServerCommands {
 
   val StartAmmoniteBuildServer = new Command(
     "ammonite-start",
-    "Start an Ammonite build server",
-    "Something"
+    "Start Ammonite build server",
+    "Start Ammonite build server"
   )
 
   val StopAmmoniteBuildServer = new Command(
     "ammonite-stop",
     "Stop Ammonite build server",
-    "Something"
+    "Stop Ammonite build server"
   )
 
   def all: List[Command] =
