@@ -84,14 +84,15 @@ object Messages {
     }
   }
 
-  val PartialNavigation = new MetalsStatusParams(
-    "$(info) Partial navigation",
-    tooltip =
-      "This external library source has compile errors. " +
-        "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as " +
-        "the external library.",
-    command = ClientCommands.FocusDiagnostics.id
-  )
+  def partialNavigation(icons: Icons) =
+    new MetalsStatusParams(
+      s"${icons.info} Partial navigation",
+      tooltip =
+        "This external library source has compile errors. " +
+          "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as " +
+          "the external library.",
+      command = ClientCommands.FocusDiagnostics.id
+    )
 
   object CheckDoctor {
     def problemsFixed: MessageParams =
