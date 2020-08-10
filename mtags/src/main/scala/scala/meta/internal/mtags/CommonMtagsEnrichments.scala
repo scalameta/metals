@@ -257,12 +257,14 @@ trait CommonMtagsEnrichments {
       doc.endsWith(".sbt")
     def isScalaScript: Boolean =
       doc.endsWith(".sc")
+    def isWorksheet: Boolean =
+      doc.endsWith(".worksheet.sc")
     def isScalaFilename: Boolean =
       doc.isScala || isScalaScript || isSbt
     def isAmmoniteGeneratedFile: Boolean =
       doc.endsWith(".sc.scala")
     def isAmmoniteScript: Boolean =
-      isScalaScript && !doc.endsWith(".worksheet.sc")
+      isScalaScript && !isWorksheet
     def asSymbol: Symbol = Symbol(doc)
     def endsWithAt(value: String, offset: Int): Boolean = {
       val start = offset - value.length

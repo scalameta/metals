@@ -3,9 +3,12 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Properties
 
+import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.Position
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
@@ -186,4 +189,29 @@ object SbtBuildTool {
     SbtBuildTool(version, userConfig)
   }
 
+  def sbtInputPosAdjustment(
+      originInput: Input.VirtualFile,
+      autoImports: Seq[String],
+      uri: String,
+      position: Position
+  ): (Input.VirtualFile, Position, AdjustLspData) = {
+
+    val appendStr = autoImports.mkString("", "\n", "\n")
+    val appendLineSize = autoImports.size
+
+    val modifiedInput =
+      originInput.copy(value = appendStr + originInput.value)
+    val pos = new Position(
+      appendLineSize + position.getLine(),
+      position.getCharacter()
+    )
+    val adjustLspData = AdjustedLspData.create(
+      pos => {
+        new Position(pos.getLine() - appendLineSize, pos.getCharacter())
+      },
+      filterOutLocations = { loc => !loc.getUri().isSbt }
+    )
+    (modifiedInput, pos, adjustLspData)
+
+  }
 }

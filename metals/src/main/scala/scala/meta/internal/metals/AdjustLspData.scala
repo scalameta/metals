@@ -41,12 +41,7 @@ trait AdjustLspData {
 
   def adjustLocations(
       locations: java.util.List[Location]
-  ): ju.List[Location] = {
-    locations.asScala.map { loc =>
-      loc.setRange(adjustRange(loc.getRange()))
-      loc
-    }.asJava
-  }
+  ): ju.List[Location]
 
   def adjustHoverResp(hover: Hover): Hover =
     if (hover.getRange == null)
@@ -77,7 +72,25 @@ trait AdjustLspData {
   }
 }
 
-object DefaultAdjust extends AdjustLspData {
+case class AdjustedLspData(
+    adjustPosition: Position => Position,
+    filterOutLocations: Location => Boolean
+) extends AdjustLspData {
+
+  override def adjustLocations(
+      locations: ju.List[Location]
+  ): ju.List[Location] = {
+    locations.asScala.collect {
+      case loc if !filterOutLocations(loc) =>
+        loc.setRange(adjustRange(loc.getRange()))
+        loc
+    }.asJava
+  }
+  override def adjustPos(pos: Position): Position = adjustPosition(pos)
+
+}
+
+object DefaultAdjustedData extends AdjustLspData {
 
   override def adjustPos(pos: Position): Position = identity(pos)
 
@@ -104,17 +117,21 @@ object DefaultAdjust extends AdjustLspData {
   ): Diagnostic = identity(diag)
 }
 
-object AdjustLspData {
+object AdjustedLspData {
 
-  def create(f: Position => Position): AdjustLspData =
-    new AdjustLspData {
-      override def adjustPos(pos: Position): Position = {
+  def create(
+      f: Position => Position,
+      filterOutLocations: Location => Boolean = _ => false
+  ): AdjustLspData =
+    AdjustedLspData(
+      pos => {
         val newPos = f(pos)
         if (newPos.getLine() < 0)
           pos
         else newPos
-      }
-    }
+      },
+      filterOutLocations
+    )
 
-  val default: AdjustLspData = DefaultAdjust
+  val default: AdjustLspData = DefaultAdjustedData
 }

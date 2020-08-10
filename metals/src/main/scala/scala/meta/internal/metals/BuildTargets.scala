@@ -266,6 +266,16 @@ final class BuildTargets(
   }
 
   /**
+   * Resolves sbt auto imports if a file belongs to a Sbt build target.
+   */
+  def sbtAutoImports(path: AbsolutePath): Option[Seq[String]] =
+    for {
+      targetId <- inverseSources(path)
+      target <- scalaTarget(targetId)
+      imports <- target.autoImports
+    } yield imports
+
+  /**
    * Add custom fallback handler to recover from "no build target" errors.
    */
   def addBuildTargetInference(

@@ -451,7 +451,8 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
       _ <- assertDefinitionAtLocation(
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
-        ".metals/readonly/sbt/Keys.scala"
+        ".metals/readonly/sbt/Keys.scala",
+        expectedLine = 170
       )
     } yield ()
   }
