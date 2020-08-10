@@ -116,7 +116,7 @@ final class InteractiveSemanticdbs(
           new l.Diagnostic(range.toLSP, diag.message, severity, "scala")
         }
         if (diagnostics.nonEmpty) {
-          statusBar.addMessage(PartialNavigation)
+          statusBar.addMessage(partialNavigation(clientConfig.icons))
           client.publishDiagnostics(
             new PublishDiagnosticsParams(doc.uri, diagnostics.asJava)
           )
