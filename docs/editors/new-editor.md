@@ -693,6 +693,8 @@ interface MetalsSlowTaskParams {
    * In VS Code, the Metals "Output channel" is not toggled when this flag is true.
    */
   quietLogs?: boolean;
+  /** Time that has elapsed since the begging of the task. */
+  secondsElapsed?: number;
 }
 ```
 
@@ -707,7 +709,7 @@ interface MetalsSlowTaskResult {
    * If false, the user dismissed the dialogue but want to
    * continue running the task.
    */
-  message: string;
+  cancel: boolean;
 }
 ```
 
@@ -924,6 +926,22 @@ _Notification_:
 interface WindowStateDidChangeParams( {
   /** If true, the editor application window is focused. False, otherwise. */
   focused: boolean;
+}
+```
+
+### `metals/openWindow`
+
+The  `metals/openWindow` params are used with the New Scala Project
+functionality. After the new project has been created, if the editor has the
+ability to open the project in a new window then these params are used with the
+the `metals-open-folder` command.
+
+```ts
+interface MetalsOpenWindowParams {
+  /** Location of the newly created project. */
+  uri: string;
+  /** Whether or not to open the project in a new window. */
+  openNewWindow: boolean;
 }
 ```
 

@@ -146,6 +146,7 @@ object ClientCommands {
       ToggleLogs,
       FocusDiagnostics,
       GotoLocation,
-      EchoCommand
+      EchoCommand,
+      RefreshModel
     )
 }
