@@ -251,17 +251,16 @@ final class BuildTargets(
   def inverseSources(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    if (source.isSbt) {
-      sbtBuildScalaTarget(source)
+    val buildTargets = sourceBuildTargets(source)
+    val orSbtBuildTarget =
+      if (buildTargets.isEmpty) sbtBuildScalaTarget(source).toIterable
+      else buildTargets
+    if (orSbtBuildTarget.isEmpty) {
+      tables
+        .flatMap(_.dependencySources.getBuildTarget(source))
+        .orElse(inferBuildTarget(source))
     } else {
-      val buildTargets = sourceBuildTargets(source)
-      if (buildTargets.isEmpty) {
-        tables
-          .flatMap(_.dependencySources.getBuildTarget(source))
-          .orElse(inferBuildTarget(source))
-      } else {
-        Some(buildTargets.maxBy(buildTargetsOrder))
-      }
+      Some(orSbtBuildTarget.maxBy(buildTargetsOrder))
     }
   }
 
@@ -316,14 +315,15 @@ final class BuildTargets(
   }
 
   /**
-   * Returns meta build target for `*.sbt`  files.
+   * Returns meta build target for `*.sbt` or `*.scala`  files.
    * It selects build target by directory of its connection
-   *   because `*.sbt` aren't included in `sourceFiles` set
+   *   because `*.sbt` and `*.scala` aren't included in `sourceFiles` set
    */
   private def sbtBuildScalaTarget(
       file: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    val targetMetaBuildDir = file.parent.resolve("project")
+    val targetMetaBuildDir =
+      if (file.isSbt) file.parent.resolve("project") else file.parent
     buildTargetInfo.values
       .find { target =>
         val isMetaBuild = target.getDataKind == "sbt"

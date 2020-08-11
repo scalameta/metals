@@ -517,6 +517,34 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
 
   }
 
+  test("scala-file-hover") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/build.sbt
+            |scalaVersion := "$scalaVersion"
+            |/project/Deps.scala
+            |import sbt._
+            |import Keys._
+            |object Deps {
+            |  val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
+            |}
+         """.stripMargin
+      )
+      hoverRes <- assertHoverAtPos("project/Deps.scala", 3, 9)
+      expectedHoverRes =
+        """|```scala
+           |val scalatest: ModuleID
+           |```
+           |```range
+           |val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
+           |```
+           |""".stripMargin
+      _ = assertNoDiff(hoverRes, expectedHoverRes)
+    } yield ()
+
+  }
+
   test("sbt-file-autocomplete") {
     cleanWorkspace()
     for {
