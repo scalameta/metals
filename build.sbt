@@ -1,5 +1,6 @@
 import scala.collection.mutable
 import scala.sys.process._
+import Tests._
 
 def localSnapshotVersion = "0.9.4-SNAPSHOT"
 def isCI = System.getenv("CI") != null
@@ -570,11 +571,37 @@ lazy val cross = project
   )
   .dependsOn(mtest, mtags)
 
+def groupByDuration(
+    tests: Seq[TestDefinition],
+    forkOpts: ForkOptions
+): Seq[sbt.Tests.Group] = {
+  tests
+    .groupBy { test =>
+      if (TestGroups.testGroup1(test.name)) 0
+      else 1
+    }
+    .map {
+      case (num, tests) =>
+        val jvmOpts =
+          forkOpts.runJVMOptions.filterNot(_.startsWith("-Xmx")) :+ "-Xmx1G"
+        val options = forkOpts.withRunJVMOptions(jvmOpts)
+        new Group("group" + num, tests, SubProcess(options))
+    }
+    .toSeq
+}
+
+concurrentRestrictions in Global := Seq(Tags.limitAll(if (isCI) 2 else 1))
+
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
     sharedSettings,
+    Test / parallelExecution := true,
+    Test / testGrouping := groupByDuration(
+      (Test / definedTests).value,
+      forkOptions.value
+    ),
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,

@@ -74,6 +74,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
         getExpected(expected, compat, scalaVersion)
       val obtained = completion.getItems.asScala
         .map(_.getLabel)
+        .sorted
         .mkString("\n")
       assertNoDiff(obtained, expectedCompat)
     }
@@ -90,13 +91,9 @@ class CancelCompletionSuite extends BaseCompletionSuite {
        |assert(assertion: Boolean, message: => Any): Unit
        |""".stripMargin,
     compat = Map(
-      "0.25" ->
+      "0.2" ->
         """|assert(assertion: Boolean @InlineParam): Unit
            |assertFail(message: => Any): Nothing
-           |""".stripMargin,
-      "0.26" ->
-        """|assertFail(message: => Any): Nothing
-           |assert(assertion: Boolean @InlineParam): Unit
            |""".stripMargin
     )
   )
