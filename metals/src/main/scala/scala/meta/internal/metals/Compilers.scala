@@ -12,12 +12,14 @@ import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.mtags
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
@@ -194,21 +196,25 @@ class Compilers(
 
   def didChange(path: AbsolutePath): Future[Unit] = {
 
+    def originInput =
+      path
+        .toInputFromBuffers(buffers)
+
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     val inputAndAdjust =
       if (
         path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
       ) {
-        worksheet3InputPosAdjustmentOpt(path)
+        WorksheetProvider.worksheetScala3Adjustments(originInput, path)
       } else {
         None
       }
 
     val (input, adjust) = inputAndAdjust.getOrElse(
-      path
-        .toInputFromBuffers(buffers),
-      AdjustLspData.default
+      originInput,
+      AdjustedLspData.default
     )
+
     for {
       ds <-
         pc
@@ -475,70 +481,6 @@ class Compilers(
     else
       None
 
-  private def worksheet3InputPosAdjustmentOpt(
-      path: AbsolutePath
-  ): Option[(Input.VirtualFile, AdjustLspData)] = {
-
-    val originInput = path
-      .toInputFromBuffers(buffers)
-
-    val ident = "  "
-    val withOuter = s"""|object worksheet{
-                        |$ident${originInput.value.replace("\n", "\n" + ident)}
-                        |}""".stripMargin
-    val modifiedInput =
-      originInput.copy(value = withOuter)
-    val adjustLspData = AdjustLspData.create(pos => {
-      new LspPosition(pos.getLine() - 1, pos.getCharacter() - ident.size)
-    })
-    Some((modifiedInput, adjustLspData))
-  }
-
-  private def worksheet3InputPosAdjustmentOpt(
-      uri: String,
-      position: LspPosition
-  ): Option[(Input.VirtualFile, LspPosition, AdjustLspData)] = {
-    worksheet3InputPosAdjustmentOpt(uri.toAbsolutePath).map {
-      case (input, adjust) =>
-        val pos = new LspPosition(
-          position.getLine() + 1,
-          position.getCharacter() + 2
-        )
-        (input, pos, adjust)
-
-    }
-  }
-
-  private def sbtInputPosAdjustmentOpt(
-      uri: String,
-      position: LspPosition
-  ): Option[(Input.VirtualFile, LspPosition, AdjustLspData)] = {
-
-    val path = uri.toAbsolutePath
-    buildTargets
-      .inverseSources(path)
-      .flatMap(buildTargets.scalaTarget)
-      .flatMap(_.autoImports)
-      .map { imports =>
-        val appendStr = imports.mkString("", "\n", "\n")
-        val appendLineSize = imports.size
-
-        val originInput = path
-          .toInputFromBuffers(buffers)
-
-        val modifiedInput =
-          originInput.copy(value = appendStr + originInput.value)
-        val pos = new LspPosition(
-          appendLineSize + position.getLine(),
-          position.getCharacter()
-        )
-        val adjustLspData = AdjustLspData.create(pos => {
-          new LspPosition(pos.getLine() - appendLineSize, pos.getCharacter())
-        })
-        (modifiedInput, pos, adjustLspData)
-      }
-  }
-
   private def withPCAndAdjustLsp[T](
       params: TextDocumentPositionParams,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
@@ -568,12 +510,8 @@ class Compilers(
     val path = uri.toAbsolutePath
     val position = params.getPosition
 
-    def default = {
-      val input = path
-        .toInputFromBuffers(buffers)
-
-      (input, position, AdjustLspData.default)
-    }
+    def input = path.toInputFromBuffers(buffers)
+    def default = (input, position, AdjustedLspData.default)
 
     val forScripts =
       if (path.isAmmoniteScript) {
@@ -583,11 +521,15 @@ class Compilers(
               (input, pos, Ammonite.adjustLspData(input.text))
           }
       } else if (path.isSbt) {
-        sbtInputPosAdjustmentOpt(uri, position)
+        buildTargets
+          .sbtAutoImports(path)
+          .map(
+            SbtBuildTool.sbtInputPosAdjustment(input, _, uri, position)
+          )
       } else if (
         path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)
       ) {
-        worksheet3InputPosAdjustmentOpt(uri, position)
+        WorksheetProvider.worksheetScala3Adjustments(input, uri, position)
       } else None
 
     forScripts.getOrElse(default)

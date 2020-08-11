@@ -13,6 +13,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta._
+import scala.meta.internal.metals.AdjustLspData
+import scala.meta.internal.metals.AdjustedLspData
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
@@ -327,5 +329,43 @@ class WorksheetProvider(
       digest.update(path.toString.getBytes(StandardCharsets.UTF_8))
     }
     MD5.bytesToHex(digest.digest())
+  }
+}
+
+object WorksheetProvider {
+
+  def worksheetScala3Adjustments(
+      originInput: Input.VirtualFile,
+      path: AbsolutePath
+  ): Option[(Input.VirtualFile, AdjustLspData)] = {
+    val ident = "  "
+    val withOuter = s"""|object worksheet{
+                        |$ident${originInput.value.replace("\n", "\n" + ident)}
+                        |}""".stripMargin
+    val modifiedInput =
+      originInput.copy(value = withOuter)
+    val adjustLspData = AdjustedLspData.create(
+      pos => {
+        new Position(pos.getLine() - 1, pos.getCharacter() - ident.size)
+      },
+      filterOutLocations = { loc => loc.getUri().isWorksheet }
+    )
+    Some((modifiedInput, adjustLspData))
+  }
+
+  def worksheetScala3Adjustments(
+      originInput: Input.VirtualFile,
+      uri: String,
+      position: Position
+  ): Option[(Input.VirtualFile, Position, AdjustLspData)] = {
+    worksheetScala3Adjustments(originInput, uri.toAbsolutePath).map {
+      case (input, adjust) =>
+        val pos = new Position(
+          position.getLine() + 1,
+          position.getCharacter() + 2
+        )
+        (input, pos, adjust)
+
+    }
   }
 }

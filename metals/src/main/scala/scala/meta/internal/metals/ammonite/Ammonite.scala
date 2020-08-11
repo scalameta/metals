@@ -373,7 +373,7 @@ object Ammonite {
   }
 
   def adjustLspData(scalaCode: String): AdjustLspData =
-    AdjustLspData.create(adjustPosition(scalaCode))
+    AdjustedLspData.create(adjustPosition(scalaCode))
 
   private def logOutputThread(
       is: InputStream,
