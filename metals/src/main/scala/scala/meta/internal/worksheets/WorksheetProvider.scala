@@ -34,6 +34,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.semver.SemVer
 import scala.meta.internal.worksheets.MdocEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -293,18 +294,32 @@ class WorksheetProvider(
   }
 
   private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
+
+    def isSupportedScala3Version(scalaVersion: String) = {
+      // Worksheet support for Scala 3 started with 0.26.0-RC1
+      ScalaVersions.isScala3Version(scalaVersion) && SemVer.isCompatibleVersion(
+        "0.26.0",
+        scalaVersion
+      )
+    }
+
+    def isSupportedScala2Version(scalaVersion: String) = {
+      !ScalaVersions.isScala3Version(scalaVersion) && ScalaVersions
+        .isSupportedScalaVersion(scalaVersion)
+    }
+
     mdocs.get(target).orElse {
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
-        isSupported =
-          ScalaVersions
-            .isSupportedScalaVersion(scalaVersion)
+        isSupported = isSupportedScala2Version(
+          scalaVersion
+        ) || isSupportedScala3Version(scalaVersion)
         _ = {
           if (!isSupported) {
             scribe.warn(
               s"worksheet: unsupported Scala version '${scalaVersion}', using Scala version '${BuildInfo.scala212}' without classpath instead.\n" +
-                s"worksheet: to fix this problem use Scala version '${BuildInfo.scala212}'."
+                s"worksheet: to fix this problem use Scala version '${ScalaVersions.recommendedVersion(scalaVersion)}'."
             )
           }
         }
