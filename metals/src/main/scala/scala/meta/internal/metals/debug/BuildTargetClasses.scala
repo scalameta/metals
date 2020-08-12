@@ -1,11 +1,14 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.debug
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.BuildTargetClasses.Classes
+import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 
@@ -92,7 +95,7 @@ final class BuildTargetClasses(
       target = item.getTarget
       aClass <- item.getClasses.asScala
       descriptors = descriptorsForMainClasses(target)
-      symbol <- createSymbols(
+      symbol <- symbolFromClassName(
         aClass.getClassName,
         descriptors
       )
@@ -109,7 +112,8 @@ final class BuildTargetClasses(
       item <- result.getItems.asScala
       target = item.getTarget
       className <- item.getClasses.asScala
-      symbol <- createSymbols(className, List(Descriptor.Term, Descriptor.Type))
+      symbol <-
+        symbolFromClassName(className, List(Descriptor.Term, Descriptor.Type))
     } {
       classes(target).testClasses.put(symbol, className)
     }
@@ -128,7 +132,7 @@ final class BuildTargetClasses(
     }
   }
 
-  private def createSymbols(
+  def symbolFromClassName(
       className: String,
       descriptors: List[String => Descriptor]
   ): List[String] = {

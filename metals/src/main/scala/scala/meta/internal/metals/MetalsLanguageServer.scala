@@ -40,6 +40,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.mtags._
@@ -490,7 +491,8 @@ class MetalsLanguageServer(
       languageClient,
       buildClient,
       statusBar,
-      compilers
+      compilers,
+      definitionIndex
     )
     codeActionProvider = new CodeActionProvider(
       compilers,

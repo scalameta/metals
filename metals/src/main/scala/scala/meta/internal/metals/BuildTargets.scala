@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.lang.{Iterable => JIterable}
 import java.net.URLClassLoader
+import java.nio.file.Paths
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.{util => ju}
@@ -52,8 +53,6 @@ final class BuildTargets(
     TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
   private val isSourceRoot =
     ConcurrentHashSet.empty[AbsolutePath]
-  private val buildTargetInference =
-    new ConcurrentLinkedQueue[AbsolutePath => Seq[BuildTargetIdentifier]]()
   // if workspace contains symlinks, original source items are kept here and source items dealiased
   private val originalSourceItems = ConcurrentHashSet.empty[AbsolutePath]
 
@@ -94,7 +93,6 @@ final class BuildTargets(
     buildTargetSources.clear()
     inverseDependencySources.clear()
     isSourceRoot.clear()
-    buildTargetInference.clear()
   }
   def sourceItems: Iterable[AbsolutePath] =
     sourceItemsToBuildTarget.keys
@@ -275,15 +273,6 @@ final class BuildTargets(
     } yield imports
 
   /**
-   * Add custom fallback handler to recover from "no build target" errors.
-   */
-  def addBuildTargetInference(
-      fn: AbsolutePath => Seq[BuildTargetIdentifier]
-  ): Unit = {
-    buildTargetInference.add(fn)
-  }
-
-  /**
    * Tries to guess what build target this readonly file belongs to from the symbols it defines.
    *
    * By default, we rely on carefully recording what build target produced what
@@ -301,6 +290,8 @@ final class BuildTargets(
    *   symbols.
    * - find the build target which has that jar file in it's classpath.
    *
+   * Otherwise if it's a jar file we find a build target it belongs to.
+   *
    * This approach is not glamorous but it seems to work reasonably well.
    */
   def inferBuildTarget(
@@ -309,19 +300,34 @@ final class BuildTargets(
     if (source.isDependencySource(workspace)) {
       Try(unsafeInferBuildTarget(source)).getOrElse(None)
     } else {
-      val fromInference =
-        buildTargetInference.asScala.flatMap(fn => fn(source))
-      if (fromInference.nonEmpty) {
-        fromInference.foreach { target => addSourceItem(source, target) }
-        inverseSources(source)
-      } else {
-        None
-      }
+      // else it can be a source file inside a jar
+      val fromJar = jarPath(source)
+        .flatMap { jar =>
+          all.find { scalaTarget =>
+            scalaTarget.jarClasspath.contains(jar)
+          }
+        }
+        .map(_.id)
+      fromJar.foreach(addSourceItem(source, _))
+      fromJar
     }
   }
 
   def findByDisplayName(name: String): Option[BuildTarget] = {
     buildTargetInfo.values.find(_.getDisplayName() == name)
+  }
+
+  private def jarPath(source: AbsolutePath): Option[AbsolutePath] = {
+    val filesystem = source.toNIO.getFileSystem()
+    if (filesystem.provider().getScheme().equals("jar")) {
+      Some(
+        AbsolutePath(
+          Paths.get(filesystem.toString.replace("-sources.jar", ".jar"))
+        )
+      )
+    } else {
+      None
+    }
   }
 
   /**

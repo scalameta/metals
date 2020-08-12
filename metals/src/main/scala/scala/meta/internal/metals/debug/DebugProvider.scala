@@ -15,11 +15,7 @@ import scala.util.Failure
 import scala.util.Try
 
 import scala.meta.internal.metals.BuildServerConnection
-import scala.meta.internal.metals.BuildTargetClasses
-import scala.meta.internal.metals.BuildTargetClassesFinder
-import scala.meta.internal.metals.BuildTargetNotFoundException
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
@@ -34,6 +30,7 @@ import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
@@ -52,12 +49,14 @@ class DebugProvider(
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
     statusBar: StatusBar,
-    compilers: Compilers
+    compilers: Compilers,
+    index: OnDemandSymbolIndex
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
     buildTargets,
-    buildTargetClasses
+    buildTargetClasses,
+    index
   )
 
   def start(
