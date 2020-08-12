@@ -577,8 +577,7 @@ def groupByDuration(
 ): Seq[sbt.Tests.Group] = {
   tests
     .groupBy { test =>
-      if (TestGroups.testGroup1(test.name)) 0
-      else 1
+      TestGroups.testGroups.indexWhere(group => group(test.name))
     }
     .map {
       case (num, tests) =>
@@ -590,7 +589,7 @@ def groupByDuration(
     .toSeq
 }
 
-concurrentRestrictions in Global := Seq(Tags.limitAll(if (isCI) 2 else 1))
+concurrentRestrictions in Global := Seq(Tags.limitAll(if (isCI) 4 else 1))
 
 lazy val unit = project
   .in(file("tests/unit"))
