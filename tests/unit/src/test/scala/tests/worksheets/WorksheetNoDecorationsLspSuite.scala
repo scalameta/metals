@@ -31,18 +31,18 @@ class WorksheetNoDecorationsLspSuite
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/foo/Main.worksheet.sc").readText,
         """
-          |val x = 1  /*>  1  */
-          |val foo = "bar"  /*>  "bar"  */
+          |val x = 1  /*>  : Int = 1  */
+          |val foo = "bar"  /*>  : String = "bar"  */
           |println("metals")  /*>  metals  */
-        """.stripMargin
+          |""".stripMargin
       )
       _ <- assertHovers(
         "a/src/main/scala/foo/Main.worksheet.sc",
         """
-          |val x = 1  /*>  @@1  */
-          |val foo = "bar"  /*>  "b@@ar"  */
-          |println("metals")  /*>  metals  *@@/
-      """.stripMargin,
+          |val x = 1  /*>  : Int@@ = 1  */
+          |val foo = "bar"  /*>  : @@String = "bar"  */
+          |println("metals")  /*>  @@metals  */
+          |""".stripMargin,
         """x: Int = 1""".hover,
         """foo: String = "bar"""".hover,
         """// metals""".hover
@@ -69,18 +69,18 @@ class WorksheetNoDecorationsLspSuite
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/foo/Main.worksheet.sc").readText,
         """
-          |val x = 2  /*>  2  */
-          |val foo = "baz"  /*>  "baz"  */
+          |val x = 2  /*>  : Int = 2  */
+          |val foo = "baz"  /*>  : String = "baz"  */
           |println("meta ls")  /*>  meta ls  */
-        """.stripMargin
+          |""".stripMargin
       )
       _ <- assertHovers(
         "a/src/main/scala/foo/Main.worksheet.sc",
         """
-          |val x = 2  /*>  @@2  */
-          |val foo = "baz"  /*>  "b@@az"  */
-          |println("meta ls")  /*>  meta ls  *@@/
-      """.stripMargin,
+          |val x = 2  /*>  : Int @@= 2  */
+          |val foo = "baz"  /*>  : String = "baz"@@  */
+          |println("meta ls")  /*>  meta@@ ls  */
+          |""".stripMargin,
         """x: Int = 2""".hover,
         """foo: String = "baz"""".hover,
         """// meta ls""".hover
