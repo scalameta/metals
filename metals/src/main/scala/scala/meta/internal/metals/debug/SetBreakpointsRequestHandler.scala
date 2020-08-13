@@ -21,6 +21,8 @@ private[debug] final class SetBreakpointsRequestHandler(
     compilers: Compilers
 )(implicit ec: ExecutionContext) {
 
+  @volatile private var previousBreakpointUris = Set.empty[String]
+
   def apply(
       request: SetBreakpointsArguments
   ): Future[SetBreakpointsResponse] = {
@@ -53,8 +55,16 @@ private[debug] final class SetBreakpointsRequestHandler(
         case _ => None
       }
 
+      val allUris = partitions.map(_.getSource().getPath()).toSet
+      val removed = previousBreakpointUris.diff(allUris)
+      previousBreakpointUris = allUris
+
+      val requests = partitions ++ removed.map { uri =>
+        createEmptyPartition(request, uri)
+      }
+
       server
-        .sendPartitioned(partitions.map(DebugProtocol.syntheticRequest))
+        .sendPartitioned(requests.map(DebugProtocol.syntheticRequest))
         .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
         .map(_.flatMap(_.toList))
         .map(assembleResponse(_, originalSource))
@@ -76,6 +86,21 @@ private[debug] final class SetBreakpointsRequestHandler(
     val response = new SetBreakpointsResponse
     response.setBreakpoints(breakpoints.toArray)
     response
+  }
+
+  private def createEmptyPartition(
+      request: SetBreakpointsArguments,
+      uri: String
+  ) = {
+    val source = DebugProtocol.copy(request.getSource)
+    source.setPath(uri)
+
+    val partition = new SetBreakpointsArguments
+    partition.setBreakpoints(Array.empty)
+    partition.setSource(source)
+    partition.setLines(Array.empty)
+    partition.setSourceModified(request.getSourceModified)
+    partition
   }
 
   private def createPartition(
