@@ -571,36 +571,23 @@ lazy val cross = project
   )
   .dependsOn(mtest, mtags)
 
-def groupByDuration(
-    tests: Seq[TestDefinition],
-    forkOpts: ForkOptions
-): Seq[sbt.Tests.Group] = {
-  tests
-    .groupBy { test =>
-      TestGroups.testGroups.indexWhere(group => group(test.name))
-    }
-    .map {
-      case (num, tests) =>
-        val jvmOpts =
-          forkOpts.runJVMOptions.filterNot(_.startsWith("-Xmx")) :+ "-Xmx1G"
-        val options = forkOpts.withRunJVMOptions(jvmOpts)
-        new Group("group" + num, tests, SubProcess(options))
-    }
-    .toSeq
+def isInTestShard(name: String) = {
+  if (!isCI) {
+    true
+  } else {
+    val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
+    val groupId = Math.max(0, groupIndex) + 1
+    System.getenv("TEST_SHARD").toInt == groupId
+  }
 }
-
-concurrentRestrictions in Global := Seq(Tags.limitAll(if (isCI) 4 else 1))
 
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
+    Test / testOptions := Seq(Tests.Filter(name => isInTestShard(name))),
     sharedSettings,
-    Test / parallelExecution := true,
-    Test / testGrouping := groupByDuration(
-      (Test / definedTests).value,
-      forkOptions.value
-    ),
+    Test / javaOptions += "-Xmx1G",
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
