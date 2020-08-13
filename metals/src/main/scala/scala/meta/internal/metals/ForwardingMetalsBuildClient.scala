@@ -12,6 +12,7 @@ import scala.util.Success
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.WorksheetProvider
 
