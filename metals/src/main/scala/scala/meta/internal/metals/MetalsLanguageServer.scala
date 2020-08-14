@@ -1018,7 +1018,10 @@ class MetalsLanguageServer(
         Future {
           diagnostics.didDelete(path)
         }.asJava
-      } else if (isScalaOrJava && !savedFiles.isRecentlyActive(path)) {
+      } else if (
+        isScalaOrJava && !savedFiles.isRecentlyActive(path) && !buffers
+          .contains(path)
+      ) {
         event.eventType() match {
           case EventType.CREATE =>
             buildTargets.onCreate(path)
