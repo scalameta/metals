@@ -56,8 +56,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|identity(42) // 42
-           |val name = sourcecode.Name.generate.value // "name"
+        """|identity(42) // : Int = 42
+           |val name = sourcecode.Name.generate.value // : String = "name"
            |""".stripMargin
       )
     } yield ()
@@ -102,9 +102,9 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |  body(
              |    p("This is a big paragraph of text")
              |  )
-             |) // TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p", List(WrappedArray(StringFrag("This is…
+             |) // : scalatags.Text.TypedTag[String] = TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p",Li…
              |
-             |htmlFile.render // "<html><body><p>This is a big paragraph of text</p></body></html>"
+             |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
              |""".stripMargin
         )
       } yield ()
@@ -130,13 +130,12 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|
-           |import java.nio.file.Files
-           |val name = "Susan" // "Susan"
-           |val greeting = s"Hello $name" // "Hello Susan"
+        """|import java.nio.file.Files
+           |val name = "Susan" // : String = "Susan"
+           |val greeting = s"Hello $name" // : String = "Hello Susan"
            |println(greeting + "\nHow are you?") // Hello Susan…
-           |1.to(10).toVector // Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-           |val List(a, b) = List(42, 10) // a=42, b=10
+           |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+           |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
            |""".stripMargin
       )
     } yield ()
@@ -161,13 +160,12 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|
-           |import java.nio.file.Files
-           |val name = "Susan" // "Susan"
-           |val greeting = s"Hello $name" // "Hello Susan"
+        """|import java.nio.file.Files
+           |val name = "Susan" // : String = "Susan"
+           |val greeting = s"Hello $name" // : String = "Hello Susan"
            |println(greeting + "\nHow are you?") // Hello Susan…
-           |1.to(10).toVector // Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-           |val List(a, b) = List(42, 10) // a=42, b=10
+           |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+           |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
            |""".stripMargin
       )
       _ = assertNoDiff(
@@ -250,7 +248,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|
-           |val x = 42 // 42
+           |val x = 42 // : Int = 42
            |throw new RuntimeException("boom")
            |""".stripMargin
       )
@@ -358,7 +356,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDecorations,
         """
-          |a.Util.increase(1) // 2
+          |a.Util.increase(1) // : Int = 2
           |""".stripMargin
       )
       _ <- server.didSave("a/src/main/scala/a/Util.scala")(
@@ -368,7 +366,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDecorations,
         """
-          |a.Util.increase(1) // 3
+          |a.Util.increase(1) // : Int = 3
           |""".stripMargin
       )
     } yield ()
