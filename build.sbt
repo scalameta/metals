@@ -216,7 +216,7 @@ lazy val V = new {
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-24"
   val coursierInterfaces = "0.0.22"
-  val ammonite = "2.1.4-13-fb16e4e"
+  val ammonite = "2.2.0"
   val mill = "0.8.0"
 }
 
@@ -302,7 +302,7 @@ val mtagsSettings = List(
     ),
     if3 = List(
       "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.2",
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value),
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
@@ -376,14 +376,14 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.9.10",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.11",
+      "org.openjdk.jol" % "jol-core" % "0.12",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.10.0",
       // for http client
       "io.undertow" % "undertow-core" % "2.1.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.1.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.5.3",
+      "org.flywaydb" % "flyway-core" % "6.5.4",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.1",
