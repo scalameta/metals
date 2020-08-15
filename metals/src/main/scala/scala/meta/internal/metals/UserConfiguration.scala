@@ -122,7 +122,7 @@ object UserConfiguration {
         "false",
         "false",
         "Don't generate Bloop plugin file for sbt",
-        "If true, Metals will not generate a `project/metals.sbt` file under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
+        "If true, Metals will not generate `metals.sbt` files under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
       ),
       UserConfigurationOption(
         "bloop-version",

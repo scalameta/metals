@@ -13,7 +13,6 @@ specific sections.
 
 ```
 
-
 ## Editor support
 
 Metals works with the following text editors with varying degree of
@@ -402,6 +401,134 @@ The Metals language server supports custom extensions that are not part of the
 Language Server Protocol (LSP). These extensions are not necessary for Metals to
 function but they improve the user experience. To learn more about Metals
 extensions, see [integrating a new editor](new-editor.md).
+
+## Additional file types
+
+Not all features are supported in all possible scenarios, espacially when it
+comes to non-standard Scala files like Ammonite scripts, worksheets or sbt
+scripts.
+
+<table>
+<thead>
+  <tr>
+    <td />
+    <td align="center">Sbt scripts</td>
+    <td align="center">Worksheets</td>
+    <td align="center">Ammonite scripts</td>
+    <td align="center">Standalone Scala files</td>
+  </tr>
+</thead>
+<tbody>
+   <tr>
+    <td>Diagnostics</td>
+    <td align="center">✅*</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅*</td>
+  </tr>
+  <tr>
+    <td>Goto definition</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Completions</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Hover</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Parameter hints</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Find references</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Run/Debug</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Find implementations</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Rename symbol</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Code actions</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Document symbols</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Workspace symbols</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Formatting</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Folding</td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Highlight</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+  </tr>
+</tbody>
+</table>
+
+\* Diagnostics for Sbt script and standalone Scala files will only show parsing
+errors, but not diagnostics coming from the compiler.
 
 ## Unsupported features
 
