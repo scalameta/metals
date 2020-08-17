@@ -2,9 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.FileWriter
 import java.net.URLEncoder
-import java.util.Collections.singletonList
 
-import scala.io.Source
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -16,8 +14,9 @@ import org.eclipse.{lsp4j => l}
 
 class StacktraceAnalyzer(
     workspace: AbsolutePath,
+    buffers: Buffers,
     definitionProvider: DefinitionProvider,
-    gotoicon: String,
+    icons: Icons,
     commandsInHtmlSupported: Boolean
 ) {
 
@@ -28,52 +27,17 @@ class StacktraceAnalyzer(
       .flatMap(analyzeStackTrace)
   }
 
-  def matches(path: AbsolutePath): Boolean =
+  def isStackTraceFile(path: AbsolutePath): Boolean =
     path == workspace.resolve(Directories.stacktrace)
 
-  def highlight(
-      path: AbsolutePath,
-      lineNumber: Int
-  ): java.util.List[l.DocumentHighlight] = {
-    val lineOpt = readStacktraceFileLine(path, lineNumber)
-    lineOpt match {
-      case Some(line) =>
-        val from = new l.Position(lineNumber, line.indexOf("at ") + 3)
-        val to = new l.Position(lineNumber, line.indexOf("("))
-        val range = new l.Range(from, to)
-        singletonList(
-          new l.DocumentHighlight(range, l.DocumentHighlightKind.Read)
-        )
-      case None =>
-        java.util.Collections.emptyList()
-    }
-  }
-
   def stacktraceLenses(path: AbsolutePath): Seq[l.CodeLens] = {
-    stacktraceLenses(readStacktraceFile(path))
+    readStacktraceFile(path)
+      .map(stacktraceLenses)
+      .getOrElse(Seq.empty)
   }
 
-  private def readStacktraceFileLine(
-      path: AbsolutePath,
-      lineNumber: Int
-  ): Option[String] =
-    readStacktraceFile(path).drop(lineNumber).headOption
-
-  private def readStacktraceFile(path: AbsolutePath): List[String] = {
-    Source.fromFile(path.toString).getLines().toList
-  }
-
-  def definition(
-      path: AbsolutePath,
-      position: l.Position
-  ): java.util.List[Location] = {
-    val lineOpt = readStacktraceFileLine(path, position.getLine)
-    lineOpt match {
-      case Some(line) =>
-        getSymbolLocationFromLine(line).toList.asJava
-      case None =>
-        java.util.Collections.emptyList()
-    }
+  private def readStacktraceFile(path: AbsolutePath): Option[List[String]] = {
+    buffers.get(path).map(_.split('\n').toList)
   }
 
   private def adjustPosition(lineNumber: Int, pos: l.Position): Unit = {
@@ -83,7 +47,8 @@ class StacktraceAnalyzer(
 
   private def tryGetLineNumberFromStacktrace(line: String): Try[Int] = {
     Try(
-      // number is 1-based, but editors are 0-based
+      // stacktrace line numbers are 1-based but line numbers in LSP protocol are 0-based.
+      // line number from stacktrace will be used in LSP message that's why "-1"
       Integer.valueOf(
         line.substring(line.indexOf(":") + 1, line.indexOf(")"))
       ) - 1
@@ -114,7 +79,7 @@ class StacktraceAnalyzer(
     new l.CodeLens(
       range,
       new l.Command(
-        s"$gotoicon open",
+        s"${icons.findsuper} open",
         ServerCommands.GotoLocationForPosition.id,
         List[Object](location: Object, java.lang.Boolean.TRUE).asJava
       ),
@@ -129,9 +94,10 @@ class StacktraceAnalyzer(
       Some(makeHtmlCommandParams(stacktrace))
     } else {
       val path = workspace.resolve(Directories.stacktrace)
-      val pathStr = path.toFile.toString
+      val pathFile = path.toFile
+      val pathStr = pathFile.toString
 
-      path.toFile.createNewFile()
+      pathFile.createNewFile()
       val fw = new FileWriter(pathStr)
       try {
         fw.write(stacktrace)

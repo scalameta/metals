@@ -79,7 +79,8 @@ object ClientExperimentalCapabilities {
       executeClientCommandProvider =
         jsonObj.getBooleanOption("executeClientCommandProvider"),
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
-      isCommandInHtmlSupported = jsonObj.getBooleanOption("isCommandInHtmlSupported"),
+      isCommandInHtmlSupported =
+        jsonObj.getBooleanOption("isCommandInHtmlSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
