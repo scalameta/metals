@@ -919,7 +919,11 @@ class MetalsLanguageServer(
       // reliable way to await until those notifications appear.
       for {
         item <- buildTargets.scalacOptions(report.getTarget())
-        semanticdb = item.targetroot.resolve(Directories.semanticdb)
+        scalaInfo <- buildTargets.scalaInfo(report.getTarget)
+        semanticdb =
+          item
+            .targetroot(scalaInfo.getScalaVersion)
+            .resolve(Directories.semanticdb)
         generatedFile <- semanticdb.listRecursive
       } {
         val event =

@@ -94,14 +94,19 @@ final class FileWatcher(
     buildTargets.sourceRoots.foreach(watch(_, isSource = true))
     buildTargets.sourceItems.foreach(watch(_, isSource = true))
     buildTargets.scalacOptions.foreach { item =>
-      val targetroot = item.targetroot
-      if (!targetroot.isJar) {
-        // Watch META-INF/semanticdb directories for "find references" index.
-        watch(
-          targetroot.resolve(Directories.semanticdb),
-          isSource = false
-        )
+      for {
+        scalaInfo <- buildTargets.scalaInfo(item.getTarget)
+      } {
+        val targetroot = item.targetroot(scalaInfo.getScalaVersion)
+        if (!targetroot.isJar) {
+          // Watch META-INF/semanticdb directories for "find references" index.
+          watch(
+            targetroot.resolve(Directories.semanticdb),
+            isSource = false
+          )
+        }
       }
+
     }
     startWatching(
       directories = sourceDirectoriesToWatch.toSet,

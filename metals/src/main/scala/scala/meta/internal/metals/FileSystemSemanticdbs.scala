@@ -31,11 +31,11 @@ final class FileSystemSemanticdbs(
 
       val paths = for {
         buildTarget <- buildTargets.inverseSources(file)
-        info <- buildTargets.info(buildTarget)
+        scalaInfo <- buildTargets.scalaInfo(buildTarget)
         workspace <- buildTargets.workspaceDirectory(buildTarget)
         scalacOptions <- buildTargets.scalacOptions(buildTarget)
       } yield {
-        (workspace, scalacOptions.targetroot)
+        (workspace, scalacOptions.targetroot(scalaInfo.getScalaVersion))
       }
 
       paths match {

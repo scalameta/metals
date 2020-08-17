@@ -572,10 +572,20 @@ object MetalsEnrichments
         .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
         .filter(p => Files.exists(p.toNIO))
     }
-    def targetroot: AbsolutePath = {
-      semanticdbFlag("targetroot")
-        .map(AbsolutePath(_))
-        .getOrElse(item.getClassDirectory.toAbsolutePath)
+    def targetroot(scalaVersion: String): AbsolutePath = {
+      if (ScalaVersions.isScala3Version(scalaVersion)) {
+        val options = item.getOptions.asScala
+        val targetOption = if (options.contains("-semanticdb-target")) {
+          val index = options.indexOf("-semanticdb-target") + 1
+          if (options.size > index) Some(AbsolutePath(options(index)))
+          else None
+        } else None
+        targetOption.getOrElse(item.getClassDirectory.toAbsolutePath)
+      } else {
+        semanticdbFlag("targetroot")
+          .map(AbsolutePath(_))
+          .getOrElse(item.getClassDirectory.toAbsolutePath)
+      }
     }
 
     def isSemanticdbEnabled(scalaVersion: String): Boolean = {
