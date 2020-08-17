@@ -85,6 +85,20 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
     }
   }
 
+  def removeBreakpoints(
+      debugger: TestDebugger,
+      workspace: DebugWorkspaceLayout
+  ): Future[List[SetBreakpointsResponse]] = {
+    Future.sequence {
+      workspace.files
+        .filter(_.breakpoints.nonEmpty)
+        .map { file =>
+          val path = server.toPath(file.relativePath)
+          debugger.setBreakpoints(path, Nil)
+        }
+    }
+  }
+
   def scalaVersion = BuildInfo.scalaVersion
 
   def assertBreakpoints(
