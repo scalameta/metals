@@ -14,7 +14,7 @@ final class CodeLensProvider(
 ) {
   // code lenses will be refreshed after compilation or when workspace gets indexed
   def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
-    if (stacktraceAnalyzer.matches(path)) {
+    if (stacktraceAnalyzer.isStackTraceFile(path)) {
       stacktraceAnalyzer.stacktraceLenses(path)
     } else {
       semanticdbs

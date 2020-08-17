@@ -40,7 +40,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
-import scala.meta.internal.metals.config.DoctorFormat
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.mtags._
@@ -435,8 +435,9 @@ class MetalsLanguageServer(
 
     stacktraceAnalyzer = new StacktraceAnalyzer(
       workspace,
+      buffers,
       definitionProvider,
-      clientConfig.icons.findsuper,
+      clientConfig.icons,
       clientConfig.isCommandInHtmlSupported
     )
 
@@ -791,43 +792,43 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (stacktraceAnalyzer.matches(path)) {
+    if (stacktraceAnalyzer.isStackTraceFile(path)) {
       CompletableFuture.completedFuture(())
     } else {
-    focusedDocument = Some(path)
-    openedFiles.add(path)
+      focusedDocument = Some(path)
+      openedFiles.add(path)
 
-    // Update md5 fingerprint from file contents on disk
-    fingerprints.add(path, FileIO.slurp(path, charset))
-    // Update in-memory buffer contents from LSP client
-    buffers.put(path, params.getTextDocument.getText)
-    val didChangeFuture = compilers.didChange(path)
+      // Update md5 fingerprint from file contents on disk
+      fingerprints.add(path, FileIO.slurp(path, charset))
+      // Update in-memory buffer contents from LSP client
+      buffers.put(path, params.getTextDocument.getText)
+      val didChangeFuture = compilers.didChange(path)
 
-    packageProvider
-      .workspaceEdit(path)
-      .map(new ApplyWorkspaceEditParams(_))
-      .foreach(languageClient.applyEdit)
+      packageProvider
+        .workspaceEdit(path)
+        .map(new ApplyWorkspaceEditParams(_))
+        .foreach(languageClient.applyEdit)
 
-    if (path.isDependencySource(workspace)) {
-      CancelTokens { _ =>
-        // trigger compilation in preparation for definition requests
-        interactiveSemanticdbs.textDocument(path)
-        // publish diagnostics
-        interactiveSemanticdbs.didFocus(path)
-        ()
+      if (path.isDependencySource(workspace)) {
+        CancelTokens { _ =>
+          // trigger compilation in preparation for definition requests
+          interactiveSemanticdbs.textDocument(path)
+          // publish diagnostics
+          interactiveSemanticdbs.didFocus(path)
+          ()
+        }
+      } else {
+        if (path.isAmmoniteScript)
+          ammonite.maybeImport(path)
+        val loadFuture = compilers.load(List(path))
+        val compileFuture =
+          compilations.compileFile(path)
+        Future
+          .sequence(List(didChangeFuture, loadFuture, compileFuture))
+          .ignoreValue
+          .asJava
       }
-    } else {
-      if (path.isAmmoniteScript)
-        ammonite.maybeImport(path)
-      val loadFuture = compilers.load(List(path))
-      val compileFuture =
-        compilations.compileFile(path)
-      Future
-        .sequence(List(didChangeFuture, loadFuture, compileFuture))
-        .ignoreValue
-        .asJava
     }
-  }
   }
 
   @JsonNotification("metals/didFocusTextDocument")
@@ -1086,14 +1087,7 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
-      val path = position.getTextDocument.getUri.toAbsolutePath
-      if (stacktraceAnalyzer.matches(path)) {
-        Future.successful {
-          stacktraceAnalyzer.definition(path, position.getPosition())
-        }
-      } else {
-        definitionOrReferences(position, token).map(_.locations)
-      }
+      definitionOrReferences(position, token).map(_.locations)
     }
 
   @JsonRequest("textDocument/typeDefinition")
@@ -1134,12 +1128,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
     CancelTokens { _ =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      if (stacktraceAnalyzer.matches(path)) {
-        stacktraceAnalyzer.highlight(path, params.getPosition().getLine())
-      } else {
-        documentHighlightProvider.documentHighlight(params)
-      }
+      documentHighlightProvider.documentHighlight(params)
     }
 
   @JsonRequest("textDocument/documentSymbol")

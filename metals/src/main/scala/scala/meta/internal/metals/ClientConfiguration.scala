@@ -43,9 +43,11 @@ class ClientConfiguration(
     )
 
   def isCommandInHtmlSupported(): Boolean =
-    extract(initializationOptions.isCommandInHtmlSupported,
+    extract(
+      initializationOptions.isCommandInHtmlSupported,
       experimentalCapabilities.isCommandInHtmlSupported,
-      initialConfig.isCommandInHtmlSupported)
+      initialConfig.isCommandInHtmlSupported
+    )
 
   def icons(): Icons =
     initializationOptions.icons

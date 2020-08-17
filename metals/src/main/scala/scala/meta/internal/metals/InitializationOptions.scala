@@ -121,7 +121,8 @@ object InitializationOptions {
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
       isExitOnShutdown = jsonObj.getBooleanOption("isExitOnShutdown"),
       isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled"),
-      isCommandInHtmlSupported = jsonObj.getBooleanOption("isCommandInHtmlSupported"),
+      isCommandInHtmlSupported =
+        jsonObj.getBooleanOption("isCommandInHtmlSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
