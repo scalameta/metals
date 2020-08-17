@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.util.control.NonFatal
+
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.TextDocuments
@@ -70,9 +72,14 @@ class SemanticdbIndexer(
   def onChange(file: Path): Unit = {
     if (!Files.isDirectory(file)) {
       if (file.isSemanticdb) {
-        val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
-        referenceProvider.onChange(doc, file)
-        implementationProvider.onChange(doc, file)
+        try {
+          val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
+          referenceProvider.onChange(doc, file)
+          implementationProvider.onChange(doc, file)
+        } catch {
+          case NonFatal(e) =>
+            scribe.warn(s"unexpected error processing the file $file", e)
+        }
       } else {
         scribe.warn(s"not a semanticdb file: $file")
       }
