@@ -132,6 +132,84 @@ As you type, the symbol outline is also visible at the top of the file.
 
 ```
 
+## Running and debugging your code
+
+Metals supports running and debugging tests and main methods via the
+[Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
+The protocol is used to communicate between the editor and debugger, which means
+that applications can be run the same as for any other language in the natively
+supported `Run` view. When using Metals the debugger itself is
+[Bloop](https://scalacenter.github.io/bloop/), which is also responsible for
+starting the actual process.
+
+Users can begin the debugging session in two ways:
+
+### via code lenses
+
+![lenses](https://i.imgur.com/5nTnrcS.png)
+
+For each main or test class Metals shows two code lenses `run | debug` or
+`test | test debug`, which show up above the definition as a kind of virtual
+text. Clicking `run` or `test` will start running the main class or test without
+stopping at any breakpoints, while clicking `debug` or `test debug` will pause
+once any of them are hit. It's not possible to add any arguments or java
+properties when running using this method.
+
+### via a `launch.json` configuration
+
+Visual Studio Code uses `.vscode/launch.json` to store user defined
+configurations, which can be run using:
+
+- The `Run -> Start Debugging` menu item or `workbench.action.debug.start`
+  shortcut.
+- The `Run -> Run Without Debugging` menu item or `workbench.action.debug.run`
+  shortcut.
+
+If a user doesn't have anything yet saved, a configuration wizard will pop up to
+guide them. In the end users should end up with something like this:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    // Main class configuration
+    {
+      "type": "scala",
+      "request": "launch",
+      // configuration name visible for the user
+      "name": "Main class",
+      // full name of the class to run
+      "mainClass": "com.example.Main",
+      // optional arguments for the main class
+      "args": [],
+      // optional jvm properties to use
+      "jvmOptions": [],
+      // optional build target name in case there more than one
+      // class with the same name
+      "buildTarget": "root"
+    },
+    // Test class configuration
+    {
+      "type": "scala",
+      "request": "launch",
+      // configuration name visible for the user
+      "name": "Test class",
+      // full name of the class to run
+      "testClass": "com.example.Test",
+      // optional jvm properties to use
+      "jvmOptions": [],
+      // optional build target name in case there more than one
+      // class with the same name
+      "buildTarget": "root"
+    }
+  ]
+}
+```
+
+Multiple configurations can be stored in that file and can be chosen either
+manually in the `Run` view or can be picked by invoking a shortcut defined under
+`workbench.action.debug.selectandstart`.
+
 ## On type formatting for multiline string formatting
 
 ![on-type](https://imgur.com/a0O2vCs.gif)
@@ -156,6 +234,7 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 ![format-on-paste-setting](https://i.imgur.com/rMrk27F.png)
 
 ```scala mdoc:worksheet:vscode
+
 ```
 
 ## Coming from IntelliJ
