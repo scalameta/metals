@@ -131,7 +131,10 @@ final class TestDebugger(
       case Category.STDOUT =>
         output.append(event.getOutput)
       case Category.STDERR =>
-        fail(new IllegalStateException(event.getOutput))
+        val output = event.getOutput()
+        // This might sometimes be printed in the JVM, but does not cause any actual issues
+        if (!output.contains("Picked up JAVA_TOOL_OPTIONS"))
+          fail(new IllegalStateException(output))
       case _ =>
       // ignore
     }
