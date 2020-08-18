@@ -1,7 +1,7 @@
 import scala.collection.mutable
 import scala.sys.process._
 
-def localSnapshotVersion = "0.9.3-SNAPSHOT"
+def localSnapshotVersion = "0.9.4-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))

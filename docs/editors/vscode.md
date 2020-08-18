@@ -196,8 +196,6 @@ guide them. In the end users should end up with something like this:
       "name": "Test class",
       // full name of the class to run
       "testClass": "com.example.Test",
-      // optional jvm properties to use
-      "jvmOptions": [],
       // optional build target name in case there more than one
       // class with the same name
       "buildTarget": "root"
