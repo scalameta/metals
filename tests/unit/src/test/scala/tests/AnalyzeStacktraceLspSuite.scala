@@ -11,7 +11,7 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
       """|package a.b
          |
          |object Main {
-         |<<5>>  def main(args: Array[String]): Unit = {
+         |  def main(args: Array[String]): Unit = {
          |<<4>>    new ClassError().raise
          |  }
          |}
