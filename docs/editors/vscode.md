@@ -29,7 +29,7 @@ Install the Metals extension from the
 
 Next, open a directory containing your Scala code. The extension activates when
 the main directory contains `build.sbt` or `build.sc` file, a Scala file is
-opened, which insludes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala
+opened, which includes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala
 directory structure `src/main/scala` is detected.
 
 ```scala mdoc:editor:vscode
