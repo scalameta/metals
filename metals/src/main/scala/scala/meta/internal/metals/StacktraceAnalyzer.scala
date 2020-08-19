@@ -6,6 +6,7 @@ import java.net.URLEncoder
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StacktraceAnalyzer._
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonPrimitive
@@ -53,14 +54,6 @@ class StacktraceAnalyzer(
         line.substring(line.indexOf(":") + 1, line.indexOf(")"))
       ) - 1
     )
-  }
-
-  private def convert(symbol: String): String = {
-    val components =
-      symbol.split('.').map(_.replace("$", "").replace("<init>", "init")).toList
-    val scope = components.dropRight(1)
-    val method = components.last
-    scope.mkString("/") ++ "." ++ method ++ "()."
   }
 
   def stacktraceLenses(content: List[String]): Seq[l.CodeLens] = {
@@ -122,15 +115,17 @@ class StacktraceAnalyzer(
 
   private def getSymbolLocationFromLine(line: String): Option[l.Location] = {
     val symbol = getSymbolFromLine(line)
-    definitionProvider.fromSymbol(convert(symbol)).asScala.headOption.map {
-      location =>
+    convert(symbol)
+      .flatMap(s => definitionProvider.fromSymbol(s).asScala.headOption)
+      .headOption
+      .map { location =>
         val lineNumberOpt = tryGetLineNumberFromStacktrace(line)
         lineNumberOpt.foreach { lineNumber =>
           adjustPosition(lineNumber, location.getRange().getStart())
           adjustPosition(lineNumber, location.getRange().getEnd())
         }
         location
-    }
+      }
   }
 
   private def getSymbolFromLine(line: String): String = {
@@ -190,4 +185,27 @@ class StacktraceAnalyzer(
       stacktrace = arg.getAsString()
     } yield stacktrace
   }
+}
+
+object StacktraceAnalyzer {
+
+  def convert(symbolIn: String): List[String] = {
+    def removeMethodPartFromSymbol(s: String) = s.split('.').init.mkString("/")
+    val symbol = removeMethodPartFromSymbol(symbolIn)
+    if (symbol.contains('$')) {
+      // if $ is only at the end we know it is object => append '.'
+      // if $ is in the middle we don't know, we will try to treat it as class/trait first
+      // but in case nothing is found we will retry as object
+      val dollarPos = symbol.indexOf('$')
+      val s = symbol.substring(0, dollarPos)
+      if (symbol.size - 1 == dollarPos) {
+        List(s :+ '.')
+      } else {
+        List(s :+ '#', s :+ '.')
+      }
+    } else {
+      List(symbol :+ '#')
+    }
+  }
+
 }
