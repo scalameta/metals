@@ -92,12 +92,14 @@ example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.</li>
 <li><p>While waiting for Travis, draft the release notes:</p>
 <ul>
 <li>Copy <code>website/blog/2018-12-06-iron.md</code> as a template</li>
-<li>You might use <code>.bin/release_notes.sc</code> script to generate merged PRs list. It
-can be run using ammonite:</li>
+<li>You might use <code>./bin/merged_prs.sc</code> script to generate merged PRs list
+between two last release tags. It can be run using ammonite:</li>
 </ul>
-<pre><code class="hljs">cs <span class="hljs-keyword">install </span>ammonite
-amm <span class="hljs-keyword">bin/release_notes.sc
-</span></code></pre>
+<pre><code class="hljs">cs install ammonite
+amm .<span class="hljs-meta-keyword">/bin/</span>merged_prs.sc <span class="hljs-params">&lt;tag1&gt;</span> <span class="hljs-params">&lt;tag2&gt;</span> <span class="hljs-string">"&lt;github_api_token&gt;"</span>
+</code></pre>
+<p>It will need a basic github API token to run, which may be specified via
+environment variable <code>GITHUB_TOKEN</code> or via the last argument.</p>
 <ul>
 <li>Update Metals SNAPSHOT version in <code>build.sbt</code> and the default version in
 Github issue templates.</li>
