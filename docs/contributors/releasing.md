@@ -33,13 +33,16 @@ title: Making a release
 - While waiting for Travis, draft the release notes:
 
   - Copy `website/blog/2018-12-06-iron.md` as a template
-  - You might use `.bin/release_notes.sc` script to generate merged PRs list. It
-    can be run using ammonite:
+  - You might use `./bin/merged_prs.sc` script to generate merged PRs list
+    between two last release tags. It can be run using ammonite:
 
   ```
   cs install ammonite
-  amm bin/release_notes.sc
+  amm ./bin/merged_prs.sc <tag1> <tag2> "<github_api_token>"
   ```
+
+  It will need a basic github API token to run, which may be specified via
+  environment variable `GITHUB_TOKEN` or via the last argument.
 
   - Update Metals SNAPSHOT version in `build.sbt` and the default version in
     Github issue templates.
