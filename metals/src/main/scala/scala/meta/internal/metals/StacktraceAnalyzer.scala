@@ -41,7 +41,7 @@ class StacktraceAnalyzer(
     buffers.get(path).map(_.split('\n').toList)
   }
 
-  private def adjustPosition(lineNumber: Int, pos: l.Position): Unit = {
+  private def setToLineStart(lineNumber: Int, pos: l.Position): Unit = {
     pos.setLine(lineNumber)
     pos.setCharacter(0)
   }
@@ -60,7 +60,7 @@ class StacktraceAnalyzer(
     (for {
       (line, row) <- content.zipWithIndex
       if line.trim.startsWith("at ")
-      location <- getSymbolLocationFromLine(line)
+      location <- fileLocationFromLine(line)
       range = new l.Range(new l.Position(row, 0), new l.Position(row, 0))
     } yield makeGotoLocationCodeLens(location, range)).toSeq
   }
@@ -73,7 +73,7 @@ class StacktraceAnalyzer(
       range,
       new l.Command(
         s"${icons.findsuper} open",
-        ServerCommands.GotoLocationForPosition.id,
+        ServerCommands.GotoPosition.id,
         List[Object](location: Object, java.lang.Boolean.TRUE).asJava
       ),
       null
@@ -93,14 +93,14 @@ class StacktraceAnalyzer(
       pathFile.createNewFile()
       val fw = new FileWriter(pathStr)
       try {
-        fw.write(stacktrace)
+        fw.write(s"/*\n$stacktrace\n*/")
       } finally {
         fw.close()
       }
-      val pos = new l.Position(0, 0)
-      val range = new l.Range(pos, pos)
-      val location = new l.Location(pathStr, range)
-      Some(makeGotoCommandParams(location))
+      val fileStartPos = new l.Position(0, 0)
+      val range = new l.Range(fileStartPos, fileStartPos)
+      val stackTraceLocation = new l.Location(pathStr, range)
+      Some(makeGotoCommandParams(stackTraceLocation))
     }
   }
 
@@ -113,22 +113,28 @@ class StacktraceAnalyzer(
     )
   }
 
-  private def getSymbolLocationFromLine(line: String): Option[l.Location] = {
-    val symbol = getSymbolFromLine(line)
-    convert(symbol)
-      .flatMap(s => definitionProvider.fromSymbol(s).asScala.headOption)
-      .headOption
-      .map { location =>
-        val lineNumberOpt = tryGetLineNumberFromStacktrace(line)
-        lineNumberOpt.foreach { lineNumber =>
-          adjustPosition(lineNumber, location.getRange().getStart())
-          adjustPosition(lineNumber, location.getRange().getEnd())
-        }
-        location
-      }
+  private def trySetLineFromStacktrace(
+      location: Location,
+      line: String
+  ): Location = {
+    val lineNumberOpt = tryGetLineNumberFromStacktrace(line)
+    lineNumberOpt.foreach { lineNumber =>
+      setToLineStart(lineNumber, location.getRange().getStart())
+      setToLineStart(lineNumber, location.getRange().getEnd())
+    }
+    location
   }
 
-  private def getSymbolFromLine(line: String): String = {
+  private def fileLocationFromLine(line: String): Option[l.Location] = {
+    def findLocationForSymbol(s: String): Option[Location] =
+      definitionProvider.fromSymbol(s).asScala.headOption
+
+    toToplevelSymbol(symbolFromLine(line))
+      .collectFirst(Function.unlift(findLocationForSymbol))
+      .map(location => trySetLineFromStacktrace(location, line))
+  }
+
+  private def symbolFromLine(line: String): String = {
     line.substring(line.indexOf("at ") + 3, line.indexOf("("))
   }
 
@@ -138,7 +144,7 @@ class StacktraceAnalyzer(
     def htmlStack(builder: HtmlBuilder): Unit = {
       for (line <- stacktrace.split('\n')) {
         if (line.contains("at ")) {
-          getSymbolLocationFromLine(line) match {
+          fileLocationFromLine(line) match {
             case Some(location) =>
               builder
                 .text("at ")
@@ -179,8 +185,7 @@ class StacktraceAnalyzer(
   ): Option[String] = {
     for {
       args <- Option(commandParams.getArguments)
-      argObject <- args.asScala.headOption
-      arg = argObject.asInstanceOf[JsonPrimitive]
+      arg <- args.asScala.lift(0).collect { case js: JsonPrimitive => js }
       if arg.isString()
       stacktrace = arg.getAsString()
     } yield stacktrace
@@ -189,9 +194,8 @@ class StacktraceAnalyzer(
 
 object StacktraceAnalyzer {
 
-  def convert(symbolIn: String): List[String] = {
-    def removeMethodPartFromSymbol(s: String) = s.split('.').init.mkString("/")
-    val symbol = removeMethodPartFromSymbol(symbolIn)
+  def toToplevelSymbol(symbolIn: String): List[String] = {
+    val symbol = symbolIn.split('.').init.mkString("/")
     if (symbol.contains('$')) {
       // if $ is only at the end we know it is object => append '.'
       // if $ is in the middle we don't know, we will try to treat it as class/trait first

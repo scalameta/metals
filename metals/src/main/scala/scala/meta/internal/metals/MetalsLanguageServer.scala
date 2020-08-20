@@ -792,42 +792,38 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (stacktraceAnalyzer.isStackTraceFile(path)) {
-      CompletableFuture.completedFuture(())
-    } else {
-      focusedDocument = Some(path)
-      openedFiles.add(path)
+    focusedDocument = Some(path)
+    openedFiles.add(path)
 
-      // Update md5 fingerprint from file contents on disk
-      fingerprints.add(path, FileIO.slurp(path, charset))
-      // Update in-memory buffer contents from LSP client
-      buffers.put(path, params.getTextDocument.getText)
-      val didChangeFuture = compilers.didChange(path)
+    // Update md5 fingerprint from file contents on disk
+    fingerprints.add(path, FileIO.slurp(path, charset))
+    // Update in-memory buffer contents from LSP client
+    buffers.put(path, params.getTextDocument.getText)
+    val didChangeFuture = compilers.didChange(path)
 
-      packageProvider
-        .workspaceEdit(path)
-        .map(new ApplyWorkspaceEditParams(_))
-        .foreach(languageClient.applyEdit)
+    packageProvider
+      .workspaceEdit(path)
+      .map(new ApplyWorkspaceEditParams(_))
+      .foreach(languageClient.applyEdit)
 
-      if (path.isDependencySource(workspace)) {
-        CancelTokens { _ =>
-          // trigger compilation in preparation for definition requests
-          interactiveSemanticdbs.textDocument(path)
-          // publish diagnostics
-          interactiveSemanticdbs.didFocus(path)
-          ()
-        }
-      } else {
-        if (path.isAmmoniteScript)
-          ammonite.maybeImport(path)
-        val loadFuture = compilers.load(List(path))
-        val compileFuture =
-          compilations.compileFile(path)
-        Future
-          .sequence(List(didChangeFuture, loadFuture, compileFuture))
-          .ignoreValue
-          .asJava
+    if (path.isDependencySource(workspace)) {
+      CancelTokens { _ =>
+        // trigger compilation in preparation for definition requests
+        interactiveSemanticdbs.textDocument(path)
+        // publish diagnostics
+        interactiveSemanticdbs.didFocus(path)
+        ()
       }
+    } else {
+      if (path.isAmmoniteScript)
+        ammonite.maybeImport(path)
+      val loadFuture = compilers.load(List(path))
+      val compileFuture =
+        compilations.compileFile(path)
+      Future
+        .sequence(List(didChangeFuture, loadFuture, compileFuture))
+        .ignoreValue
+        .asJava
     }
   }
 
@@ -1127,9 +1123,7 @@ class MetalsLanguageServer(
   def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens { _ =>
-      documentHighlightProvider.documentHighlight(params)
-    }
+    CancelTokens { _ => documentHighlightProvider.documentHighlight(params) }
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
@@ -1377,7 +1371,7 @@ class MetalsLanguageServer(
         Future {
           compilers.restartAll()
         }.asJavaObject
-      case ServerCommands.GotoLocationForPosition() =>
+      case ServerCommands.GotoPosition() =>
         Future {
           // arguments are not checked but are of format:
           // singletonList(location: Location, otherWindow: Boolean)
@@ -1389,7 +1383,7 @@ class MetalsLanguageServer(
           )
         }.asJavaObject
 
-      case ServerCommands.GotoLocationForSymbol() =>
+      case ServerCommands.GotoSymbol() =>
         Future {
           for {
             args <- Option(params.getArguments())
@@ -1474,8 +1468,7 @@ class MetalsLanguageServer(
       case ServerCommands.ResetChoicePopup() =>
         val argsMaybe = Option(params.getArguments())
         (argsMaybe.flatMap(_.asScala.headOption) match {
-          case Some(argObject: JsonPrimitive) =>
-            val arg = argObject.asInstanceOf[JsonPrimitive]
+          case Some(arg: JsonPrimitive) =>
             val value = arg.getAsString().replace("+", " ")
             scribe.debug(
               s"Executing ResetChoicePopup ${command} for choice ${value}"
