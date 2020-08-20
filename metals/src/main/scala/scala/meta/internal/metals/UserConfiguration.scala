@@ -18,8 +18,6 @@ import com.google.gson.JsonPrimitive
 
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
- *
- * @param javaHome The Java home location used to detect src.zip for JDK sources.
  */
 case class UserConfiguration(
     javaHome: Option[String] = None,
@@ -37,7 +35,8 @@ case class UserConfiguration(
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None,
-    enableStripMarginOnTypeFormatting: Boolean = true
+    enableStripMarginOnTypeFormatting: Boolean = true,
+    excludedPackages: List[String] = ExcludedPackages.default
 ) {
 
   def currentBloopVersion: String =
@@ -116,6 +115,13 @@ object UserConfiguration {
         """|Optional list of JVM properties to pass along to the Ammonite server. 
            |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`" 
            |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "excluded-packages",
+        default.excludedPackages.mkString("\n"),
+        """["akka.actor.typed.javadsl"]""",
+        "Excluded Packages",
+        "Packages that will be excluded from completions, imports, and symbol searches."
       ),
       UserConfigurationOption(
         "bloop-sbt-already-installed",
@@ -297,6 +303,8 @@ object UserConfiguration {
       getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
+    val excludedPackages =
+      getStringListKey("excluded-packages").getOrElse(default.excludedPackages)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -314,7 +322,8 @@ object UserConfiguration {
           ammoniteProperties,
           superMethodLensesEnabled,
           remoteLanguageServer,
-          enableStripMarginOnTypeFormatting
+          enableStripMarginOnTypeFormatting,
+          excludedPackages
         )
       )
     } else {

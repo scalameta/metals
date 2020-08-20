@@ -419,6 +419,7 @@ class Compilers(
             classpath.map(AbsolutePath(_)),
             sources.map(AbsolutePath(_)),
             buffers,
+            userConfig().excludedPackages,
             workspaceFallback = Some(search)
           )
           newCompiler(scalac, scalaTarget, classpath, worksheetSearch)

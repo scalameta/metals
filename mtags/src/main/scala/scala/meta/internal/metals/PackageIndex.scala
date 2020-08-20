@@ -121,15 +121,15 @@ class PackageIndex() {
     }
   }
 
-  def visitBootClasspath(): Unit = {
+  def visitBootClasspath(excludedPackages: List[String]): Unit = {
     if (Properties.isJavaAtLeast("9")) {
-      expandJrtClasspath()
+      expandJrtClasspath(excludedPackages)
     } else {
       PackageIndex.bootClasspath.foreach(visit)
     }
   }
 
-  private def expandJrtClasspath(): Unit = {
+  private def expandJrtClasspath(excludedPackages: List[String]): Unit = {
     val fs = FileSystems.getFileSystem(URI.create("jrt:/"))
     val dir = fs.getPath("/packages")
     for {
@@ -151,7 +151,13 @@ class PackageIndex() {
           ): FileVisitResult = {
             activeDirectory =
               module.relativize(dir).iterator().asScala.mkString("", "/", "/")
-            if (CompressedPackageIndex.isExcludedPackage(activeDirectory)) {
+            //if (CompressedPackageIndex.isExcludedPackage(activeDirectory)) {
+            val ex = excludedPackages.map(_.replace(".", "/"))
+            if (
+              ex.collect {
+                case x if activeDirectory.startsWith(x) => x
+              }.nonEmpty
+            ) {
               FileVisitResult.SKIP_SUBTREE
             } else {
               FileVisitResult.CONTINUE
@@ -175,9 +181,12 @@ class PackageIndex() {
 }
 
 object PackageIndex {
-  def fromClasspath(classpath: collection.Seq[Path]): PackageIndex = {
+  def fromClasspath(
+      classpath: collection.Seq[Path],
+      excludedPackages: List[String]
+  ): PackageIndex = {
     val packages = new PackageIndex()
-    packages.visitBootClasspath()
+    packages.visitBootClasspath(excludedPackages)
     classpath.foreach { path => packages.visit(AbsolutePath(path)) }
     packages
   }

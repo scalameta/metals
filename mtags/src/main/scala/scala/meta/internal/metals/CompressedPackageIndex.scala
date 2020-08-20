@@ -7,6 +7,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 /**
  * The memory-compressed version of PackageIndex.
  *
+ * @param packages all packages in the index
  * @param bloom the fuzzy search bloom filter for all members of this package.
  * @param memberBytes the GZIP compressed bytes representing Array[String] for
  *   all members of this package. The members are compressed because the strings
@@ -29,6 +30,7 @@ case class CompressedPackageIndex(
 }
 
 object CompressedPackageIndex {
+  // TODO this method should be able to just be removed
   def isExcludedPackage(pkg: String): Boolean = {
     // NOTE(olafur) At some point we may consider making this list configurable, I can
     // imagine that some people wouldn't mind excluding more packages or including for
@@ -97,6 +99,7 @@ object CompressedPackageIndex {
    */
   def fromPackages(
       packages: PackageIndex,
+      excludedPackages: List[String],
       bucketSize: Int = DefaultBucketSize
   ): Array[CompressedPackageIndex] = {
     // The final result.
@@ -140,7 +143,12 @@ object CompressedPackageIndex {
 
     for {
       (pkg, packageMembers) <- packages.packages.asScala.iterator
-      if !isExcludedPackage(pkg)
+      // TODO Figure out a bettery place to do this replace so we don't have
+      // to do it multiple places
+      ex = excludedPackages.map(_.replace(".", "/"))
+      // TODO make into a utility method that we can re-use and is probably nicer than this.
+      if (ex.collect { case x if pkg.startsWith(x) => x }.isEmpty)
+      //if !isExcludedPackage(pkg)
     } {
       enterPackage(pkg)
 

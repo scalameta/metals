@@ -23,6 +23,7 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import tests.Library
 import tests.TestingSymbolSearch
+import scala.meta.internal.metals.UserConfiguration
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {
@@ -113,7 +114,12 @@ abstract class CompletionBench {
 
   def newSearch(): SymbolSearch = {
     require(libraries.nonEmpty)
-    new TestingSymbolSearch(ClasspathSearch.fromClasspath(classpath))
+    new TestingSymbolSearch(
+      ClasspathSearch.fromClasspath(
+        classpath,
+        UserConfiguration.default.excludedPackages
+      )
+    )
   }
 
   def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {

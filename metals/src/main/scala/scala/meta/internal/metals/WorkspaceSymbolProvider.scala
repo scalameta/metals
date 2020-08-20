@@ -26,12 +26,17 @@ final class WorkspaceSymbolProvider(
     val buildTargets: BuildTargets,
     val index: GlobalSymbolIndex,
     fileOnDisk: AbsolutePath => AbsolutePath,
+    userConfig: () => UserConfiguration,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
 ) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
   var inDependencies: ClasspathSearch =
-    ClasspathSearch.fromClasspath(Nil, bucketSize)
+    ClasspathSearch.fromClasspath(
+      Nil,
+      userConfig().excludedPackages,
+      bucketSize
+    )
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -89,13 +94,17 @@ final class WorkspaceSymbolProvider(
 
   private def indexClasspathUnsafe(): Unit = {
     val packages = new PackageIndex()
-    packages.visitBootClasspath()
+    packages.visitBootClasspath(userConfig().excludedPackages)
     for {
       classpathEntry <- buildTargets.allWorkspaceJars
     } {
       packages.visit(classpathEntry)
     }
-    inDependencies = ClasspathSearch.fromPackages(packages, bucketSize)
+    inDependencies = ClasspathSearch.fromPackages(
+      packages,
+      userConfig().excludedPackages,
+      bucketSize
+    )
   }
 
   private def workspaceSearch(

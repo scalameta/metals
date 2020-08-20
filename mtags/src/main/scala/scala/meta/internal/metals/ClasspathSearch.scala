@@ -80,16 +80,25 @@ object ClasspathSearch {
     new ClasspathSearch(Array.empty)
   def fromPackages(
       packages: PackageIndex,
+      excludedPackages: List[String],
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
-    val map = CompressedPackageIndex.fromPackages(packages, bucketSize)
+    val map = CompressedPackageIndex.fromPackages(
+      packages,
+      excludedPackages,
+      bucketSize
+    )
     new ClasspathSearch(map)
   }
   def fromClasspath(
       classpath: collection.Seq[Path],
+      excludedPackages: List[String],
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
-    val packages = PackageIndex.fromClasspath(classpath)
-    fromPackages(packages, bucketSize)
+    val packages = PackageIndex.fromClasspath(classpath, excludedPackages)
+    // TODO figure why why it's necessary to still pass the excludedPackages here
+    // since the package above should already be filtered??? But without it they still
+    // seem to appear.
+    fromPackages(packages, excludedPackages, bucketSize)
   }
 }

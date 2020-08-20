@@ -22,13 +22,17 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
+    excludedPackages: List[String],
     workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
   private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
   private val classpathSearch =
-    ClasspathSearch.fromClasspath(classpath.toList.map(_.toNIO))
+    ClasspathSearch.fromClasspath(
+      classpath.toList.map(_.toNIO),
+      excludedPackages
+    )
 
   private val index = OnDemandSymbolIndex()
   sources.foreach(index.addSourceJar)
@@ -90,8 +94,12 @@ object StandaloneSymbolSearch {
   def apply(
       workspace: AbsolutePath,
       buffers: Buffers,
+<<<<<<< HEAD
       sources: Seq[Path],
       classpath: Seq[Path]
+=======
+      excludedPackages: List[String]
+>>>>>>> 9bc435a6c... Maybe this will work?
   ): StandaloneSymbolSearch = {
     new StandaloneSymbolSearch(
       workspace,
@@ -114,6 +122,12 @@ object StandaloneSymbolSearch {
     val (sources, classpath) =
       jars.partition(_.toString.endsWith("-sources.jar"))
 
-    new StandaloneSymbolSearch(workspace, classpath, sources, buffers)
+    new StandaloneSymbolSearch(
+      workspace,
+      classpath,
+      sources,
+      buffers,
+      excludedPackages
+    )
   }
 }

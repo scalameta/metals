@@ -470,7 +470,8 @@ class MetalsLanguageServer(
       clientConfig.initialConfig.statistics,
       buildTargets,
       definitionIndex,
-      interactiveSemanticdbs.toFileOnDisk
+      interactiveSemanticdbs.toFileOnDisk,
+      () => userConfig
     )
     symbolSearch = new MetalsSymbolSearch(
       symbolDocs,
@@ -958,6 +959,7 @@ class MetalsLanguageServer(
         case Right(value) =>
           val old = userConfig
           userConfig = value
+          // TODO add a check for different package exclusion and probably restart compilers
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
