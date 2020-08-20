@@ -50,7 +50,7 @@ class StandaloneSymbolSearch(
       .orElse(workspaceFallback.flatMap(_.documentation(symbol).asScala))
       .asJava
 
-  def definition(x: String): ju.List[Location] = {
+  override def definition(x: String): ju.List[Location] = {
     destinationProvider
       .fromSymbol(x)
       .flatMap(_.toResult)

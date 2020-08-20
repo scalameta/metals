@@ -164,12 +164,12 @@ object ServerCommands {
        |then client is requested to display html with links
        |already pointing to proper locations in user codebase.
        |Otherwise client will display simple scala file
-       |but with code lenses that on action move user to proper location in codebase.
+       |but with code lenses that direct user to proper location in codebase.
        |""".stripMargin,
     "[string], where the string is a stacktrace."
   )
 
-  val GotoLocationForSymbol = new Command(
+  val GotoSymbol = new Command(
     "goto",
     "Goto location for symbol",
     """|Move the cursor to the definition of the argument symbol.
@@ -178,7 +178,7 @@ object ServerCommands {
     "[string], where the string is a SemanticDB symbol."
   )
 
-  val GotoLocationForPosition = new Command(
+  val GotoPosition = new Command(
     "goto-position",
     "Goto location for position",
     """|Move the cursor to the location provided in arguments.
@@ -353,8 +353,8 @@ object ServerCommands {
       CleanCompile,
       BspSwitch,
       StartDebugAdapter,
-      GotoLocationForSymbol,
-      GotoLocationForPosition,
+      GotoSymbol,
+      GotoPosition,
       NewScalaFile,
       NewScalaProject,
       GotoSuperMethod,
