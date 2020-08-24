@@ -99,7 +99,7 @@ object CompressedPackageIndex {
    */
   def fromPackages(
       packages: PackageIndex,
-      excludedPackages: List[String],
+      isExcludedPackage: String => Boolean,
       bucketSize: Int = DefaultBucketSize
   ): Array[CompressedPackageIndex] = {
     // The final result.
@@ -143,12 +143,8 @@ object CompressedPackageIndex {
 
     for {
       (pkg, packageMembers) <- packages.packages.asScala.iterator
-      // TODO Figure out a bettery place to do this replace so we don't have
-      // to do it multiple places
-      ex = excludedPackages.map(_.replace(".", "/"))
-      // TODO make into a utility method that we can re-use and is probably nicer than this.
-      if (ex.collect { case x if pkg.startsWith(x) => x }.isEmpty)
       //if !isExcludedPackage(pkg)
+      if !isExcludedPackage(pkg)
     } {
       enterPackage(pkg)
 

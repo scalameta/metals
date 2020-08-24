@@ -130,6 +130,8 @@ class MetalsLanguageServer(
   private val openedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
+  val excludedPackageHandler: ExcludedPackagesHandler =
+    new ExcludedPackagesHandler(() => userConfig)
   var ammonite: Ammonite = _
   val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
   private val buildTargetClasses =
@@ -471,7 +473,7 @@ class MetalsLanguageServer(
       buildTargets,
       definitionIndex,
       interactiveSemanticdbs.toFileOnDisk,
-      () => userConfig
+      excludedPackageHandler.isExcludedPackage
     )
     symbolSearch = new MetalsSymbolSearch(
       symbolDocs,
@@ -491,7 +493,8 @@ class MetalsLanguageServer(
         statusBar,
         sh,
         Option(params),
-        diagnostics
+        diagnostics,
+        excludedPackageHandler.isExcludedPackage
       )
     )
     debugProvider = new DebugProvider(
@@ -959,7 +962,9 @@ class MetalsLanguageServer(
         case Right(value) =>
           val old = userConfig
           userConfig = value
-          // TODO add a check for different package exclusion and probably restart compilers
+          if (userConfig.excludedPackages != old.excludedPackages) {
+            slowConnectToBuildServer(forceImport = true).asJavaObject
+          }
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }

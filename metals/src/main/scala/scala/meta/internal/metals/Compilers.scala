@@ -63,7 +63,8 @@ class Compilers(
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
     initializeParams: Option[InitializeParams],
-    diagnostics: Diagnostics
+    diagnostics: Diagnostics,
+    isExcludedPackage: String => Boolean
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -419,7 +420,7 @@ class Compilers(
             classpath.map(AbsolutePath(_)),
             sources.map(AbsolutePath(_)),
             buffers,
-            userConfig().excludedPackages,
+            isExcludedPackage,
             workspaceFallback = Some(search)
           )
           newCompiler(scalac, scalaTarget, classpath, worksheetSearch)

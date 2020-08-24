@@ -22,7 +22,7 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
-    excludedPackages: List[String],
+    isExcludedPackage: String => Boolean,
     workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
@@ -31,7 +31,7 @@ class StandaloneSymbolSearch(
   private val classpathSearch =
     ClasspathSearch.fromClasspath(
       classpath.toList.map(_.toNIO),
-      excludedPackages
+      isExcludedPackage
     )
 
   private val index = OnDemandSymbolIndex()
@@ -94,12 +94,9 @@ object StandaloneSymbolSearch {
   def apply(
       workspace: AbsolutePath,
       buffers: Buffers,
-<<<<<<< HEAD
       sources: Seq[Path],
-      classpath: Seq[Path]
-=======
-      excludedPackages: List[String]
->>>>>>> 9bc435a6c... Maybe this will work?
+      classpath: Seq[Path],
+      isExcludedPackage: String => Boolean
   ): StandaloneSymbolSearch = {
     new StandaloneSymbolSearch(
       workspace,
@@ -127,7 +124,7 @@ object StandaloneSymbolSearch {
       classpath,
       sources,
       buffers,
-      excludedPackages
+      isExcludedPackage
     )
   }
 }

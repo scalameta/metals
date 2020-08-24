@@ -14,7 +14,6 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import tests.Library
-import scala.meta.internal.metals.UserConfiguration
 
 @State(Scope.Benchmark)
 class ClasspathIndexingBench {
@@ -34,7 +33,7 @@ class ClasspathIndexingBench {
   def run(): Unit = {
     ClasspathSearch.fromClasspath(
       classpath,
-      UserConfiguration.default.excludedPackages
+      _ => true
     )
   }
 

@@ -59,7 +59,7 @@ abstract class BasePCSuite extends BaseSuite {
     if (requiresScalaLibrarySources)
       indexScalaLibrary(index, scalaVersion)
     val search = new TestingSymbolSearch(
-      ClasspathSearch.fromClasspath(myclasspath, List.empty),
+      ClasspathSearch.fromClasspath(myclasspath, _ => true),
       new Docstrings(index),
       workspace,
       index

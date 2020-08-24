@@ -23,7 +23,6 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import tests.Library
 import tests.TestingSymbolSearch
-import scala.meta.internal.metals.UserConfiguration
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {
@@ -117,7 +116,7 @@ abstract class CompletionBench {
     new TestingSymbolSearch(
       ClasspathSearch.fromClasspath(
         classpath,
-        UserConfiguration.default.excludedPackages
+        _ => true
       )
     )
   }

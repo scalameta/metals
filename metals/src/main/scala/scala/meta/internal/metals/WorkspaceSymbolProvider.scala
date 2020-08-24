@@ -26,7 +26,7 @@ final class WorkspaceSymbolProvider(
     val buildTargets: BuildTargets,
     val index: GlobalSymbolIndex,
     fileOnDisk: AbsolutePath => AbsolutePath,
-    userConfig: () => UserConfiguration,
+    isExcludedPackage: String => Boolean,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
 ) {
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
@@ -34,7 +34,7 @@ final class WorkspaceSymbolProvider(
   var inDependencies: ClasspathSearch =
     ClasspathSearch.fromClasspath(
       Nil,
-      userConfig().excludedPackages,
+      isExcludedPackage,
       bucketSize
     )
 
@@ -94,7 +94,7 @@ final class WorkspaceSymbolProvider(
 
   private def indexClasspathUnsafe(): Unit = {
     val packages = new PackageIndex()
-    packages.visitBootClasspath(userConfig().excludedPackages)
+    packages.visitBootClasspath(isExcludedPackage)
     for {
       classpathEntry <- buildTargets.allWorkspaceJars
     } {
@@ -102,7 +102,7 @@ final class WorkspaceSymbolProvider(
     }
     inDependencies = ClasspathSearch.fromPackages(
       packages,
-      userConfig().excludedPackages,
+      isExcludedPackage,
       bucketSize
     )
   }

@@ -36,7 +36,7 @@ case class UserConfiguration(
     superMethodLensesEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
-    excludedPackages: List[String] = ExcludedPackages.default
+    excludedPackages: Option[List[String]] = None
 ) {
 
   def currentBloopVersion: String =
@@ -47,6 +47,10 @@ case class UserConfiguration(
 object UserConfiguration {
 
   def default: UserConfiguration = UserConfiguration()
+
+  private val defaultExclusion = new ExcludedPackagesHandler(() =>
+    UserConfiguration()
+  ).defaultExclusions.mkString("\n").replace("/", ".").dropRight(1)
 
   def options: List[UserConfigurationOption] =
     List(
@@ -118,10 +122,26 @@ object UserConfiguration {
       ),
       UserConfigurationOption(
         "excluded-packages",
-        default.excludedPackages.mkString("\n"),
+        """`[]`.""",
         """["akka.actor.typed.javadsl"]""",
         "Excluded Packages",
-        "Packages that will be excluded from completions, imports, and symbol searches."
+        s"""|Packages that will be excluded from completions, imports, and symbol searches.
+            |
+            |Note that this is in addition to some default packages that are already excluded.
+            |The default excluded packages are listed below:
+            |```js
+            |${defaultExclusion}
+            |```
+            |
+            |If there is a need to remove one of the defaults, you are able to do so by including the
+            |package in your list and prepending `--` to it.
+            |
+            |Example:
+            |
+            |```js
+            |["--javax"]
+            |```
+            |""".stripMargin
       ),
       UserConfigurationOption(
         "bloop-sbt-already-installed",
@@ -304,7 +324,7 @@ object UserConfiguration {
     val enableStripMarginOnTypeFormatting =
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val excludedPackages =
-      getStringListKey("excluded-packages").getOrElse(default.excludedPackages)
+      getStringListKey("excluded-packages")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
