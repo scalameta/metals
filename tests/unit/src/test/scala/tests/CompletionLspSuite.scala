@@ -229,4 +229,56 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  // TODO need to figure this out. This works locally, but it seems to failure
+  // since there is no build tool here, so it never re-indexes
+  test("with-exclusions") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object Main {
+          |  // @@
+          |}
+          |""".stripMargin
+      )
+      _ <- assertCompletion(
+        "Duration@@",
+        """|Duration - java.time
+           |Duration - scala.concurrent.duration
+           |DurationConversions - scala.concurrent.duration
+           |DurationDouble - scala.concurrent.duration.package
+           |DurationDouble - scala.concurrent.duration.package
+           |DurationInt - scala.concurrent.duration.package
+           |DurationInt - scala.concurrent.duration.package
+           |DurationIsOrdered - scala.concurrent.duration.Duration
+           |DurationLong - scala.concurrent.duration.package
+           |DurationLong - scala.concurrent.duration.package
+           |FiniteDuration - scala.concurrent.duration
+           |FiniteDurationIsOrdered - scala.concurrent.duration.FiniteDuration""".stripMargin,
+        includeDetail = false
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "excluded-packages": [
+          |    "scala.concurrent/"
+          |  ]
+          |}
+          |""".stripMargin
+      )
+      // The new config has been picked up.
+      _ <- assertCompletion(
+        "Duration@@",
+        """|Duration - java.time
+           |""".stripMargin,
+        includeDetail = false
+      )
+    } yield ()
+  }
 }
