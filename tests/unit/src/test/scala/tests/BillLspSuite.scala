@@ -89,7 +89,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  test("automatic-reconnect".tag(FlakyWindows)) {
+  test("automatic-reconnect".flaky) {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {

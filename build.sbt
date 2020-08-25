@@ -1,5 +1,6 @@
 import scala.collection.mutable
 import scala.sys.process._
+import Tests._
 
 def localSnapshotVersion = "0.9.4-SNAPSHOT"
 def isCI = System.getenv("CI") != null
@@ -571,11 +572,23 @@ lazy val cross = project
   )
   .dependsOn(mtest, mtags)
 
+def isInTestShard(name: String) = {
+  if (!isCI) {
+    true
+  } else {
+    val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
+    val groupId = Math.max(0, groupIndex) + 1
+    System.getenv("TEST_SHARD").toInt == groupId
+  }
+}
+
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
+    Test / testOptions := Seq(Tests.Filter(name => isInTestShard(name))),
     sharedSettings,
+    Test / javaOptions += "-Xmx1G",
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
