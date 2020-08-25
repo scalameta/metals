@@ -28,11 +28,12 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
       prints <- Option(fingerprints.get(path))
       fingerprint <- prints.asScala.find(_.md5 == md5)
     } yield {
-      // remove non-active md5 fingerprints.
-//      prints.clear()
+      // clear older fingerprints that no longer correspond to the semanticDB hash
+      prints.clear()
       prints.add(fingerprint)
       fingerprint.text
     }
   }
+
   override def toString: String = s"Md5FingerprintProvider($fingerprints)"
 }
