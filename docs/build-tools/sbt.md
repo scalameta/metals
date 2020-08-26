@@ -7,6 +7,7 @@ sbt is most commonly used build tool in the Scala community and works with
 Metals out-of-the-box.
 
 ```scala mdoc:automatic-installation:sbt
+
 ```
 
 ![Import build](https://i.imgur.com/t5RJ3q6.png)
@@ -32,8 +33,6 @@ generate the Bloop JSON files directly from your sbt shell. This approach may
 speed up build import by avoiding Metals from starting sbt in a separate
 process.
 
-### For latest SNAPSHOT
-
 First, install the Bloop plugin globally or inside your `project` directory:
 
 ```scala
@@ -57,66 +56,6 @@ the above command will do it automatically for you in the current sbt session.
 Finally, once `bloopInstall` is finished, execute the "Connect to build server"
 command (id: `build.connect`) command to tell Metals to establish a connection
 with the Bloop build server.
-
-### For versions up to 0.7.6
-
-First, install the Bloop and Metals plugins globally
-
-```scala
-// One of:
-//   ~/.sbt/0.13/plugins/plugins.sbt
-//   ~/.sbt/1.0/plugins/plugins.sbt
-resolvers += Resolver.sonatypeRepo("snapshots")
-addSbtPlugin("org.scalameta" % "sbt-metals" % "0.7.6")
-addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
-```
-
-Next, run `sbt metalsEnable bloopInstall` to generate the Bloop JSON
-configuration files.
-
-Finally, once `bloopInstall` is finished, execute the "Connect to build server"
-command (id: `build.connect`) command to tell Metals to establish a connections
-with the Bloop build server.
-
-For more information about sbt-bloop, consult the
-[Bloop website](https://scalacenter.github.io/bloop/docs/build-tools/sbt).
-
-### Permanent metalsEnable
-
-If you use manual installation, you can avoid running the `metalsEnable` command
-in every sbt session with the following steps.
-
-First, update the global Bloop settings to download sources of external
-libraries.
-
-```scala
-// One of:
-//   ~/.sbt/0.13/build.sbt
-//   ~/.sbt/1.0/build.sbt
-bloopExportJarClassifiers.in(Global) := Some(Set("sources"))
-```
-
-Next, update your build settings to use the
-[semanticdb-scalac](https://scalameta.org/docs/semanticdb/guide.html) compiler
-plugin.
-
-```diff
-// build.sbt
- lazy val myproject = project.settings(
-+  scalaVersion := "@SCALA_VERSION@", // or @SCALA211_VERSION@, other versions are not supported.
-+  addCompilerPlugin(MetalsPlugin.semanticdbModule), // enable SemanticDB
-+  scalacOptions += "-Yrangepos" // required by SemanticDB
- )
-```
-
-Now, you can run `sbt bloopInstall` without the `metalsEnable` step.
-
-**Pro tip**: With semanticdb-scalac enabled in your sbt build can also use
-[Scalafix](https://scalacenter.github.io/scalafix).
-
-```scala mdoc:custom-bloop
-
-```
 
 ## Troubleshooting
 
