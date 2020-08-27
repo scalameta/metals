@@ -1319,6 +1319,7 @@ final class TestingServer(
     val parents = (reveal.uriChain :+ null).map { uri =>
       server.treeView.children(TreeViewChildrenParams(reveal.viewId, uri))
     }
+
     val label = parents.iterator
       .flatMap { r =>
         r.nodes.iterator.map { n =>
@@ -1327,19 +1328,20 @@ final class TestingServer(
             case Some(value) => s" $value"
           }
           val label = n.label + icon
-          n.nodeUri -> label
+          n.nodeUri.toLowerCase -> label
         }
       }
       .toMap
       .updated("root", "root")
+
     val tree = parents
       .zip(reveal.uriChain :+ "root")
       .foldLeft(PrettyPrintTree.empty) {
         case (child, (parent, uri)) =>
           PrettyPrintTree(
-            label(uri),
+            label(uri.toLowerCase),
             parent.nodes
-              .map(n => PrettyPrintTree(label(n.nodeUri)))
+              .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase)))
               .filterNot(t => isIgnored(t.value))
               .toList :+ child
           )

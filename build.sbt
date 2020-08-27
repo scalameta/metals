@@ -588,7 +588,7 @@ lazy val unit = project
     testSettings,
     Test / testOptions := Seq(Tests.Filter(name => isInTestShard(name))),
     sharedSettings,
-    Test / javaOptions += "-Xmx1G",
+    Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
