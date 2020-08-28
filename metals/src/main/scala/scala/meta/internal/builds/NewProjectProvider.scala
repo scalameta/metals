@@ -363,6 +363,11 @@ object NewProjectProvider {
         description = "A Scala template for the Gradle build tool"
       ),
       MetalsQuickPickItem(
+        id = "scalameta/maven-scala-seed.g8",
+        label = "scalameta/maven-scala-seed.g8",
+        description = "A Scala template for the Maven build tool"
+      ),
+      MetalsQuickPickItem(
         id = "VirtusLab/akka-http-kubernetes.g8",
         label = "VirtusLab/akka-http-kubernetes.g8",
         description = "Akka HTTP application using Kubernetes"
