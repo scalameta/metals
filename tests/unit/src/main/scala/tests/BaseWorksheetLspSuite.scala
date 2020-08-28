@@ -63,54 +63,6 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  if (scalaVersion == V.scala212) {
-    test("completion-imports") {
-      for {
-        _ <- server.initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": {}
-             |}
-             |/a/src/main/scala/foo/Main.worksheet.sc
-             |import $$dep.`com.lihaoyi::scalatags:0.9.0`
-             |import scalatags.Text.all._
-             |
-             |val htmlFile = html(
-             |  body(
-             |    p("This is a big paragraph of text")
-             |  )
-             |)
-             |
-             |htmlFile.render
-             |""".stripMargin
-        )
-        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
-        identity <- server.completion(
-          "a/src/main/scala/foo/Main.worksheet.sc",
-          "htmlFile.render@@"
-        )
-        _ = assertNoDiff(identity, "render: String")
-        _ = assertNoDiagnostics()
-        _ = assertNoDiff(
-          client.workspaceDecorations,
-          """|import $dep.`com.lihaoyi::scalatags:0.9.0`
-             |import scalatags.Text.all._
-             |
-             |val htmlFile = html(
-             |  body(
-             |    p("This is a big paragraph of text")
-             |  )
-             |) // : scalatags.Text.TypedTag[String] = TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p",Li…
-             |
-             |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
-             |""".stripMargin
-        )
-      } yield ()
-    }
-  }
-
   test("outside-target") {
     for {
       _ <- server.initialize(
