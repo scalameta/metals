@@ -87,19 +87,19 @@ class Compilers(
   // The "rambo" compiler is used for source files that don't belong to a build target.
   lazy val ramboCompiler: PresentationCompiler = createStandaloneCompiler(
     PackageIndex.scalaLibrary,
+    Try(StandaloneSymbolSearch(workspace, buffers))
+      .getOrElse(EmptySymbolSearch),
     "metals-default"
   )
 
-  def createStandaloneCompiler(
+  private def createStandaloneCompiler(
       classpath: Seq[Path],
+      standaloneSearch: SymbolSearch,
       name: String
   ): PresentationCompiler = {
     scribe.info(
       "no build target: using presentation compiler with only scala-library"
     )
-    val standaloneSearch =
-      Try(StandaloneSymbolSearch(workspace, buffers))
-        .getOrElse(EmptySymbolSearch)
     val compiler =
       configure(new ScalaPresentationCompiler(), standaloneSearch)
         .newInstance(
@@ -110,6 +110,7 @@ class Compilers(
     ramboCancelable = Cancelable(() => compiler.shutdown())
     compiler
   }
+
   var ramboCancelable = Cancelable.empty
 
   def loadedPresentationCompilerCount(): Int = cache.values.count(_.isLoaded())
@@ -428,7 +429,11 @@ class Compilers(
     created.getOrElse {
       jworksheetsCache.put(
         path,
-        createStandaloneCompiler(classpath, path.toString())
+        createStandaloneCompiler(
+          classpath,
+          StandaloneSymbolSearch(workspace, buffers, sources, classpath),
+          path.toString()
+        )
       )
     }
   }

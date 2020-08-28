@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Path
 import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
@@ -85,11 +86,25 @@ class StandaloneSymbolSearch(
 }
 
 object StandaloneSymbolSearch {
+
+  def apply(
+      workspace: AbsolutePath,
+      buffers: Buffers,
+      sources: Seq[Path],
+      classpath: Seq[Path]
+  ): StandaloneSymbolSearch = {
+    new StandaloneSymbolSearch(
+      workspace,
+      classpath.map(path => AbsolutePath(path)),
+      sources.map(path => AbsolutePath(path)),
+      buffers
+    )
+  }
+
   def apply(
       workspace: AbsolutePath,
       buffers: Buffers
   ): StandaloneSymbolSearch = {
-
     val scalaVersion = BuildInfo.scala212
 
     val jars = Embedded
