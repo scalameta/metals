@@ -963,7 +963,8 @@ class MetalsLanguageServer(
           val old = userConfig
           userConfig = value
           if (userConfig.excludedPackages != old.excludedPackages) {
-            slowConnectToBuildServer(forceImport = true).asJavaObject
+            excludedPackageHandler.clearExclusionsCache()
+            workspaceSymbols.indexClasspath()
           }
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()

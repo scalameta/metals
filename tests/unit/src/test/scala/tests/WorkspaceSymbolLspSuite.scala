@@ -235,9 +235,6 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  // TODO same issue as other test. This works locally but will need
-  // to either correct what happens when the new user config is retrieved
-  // or figure out a better way to get this picked up.
   test("excluded") {
     cleanWorkspace()
     for {

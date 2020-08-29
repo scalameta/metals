@@ -151,7 +151,6 @@ class PackageIndex() {
           ): FileVisitResult = {
             activeDirectory =
               module.relativize(dir).iterator().asScala.mkString("", "/", "/")
-            //if (CompressedPackageIndex.isExcludedPackage(activeDirectory)) {
             if (isExcludedPackage(activeDirectory)) {
               FileVisitResult.SKIP_SUBTREE
             } else {

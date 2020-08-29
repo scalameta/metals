@@ -230,8 +230,6 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
-  // TODO need to figure this out. This works locally, but it seems to failure
-  // since there is no build tool here, so it never re-indexes
   test("with-exclusions") {
     cleanWorkspace()
     for {
@@ -272,7 +270,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |}
           |""".stripMargin
       )
-      // The new config has been picked up.
+      // The new config has been picked up and all `scala.concurrent` are no longer suggested
       _ <- assertCompletion(
         "Duration@@",
         """|Duration - java.time

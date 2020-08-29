@@ -102,13 +102,15 @@ object StandaloneSymbolSearch {
       workspace,
       classpath.map(path => AbsolutePath(path)),
       sources.map(path => AbsolutePath(path)),
-      buffers
+      buffers,
+      isExcludedPackage
     )
   }
 
   def apply(
       workspace: AbsolutePath,
-      buffers: Buffers
+      buffers: Buffers,
+      isExcludedPackage: String => Boolean
   ): StandaloneSymbolSearch = {
     val scalaVersion = BuildInfo.scala212
 

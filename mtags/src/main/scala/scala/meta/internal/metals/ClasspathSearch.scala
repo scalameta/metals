@@ -96,9 +96,6 @@ object ClasspathSearch {
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
     val packages = PackageIndex.fromClasspath(classpath, isExcludedPackage)
-    // TODO figure why why it's necessary to still pass the excludedPackages here
-    // since the package above should already be filtered??? But without it they still
-    // seem to appear.
     fromPackages(packages, isExcludedPackage, bucketSize)
   }
 }

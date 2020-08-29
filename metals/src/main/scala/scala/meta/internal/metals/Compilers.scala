@@ -88,7 +88,7 @@ class Compilers(
   // The "rambo" compiler is used for source files that don't belong to a build target.
   lazy val ramboCompiler: PresentationCompiler = createStandaloneCompiler(
     PackageIndex.scalaLibrary,
-    Try(StandaloneSymbolSearch(workspace, buffers))
+    Try(StandaloneSymbolSearch(workspace, buffers, isExcludedPackage))
       .getOrElse(EmptySymbolSearch),
     "metals-default"
   )
@@ -433,7 +433,13 @@ class Compilers(
         path,
         createStandaloneCompiler(
           classpath,
-          StandaloneSymbolSearch(workspace, buffers, sources, classpath),
+          StandaloneSymbolSearch(
+            workspace,
+            buffers,
+            sources,
+            classpath,
+            isExcludedPackage
+          ),
           path.toString()
         )
       )
