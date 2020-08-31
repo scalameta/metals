@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.ExcludedPackagesHandler
 
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -33,7 +34,7 @@ class ClasspathIndexingBench {
   def run(): Unit = {
     ClasspathSearch.fromClasspath(
       classpath,
-      _ => true
+      new ExcludedPackagesHandler(None).isExcludedPackage
     )
   }
 

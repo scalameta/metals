@@ -131,7 +131,7 @@ class MetalsLanguageServer(
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val excludedPackageHandler: ExcludedPackagesHandler =
-    new ExcludedPackagesHandler(() => userConfig)
+    new ExcludedPackagesHandler(userConfig.excludedPackages)
   var ammonite: Ammonite = _
   val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
   private val buildTargetClasses =
@@ -963,7 +963,7 @@ class MetalsLanguageServer(
           val old = userConfig
           userConfig = value
           if (userConfig.excludedPackages != old.excludedPackages) {
-            excludedPackageHandler.clearExclusionsCache()
+            userConfig.excludedPackages.foreach(excludedPackageHandler.update)
             workspaceSymbols.indexClasspath()
           }
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {

@@ -5,7 +5,6 @@ import scala.meta.internal.metals.CompressedPackageIndex
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
@@ -23,9 +22,7 @@ object TestingWorkspaceSymbolProvider {
       buildTargets = BuildTargets.withoutAmmonite,
       index = index,
       _.toFileOnDisk(workspace),
-      new ExcludedPackagesHandler(() =>
-        UserConfiguration.default
-      ).isExcludedPackage,
+      new ExcludedPackagesHandler(None).isExcludedPackage,
       bucketSize = bucketSize
     )
   }

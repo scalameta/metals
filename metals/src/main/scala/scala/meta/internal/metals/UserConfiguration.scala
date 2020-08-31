@@ -48,9 +48,9 @@ object UserConfiguration {
 
   def default: UserConfiguration = UserConfiguration()
 
-  private val defaultExclusion = new ExcludedPackagesHandler(() =>
-    UserConfiguration()
-  ).defaultExclusions.mkString("\n").replace("/", ".").dropRight(1)
+  private val defaultExclusion = new ExcludedPackagesHandler(
+    None
+  ).defaultExclusions.map(_.dropRight(1)).mkString("\n").replace("/", ".")
 
   def options: List[UserConfigurationOption] =
     List(

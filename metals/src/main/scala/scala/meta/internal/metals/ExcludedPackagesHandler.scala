@@ -1,14 +1,12 @@
 package scala.meta.internal.metals
 
-import scala.collection.mutable.ListBuffer
-
 /**
  * This class handles packages that should be excluded from indexing causing
  * them to not be recommended for completions, symbol searches, and code actions.
  *
- * @param userConfig access to user input for excluded packages
+ * @param pkgsToExclude any exclusions that are in the `UserConfiguration` to start with.
  */
-class ExcludedPackagesHandler(userConfig: () => UserConfiguration) {
+class ExcludedPackagesHandler(pkgsToExclude: Option[List[String]]) {
   val defaultExclusions: List[String] = List(
     "META-INF/", "images/", "toolbarButtonGraphics/", "jdk/", "sun/", "javax/",
     "oracle/", "java/awt/desktop/", "org/jcp/", "org/omg/", "org/graalvm/",
@@ -17,29 +15,39 @@ class ExcludedPackagesHandler(userConfig: () => UserConfiguration) {
 
   /**
    * Cached exclusions to make sure that we only have to process the list
-   * once. This is only cleared if the user changes the exclusions in the
+   * once. This is only updated if the user changes the exclusions in the
    * UserConfiguration which is detected in the `workspace/didChangeConfiguration`.
    */
-  private lazy val cachedExclusions: ListBuffer[String] = new ListBuffer
+  private var cachedExclusions: List[String] = List.empty
 
-  private def handleUserExclusions(pkgs: List[String]): List[String] = {
-    defaultExclusions.foreach(cachedExclusions += _)
-    pkgs.foreach { pkg =>
+  /**
+   * More than likely a user will give us exclusions in the following format:
+   *
+   * - `akka.actor.typed.javadsl`
+   *
+   * This will make sure that they are always formatted in the way we need them
+   * to be when we are actually comparing them as paths:
+   *
+   * - `akka/actor/typed/javadsl/`
+   *
+   * @param pkgs pkgs to either add to or check against the defaults.
+   */
+  private def prepareCache(pkgs: List[String]): List[String] = {
+    pkgs.foldLeft(defaultExclusions) { (exclusions, pkg) =>
       val replaced = pkg.replace(".", "/")
       val formatted =
         if (replaced.endsWith("/")) replaced
         else replaced + "/"
 
       if (formatted.startsWith("--")) {
-        cachedExclusions -= formatted.drop(2)
+        exclusions.filterNot(_ == formatted.drop(2))
       } else {
-        cachedExclusions += formatted
+        formatted :: exclusions
       }
     }
-    cachedExclusions.result
   }
 
-  def clearExclusionsCache(): Unit = cachedExclusions.clear()
+  def update(pkgs: List[String]): Unit = cachedExclusions = prepareCache(pkgs)
 
   /**
    * Should the given package be excluded from indexing
@@ -47,12 +55,17 @@ class ExcludedPackagesHandler(userConfig: () => UserConfiguration) {
    * @param pkg package to check against excluded list
    */
   def isExcludedPackage(pkg: String): Boolean = {
-    val packagesToExclude: List[String] = userConfig().excludedPackages match {
-      case Some(pkgs) =>
-        if (cachedExclusions.nonEmpty) cachedExclusions.result
-        else handleUserExclusions(pkgs)
-      case None => defaultExclusions
+    if (cachedExclusions.nonEmpty) {
+      cachedExclusions.exists(excluded => pkg.startsWith(excluded))
+    } else {
+      val exclusions = pkgsToExclude match {
+        case Some(pkgs) =>
+          val toExclude = prepareCache(pkgs)
+          cachedExclusions = toExclude
+          toExclude
+        case None => defaultExclusions
+      }
+      exclusions.exists(excluded => pkg.startsWith(excluded))
     }
-    packagesToExclude.exists(excluded => pkg.startsWith(excluded))
   }
 }
