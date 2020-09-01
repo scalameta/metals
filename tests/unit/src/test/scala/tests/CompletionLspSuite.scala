@@ -229,4 +229,54 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("with-exclusions") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object Main {
+          |  // @@
+          |}
+          |""".stripMargin
+      )
+      _ <- assertCompletion(
+        "Duration@@",
+        """|Duration - java.time
+           |Duration - scala.concurrent.duration
+           |DurationConversions - scala.concurrent.duration
+           |DurationDouble - scala.concurrent.duration.package
+           |DurationDouble - scala.concurrent.duration.package
+           |DurationInt - scala.concurrent.duration.package
+           |DurationInt - scala.concurrent.duration.package
+           |DurationIsOrdered - scala.concurrent.duration.Duration
+           |DurationLong - scala.concurrent.duration.package
+           |DurationLong - scala.concurrent.duration.package
+           |FiniteDuration - scala.concurrent.duration
+           |FiniteDurationIsOrdered - scala.concurrent.duration.FiniteDuration""".stripMargin,
+        includeDetail = false
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "excluded-packages": [
+          |    "scala.concurrent"
+          |  ]
+          |}
+          |""".stripMargin
+      )
+      // The new config has been picked up and all `scala.concurrent` are no longer suggested
+      _ <- assertCompletion(
+        "Duration@@",
+        """|Duration - java.time
+           |""".stripMargin,
+        includeDetail = false
+      )
+    } yield ()
+  }
 }

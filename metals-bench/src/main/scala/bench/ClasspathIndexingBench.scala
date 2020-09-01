@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.ClasspathSearch
+import scala.meta.internal.metals.ExcludedPackagesHandler
 
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -31,7 +32,10 @@ class ClasspathIndexingBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Unit = {
-    ClasspathSearch.fromClasspath(classpath)
+    ClasspathSearch.fromClasspath(
+      classpath,
+      new ExcludedPackagesHandler(None).isExcludedPackage
+    )
   }
 
 }

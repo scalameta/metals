@@ -22,13 +22,17 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
+    isExcludedPackage: String => Boolean,
     workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
   private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
   private val classpathSearch =
-    ClasspathSearch.fromClasspath(classpath.toList.map(_.toNIO))
+    ClasspathSearch.fromClasspath(
+      classpath.toList.map(_.toNIO),
+      isExcludedPackage
+    )
 
   private val index = OnDemandSymbolIndex()
   sources.foreach(index.addSourceJar)
@@ -91,19 +95,22 @@ object StandaloneSymbolSearch {
       workspace: AbsolutePath,
       buffers: Buffers,
       sources: Seq[Path],
-      classpath: Seq[Path]
+      classpath: Seq[Path],
+      isExcludedPackage: String => Boolean
   ): StandaloneSymbolSearch = {
     new StandaloneSymbolSearch(
       workspace,
       classpath.map(path => AbsolutePath(path)),
       sources.map(path => AbsolutePath(path)),
-      buffers
+      buffers,
+      isExcludedPackage
     )
   }
 
   def apply(
       workspace: AbsolutePath,
-      buffers: Buffers
+      buffers: Buffers,
+      isExcludedPackage: String => Boolean
   ): StandaloneSymbolSearch = {
     val scalaVersion = BuildInfo.scala212
 
@@ -114,6 +121,12 @@ object StandaloneSymbolSearch {
     val (sources, classpath) =
       jars.partition(_.toString.endsWith("-sources.jar"))
 
-    new StandaloneSymbolSearch(workspace, classpath, sources, buffers)
+    new StandaloneSymbolSearch(
+      workspace,
+      classpath,
+      sources,
+      buffers,
+      isExcludedPackage
+    )
   }
 }

@@ -63,7 +63,8 @@ class Compilers(
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
     initializeParams: Option[InitializeParams],
-    diagnostics: Diagnostics
+    diagnostics: Diagnostics,
+    isExcludedPackage: String => Boolean
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -87,7 +88,7 @@ class Compilers(
   // The "rambo" compiler is used for source files that don't belong to a build target.
   lazy val ramboCompiler: PresentationCompiler = createStandaloneCompiler(
     PackageIndex.scalaLibrary,
-    Try(StandaloneSymbolSearch(workspace, buffers))
+    Try(StandaloneSymbolSearch(workspace, buffers, isExcludedPackage))
       .getOrElse(EmptySymbolSearch),
     "metals-default"
   )
@@ -419,6 +420,7 @@ class Compilers(
             classpath.map(AbsolutePath(_)),
             sources.map(AbsolutePath(_)),
             buffers,
+            isExcludedPackage,
             workspaceFallback = Some(search)
           )
           newCompiler(scalac, scalaTarget, classpath, worksheetSearch)
@@ -431,7 +433,13 @@ class Compilers(
         path,
         createStandaloneCompiler(
           classpath,
-          StandaloneSymbolSearch(workspace, buffers, sources, classpath),
+          StandaloneSymbolSearch(
+            workspace,
+            buffers,
+            sources,
+            classpath,
+            isExcludedPackage
+          ),
           path.toString()
         )
       )

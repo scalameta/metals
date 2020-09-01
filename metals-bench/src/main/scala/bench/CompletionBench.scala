@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
@@ -113,7 +114,12 @@ abstract class CompletionBench {
 
   def newSearch(): SymbolSearch = {
     require(libraries.nonEmpty)
-    new TestingSymbolSearch(ClasspathSearch.fromClasspath(classpath))
+    new TestingSymbolSearch(
+      ClasspathSearch.fromClasspath(
+        classpath,
+        new ExcludedPackagesHandler().isExcludedPackage
+      )
+    )
   }
 
   def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {
