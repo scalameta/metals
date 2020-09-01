@@ -57,14 +57,14 @@ object UserConfiguration {
       UserConfigurationOption(
         "java-home",
         "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
-        "/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home",
+        """"/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home"""",
         "Java Home directory",
         "The Java Home directory used for indexing JDK sources and locating the `java` binary."
       ),
       UserConfigurationOption(
         "sbt-script",
         """empty string `""`.""",
-        "/usr/local/bin/sbt",
+        """"/usr/local/bin/sbt"""",
         "sbt script",
         """Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`.
           |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
@@ -75,7 +75,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "gradle-script",
         """empty string `""`.""",
-        "/usr/local/bin/gradle",
+        """"/usr/local/bin/gradle"""",
         "gradle script",
         """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
           |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
@@ -85,7 +85,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "maven-script",
         """empty string `""`.""",
-        "/usr/local/bin/mvn",
+        """"/usr/local/bin/mvn"""",
         "maven script",
         """Optional absolute path to a `maven` executable to use for generating bloop config.
           |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
@@ -94,7 +94,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "mill-script",
         """empty string `""`.""",
-        "/usr/local/bin/mill",
+        """"/usr/local/bin/mill"""",
         "mill script",
         """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
           |By default, Metals uses mill wrapper script with 0.5.0 mill version. Update this setting if your `mill` script requires more customizations
@@ -104,7 +104,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "scalafmt-config-path",
         default.scalafmtConfigPath.toString,
-        "project/.scalafmt.conf",
+        """"project/.scalafmt.conf"""",
         "Scalafmt config path",
         """Optional custom path to the .scalafmt.conf file.
           |Should be relative to the workspace root directory and use forward slashes / for file
@@ -153,7 +153,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "bloop-version",
         BuildInfo.bloopVersion,
-        "1.4.0-RC1",
+        """"1.4.0-RC1"""",
         "Version of Bloop",
         """|This version will be used for the Bloop build tool plugin, for any supported build tool,
            |while importing in Metals as well as for running the embedded server""".stripMargin
@@ -171,7 +171,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "remote-language-server",
         """empty string `""`.""",
-        "https://language-server.company.com/message",
+        """"https://language-server.company.com/message"""",
         "Remote language server",
         """A URL pointing to an endpoint that implements a remote language server.
           |
