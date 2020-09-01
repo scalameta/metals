@@ -100,7 +100,8 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 
 <span class="hljs-comment">;; Enable scala-mode for highlighting, indentation and motion commands</span>
 (<span class="hljs-name">use-package</span> scala-mode
-  <span class="hljs-symbol">:mode</span> <span class="hljs-string">"\\.s\\(cala\\|bt\\)$"</span>)
+  <span class="hljs-symbol">:interpreter</span>
+    (<span class="hljs-string">"scala"</span> . scala-mode))
 
 <span class="hljs-comment">;; Enable sbt mode for executing sbt commands</span>
 (<span class="hljs-name">use-package</span> sbt-mode
@@ -127,7 +128,8 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
   <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
 
 <span class="hljs-comment">;; Add metals backend for lsp-mode</span>
-(<span class="hljs-name">use-package</span> lsp-metals)
+(<span class="hljs-name">use-package</span> lsp-metals
+  <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-metals-treeview-show-when-views-received <span class="hljs-literal">t</span>))
 
 <span class="hljs-comment">;; Enable nice rendering of documentation on hover</span>
 (<span class="hljs-name">use-package</span> lsp-ui)
@@ -148,13 +150,6 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
   <span class="hljs-symbol">:hook</span>
   (<span class="hljs-name">lsp-mode</span> . dap-mode)
   (<span class="hljs-name">lsp-mode</span> . dap-ui-mode)
-  )
-
-<span class="hljs-comment">;; Use the Tree View Protocol for viewing the project structure and triggering compilation</span>
-(<span class="hljs-name">use-package</span> lsp-treemacs
-  <span class="hljs-symbol">:config</span>
-  (<span class="hljs-name">lsp-metals-treeview-enable</span> <span class="hljs-literal">t</span>)
-  (<span class="hljs-name">setq</span> lsp-metals-treeview-show-when-views-received <span class="hljs-literal">t</span>)
   )
 </code></pre>
 <blockquote>
@@ -178,8 +173,8 @@ not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.9.3+50-ef141cd6-SNAPSHOT</td>
-          <td>01 Sep 2020 06:48</td>
+          <td>0.9.3+53-11ed3703-SNAPSHOT</td>
+          <td>01 Sep 2020 07:39</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -268,7 +263,8 @@ you want to use an alternative to lsp-mode.</p>
 
 <span class="hljs-comment">;; Enable scala-mode and sbt-mode</span>
 (<span class="hljs-name">use-package</span> scala-mode
-  <span class="hljs-symbol">:mode</span> <span class="hljs-string">"^\w+\\.s\\(cala\\|bt\\)$"</span>)
+  <span class="hljs-symbol">:interpreter</span>
+    (<span class="hljs-string">"scala"</span> . scala-mode))
 
 <span class="hljs-comment">;; Enable sbt mode for executing sbt commands</span>
 (<span class="hljs-name">use-package</span> sbt-mode
