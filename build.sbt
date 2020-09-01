@@ -173,10 +173,10 @@ lazy val V = new {
   val sbtScala = "2.12.10"
   val scala212 = "2.12.12"
   val scala213 = "2.13.3"
-  val scalameta = "4.3.20"
+  val scalameta = "4.3.21"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloop = "1.4.3-23-550c6c0a"
+  val bloop = "1.4.3-27-dfdc9971"
   val scala3 = "0.26.0"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -215,7 +215,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
-  val coursier = "2.0.0-RC6-24"
+  val coursier = "2.0.0-RC6-25"
   val coursierInterfaces = "0.0.25"
   val ammonite = "2.2.0"
   val mill = "0.8.0"
@@ -377,15 +377,15 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.9.10",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.12",
+      "org.openjdk.jol" % "jol-core" % "0.13",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.10.0",
-      "com.swoval" % "file-tree-views" % "2.1.4",
+      "com.swoval" % "file-tree-views" % "2.1.5",
       // for http client
       "io.undertow" % "undertow-core" % "2.1.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.1.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.5.4",
+      "org.flywaydb" % "flyway-core" % "6.5.5",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "2.0.1",
