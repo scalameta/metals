@@ -963,7 +963,7 @@ class MetalsLanguageServer(
           val old = userConfig
           userConfig = value
           if (userConfig.excludedPackages != old.excludedPackages) {
-            userConfig.excludedPackages.foreach(excludedPackageHandler.update)
+            excludedPackageHandler.update(userConfig.excludedPackages)
             workspaceSymbols.indexClasspath()
           }
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {

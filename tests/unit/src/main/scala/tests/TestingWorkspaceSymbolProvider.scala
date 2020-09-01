@@ -22,7 +22,7 @@ object TestingWorkspaceSymbolProvider {
       buildTargets = BuildTargets.withoutAmmonite,
       index = index,
       _.toFileOnDisk(workspace),
-      new ExcludedPackagesHandler(None).isExcludedPackage,
+      new ExcludedPackagesHandler().isExcludedPackage,
       bucketSize = bucketSize
     )
   }

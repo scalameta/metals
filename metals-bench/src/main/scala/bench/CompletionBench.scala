@@ -117,7 +117,7 @@ abstract class CompletionBench {
     new TestingSymbolSearch(
       ClasspathSearch.fromClasspath(
         classpath,
-        new ExcludedPackagesHandler(None).isExcludedPackage
+        new ExcludedPackagesHandler().isExcludedPackage
       )
     )
   }

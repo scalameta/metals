@@ -265,7 +265,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       _ <- server.didChangeConfiguration(
         """{
           |  "excluded-packages": [
-          |    "scala.concurrent/"
+          |    "scala.concurrent"
           |  ]
           |}
           |""".stripMargin

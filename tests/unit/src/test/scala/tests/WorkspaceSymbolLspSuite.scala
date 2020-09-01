@@ -268,7 +268,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ <- server.didChangeConfiguration(
         """|{
            |  "excluded-packages": [
-           |     "java.util/"
+           |     "java.util"
            |  ]
            |}
            |""".stripMargin

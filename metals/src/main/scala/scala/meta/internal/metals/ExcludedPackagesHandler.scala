@@ -6,7 +6,7 @@ package scala.meta.internal.metals
  *
  * @param pkgsToExclude any exclusions that are in the `UserConfiguration` to start with.
  */
-class ExcludedPackagesHandler(pkgsToExclude: Option[List[String]]) {
+class ExcludedPackagesHandler(pkgsToExclude: Option[List[String]] = None) {
   val defaultExclusions: List[String] = List(
     "META-INF/", "images/", "toolbarButtonGraphics/", "jdk/", "sun/", "javax/",
     "oracle/", "java/awt/desktop/", "org/jcp/", "org/omg/", "org/graalvm/",
@@ -47,7 +47,11 @@ class ExcludedPackagesHandler(pkgsToExclude: Option[List[String]]) {
     }
   }
 
-  def update(pkgs: List[String]): Unit = cachedExclusions = prepareCache(pkgs)
+  def update(pkgs: Option[List[String]]): Unit =
+    cachedExclusions = pkgs match {
+      case Some(newPkgs) => prepareCache(newPkgs)
+      case None => defaultExclusions
+    }
 
   /**
    * Should the given package be excluded from indexing
