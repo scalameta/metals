@@ -129,7 +129,6 @@ case class ScalaPresentationCompiler(
           Completion.completions(pos)(using ctx.fresh.setCompilationUnit(unit))._2
         case None => Nil
       }
-
       new CompletionList(
         /*isIncomplete = */ false,
         items.map(completionItem).asJava

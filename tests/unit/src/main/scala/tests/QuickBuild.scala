@@ -106,7 +106,7 @@ case class QuickBuild(
       s"src/main/scala-$binaryVersion",
       s"src/main/scala-$binaryVersion"
     ).map(relpath => baseDirectory.resolve(relpath))
-    val allDependencies =
+    val scalaDependencies =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         Array(
           s"org.scala-lang:scala-library:2.13.1",
@@ -117,7 +117,9 @@ case class QuickBuild(
           s"org.scala-lang:scala-library:$scalaVersion",
           s"org.scala-lang:scala-reflect:$scalaVersion"
         )
-      } ++ libraryDependencies
+      }
+
+    val allDependencies = scalaDependencies ++ libraryDependencies
     val allJars = classDirectory :: QuickBuild.fetch(
       allDependencies,
       scalaVersion,

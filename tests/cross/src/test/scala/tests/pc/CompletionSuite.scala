@@ -46,7 +46,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "extension",
+    "extension".tag(IgnoreScalaVersion("0.27.0-RC1")),
     """
       |object A {
       |  "".stripSu@@
@@ -460,7 +460,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "commit1",
+    "commit1".tag(IgnoreScalaVersion("0.27.0-RC1")),
     """
       |package a
       |
@@ -788,7 +788,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "pat",
+    "pat".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  Option(1) match {
         |    case Som@@
@@ -802,7 +802,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "pat1",
+    "pat1".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  Option(1) match {
         |    case List(Som@@)
@@ -816,7 +816,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "adt",
+    "adt".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  Option(1) match {
         |    case No@@
@@ -835,7 +835,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "adt1",
+    "adt1".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  Option(1) match {
         |    case S@@
@@ -861,7 +861,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "adt2",
+    "adt2".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  Option(1) match {
         |    case _: S@@
@@ -887,7 +887,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "adt3",
+    "adt3".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|import Matches._
         |object Matches {
         |  val Number = "".r
@@ -915,7 +915,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "adt4",
+    "adt4".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  val Number = "".r
         |  "" match {
@@ -937,7 +937,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "adt5",
+    "adt5".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  val Number = "".r
         |  "" match {
@@ -996,7 +996,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "sort",
+    "sort".tag(IgnoreScalaVersion("0.27.0-RC1")),
     s"""|object Main {
         |  def printnnn = ""
         |  def printmmm = ""

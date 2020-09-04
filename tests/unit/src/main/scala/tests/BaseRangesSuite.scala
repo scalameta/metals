@@ -6,6 +6,9 @@ import munit.Location
 
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
+  protected def libraryDependencies: List[String] = Nil
+  protected def compilerPlugins: List[String] = Nil
+
   def assertCheck(
       filename: String,
       edit: String,
@@ -38,6 +41,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
     }
 
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
+
     test(name) {
       cleanWorkspace()
       for {
@@ -46,13 +50,8 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |{"a":
              |  {
              |    "scalaVersion" : "$actualScalaVersion",
-             |    "compilerPlugins": [
-             |      "org.scalamacros:::paradise:2.1.1"
-             |    ],
-             |    "libraryDependencies": [
-             |      "org.scalatest::scalatest:3.0.5",
-             |      "io.circe::circe-generic:0.12.0"
-             |    ]
+             |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
+             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
              |  }
              |}
              |${input
