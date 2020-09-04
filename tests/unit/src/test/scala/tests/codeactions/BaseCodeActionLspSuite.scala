@@ -16,13 +16,14 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectedCode: String,
       selectedActionIndex: Int = 0,
       expectNoDiagnostics: Boolean = true,
+      fileName: Option[String] = None,
       kind: List[String] = Nil,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"]"""
-    val path = "a/src/main/scala/a/A.scala"
+    val path = s"a/src/main/scala/a/${fileName.getOrElse("A.scala")}"
     test(name) {
       cleanWorkspace()
       for {

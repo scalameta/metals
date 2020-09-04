@@ -86,4 +86,27 @@ class OrganizeImportsLspSuite
     scalacOptions = scalacOption
   )
 
+  check(
+    "should not work on worksheet or Ammonite files",
+    """
+      |import scala.concurrent.duration._
+      |import java.util.Optional<<>>
+      |
+      |object A {
+      | println("")
+      |}
+      |""".stripMargin,
+    s"${OrganizeImports.title}",
+    """
+      |import scala.concurrent.duration._
+      |import java.util.Optional
+      |
+      |object A {
+      | println("")
+      |}
+      |""".stripMargin.replace("'", "\""),
+    fileName = Some("A.worksheet.sc"),
+    kind = List(kind),
+  )
+
 }

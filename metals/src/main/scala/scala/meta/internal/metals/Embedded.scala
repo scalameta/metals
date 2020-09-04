@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.ServiceLoader
@@ -81,11 +80,9 @@ final class Embedded(
       scalafixClassLoader: ClassLoader
   ): URLClassLoader = {
     val toolClasspathJars =
-      statusBar.trackBlockingTask("Downloading organize import rule") {
         Embedded.organizeImportRule(scalaBinaryVersion)
-      }
     toClassLoader(
-      Classpath(toolClasspathJars.map(jar => AbsolutePath(jar))),
+      Classpath(toolClasspathJars.map(AbsolutePath(_))),
       scalafixClassLoader
     )
 
@@ -251,18 +248,13 @@ object Embedded {
       resolution = resolutionParams
     )
 
-  def organizeImportRule(scalaBinaryVersion: String): List[File] = {
+  def organizeImportRule(scalaBinaryVersion: String): List[Path] = {
     val dep = Dependency.of(
       "com.github.liancheng",
       s"organize-imports_$scalaBinaryVersion",
       BuildInfo.organizeImportVersion
     )
-    Fetch
-      .create()
-      .withDependencies(dep)
-      .fetch()
-      .asScala
-      .toList
+    downloadDependency(dep, scalaBinaryVersion)
   }
 
   def newPresentationCompilerClassLoader(
