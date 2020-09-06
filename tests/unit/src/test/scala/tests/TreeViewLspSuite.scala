@@ -60,6 +60,10 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
                                |  "a": {},
                                |  "b": {}
                                |}
+                               |/a/src/main/scala/a/Zero.scala
+                               |class Zero {
+                               | val a = 1
+                               |}
                                |/a/src/main/scala/a/First.scala
                                |package a
                                |class First {
@@ -99,7 +103,19 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ <- server.didOpen("b/src/main/scala/b/Third.scala")
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}",
-        "a/ +"
+        """|_empty_/ -
+           |a/ -
+           |""".stripMargin
+      )
+      _ = server.assertTreeViewChildren(
+        s"projects:${server.buildTarget("a")}!/_empty_/",
+        """|Zero class +
+           |""".stripMargin
+      )
+      _ = server.assertTreeViewChildren(
+        s"projects:${server.buildTarget("a")}!/_empty_/Zero#",
+        """|a val
+           |""".stripMargin
       )
       _ = server.assertTreeViewChildren(
         s"projects:${server.buildTarget("a")}!/a/",

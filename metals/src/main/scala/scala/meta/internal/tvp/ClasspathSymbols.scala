@@ -97,7 +97,9 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
     val buf = Array.newBuilder[TreeViewSymbolInformation]
     def list(root: AbsolutePath): Unit = {
       val dir =
-        if (symbol == Scala.Symbols.RootPackage) root
+        if (
+          symbol == Scala.Symbols.RootPackage || symbol == Scala.Symbols.EmptyPackage
+        ) root
         else root.resolve(Symbol(symbol).enclosingPackage.value)
 
       dir.list.foreach {
