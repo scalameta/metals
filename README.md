@@ -1,16 +1,13 @@
 # Metals
 
-<a href="https://travis-ci.org/scalameta/metals">
-<img src="https://img.shields.io/travis/scalameta/metals/main.svg?style=flat-square" />
-</a>
 <a href="https://gitter.im/scalameta/metals">
-<img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&style=flat-square&color=F71263" />
+<img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&color=F71263" />
 </a>
 <a href="https://twitter.com/scalameta">
-<img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&style=flat-square&color=blue" />
+<img alt="Follow scalameta on Twitter" src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&color=blue" />
 </a>
 <a href="https://index.scala-lang.org/scalameta/metals/metals">
-<img src="https://index.scala-lang.org/scalameta/metals/metals/latest.svg" />
+<img alt="Find us on scaladex" src="https://index.scala-lang.org/scalameta/metals/metals/latest.svg" />
 </a>
 
 ## Documentation
