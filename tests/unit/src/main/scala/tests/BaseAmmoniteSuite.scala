@@ -97,8 +97,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
-  //https://github.com/scalameta/metals/issues/1801
-  test("hover".flaky) {
+  test("hover") {
     for {
       _ <- server.initialize(
         s"""
