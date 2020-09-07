@@ -217,7 +217,7 @@ lazy val V = new {
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
   val coursier = "2.0.0-RC6-25"
   val coursierInterfaces = "0.0.25"
-  val ammonite = "2.2.0"
+  val ammonite = "2.2.0-4-4bd225e"
   val mill = "0.8.0"
 }
 
