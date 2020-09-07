@@ -35,15 +35,20 @@ final class RunTestCodeLens(
   ): Seq[l.CodeLens] = {
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    val distance = buffers.tokenEditDistance(path, textDocument.text)
+    if (path.isAmmoniteScript || path.isWorksheet) {
+      Seq.empty
+    } else {
+      val distance = buffers.tokenEditDistance(path, textDocument.text)
 
-    buildTargets
-      .inverseSources(path)
-      .map { buildTarget =>
-        val classes = buildTargetClasses.classesOf(buildTarget)
-        codeLenses(textDocument, buildTarget, classes, distance)
-      }
-      .getOrElse(Seq.empty)
+      buildTargets
+        .inverseSources(path)
+        .map { buildTarget =>
+          val classes = buildTargetClasses.classesOf(buildTarget)
+          codeLenses(textDocument, buildTarget, classes, distance)
+        }
+        .getOrElse(Seq.empty)
+
+    }
   }
 
   private def codeLenses(
