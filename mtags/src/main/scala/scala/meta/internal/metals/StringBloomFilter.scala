@@ -28,7 +28,7 @@ import net.jpountz.xxhash.XXHashFactory
  * up search queries by allowing the client to pre-compute the hash of the
  * query string and re-use `mightContain` calls to multiple bloom filters. For
  * every single fuzzy symbol search (which happens on every single scope
- * completion request) we usually perform several thousant bloom filter
+ * completion request) we usually perform several thousand bloom filter
  * `mightContain` calls so should also help avoid a non-trivial amount of
  * unnecessary hashing.
  */
