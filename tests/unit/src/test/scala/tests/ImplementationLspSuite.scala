@@ -532,6 +532,12 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin
   )
 
+  override protected def libraryDependencies: List[String] =
+    List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
+
+  override protected def compilerPlugins: List[String] =
+    List("org.scalamacros:::paradise:2.1.1")
+
   override def assertCheck(
       filename: String,
       edit: String,

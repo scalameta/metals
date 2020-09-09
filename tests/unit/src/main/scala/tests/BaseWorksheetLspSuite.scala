@@ -26,7 +26,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |{
            |  "a": {
            |    "scalaVersion": "$scalaVersion",
-           |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]
+           |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.2.1"]
            |  }
            |}
            |/a/src/main/scala/foo/Main.worksheet.sc
@@ -56,9 +56,18 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|identity(42) // : Int = 42
-           |val name = sourcecode.Name.generate.value // : String = "name"
-           |""".stripMargin
+        getExpected(
+          """|identity(42) // : Int = 42
+             |val name = sourcecode.Name.generate.value // : String = "name"
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|identity(42) // : Int = 42
+                 |val name = sourcecode.Name.generate.value // : String = name
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }
@@ -112,40 +121,83 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|import java.nio.file.Files
-           |val name = "Susan" // : String = "Susan"
-           |val greeting = s"Hello $name" // : String = "Hello Susan"
-           |println(greeting + "\nHow are you?") // Hello Susan…
-           |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-           |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
-           |""".stripMargin
+        getExpected(
+          """|import java.nio.file.Files
+             |val name = "Susan" // : String = "Susan"
+             |val greeting = s"Hello $name" // : String = "Hello Susan"
+             |println(greeting + "\nHow are you?") // Hello Susan…
+             |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+             |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|import java.nio.file.Files
+                 |val name = "Susan" // : String = Susan
+                 |val greeting = s"Hello $name" // : String = Hello Susan
+                 |println(greeting + "\nHow are you?") // Hello Susan…
+                 |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                 |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
       _ = assertNoDiff(
         client.workspaceDecorationHoverMessage,
-        """|import java.nio.file.Files
-           |val name = "Susan"
-           |```scala
-           |name: String = "Susan"
-           |```
-           |val greeting = s"Hello $name"
-           |```scala
-           |greeting: String = "Hello Susan"
-           |```
-           |println(greeting + "\nHow are you?")
-           |```scala
-           |// Hello Susan
-           |// How are you?
-           |```
-           |1.to(10).toVector
-           |```scala
-           |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-           |```
-           |val List(a, b) = List(42, 10)
-           |```scala
-           |a: Int = 42
-           |b: Int = 10
-           |```
-           |""".stripMargin
+        getExpected(
+          """|import java.nio.file.Files
+             |val name = "Susan"
+             |```scala
+             |name: String = "Susan"
+             |```
+             |val greeting = s"Hello $name"
+             |```scala
+             |greeting: String = "Hello Susan"
+             |```
+             |println(greeting + "\nHow are you?")
+             |```scala
+             |// Hello Susan
+             |// How are you?
+             |```
+             |1.to(10).toVector
+             |```scala
+             |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+             |```
+             |val List(a, b) = List(42, 10)
+             |```scala
+             |a: Int = 42
+             |b: Int = 10
+             |```
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|import java.nio.file.Files
+                 |val name = "Susan"
+                 |```scala
+                 |name: String = Susan
+                 |```
+                 |val greeting = s"Hello $name"
+                 |```scala
+                 |greeting: String = Hello Susan
+                 |```
+                 |println(greeting + "\nHow are you?")
+                 |```scala
+                 |// Hello Susan
+                 |// How are you?
+                 |```
+                 |1.to(10).toVector
+                 |```scala
+                 |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                 |```
+                 |val List(a, b) = List(42, 10)
+                 |```scala
+                 |a: Int = 42
+                 |b: Int = 10
+                 |```
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }

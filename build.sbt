@@ -178,13 +178,14 @@ lazy val V = new {
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.3-27-dfdc9971"
   val scala3 = "0.26.0"
+  val scala3Candidate = "0.27.0-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.5"
+  val mdoc = "2.2.7"
   val scalafmt = "2.6.4"
-  val munit = "0.7.10"
+  val munit = "0.7.12"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
@@ -201,8 +202,8 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(scala3, "0.25.0")
-  def deprecatedScala3Versions = Seq("0.25.0-RC2", "0.26.0-RC1")
+  def nonDeprecatedScala3Versions = Seq(scala3, scala3Candidate)
+  def deprecatedScala3Versions = Seq("0.25.0", "0.26.0-RC1")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions

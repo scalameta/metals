@@ -64,6 +64,10 @@ class BaseSuite extends munit.FunSuite with Assertions {
 
     postProcess(result)
   }
+  protected def toJsonArray(list: List[String]): String = {
+    if (list.isEmpty) "[]"
+    else s"[${list.mkString("\"", """", """", "\"")}]"
+  }
 }
 
 object BaseSuite {

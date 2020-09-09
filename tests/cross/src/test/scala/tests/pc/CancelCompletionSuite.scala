@@ -13,6 +13,7 @@ import scala.meta.internal.pc.InterruptException
 import scala.meta.pc.CancelToken
 
 import munit.Location
+import munit.TestOptions
 import tests.BaseCompletionSuite
 
 class CancelCompletionSuite extends BaseCompletionSuite {
@@ -34,7 +35,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
   }
 
   def checkCancelled(
-      name: String,
+      name: TestOptions,
       query: String,
       expected: String,
       compat: Map[String, String]
@@ -81,7 +82,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
   }
 
   checkCancelled(
-    "basic",
+    "basic".tag(IgnoreScalaVersion("0.27.0-RC1")),
     """
       |object A {
       |  val x = asser@@
