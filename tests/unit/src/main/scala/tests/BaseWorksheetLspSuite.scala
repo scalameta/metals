@@ -465,8 +465,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
           Map(
             V.scala3 ->
               """|/a/src/main/scala/Main.worksheet.sc
-                 |val message/*L1*/ = "Hello World!"
-                 |println/*<no symbol>*/(message/*L1*/)
+                 |val message/*L0*/ = "Hello World!"
+                 |println/*<no symbol>*/(message/*L0*/)
                  |""".stripMargin
           ),
           scalaVersion
