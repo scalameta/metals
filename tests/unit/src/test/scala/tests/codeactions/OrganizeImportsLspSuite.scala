@@ -106,7 +106,7 @@ class OrganizeImportsLspSuite
       |}
       |""".stripMargin.replace("'", "\""),
     fileName = Some("A.worksheet.sc"),
-    kind = List(kind),
+    kind = List(kind)
   )
 
 }

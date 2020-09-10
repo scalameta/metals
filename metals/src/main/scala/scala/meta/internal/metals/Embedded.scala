@@ -80,7 +80,7 @@ final class Embedded(
       scalafixClassLoader: ClassLoader
   ): URLClassLoader = {
     val toolClasspathJars =
-        Embedded.organizeImportRule(scalaBinaryVersion)
+      Embedded.organizeImportRule(scalaBinaryVersion)
     toClassLoader(
       Classpath(toolClasspathJars.map(AbsolutePath(_))),
       scalafixClassLoader

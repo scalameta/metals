@@ -511,8 +511,15 @@ class MetalsLanguageServer(
       compilers,
       definitionIndex
     )
-    scalafixProvider =
-      ScalafixProvider(buildTargets, buffers, workspace, embedded, statusBar)
+    scalafixProvider = ScalafixProvider(
+      buildTargets,
+      buffers,
+      workspace,
+      embedded,
+      statusBar,
+      clientConfig.icons(),
+      languageClient
+    )
     codeActionProvider = new CodeActionProvider(
       compilers,
       buffers,
