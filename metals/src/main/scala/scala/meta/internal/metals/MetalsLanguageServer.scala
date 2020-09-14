@@ -514,6 +514,7 @@ class MetalsLanguageServer(
     scalafixProvider = ScalafixProvider(
       buildTargets,
       buffers,
+      userConfig.scalafixConfigPath,
       workspace,
       embedded,
       statusBar,
@@ -1173,12 +1174,10 @@ class MetalsLanguageServer(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { token =>
-      {
-        formattingProvider.format(
-          params.getTextDocument.getUri.toAbsolutePath,
-          token
-        )
-      }
+      formattingProvider.format(
+        params.getTextDocument.getUri.toAbsolutePath,
+        token
+      )
     }
 
   @JsonRequest("textDocument/onTypeFormatting")

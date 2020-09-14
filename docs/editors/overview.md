@@ -204,6 +204,15 @@ functionality.
     <td align="center">Status bar</td>
     <td align="center">Status bar, Slow task</td>
   </tr>
+  <tr>
+     <td>Organize imports</td>
+     <td align="center">✅</td>
+     <td align="center"></td>
+     <td align="center">✅</td>
+     <td align="center"></td>
+     <td align="center">✅</td>
+     <td align="center"></td>
+  </tr>
 </tbody>
 </table>
 
@@ -525,6 +534,13 @@ scripts.
     <td align="center">✅</td>
     <td align="center"></td>
   </tr>
+  <tr>
+     <td>Organize imports</td>
+     <td align="center"></td>
+     <td align="center"></td>
+     <td align="center"></td>
+     <td align="center"></td>
+  </tr>
 </tbody>
 </table>
 
@@ -535,5 +551,4 @@ errors, but not diagnostics coming from the compiler.
 
 Metals does not support the following features:
 
-- Organize imports
 - Refactoring: move class, extract/inline value, convert to block

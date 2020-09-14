@@ -26,6 +26,7 @@ case class UserConfiguration(
     mavenScript: Option[String] = None,
     millScript: Option[String] = None,
     scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf"),
+    scalafixConfigPath: RelativePath = RelativePath(".scalafix.conf"),
     symbolPrefixes: Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
@@ -292,6 +293,10 @@ object UserConfiguration {
       getStringKey("scalafmt-config-path")
         .map(RelativePath(_))
         .getOrElse(default.scalafmtConfigPath)
+    val scalafixConfigPath =
+      getStringKey("scalafix-config-path")
+        .map(RelativePath(_))
+        .getOrElse(default.scalafixConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
     val gradleScript =
@@ -334,6 +339,7 @@ object UserConfiguration {
           mavenScript,
           millScript,
           scalafmtConfigPath,
+          scalafixConfigPath,
           symbolPrefixes,
           worksheetScreenWidth,
           worksheetCancelTimeout,

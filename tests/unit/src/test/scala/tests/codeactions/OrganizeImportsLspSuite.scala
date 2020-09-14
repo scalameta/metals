@@ -30,7 +30,7 @@ class OrganizeImportsLspSuite
        |""".stripMargin
 
   check(
-    "basic organize imports",
+    "basic",
     """
       |package a
       |import scala.concurrent.duration._
@@ -52,13 +52,13 @@ class OrganizeImportsLspSuite
       |  val d = Duration(10, MICROSECONDS)
       |  val k = Future.successful(1)
       |}
-      |""".stripMargin.replace("'", "\""),
+      |""".stripMargin,
     kind = List(kind),
     scalacOptions = scalacOption
   )
 
   check(
-    "basic organize imports with existing config",
+    "basic-with-existing-config",
     """
       |package a
       |import scala.concurrent.duration._
@@ -86,8 +86,9 @@ class OrganizeImportsLspSuite
     scalacOptions = scalacOption
   )
 
+  // organize import only works .scala or .sbt files.
   check(
-    "should not work on worksheet or Ammonite files",
+    "doesnt-work-on-worksheets",
     """
       |import scala.concurrent.duration._
       |import java.util.Optional<<>>
@@ -104,9 +105,8 @@ class OrganizeImportsLspSuite
       |object A {
       | println("")
       |}
-      |""".stripMargin.replace("'", "\""),
-    fileName = Some("A.worksheet.sc"),
+      |""".stripMargin,
+    fileName = "A.worksheet.sc",
     kind = List(kind)
   )
-
 }

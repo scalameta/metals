@@ -413,8 +413,6 @@ lazy val metals = project
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
-      "ch.epfl.scala" % "scalafix-cli_2.12.12" % V.scalafix,
-      "ch.epfl.scala" % "scalafix-core_2.12" % V.scalafix,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,

@@ -16,14 +16,15 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectedCode: String,
       selectedActionIndex: Int = 0,
       expectNoDiagnostics: Boolean = true,
-      fileName: Option[String] = None,
+      fileName: String = "A.scala",
       kind: List[String] = Nil,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"]"""
-    val path = s"a/src/main/scala/a/${fileName.getOrElse("A.scala")}"
+    val path = s"a/src/main/scala/a/$fileName"
+    val fileContent = input.replace("<<", "").replace(">>", "")
     test(name) {
       cleanWorkspace()
       for {
@@ -31,9 +32,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
                                   |{"a":{$scalacOptionsJson}}
                                   |$scalafixConf
                                   |/$path
-                                  |${input
-          .replace("<<", "")
-          .replace(">>", "")}""".stripMargin)
+                                  |$fileContent""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <-
           server.assertCodeAction(path, input, expectedActions, kind)

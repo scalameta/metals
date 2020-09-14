@@ -1,11 +1,11 @@
 package scala.meta.internal.metals
 
+import java.net.URLClassLoader
 import java.nio.file.Path
-import java.util
 import java.util.Collections
-import java.util.Optional
+import java.util.{List => JList}
 
-import scala.collection.mutable
+import scala.collection.concurrent.TrieMap
 import scala.util.Try
 
 import scala.meta._
@@ -20,6 +20,7 @@ import scalafix.interfaces.ScalafixArguments
 case class ScalafixProvider(
     buildTargets: BuildTargets,
     buffers: Buffers,
+    scalafixConfigPath: RelativePath,
     workspace: AbsolutePath,
     embedded: Embedded,
     statusBar: StatusBar,
@@ -27,12 +28,14 @@ case class ScalafixProvider(
     languageClient: MetalsLanguageClient
 ) {
   import ScalafixProvider._
-  private val scalafixCache = mutable.Map.empty[String, Scalafix]
+  private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
+  private val organizeImportRuleCache =
+    TrieMap.empty[ScalaBinaryVersion, List[Path]]
 
   def organizeImports(file: AbsolutePath): List[l.TextEdit] = {
     val fileInput = file.toInput
     val unsavedFile = file.toInputFromBuffers(buffers)
-    if (fileInput.text.diff(unsavedFile.text).nonEmpty) {
+    if (isUnsaved(unsavedFile.text, fileInput.text)) {
       scribe.info(s"Organize imports requires saving the file first")
       languageClient.showMessage(
         MessageType.Warning,
@@ -40,18 +43,25 @@ case class ScalafixProvider(
       )
       Nil
     } else {
-      val baseMatcher = scalafix.internal.v1.Args.baseMatcher
-      if (baseMatcher.matches(file.toNIO)) {
-        val scalafixConfPath = workspace.resolve(scalafixFileName)
-        val scalafixConf: Optional[Path] =
-          if (scalafixConfPath.isFile) Optional.of(scalafixConfPath.toNIO)
-          else Optional.empty()
+      if (Seq("scala", "sbt").contains(file.`extension`)) {
+        val scalafixConfPath = workspace.resolve(scalafixConfigPath)
+        val scalafixConf =
+          if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
+          else None
         val scalafixEvaluation = for {
           (scalaVersion, scalaBinaryVersion, classPath) <-
-            getScalaVersionAndClassPath(file)
+            scalaVersionAndClasspath(file)
+          _ <-
+            if (!ScalaVersions.isScala3Version(scalaVersion)) Some(())
+            else {
+              scribe.warn(
+                s"Organize import doesn't work on $scalaVersion files"
+              )
+              None
+            }
           api <- getOrUpdateScalafixCache(scalaBinaryVersion)
           scalafixArgs = configureApi(api, scalaVersion, classPath)
-          urlClassLoaderWithExternalRule = embedded.organizeImports(
+          urlClassLoaderWithExternalRule <- getOrUpdateRuleCache(
             scalaBinaryVersion,
             api.getClass.getClassLoader
           )
@@ -62,7 +72,7 @@ case class ScalafixProvider(
 
           scalafixArgs
             .withToolClasspath(urlClassLoaderWithExternalRule)
-            .withConfig(scalafixConf)
+            .withConfig(scalafixConf.asJava)
             .withRules(List(organizeImportRuleName).asJava)
             .withPaths(List(file.toNIO).asJava)
             .withSourceroot(workspace.toNIO)
@@ -73,7 +83,7 @@ case class ScalafixProvider(
         val newFileContentOpt = scalafixEvaluation
           .flatMap(result => result.getFileEvaluations.headOption)
           .flatMap(_.previewPatches().asScala)
-        newFileContentOpt.map(getTextEditsFrom(_, fileInput)).getOrElse(Nil)
+        newFileContentOpt.map(textEditsFrom(_, fileInput)).getOrElse(Nil)
       } else {
         scribe.info(
           s"""|Could not organize import for ${file.toNIO.getFileName}. Should end with .scala or .sbt"""
@@ -83,7 +93,7 @@ case class ScalafixProvider(
     }
   }
 
-  private def getTextEditsFrom(
+  private def textEditsFrom(
       newFileContent: String,
       input: Input
   ): List[l.TextEdit] = {
@@ -95,9 +105,9 @@ case class ScalafixProvider(
     }
   }
 
-  private def getScalaVersionAndClassPath(
+  private def scalaVersionAndClasspath(
       file: AbsolutePath
-  ): Option[(ScalaVersion, ScalaBinaryVersion, util.List[Path])] =
+  ): Option[(ScalaVersion, ScalaBinaryVersion, JList[Path])] =
     for {
       identifier <- buildTargets.inverseSources(file)
       scalacOptions <- buildTargets.scalacOptions(identifier)
@@ -112,7 +122,7 @@ case class ScalafixProvider(
   private def configureApi(
       api: Scalafix,
       scalaVersion: ScalaVersion,
-      classPath: util.List[Path]
+      classPath: JList[Path]
   ): ScalafixArguments = {
     api
       .newArguments()
@@ -135,6 +145,35 @@ case class ScalafixProvider(
         }
       )
   }
+
+  private def getOrUpdateRuleCache(
+      scalaBinaryVersion: ScalaBinaryVersion,
+      scalafixClassLoader: ClassLoader
+  ): Option[URLClassLoader] = {
+    val pathsOpt = organizeImportRuleCache
+      .get(scalaBinaryVersion)
+      .orElse(
+        statusBar.trackBlockingTask("Downloading organize import rule") {
+          Try(Embedded.organizeImportRule(scalaBinaryVersion)).toOption
+            .map { paths =>
+              organizeImportRuleCache.update(scalaBinaryVersion, paths)
+              paths
+            }
+        }
+      )
+    pathsOpt.map(paths =>
+      Embedded.toClassLoader(
+        Classpath(paths.map(AbsolutePath(_))),
+        scalafixClassLoader
+      )
+    )
+  }
+
+  private def isUnsaved(fromBuffers: String, fromFile: String): Boolean =
+    fromBuffers.linesIterator.zip(fromFile.linesIterator).exists {
+      case (line1, line2) => line1 != line2
+    }
+
 }
 
 object ScalafixProvider {
@@ -142,6 +181,4 @@ object ScalafixProvider {
   type ScalaVersion = String
 
   val organizeImportRuleName = "OrganizeImports"
-  val scalafixFileName = ".scalafix.conf"
-
 }

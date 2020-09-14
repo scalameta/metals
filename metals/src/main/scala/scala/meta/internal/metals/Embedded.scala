@@ -9,7 +9,6 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
-import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
@@ -75,19 +74,6 @@ final class Embedded(
     )
   }
 
-  def organizeImports(
-      scalaBinaryVersion: String,
-      scalafixClassLoader: ClassLoader
-  ): URLClassLoader = {
-    val toolClasspathJars =
-      Embedded.organizeImportRule(scalaBinaryVersion)
-    toClassLoader(
-      Classpath(toolClasspathJars.map(AbsolutePath(_))),
-      scalafixClassLoader
-    )
-
-  }
-
   private def serviceLoader[T](
       cls: Class[T],
       className: String,
@@ -106,13 +92,6 @@ final class Embedded(
     }
   }
 
-  private def toClassLoader(
-      classpath: Classpath,
-      scalafixClassLoader: ClassLoader
-  ): URLClassLoader = {
-    val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
-    new URLClassLoader(urls, scalafixClassLoader)
-  }
 }
 
 object Embedded {
@@ -275,6 +254,14 @@ object Embedded {
     val parent =
       new PresentationCompilerClassLoader(this.getClass.getClassLoader)
     new URLClassLoader(allURLs, parent)
+  }
+
+  def toClassLoader(
+      classpath: Classpath,
+      scalafixClassLoader: ClassLoader
+  ): URLClassLoader = {
+    val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
+    new URLClassLoader(urls, scalafixClassLoader)
   }
 
 }
