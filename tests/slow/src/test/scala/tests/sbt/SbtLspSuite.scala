@@ -462,7 +462,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     for {
       _ <- server.initialize(
         s"""|/project/plugins.sbt
-            |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.19")
+            |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.20")
             |
             |/build.sbt
             |scalaVersion := "$scalaVersion"
