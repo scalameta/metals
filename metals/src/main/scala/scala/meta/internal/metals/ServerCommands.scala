@@ -255,7 +255,10 @@ object ServerCommands {
        |
        |Note: requires 'metals/inputBox' capability from language client.
        |""".stripMargin,
-    "[string], where the string is a directory location for the new file."
+    """|[string[]], where the first is a directory location for the new file.
+       |The second and third positions correspond to the file name and file type to allow for quick
+       |creation of a file if all are present.
+       |""".stripMargin
   )
 
   val NewScalaProject = new Command(
