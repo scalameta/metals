@@ -19,92 +19,271 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def initializationOptions: Option[InitializationOptions] =
     Some(InitializationOptions.Default.copy(inputBoxProvider = Some(true)))
 
-  check("new-worksheet")(
-    Some("a/src/main/scala/"),
-    "worksheet",
-    Some("Foo"),
-    "a/src/main/scala/Foo.worksheet.sc",
-    ""
+  check("new-worksheet-picked")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Right(worksheet),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
+    expectedContent = ""
+  )
+
+  check("new-worksheet-name-provided")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Left(worksheet),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
+    expectedContent = ""
+  )
+
+  check("new-worksheet-fully-provided")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Left(worksheet),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
+    expectedContent = ""
   )
 
   check("new-ammonite-script")(
-    Some("a/src/main/scala/"),
-    "ammonite",
-    Some("Foo"),
-    "a/src/main/scala/Foo.sc",
-    ""
+    directory = Some("a/src/main/scala/"),
+    fileType = Right(ammonite),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/Foo.sc",
+    expectedContent = ""
+  )
+
+  check("new-ammonite-script-name-provided")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Right(ammonite),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/Foo.sc",
+    expectedContent = ""
+  )
+
+  check("new-ammonite-script-fully-provided")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Left(ammonite),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/Foo.sc",
+    expectedContent = ""
   )
 
   check("new-class")(
-    Some("a/src/main/scala/foo/"),
-    "class",
-    Some("Foo"),
-    "a/src/main/scala/foo/Foo.scala",
-    s"""|package foo
-        |
-        |class Foo {
-        |$indent
-        |}
-        |""".stripMargin
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(clazz),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-class-name-provided")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(clazz),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-class-fully-provided")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Left(clazz),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin
   )
 
   check("new-case-class")(
-    Some("a/src/main/scala/foo/"),
-    "case-class",
-    Some("Foo"),
-    "a/src/main/scala/foo/Foo.scala",
-    """|package foo
-       |
-       |final case class Foo()
-       |""".stripMargin
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(caseClass),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = """|package foo
+                         |
+                         |final case class Foo()
+                         |""".stripMargin
+  )
+
+  check("new-case-class-name-provided")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(caseClass),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = """|package foo
+                         |
+                         |final case class Foo()
+                         |""".stripMargin
+  )
+
+  check("new-case-class-fully-provided")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Left(caseClass),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = """|package foo
+                         |
+                         |final case class Foo()
+                         |""".stripMargin
   )
 
   check("new-object-null-dir")(
     directory = None,
-    "object",
-    Some("Bar"),
-    "Bar.scala",
-    s"""|object Bar {
-        |$indent
-        |}
-        |""".stripMargin
+    fileType = Right(objekt),
+    fileName = Right("Bar"),
+    expectedFilePath = "Bar.scala",
+    expectedContent = s"""|object Bar {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-object-null-dir-name-provided")(
+    directory = None,
+    fileType = Right(objekt),
+    fileName = Left("Bar"),
+    expectedFilePath = "Bar.scala",
+    expectedContent = s"""|object Bar {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-object-null-dir")(
+    directory = None,
+    fileType = Left(objekt),
+    fileName = Left("Bar"),
+    expectedFilePath = "Bar.scala",
+    expectedContent = s"""|object Bar {
+                          |$indent
+                          |}
+                          |""".stripMargin
   )
 
   check("new-trait-new-dir")(
-    Some("a/src/main/scala/"),
-    "trait",
-    Some("bar/Baz"),
-    "a/src/main/scala/bar/Baz.scala",
-    s"""|package bar
-        |
-        |trait Baz {
-        |$indent
-        |}
-        |""".stripMargin
+    directory = Some("a/src/main/scala/"),
+    fileType = Right(trate),
+    fileName = Right("bar/Baz"),
+    expectedFilePath = "a/src/main/scala/bar/Baz.scala",
+    expectedContent = s"""|package bar
+                          |
+                          |trait Baz {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-trait-new-dir-name-provided")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Right(trate),
+    fileName = Left("bar/Baz"),
+    expectedFilePath = "a/src/main/scala/bar/Baz.scala",
+    expectedContent = s"""|package bar
+                          |
+                          |trait Baz {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-trait-new-dir-fully-provided")(
+    directory = Some("a/src/main/scala/"),
+    fileType = Right(trate),
+    fileName = Right("bar/Baz"),
+    expectedFilePath = "a/src/main/scala/bar/Baz.scala",
+    expectedContent = s"""|package bar
+                          |
+                          |trait Baz {
+                          |$indent
+                          |}
+                          |""".stripMargin
   )
 
   check("new-package-object")(
-    Some("a/src/main/scala/foo"),
-    "package-object",
-    name = None,
-    "a/src/main/scala/foo/package.scala",
-    s"""|package object foo {
-        |$indent
-        |}
-        |""".stripMargin
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(packageObject),
+    fileName = Right(
+      ""
+    ), // Just given an empty string here because it will never be used for package objects
+    expectedFilePath = "a/src/main/scala/foo/package.scala",
+    expectedContent = s"""|package object foo {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
+  check("new-package-object-provided")(
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Left(packageObject),
+    fileName = Right(
+      ""
+    ), // Just given an empty string here because it will never be used for package objects
+    expectedFilePath = "a/src/main/scala/foo/package.scala",
+    expectedContent = s"""|package object foo {
+                          |$indent
+                          |}
+                          |""".stripMargin
   )
 
   check("new-class-on-file")(
-    Some("a/src/main/scala/foo/Other.scala"),
-    "class",
-    Some("Foo"),
-    "a/src/main/scala/foo/Foo.scala",
-    s"""|package foo
-        |
-        |class Foo {
-        |$indent
-        |}
-        |""".stripMargin,
+    directory = Some("a/src/main/scala/foo/Other.scala"),
+    fileType = Right(clazz),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    existingFiles = """|/a/src/main/scala/foo/Other.scala
+                       |package foo
+                       |
+                       |class Other
+                       |""".stripMargin
+  )
+
+  check("new-class-on-file-name-provided")(
+    directory = Some("a/src/main/scala/foo/Other.scala"),
+    fileType = Right(clazz),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    existingFiles = """|/a/src/main/scala/foo/Other.scala
+                       |package foo
+                       |
+                       |class Other
+                       |""".stripMargin
+  )
+
+  check("new-class-on-file-fully-provided")(
+    directory = Some("a/src/main/scala/foo/Other.scala"),
+    fileType = Right(clazz),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
     existingFiles = """|/a/src/main/scala/foo/Other.scala
                        |package foo
                        |
@@ -113,10 +292,10 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
   )
 
   check("existing-file")(
-    Some("a/src/main/scala/foo"),
-    "class",
-    Some("Other"),
-    "a/src/main/scala/foo/Other.scala",
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(clazz),
+    fileName = Right("Other"),
+    expectedFilePath = "a/src/main/scala/foo/Other.scala",
     expectedContent = s"""|package foo
                           |
                           |class Other {
@@ -133,12 +312,22 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     expectedException = List(classOf[FileAlreadyExistsException])
   )
 
-  private def indent = "  "
+  private lazy val indent = "  "
+  private lazy val worksheet = "worksheet"
+  private lazy val ammonite = "ammonite"
+  private lazy val clazz = "class"
+  private lazy val caseClass = "case-class"
+  private lazy val objekt = "object"
+  private lazy val trate = "trait"
+  private lazy val packageObject = "package-object"
+
+  type Provided = String
+  type Picked = String
 
   private def check(testName: TestOptions)(
       directory: Option[String],
-      pickedKind: String,
-      name: Option[String],
+      fileType: Either[Provided, Picked],
+      fileName: Either[Provided, Picked],
       expectedFilePath: String,
       expectedContent: String,
       existingFiles: String = "",
@@ -157,27 +346,51 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
         workspace.resolve("a/src/main/scala/").toNIO
       )
 
-      client.showMessageRequestHandler = { params =>
-        if (isSelectTheKindOfFile(params)) {
-          params.getActions().asScala.find(_.getTitle() == pickedKind)
-        } else {
-          None
+      val ft: String =
+        fileType match {
+          case Left(providedType) => providedType
+          case Right(pickedType) =>
+            client.showMessageRequestHandler = { params =>
+              if (isSelectTheKindOfFile(params)) {
+                params.getActions().asScala.find(_.getTitle() == pickedType)
+              } else {
+                None
+              }
+            }
+            pickedType
         }
-      }
-      name.foreach { name =>
-        client.inputBoxHandler = { params =>
-          if (isEnterName(params, pickedKind)) {
-            Some(new MetalsInputBoxResult(value = name))
-          } else {
-            None
+
+      fileName match {
+        case Left(_) => ()
+        case Right(value) =>
+          client.inputBoxHandler = { params =>
+            if (isEnterName(params, ft)) {
+              Some(new MetalsInputBoxResult(value = value))
+            } else {
+              None
+            }
           }
-        }
+      }
+
+      val selectFileMessage = fileType match {
+        case Left(_) => ""
+        case Right(_) => NewScalaFile.selectTheKindOfFileMessage
+      }
+
+      val selectNameMessage = fileName match {
+        // If given "" as a name, just ignore it (basically for package objects)
+        case Left(_) | Right("") => ""
+        case Right(_) => "\n" + NewScalaFile.enterNameMessage(ft)
       }
 
       val expectedMessages =
-        NewScalaFile.selectTheKindOfFileMessage + name.fold("")(_ =>
-          "\n" + NewScalaFile.enterNameMessage(pickedKind)
-        )
+        selectFileMessage + selectNameMessage
+
+      val args = List(
+        directoryUri,
+        fileName.fold(identity, _ => null.asInstanceOf[String]),
+        fileType.fold(identity, _ => null.asInstanceOf[String])
+      )
 
       val futureToRecover = for {
         _ <- server.initialize(s"""
@@ -191,7 +404,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
           server
             .executeCommand(
               ServerCommands.NewScalaFile.id,
-              directoryUri
+              args: _*
             )
         _ = {
           assertNoDiff(

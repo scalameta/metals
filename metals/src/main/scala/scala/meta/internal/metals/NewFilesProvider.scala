@@ -37,9 +37,10 @@ class NewFilesProvider(
   private val ammonitePick =
     MetalsQuickPickItem(id = "ammonite", label = "Ammonite script")
 
-  def createNewFileDialog(
+  def handleFileCreation(
       directoryUri: Option[URI],
-      name: Option[String]
+      name: Option[String],
+      fileType: Option[String]
   ): Future[Unit] = {
     val directory = directoryUri
       .map { uri =>
@@ -52,34 +53,46 @@ class NewFilesProvider(
       .orElse(focusedDocument().map(_.parent))
 
     val newlyCreatedFile =
-      askForKind
-        .flatMapOption {
-          case kind @ (classPick.id | caseClassPick.id | objectPick.id |
-              traitPick.id) =>
-            getName(kind, name)
-              .mapOption(
-                createClass(directory, _, kind)
-              )
-          case worksheetPick.id =>
-            getName(worksheetPick.id, name)
-              .mapOption(
-                createEmptyFile(directory, _, ".worksheet.sc")
-              )
-          case ammonitePick.id =>
-            getName(ammonitePick.id, name)
-              .mapOption(
-                createEmptyFile(directory, _, ".sc")
-              )
-          case packageObjectPick.id =>
-            createPackageObject(directory).liftOption
-          case invalid =>
-            Future.failed(new IllegalArgumentException(invalid))
-        }
+      fileType match {
+        case Some(ft) => createFile(directory, ft, name)
+        case None =>
+          askForKind
+            .flatMapOption(createFile(directory, _, name))
+      }
 
     newlyCreatedFile.map {
       case Some((path, cursorRange)) =>
         openFile(path, cursorRange)
       case None => ()
+    }
+  }
+
+  private def createFile(
+      directory: Option[AbsolutePath],
+      fileType: String,
+      name: Option[String]
+  ) = {
+    fileType match {
+      case kind @ (classPick.id | caseClassPick.id | objectPick.id |
+          traitPick.id) =>
+        getName(kind, name)
+          .mapOption(
+            createClass(directory, _, kind)
+          )
+      case worksheetPick.id =>
+        getName(worksheetPick.id, name)
+          .mapOption(
+            createEmptyFile(directory, _, ".worksheet.sc")
+          )
+      case ammonitePick.id =>
+        getName(ammonitePick.id, name)
+          .mapOption(
+            createEmptyFile(directory, _, ".sc")
+          )
+      case packageObjectPick.id =>
+        createPackageObject(directory).liftOption
+      case invalid =>
+        Future.failed(new IllegalArgumentException(invalid))
     }
   }
 

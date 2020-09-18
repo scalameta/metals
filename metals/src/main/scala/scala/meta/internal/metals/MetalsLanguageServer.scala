@@ -1499,7 +1499,14 @@ class MetalsLanguageServer(
           case name: JsonPrimitive if name.isString =>
             name.getAsString()
         }
-        newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
+        val fileType = args.lift(2).collect {
+          case fileType: JsonPrimitive if fileType.isString =>
+            fileType.getAsString()
+        }
+        newFilesProvider
+          .handleFileCreation(directoryURI, name, fileType)
+          .asJavaObject
+
       case ServerCommands.StartAmmoniteBuildServer() =>
         ammonite.start().asJavaObject
       case ServerCommands.StopAmmoniteBuildServer() =>
