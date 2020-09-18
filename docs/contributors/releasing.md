@@ -56,7 +56,8 @@ title: Making a release
   - Run `./bin/test-release.sh $VERSION` to ensure that all artifacts have
     successfully been released. It's important to ensure that this script passes
     before announcing the release since it takes a while for all published
-    artifacts to sync with Maven Central.
+    artifacts to sync with Maven Central. You might need to update the script if
+    the list of supported versions changed in the meantime.
   - To check that the release to Sonatype succeed even if the artifacts are not
     yet available on Maven Central run:
     `./bin/test-release.sh $VERSION -r sonatype:public`
