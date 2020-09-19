@@ -59,11 +59,20 @@ class StacktraceAnalyzer(
   def stacktraceLenses(content: List[String]): Seq[l.CodeLens] = {
     (for {
       (line, row) <- content.zipWithIndex
-      if line.trim.startsWith("at ")
-      location <- fileLocationFromLine(line)
+      cleanedLine = stripErrorSignifier(line)
+      if cleanedLine.startsWith("at ")
+      location <- fileLocationFromLine(cleanedLine)
       range = new l.Range(new l.Position(row, 0), new l.Position(row, 0))
     } yield makeGotoLocationCodeLens(location, range)).toSeq
   }
+
+  /**
+   * Strip out the `[E]` when the line is coming from bloop-cli.
+   * Or
+   * Strip out the `[error]` when the line is coming from sbt
+   */
+  private def stripErrorSignifier(line: String) =
+    line.replaceFirst("""(\[E\]|\[error\])""", "").trim
 
   private def makeGotoLocationCodeLens(
       location: l.Location,
