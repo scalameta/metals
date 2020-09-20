@@ -8,11 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - uses: olafurpg/setup-scala@v7
       - uses: olafurpg/setup-gpg@v2
-      - uses: coursier/cache-action@v3
-      - run: git fetch --unshallow
-      - run: git fetch --tags
+      - uses: coursier/cache-action@v4
       - name: Publish
         run: |
           sbt ci-release
