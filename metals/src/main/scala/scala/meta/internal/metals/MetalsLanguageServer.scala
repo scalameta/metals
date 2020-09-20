@@ -43,6 +43,7 @@ import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.mtags._
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
@@ -202,7 +203,7 @@ class MetalsLanguageServer(
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
-  private var newFilesProvider: NewFilesProvider = _
+  private var newFileProvider: NewFileProvider = _
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
@@ -392,7 +393,7 @@ class MetalsLanguageServer(
       },
       tables
     )
-    newFilesProvider = new NewFilesProvider(
+    newFileProvider = new NewFileProvider(
       workspace,
       languageClient,
       packageProvider,
@@ -1503,7 +1504,7 @@ class MetalsLanguageServer(
           case fileType: JsonPrimitive if fileType.isString =>
             fileType.getAsString()
         }
-        newFilesProvider
+        newFileProvider
           .handleFileCreation(directoryURI, name, fileType)
           .asJavaObject
 
