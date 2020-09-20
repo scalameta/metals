@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.NewFileTemplate
+import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 
 class NewFileTemplateSuite extends BaseSuite {
 

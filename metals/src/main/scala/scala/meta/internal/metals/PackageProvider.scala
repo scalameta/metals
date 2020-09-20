@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position

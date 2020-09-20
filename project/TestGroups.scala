@@ -7,7 +7,7 @@ object TestGroups {
       "tests.DebugProtocolSuite", "tests.BillLspSuite",
       "tests.CodeLensLspSuite", "tests.codeactions.ImportMissingSymbolLspSuite",
       "tests.debug.StepDapSuite", "tests.debug.StackFrameDapSuite",
-      "tests.FormattingLspSuite", "tests.NewFilesLspSuite",
+      "tests.FormattingLspSuite", "tests.NewFileLspSuite",
       "tests.CascadeLspSuite", "tests.DiagnosticsLspSuite",
       "tests.worksheets.WorksheetNoDecorationsLspSuite",
       "tests.CompletionLspSuite", "tests.TreeViewLspSuite",

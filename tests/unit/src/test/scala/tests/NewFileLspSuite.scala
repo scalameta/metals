@@ -10,18 +10,19 @@ import scala.meta.internal.metals.MetalsInputBoxParams
 import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 
 import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
-class NewFilesLspSuite extends BaseLspSuite("new-files") {
+class NewFileLspSuite extends BaseLspSuite("new-file") {
 
   override def initializationOptions: Option[InitializationOptions] =
     Some(InitializationOptions.Default.copy(inputBoxProvider = Some(true)))
 
   check("new-worksheet-picked")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(worksheet),
+    fileType = Right(Worksheet),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
     expectedContent = ""
@@ -29,7 +30,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-worksheet-name-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Left(worksheet),
+    fileType = Left(Worksheet),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
     expectedContent = ""
@@ -37,7 +38,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-worksheet-fully-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Left(worksheet),
+    fileType = Left(Worksheet),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.worksheet.sc",
     expectedContent = ""
@@ -45,7 +46,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-ammonite-script")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(ammonite),
+    fileType = Right(AmmoniteScript),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
     expectedContent = ""
@@ -53,7 +54,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-ammonite-script-name-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(ammonite),
+    fileType = Right(AmmoniteScript),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
     expectedContent = ""
@@ -61,7 +62,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-ammonite-script-fully-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Left(ammonite),
+    fileType = Left(AmmoniteScript),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/Foo.sc",
     expectedContent = ""
@@ -69,7 +70,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-class")(
     directory = Some("a/src/main/scala/foo/"),
-    fileType = Right(clazz),
+    fileType = Right(Class),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
@@ -82,7 +83,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-class-name-provided")(
     directory = Some("a/src/main/scala/foo/"),
-    fileType = Right(clazz),
+    fileType = Right(Class),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
@@ -95,7 +96,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-class-fully-provided")(
     directory = Some("a/src/main/scala/foo/"),
-    fileType = Left(clazz),
+    fileType = Left(Class),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
@@ -108,7 +109,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-case-class")(
     directory = Some("a/src/main/scala/foo/"),
-    fileType = Right(caseClass),
+    fileType = Right(CaseClass),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = """|package foo
@@ -119,7 +120,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-case-class-name-provided")(
     directory = Some("a/src/main/scala/foo/"),
-    fileType = Right(caseClass),
+    fileType = Right(CaseClass),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = """|package foo
@@ -130,7 +131,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-case-class-fully-provided")(
     directory = Some("a/src/main/scala/foo/"),
-    fileType = Left(caseClass),
+    fileType = Left(CaseClass),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = """|package foo
@@ -141,7 +142,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-object-null-dir")(
     directory = None,
-    fileType = Right(objekt),
+    fileType = Right(Object),
     fileName = Right("Bar"),
     expectedFilePath = "Bar.scala",
     expectedContent = s"""|object Bar {
@@ -152,7 +153,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-object-null-dir-name-provided")(
     directory = None,
-    fileType = Right(objekt),
+    fileType = Right(Object),
     fileName = Left("Bar"),
     expectedFilePath = "Bar.scala",
     expectedContent = s"""|object Bar {
@@ -163,7 +164,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-object-null-dir")(
     directory = None,
-    fileType = Left(objekt),
+    fileType = Left(Object),
     fileName = Left("Bar"),
     expectedFilePath = "Bar.scala",
     expectedContent = s"""|object Bar {
@@ -174,7 +175,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-trait-new-dir")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(trate),
+    fileType = Right(Trait),
     fileName = Right("bar/Baz"),
     expectedFilePath = "a/src/main/scala/bar/Baz.scala",
     expectedContent = s"""|package bar
@@ -187,7 +188,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-trait-new-dir-name-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(trate),
+    fileType = Right(Trait),
     fileName = Left("bar/Baz"),
     expectedFilePath = "a/src/main/scala/bar/Baz.scala",
     expectedContent = s"""|package bar
@@ -200,7 +201,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-trait-new-dir-fully-provided")(
     directory = Some("a/src/main/scala/"),
-    fileType = Right(trate),
+    fileType = Right(Trait),
     fileName = Right("bar/Baz"),
     expectedFilePath = "a/src/main/scala/bar/Baz.scala",
     expectedContent = s"""|package bar
@@ -213,7 +214,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-package-object")(
     directory = Some("a/src/main/scala/foo"),
-    fileType = Right(packageObject),
+    fileType = Right(PackageObject),
     fileName = Right(
       ""
     ), // Just given an empty string here because it will never be used for package objects
@@ -226,7 +227,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-package-object-provided")(
     directory = Some("a/src/main/scala/foo"),
-    fileType = Left(packageObject),
+    fileType = Left(PackageObject),
     fileName = Right(
       ""
     ), // Just given an empty string here because it will never be used for package objects
@@ -239,7 +240,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-class-on-file")(
     directory = Some("a/src/main/scala/foo/Other.scala"),
-    fileType = Right(clazz),
+    fileType = Right(Class),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
@@ -257,7 +258,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-class-on-file-name-provided")(
     directory = Some("a/src/main/scala/foo/Other.scala"),
-    fileType = Right(clazz),
+    fileType = Right(Class),
     fileName = Left("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
@@ -275,7 +276,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("new-class-on-file-fully-provided")(
     directory = Some("a/src/main/scala/foo/Other.scala"),
-    fileType = Right(clazz),
+    fileType = Right(Class),
     fileName = Right("Foo"),
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
@@ -293,7 +294,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
   check("existing-file")(
     directory = Some("a/src/main/scala/foo"),
-    fileType = Right(clazz),
+    fileType = Right(Class),
     fileName = Right("Other"),
     expectedFilePath = "a/src/main/scala/foo/Other.scala",
     expectedContent = s"""|package foo
@@ -313,20 +314,15 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
   )
 
   private lazy val indent = "  "
-  private lazy val worksheet = "worksheet"
-  private lazy val ammonite = "ammonite"
-  private lazy val clazz = "class"
-  private lazy val caseClass = "case-class"
-  private lazy val objekt = "object"
-  private lazy val trate = "trait"
-  private lazy val packageObject = "package-object"
 
+  type ProvidedFileType = NewFileType
+  type PickedFileType = NewFileType
   type Provided = String
   type Picked = String
 
   private def check(testName: TestOptions)(
       directory: Option[String],
-      fileType: Either[Provided, Picked],
+      fileType: Either[ProvidedFileType, PickedFileType],
       fileName: Either[Provided, Picked],
       expectedFilePath: String,
       expectedContent: String,
@@ -348,16 +344,16 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
 
       val ft: String =
         fileType match {
-          case Left(providedType) => providedType
+          case Left(providedType) => providedType.label
           case Right(pickedType) =>
             client.showMessageRequestHandler = { params =>
               if (isSelectTheKindOfFile(params)) {
-                params.getActions().asScala.find(_.getTitle() == pickedType)
+                params.getActions().asScala.find(_.getTitle() == pickedType.id)
               } else {
                 None
               }
             }
-            pickedType
+            pickedType.label
         }
 
       fileName match {
@@ -389,7 +385,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
       val args = List(
         directoryUri,
         fileName.fold(identity, _ => null.asInstanceOf[String]),
-        fileType.fold(identity, _ => null.asInstanceOf[String])
+        fileType.fold(ft => ft.id, _ => null.asInstanceOf[String])
       )
 
       val futureToRecover = for {

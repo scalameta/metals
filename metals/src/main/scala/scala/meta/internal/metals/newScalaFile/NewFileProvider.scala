@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.newScalaFile
 
 import java.net.URI
 import java.nio.file.FileAlreadyExistsException
@@ -7,8 +7,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsQuickPickParams
+import scala.meta.internal.metals.PackageProvider
+import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -16,7 +22,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Range
 
-class NewFilesProvider(
+class NewFileProvider(
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
@@ -24,18 +30,6 @@ class NewFilesProvider(
 )(implicit
     ec: ExecutionContext
 ) {
-
-  private val classPick = MetalsQuickPickItem(id = "class", label = "Class")
-  private val caseClassPick =
-    MetalsQuickPickItem(id = "case-class", label = "Case class")
-  private val objectPick = MetalsQuickPickItem(id = "object", label = "Object")
-  private val traitPick = MetalsQuickPickItem(id = "trait", label = "Trait")
-  private val packageObjectPick =
-    MetalsQuickPickItem(id = "package-object", label = "Package Object")
-  private val worksheetPick =
-    MetalsQuickPickItem(id = "worksheet", label = "Worksheet")
-  private val ammonitePick =
-    MetalsQuickPickItem(id = "ammonite", label = "Ammonite script")
 
   def handleFileCreation(
       directoryUri: Option[URI],
@@ -52,13 +46,14 @@ class NewFilesProvider(
       }
       .orElse(focusedDocument().map(_.parent))
 
-    val newlyCreatedFile =
-      fileType match {
+    val newlyCreatedFile = {
+      fileType.flatMap(getFromString) match {
         case Some(ft) => createFile(directory, ft, name)
         case None =>
           askForKind
             .flatMapOption(createFile(directory, _, name))
       }
+    }
 
     newlyCreatedFile.map {
       case Some((path, cursorRange)) =>
@@ -69,52 +64,49 @@ class NewFilesProvider(
 
   private def createFile(
       directory: Option[AbsolutePath],
-      fileType: String,
+      fileType: NewFileType,
       name: Option[String]
   ) = {
     fileType match {
-      case kind @ (classPick.id | caseClassPick.id | objectPick.id |
-          traitPick.id) =>
+      case kind @ (Class | CaseClass | Object | Trait) =>
         getName(kind, name)
           .mapOption(
             createClass(directory, _, kind)
           )
-      case worksheetPick.id =>
-        getName(worksheetPick.id, name)
+      case Worksheet =>
+        getName(Worksheet, name)
           .mapOption(
             createEmptyFile(directory, _, ".worksheet.sc")
           )
-      case ammonitePick.id =>
-        getName(ammonitePick.id, name)
+      case AmmoniteScript =>
+        getName(AmmoniteScript, name)
           .mapOption(
             createEmptyFile(directory, _, ".sc")
           )
-      case packageObjectPick.id =>
+      case PackageObject =>
         createPackageObject(directory).liftOption
-      case invalid =>
-        Future.failed(new IllegalArgumentException(invalid))
     }
   }
 
-  private def askForKind: Future[Option[String]] = {
+  private def askForKind: Future[Option[NewFileType]] = {
     client
       .metalsQuickPick(
         MetalsQuickPickParams(
           List(
-            classPick,
-            caseClassPick,
-            objectPick,
-            traitPick,
-            packageObjectPick,
-            worksheetPick,
-            ammonitePick
+            Class.toQuickPickItem,
+            CaseClass.toQuickPickItem,
+            Object.toQuickPickItem,
+            Trait.toQuickPickItem,
+            PackageObject.toQuickPickItem,
+            Worksheet.toQuickPickItem,
+            AmmoniteScript.toQuickPickItem
           ).asJava,
           placeHolder = NewScalaFile.selectTheKindOfFileMessage
         )
       )
       .asScala
       .map {
-        case kind if !kind.cancelled => Some(kind.itemId)
+        case kind if !kind.cancelled => getFromString(kind.itemId)
         case _ => None
       }
   }
@@ -132,26 +124,26 @@ class NewFilesProvider(
   }
 
   private def getName(
-      kind: String,
+      kind: NewFileType,
       name: Option[String]
   ): Future[Option[String]] = {
     name match {
       case Some(v) if v.trim.length > 0 => Future.successful(name)
-      case _ => askForName(kind)
+      case _ => askForName(kind.label)
     }
   }
 
   private def createClass(
       directory: Option[AbsolutePath],
       name: String,
-      kind: String
+      kind: NewFileType
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
     //name can be actually be "foo/Name", where "foo" is a folder to create
     val className = directory.getOrElse(workspace).resolve(name).filename
     val template = kind match {
-      case caseClassPick.id => caseClassTemplate(className)
-      case _ => classTemplate(kind, className)
+      case CaseClass => caseClassTemplate(className)
+      case _ => classTemplate(kind.id, className)
     }
     val editText = template.map { s =>
       packageProvider
