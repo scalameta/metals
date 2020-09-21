@@ -372,4 +372,22 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin
   )
 
+  check(
+    "topLevel".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "@@",
+    """|abstract class
+       |case class
+       |class
+       |final
+       |import
+       |object
+       |package
+       |private
+       |protected
+       |sealed abstract class
+       |sealed class
+       |sealed trait
+       |trait
+       |""".stripMargin
+  )
 }

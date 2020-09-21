@@ -12,7 +12,10 @@ trait Keywords { this: MetalsGlobal =>
       latestEnclosing: List[Tree]
   ): List[Member] = {
     getIdentifierName(latestEnclosing, pos) match {
-      case None => Nil
+      case None =>
+        Keyword.all.collect {
+          case kw if kw.isPackage => mkTextEditMember(kw, editRange)
+        }
       case Some(name) =>
         val isExpression = this.isExpression(latestEnclosing)
         val isBlock = this.isBlock(latestEnclosing)
