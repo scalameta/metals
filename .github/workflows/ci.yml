@@ -39,7 +39,7 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.${{ matrix.java }}"
-      - uses: coursier/cache-action@v3
+      - uses: coursier/cache-action@v4
       - name: Run unit tests
         run: |
           bin/test.sh unit/test
