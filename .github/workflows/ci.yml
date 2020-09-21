@@ -111,7 +111,7 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
-      - uses: coursier/cache-action@v3
+      - uses: coursier/cache-action@v4
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:
