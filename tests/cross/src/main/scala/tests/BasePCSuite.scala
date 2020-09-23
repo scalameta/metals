@@ -50,7 +50,6 @@ abstract class BasePCSuite extends BaseSuite {
     pkg.startsWith("toolbarButtonGraphics/") ||
     pkg.startsWith("jdk/") ||
     pkg.startsWith("sun/") ||
-    pkg.startsWith("javax/") ||
     pkg.startsWith("oracle/") ||
     pkg.startsWith("java/awt/desktop/") ||
     pkg.startsWith("org/jcp/") ||

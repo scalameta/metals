@@ -116,8 +116,8 @@ object UserConfiguration {
         """`[]`.""",
         """["-Xmx1G"]""",
         "Ammonite JVM Properties",
-        """|Optional list of JVM properties to pass along to the Ammonite server. 
-           |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`" 
+        """|Optional list of JVM properties to pass along to the Ammonite server.
+           |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`"
            |""".stripMargin
       ),
       UserConfigurationOption(
@@ -139,7 +139,7 @@ object UserConfiguration {
             |Example:
             |
             |```js
-            |["--javax"]
+            |["--sun"]
             |```
             |""".stripMargin
       ),
