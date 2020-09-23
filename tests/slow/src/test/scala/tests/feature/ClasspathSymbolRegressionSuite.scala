@@ -94,8 +94,8 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |java.io.File Class
        |java.nio.file.Files Class
        |java.nio.file.Files#FileTypeDetectors Class
+       |javax.annotation.processing.Filer Interface
        |org.apache.hadoop.mapred.IFile Class
-       |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
        |scala.meta.inputs.Input.Stream.SerializationProxy#File Class
        |scala.meta.inputs.Input.Stream.SerializationProxy#File Object
@@ -112,6 +112,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.google.common.io.MoreFiles Class
        |com.twitter.io.Files Object
        |java.nio.file.Files Class
+       |javax.swing.plaf.basic.BasicDirectoryModel#FilesLoader Class
        |org.apache.hadoop.mapred.MROutputFiles Class
        |org.apache.hadoop.mapred.YarnOutputFiles Class
        |org.apache.ivy.ant.IvyCacheFileset Class
@@ -121,7 +122,6 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
        |scala.meta.internal.io.ListFiles Class
-       |scala.tools.nsc.interactive.CompilerControl#FilesDeletedItem Class
        |""".stripMargin
   )
 
