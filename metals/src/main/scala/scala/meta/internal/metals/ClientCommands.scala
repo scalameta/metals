@@ -109,16 +109,21 @@ object ClientCommands {
     "metals-goto-location",
     "Goto location",
     "Move the cursor focus to the provided location",
-    """|A LSP `Location` object with `uri` and `range` fields.
+    """|First required parameter is LSP `Location` object with `uri` and `range` fields.
+       |Second parameter is optional and has signature `otherWindow: Boolean`. 
+       |It gives a hint to client that if possible it would be good to open location in
+       |another buffer/window.
        |Example: 
        |```json
-       |{
+       |[{
        |  "uri": "file://path/to/Definition.scala",
        |  "range": {
        |    "start": {"line": 194, "character": 0},
        |    "end":   {"line": 194, "character": 1}
        |  }
-       |}
+       |},
+       |  false
+       |]
        |```
        |""".stripMargin
   )
