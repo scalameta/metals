@@ -512,7 +512,6 @@ class MetalsLanguageServer(
       definitionIndex
     )
     scalafixProvider = ScalafixProvider(
-      buildTargets,
       buffers,
       userConfig.scalafixConfigPath,
       workspace,
@@ -524,6 +523,7 @@ class MetalsLanguageServer(
     codeActionProvider = new CodeActionProvider(
       compilers,
       buffers,
+      buildTargets,
       scalafixProvider
     )
     doctor = new Doctor(

@@ -80,33 +80,9 @@ class OrganizeImportsLspSuite
       |  val d = Duration(10, MICROSECONDS)
       |  val optional = Optional.empty()
       |}
-      |""".stripMargin.replace("'", "\""),
+      |""".stripMargin,
     kind = List(kind),
     scalafixConf = scalafixConf,
     scalacOptions = scalacOption
-  )
-
-  // organize import only works .scala or .sbt files.
-  check(
-    "doesnt-work-on-worksheets",
-    """
-      |import scala.concurrent.duration._
-      |import java.util.Optional<<>>
-      |
-      |object A {
-      | println("")
-      |}
-      |""".stripMargin,
-    s"${OrganizeImports.title}",
-    """
-      |import scala.concurrent.duration._
-      |import java.util.Optional
-      |
-      |object A {
-      | println("")
-      |}
-      |""".stripMargin,
-    fileName = "A.worksheet.sc",
-    kind = List(kind)
   )
 }

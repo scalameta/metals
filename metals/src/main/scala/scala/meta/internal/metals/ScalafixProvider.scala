@@ -18,7 +18,6 @@ import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixArguments
 
 case class ScalafixProvider(
-    buildTargets: BuildTargets,
     buffers: Buffers,
     scalafixConfigPath: RelativePath,
     workspace: AbsolutePath,
@@ -32,7 +31,12 @@ case class ScalafixProvider(
   private val organizeImportRuleCache =
     TrieMap.empty[ScalaBinaryVersion, List[Path]]
 
-  def organizeImports(file: AbsolutePath): List[l.TextEdit] = {
+  def organizeImports(
+      file: AbsolutePath,
+      scalaVersion: ScalaVersion,
+      scalaBinaryVersion: ScalaBinaryVersion,
+      classpath: JList[Path]
+  ): List[l.TextEdit] = {
     val fileInput = file.toInput
     val unsavedFile = file.toInputFromBuffers(buffers)
     if (isUnsaved(unsavedFile.text, fileInput.text)) {
@@ -43,53 +47,36 @@ case class ScalafixProvider(
       )
       Nil
     } else {
-      if (Seq("scala", "sbt").contains(file.`extension`)) {
-        val scalafixConfPath = workspace.resolve(scalafixConfigPath)
-        val scalafixConf =
-          if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
-          else None
-        val scalafixEvaluation = for {
-          (scalaVersion, scalaBinaryVersion, classPath) <-
-            scalaVersionAndClasspath(file)
-          _ <-
-            if (!ScalaVersions.isScala3Version(scalaVersion)) Some(())
-            else {
-              scribe.warn(
-                s"Organize import doesn't work on $scalaVersion files"
-              )
-              None
-            }
-          api <- getOrUpdateScalafixCache(scalaBinaryVersion)
-          scalafixArgs = configureApi(api, scalaVersion, classPath)
-          urlClassLoaderWithExternalRule <- getOrUpdateRuleCache(
-            scalaBinaryVersion,
-            api.getClass.getClassLoader
-          )
-        } yield {
-          val scalacOption =
-            if (scalaBinaryVersion == "2.13") "-Wunused:imports"
-            else "-Ywarn-unused-import"
-
-          scalafixArgs
-            .withToolClasspath(urlClassLoaderWithExternalRule)
-            .withConfig(scalafixConf.asJava)
-            .withRules(List(organizeImportRuleName).asJava)
-            .withPaths(List(file.toNIO).asJava)
-            .withSourceroot(workspace.toNIO)
-            .withScalacOptions(Collections.singletonList(scalacOption))
-            .evaluate()
-        }
-
-        val newFileContentOpt = scalafixEvaluation
-          .flatMap(result => result.getFileEvaluations.headOption)
-          .flatMap(_.previewPatches().asScala)
-        newFileContentOpt.map(textEditsFrom(_, fileInput)).getOrElse(Nil)
-      } else {
-        scribe.info(
-          s"""|Could not organize import for ${file.toNIO.getFileName}. Should end with .scala or .sbt"""
+      val scalafixConfPath = workspace.resolve(scalafixConfigPath)
+      val scalafixConf =
+        if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
+        else None
+      val scalafixEvaluation = for {
+        api <- getOrUpdateScalafixCache(scalaBinaryVersion)
+        scalafixArgs = configureApi(api, scalaVersion, classpath)
+        urlClassLoaderWithExternalRule <- getOrUpdateRuleCache(
+          scalaBinaryVersion,
+          api.getClass.getClassLoader
         )
-        Nil
+      } yield {
+        val scalacOption =
+          if (scalaBinaryVersion == "2.13") "-Wunused:imports"
+          else "-Ywarn-unused-import"
+
+        scalafixArgs
+          .withToolClasspath(urlClassLoaderWithExternalRule)
+          .withConfig(scalafixConf.asJava)
+          .withRules(List(organizeImportRuleName).asJava)
+          .withPaths(List(file.toNIO).asJava)
+          .withSourceroot(workspace.toNIO)
+          .withScalacOptions(Collections.singletonList(scalacOption))
+          .evaluate()
       }
+
+      val newFileContentOpt = scalafixEvaluation
+        .flatMap(result => result.getFileEvaluations.headOption)
+        .flatMap(_.previewPatches().asScala)
+      newFileContentOpt.map(textEditsFrom(_, fileInput)).getOrElse(Nil)
     }
   }
 
@@ -104,20 +91,6 @@ case class ScalafixProvider(
       Nil
     }
   }
-
-  private def scalaVersionAndClasspath(
-      file: AbsolutePath
-  ): Option[(ScalaVersion, ScalaBinaryVersion, JList[Path])] =
-    for {
-      identifier <- buildTargets.inverseSources(file)
-      scalacOptions <- buildTargets.scalacOptions(identifier)
-      scalaBuildTarget <- buildTargets.scalaInfo(identifier)
-      scalaVersion = scalaBuildTarget.getScalaVersion
-      semanticdbTarget = scalacOptions.targetroot(scalaVersion).toNIO
-      scalaBinaryVersion = scalaBuildTarget.getScalaBinaryVersion
-      classPath = scalacOptions.getClasspath.map(_.toAbsolutePath.toNIO)
-      _ = classPath.add(semanticdbTarget)
-    } yield (scalaVersion, scalaBinaryVersion, classPath)
 
   private def configureApi(
       api: Scalafix,

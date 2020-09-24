@@ -12,6 +12,7 @@ import org.eclipse.{lsp4j => l}
 final class CodeActionProvider(
     compilers: Compilers,
     buffers: Buffers,
+    buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider
 ) {
   private val allActions: List[CodeAction] = List(
@@ -19,7 +20,7 @@ final class CodeActionProvider(
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol(),
     new StringActions(buffers),
-    new OrganizeImports(scalafixProvider)
+    new OrganizeImports(scalafixProvider, buildTargets)
   )
 
   def codeActions(

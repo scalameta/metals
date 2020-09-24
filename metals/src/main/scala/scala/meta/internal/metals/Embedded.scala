@@ -258,10 +258,10 @@ object Embedded {
 
   def toClassLoader(
       classpath: Classpath,
-      scalafixClassLoader: ClassLoader
+      classLoader: ClassLoader
   ): URLClassLoader = {
     val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
-    new URLClassLoader(urls, scalafixClassLoader)
+    new URLClassLoader(urls, classLoader)
   }
 
 }

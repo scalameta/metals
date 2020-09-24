@@ -16,11 +16,11 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectedCode: String,
       selectedActionIndex: Int = 0,
       expectNoDiagnostics: Boolean = true,
-      fileName: String = "A.scala",
       kind: List[String] = Nil,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil
   )(implicit loc: Location): Unit = {
+    val fileName: String = "A.scala"
     val scalacOptionsJson =
       s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"]"""
     val path = s"a/src/main/scala/a/$fileName"
