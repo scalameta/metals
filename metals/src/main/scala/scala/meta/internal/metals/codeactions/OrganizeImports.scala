@@ -32,7 +32,7 @@ final class OrganizeImports(
     val uri = params.getTextDocument.getUri
     val file = uri.toAbsolutePath
     if (isSourceOrganizeImportCalled(params) && isScalaOrSbt(file)) {
-      scalaVersionAndClasspath(file) match {
+      ScalafixProvider.scalaVersionAndClasspath(file, buildTargets) match {
         case Some((scalaVersion, scalaBinaryVersion, classpath))
             if !ScalaVersions.isScala3Version(scalaVersion) =>
           organizeImportsEdits(
@@ -41,6 +41,10 @@ final class OrganizeImports(
             scalaBinaryVersion,
             classpath
           )
+        case Some((scalaVersion, _, _))
+            if ScalaVersions.isScala3Version(scalaVersion) =>
+          scribe.info(s"Organize import doesn't work on $scalaVersion files")
+          Future.successful(Seq())
         case _ => Future.successful(Seq())
       }
     } else Future.successful(Seq())
@@ -83,20 +87,6 @@ final class OrganizeImports(
   private def isScalaOrSbt(file: AbsolutePath): Boolean =
     Seq("scala", "sbt").contains(file.extension)
 
-  private def scalaVersionAndClasspath(
-      file: AbsolutePath
-  ): Option[(ScalaVersion, ScalaBinaryVersion, JList[Path])] =
-    for {
-      buildId <- buildTargets.inverseSources(file)
-      scalacOptions <- buildTargets.scalacOptions(buildId)
-      scalaBuildTarget <- buildTargets.scalaInfo(buildId)
-      scalaVersion = scalaBuildTarget.getScalaVersion
-      semanticdbTarget = scalacOptions.targetroot(scalaVersion).toNIO
-      scalaBinaryVersion = scalaBuildTarget.getScalaBinaryVersion
-      classPath = scalacOptions.getClasspath.map(_.toAbsolutePath.toNIO)
-      _ = classPath.add(semanticdbTarget)
-    } yield (scalaVersion, scalaBinaryVersion, classPath)
-
 }
 object OrganizeImports {
   def title: String = "Organize imports"
@@ -104,4 +94,5 @@ object OrganizeImports {
 
   type ScalaBinaryVersion = String
   type ScalaVersion = String
+
 }

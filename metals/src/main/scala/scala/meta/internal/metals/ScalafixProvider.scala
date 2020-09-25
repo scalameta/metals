@@ -15,7 +15,6 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
-import scalafix.interfaces.ScalafixArguments
 
 case class ScalafixProvider(
     buffers: Buffers,
@@ -52,9 +51,8 @@ case class ScalafixProvider(
         if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
         else None
       val scalafixEvaluation = for {
-        api <- getOrUpdateScalafixCache(scalaBinaryVersion)
-        scalafixArgs = configureApi(api, scalaVersion, classpath)
-        urlClassLoaderWithExternalRule <- getOrUpdateRuleCache(
+        api <- getScalafix(scalaBinaryVersion)
+        urlClassLoaderWithExternalRule <- getRuleClassLoader(
           scalaBinaryVersion,
           api.getClass.getClassLoader
         )
@@ -63,7 +61,10 @@ case class ScalafixProvider(
           if (scalaBinaryVersion == "2.13") "-Wunused:imports"
           else "-Ywarn-unused-import"
 
-        scalafixArgs
+        api
+          .newArguments()
+          .withScalaVersion(scalaVersion)
+          .withClasspath(classpath)
           .withToolClasspath(urlClassLoaderWithExternalRule)
           .withConfig(scalafixConf.asJava)
           .withRules(List(organizeImportRuleName).asJava)
@@ -92,18 +93,7 @@ case class ScalafixProvider(
     }
   }
 
-  private def configureApi(
-      api: Scalafix,
-      scalaVersion: ScalaVersion,
-      classPath: JList[Path]
-  ): ScalafixArguments = {
-    api
-      .newArguments()
-      .withScalaVersion(scalaVersion)
-      .withClasspath(classPath)
-  }
-
-  private def getOrUpdateScalafixCache(
+  private def getScalafix(
       scalaBinaryVersion: ScalaBinaryVersion
   ): Option[Scalafix] = {
     scalafixCache
@@ -119,7 +109,7 @@ case class ScalafixProvider(
       )
   }
 
-  private def getOrUpdateRuleCache(
+  private def getRuleClassLoader(
       scalaBinaryVersion: ScalaBinaryVersion,
       scalafixClassLoader: ClassLoader
   ): Option[URLClassLoader] = {
@@ -154,4 +144,19 @@ object ScalafixProvider {
   type ScalaVersion = String
 
   val organizeImportRuleName = "OrganizeImports"
+
+  def scalaVersionAndClasspath(
+      file: AbsolutePath,
+      buildTargets: BuildTargets
+  ): Option[(ScalaVersion, ScalaBinaryVersion, JList[Path])] =
+    for {
+      buildId <- buildTargets.inverseSources(file)
+      scalacOptions <- buildTargets.scalacOptions(buildId)
+      scalaBuildTarget <- buildTargets.scalaInfo(buildId)
+      scalaVersion = scalaBuildTarget.getScalaVersion
+      semanticdbTarget = scalacOptions.targetroot(scalaVersion).toNIO
+      scalaBinaryVersion = scalaBuildTarget.getScalaBinaryVersion
+      classPath = scalacOptions.getClasspath.map(_.toAbsolutePath.toNIO)
+      _ = classPath.add(semanticdbTarget)
+    } yield (scalaVersion, scalaBinaryVersion, classPath)
 }
