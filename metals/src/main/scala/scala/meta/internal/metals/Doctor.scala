@@ -25,6 +25,8 @@ final class Doctor(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
+    currentBuildServer: () => Option[String],
+    calculateNewBuildServer: () => BspResolveResult,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration
@@ -281,6 +283,21 @@ final class Doctor(
     }
   }
 
+  private def selectedBuildServerMessage(): String = {
+    val current = currentBuildServer().getOrElse("<none>")
+    val onRestart = calculateNewBuildServer() match {
+      case ResolveNone => "<none>"
+      case ResolveBloop => "Bloop"
+      case ResolveBspOne(details) => details.getName
+      case ResolveMultiple(_, _) => "<ask user>"
+    }
+    if (current != onRestart) {
+      s"Build server currently used: ${current}. After reload will try connect to: ${onRestart}"
+    } else {
+      s"Build server currently used: ${current}."
+    }
+  }
+
   private def buildTargetsHtml(): String = {
     new HtmlBuilder()
       .element("h1")(_.text(doctorTitle))
@@ -347,6 +364,10 @@ final class Doctor(
           )
       )
     }
+
+    html.element("p")(
+      _.text(selectedBuildServerMessage())
+    )
 
     html
       .element("p")(

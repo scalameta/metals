@@ -8,10 +8,24 @@ import scala.concurrent.Future
 import scala.meta.internal.builds.BuildTools
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BspConnectionDetails
+
+sealed trait BspResolveResult
+case object ResolveNone extends BspResolveResult
+case object ResolveBloop extends BspResolveResult
+case class ResolveBspOne(details: BspConnectionDetails) extends BspResolveResult
+case class ResolveMultiple(md5: String, details: List[BspConnectionDetails])
+    extends BspResolveResult
+
 class BspConnector(
     bloopServers: BloopServers,
     bspServers: BspServers
 ) {
+
+  def resolve(buildTools: BuildTools): BspResolveResult = {
+    if (buildTools.isBloop) ResolveBloop
+    else bspServers.resolve()
+  }
 
   def connect(
       workspace: AbsolutePath,

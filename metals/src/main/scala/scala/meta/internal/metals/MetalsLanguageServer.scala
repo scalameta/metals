@@ -518,6 +518,8 @@ class MetalsLanguageServer(
       workspace,
       buildTargets,
       languageClient,
+      () => bspSession.map(_.mainConnection.name),
+      () => bspConnector.resolve(buildTools),
       () => httpServer,
       tables,
       clientConfig
