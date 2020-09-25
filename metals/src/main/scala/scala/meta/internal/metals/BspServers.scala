@@ -34,13 +34,36 @@ final class BspServers(
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
+  def resolve(): BspResolveResult = {
+    findAvailableServers(mainWorkspace) match {
+      case Nil => ResolveNone
+      case head :: Nil => ResolveBspOne(head)
+      case availableServers =>
+        val md5 = digestServerDetails(availableServers)
+        val selectedServer = for {
+          name <- tables.buildServers.selectedServer(md5)
+          server <- availableServers.find(_.getName == name)
+        } yield server
+        selectedServer match {
+          case Some(details) => ResolveBspOne(details)
+          case None => ResolveMultiple(md5, availableServers)
+        }
+    }
+  }
+
   def newServer(
       projectDirectory: AbsolutePath
   ): Future[Option[BuildServerConnection]] = {
-    findServer(projectDirectory).flatMap { details =>
-      details
-        .map(d => newServer(projectDirectory, d).map(Option(_)))
-        .getOrElse(Future.successful(None))
+    def makeServer(details: BspConnectionDetails) =
+      newServer(projectDirectory, details).map(Some(_))
+    resolve() match {
+      case ResolveBloop => Future.successful(None)
+      case ResolveNone => Future.successful(None)
+      case ResolveBspOne(details) => makeServer(details)
+      case ResolveMultiple(md5, availableServers) =>
+        askUser(md5, availableServers).flatMap(s =>
+          s.map(makeServer).getOrElse(Future.successful(None))
+        )
     }
   }
 
@@ -97,7 +120,6 @@ final class BspServers(
           finished
         )
       }
-
     }
 
     BuildServerConnection.fromSockets(
@@ -108,32 +130,6 @@ final class BspServers(
       tables.dismissedNotifications.ReconnectBsp,
       config
     )
-  }
-
-  private def findServer(
-      projectDirectory: AbsolutePath
-  ): Future[Option[BspConnectionDetails]] = {
-    findAvailableServers(projectDirectory) match {
-      case Nil =>
-        Future.successful(None)
-      case head :: Nil =>
-        Future.successful(Some(head))
-      case availableServers =>
-        val md5 = digestServerDetails(availableServers)
-        val selectedServer = for {
-          name <- tables.buildServers.selectedServer(md5)
-          server <- availableServers.find(_.getName == name)
-        } yield server
-        selectedServer match {
-          case Some(value) =>
-            scribe.info(
-              s"pre-selected build server: ${value.getName} (run 'Switch build server' command to pick a new server)"
-            )
-            Future.successful(Some(value))
-          case None =>
-            askUser(md5, availableServers)
-        }
-    }
   }
 
   private def findAvailableServers(
