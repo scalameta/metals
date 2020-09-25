@@ -9,6 +9,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
+import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
@@ -214,6 +215,7 @@ object Embedded {
     downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
   def downloadMtags(scalaVersion: String): List[Path] =
     downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
+
   def downloadMdoc(
       scalaVersion: String,
       scalaBinaryVersion: String,
@@ -224,6 +226,15 @@ object Embedded {
       scalaVersion,
       resolution = resolutionParams
     )
+
+  def organizeImportRule(scalaBinaryVersion: String): List[Path] = {
+    val dep = Dependency.of(
+      "com.github.liancheng",
+      s"organize-imports_$scalaBinaryVersion",
+      BuildInfo.organizeImportVersion
+    )
+    downloadDependency(dep, scalaBinaryVersion)
+  }
 
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
@@ -243,6 +254,14 @@ object Embedded {
     val parent =
       new PresentationCompilerClassLoader(this.getClass.getClassLoader)
     new URLClassLoader(allURLs, parent)
+  }
+
+  def toClassLoader(
+      classpath: Classpath,
+      classLoader: ClassLoader
+  ): URLClassLoader = {
+    val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
+    new URLClassLoader(urls, classLoader)
   }
 
 }

@@ -207,6 +207,7 @@ class MetalsLanguageServer(
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
+  private var scalafixProvider: ScalafixProvider = _
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
   var tables: Tables = _
@@ -510,9 +511,20 @@ class MetalsLanguageServer(
       compilers,
       definitionIndex
     )
+    scalafixProvider = ScalafixProvider(
+      buffers,
+      userConfig.scalafixConfigPath,
+      workspace,
+      embedded,
+      statusBar,
+      clientConfig.icons(),
+      languageClient
+    )
     codeActionProvider = new CodeActionProvider(
       compilers,
-      buffers
+      buffers,
+      buildTargets,
+      scalafixProvider
     )
     doctor = new Doctor(
       workspace,
@@ -637,7 +649,11 @@ class MetalsLanguageServer(
       if (initializeParams.supportsCodeActionLiterals) {
         capabilities.setCodeActionProvider(
           new CodeActionOptions(
-            List(CodeActionKind.QuickFix, CodeActionKind.Refactor).asJava
+            List(
+              CodeActionKind.QuickFix,
+              CodeActionKind.Refactor,
+              CodeActionKind.SourceOrganizeImports
+            ).asJava
           )
         )
       } else {
@@ -1514,6 +1530,7 @@ class MetalsLanguageServer(
         ammonite.stop()
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
+
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

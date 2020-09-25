@@ -74,6 +74,10 @@ class UserConfigurationSuite extends BaseSuite {
       obtained.scalafmtConfigPath ==
         UserConfiguration.default.scalafmtConfigPath
     )
+    assert(
+      obtained.scalafixConfigPath ==
+        UserConfiguration.default.scalafixConfigPath
+    )
   }
 
   checkOK(
