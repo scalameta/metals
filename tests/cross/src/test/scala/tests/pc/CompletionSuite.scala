@@ -16,8 +16,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|List scala.collection.immutable
        |List - java.awt
        |List - java.util
-       |ListMap - scala.collection.immutable
-       |ListMap - scala.collection.mutable
+       |JList - javax.swing
+       |ListUI - javax.swing.plaf
        |""".stripMargin,
     compat = Map(
       "2.13" ->
@@ -25,7 +25,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |LazyList scala.collection.immutable
            |List - java.awt
            |List - java.util
-           |ListMap - scala.collection.immutable
+           |JList - javax.swing
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -271,6 +271,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
+       |PooledConnectionBuilder - javax.sql
        |CertPathBuilderException - java.security.cert
        |PKIXCertPathBuilderResult - java.security.cert
        |""".stripMargin
@@ -365,15 +366,15 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|Path - java.nio.file
        |Paths - java.nio.file
+       |XPath - javax.xml.xpath
        |Path2D - java.awt.geom
        |CertPath - java.security.cert
+       |TreePath - javax.swing.tree
+       |XPathType - javax.xml.crypto.dsig.spec
        |LayoutPath - java.awt.font
+       |XPathNodes - javax.xml.xpath
        |PathMatcher - java.nio.file
-       |GeneralPath - java.awt.geom
        |XPathResult - org.w3c.dom.xpath
-       |PathIterator - java.awt.geom
-       |XPathEvaluator - org.w3c.dom.xpath
-       |XPathException - org.w3c.dom.xpath
        |""".stripMargin
   )
 
@@ -383,9 +384,11 @@ class CompletionSuite extends BaseCompletionSuite {
       |package a
       |import MetaData@@
       |""".stripMargin,
-    """|DatabaseMetaData - java.sql
+    """|RowSetMetaData - javax.sql
+       |DatabaseMetaData - java.sql
        |ParameterMetaData - java.sql
        |ResultSetMetaData - java.sql
+       |RowSetMetaDataImpl - javax.sql.rowset
        |""".stripMargin
   )
 

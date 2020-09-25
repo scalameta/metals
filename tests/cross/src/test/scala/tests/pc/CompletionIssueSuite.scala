@@ -76,7 +76,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |package all
       |import all.World.Countries.{
       |  Sweden,
-      |  Norway
+      |  USA
       |}
       |
       |object World {
@@ -89,15 +89,15 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |}
       |import all.World.Countries.France
       |object B {
-      |  val allCountries = Sweden + Norway + France + USA@@
+      |  val allCountries = Sweden + France + USA + Norway@@
       |}""".stripMargin,
     """
       |package all
       |import all.World.Countries.{
       |  Sweden,
-      |  Norway
+      |  USA
       |}
-      |import all.World.Countries.USA
+      |import all.World.Countries.Norway
       |
       |object World {
       |  object Countries{
@@ -109,7 +109,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |}
       |import all.World.Countries.France
       |object B {
-      |  val allCountries = Sweden + Norway + France + USA
+      |  val allCountries = Sweden + France + USA + Norway
       |}""".stripMargin
   )
 

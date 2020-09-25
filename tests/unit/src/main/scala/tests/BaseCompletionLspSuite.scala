@@ -98,32 +98,32 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
         "Stream@@",
         getExpected(
           """|BaseStream - java.util.stream
-             |DoubleStream - java.util.stream
              |InputStream - java.io
              |IntStream - java.util.stream
              |LogStream - java.rmi.server
              |LongStream - java.util.stream
-             |OutputStream - java.io
              |PrintStream - java.io
              |Stream - java.util.stream
              |Stream scala.collection.immutable
              |StreamBuilder - scala.collection.immutable.Stream
              |StreamCanBuildFrom - scala.collection.immutable.Stream
+             |StreamFilter - javax.xml.stream
+             |StreamResult - javax.xml.transform.stream
              |StreamView - scala.collection.immutable
              |Streamable - scala.reflect.io
              |""".stripMargin,
           Map(
             "2.13" ->
               """|BaseStream - java.util.stream
-                 |DoubleStream - java.util.stream
                  |InputStream - java.io
                  |IntStream - java.util.stream
                  |LogStream - java.rmi.server
                  |LongStream - java.util.stream
-                 |OutputStream - java.io
                  |PrintStream - java.io
                  |Stream - java.util.stream
                  |Stream scala.collection.immutable
+                 |StreamFilter - javax.xml.stream
+                 |StreamResult - javax.xml.transform.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
                  |Streamable - scala.reflect.io
                  |""".stripMargin

@@ -249,6 +249,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       _ <- assertCompletion(
         "Duration@@",
         """|Duration - java.time
+           |Duration - javax.xml.datatype
            |Duration - scala.concurrent.duration
            |DurationConversions - scala.concurrent.duration
            |DurationDouble - scala.concurrent.duration.package
@@ -274,6 +275,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       _ <- assertCompletion(
         "Duration@@",
         """|Duration - java.time
+           |Duration - javax.xml.datatype
            |""".stripMargin,
         includeDetail = false
       )
