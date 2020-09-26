@@ -1,7 +1,6 @@
 package tests
 
 import scala.meta.inputs.Input
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.HoverMarkup
 
@@ -28,21 +27,7 @@ trait TestHovers {
   ): String = {
     hover match {
       case Some(value) =>
-        val types = value.getContents.asScala match {
-          case Right(value) =>
-            value.getValue
-          case Left(values) =>
-            values.asScala
-              .map { e =>
-                e.asScala match {
-                  case Left(value) =>
-                    value
-                  case Right(marked) =>
-                    codeFence(marked.getValue, marked.getLanguage)
-                }
-              }
-              .mkString("\n")
-        }
+        val types = value.getContents.getRight.getValue()
         val range = Option(value.getRange) match {
           case Some(value) if includeRange =>
             codeFence(
