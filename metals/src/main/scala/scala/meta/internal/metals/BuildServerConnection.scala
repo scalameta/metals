@@ -313,7 +313,7 @@ object BuildServerConnection {
         if (isCI)
           initializeResult.get(20, TimeUnit.SECONDS)
         else
-          initializeResult.get(5, TimeUnit.SECONDS)
+          initializeResult.get(205, TimeUnit.SECONDS)
       } catch {
         case e: TimeoutException =>
           scribe.error("Timeout waiting for 'build/initialize' response")

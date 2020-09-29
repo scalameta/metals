@@ -6,7 +6,9 @@ import java.sql.Timestamp
 import scala.meta.internal.metals.JdbcEnrichments._
 
 class ChosenBuildServers(conn: () => Connection, time: Time) {
-  def selectedServer(md5: String): Option[String] = {
+  final val explicit = "EXPLICIT"
+
+  def selectedServer(md5: String = explicit): Option[String] = {
     conn()
       .query(
         "select selected_server from chosen_build_server where md5 = ?;"
@@ -15,6 +17,11 @@ class ChosenBuildServers(conn: () => Connection, time: Time) {
       ) { rs => rs.getString(1) }
       .headOption
   }
+
+  def reset(): Unit = 
+    conn().update("delete from chosen_build_server where md5 = ?;")(_.setString(1, explicit))
+
+  def chooseServer(server: String): Int = chooseServer(explicit, server)
 
   def chooseServer(md5: String, server: String): Int = {
     conn().update(

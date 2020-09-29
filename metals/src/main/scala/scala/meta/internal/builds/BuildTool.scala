@@ -57,4 +57,13 @@ object BuildTool {
     Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
     outFile
   }
+
+  def copyFromResource(
+      resourceFile: String,
+      destination: Path
+  ): Unit = {
+    val embeddedFile = this.getClass.getResourceAsStream(s"/$resourceFile")
+    Files.createDirectories(destination.getParent)
+    Files.copy(embeddedFile, destination, StandardCopyOption.REPLACE_EXISTING)
+  }
 }

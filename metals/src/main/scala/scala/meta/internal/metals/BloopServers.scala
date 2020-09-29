@@ -58,7 +58,7 @@ final class BloopServers(
   def newServer(
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration
-  ): Future[Option[BuildServerConnection]] = {
+  ): Future[BuildServerConnection] = {
     val bloopVersion = userConfiguration.currentBloopVersion
     BuildServerConnection
       .fromSockets(
@@ -69,7 +69,6 @@ final class BloopServers(
         tables.dismissedNotifications.ReconnectBsp,
         config
       )
-      .map(Option(_))
   }
 
   private def connectToLauncher(

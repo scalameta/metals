@@ -13,13 +13,14 @@ import com.zaxxer.nuprocess.NuProcess
 
 object ProcessHandler {
   def apply(
+      command: String,
       joinErrorWithInfo: Boolean
   ): ProcessHandler = {
     val stdout = new LineListener(line => scribe.info(line))
     val stderr =
       if (joinErrorWithInfo) stdout
       else new LineListener(line => scribe.error(line))
-    new ProcessHandler(stdout, stderr)
+    new ProcessHandler(command, stdout, stderr)
   }
 
   /**
@@ -40,6 +41,7 @@ object ProcessHandler {
  * Converts running system processing into Future[BloopInstallResult].
  */
 class ProcessHandler(
+    val command: String,
     val stdout: LineListener,
     val stderr: LineListener
 ) extends NuAbstractProcessHandler {
@@ -57,7 +59,7 @@ class ProcessHandler(
     if (!completeProcess.isCompleted) {
       completeProcess.trySuccess(statusCode)
     }
-    scribe.info(s"build tool exit: $statusCode")
+    scribe.info(s"$command exit: $statusCode")
     response.foreach(_.cancel(false))
   }
 
