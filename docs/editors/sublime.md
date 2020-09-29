@@ -86,6 +86,17 @@ This paragraph contains a few tips & trick that can improve your daily productiv
 
 ### Optional LSP client tweaks
 
+If you want Metals to automatically organize the imports on file save set the following setting in the "Preferences > Preferences: LSP Settings":
+
+```json
+{
+  // ...
+  "lsp_code_actions_on_save": {
+    "source.organizeImports": true
+  }
+}
+```
+
 If you prefer to only enable Metals completions
 (without mixing them with the default ones from Sublime) set the following setting
 in the "Preferences > Preferences: LSP Settings":
