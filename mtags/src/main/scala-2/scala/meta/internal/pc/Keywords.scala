@@ -9,10 +9,24 @@ trait Keywords { this: MetalsGlobal =>
   def keywords(
       pos: Position,
       editRange: l.Range,
-      latestEnclosing: List[Tree]
+      latestEnclosing: List[Tree],
+      completion: CompletionPosition
   ): List[Member] = {
     getIdentifierName(latestEnclosing, pos) match {
-      case None => Nil
+      case None =>
+        completion match {
+          // This whole block is meant to catch top level completions, however
+          // it's also valid to have a scaladoc comment at the top level, so we
+          // explicitly check that we don't have a scaladocCompletion before we
+          // grab the top level completions since it's safe to assume if someone
+          // has already typed /* then they are going for the scaladoc, not the
+          // other stuff.
+          case _: ScaladocCompletion => List.empty
+          case _ =>
+            Keyword.all.collect {
+              case kw if kw.isPackage => mkTextEditMember(kw, editRange)
+            }
+        }
       case Some(name) =>
         val isExpression = this.isExpression(latestEnclosing)
         val isBlock = this.isBlock(latestEnclosing)

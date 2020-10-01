@@ -739,7 +739,7 @@ trait Completions { this: MetalsGlobal =>
   def inferIdentStart(pos: Position, text: String): Int = {
     def fallback: Int = {
       var i = pos.point - 1
-      while (i > 0 && Chars.isIdentifierPart(text.charAt(i))) {
+      while (i >= 0 && Chars.isIdentifierPart(text.charAt(i))) {
         i -= 1
       }
       i + 1
