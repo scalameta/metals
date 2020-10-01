@@ -309,7 +309,7 @@ class CompletionProvider(
     }
     completions.foreach(visit)
     completion.contribute.foreach(visit)
-    buf ++= keywords(pos, editRange, latestParentTrees)
+    buf ++= keywords(pos, editRange, latestParentTrees, completion)
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
