@@ -38,7 +38,9 @@ Apart from using code lenses, users can start a debug session by executing the
 {
   "mainClass": "com.foo.App",
   "buildTarget": "foo",
-  "args": ["bar"]
+  "args": ["bar"],
+  "jvmOptions": ["-Dpropert=123"],
+  "env": { "RETRY": "TRUE" }
 }
 ```
 
@@ -52,8 +54,8 @@ Apart from using code lenses, users can start a debug session by executing the
 ```
 
 `buildTarget` is an optional parameter, which might be useful if there are
-identically named classes in different modules. A uri will be returned that can be
-used by the DAP client.
+identically named classes in different modules. A uri will be returned that can
+be used by the DAP client.
 
 ### Wiring it all together
 

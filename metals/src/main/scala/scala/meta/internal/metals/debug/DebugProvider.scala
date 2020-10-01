@@ -143,6 +143,15 @@ class DebugProvider(
         clazz.setJvmOptions(
           Option(params.jvmOptions).getOrElse(List().asJava)
         )
+        val env =
+          if (params.env != null)
+            params.env.asScala.map {
+              case (key, value) => s"$key=$value"
+            }.toList
+          else
+            Nil
+
+        clazz.setEnvironmentVariables(env.asJava)
         Future.successful(
           new b.DebugSessionParams(
             singletonList(target.getId()),
@@ -250,6 +259,9 @@ class DebugProvider(
               param
           }
           main.setJvmOptions(translated.asJava)
+          if (main.getEnvironmentVariables() == null) {
+            main.setEnvironmentVariables(Nil.asJava)
+          }
           parameters.setData(main.toJsonObject)
         }
         parameters
