@@ -31,6 +31,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -198,6 +199,7 @@ class MetalsLanguageServer(
   private var renameProvider: RenameProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
+  private var syntheticsDecorator: SyntheticsDecorationProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
@@ -460,9 +462,22 @@ class MetalsLanguageServer(
       compilations,
       clientConfig
     )
+    syntheticsDecorator = new SyntheticsDecorationProvider(
+      workspace,
+      semanticdbs,
+      buffers,
+      languageClient,
+      fingerprints,
+      charset,
+      diagnostics,
+      () => focusedDocument,
+      clientConfig,
+      () => userConfig
+    )
     semanticDBIndexer = new SemanticdbIndexer(
       referencesProvider,
       implementationProvider,
+      syntheticsDecorator,
       buildTargets
     )
     documentHighlightProvider = new DocumentHighlightProvider(
@@ -817,6 +832,7 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     focusedDocument = Some(path)
     openedFiles.add(path)
+    syntheticsDecorator.publishSynthetics(path)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -867,6 +883,7 @@ class MetalsLanguageServer(
     } else if (openedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
+      syntheticsDecorator.publishSynthetics(path)
       buildTargets.inverseSources(path) match {
         case Some(target) =>
           val isAffectedByCurrentCompilation =
@@ -916,7 +933,12 @@ class MetalsLanguageServer(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        parseTrees(path).asJava
+        Future
+          .sequence(
+            List(parseTrees(path), syntheticsDecorator.publishSynthetics(path))
+          )
+          .ignoreValue
+          .asJava
     }
 
   @JsonNotification("textDocument/didClose")
@@ -1135,6 +1157,9 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       compilers
         .hover(params, token, interactiveSemanticdbs)
+        .map { hover =>
+          syntheticsDecorator.addSyntheticsHover(params, hover)
+        }
         .map(
           _.orElse {
             val path = params.getTextDocument.getUri.toAbsolutePath

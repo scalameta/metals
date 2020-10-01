@@ -18,6 +18,9 @@ import org.eclipse.{lsp4j => l}
  * @param compilerOptions configuration for the `PresentationCompilerConfig`.
  * @param debuggingProvider if the client supports debugging.
  * @param decorationProvider if the client implements the Metals Decoration Protocol.
+ * @param inlineDecorationProvider if the client implements the Metals Decoration Protocol
+ *                                 and supports decorations to be show inside text and not
+ *                                 only at the end of a line.
  * @param didFocusProvider if the client implements the `metals/didFocusTextDocument` command.
  * @param doctorProvider format that the client would like the Doctor to be returned in.
  * @param executeClientCommandProvider if the client implements `metals/executeClientCommand`.
@@ -39,6 +42,7 @@ final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
     debuggingProvider: Option[Boolean],
     decorationProvider: Option[Boolean],
+    inlineDecorationProvider: Option[Boolean],
     didFocusProvider: Option[Boolean],
     doctorProvider: Option[String],
     executeClientCommandProvider: Option[Boolean],
@@ -85,6 +89,7 @@ object InitializationOptions {
     None,
     None,
     None,
+    None,
     None
   )
 
@@ -112,6 +117,8 @@ object InitializationOptions {
       compilerOptions = extractCompilerOptions(jsonObj),
       debuggingProvider = jsonObj.getBooleanOption("debuggingProvider"),
       decorationProvider = jsonObj.getBooleanOption("decorationProvider"),
+      inlineDecorationProvider =
+        jsonObj.getBooleanOption("inlineDecorationProvider"),
       didFocusProvider = jsonObj.getBooleanOption("didFocusProvider"),
       doctorProvider = jsonObj.getStringOption("doctorProvider"),
       executeClientCommandProvider =

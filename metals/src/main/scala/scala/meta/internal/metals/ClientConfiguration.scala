@@ -125,6 +125,9 @@ class ClientConfiguration(
       false
     )
 
+  def isInlineDecorationProvider(): Boolean =
+    initializationOptions.inlineDecorationProvider.getOrElse(false)
+
   def isTreeViewProvider(): Boolean =
     extract(
       initializationOptions.treeViewProvider,
