@@ -517,8 +517,10 @@ class MetalsLanguageServer(
       workspace,
       embedded,
       statusBar,
+      compilations,
       clientConfig.icons(),
-      languageClient
+      languageClient,
+      buildTargets
     )
     codeActionProvider = new CodeActionProvider(
       compilers,

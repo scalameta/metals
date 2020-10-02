@@ -14,7 +14,7 @@ final class CodeActionProvider(
     buffers: Buffers,
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider
-) {
+)(implicit ec: ExecutionContext) {
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),

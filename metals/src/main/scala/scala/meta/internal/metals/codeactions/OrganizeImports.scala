@@ -1,8 +1,5 @@
 package scala.meta.internal.metals.codeactions
 
-import java.nio.file.Path
-import java.util.{List => JList}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -10,6 +7,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.io.AbsolutePath
@@ -21,8 +19,8 @@ import org.eclipse.{lsp4j => l}
 final class OrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets
-) extends CodeAction {
-  import OrganizeImports._
+)(implicit ec: ExecutionContext)
+    extends CodeAction {
 
   override def kind: String = OrganizeImports.kind
 
@@ -32,18 +30,20 @@ final class OrganizeImports(
     val uri = params.getTextDocument.getUri
     val file = uri.toAbsolutePath
     if (isSourceOrganizeImportCalled(params) && isScalaOrSbt(file)) {
-      ScalafixProvider.scalaVersionAndClasspath(file, buildTargets) match {
-        case Some((scalaVersion, scalaBinaryVersion, classpath))
-            if !ScalaVersions.isScala3Version(scalaVersion) =>
-          organizeImportsEdits(
-            file,
-            scalaVersion,
-            scalaBinaryVersion,
-            classpath
+
+      val scalaTarget = for {
+        buildId <- buildTargets.inverseSources(file)
+        target <- buildTargets.scalaTarget(buildId)
+      } yield target
+      scalaTarget match {
+        case Some(target)
+            if !ScalaVersions.isScala3Version(target.scalaVersion) =>
+          organizeImportsEdits(file, target)
+        case Some(target)
+            if ScalaVersions.isScala3Version(target.scalaVersion) =>
+          scribe.info(
+            s"Organize import doesn't work on ${target.scalaVersion} files"
           )
-        case Some((scalaVersion, _, _))
-            if ScalaVersions.isScala3Version(scalaVersion) =>
-          scribe.info(s"Organize import doesn't work on $scalaVersion files")
           Future.successful(Seq())
         case _ => Future.successful(Seq())
       }
@@ -53,27 +53,21 @@ final class OrganizeImports(
 
   private def organizeImportsEdits(
       path: AbsolutePath,
-      scalaVersion: ScalaVersion,
-      scalaBinaryVersion: ScalaBinaryVersion,
-      classpath: JList[Path]
+      scalaVersion: ScalaTarget
   ): Future[Seq[l.CodeAction]] = {
-    val edits = scalafixProvider.organizeImports(
-      path,
-      scalaVersion,
-      scalaBinaryVersion,
-      classpath
-    )
-    val codeAction = new l.CodeAction()
-    codeAction.setTitle(OrganizeImports.title)
-    codeAction.setKind(l.CodeActionKind.SourceOrganizeImports)
-    codeAction.setEdit(
-      new l.WorkspaceEdit(
-        Map(path.toURI.toString -> edits.asJava).asJava
-      )
-    )
-    Future.successful {
-      Seq(codeAction)
-    }
+    scalafixProvider
+      .organizeImports(path, scalaVersion)
+      .map { edits =>
+        val codeAction = new l.CodeAction()
+        codeAction.setTitle(OrganizeImports.title)
+        codeAction.setKind(l.CodeActionKind.SourceOrganizeImports)
+        codeAction.setEdit(
+          new l.WorkspaceEdit(
+            Map(path.toURI.toString -> edits.asJava).asJava
+          )
+        )
+        Seq(codeAction)
+      }
 
   }
 

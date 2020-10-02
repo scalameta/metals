@@ -47,6 +47,16 @@ final class Compilations(
   def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
     lastCompile.contains(buildTarget)
 
+  def compilationFinished(
+      source: AbsolutePath
+  ): Future[Unit] = {
+    if (currentlyCompiling.isEmpty) {
+      Future(())
+    } else {
+      cascadeCompileFiles(Seq(source))
+    }
+  }
+
   def compileTarget(
       target: b.BuildTargetIdentifier
   ): Future[b.CompileResult] = {
