@@ -18,6 +18,12 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
 
   test("start") {
+    val mainClass = new ScalaMainClass(
+      "a.Main",
+      List("Bar").asJava,
+      List("-Dproperty=Foo").asJava
+    )
+    mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -30,7 +36,9 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |  def main(args: Array[String]) = {
            |    val foo = sys.props.getOrElse("property", "")
            |    val bar = args(0)
+           |    val env = sys.env.get("HELLO")
            |    print(foo + bar)
+           |    env.foreach(print)
            |    System.exit(0)
            |  }
            |}
@@ -39,18 +47,14 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       debugger <- server.startDebugging(
         "a",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-        new ScalaMainClass(
-          "a.Main",
-          List("Bar").asJava,
-          List("-Dproperty=Foo").asJava
-        )
+        mainClass
       )
       _ <- debugger.initialize
       _ <- debugger.launch
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertNoDiff(output, "FooBar")
+    } yield assertNoDiff(output, "FooBarFoo")
   }
 
   test("broken-workspace") {
@@ -179,7 +183,10 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
-           |    print(args(0))
+           |    val name = sys.props.getOrElse("name", "")
+           |    val location = args(0)
+           |    val greeting = sys.env("HELLO") 
+           |    print(s"$$greeting $$name from $$location")
            |    System.exit(0)
            |  }
            |}
@@ -189,7 +196,9 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
         new DebugUnresolvedMainClassParams(
           "a.Main",
           "a",
-          singletonList("Foo")
+          singletonList("Arkansas"),
+          singletonList("-Dname=Megan"),
+          Map("HELLO" -> "Welcome").asJava
         ).toJson
       )
       _ <- debugger.initialize
@@ -197,7 +206,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertNoDiff(output, "Foo")
+    } yield assertNoDiff(output, "Welcome Megan from Arkansas")
   }
 
   test("run-unrelated-error") {
