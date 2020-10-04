@@ -12,7 +12,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 object DotEnvFileParser {
-  // DotEnv file regex adopted from the following projects:
+  // DotEnv file regex adapted from the following projects:
   //  - https://github.com/mefellows/sbt-dotenv
   //  - https://github.com/bkeepers/dotenv
   val LineRegex: Regex =
