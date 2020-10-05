@@ -9,6 +9,7 @@ import scala.meta.Position
 import scala.meta.Token
 import scala.meta.Tokens
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.{semanticdb => s}
 
 import difflib._
 import difflib.myers.Equalizer
@@ -142,6 +143,25 @@ final class TokenEditDistance private (
 
   def toRevised(pos: l.Position): Either[EmptyResult, Position] = {
     toRevised(pos.getLine, pos.getCharacter)
+  }
+
+  def toRevisedStrict(range: s.Range): Option[l.Range] = {
+    if (isUnchanged) Some(range.toLSP)
+    else {
+      (
+        toRevised(range.startLine, range.startCharacter),
+        toRevised(range.endLine, range.endCharacter)
+      ) match {
+        case (Right(start), Right(end)) =>
+          Some(
+            new l.Range(
+              new l.Position(start.startLine, start.startColumn),
+              new l.Position(end.startLine, end.startColumn)
+            )
+          )
+        case _ => None
+      }
+    }
   }
 
   def toRevised(

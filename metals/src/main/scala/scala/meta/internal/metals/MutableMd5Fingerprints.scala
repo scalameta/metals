@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
+import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Md5Fingerprints
@@ -32,6 +34,21 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
       prints.clear()
       prints.add(fingerprint)
       fingerprint.text
+
+    }
+  }
+
+  override def loadLastValid(
+      path: AbsolutePath,
+      soughtMd5: String,
+      charset: Charset
+  ): Option[String] = {
+    val text = FileIO.slurp(path, charset)
+    val md5 = MD5.compute(text)
+    if (soughtMd5 != md5) {
+      lookupText(path, soughtMd5)
+    } else {
+      Some(text)
     }
   }
 

@@ -900,6 +900,17 @@ final class TestingServer(
     }
   }
 
+  def assertHoverAtLine(
+      filename: String,
+      query: String,
+      expected: String,
+      root: AbsolutePath = workspace
+  )(implicit loc: munit.Location): Future[Unit] = {
+    val text = root.resolve(filename).readText
+    val fullQuery = text.replace(query.replace("@@", "") + "\n", query + "\n")
+    assertHover(filename, fullQuery, expected, root)
+  }
+
   def assertHover(
       filename: String,
       query: String,

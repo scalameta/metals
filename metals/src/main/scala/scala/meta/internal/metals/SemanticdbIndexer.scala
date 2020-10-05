@@ -5,6 +5,7 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.TextDocuments
@@ -14,6 +15,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsResult
 class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider,
+    implicitDecorator: SyntheticsDecorationProvider,
     buildTargets: BuildTargets
 ) {
 
@@ -82,6 +84,7 @@ class SemanticdbIndexer(
           val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
           referenceProvider.onChange(doc, file)
           implementationProvider.onChange(doc, file)
+          implicitDecorator.onChange(doc, file)
         } catch {
           case NonFatal(e) =>
             scribe.warn(s"unexpected error processing the file $file", e)
