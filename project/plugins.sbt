@@ -4,7 +4,7 @@ addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.3")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.2.9")
 addSbtPlugin("org.scalameta" % "sbt-munit" % "0.7.12")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
-addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.4.2")
+addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.4.4")
 
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
 
