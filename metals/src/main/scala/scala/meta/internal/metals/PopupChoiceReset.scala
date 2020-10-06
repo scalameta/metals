@@ -51,7 +51,9 @@ class PopupChoiceReset(
       .showMessageRequest(choicesParams())
       .asScala
       .flatMap { item =>
-        if (item.getTitle() == PopupChoiceReset.BuildTool) {
+        if (item == null) {
+          Future.successful(())
+        } else if (item.getTitle() == PopupChoiceReset.BuildTool) {
           reset(PopupChoiceReset.BuildTool)
         } else if (item.getTitle() == PopupChoiceReset.BuildImport) {
           reset(PopupChoiceReset.BuildImport)
@@ -63,6 +65,6 @@ class PopupChoiceReset(
 }
 
 object PopupChoiceReset {
-  final val BuildTool = "build tool selection"
-  final val BuildImport = "build import"
+  final val BuildTool = "Build tool selection"
+  final val BuildImport = "Build import"
 }

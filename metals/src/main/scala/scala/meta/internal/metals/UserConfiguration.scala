@@ -35,6 +35,8 @@ case class UserConfiguration(
     bloopVersion: Option[String] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
+    typeAnnotationsEnabled: Boolean = false,
+    implicitArgumentAnnotationsEnabled: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
     excludedPackages: Option[List[String]] = None
@@ -167,6 +169,26 @@ object UserConfiguration {
         """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
            |Disabled lenses are not calculated for opened documents which might speed up document processing.
            |
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "type-annotations-enabled",
+        "false",
+        "false",
+        "Should display type annotations for infered types",
+        """|When this option is enabled, each method that can have inferred types has them
+           |displayed either as additional decorations if they are supported by the editor or
+           |shown in hover otherwise.
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "implicit-argument-annotations-enabled",
+        "false",
+        "false",
+        "Should display implicit parameter at usage sites",
+        """|When this option is enabled, each method that has implicit arguments has them 
+           |displayed either as additional decorations if they are supported by the editor or 
+           |shown in hover otherwise.
            |""".stripMargin
       ),
       UserConfigurationOption(
@@ -324,6 +346,10 @@ object UserConfiguration {
       getStringKey("bloop-version")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
+    val typeAnnotationsEnabled =
+      getBooleanKey("type-annotations-enabled").getOrElse(false)
+    val implicitArgumentAnnotationsEnabled =
+      getBooleanKey("implicit-argument-annotations-enabled").getOrElse(false)
     val remoteLanguageServer =
       getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
@@ -347,6 +373,8 @@ object UserConfiguration {
           bloopVersion,
           ammoniteProperties,
           superMethodLensesEnabled,
+          typeAnnotationsEnabled,
+          implicitArgumentAnnotationsEnabled,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
           excludedPackages

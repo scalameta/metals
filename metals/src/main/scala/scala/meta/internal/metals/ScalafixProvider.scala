@@ -1,17 +1,20 @@
 package scala.meta.internal.metals
 
 import java.net.URLClassLoader
-import java.nio.file.Path
 import java.util.Collections
-import java.util.{List => JList}
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
@@ -22,63 +25,96 @@ case class ScalafixProvider(
     workspace: AbsolutePath,
     embedded: Embedded,
     statusBar: StatusBar,
+    compilations: Compilations,
     icons: Icons,
-    languageClient: MetalsLanguageClient
-) {
+    languageClient: MetalsLanguageClient,
+    buildTargets: BuildTargets
+)(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
   private val organizeImportRuleCache =
-    TrieMap.empty[ScalaBinaryVersion, List[Path]]
+    TrieMap.empty[ScalaBinaryVersion, URLClassLoader]
 
   def organizeImports(
       file: AbsolutePath,
-      scalaVersion: ScalaVersion,
-      scalaBinaryVersion: ScalaBinaryVersion,
-      classpath: JList[Path]
-  ): List[l.TextEdit] = {
-    val fileInput = file.toInput
-    val unsavedFile = file.toInputFromBuffers(buffers)
-    if (isUnsaved(unsavedFile.text, fileInput.text)) {
+      scalaTarget: ScalaTarget
+  ): Future[List[l.TextEdit]] = {
+    val fromDisk = file.toInput
+    val inBuffers = file.toInputFromBuffers(buffers)
+    if (isUnsaved(inBuffers.text, fromDisk.text)) {
       scribe.info(s"Organize imports requires saving the file first")
       languageClient.showMessage(
         MessageType.Warning,
-        s"Save ${file.toNIO.getFileName} before organizing imports"
+        s"Save ${file.toNIO.getFileName} to compile it before organizing imports"
       )
-      Nil
+      Future.successful(Nil)
     } else {
-      val scalafixConfPath = workspace.resolve(scalafixConfigPath)
-      val scalafixConf =
-        if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
-        else None
-      val scalafixEvaluation = for {
-        api <- getScalafix(scalaBinaryVersion)
-        urlClassLoaderWithExternalRule <- getRuleClassLoader(
-          scalaBinaryVersion,
-          api.getClass.getClassLoader
-        )
-      } yield {
-        val scalacOption =
-          if (scalaBinaryVersion == "2.13") "-Wunused:imports"
-          else "-Ywarn-unused-import"
+      compilations.compilationFinished(file).flatMap { _ =>
+        val scalafixConfPath = workspace.resolve(scalafixConfigPath)
+        val scalafixConf =
+          if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
+          else None
+        val scalaBinaryVersion = scalaTarget.scalaBinaryVersion
+        val scalafixEvaluation = for {
+          api <- getScalafix(scalaBinaryVersion)
+          urlClassLoaderWithExternalRule <- getRuleClassLoader(
+            scalaBinaryVersion,
+            api.getClass.getClassLoader
+          )
+        } yield {
+          val scalacOption =
+            if (scalaBinaryVersion == "2.13") "-Wunused:imports"
+            else "-Ywarn-unused-import"
 
-        api
-          .newArguments()
-          .withScalaVersion(scalaVersion)
-          .withClasspath(classpath)
-          .withToolClasspath(urlClassLoaderWithExternalRule)
-          .withConfig(scalafixConf.asJava)
-          .withRules(List(organizeImportRuleName).asJava)
-          .withPaths(List(file.toNIO).asJava)
-          .withSourceroot(workspace.toNIO)
-          .withScalacOptions(Collections.singletonList(scalacOption))
-          .evaluate()
+          api
+            .newArguments()
+            .withScalaVersion(scalaTarget.scalaVersion)
+            .withClasspath(scalaTarget.fullClasspath)
+            .withToolClasspath(urlClassLoaderWithExternalRule)
+            .withConfig(scalafixConf.asJava)
+            .withRules(List(organizeImportRuleName).asJava)
+            .withPaths(List(file.toNIO).asJava)
+            .withSourceroot(workspace.toNIO)
+            .withScalacOptions(Collections.singletonList(scalacOption))
+            .evaluate()
+        }
+
+        scalafixEvaluation match {
+          case Failure(exception) =>
+            reportScalafixError(
+              "Unable to run scalafix, please check logs for more info.",
+              exception
+            )
+            Future.failed(exception)
+          case Success(results) if !results.isSuccessful =>
+            val scalafixError = results.getMessageError().asScala
+            val message = scalafixError.getOrElse(defaultErrorMessage)
+            val exception = ScalafixRunException(message)
+            reportScalafixError(
+              message,
+              exception
+            )
+            Future.failed(exception)
+          case Success(results) =>
+            Future.successful {
+              val edits = for {
+                fileEvaluation <- results.getFileEvaluations().headOption
+                patches <- fileEvaluation.previewPatches().asScala
+              } yield textEditsFrom(patches, fromDisk)
+              edits.getOrElse(Nil)
+            }
+        }
       }
-
-      val newFileContentOpt = scalafixEvaluation
-        .flatMap(result => result.getFileEvaluations.headOption)
-        .flatMap(_.previewPatches().asScala)
-      newFileContentOpt.map(textEditsFrom(_, fileInput)).getOrElse(Nil)
     }
+  }
+
+  private def reportScalafixError(
+      message: String,
+      exception: Throwable
+  ): Unit = {
+    val params = new MessageParams(MessageType.Error, message)
+    scribe.error(message, exception)
+    languageClient.showMessage(params)
   }
 
   private def textEditsFrom(
@@ -95,41 +131,40 @@ case class ScalafixProvider(
 
   private def getScalafix(
       scalaBinaryVersion: ScalaBinaryVersion
-  ): Option[Scalafix] = {
-    scalafixCache
-      .get(scalaBinaryVersion)
-      .orElse(
+  ): Try[Scalafix] = {
+    scalafixCache.get(scalaBinaryVersion) match {
+      case Some(value) => Success(value)
+      case None =>
         statusBar.trackBlockingTask("Downloading scalafix") {
-          Try(Scalafix.fetchAndClassloadInstance(scalaBinaryVersion)).toOption
-            .map { api =>
-              scalafixCache.update(scalaBinaryVersion, api)
-              api
-            }
+          val scalafix =
+            Try(Scalafix.fetchAndClassloadInstance(scalaBinaryVersion))
+          scalafix.foreach(api => scalafixCache.update(scalaBinaryVersion, api))
+          scalafix
         }
-      )
+    }
+
   }
 
   private def getRuleClassLoader(
       scalaBinaryVersion: ScalaBinaryVersion,
       scalafixClassLoader: ClassLoader
-  ): Option[URLClassLoader] = {
-    val pathsOpt = organizeImportRuleCache
-      .get(scalaBinaryVersion)
-      .orElse(
+  ): Try[URLClassLoader] = {
+    organizeImportRuleCache.get(scalaBinaryVersion) match {
+      case Some(value) => Success(value)
+      case None =>
         statusBar.trackBlockingTask("Downloading organize import rule") {
-          Try(Embedded.organizeImportRule(scalaBinaryVersion)).toOption
-            .map { paths =>
-              organizeImportRuleCache.update(scalaBinaryVersion, paths)
-              paths
+          val organizeImportRule =
+            Try(Embedded.organizeImportRule(scalaBinaryVersion)).map { paths =>
+              val classloader = Embedded.toClassLoader(
+                Classpath(paths.map(AbsolutePath(_))),
+                scalafixClassLoader
+              )
+              organizeImportRuleCache.update(scalaBinaryVersion, classloader)
+              classloader
             }
+          organizeImportRule
         }
-      )
-    pathsOpt.map(paths =>
-      Embedded.toClassLoader(
-        Classpath(paths.map(AbsolutePath(_))),
-        scalafixClassLoader
-      )
-    )
+    }
   }
 
   private def isUnsaved(fromBuffers: String, fromFile: String): Boolean =
@@ -143,20 +178,11 @@ object ScalafixProvider {
   type ScalaBinaryVersion = String
   type ScalaVersion = String
 
+  case class ScalafixRunException(msg: String) extends Exception(msg)
+
+  val defaultErrorMessage: String =
+    """|Unexpected error while running scalafix. Semanticdb might have been stale, which 
+       |would require successful compilation to be created.""".stripMargin
   val organizeImportRuleName = "OrganizeImports"
 
-  def scalaVersionAndClasspath(
-      file: AbsolutePath,
-      buildTargets: BuildTargets
-  ): Option[(ScalaVersion, ScalaBinaryVersion, JList[Path])] =
-    for {
-      buildId <- buildTargets.inverseSources(file)
-      scalacOptions <- buildTargets.scalacOptions(buildId)
-      scalaBuildTarget <- buildTargets.scalaInfo(buildId)
-      scalaVersion = scalaBuildTarget.getScalaVersion
-      semanticdbTarget = scalacOptions.targetroot(scalaVersion).toNIO
-      scalaBinaryVersion = scalaBuildTarget.getScalaBinaryVersion
-      classPath = scalacOptions.getClasspath.map(_.toAbsolutePath.toNIO)
-      _ = classPath.add(semanticdbTarget)
-    } yield (scalaVersion, scalaBinaryVersion, classPath)
 }
