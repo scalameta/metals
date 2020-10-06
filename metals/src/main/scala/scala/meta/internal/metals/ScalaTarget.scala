@@ -24,6 +24,8 @@ case class ScalaTarget(
 
   def id: BuildTargetIdentifier = info.getId()
 
+  def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
+
   def baseDirectory: String = info.getBaseDirectory()
 
   def fullClasspath: ju.List[Path] = {
