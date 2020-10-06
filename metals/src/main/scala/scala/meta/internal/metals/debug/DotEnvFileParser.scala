@@ -50,7 +50,7 @@ object DotEnvFileParser {
   def parse(content: String): Map[String, String] = {
     LineRegex
       .findAllMatchIn(content)
-      .map(_ match { case Groups(k, v) => (k -> unquote(v)) })
+      .map(_ match { case Groups(k, v) => (k -> unescape(unquote(v))) })
       .toMap
   }
 
@@ -68,4 +68,7 @@ object DotEnvFileParser {
   private def trim(s: String): String =
     if (s.length > 1) s.substring(1, s.length - 1)
     else s
+
+  private def unescape(s: String): String =
+    s.replaceAll("""\\([^$])""", "$1")
 }
