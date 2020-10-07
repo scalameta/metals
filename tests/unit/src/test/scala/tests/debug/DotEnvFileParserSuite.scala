@@ -5,7 +5,7 @@ import scala.meta.internal.metals.debug.DotEnvFileParser._
 import tests.BaseSuite
 
 class DotEnvFileParserSuite extends BaseSuite {
-  val keyValue = Map("KEY" -> "value")
+  val keyValue: Map[String, String] = Map("KEY" -> "value")
 
   test("parse empty values") {
     assertDiffEqual(parse("KEY="), Map("KEY" -> ""))

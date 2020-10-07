@@ -1,7 +1,11 @@
 package tests
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Collections.emptyList
 import java.util.Collections.singletonList
+
+import scala.util.Random
 
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
@@ -173,6 +177,14 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
   test("run-unresolved-params") {
     cleanCompileCache("a")
     cleanWorkspace()
+    val envFile: Path =
+      Files.write(
+        workspace
+          .resolve(Random.alphanumeric.take(10).mkString.toLowerCase + ".env")
+          .toNIO,
+        "MIDDLE_NAME=Emily\nLAST_NAME=Morris".getBytes()
+      )
+
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -185,8 +197,10 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |  def main(args: Array[String]) = {
            |    val name = sys.props.getOrElse("name", "")
            |    val location = args(0)
-           |    val greeting = sys.env("HELLO") 
-           |    print(s"$$greeting $$name from $$location")
+           |    val greeting = sys.env("GREETING")
+           |    val middleName = sys.env("MIDDLE_NAME")
+           |    val lastName = sys.env("LAST_NAME")
+           |    print(s"$$greeting $$name $$middleName $$lastName from $$location")
            |    System.exit(0)
            |  }
            |}
@@ -198,7 +212,8 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
           "a",
           singletonList("Arkansas"),
           singletonList("-Dname=Megan"),
-          Map("HELLO" -> "Welcome").asJava
+          Map("GREETING" -> "Welcome").asJava,
+          envFile.getFileName.toString
         ).toJson
       )
       _ <- debugger.initialize
@@ -206,7 +221,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertNoDiff(output, "Welcome Megan from Arkansas")
+    } yield assertNoDiff(output, "Welcome Megan Emily Morris from Arkansas")
   }
 
   test("run-unrelated-error") {
