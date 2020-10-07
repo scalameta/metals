@@ -129,7 +129,8 @@ object ServerCommands {
         |   buildTarget: "foo",
         |   args: ["bar"],
         |   jvmOptions: ["-Dfile.encoding=UTF-16"],
-        |   env: {"NUM" : "123"}
+        |   env: {"NUM" : "123"},
+        |   envFile: ".env"
         |}
         |```
         |
