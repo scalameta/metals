@@ -40,7 +40,8 @@ Apart from using code lenses, users can start a debug session by executing the
   "buildTarget": "foo",
   "args": ["bar"],
   "jvmOptions": ["-Dpropert=123"],
-  "env": { "RETRY": "TRUE" }
+  "env": { "RETRY": "TRUE" },
+  "envFile": ".env"
 }
 ```
 
@@ -56,6 +57,10 @@ Apart from using code lenses, users can start a debug session by executing the
 `buildTarget` is an optional parameter, which might be useful if there are
 identically named classes in different modules. A uri will be returned that can
 be used by the DAP client.
+
+`envFile` is an optional parameter, which allows you to specify a path to a
+`.env` file with additional environment variables. It supports single line as
+well as multi-line quoted values (without value substitution).
 
 ### Wiring it all together
 
