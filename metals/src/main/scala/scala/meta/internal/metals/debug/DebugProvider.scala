@@ -13,6 +13,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.BuildServerConnection
@@ -20,6 +21,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.DefinitionProvider
@@ -216,6 +218,22 @@ class DebugProvider(
     result
   }
 
+  def resolveAttachRemoteParams(
+      params: DebugUnresolvedAttachRemoteParams
+  ): Future[b.DebugSessionParams] =
+    buildTargets.findByDisplayName(params.buildTarget) match {
+      case Some(target) =>
+        Future.successful(
+          new b.DebugSessionParams(
+            singletonList(target.getId()),
+            b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
+            Unit.toJson
+          )
+        )
+      case None =>
+        Future.failed(new ju.NoSuchElementException(params.buildTarget))
+    }
+
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case _ if buildClient.buildHasErrors =>
       statusBar.addMessage(Messages.DebugErrorsPresent)
@@ -248,10 +266,12 @@ class DebugProvider(
     parameters.getData match {
       case json: JsonElement =>
         parameters.getDataKind match {
-          case "scala-main-class" =>
+          case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             json.as[b.ScalaMainClass].map(_.getClassName)
-          case "scala-test-suites" =>
+          case b.DebugSessionParamsDataKind.SCALA_TEST_SUITES =>
             json.as[ju.List[String]].map(_.asScala.sorted.mkString(";"))
+          case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
+            Success("attach-remote-debug-session")
         }
       case data =>
         val dataType = data.getClass.getSimpleName
@@ -263,7 +283,8 @@ class DebugProvider(
       parameters: b.DebugSessionParams
   ): b.DebugSessionParams = {
     parameters.getData match {
-      case json: JsonElement if parameters.getDataKind == "scala-main-class" =>
+      case json: JsonElement
+          if parameters.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
         json.as[b.ScalaMainClass].foreach { main =>
           val translated = main.getJvmOptions().asScala.map { param =>
             if (!param.startsWith("-J"))
@@ -345,6 +366,8 @@ object DebugParametersJsonParsers {
     new JsonParser.Of[DebugUnresolvedMainClassParams]
   lazy val testClassParamsParser =
     new JsonParser.Of[DebugUnresolvedTestClassParams]
+  lazy val attachRemoteParamsParser =
+    new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
 }
 
 case object WorkspaceErrorsException

@@ -1522,6 +1522,9 @@ class MetalsLanguageServer(
           case Seq(testClassParamsParser.Jsonized(params))
               if params.testClass != null =>
             debugProvider.resolveTestClassParams(params)
+          case Seq(attachRemoteParamsParser.Jsonized(params))
+              if params.hostName != null =>
+            debugProvider.resolveAttachRemoteParams(params)
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
