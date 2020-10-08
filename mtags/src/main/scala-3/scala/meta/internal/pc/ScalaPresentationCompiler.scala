@@ -98,11 +98,7 @@ case class ScalaPresentationCompiler(
   }
 
   def newDriver: InteractiveDriver = {
-    val implicitSuggestionTimeout =
-      if (SemVer.isCompatibleVersion("0.25.0", BuildInfo.scalaCompilerVersion))
-        List("-Ximport-suggestion-timeout", "0")
-      else Nil
-
+    val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
     val settings =
       options ::: defaultFlags ::: implicitSuggestionTimeout ::: "-classpath" :: classpath
@@ -263,7 +259,7 @@ case class ScalaPresentationCompiler(
       val tp = Interactive.enclosingType(trees, pos)
       val tpw = tp.widenTermRefExpr
 
-      if (tp.isError || tpw == NoType)
+      if (tp.isError || tpw == NoType || tpw.isError)
         ju.Optional.empty()
       else {
         Interactive.enclosingSourceSymbols(path, pos) match {
