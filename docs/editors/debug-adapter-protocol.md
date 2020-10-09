@@ -63,6 +63,30 @@ be used by the DAP client.
 absolute or relative to your project workspace. The parser supports single line
 as well as multi-line quoted values (without value substitution). Any variables
 defined in the `env` object take precedence over those from the `.env` file.
+Here's an example of a supported .env file:
+
+```bash
+# single line values
+key1=value 1
+key2='value 2'   # ignored inline comment
+key3="value 3"
+
+# multi-line values
+key4='line 1
+line 2'
+key5="line 1
+line 2"
+
+# export statements
+export key6=value 6
+
+# comma delimiter
+key7:value 6
+
+# keys cannot contain dots or dashes
+a.b.key8=value 8   # will be ignored
+a-b-key9=value 9   # will be ignored
+```
 
 ### Wiring it all together
 
