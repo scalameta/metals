@@ -162,14 +162,12 @@ class DebugProvider(
               .map(_.map { case (key, value) => s"$key=$value" }.toList)
           } else Future.successful(List.empty)
 
-        envFromFile.flatMap { envFromFile =>
+        envFromFile.map { envFromFile =>
           clazz.setEnvironmentVariables((envFromFile ::: env).asJava)
-          Future.successful(
-            new b.DebugSessionParams(
-              singletonList(target.getId()),
-              b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-              clazz.toJson
-            )
+          new b.DebugSessionParams(
+            singletonList(target.getId()),
+            b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+            clazz.toJson
           )
         }
 
