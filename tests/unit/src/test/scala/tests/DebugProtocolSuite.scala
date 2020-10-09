@@ -224,6 +224,53 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
     } yield assertNoDiff(output, "Welcome Megan Olivia Morris from Arkansas")
   }
 
+  test("run-unresolved-params-absolute-envfile") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    val tmpPath = Files.createTempFile("", ".env")
+    tmpPath.toFile.deleteOnExit()
+    val envFile: Path =
+      Files.write(tmpPath, "MIDDLE_NAME=Emily\nLAST_NAME=Morris".getBytes())
+
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    val name = sys.props.getOrElse("name", "")
+           |    val location = args(0)
+           |    val greeting = sys.env("GREETING")
+           |    val middleName = sys.env("MIDDLE_NAME")
+           |    val lastName = sys.env("LAST_NAME")
+           |    print(s"$$greeting $$name $$middleName $$lastName from $$location")
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedMainClassParams(
+          "a.Main",
+          "a",
+          singletonList("Arkansas"),
+          singletonList("-Dname=Megan"),
+          Map("GREETING" -> "Welcome").asJava,
+          envFile.toString
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "Welcome Megan Emily Morris from Arkansas")
+  }
+
   test("run-unrelated-error") {
     cleanCompileCache("a")
     cleanWorkspace()

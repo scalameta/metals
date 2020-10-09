@@ -59,8 +59,9 @@ identically named classes in different modules. A uri will be returned that can
 be used by the DAP client.
 
 `envFile` is an optional parameter, which allows you to specify a path to a
-`.env` file with additional environment variables. It supports single line as
-well as multi-line quoted values (without value substitution). Any variables
+`.env` file with additional environment variables. The path can be either
+absolute or relative to your project workspace. The parser supports single line
+as well as multi-line quoted values (without value substitution). Any variables
 defined in the `env` object take precedence over those from the `.env` file.
 
 ### Wiring it all together
