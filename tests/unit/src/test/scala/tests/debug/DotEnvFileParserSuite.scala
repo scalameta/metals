@@ -103,13 +103,19 @@ class DotEnvFileParserSuite extends BaseSuite {
   test("parse multi-line single quoted values") {
     val content = """KEY='line1
                     |line2'""".stripMargin
-    assertDiffEqual(parse(content), Map("KEY" -> "line1\nline2"))
+    assertDiffEqual(
+      parse(content),
+      Map("KEY" -> s"line1${System.lineSeparator}line2")
+    )
   }
 
   test("parse multi-line double quoted values") {
     val content = """KEY="line1
                     |line2"""".stripMargin
-    assertDiffEqual(parse(content), Map("KEY" -> "line1\nline2"))
+    assertDiffEqual(
+      parse(content),
+      Map("KEY" -> s"line1${System.lineSeparator}line2")
+    )
   }
 
   test("parse multiple values") {
@@ -139,8 +145,8 @@ class DotEnvFileParserSuite extends BaseSuite {
       parse(content),
       Map(
         "KEY" -> "value",
-        "KEY2" -> "value2 line1\nvalue2 line2",
-        "KEY3" -> "value3 line1\nvalue3 line2"
+        "KEY2" -> s"value2 line1${System.lineSeparator}value2 line2",
+        "KEY3" -> s"value3 line1${System.lineSeparator}value3 line2"
       )
     )
   }
@@ -151,5 +157,12 @@ class DotEnvFileParserSuite extends BaseSuite {
 
   test("exclude variables with - in the name") {
     assertDiffEqual(parse("K-E-Y=value"), Map.empty)
+  }
+
+  test("retain the original line separators") {
+    assertDiffEqual(
+      parse("KEY=\"line1\r\nline2\""),
+      Map("KEY" -> "line1\r\nline2")
+    )
   }
 }
