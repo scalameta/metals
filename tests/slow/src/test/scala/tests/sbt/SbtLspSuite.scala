@@ -588,4 +588,28 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
     } yield ()
 
   }
+
+  test("sbt-meta-symbols") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/build.sbt
+            |scalaVersion := MetaValues.scalaVersion
+            |/project/MetaValues.scala
+            |import scala.util.Success
+            |object MetaValues {
+            |  val scalaVersion = "$scalaVersion"
+            |}
+         """.stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      _ = server.workspaceDefinitions
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/build.sbt
+           |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ MetaValues/*MetaValues.scala:1*/.scalaVersion/*MetaValues.scala:2*/
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

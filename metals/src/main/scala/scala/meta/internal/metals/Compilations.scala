@@ -136,7 +136,8 @@ final class Compilations(
 
   private def expand(path: AbsolutePath): Option[b.BuildTargetIdentifier] = {
     val isCompilable =
-      path.isScalaOrJava && !path.isDependencySource(workspace())
+      (path.isScalaOrJava || path.isSbt) &&
+        !path.isDependencySource(workspace())
 
     if (isCompilable) {
       val targetOpt = buildTargets.inverseSources(path)
