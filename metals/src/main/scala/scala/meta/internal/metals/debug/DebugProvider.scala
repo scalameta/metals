@@ -31,6 +31,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
@@ -41,6 +42,7 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
 class DebugProvider(
+    workspace: AbsolutePath,
     definitionProvider: DefinitionProvider,
     buildServer: () => Option[BuildServerConnection],
     buildTargets: BuildTargets,
@@ -143,7 +145,8 @@ class DebugProvider(
         clazz.setJvmOptions(
           Option(params.jvmOptions).getOrElse(List().asJava)
         )
-        val env =
+
+        val env: List[String] =
           if (params.env != null)
             params.env.asScala.map {
               case (key, value) => s"$key=$value"
@@ -151,14 +154,23 @@ class DebugProvider(
           else
             Nil
 
-        clazz.setEnvironmentVariables(env.asJava)
-        Future.successful(
+        val envFromFile: Future[List[String]] =
+          if (params.envFile != null) {
+            val path = AbsolutePath(params.envFile)(workspace)
+            DotEnvFileParser
+              .parse(path)
+              .map(_.map { case (key, value) => s"$key=$value" }.toList)
+          } else Future.successful(List.empty)
+
+        envFromFile.map { envFromFile =>
+          clazz.setEnvironmentVariables((envFromFile ::: env).asJava)
           new b.DebugSessionParams(
             singletonList(target.getId()),
             b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
             clazz.toJson
           )
-        )
+        }
+
       //should not really happen due to
       //`findMainClassAndItsBuildTarget` succeeding with non-empty list
       case Nil => Future.failed(new ju.NoSuchElementException(params.mainClass))

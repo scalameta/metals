@@ -129,7 +129,8 @@ object ServerCommands {
         |   buildTarget: "foo",
         |   args: ["bar"],
         |   jvmOptions: ["-Dfile.encoding=UTF-16"],
-        |   env: {"NUM" : "123"}
+        |   env: {"NUM" : "123"},
+        |   envFile: ".env"
         |}
         |```
         |
@@ -375,7 +376,8 @@ case class DebugUnresolvedMainClassParams(
     @Nullable buildTarget: String = null,
     @Nullable args: java.util.List[String] = null,
     @Nullable jvmOptions: java.util.List[String] = null,
-    @Nullable env: java.util.Map[String, String] = null
+    @Nullable env: java.util.Map[String, String] = null,
+    @Nullable envFile: String = null
 )
 
 case class DebugUnresolvedTestClassParams(

@@ -515,6 +515,7 @@ class MetalsLanguageServer(
       )
     )
     debugProvider = new DebugProvider(
+      workspace,
       definitionProvider,
       () => bspSession.map(_.mainConnection),
       buildTargets,
