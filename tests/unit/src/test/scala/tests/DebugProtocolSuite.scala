@@ -212,7 +212,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
           "a",
           singletonList("Arkansas"),
           singletonList("-Dname=Megan"),
-          Map("GREETING" -> "Welcome").asJava,
+          Map("GREETING" -> "Welcome", "MIDDLE_NAME" -> "Olivia").asJava,
           envFile.getFileName.toString
         ).toJson
       )
@@ -221,7 +221,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertNoDiff(output, "Welcome Megan Emily Morris from Arkansas")
+    } yield assertNoDiff(output, "Welcome Megan Olivia Morris from Arkansas")
   }
 
   test("run-unrelated-error") {
