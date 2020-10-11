@@ -19,6 +19,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
@@ -62,7 +63,8 @@ class WorksheetProvider(
     diagnostics: Diagnostics,
     embedded: Embedded,
     publisher: WorksheetPublisher,
-    compilers: Compilers
+    compilers: Compilers,
+    compilations: Compilations
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -108,8 +110,21 @@ class WorksheetProvider(
       path: AbsolutePath,
       token: CancelToken
   ): Future[Unit] = {
-    evaluateAsync(path, token).map(
-      _.foreach(publisher.publish(languageClient, path, _))
+    val possibleBuildTarget = buildTargets.inverseSources(path)
+    val previouslyCompiled = compilations.previouslyCompiled.toSeq
+
+    (possibleBuildTarget match {
+      case Some(bdi)
+          if (previouslyCompiled.isEmpty || !previouslyCompiled.contains(
+            bdi
+          )) =>
+        compilations.compileTarget(bdi).ignoreValue
+      case _ =>
+        Future.successful(())
+    }).flatMap(_ =>
+      evaluateAsync(path, token).map(
+        _.foreach(publisher.publish(languageClient, path, _))
+      )
     )
   }
 
@@ -145,7 +160,9 @@ class WorksheetProvider(
       cancelables.cancel() // Cancel previous worksheet evaluations.
       val timer = new Timer(Time.system)
       result.asScala.foreach { _ =>
-        scribe.info(s"time: evaluated worksheet '${path.filename}' in $timer")
+        scribe.info(
+          s"time: evaluated worksheet '${path.filename}' in $timer"
+        )
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
       statusBar.trackFuture(

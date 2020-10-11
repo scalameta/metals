@@ -475,6 +475,35 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("root-outside-definition") {
+    assume(!isWindows, "This test fails unpredictably on Window")
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/Main.worksheet.sc
+           |import java.time.Instant
+           |
+           |val x = Instant.now()
+           |""".stripMargin
+      )
+      _ <- server.didOpen("Main.worksheet.sc")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        getExpected(
+          """|/Main.worksheet.sc
+             |import java.time.Instant/*Instant.java*/
+             |
+             |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
+             |""".stripMargin,
+          Map.empty,
+          scalaVersion
+        )
+      )
+    } yield ()
+  }
+
   test("no-position") {
     for {
       _ <- server.initialize(
