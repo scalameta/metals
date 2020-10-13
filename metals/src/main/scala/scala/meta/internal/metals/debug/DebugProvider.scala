@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.debug
 
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -65,7 +66,8 @@ class DebugProvider(
       parameters: b.DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     Future.fromTry(parseSessionName(parameters)).flatMap { sessionName =>
-      val proxyServer = new ServerSocket(0)
+      val inetAddress = InetAddress.getByName("127.0.0.1")
+      val proxyServer = new ServerSocket(0, 50, inetAddress)
       val host = InetAddresses.toUriString(proxyServer.getInetAddress)
       val port = proxyServer.getLocalPort
       proxyServer.setSoTimeout(10 * 1000)
