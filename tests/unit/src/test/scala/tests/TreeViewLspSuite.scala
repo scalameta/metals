@@ -4,6 +4,10 @@ import scala.collection.SortedSet
 
 import scala.meta.internal.tvp.TreeViewProvider
 
+/**
+ * @note This suite will fail on openjdk8 < 262)
+ *       due to https://mail.openjdk.java.net/pipermail/jdk8u-dev/2020-July/012143.html
+ */
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   /**
@@ -32,14 +36,10 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       "scala-library", "scala-reflect", "sourcecode_2.12"
     )
 
-    (
-      scala.util.Properties.isJavaAtLeast(9.toString),
-      scala.util.Properties.javaVmVendor
-    ) match {
-      case (true, _) => otherLibraries
-      case (false, "Oracle Corporation") =>
-        otherLibraries ++ jdk8Libraries + "jfr"
-      case _ => otherLibraries ++ jdk8Libraries
+    if (scala.util.Properties.isJavaAtLeast(9.toString)) {
+      otherLibraries
+    } else {
+      otherLibraries ++ jdk8Libraries + "jfr"
     }
   }
 
