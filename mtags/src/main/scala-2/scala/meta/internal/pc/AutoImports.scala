@@ -77,8 +77,8 @@ trait AutoImports { this: MetalsGlobal =>
 
         def forAmmoniteScript =
           for {
-            obj <- lastVisitedParentTrees.collectFirst {
-              case mod: ModuleDef => mod
+            obj <- lastVisitedParentTrees.collectFirst { case mod: ModuleDef =>
+              mod
             }
           } yield {
             val lastImportOpt = obj.impl.body.iterator

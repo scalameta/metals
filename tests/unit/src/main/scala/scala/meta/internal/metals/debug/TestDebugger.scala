@@ -80,12 +80,11 @@ final class TestDebugger(
 
   def restart: Future[Unit] = {
     Debug.printEnclosing()
-    ifNotFailed(debugger.restart).andThen {
-      case _ =>
-        debugger = connect(this)
-        terminated = Promise()
-        output = new DebuggeeOutput
-        breakpoints = new DebuggeeBreakpoints
+    ifNotFailed(debugger.restart).andThen { case _ =>
+      debugger = connect(this)
+      terminated = Promise()
+      output = new DebuggeeOutput
+      breakpoints = new DebuggeeBreakpoints
     }
   }
 
@@ -112,10 +111,9 @@ final class TestDebugger(
       output
         .awaitPrefix(prefix.replaceAll("\n", System.lineSeparator()))
         .withTimeout(seconds, TimeUnit.SECONDS)
-        .recoverWith {
-          case timeout: TimeoutException =>
-            val error = s"No prefix [$prefix] in [${output()}]"
-            Future.failed(new Exception(error, timeout))
+        .recoverWith { case timeout: TimeoutException =>
+          val error = s"No prefix [$prefix] in [${output()}]"
+          Future.failed(new Exception(error, timeout))
         }
     }
   }
@@ -157,8 +155,8 @@ final class TestDebugger(
       case Failure(error) =>
         fail(error)
       case Success(step) =>
-        debugger.step(event.getThreadId, step).recover {
-          case error => fail(error)
+        debugger.step(event.getThreadId, step).recover { case error =>
+          fail(error)
         }
     }
   }

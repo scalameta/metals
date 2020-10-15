@@ -87,10 +87,9 @@ object Messages {
   def partialNavigation(icons: Icons) =
     new MetalsStatusParams(
       s"${icons.info} Partial navigation",
-      tooltip =
-        "This external library source has compile errors. " +
-          "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as " +
-          "the external library.",
+      tooltip = "This external library source has compile errors. " +
+        "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as " +
+        "the external library.",
       command = ClientCommands.FocusDiagnostics.id
     )
 

@@ -780,9 +780,8 @@ class MetalsLanguageServer(
       scribe.warn("Ignoring duplicate 'initialized' notification.")
       Future.successful(())
     }
-  }.recover {
-    case NonFatal(e) =>
-      scribe.error("Unexpected error initializing server", e)
+  }.recover { case NonFatal(e) =>
+    scribe.error("Unexpected error initializing server", e)
   }.asJava
 
   lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
@@ -1744,17 +1743,16 @@ class MetalsLanguageServer(
           treeView.init()
         }
       } yield result
-    }.recover {
-      case NonFatal(e) =>
-        disconnectOldBuildServer()
-        val message =
-          "Failed to connect with build server, no functionality will work."
-        val details = " See logs for more details."
-        languageClient.showMessage(
-          new MessageParams(MessageType.Error, message + details)
-        )
-        scribe.error(message, e)
-        BuildChange.Failed
+    }.recover { case NonFatal(e) =>
+      disconnectOldBuildServer()
+      val message =
+        "Failed to connect with build server, no functionality will work."
+      val details = " See logs for more details."
+      languageClient.showMessage(
+        new MessageParams(MessageType.Error, message + details)
+      )
+      scribe.error(message, e)
+      BuildChange.Failed
     }.flatMap(compileAllOpenFiles)
   }
 
@@ -1882,8 +1880,8 @@ class MetalsLanguageServer(
       didWhat: String,
       reportStatus: Boolean = false
   )(thunk: => Future[T]): Future[T] = {
-    withTimer(didWhat, reportStatus)(thunk).map {
-      case (_, value) => value
+    withTimer(didWhat, reportStatus)(thunk).map { case (_, value) =>
+      value
     }
   }
 

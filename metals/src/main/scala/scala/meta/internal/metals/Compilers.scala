@@ -529,9 +529,8 @@ class Compilers(
     val forScripts =
       if (path.isAmmoniteScript) {
         ammoniteInputPosOpt(path, position, interactiveSemanticdbs)
-          .map {
-            case (input, pos) =>
-              (input, pos, Ammonite.adjustLspData(input.text))
+          .map { case (input, pos) =>
+            (input, pos, Ammonite.adjustLspData(input.text))
           }
       } else if (path.isSbt) {
         buildTargets

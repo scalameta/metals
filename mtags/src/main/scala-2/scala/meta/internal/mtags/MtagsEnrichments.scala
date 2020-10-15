@@ -106,8 +106,8 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       else None
     }
     def lastOption: Option[T] = {
-      it.foldLeft(Option.empty[T]) {
-        case (_, e) => Some(e)
+      it.foldLeft(Option.empty[T]) { case (_, e) =>
+        Some(e)
       }
     }
   }

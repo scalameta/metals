@@ -69,7 +69,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       paramsIndex == i && {
         paramIndex == j ||
         (param.tpe != null && paramIndex > j &&
-        definitions.isRepeatedParamType(param.tpe))
+          definitions.isRepeatedParamType(param.tpe))
       }
   }
 
@@ -106,10 +106,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                   case _ => args
                 }
                 val isAlignedTypes = toZip.lengthCompare(params.length) == 0 &&
-                  toZip.zip(params).forall {
-                    case (a, b) =>
-                      a == b.tpe ||
-                        b.tpe.typeSymbol.isTypeParameter
+                  toZip.zip(params).forall { case (a, b) =>
+                    a == b.tpe ||
+                      b.tpe.typeSymbol.isTypeParameter
                   }
                 if (isAlignedTypes) {
                   ctor.info
@@ -486,69 +485,66 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       methodType,
       includeDocs = true
     )
-    val paramLabels = mparamss.zipWithIndex.flatMap {
-      case (params, i) =>
-        val byName: Map[Name, Int] =
-          if (isActiveSignature) {
-            (for {
-              args <- t.call.all.lift(i).toList
-              (AssignOrNamedArg(Ident(arg), _), argIndex) <- args.zipWithIndex
-            } yield arg -> argIndex).toMap
-          } else {
-            Map.empty[Name, Int]
-          }
-        def byNamedArgumentPosition(symbol: Symbol): Int = {
-          byName.getOrElse(symbol.name, Int.MaxValue)
+    val paramLabels = mparamss.zipWithIndex.flatMap { case (params, i) =>
+      val byName: Map[Name, Int] =
+        if (isActiveSignature) {
+          (for {
+            args <- t.call.all.lift(i).toList
+            (AssignOrNamedArg(Ident(arg), _), argIndex) <- args.zipWithIndex
+          } yield arg -> argIndex).toMap
+        } else {
+          Map.empty[Name, Int]
         }
-        val sortedByName = params.zipWithIndex
-          .sortBy {
-            case (sym, pos) =>
-              (byNamedArgumentPosition(sym), pos)
-          }
-          .map {
-            case (sym, _) => sym
-          }
-        val isByNamedOrdered = sortedByName.zip(params).exists {
-          case (a, b) => a != b
+      def byNamedArgumentPosition(symbol: Symbol): Int = {
+        byName.getOrElse(symbol.name, Int.MaxValue)
+      }
+      val sortedByName = params.zipWithIndex
+        .sortBy { case (sym, pos) =>
+          (byNamedArgumentPosition(sym), pos)
         }
-        val labels = sortedByName.zipWithIndex.flatMap {
-          case (param, j) =>
-            if (param.name.startsWith(termNames.EVIDENCE_PARAM_PREFIX)) {
-              Nil
-            } else {
-              val index = k
-              k += 1
-              val label = printer.paramLabel(param, index)
-              val docstring = printer.paramDocstring(index)
-              val byNameLabel =
-                if (isByNamedOrdered) s"<$label>"
-                else label
-              val lparam = new ParameterInformation(byNameLabel)
-              if (metalsConfig.isSignatureHelpDocumentationEnabled) {
-                lparam.setDocumentation(docstring.toMarkupContent)
-              }
-              if (isActiveSignature && t.activeArg.matches(param, i, j)) {
-                arg(i, j) match {
-                  case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
-                    val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
-                    if (
-                      lparam.getLabel() != null &&
-                      lparam.getLabel().isLeft() &&
-                      !lparam.getLabel().getLeft().endsWith(tpe) &&
-                      metalsConfig.isSignatureHelpDocumentationEnabled
-                    ) {
-                      lparam.setDocumentation(
-                        ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
-                      )
-                    }
-                  case _ =>
+        .map { case (sym, _) =>
+          sym
+        }
+      val isByNamedOrdered = sortedByName.zip(params).exists { case (a, b) =>
+        a != b
+      }
+      val labels = sortedByName.zipWithIndex.flatMap { case (param, j) =>
+        if (param.name.startsWith(termNames.EVIDENCE_PARAM_PREFIX)) {
+          Nil
+        } else {
+          val index = k
+          k += 1
+          val label = printer.paramLabel(param, index)
+          val docstring = printer.paramDocstring(index)
+          val byNameLabel =
+            if (isByNamedOrdered) s"<$label>"
+            else label
+          val lparam = new ParameterInformation(byNameLabel)
+          if (metalsConfig.isSignatureHelpDocumentationEnabled) {
+            lparam.setDocumentation(docstring.toMarkupContent)
+          }
+          if (isActiveSignature && t.activeArg.matches(param, i, j)) {
+            arg(i, j) match {
+              case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
+                val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
+                if (
+                  lparam.getLabel() != null &&
+                  lparam.getLabel().isLeft() &&
+                  !lparam.getLabel().getLeft().endsWith(tpe) &&
+                  metalsConfig.isSignatureHelpDocumentationEnabled
+                ) {
+                  lparam.setDocumentation(
+                    ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
+                  )
                 }
-              }
-              lparam :: Nil
+              case _ =>
             }
+          }
+          lparam :: Nil
         }
-        if (labels.isEmpty && sortedByName.nonEmpty) Nil
-        else labels :: Nil
+      }
+      if (labels.isEmpty && sortedByName.nonEmpty) Nil
+      else labels :: Nil
     }
     val signatureInformation = new SignatureInformation(
       printer.methodSignature(

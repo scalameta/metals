@@ -683,13 +683,12 @@ trait Completions { this: MetalsGlobal =>
     metalsConfig
       .symbolPrefixes()
       .asScala
-      .map {
-        case (sym, name) =>
-          val nme =
-            if (name.endsWith("#")) TypeName(name.stripSuffix("#"))
-            else if (name.endsWith(".")) TermName(name.stripSuffix("."))
-            else TermName(name)
-          inverseSemanticdbSymbol(sym) -> nme
+      .map { case (sym, name) =>
+        val nme =
+          if (name.endsWith("#")) TypeName(name.stripSuffix("#"))
+          else if (name.endsWith(".")) TermName(name.stripSuffix("."))
+          else TermName(name)
+        inverseSemanticdbSymbol(sym) -> nme
       }
       .filterKeys(_ != NoSymbol)
       .toMap

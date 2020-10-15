@@ -159,18 +159,16 @@ object MetalsEnrichments
     def logErrorAndContinue(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[Unit] = {
-      future.ignoreValue.recover {
-        case e =>
-          scribe.error(s"Unexpected error while $doingWhat", e)
+      future.ignoreValue.recover { case e =>
+        scribe.error(s"Unexpected error while $doingWhat", e)
       }
     }
     def logError(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[A] = {
-      future.recover {
-        case e =>
-          scribe.error(s"Unexpected error while $doingWhat", e)
-          throw e
+      future.recover { case e =>
+        scribe.error(s"Unexpected error while $doingWhat", e)
+        throw e
       }
     }
 
@@ -184,10 +182,9 @@ object MetalsEnrichments
         action: => Unit
     )(implicit ec: ExecutionContext): Future[A] = {
       // schedule action to execute on timeout
-      future.withTimeout(length, unit).recoverWith {
-        case e: TimeoutException =>
-          action
-          Future.failed(e)
+      future.withTimeout(length, unit).recoverWith { case e: TimeoutException =>
+        action
+        Future.failed(e)
       }
     }
 
@@ -220,9 +217,8 @@ object MetalsEnrichments
         )
         val newOwner: String = s.getKind match {
           case l.SymbolKind.Package =>
-            s.getName.split("\\.").foldLeft(owner) {
-              case (accum, name) =>
-                Symbols.Global(accum, Descriptor.Package(name))
+            s.getName.split("\\.").foldLeft(owner) { case (accum, name) =>
+              Symbols.Global(accum, Descriptor.Package(name))
             }
           case l.SymbolKind.Class | l.SymbolKind.Interface =>
             Symbols.Global(owner, Descriptor.Type(s.getName))
@@ -253,9 +249,8 @@ object MetalsEnrichments
      * Resolve each path segment individually to prevent FileSystem mismatch errors.
      */
     def resolveZipPath(zipPath: Path): AbsolutePath = {
-      zipPath.iterator().asScala.foldLeft(path) {
-        case (accum, filename) =>
-          accum.resolve(filename.toString)
+      zipPath.iterator().asScala.foldLeft(path) { case (accum, filename) =>
+        accum.resolve(filename.toString)
       }
     }
     def isDependencySource(workspace: AbsolutePath): Boolean =

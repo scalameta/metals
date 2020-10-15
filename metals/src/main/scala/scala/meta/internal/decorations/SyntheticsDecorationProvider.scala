@@ -149,20 +149,18 @@ final class SyntheticsDecorationProvider(
       position: l.Position
   ): Option[l.Hover] = {
     syntheticsAtLine
-      .find {
-        case (range, _) =>
-          range.getEnd().getCharacter() == position.getCharacter()
+      .find { case (range, _) =>
+        range.getEnd().getCharacter() == position.getCharacter()
       }
-      .flatMap {
-        case (_, synthetic) =>
-          addToHover(
-            pcHover,
-            "**Synthetics**:\n"
-              +
-                HoverMarkup(
-                  synthetic
-                )
-          )
+      .flatMap { case (_, synthetic) =>
+        addToHover(
+          pcHover,
+          "**Synthetics**:\n"
+            +
+              HoverMarkup(
+                synthetic
+              )
+        )
       }
 
   }
@@ -187,15 +185,14 @@ final class SyntheticsDecorationProvider(
       lineText: String
   ) = {
     val withEnd = syntheticsAtLine
-      .map {
-        case (range, str) => (range.getEnd().getCharacter(), str)
+      .map { case (range, str) =>
+        (range.getEnd().getCharacter(), str)
       }
       .sortBy(_._1) :+ (lineText.size, "")
     val lineWithDecorations = withEnd
-      .foldLeft(("", 0)) {
-        case ((current, index), (char, text)) =>
-          val toAdd = lineText.substring(index, char) + text
-          (current + toAdd, char)
+      .foldLeft(("", 0)) { case ((current, index), (char, text)) =>
+        val toAdd = lineText.substring(index, char) + text
+        (current + toAdd, char)
       }
       ._1
 

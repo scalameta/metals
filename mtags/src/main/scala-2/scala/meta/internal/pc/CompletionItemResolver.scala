@@ -86,12 +86,11 @@ class CompletionItemResolver(
       .asScala
       .iterator
       .zipWithIndex
-      .foldLeft(detail) {
-        case (accum, (param, i)) =>
-          accum.replace(
-            s"x$$${i + 1}",
-            param.displayName()
-          )
+      .foldLeft(detail) { case (accum, (param, i)) =>
+        accum.replace(
+          s"x$$${i + 1}",
+          param.displayName()
+        )
       }
   }
 

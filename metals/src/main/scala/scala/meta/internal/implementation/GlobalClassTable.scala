@@ -90,9 +90,8 @@ final class GlobalClassTable(
       infos = (allParents.map(_._1) -- calculated).flatMap(symTab.safeInfo)
     }
 
-    val inheritance = results.groupBy(_._1).map {
-      case (symbol, locations) =>
-        symbol -> locations.map(_._2).toSet
+    val inheritance = results.groupBy(_._1).map { case (symbol, locations) =>
+      symbol -> locations.map(_._2).toSet
     }
     context.withClasspathContext(inheritance)
   }

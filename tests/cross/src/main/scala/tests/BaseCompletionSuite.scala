@@ -73,9 +73,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       command: Option[String] = None,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    val compatTemplate = compat.map {
-      case (key, value) =>
-        key -> template.replace("___", value)
+    val compatTemplate = compat.map { case (key, value) =>
+      key -> template.replace("___", value)
     }
     checkEdit(
       name = name,

@@ -141,8 +141,8 @@ final class RenameProvider(
         } yield loc
 
         def isOccurrence(fn: String => Boolean): Boolean = {
-          symbolOccurrence.exists {
-            case (occ, _) => fn(occ.symbol)
+          symbolOccurrence.exists { case (occ, _) =>
+            fn(occ.symbol)
           }
         }
 
@@ -162,9 +162,8 @@ final class RenameProvider(
             if (clientConfig.isOpenFilesOnRenameProvider) {
               client.showMessage(fileThreshold(fileChanges.keySet.size))
             }
-            fileChanges.partition {
-              case (path, _) =>
-                buffers.contains(path)
+            fileChanges.partition { case (path, _) =>
+              buffers.contains(path)
             }
           } else {
             (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
@@ -188,12 +187,11 @@ final class RenameProvider(
   private def documentEdits(
       openedEdits: Map[AbsolutePath, List[TextEdit]]
   ): List[LSPEither[TextDocumentEdit, ResourceOperation]] = {
-    openedEdits.map {
-      case (file, edits) =>
-        val textId = new VersionedTextDocumentIdentifier()
-        textId.setUri(file.toURI.toString())
-        val ed = new TextDocumentEdit(textId, edits.asJava)
-        LSPEither.forLeft[TextDocumentEdit, ResourceOperation](ed)
+    openedEdits.map { case (file, edits) =>
+      val textId = new VersionedTextDocumentIdentifier()
+      textId.setUri(file.toURI.toString())
+      val ed = new TextDocumentEdit(textId, edits.asJava)
+      LSPEither.forLeft[TextDocumentEdit, ResourceOperation](ed)
     }.toList
   }
 
@@ -260,11 +258,10 @@ final class RenameProvider(
   private def changeClosedFiles(
       fileEdits: Map[AbsolutePath, List[TextEdit]]
   ) = {
-    fileEdits.toArray.par.foreach {
-      case (file, changes) =>
-        val text = file.readText
-        val newText = TextEdits.applyEdits(text, changes)
-        file.writeText(newText)
+    fileEdits.toArray.par.foreach { case (file, changes) =>
+      val text = file.readText
+      val newText = TextEdits.applyEdits(text, changes)
+      file.writeText(newText)
     }
   }
 

@@ -86,12 +86,11 @@ final class JarTopLevels(conn: () => Connection) {
       symbolStmt = conn().prepareStatement(
         s"insert into toplevel_symbol (symbol, path, jar) values (?, ?, ?)"
       )
-      toplevels.foreach {
-        case (symbol, source) =>
-          symbolStmt.setString(1, symbol)
-          symbolStmt.setString(2, source.toString)
-          symbolStmt.setInt(3, jar)
-          symbolStmt.addBatch()
+      toplevels.foreach { case (symbol, source) =>
+        symbolStmt.setString(1, symbol)
+        symbolStmt.setString(2, source.toString)
+        symbolStmt.setInt(3, jar)
+        symbolStmt.addBatch()
       }
       // Return number of rows inserted
       symbolStmt.executeBatch().sum

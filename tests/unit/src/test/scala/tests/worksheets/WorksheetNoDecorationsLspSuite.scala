@@ -105,8 +105,8 @@ class WorksheetNoDecorationsLspSuite
         .zip(expected.toList)
 
     Future
-      .traverse(queriesAndExpected) {
-        case (q, e) => server.assertHover(filename, q, e)
+      .traverse(queriesAndExpected) { case (q, e) =>
+        server.assertHover(filename, q, e)
       }
       .map(_ => ())
   }

@@ -55,18 +55,17 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       cleanWorkspace()
       val allMarkersRegex = "(<<|>>|@@|##.*##)"
       val files = FileLayout.mapFromString(input)
-      val expectedFiles = files.map {
-        case (file, code) =>
-          fileRenames.getOrElse(file, file) -> {
-            val expected = if (!notRenamed) {
-              code
-                .replaceAll("\\<\\<\\S*\\>\\>", newName)
-                .replaceAll("(##|@@)", "")
-            } else {
-              code.replaceAll(allMarkersRegex, "")
-            }
-            "\n" + breakingChange(expected)
+      val expectedFiles = files.map { case (file, code) =>
+        fileRenames.getOrElse(file, file) -> {
+          val expected = if (!notRenamed) {
+            code
+              .replaceAll("\\<\\<\\S*\\>\\>", newName)
+              .replaceAll("(##|@@)", "")
+          } else {
+            code.replaceAll(allMarkersRegex, "")
           }
+          "\n" + breakingChange(expected)
+        }
       }
 
       val (filename, edit) = files

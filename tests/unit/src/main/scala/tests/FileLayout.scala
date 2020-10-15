@@ -36,21 +36,20 @@ object FileLayout {
       charset: Charset = StandardCharsets.UTF_8
   ): AbsolutePath = {
     if (!layout.trim.isEmpty) {
-      mapFromString(layout).foreach {
-        case (path, contents) =>
-          val file =
-            path.split("/").foldLeft(root)(_ resolve _)
-          val parent = file.toNIO.getParent
-          if (!Files.exists(parent)) { // cannot create directories when parent is a symlink
-            Files.createDirectories(parent)
-          }
-          Files.deleteIfExists(file.toNIO)
-          Files.write(
-            file.toNIO,
-            contents.getBytes(charset),
-            StandardOpenOption.WRITE,
-            StandardOpenOption.CREATE
-          )
+      mapFromString(layout).foreach { case (path, contents) =>
+        val file =
+          path.split("/").foldLeft(root)(_ resolve _)
+        val parent = file.toNIO.getParent
+        if (!Files.exists(parent)) { // cannot create directories when parent is a symlink
+          Files.createDirectories(parent)
+        }
+        Files.deleteIfExists(file.toNIO)
+        Files.write(
+          file.toNIO,
+          contents.getBytes(charset),
+          StandardOpenOption.WRITE,
+          StandardOpenOption.CREATE
+        )
       }
     }
     root

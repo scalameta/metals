@@ -102,16 +102,15 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
       .map { actions =>
         val deduplicated = actions.flatten
           .groupBy(_.getTitle())
-          .map {
-            case (_, actions) =>
-              val mainAction = actions.head
-              val allDiagnostics =
-                actions.flatMap(_.getDiagnostics().asScala).asJava
-              val edits = joinActionEdits(actions)
-              mainAction.setDiagnostics(allDiagnostics)
-              mainAction
-                .setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
-              mainAction
+          .map { case (_, actions) =>
+            val mainAction = actions.head
+            val allDiagnostics =
+              actions.flatMap(_.getDiagnostics().asScala).asJava
+            val edits = joinActionEdits(actions)
+            mainAction.setDiagnostics(allDiagnostics)
+            mainAction
+              .setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
+            mainAction
           }
           .toSeq
           .sorted

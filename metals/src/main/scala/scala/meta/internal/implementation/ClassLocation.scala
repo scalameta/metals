@@ -76,8 +76,8 @@ object AsSeenFrom {
       childASF: Map[String, String],
       parentASF: Map[String, String]
   ): Map[String, String] = {
-    parentASF.map {
-      case (key, value) => key -> childASF.getOrElse(value, value)
+    parentASF.map { case (key, value) =>
+      key -> childASF.getOrElse(value, value)
     }
   }
 

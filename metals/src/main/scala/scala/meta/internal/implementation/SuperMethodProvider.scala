@@ -88,9 +88,10 @@ object SuperMethodProvider {
           .map(methodSymbolLink =>
             for {
               mSymbolInformation <- findSymbol(methodSymbolLink)
-              methodSignature <- Option(mSymbolInformation.signature).collect {
-                case m: MethodSignature => m
-              }
+              methodSignature <- Option(mSymbolInformation.signature)
+                .collect { case m: MethodSignature =>
+                  m
+                }
               if checkSignaturesEqual(
                 mSymbolInformation,
                 methodSignature,
@@ -128,13 +129,12 @@ object SuperMethodProvider {
             )
           val parentsHierarchy = parents
             .flatMap(p => findSymbol(p.symbol).map((_, p)))
-            .map {
-              case (si, p) =>
-                val parentASF = AsSeenFrom.calculateAsSeenFrom(
-                  p,
-                  classSignature.typeParameters
-                )
-                getSuperClasses(si, findSymbol, skipSymbols, parentASF)
+            .map { case (si, p) =>
+              val parentASF = AsSeenFrom.calculateAsSeenFrom(
+                p,
+                classSignature.typeParameters
+              )
+              getSuperClasses(si, findSymbol, skipSymbols, parentASF)
             }
             .toList
             .reverse

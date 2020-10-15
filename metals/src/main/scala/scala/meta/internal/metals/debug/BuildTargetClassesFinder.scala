@@ -34,19 +34,18 @@ class BuildTargetClassesFinder(
         .mainClasses
         .values,
       { clazz: b.ScalaMainClass => clazz.getClassName }
-    ).recoverWith {
-      case ex =>
-        val found = ex match {
-          // We check whether there is a main in dependencies that is not reported via BSP
-          case ClassNotFoundInBuildTargetException(className, target) =>
-            revertToDependencies(className, Some(target))
-          case _: ClassNotFoundException =>
-            revertToDependencies(className, buildTarget = None)
-        }
-        found match {
-          case Nil => Failure(ex)
-          case deps => Success(deps)
-        }
+    ).recoverWith { case ex =>
+      val found = ex match {
+        // We check whether there is a main in dependencies that is not reported via BSP
+        case ClassNotFoundInBuildTargetException(className, target) =>
+          revertToDependencies(className, Some(target))
+        case _: ClassNotFoundException =>
+          revertToDependencies(className, buildTarget = None)
+      }
+      found match {
+        case Nil => Failure(ex)
+        case deps => Success(deps)
+      }
     }
   }
 
@@ -97,11 +96,11 @@ class BuildTargetClassesFinder(
     buildTarget.fold {
       val classes =
         findClassesByName(className)
-          .collect {
-            case (clazz, BuildTargetIdOf(buildTarget)) => (clazz, buildTarget)
+          .collect { case (clazz, BuildTargetIdOf(buildTarget)) =>
+            (clazz, buildTarget)
           }
-          .sortBy {
-            case (_, target) => buildTargets.buildTargetsOrder(target.getId())
+          .sortBy { case (_, target) =>
+            buildTargets.buildTargetsOrder(target.getId())
           }
           .reverse
       if (classes.nonEmpty) Success(classes)

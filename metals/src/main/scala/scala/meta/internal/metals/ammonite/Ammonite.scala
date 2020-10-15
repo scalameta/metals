@@ -239,31 +239,30 @@ final class Ammonite(
         Future.failed(new Exception(msg))
       }
 
-    commandScriptOpt.flatMap {
-      case (command, script) =>
-        val extraScripts = buffers.open.toVector
-          .filter(path => path.isAmmoniteScript && path != script)
-        val jvmOpts = userConfig().ammoniteJvmProperties.getOrElse(Nil)
-        val commandWithJVMOpts =
-          command.addJvmArgs(jvmOpts: _*)
-        val futureConn = BuildServerConnection.fromSockets(
-          workspace(),
-          buildClient,
-          languageClient,
-          () =>
-            Ammonite
-              .socketConn(
-                commandWithJVMOpts,
-                script +: extraScripts,
-                workspace()
-              ),
-          tables().dismissedNotifications.ReconnectAmmonite,
-          config
-        )
-        for {
-          conn <- futureConn
-          _ <- connectToNewBuildServer(conn)
-        } yield ()
+    commandScriptOpt.flatMap { case (command, script) =>
+      val extraScripts = buffers.open.toVector
+        .filter(path => path.isAmmoniteScript && path != script)
+      val jvmOpts = userConfig().ammoniteJvmProperties.getOrElse(Nil)
+      val commandWithJVMOpts =
+        command.addJvmArgs(jvmOpts: _*)
+      val futureConn = BuildServerConnection.fromSockets(
+        workspace(),
+        buildClient,
+        languageClient,
+        () =>
+          Ammonite
+            .socketConn(
+              commandWithJVMOpts,
+              script +: extraScripts,
+              workspace()
+            ),
+        tables().dismissedNotifications.ReconnectAmmonite,
+        config
+      )
+      for {
+        conn <- futureConn
+        _ <- connectToNewBuildServer(conn)
+      } yield ()
     }
   }
 

@@ -78,9 +78,8 @@ final class ImplementationProvider(
         )
       }
     }
-    parentImplLocationPairs.groupBy(_._1).map {
-      case (symbol, locations) =>
-        symbol -> locations.map(_._2).toSet
+    parentImplLocationPairs.groupBy(_._1).map { case (symbol, locations) =>
+      symbol -> locations.map(_._2).toSet
     }
   }
 
@@ -495,16 +494,15 @@ object ImplementationProvider {
     def fromClassSignature(
         classSig: ClassSignature
     ): Seq[(String, ClassLocation)] = {
-      val allLocations = classSig.parents.collect {
-        case t: TypeRef =>
-          val loc =
-            ClassLocation(
-              symbol,
-              filePath.map(_.toNIO),
-              t,
-              classSig.typeParameters
-            )
-          t.symbol -> loc
+      val allLocations = classSig.parents.collect { case t: TypeRef =>
+        val loc =
+          ClassLocation(
+            symbol,
+            filePath.map(_.toNIO),
+            t,
+            classSig.typeParameters
+          )
+        t.symbol -> loc
 
       }
       allLocations

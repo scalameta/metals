@@ -60,7 +60,7 @@ final class DocumentHighlightProvider(
         else if (info.isObject) Set(info.symbol.dropRight(1) + "#")
         else if (
           info.isParameter && (info.symbol.contains("apply") ||
-          info.symbol.contains("copy"))
+            info.symbol.contains("copy"))
         ) {
           parameterAlternatives(info)
         } else if (info.isMethod) {

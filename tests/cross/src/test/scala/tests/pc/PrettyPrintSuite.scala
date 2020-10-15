@@ -18,9 +18,8 @@ class PrettyPrintSuite extends BaseCompletionSuite {
     val signature = original.replace("@@", "")
     val completion = original.replaceFirst("@@.*", "@@")
     val suffix = " = ${0:???}"
-    val compatWithSuffix = compat.map {
-      case (key, value) =>
-        key -> (value + suffix)
+    val compatWithSuffix = compat.map { case (key, value) =>
+      key -> (value + suffix)
     }
     checkEditLine(
       name,

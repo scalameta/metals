@@ -191,14 +191,12 @@ object MethodImplementation {
       scopesChild: Seq[Scope]
   )(implicit context: Context): Boolean = {
     scopesParent.size == scopesChild.size &&
-    scopesParent.zip(scopesChild).forall {
-      case (scopePar, scopeChild) =>
-        scopePar.hardlinks.size == scopeChild.hardlinks.size && scopePar.hardlinks
-          .zip(scopeChild.hardlinks)
-          .forall {
-            case (linkPar, linkChil) =>
-              signaturesEqual(linkPar.signature, linkChil.signature)
-          }
+    scopesParent.zip(scopesChild).forall { case (scopePar, scopeChild) =>
+      scopePar.hardlinks.size == scopeChild.hardlinks.size && scopePar.hardlinks
+        .zip(scopeChild.hardlinks)
+        .forall { case (linkPar, linkChil) =>
+          signaturesEqual(linkPar.signature, linkChil.signature)
+        }
     }
   }
 

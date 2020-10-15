@@ -78,10 +78,9 @@ class NewProjectProvider(
       .flatMapOption { template =>
         askForPath(Some(base)).mapOptionInside { path => (template, path) }
       }
-      .flatMapOption {
-        case (template, path) =>
-          askForName(nameFromPath(template.id), NewScalaProject.enterName)
-            .map { name => Some((template, path, name)) }
+      .flatMapOption { case (template, path) =>
+        askForName(nameFromPath(template.id), NewScalaProject.enterName)
+          .map { name => Some((template, path, name)) }
       }
       .flatMap {
         case Some((template, inputPath, Some(projectName))) =>

@@ -71,15 +71,14 @@ class DocumentSymbolProvider(trees: Trees) {
         detail: String
     ): Unit = {
       pats.foreach { pat =>
-        pat.collect {
-          case Pat.Var(name) =>
-            addChild(
-              name.value,
-              kind,
-              range,
-              name.pos,
-              detail
-            )
+        pat.collect { case Pat.Var(name) =>
+          addChild(
+            name.value,
+            kind,
+            range,
+            name.pos,
+            detail
+          )
         }
       }
     }

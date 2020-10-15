@@ -184,7 +184,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.2.9"
-  val scalafmt = "2.6.4"
+  val scalafmt = "2.7.4"
   val munit = "0.7.12"
   val scalafix = "0.9.21"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
@@ -272,9 +272,8 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   val base = root / "src" / "main"
   val result = mutable.ListBuffer.empty[File]
   val partialVersion = CrossVersion.partialVersion(scalaVersion)
-  partialVersion.collect {
-    case (major, minor) =>
-      result += base / s"scala-$major.$minor"
+  partialVersion.collect { case (major, minor) =>
+    result += base / s"scala-$major.$minor"
   }
   if (isScala2(partialVersion)) {
     result += base / "scala-2"

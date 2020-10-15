@@ -27,12 +27,11 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 4,
     pickedKind = "case-class",
-    newFile =
-      "a/src/main/scala/a/Location.scala" ->
-        """|package a
-           |
-           |final case class Location()
-           |""".stripMargin
+    newFile = "a/src/main/scala/a/Location.scala" ->
+      """|package a
+         |
+         |final case class Location()
+         |""".stripMargin
   )
 
   checkNewSymbol(
@@ -51,14 +50,13 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 4,
     pickedKind = "trait",
-    newFile =
-      "a/src/main/scala/a/Location.scala" ->
-        s"""|package a
-            |
-            |trait Location {
-            |$indent
-            |}
-            |""".stripMargin
+    newFile = "a/src/main/scala/a/Location.scala" ->
+      s"""|package a
+          |
+          |trait Location {
+          |$indent
+          |}
+          |""".stripMargin
   )
 
   checkNewSymbol(
@@ -79,14 +77,13 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |""".stripMargin,
     selectedActionIndex = 4,
     pickedKind = "class",
-    newFile =
-      "a/src/main/scala/a/Missing.scala" ->
-        s"""|package a
-            |
-            |class Missing {
-            |$indent
-            |}
-            |""".stripMargin,
+    newFile = "a/src/main/scala/a/Missing.scala" ->
+      s"""|package a
+          |
+          |class Missing {
+          |$indent
+          |}
+          |""".stripMargin,
     expectNoDiagnostics = false
   )
 

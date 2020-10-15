@@ -72,165 +72,167 @@ class CompletionProvider(
     lazy val importPosition = autoImportPosition(pos, params.text())
     lazy val context = doLocateImportContext(pos, importPosition)
 
-    val items = sorted.iterator.zipWithIndex.map {
-      case (member, idx) =>
-        params.checkCanceled()
-        val symbolName = member.symNameDropLocal.decoded
-        val ident = Identifier.backtickWrap(symbolName)
-        val detail = member match {
-          case o: OverrideDefMember => o.detail
-          case t: TextEditMember if t.detail.isDefined => t.detail.get
-          case _ => detailString(member, history)
-        }
-        val label = member match {
-          case _: NamedArgMember =>
-            s"$ident = "
-          case o: OverrideDefMember =>
-            o.label
-          case o: TextEditMember =>
-            o.label.getOrElse(ident)
-          case o: WorkspaceMember =>
-            s"$ident - ${o.sym.owner.fullName}"
-          case _ =>
-            if (member.sym.isMethod || member.sym.isValue) {
-              ident + detail
-            } else {
-              ident
-            }
-        }
-        val item = new CompletionItem(label)
-        if (metalsConfig.isCompletionItemDetailEnabled) {
-          item.setDetail(detail)
-        }
-        val templateSuffix =
-          if (!isSnippet || !clientSupportsSnippets) ""
-          else if (
-            completion.isNew &&
-            member.sym.dealiased.requiresTemplateCurlyBraces
-          ) " {}"
-          else ""
-
-        val typeSuffix =
-          if (!isSnippet || !clientSupportsSnippets) ""
-          else if (completion.isType && member.sym.hasTypeParams) "[$0]"
-          else if (completion.isNew && member.sym.hasTypeParams) "[$0]"
-          else ""
-        val suffix = typeSuffix + templateSuffix
-
-        member match {
-          case i: TextEditMember =>
-            item.setFilterText(i.filterText)
-          case i: OverrideDefMember =>
-            item.setFilterText(i.filterText)
-          case _ =>
-            // Explicitly set filter text because the label has method signature and
-            // fully qualified name.
-            item.setFilterText(symbolName)
-        }
-
-        if (clientSupportsSnippets) {
-          item.setInsertTextFormat(InsertTextFormat.Snippet)
-        } else {
-          item.setInsertTextFormat(InsertTextFormat.PlainText)
-        }
-
-        member match {
-          case i: TextEditMember =>
-            item.setTextEdit(i.edit)
-            if (i.additionalTextEdits.nonEmpty) {
-              item.setAdditionalTextEdits(i.additionalTextEdits.asJava)
-            }
-          case i: OverrideDefMember =>
-            item.setTextEdit(i.edit)
-            item.setAdditionalTextEdits(i.autoImports.asJava)
-          case w: WorkspaceMember =>
-            importPosition match {
-              case None =>
-                // No import position, fully qualify the name in-place.
-                item.setTextEdit(textEdit(w.sym.fullNameSyntax + suffix))
-              case Some(value) =>
-                val (short, edits) = ShortenedNames.synthesize(
-                  TypeRef(
-                    ThisType(w.sym.owner),
-                    w.sym,
-                    Nil
-                  ),
-                  pos,
-                  context,
-                  value
-                )
-                item.setAdditionalTextEdits(edits.asJava)
-                item.setTextEdit(textEdit(short + suffix))
-            }
-          case _ if isImportPosition(pos) => // no parameter lists in import statements
-          case member =>
-            val baseLabel = ident
-            if (isSnippet && member.sym.isNonNullaryMethod) {
-              member.sym.paramss match {
-                case Nil =>
-                case Nil :: Nil =>
-                  item.setTextEdit(textEdit(baseLabel + "()"))
-                case head :: Nil if head.forall(_.isImplicit) =>
-                  () // Don't set ($0) snippet for implicit-only params.
-                case _ =>
-                  if (clientSupportsSnippets) {
-                    item.setTextEdit(textEdit(baseLabel + "($0)"))
-                  }
-                  metalsConfig
-                    .parameterHintsCommand()
-                    .asScala
-                    .foreach { command =>
-                      item.setCommand(
-                        new l.Command("", command)
-                      )
-                    }
-              }
-            } else if (!suffix.isEmpty) {
-              item.setTextEdit(textEdit(baseLabel + suffix))
-            }
-        }
-
-        if (item.getTextEdit == null) {
-          val editText = member match {
-            case _: NamedArgMember => item.getLabel
-            case _ => ident
+    val items = sorted.iterator.zipWithIndex.map { case (member, idx) =>
+      params.checkCanceled()
+      val symbolName = member.symNameDropLocal.decoded
+      val ident = Identifier.backtickWrap(symbolName)
+      val detail = member match {
+        case o: OverrideDefMember => o.detail
+        case t: TextEditMember if t.detail.isDefined => t.detail.get
+        case _ => detailString(member, history)
+      }
+      val label = member match {
+        case _: NamedArgMember =>
+          s"$ident = "
+        case o: OverrideDefMember =>
+          o.label
+        case o: TextEditMember =>
+          o.label.getOrElse(ident)
+        case o: WorkspaceMember =>
+          s"$ident - ${o.sym.owner.fullName}"
+        case _ =>
+          if (member.sym.isMethod || member.sym.isValue) {
+            ident + detail
+          } else {
+            ident
           }
-          item.setTextEdit(textEdit(editText))
-        }
+      }
+      val item = new CompletionItem(label)
+      if (metalsConfig.isCompletionItemDetailEnabled) {
+        item.setDetail(detail)
+      }
+      val templateSuffix =
+        if (!isSnippet || !clientSupportsSnippets) ""
+        else if (
+          completion.isNew &&
+          member.sym.dealiased.requiresTemplateCurlyBraces
+        ) " {}"
+        else ""
 
-        member match {
-          case o: TextEditMember =>
-            o.command.foreach { command =>
-              item.setCommand(new l.Command("", command))
+      val typeSuffix =
+        if (!isSnippet || !clientSupportsSnippets) ""
+        else if (completion.isType && member.sym.hasTypeParams) "[$0]"
+        else if (completion.isNew && member.sym.hasTypeParams) "[$0]"
+        else ""
+      val suffix = typeSuffix + templateSuffix
+
+      member match {
+        case i: TextEditMember =>
+          item.setFilterText(i.filterText)
+        case i: OverrideDefMember =>
+          item.setFilterText(i.filterText)
+        case _ =>
+          // Explicitly set filter text because the label has method signature and
+          // fully qualified name.
+          item.setFilterText(symbolName)
+      }
+
+      if (clientSupportsSnippets) {
+        item.setInsertTextFormat(InsertTextFormat.Snippet)
+      } else {
+        item.setInsertTextFormat(InsertTextFormat.PlainText)
+      }
+
+      member match {
+        case i: TextEditMember =>
+          item.setTextEdit(i.edit)
+          if (i.additionalTextEdits.nonEmpty) {
+            item.setAdditionalTextEdits(i.additionalTextEdits.asJava)
+          }
+        case i: OverrideDefMember =>
+          item.setTextEdit(i.edit)
+          item.setAdditionalTextEdits(i.autoImports.asJava)
+        case w: WorkspaceMember =>
+          importPosition match {
+            case None =>
+              // No import position, fully qualify the name in-place.
+              item.setTextEdit(textEdit(w.sym.fullNameSyntax + suffix))
+            case Some(value) =>
+              val (short, edits) = ShortenedNames.synthesize(
+                TypeRef(
+                  ThisType(w.sym.owner),
+                  w.sym,
+                  Nil
+                ),
+                pos,
+                context,
+                value
+              )
+              item.setAdditionalTextEdits(edits.asJava)
+              item.setTextEdit(textEdit(short + suffix))
+          }
+        case _
+            if isImportPosition(
+              pos
+            ) => // no parameter lists in import statements
+        case member =>
+          val baseLabel = ident
+          if (isSnippet && member.sym.isNonNullaryMethod) {
+            member.sym.paramss match {
+              case Nil =>
+              case Nil :: Nil =>
+                item.setTextEdit(textEdit(baseLabel + "()"))
+              case head :: Nil if head.forall(_.isImplicit) =>
+                () // Don't set ($0) snippet for implicit-only params.
+              case _ =>
+                if (clientSupportsSnippets) {
+                  item.setTextEdit(textEdit(baseLabel + "($0)"))
+                }
+                metalsConfig
+                  .parameterHintsCommand()
+                  .asScala
+                  .foreach { command =>
+                    item.setCommand(
+                      new l.Command("", command)
+                    )
+                  }
             }
-          case _ =>
-        }
+          } else if (!suffix.isEmpty) {
+            item.setTextEdit(textEdit(baseLabel + suffix))
+          }
+      }
 
-        val completionItemDataKind = member match {
-          case o: OverrideDefMember if o.sym.isJavaDefined =>
-            CompletionItemData.OverrideKind
-          case _ =>
-            null
+      if (item.getTextEdit == null) {
+        val editText = member match {
+          case _: NamedArgMember => item.getLabel
+          case _ => ident
         }
+        item.setTextEdit(textEdit(editText))
+      }
 
-        item.setData(
-          CompletionItemData(
-            semanticdbSymbol(member.sym),
-            buildTargetIdentifier,
-            kind = completionItemDataKind
-          ).toJson
-        )
-        item.setKind(completionItemKind(member))
-        item.setSortText(f"${idx}%05d")
-        if (member.sym.isDeprecated) {
-          item.setTags(List(CompletionItemTag.Deprecated).asJava)
-        }
-        // NOTE: We intentionally don't set the commit character because there are valid scenarios where
-        // the user wants to type a dot '.' character without selecting a completion item.
-        if (idx == 0) {
-          item.setPreselect(true)
-        }
-        item
+      member match {
+        case o: TextEditMember =>
+          o.command.foreach { command =>
+            item.setCommand(new l.Command("", command))
+          }
+        case _ =>
+      }
+
+      val completionItemDataKind = member match {
+        case o: OverrideDefMember if o.sym.isJavaDefined =>
+          CompletionItemData.OverrideKind
+        case _ =>
+          null
+      }
+
+      item.setData(
+        CompletionItemData(
+          semanticdbSymbol(member.sym),
+          buildTargetIdentifier,
+          kind = completionItemDataKind
+        ).toJson
+      )
+      item.setKind(completionItemKind(member))
+      item.setSortText(f"${idx}%05d")
+      if (member.sym.isDeprecated) {
+        item.setTags(List(CompletionItemTag.Deprecated).asJava)
+      }
+      // NOTE: We intentionally don't set the commit character because there are valid scenarios where
+      // the user wants to type a dot '.' character without selecting a completion item.
+      if (idx == 0) {
+        item.setPreselect(true)
+      }
+      item
     }
 
     val result = new CompletionList(items.toSeq.asJava)

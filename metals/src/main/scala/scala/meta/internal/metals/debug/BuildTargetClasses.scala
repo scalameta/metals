@@ -49,8 +49,8 @@ final class BuildTargetClasses(
     index
       .mapValues(f)
       .toList
-      .collect {
-        case (target, Some(clazz)) => clazz -> target
+      .collect { case (target, Some(clazz)) =>
+        clazz -> target
       }
   }
 
@@ -78,8 +78,8 @@ final class BuildTargetClasses(
             _ <- updateMainClasses
             _ <- updateTestClasses
           } yield {
-            classes.foreach {
-              case (id, classes) => index.put(id, classes)
+            classes.foreach { case (id, classes) =>
+              index.put(id, classes)
             }
           }
       }
