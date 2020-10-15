@@ -429,6 +429,11 @@ class Compilers(
     }
 
     created.getOrElse {
+      val sourcesWithJdk = JdkSources(userConfig().javaHome) match {
+        case Some(absPath) => absPath.toNIO :: sources
+        case None => sources
+      }
+
       jworksheetsCache.put(
         path,
         createStandaloneCompiler(
@@ -436,7 +441,7 @@ class Compilers(
           StandaloneSymbolSearch(
             workspace,
             buffers,
-            sources,
+            sourcesWithJdk,
             classpath,
             isExcludedPackage
           ),

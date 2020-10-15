@@ -90,7 +90,6 @@ class StandaloneSymbolSearch(
 }
 
 object StandaloneSymbolSearch {
-
   def apply(
       workspace: AbsolutePath,
       buffers: Buffers,
@@ -106,7 +105,6 @@ object StandaloneSymbolSearch {
       isExcludedPackage
     )
   }
-
   def apply(
       workspace: AbsolutePath,
       buffers: Buffers,
