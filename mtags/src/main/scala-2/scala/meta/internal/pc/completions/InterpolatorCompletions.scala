@@ -183,15 +183,17 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     }
     val isCandidate = i > 0 &&
       chars(i) == '$' && {
-      val start = chars(i + 1) match {
-        case '{' => i + 2
-        case _ => i + 1
+        val start = chars(i + 1) match {
+          case '{' => i + 2
+          case _ => i + 1
+        }
+        start == offset || {
+          chars(start).isUnicodeIdentifierStart &&
+          (start + 1)
+            .until(offset)
+            .forall(j => chars(j).isUnicodeIdentifierPart)
+        }
       }
-      start == offset || {
-        chars(start).isUnicodeIdentifierStart &&
-        (start + 1).until(offset).forall(j => chars(j).isUnicodeIdentifierPart)
-      }
-    }
     if (isCandidate) {
       val name = chars(i + 1) match {
         case '{' => text.substring(i + 2, offset)
@@ -222,8 +224,8 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
             ),
             args
           ) =>
-        parts.zip(args).collectFirst {
-          case (`lit`, i: Ident) => i
+        parts.zip(args).collectFirst { case (`lit`, i: Ident) =>
+          i
         }
       case _ =>
         None

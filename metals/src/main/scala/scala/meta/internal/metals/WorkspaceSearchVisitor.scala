@@ -38,9 +38,8 @@ class WorkspaceSearchVisitor(
   private val bufferedClasspath = new ju.ArrayList[(String, String)]()
   def allResults(): Seq[l.SymbolInformation] = {
     if (fromWorkspace.isEmpty) {
-      bufferedClasspath.forEach {
-        case (pkg, name) =>
-          expandClassfile(pkg, name)
+      bufferedClasspath.forEach { case (pkg, name) =>
+        expandClassfile(pkg, name)
       }
     }
 

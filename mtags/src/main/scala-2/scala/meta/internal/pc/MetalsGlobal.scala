@@ -216,7 +216,7 @@ class MetalsGlobal(
                   if (
                     sym.isAliasType &&
                     (sym.isAbstract ||
-                    sym.overrides.lastOption.exists(_.isAbstract))
+                      sym.overrides.lastOption.exists(_.isAbstract))
                   ) {
 
                     // Always dealias abstract type aliases but leave concrete aliases alone.

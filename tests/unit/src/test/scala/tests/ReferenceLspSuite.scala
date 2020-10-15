@@ -126,12 +126,11 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   ): Unit = {
     def input(chunks: Seq[String]): String =
       chunks.zipWithIndex
-        .map {
-          case (chunk, i) =>
-            s"""|/a/src/main/scala/a/Chunk$i.scala
-                |package a
-                |$chunk
-                |""".stripMargin
+        .map { case (chunk, i) =>
+          s"""|/a/src/main/scala/a/Chunk$i.scala
+              |package a
+              |$chunk
+              |""".stripMargin
         }
         .mkString("\n")
     check(s"$name-together", input(Seq((code +: moreCode) mkString "\n")))

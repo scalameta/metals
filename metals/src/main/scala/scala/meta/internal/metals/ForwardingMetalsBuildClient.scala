@@ -206,8 +206,8 @@ final class ForwardingMetalsBuildClient(
     params.getDataKind match {
       case "bloop-progress" =>
         for {
-          data <- Option(params.getData).collect {
-            case o: JsonObject => o
+          data <- Option(params.getData).collect { case o: JsonObject =>
+            o
           }
           targetElement <- Option(data.get("target"))
           if targetElement.isJsonObject

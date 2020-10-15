@@ -182,11 +182,10 @@ abstract class BasePCSuite extends BaseSuite {
         "Run for Scala version",
         { test =>
           test.tags
-            .collectFirst {
-              case RunForScalaVersion(versions) =>
-                if (versions(scalaVersion))
-                  test
-                else test.withTags(test.tags + munit.Ignore)
+            .collectFirst { case RunForScalaVersion(versions) =>
+              if (versions(scalaVersion))
+                test
+              else test.withTags(test.tags + munit.Ignore)
             }
             .getOrElse(test)
 

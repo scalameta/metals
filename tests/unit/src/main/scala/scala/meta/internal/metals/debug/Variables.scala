@@ -6,9 +6,8 @@ final case class Variables(scopes: Map[String, List[Variable]]) {
   override def toString: String = {
     val serializedScopes = scopes.toList
       .sortBy(_._1)
-      .map {
-        case (scope, variables) =>
-          s"$scope:" + variables.sortBy(_.name).mkString("(", ", ", ")")
+      .map { case (scope, variables) =>
+        s"$scope:" + variables.sortBy(_.name).mkString("(", ", ", ")")
       }
 
     serializedScopes.mkString("\n")

@@ -22,22 +22,19 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
     val files = FileLayout.mapFromString(input)
     val (filename, edit) = files
       .find(_._2.contains("@@"))
-      .map {
-        case (fileName, code) =>
-          (fileName, code.replaceAll("(<<|>>)", ""))
+      .map { case (fileName, code) =>
+        (fileName, code.replaceAll("(<<|>>)", ""))
       }
       .getOrElse {
         throw new IllegalArgumentException(
           "No `@@` was defined that specifies cursor position"
         )
       }
-    val expected = files.map {
-      case (fileName, code) =>
-        fileName -> code.replaceAll("@@", "")
+    val expected = files.map { case (fileName, code) =>
+      fileName -> code.replaceAll("@@", "")
     }
-    val base = files.map {
-      case (fileName, code) =>
-        fileName -> code.replaceAll("(<<|>>|@@)", "")
+    val base = files.map { case (fileName, code) =>
+      fileName -> code.replaceAll("(<<|>>|@@)", "")
     }
 
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)

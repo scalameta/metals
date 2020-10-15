@@ -234,21 +234,20 @@ object MultilineStringFormattingProvider {
       text: String
   ): List[TextEdit] = {
     tokens.toIterator.zipWithIndex
-      .flatMap {
-        case (token, index) =>
-          isStringOrInterpolation(
-            start,
-            end,
-            token,
-            index,
-            text,
-            tokens,
-            newlineAdded
-          ) { (_, _, endIndex) =>
-            if (hasStripMarginSuffix(endIndex, tokens))
-              Some(indent(splitLines, start, range))
-            else None
-          }
+      .flatMap { case (token, index) =>
+        isStringOrInterpolation(
+          start,
+          end,
+          token,
+          index,
+          text,
+          tokens,
+          newlineAdded
+        ) { (_, _, endIndex) =>
+          if (hasStripMarginSuffix(endIndex, tokens))
+            Some(indent(splitLines, start, range))
+          else None
+        }
       }
       .headOption
       .getOrElse(Nil)
@@ -266,30 +265,29 @@ object MultilineStringFormattingProvider {
   ): List[TextEdit] = {
     if (triggerChar == "\n") {
       tokens.toIterator.zipWithIndex
-        .flatMap {
-          case (token, index) =>
-            isStringOrInterpolation(
-              startPosition,
-              endPosition,
-              token,
-              index,
-              text,
-              tokens,
-              newlineAdded = true
-            ) { (startToken, endToken, endIndex) =>
-              if (hasStripMarginSuffix(endIndex, tokens))
-                Some(List(indent(splitLines, position)))
-              else
-                Some(
-                  indentWhenNoStripMargin(
-                    startToken,
-                    endToken,
-                    splitLines,
-                    position,
-                    enableStripMargin
-                  )
+        .flatMap { case (token, index) =>
+          isStringOrInterpolation(
+            startPosition,
+            endPosition,
+            token,
+            index,
+            text,
+            tokens,
+            newlineAdded = true
+          ) { (startToken, endToken, endIndex) =>
+            if (hasStripMarginSuffix(endIndex, tokens))
+              Some(List(indent(splitLines, position)))
+            else
+              Some(
+                indentWhenNoStripMargin(
+                  startToken,
+                  endToken,
+                  splitLines,
+                  position,
+                  enableStripMargin
                 )
-            }
+              )
+          }
         }
         .headOption
         .getOrElse(Nil)
@@ -322,8 +320,8 @@ object MultilineStringFormattingProvider {
       position: Position
   ): Boolean = {
     val lineBefore = splitLines(position.getLine - 1)
-    getIndexOfLastQuote(lineBefore).exists {
-      case (_, quoteClosed) => !quoteClosed
+    getIndexOfLastQuote(lineBefore).exists { case (_, quoteClosed) =>
+      !quoteClosed
     }
   }
 
@@ -350,10 +348,9 @@ object MultilineStringFormattingProvider {
         defaultIndent + 2
       else defaultIndent
     val interpolationString = getIndexOfLastQuote(previousLine)
-      .map {
-        case (lastQuoteIndex, _) =>
-          if (lastQuoteIndex > 0 && previousLine(lastQuoteIndex - 1) == 's') "s"
-          else ""
+      .map { case (lastQuoteIndex, _) =>
+        if (lastQuoteIndex > 0 && previousLine(lastQuoteIndex - 1) == 's') "s"
+        else ""
       }
       .getOrElse("")
 

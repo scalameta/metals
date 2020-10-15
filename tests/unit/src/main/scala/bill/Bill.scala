@@ -247,43 +247,42 @@ object Bill {
         )
       }
       hasError --= fixedErrors
-      byFile.foreach {
-        case (file, infos) =>
-          def toBspPos(pos: r.Position, offset: Int): b.Position = {
-            val line = pos.source.offsetToLine(offset)
-            val column0 = pos.source.lineToOffset(line)
-            val column = offset - column0
-            new b.Position(line, column)
-          }
-          val diagnostics = infos.iterator
-            .filter(_.pos.isDefined)
-            .map { info =>
-              val p = info.pos
-              val start =
-                toBspPos(info.pos, if (p.isRange) p.start else p.point)
-              val end =
-                toBspPos(info.pos, if (p.isRange) p.end else p.point)
-              val severity = info.severity match {
-                case reporter.ERROR => DiagnosticSeverity.ERROR
-                case reporter.WARNING => DiagnosticSeverity.WARNING
-                case reporter.INFO => DiagnosticSeverity.INFORMATION
-                case _ => DiagnosticSeverity.HINT
-              }
-              val diagnostic = new Diagnostic(new b.Range(start, end), info.msg)
-              diagnostic.setSeverity(severity)
-              diagnostic
+      byFile.foreach { case (file, infos) =>
+        def toBspPos(pos: r.Position, offset: Int): b.Position = {
+          val line = pos.source.offsetToLine(offset)
+          val column0 = pos.source.lineToOffset(line)
+          val column = offset - column0
+          new b.Position(line, column)
+        }
+        val diagnostics = infos.iterator
+          .filter(_.pos.isDefined)
+          .map { info =>
+            val p = info.pos
+            val start =
+              toBspPos(info.pos, if (p.isRange) p.start else p.point)
+            val end =
+              toBspPos(info.pos, if (p.isRange) p.end else p.point)
+            val severity = info.severity match {
+              case reporter.ERROR => DiagnosticSeverity.ERROR
+              case reporter.WARNING => DiagnosticSeverity.WARNING
+              case reporter.INFO => DiagnosticSeverity.INFORMATION
+              case _ => DiagnosticSeverity.HINT
             }
-            .toList
-          val uri = file.name
-          val params =
-            new PublishDiagnosticsParams(
-              new TextDocumentIdentifier(uri),
-              target.getId,
-              diagnostics.asJava,
-              true
-            )
-          client.onBuildPublishDiagnostics(params)
-          hasError += file
+            val diagnostic = new Diagnostic(new b.Range(start, end), info.msg)
+            diagnostic.setSeverity(severity)
+            diagnostic
+          }
+          .toList
+        val uri = file.name
+        val params =
+          new PublishDiagnosticsParams(
+            new TextDocumentIdentifier(uri),
+            target.getId,
+            diagnostics.asJava,
+            true
+          )
+        client.onBuildPublishDiagnostics(params)
+        hasError += file
       }
     }
 

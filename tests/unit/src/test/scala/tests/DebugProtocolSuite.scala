@@ -86,11 +86,10 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
            |""".stripMargin
       )
       failed = startDebugging()
-      debugger <- failed.recoverWith {
-        case _: ResponseErrorException =>
-          server
-            .didSave("a/src/main/scala/a/Main.scala") { text => text + "}" }
-            .flatMap(_ => startDebugging())
+      debugger <- failed.recoverWith { case _: ResponseErrorException =>
+        server
+          .didSave("a/src/main/scala/a/Main.scala") { text => text + "}" }
+          .flatMap(_ => startDebugging())
       }
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -354,9 +353,8 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
               singletonList("Foo")
             ).toJson
           )
-          .recover {
-            case WorkspaceErrorsException =>
-              WorkspaceErrorsException
+          .recover { case WorkspaceErrorsException =>
+            WorkspaceErrorsException
           }
     } yield assertDiffEqual(
       result.toString(),
@@ -429,9 +427,8 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
               "a.Foo"
             ).toJson
           )
-          .recover {
-            case WorkspaceErrorsException =>
-              WorkspaceErrorsException
+          .recover { case WorkspaceErrorsException =>
+            WorkspaceErrorsException
           }
     } yield assertContains(
       result.toString(),

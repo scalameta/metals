@@ -10,9 +10,8 @@ import scala.meta.io.Classpath
 case class Inflated(inputs: List[Input.VirtualFile], linesOfCode: Long) {
   def filter(f: Input.VirtualFile => Boolean): Inflated = {
     val newInputs = inputs.filter(input => f(input))
-    val newLinesOfCode = newInputs.foldLeft(0) {
-      case (accum, input) =>
-        accum + input.text.linesIterator.length
+    val newLinesOfCode = newInputs.foldLeft(0) { case (accum, input) =>
+      accum + input.text.linesIterator.length
     }
     Inflated(newInputs, newLinesOfCode)
   }
@@ -23,9 +22,8 @@ case class Inflated(inputs: List[Input.VirtualFile], linesOfCode: Long) {
 object Inflated {
 
   def jars(classpath: Classpath): Inflated = {
-    classpath.entries.foldLeft(Inflated(Nil, 0L)) {
-      case (accum, next) =>
-        accum + jar(next)
+    classpath.entries.foldLeft(Inflated(Nil, 0L)) { case (accum, next) =>
+      accum + jar(next)
     }
   }
   def jar(file: AbsolutePath): Inflated = {

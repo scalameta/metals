@@ -147,16 +147,15 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
     val editsMap = edits.map(e => e.getRange().getStart().getLine() -> e).toMap
 
     text.linesIterator.zipWithIndex
-      .map {
-        case (line, i) =>
-          editsMap.get(i) match {
-            case Some(edit) =>
-              val before =
-                line.substring(0, edit.getRange.getStart.getCharacter)
-              val after = line.substring(edit.getRange.getEnd.getCharacter)
-              before + edit.getNewText() + after
-            case None => line
-          }
+      .map { case (line, i) =>
+        editsMap.get(i) match {
+          case Some(edit) =>
+            val before =
+              line.substring(0, edit.getRange.getStart.getCharacter)
+            val after = line.substring(edit.getRange.getEnd.getCharacter)
+            before + edit.getNewText() + after
+          case None => line
+        }
       }
       .mkString("\n")
   }

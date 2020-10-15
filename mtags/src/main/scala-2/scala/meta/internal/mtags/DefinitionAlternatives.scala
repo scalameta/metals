@@ -29,9 +29,8 @@ object DefinitionAlternatives {
    * `A` in `A(1)` to the class definition.
    */
   private def caseClassCompanionToType(symbol: Symbol): Option[Symbol] =
-    Option(symbol).collect {
-      case GlobalSymbol(owner, Descriptor.Term(name)) =>
-        GlobalSymbol(owner, Descriptor.Type(name))
+    Option(symbol).collect { case GlobalSymbol(owner, Descriptor.Term(name)) =>
+      GlobalSymbol(owner, Descriptor.Type(name))
     }
 
   /**

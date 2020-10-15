@@ -204,19 +204,18 @@ trait Signatures { this: MetalsGlobal =>
           else ""
         val scope = new ShortenedNames(context)
         val formatted = toImport.toSeq
-          .sortBy {
-            case (owner, _) => owner.fullName
+          .sortBy { case (owner, _) =>
+            owner.fullName
           }
-          .map {
-            case (owner, names) =>
-              val isGroup =
-                names.lengthCompare(1) > 0 ||
-                  names.exists(_.isRename)
-              val importNames = names.map(_.asImport).sorted
-              val name =
-                if (isGroup) importNames.mkString("{", ", ", "}")
-                else importNames.mkString
-              s"${indent}import ${scope.fullname(owner)}.${name}"
+          .map { case (owner, names) =>
+            val isGroup =
+              names.lengthCompare(1) > 0 ||
+                names.exists(_.isRename)
+            val importNames = names.map(_.asImport).sorted
+            val name =
+              if (isGroup) importNames.mkString("{", ", ", "}")
+              else importNames.mkString
+            s"${indent}import ${scope.fullname(owner)}.${name}"
           }
           .mkString(topPadding, "\n", "\n")
         val startPos = pos.withPoint(lineStart).focus
@@ -317,16 +316,15 @@ trait Signatures { this: MetalsGlobal =>
     ): String = {
       paramLabels
         .zip(mparamss.iterator)
-        .map {
-          case (params, syms) =>
-            paramsKind(syms) match {
-              case Params.TypeParameterKind =>
-                params.mkString("[", ", ", "]")
-              case Params.NormalKind =>
-                params.mkString("(", ", ", ")")
-              case Params.ImplicitKind =>
-                params.mkString("(implicit ", ", ", ")")
-            }
+        .map { case (params, syms) =>
+          paramsKind(syms) match {
+            case Params.TypeParameterKind =>
+              params.mkString("[", ", ", "]")
+            case Params.NormalKind =>
+              params.mkString("(", ", ", ")")
+            case Params.ImplicitKind =>
+              params.mkString("(implicit ", ", ", ")")
+          }
         }
         .mkString(name, "", s": ${returnType}")
     }

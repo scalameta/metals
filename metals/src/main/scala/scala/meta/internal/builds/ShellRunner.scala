@@ -72,9 +72,8 @@ class ShellRunner(
     val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(directory.toNIO)
     userConfig().javaHome.foreach(pb.environment().put("JAVA_HOME", _))
-    additionalEnv.foreach {
-      case (key, value) =>
-        pb.environment().put(key, value)
+    additionalEnv.foreach { case (key, value) =>
+      pb.environment().put(key, value)
     }
     val runningProcess = pb.start()
     // NOTE(olafur): older versions of VS Code don't respect cancellation of

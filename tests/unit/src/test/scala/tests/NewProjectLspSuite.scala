@@ -296,9 +296,8 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         "This test is based on https://github.com/scala/scalatest-example.g8, it might have changed."
       )
 
-      testFuture.onComplete {
-        case _ =>
-          RecursivelyDelete(tmpDirectory)
+      testFuture.onComplete { case _ =>
+        RecursivelyDelete(tmpDirectory)
       }
       testFuture
     }

@@ -329,43 +329,41 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       case (_, decorations) => decorations.nonEmpty
     }
     val isSingle = nonEmptyDecorations.size == 1
-    nonEmptyDecorations.foreach {
-      case (path, decorations) =>
-        if (!isSingle) {
-          out
-            .append("/")
-            .append(path.toRelative(workspace).toURI(false).toString())
-            .append("\n")
-        }
-        val input = path.toInputFromBuffers(buffers)
-        input.text.linesIterator.zipWithIndex.foreach {
-          case (line, i) =>
-            val lineDecorations = decorations
-              .filter(_.range.getEnd().getLine() == i)
-              .sortBy(_.range.getEnd().getCharacter())
-            if (isHover) {
-              out.append(line)
-              lineDecorations.collect {
-                case decoration if decoration.hoverMessage != null =>
-                  out.append("\n" + decoration.hoverMessage.getValue())
+    nonEmptyDecorations.foreach { case (path, decorations) =>
+      if (!isSingle) {
+        out
+          .append("/")
+          .append(path.toRelative(workspace).toURI(false).toString())
+          .append("\n")
+      }
+      val input = path.toInputFromBuffers(buffers)
+      input.text.linesIterator.zipWithIndex.foreach { case (line, i) =>
+        val lineDecorations = decorations
+          .filter(_.range.getEnd().getLine() == i)
+          .sortBy(_.range.getEnd().getCharacter())
+        if (isHover) {
+          out.append(line)
+          lineDecorations.collect {
+            case decoration if decoration.hoverMessage != null =>
+              out.append("\n" + decoration.hoverMessage.getValue())
+          }
+          out.append("\n")
+        } else {
+          val lineIndex = lineDecorations.foldLeft(0) {
+            case (index, decoration) =>
+              if (decoration.renderOptions.after.contentText != null) {
+                val decoCharacter = decoration.range.getEnd().getCharacter()
+                out.append(line.substring(index, decoCharacter))
+                out.append(decoration.renderOptions.after.contentText)
+                decoCharacter
+              } else {
+                index
               }
-              out.append("\n")
-            } else {
-              val lineIndex = lineDecorations.foldLeft(0) {
-                case (index, decoration) =>
-                  if (decoration.renderOptions.after.contentText != null) {
-                    val decoCharacter = decoration.range.getEnd().getCharacter()
-                    out.append(line.substring(index, decoCharacter))
-                    out.append(decoration.renderOptions.after.contentText)
-                    decoCharacter
-                  } else {
-                    index
-                  }
-              }
-              out.append(line.substring(lineIndex))
-              out.append("\n")
-            }
+          }
+          out.append(line.substring(lineIndex))
+          out.append("\n")
         }
+      }
     }
     out.toString()
   }

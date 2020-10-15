@@ -89,10 +89,9 @@ class DebugProvider(
             connectedToServer.trySuccess(())
             socket
           }
-          .recover {
-            case exception =>
-              connectedToServer.tryFailure(exception)
-              throw exception
+          .recover { case exception =>
+            connectedToServer.tryFailure(exception)
+            throw exception
           }
       }
 
@@ -150,8 +149,8 @@ class DebugProvider(
 
         val env: List[String] =
           if (params.env != null)
-            params.env.asScala.map {
-              case (key, value) => s"$key=$value"
+            params.env.asScala.map { case (key, value) =>
+              s"$key=$value"
             }.toList
           else
             Nil

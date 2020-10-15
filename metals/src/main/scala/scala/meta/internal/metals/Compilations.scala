@@ -137,9 +137,8 @@ final class Compilations(
     val groupedTargetIds = buildTargets.allBuildTargetIds
       .groupBy(buildTargets.buildServerOf(_))
     Future
-      .traverse(groupedTargetIds) {
-        case (connectionOpt, targetIds) =>
-          clean(connectionOpt, targetIds)
+      .traverse(groupedTargetIds) { case (connectionOpt, targetIds) =>
+        clean(connectionOpt, targetIds)
       }
       .ignoreValue
   }
@@ -171,16 +170,14 @@ final class Compilations(
       .flatMap(target =>
         buildTargets.buildServerOf(target).map(_ -> target).toSeq
       )
-      .groupBy {
-        case (buildServer, _) =>
-          buildServer
+      .groupBy { case (buildServer, _) =>
+        buildServer
       }
-      .map {
-        case (buildServer, targets) =>
-          val targets0 = targets.map {
-            case (_, target) => target
-          }
-          (buildServer, targets0)
+      .map { case (buildServer, targets) =>
+        val targets0 = targets.map { case (_, target) =>
+          target
+        }
+        (buildServer, targets0)
       }
 
     targetsByBuildServer.toList match {
@@ -192,11 +189,10 @@ final class Compilations(
         compile(buildServer, targets)
           .map(res => targets.map(target => target -> res).toMap)
       case targetList =>
-        val futures = targetList.map {
-          case (buildServer, targets) =>
-            compile(buildServer, targets).map(res =>
-              targets.map(target => target -> res)
-            )
+        val futures = targetList.map { case (buildServer, targets) =>
+          compile(buildServer, targets).map(res =>
+            targets.map(target => target -> res)
+          )
         }
         CancelableFuture.sequence(futures).map(_.flatten.toMap)
     }
@@ -211,16 +207,15 @@ final class Compilations(
     val compilation = connection.compile(params)
 
     val result = compilation.asScala
-      .andThen {
-        case result =>
-          updateCompiledTargetState(result)
+      .andThen { case result =>
+        updateCompiledTargetState(result)
 
-          // See https://github.com/scalacenter/bloop/issues/1067
-          classes.rebuildIndex(targets).foreach { _ =>
-            if (targets.exists(isCurrentlyFocused)) {
-              languageClient.refreshModel()
-            }
+        // See https://github.com/scalacenter/bloop/issues/1067
+        classes.rebuildIndex(targets).foreach { _ =>
+          if (targets.exists(isCurrentlyFocused)) {
+            languageClient.refreshModel()
           }
+        }
       }
 
     CancelableFuture(result, Cancelable(() => compilation.cancel(false)))

@@ -236,29 +236,28 @@ object BuildServerConnection {
   ): Future[BuildServerConnection] = {
 
     def setupServer(): Future[LauncherConnection] = {
-      connect().map {
-        case conn @ SocketConnection(_, output, input, _, _) =>
-          val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
-          val launcher = new Launcher.Builder[MetalsBuildServer]()
-            .traceMessages(tracePrinter)
-            .setOutput(output)
-            .setInput(input)
-            .setLocalService(localClient)
-            .setRemoteInterface(classOf[MetalsBuildServer])
-            .setExecutorService(ec)
-            .create()
-          val listening = launcher.startListening()
-          val server = launcher.getRemoteProxy
-          val result = BuildServerConnection.initialize(workspace, server)
-          val stopListening =
-            Cancelable(() => listening.cancel(false))
-          LauncherConnection(
-            conn,
-            server,
-            result.getDisplayName(),
-            stopListening,
-            result.getVersion()
-          )
+      connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
+        val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
+        val launcher = new Launcher.Builder[MetalsBuildServer]()
+          .traceMessages(tracePrinter)
+          .setOutput(output)
+          .setInput(input)
+          .setLocalService(localClient)
+          .setRemoteInterface(classOf[MetalsBuildServer])
+          .setExecutorService(ec)
+          .create()
+        val listening = launcher.startListening()
+        val server = launcher.getRemoteProxy
+        val result = BuildServerConnection.initialize(workspace, server)
+        val stopListening =
+          Cancelable(() => listening.cancel(false))
+        LauncherConnection(
+          conn,
+          server,
+          result.getDisplayName(),
+          stopListening,
+          result.getVersion()
+        )
       }
     }
 

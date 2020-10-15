@@ -42,9 +42,8 @@ object MetalsTestEnrichments {
 
   implicit class XtensionTestClasspath(classpath: Classpath) {
     def bytesSize: String = {
-      val bytes = classpath.entries.foldLeft(0L) {
-        case (a, b) =>
-          a + Files.size(b.toNIO)
+      val bytes = classpath.entries.foldLeft(0L) { case (a, b) =>
+        a + Files.size(b.toNIO)
       }
       Memory.approx(bytes)
     }

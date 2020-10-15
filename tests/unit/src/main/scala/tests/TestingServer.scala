@@ -290,13 +290,12 @@ final class TestingServer(
       Assertions.assertSimpleLocationOrdering(referenceLocations)
       val references =
         TestRanges.renderLocationsAsString(base, referenceLocations)
-      references.foreach {
-        case (file, obtained) =>
-          val expectedImpl = expected(file)
-          Assertions.assertNoDiff(
-            obtained,
-            expectedImpl
-          )
+      references.foreach { case (file, obtained) =>
+        val expectedImpl = expected(file)
+        Assertions.assertNoDiff(
+          obtained,
+          expectedImpl
+        )
       }
     }
   }
@@ -411,8 +410,8 @@ final class TestingServer(
           field.setAccessible(true)
           field.getName -> field.get(initOptions)
         }
-        .collect {
-          case (key, Some(value)) => key -> value
+        .collect { case (key, Some(value)) =>
+          key -> value
         }
         .toMap
         .asJava
@@ -822,9 +821,8 @@ final class TestingServer(
       original: String,
       root: AbsolutePath
   ): Future[(String, TextDocumentPositionParams)] =
-    positionFromString(filename, original, root) {
-      case (text, textId, start) =>
-        (text, new TextDocumentPositionParams(textId, start))
+    positionFromString(filename, original, root) { case (text, textId, start) =>
+      (text, new TextDocumentPositionParams(textId, start))
     }
 
   private def codeActionParams(
@@ -833,9 +831,8 @@ final class TestingServer(
       root: AbsolutePath,
       context: CodeActionContext
   ): Future[(String, CodeActionParams)] =
-    rangeFromString(filename, original, root) {
-      case (text, textId, range) =>
-        (text, new CodeActionParams(textId, range, context))
+    rangeFromString(filename, original, root) { case (text, textId, range) =>
+      (text, new CodeActionParams(textId, range, context))
     }
 
   private def onTypeParams(
@@ -851,19 +848,18 @@ final class TestingServer(
       root,
       replaceWith =
         if (triggerChar == "\n") triggerChar + autoIndent else triggerChar
-    ) {
-      case (text, textId, start) =>
-        if (triggerChar == "\n") {
-          start.setLine(start.getLine() + 1) // + newline
-          start.setCharacter(autoIndent.size)
-        }
-        val params = new DocumentOnTypeFormattingParams(
-          textId,
-          new FormattingOptions,
-          start,
-          triggerChar
-        )
-        (text, params)
+    ) { case (text, textId, start) =>
+      if (triggerChar == "\n") {
+        start.setLine(start.getLine() + 1) // + newline
+        start.setCharacter(autoIndent.size)
+      }
+      val params = new DocumentOnTypeFormattingParams(
+        textId,
+        new FormattingOptions,
+        start,
+        triggerChar
+      )
+      (text, params)
     }
   }
 
@@ -1013,14 +1009,13 @@ final class TestingServer(
     for {
       renames <- rename(filename, query, files, newName)
     } yield {
-      renames.foreach {
-        case (file, obtained) =>
-          assert(
-            expected.contains(file),
-            s"Unexpected file obtained from renames: $file"
-          )
-          val expectedImpl = expected(file)
-          Assertions.assertNoDiff(obtained, expectedImpl)
+      renames.foreach { case (file, obtained) =>
+        assert(
+          expected.contains(file),
+          s"Unexpected file obtained from renames: $file"
+        )
+        val expectedImpl = expected(file)
+        Assertions.assertNoDiff(obtained, expectedImpl)
       }
     }
   }
@@ -1096,13 +1091,12 @@ final class TestingServer(
     for {
       implementations <- implementation(filename, query, base)
     } yield {
-      implementations.foreach {
-        case (file, obtained) =>
-          val expectedImpl = expected(file)
-          Assertions.assertNoDiff(
-            obtained,
-            expectedImpl
-          )
+      implementations.foreach { case (file, obtained) =>
+        val expectedImpl = expected(file)
+        Assertions.assertNoDiff(
+          obtained,
+          expectedImpl
+        )
       }
     }
   }
@@ -1191,15 +1185,14 @@ final class TestingServer(
       buffer <- buffers.get(path)
     } yield {
       val input = Input.String(buffer)
-      val newBuffer = textEdits.asScala.foldLeft(buffer) {
-        case (buf, edit) =>
-          val startPosition = edit.getRange.getStart
-          val endPosition = edit.getRange.getEnd
-          val startOffset =
-            input.toOffset(startPosition.getLine, startPosition.getCharacter)
-          val endOffset =
-            input.toOffset(endPosition.getLine, endPosition.getCharacter)
-          buf.patch(startOffset, edit.getNewText, endOffset)
+      val newBuffer = textEdits.asScala.foldLeft(buffer) { case (buf, edit) =>
+        val startPosition = edit.getRange.getStart
+        val endPosition = edit.getRange.getEnd
+        val startOffset =
+          input.toOffset(startPosition.getLine, startPosition.getCharacter)
+        val endOffset =
+          input.toOffset(endPosition.getLine, endPosition.getCharacter)
+        buf.patch(startOffset, edit.getNewText, endOffset)
       }
       buffers.put(path, newBuffer)
     }
@@ -1350,15 +1343,14 @@ final class TestingServer(
 
     val tree = parents
       .zip(reveal.uriChain :+ "root")
-      .foldLeft(PrettyPrintTree.empty) {
-        case (child, (parent, uri)) =>
-          PrettyPrintTree(
-            label(uri.toLowerCase),
-            parent.nodes
-              .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase)))
-              .filterNot(t => isIgnored(t.value))
-              .toList :+ child
-          )
+      .foldLeft(PrettyPrintTree.empty) { case (child, (parent, uri)) =>
+        PrettyPrintTree(
+          label(uri.toLowerCase),
+          parent.nodes
+            .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase)))
+            .filterNot(t => isIgnored(t.value))
+            .toList :+ child
+        )
       }
     tree.toString()
   }
