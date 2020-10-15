@@ -378,7 +378,7 @@ class MetalsLanguageServer(
       buildTools,
       languageClient,
       tables,
-      () => userConfig,
+      () => userConfig
     )
     semanticdbs = AggregateSemanticdbs(
       List(
@@ -1409,7 +1409,7 @@ class MetalsLanguageServer(
         autoConnectToBuildServer().asJavaObject
       case ServerCommands.InstallSbtBsp() =>
         sbtInstall.connect().asJavaObject
-        // autoConnectToBuildServer
+      // autoConnectToBuildServer
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>

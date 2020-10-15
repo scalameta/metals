@@ -25,14 +25,14 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Tables
 
 class SbtInstall(
-  workspace: AbsolutePath,
-  buildTools: BuildTools,
-  bspServers: BspServers,
-  shellRunner: ShellRunner,
-  tables: Tables,
-  userConfig: () => UserConfiguration,
-  runDisconnect: () => Future[Unit],
-  runConnect: BspSession => Future[Unit],
+    workspace: AbsolutePath,
+    buildTools: BuildTools,
+    bspServers: BspServers,
+    shellRunner: ShellRunner,
+    tables: Tables,
+    userConfig: () => UserConfiguration,
+    runDisconnect: () => Future[Unit],
+    runConnect: BspSession => Future[Unit]
 )(implicit ec: ExecutionContext) {
   var sbtProcess: Option[NuProcess] = None
 
@@ -48,7 +48,7 @@ class SbtInstall(
   }
 
   def disconnect(): Unit = {
-    sbtProcess.map{p => 
+    sbtProcess.map { p =>
       scribe.info(s"Killing running sbt process.")
       p.destroy(false)
       p.waitFor(10, TimeUnit.SECONDS)
@@ -68,7 +68,7 @@ class SbtInstall(
 
   private def connectSbt(): Future[Unit] = {
     scribe.info("Generating configuration file sbt.json")
-    val output = "sbt about"!!
+    val output = "sbt about" !!
 
     val sbtVersion = output
       .split(System.lineSeparator())
@@ -89,13 +89,13 @@ class SbtInstall(
   }
 
   private def installSbtPlugin(): Unit = {
-    val metalsPluginFile = workspace.resolve("project").resolve("MetalsSbtBsp.scala")
+    val metalsPluginFile =
+      workspace.resolve("project").resolve("MetalsSbtBsp.scala")
     if (!metalsPluginFile.isFile) {
       scribe.info(s"Install plugin to ${metalsPluginFile}")
       BuildTool.copyFromResource("MetalsSbtBsp.scala", metalsPluginFile.toNIO)
     }
   }
-
 
   private def runSbtShell(): (NuProcess, SbtProcessHandler) = {
     val sbtArgs = List() // what to run actually???
@@ -120,13 +120,10 @@ class SbtInstall(
     ).flatten
 
     run(
-        runCommand,
-        workspace
+      runCommand,
+      workspace
     )
   }
-
-
-
 
   private def connectSbtWithConfig(): Future[Unit] = {
     scribe.info(s"Copying metals plugin")
@@ -146,22 +143,28 @@ class SbtInstall(
   }
 
   def initialize(): Future[Unit] = {
-    val detailsMaybe = bspServers.findAvailableServers().find(_.getName() == "sbt")
-    val sessionMaybe = detailsMaybe.map(c => bspServers.newServer(workspace, c).map(bsc => BspSession(bsc, Nil)))
+    val detailsMaybe =
+      bspServers.findAvailableServers().find(_.getName() == "sbt")
+    val sessionMaybe = detailsMaybe.map(c =>
+      bspServers.newServer(workspace, c).map(bsc => BspSession(bsc, Nil))
+    )
 
-    detailsMaybe.foreach(details => tables.buildServers.chooseServer(details.getName))
+    detailsMaybe.foreach(details =>
+      tables.buildServers.chooseServer(details.getName)
+    )
 
     sessionMaybe match {
       case None => Future.successful(())
-      case Some(sessionF) => sessionF.flatMap { session =>
-        val c = runConnect(session)
-        session.mainConnection.onReconnection { newMainConn =>
-          val updSession = session.copy(main = newMainConn)
-          runConnect(updSession).map(_ => ())
+      case Some(sessionF) =>
+        sessionF.flatMap { session =>
+          val c = runConnect(session)
+          session.mainConnection.onReconnection { newMainConn =>
+            val updSession = session.copy(main = newMainConn)
+            runConnect(updSession).map(_ => ())
+          }
+          c.onComplete(r => scribe.info(s"Completed connection with ${r}"))
+          c.map(_ => ())
         }
-        c.onComplete(r => scribe.info(s"Completed connection with ${r}"))
-        c.map(_ => ())
-      }
     }
   }
 
@@ -176,9 +179,8 @@ class SbtInstall(
     val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(directory.toNIO)
     userConfig().javaHome.foreach(pb.environment().put("JAVA_HOME", _))
-    additionalEnv.foreach {
-      case (key, value) =>
-        pb.environment().put(key, value)
+    additionalEnv.foreach { case (key, value) =>
+      pb.environment().put(key, value)
     }
     val runningProcess = pb.start()
     handler.completeProcess.future.foreach { result =>
@@ -189,27 +191,33 @@ class SbtInstall(
 
 }
 
-class SbtProcessHandler(workspace: AbsolutePath) extends NuAbstractProcessHandler {
+class SbtProcessHandler(workspace: AbsolutePath)
+    extends NuAbstractProcessHandler {
   val sbtLogFile = workspace.resolve(Directories.sbtlog)
 
   val initialized: Promise[Boolean] = Promise[Boolean]()
   val completeProcess: Promise[Int] = Promise[Int]()
 
   override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
-      val msg = StandardCharsets.UTF_8.decode(buffer).toString()
-      sbtLogFile.appendText(msg)
-      if (!initialized.isCompleted && msg.contains("sbt server started at"))
-        initialized.trySuccess(true)
-      if (!initialized.isCompleted && msg.contains("another instance of sbt running on this build"))
-        initialized.trySuccess(false)
-      super.onStdout(buffer, closed)
+    val msg = StandardCharsets.UTF_8.decode(buffer).toString()
+    sbtLogFile.appendText(msg)
+    if (!initialized.isCompleted && msg.contains("sbt server started at"))
+      initialized.trySuccess(true)
+    if (
+      !initialized.isCompleted && msg.contains(
+        "another instance of sbt running on this build"
+      )
+    )
+      initialized.trySuccess(false)
+    super.onStdout(buffer, closed)
   }
 
   override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
-      val msg = StandardCharsets.UTF_8.decode(buffer).toString()
-      sbtLogFile.appendText(msg)
-      super.onStderr(buffer, closed)
+    val msg = StandardCharsets.UTF_8.decode(buffer).toString()
+    sbtLogFile.appendText(msg)
+    super.onStderr(buffer, closed)
   }
 
-  override def onExit(statusCode: Int): Unit = completeProcess.trySuccess(statusCode)
+  override def onExit(statusCode: Int): Unit =
+    completeProcess.trySuccess(statusCode)
 }

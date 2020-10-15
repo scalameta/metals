@@ -45,7 +45,7 @@ class PopupChoiceReset(
         List(
           new MessageActionItem(PopupChoiceReset.BuildTool),
           new MessageActionItem(PopupChoiceReset.BuildImport),
-          new MessageActionItem(PopupChoiceReset.BuildServer),
+          new MessageActionItem(PopupChoiceReset.BuildServer)
         ).asJava
       )
       params

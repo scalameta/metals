@@ -13,7 +13,8 @@ object MetalsPlugin extends AutoPlugin {
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = Seq(
     semanticdbCompilerPlugin := {
-      ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion).cross(CrossVersion.full)
+      ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion)
+        .cross(CrossVersion.full)
     },
     allDependencies ++= {
       val m = semanticdbCompilerPlugin.value
@@ -26,7 +27,9 @@ object MetalsPlugin extends AutoPlugin {
         )
       } else Nil
     }
-  ) ++ inConfig(Compile)(configurationSettings) ++ inConfig(Test)(configurationSettings)
+  ) ++ inConfig(Compile)(configurationSettings) ++ inConfig(Test)(
+    configurationSettings
+  )
 
   lazy val configurationSettings: Seq[Def.Setting[_]] = List(
     scalacOptions := {
@@ -50,18 +53,17 @@ object MetalsPlugin extends AutoPlugin {
       val tr = semanticdbTargetRoot.value
       val sv = scalaVersion.value
       if (ScalaInstance.isDotty(sv)) List("-semanticdb-target", tr.toString)
-      else List(
-        s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
-        s"-P:semanticdb:targetroot:$tr",
-        "-Yrangepos",
-        //test
-        // Needed for "find references" on implicits and `apply` methods.
-        s"-P:semanticdb:synthetics:on",
-        // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
-        s"-P:semanticdb:failures:warning",
-
-
-      )
+      else
+        List(
+          s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
+          s"-P:semanticdb:targetroot:$tr",
+          "-Yrangepos",
+          //test
+          // Needed for "find references" on implicits and `apply` methods.
+          s"-P:semanticdb:synthetics:on",
+          // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
+          s"-P:semanticdb:failures:warning"
+        )
     }
   )
 }

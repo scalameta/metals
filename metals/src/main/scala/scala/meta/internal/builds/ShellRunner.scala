@@ -67,7 +67,7 @@ class ShellRunner(
   ): Future[Int] = {
     val elapsed = new Timer(time)
     val handler = ProcessHandler(
-      commandRun, 
+      commandRun,
       joinErrorWithInfo = redirectErrorOutput
     )
     val pb = new NuProcessBuilder(handler, args.asJava)

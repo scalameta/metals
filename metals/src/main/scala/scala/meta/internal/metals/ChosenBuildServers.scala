@@ -18,8 +18,10 @@ class ChosenBuildServers(conn: () => Connection, time: Time) {
       .headOption
   }
 
-  def reset(): Unit = 
-    conn().update("delete from chosen_build_server where md5 = ?;")(_.setString(1, explicit))
+  def reset(): Unit =
+    conn().update("delete from chosen_build_server where md5 = ?;")(
+      _.setString(1, explicit)
+    )
 
   def chooseServer(server: String): Int = chooseServer(explicit, server)
 
