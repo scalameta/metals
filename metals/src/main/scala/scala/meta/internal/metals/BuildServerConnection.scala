@@ -77,6 +77,7 @@ class BuildServerConnection private (
         if (isShuttingDown.compareAndSet(false, true)) {
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
+          scribe.info("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
         }

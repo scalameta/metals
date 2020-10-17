@@ -21,7 +21,7 @@ import io.github.soc.directories.ProjectDirectories
 /**
  * Implements BSP server discovery, named "BSP Connection Protocol" in the spec.
  *
- * See https://build-server-protocol.github.io/docs/specification
+ * See https://build-server-protocol.github.io/docs/server-discovery.html
  */
 final class BspServers(
     mainWorkspace: AbsolutePath,

@@ -9,6 +9,7 @@ import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
+import scala.meta.internal.semver.SemVer.isCompatibleVersion
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
@@ -139,6 +140,19 @@ case class SbtBuildTool(
 
 object SbtBuildTool {
 
+  private val firstVersionWithBsp = "1.4.0"
+
+  def workspaceSupportsBsp(workspace: AbsolutePath) = {
+    loadVersion(workspace) match {
+      case Some(version) =>
+        scribe.info(s"sbt ${version} found for workspace.")
+        isCompatibleVersion(firstVersionWithBsp, version)
+      case None =>
+        scribe.warn("No sbt version can be found for sbt workspace.")
+        false
+    }
+  }
+
   def isSbtRelatedPath(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
     val project = workspace.toNIO.resolve("project")
     val isToplevel = Set(
@@ -175,18 +189,22 @@ object SbtBuildTool {
       workspace: AbsolutePath,
       userConfig: () => UserConfiguration
   ): SbtBuildTool = {
+    val version = loadVersion(workspace).map(_.toString())
+    SbtBuildTool(version, userConfig)
+  }
+
+  def loadVersion(workspace: AbsolutePath): Option[String] = {
     val props = new Properties()
     val buildproperties =
       workspace.resolve("project").resolve("build.properties")
-    val version =
-      if (!buildproperties.isFile) None
-      else {
-        val in = Files.newInputStream(buildproperties.toNIO)
-        try props.load(in)
-        finally in.close()
-        Option(props.getProperty("sbt.version"))
-      }
-    SbtBuildTool(version, userConfig)
+
+    if (!buildproperties.isFile) None
+    else {
+      val in = Files.newInputStream(buildproperties.toNIO)
+      try props.load(in)
+      finally in.close()
+      Option(props.getProperty("sbt.version"))
+    }
   }
 
   def sbtInputPosAdjustment(
@@ -212,6 +230,5 @@ object SbtBuildTool {
       filterOutLocations = { loc => !loc.getUri().isSbt }
     )
     (modifiedInput, pos, adjustLspData)
-
   }
 }

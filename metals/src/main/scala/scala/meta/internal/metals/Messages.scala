@@ -17,6 +17,12 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
  */
 object Messages {
+
+  // TODO-BSP make sure to improve this message so it's actionable
+  val FoundNoServerToConnectTo = new MessageParams(
+    MessageType.Warning,
+    "Found no build server to connect to. Try to <enter nice message here later>"
+  )
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"

@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import com.google.common.collect.ImmutableList
 
+// TODO move this ADT out of here and also probably rename? BspResolvedResult
 sealed trait BspResolveResult
 case object ResolveNone extends BspResolveResult
 case object ResolveBloop extends BspResolveResult
@@ -21,10 +22,14 @@ case class ResolveBspOne(details: BspConnectionDetails) extends BspResolveResult
 case class ResolveMultiple(md5: String, details: List[BspConnectionDetails])
     extends BspResolveResult
 
+// TODO this seems weird here, where should we move it?
 object BspConnector {
   final val BLOOP_SELECTED = "BLOOP"
 }
 
+// TODO the more I mess around with all this stuff, a nice refactoring would be to
+// create a BSP package, and move all the connector, discovery, management of the
+// BSP related things into its own package.
 class BspConnector(
     bloopServers: BloopServers,
     bspServers: BspServers,
@@ -59,27 +64,43 @@ class BspConnector(
     def connect(
         workspace: AbsolutePath
     ): Future[Option[BuildServerConnection]] = {
+      scribe.info("Attempting to connect to the build server...")
       resolve() match {
-        case ResolveNone => Future.successful(None)
+        case ResolveNone =>
+          scribe.info("No build server found")
+          Future.successful(None)
         case ResolveBloop =>
+          scribe.info(
+            "Attempting to start a bloop connection from previous choice"
+          )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolveBspOne(details) =>
+          pprint.log(details)
+          scribe.info(
+            s"Attempting to start a new connection to ${details.getName()} from previous choice..."
+          )
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolveMultiple(_, _) => Future.successful(None)
       }
     }
 
+    // TODO-BSP ensure the timing of this is correct, we don't want the metabuilds yet for sbt BSP
+    // because afaik, they don't support it? So if the user has chosen bloop, but this point, there
+    // will have been a .bloop directory created alraedy, and therefore we check for both to avoid
+    // passing the metabuild to sbt.
     val metaDirectories =
-      if (buildTools.isSbt) sbtMetaWorkspaces(workspace) else List.empty
+      if (buildTools.isSbt && buildTools.isBloop) sbtMetaWorkspaces(workspace)
+      else List.empty
 
-    connect(workspace).flatMap { mainOpt =>
-      mainOpt match {
+    pprint.log(metaDirectories)
+    connect(workspace).flatMap { possibleBuildServerConn =>
+      possibleBuildServerConn match {
         case None => Future.successful(None)
-        case Some(main) =>
+        case Some(buildServerConn) =>
           val metaConns = metaDirectories.map(connect(_))
           Future
             .sequence(metaConns)
-            .map(meta => Some(BspSession(main, meta.flatten)))
+            .map(meta => Some(BspSession(buildServerConn, meta.flatten)))
       }
     }
   }

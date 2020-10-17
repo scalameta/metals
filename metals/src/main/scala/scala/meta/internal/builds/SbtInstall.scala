@@ -56,34 +56,15 @@ class SbtInstall(
   }
 
   def connect(): Future[Unit] = {
-    scribe.info("Trying to connect directly to SBT BSP")
-    if (buildTools.isSbt) {
-      scribe.info("Sbt build verified")
-      connectSbt()
+    scribe.info("Attempting to connect to sbt BSP server...")
+    if (buildTools.isSbt && SbtBuildTool.workspaceSupportsBsp(workspace)) {
+      scribe.info("Suitable version of sbt found, attempting to connect...")
+      launchSbt()
     } else {
-      scribe.info("No sbt build")
-      Future.successful(())
-    }
-  }
-
-  private def connectSbt(): Future[Unit] = {
-    scribe.info("Generating configuration file sbt.json")
-    val output = "sbt about" !!
-
-    val sbtVersion = output
-      .split(System.lineSeparator())
-      .filter(_.contains("This is sbt"))
-      .map(s => s.substring(s.indexOf("This is sbt")))
-      .mkString
-
-    scribe.info(s"Sbt version: ${sbtVersion}")
-
-    val sbtBspConfig = workspace.resolve(".bsp").resolve("sbt.json")
-    if (sbtBspConfig.isFile) {
-      scribe.info(s"We found sbt.json, ready to connect")
-      connectSbtWithConfig()
-    } else {
-      scribe.info(s"Sbt probably too old, sbt.json not found")
+      // TODO we may also want to do a showMessage here to warn the user
+      scribe.info(
+        "Unable to connect to sbt server, please make sure you have sbt >= 1.4.0 defined in your build.properties"
+      )
       Future.successful(())
     }
   }
@@ -92,13 +73,13 @@ class SbtInstall(
     val metalsPluginFile =
       workspace.resolve("project").resolve("MetalsSbtBsp.scala")
     if (!metalsPluginFile.isFile) {
-      scribe.info(s"Install plugin to ${metalsPluginFile}")
+      scribe.info(s"Installalling plugin to ${metalsPluginFile}")
       BuildTool.copyFromResource("MetalsSbtBsp.scala", metalsPluginFile.toNIO)
     }
   }
 
   private def runSbtShell(): (NuProcess, SbtProcessHandler) = {
-    val sbtArgs = List() // what to run actually???
+    val sbtArgs = List() // What sbt args are needed?
 
     val javaArgs = List[String](
       JavaBinary(userConfig().javaHome),
@@ -125,8 +106,7 @@ class SbtInstall(
     )
   }
 
-  private def connectSbtWithConfig(): Future[Unit] = {
-    scribe.info(s"Copying metals plugin")
+  private def launchSbt(): Future[Unit] = {
     installSbtPlugin()
 
     runDisconnect().map { _ =>
@@ -174,7 +154,7 @@ class SbtInstall(
       additionalEnv: Map[String, String] = Map.empty
   )(implicit ec: ExecutionContext): (NuProcess, SbtProcessHandler) = {
     val elapsed = new Timer(Time.system)
-    scribe.info("Starting background sbt process")
+    scribe.info("Starting background sbt process...")
     val handler = new SbtProcessHandler(workspace)
     val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(directory.toNIO)
@@ -200,7 +180,8 @@ class SbtProcessHandler(workspace: AbsolutePath)
 
   override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
     val msg = StandardCharsets.UTF_8.decode(buffer).toString()
-    sbtLogFile.appendText(msg)
+    if (sbtLogFile.isFile) sbtLogFile.appendText(msg)
+    else sbtLogFile.writeText(msg)
     if (!initialized.isCompleted && msg.contains("sbt server started at"))
       initialized.trySuccess(true)
     if (

@@ -188,6 +188,10 @@ class MetalsLanguageServer(
   private var newProjectProvider: NewProjectProvider = _
   private var semanticdbs: Semanticdbs = _
   private var buildClient: ForwardingMetalsBuildClient = _
+  // TODO I think if possible, it'd be nice to get rid of this class.
+  // We still need the functionality, but it'd be nice to instead merge
+  // this into BspServers and just call it from there if the it's the
+  // build tool doesn't provide itself as a BSP server.
   private var bloopServers: BloopServers = _
   private var sbtInstall: SbtInstall = _
   private var bspServers: BspServers = _
@@ -264,7 +268,7 @@ class MetalsLanguageServer(
       case None => ""
     }
     scribe.info(
-      s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+      s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
     )
 
     clientConfig.experimentalCapabilities =
@@ -1030,6 +1034,7 @@ class MetalsLanguageServer(
             compilers.restartAll()
           }
           val expectedBloopVersion = userConfig.currentBloopVersion
+          // TODO there is no gaurantee this is bloop now, this will need to change
           val correctVersionRunning =
             bspSession.map(_.version).contains(expectedBloopVersion)
           val allVersionsDefined =
@@ -1404,10 +1409,12 @@ class MetalsLanguageServer(
         Future {
           indexWorkspaceSources()
         }.asJavaObject
+      // TODO this should restart whichever build server is attatched
       case ServerCommands.RestartBuildServer() =>
         bloopServers.shutdownServer()
         autoConnectToBuildServer().asJavaObject
-      case ServerCommands.InstallSbtBsp() =>
+      // TODO right now this is only handling sbt, but also trigger a start for bloop
+      case ServerCommands.BuildServerStart() =>
         sbtInstall.connect().asJavaObject
       // autoConnectToBuildServer
       case ServerCommands.ImportBuild() =>
@@ -1718,7 +1725,10 @@ class MetalsLanguageServer(
     } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
+    scribe.info("Attempting quick connect to the build server")
     if (!buildTools.isAutoConnectable) {
+      languageClient.showMessage(Messages.FoundNoServerToConnectTo)
+      scribe.warn("Build server is not auto-connectable.")
       Future.successful(BuildChange.None)
     } else {
       autoConnectToBuildServer()
@@ -1743,7 +1753,7 @@ class MetalsLanguageServer(
     {
       for {
         _ <- disconnectOldBuildServer()
-        maybeSession <- timed("connected to build server") {
+        maybeSession <- timed("connected to build server", true) {
           bspConnector.connect(workspace, userConfig)
         }
         result <- maybeSession match {
@@ -1777,18 +1787,20 @@ class MetalsLanguageServer(
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
-    if (bspSession.isDefined) {
-      scribe.info("disconnected: build server")
-    }
+    bspSession.foreach(connection =>
+      scribe.info(s"Disconnecting from ${connection.main.name} session...")
+    )
+
+    // TODO make this nicer. Basically check if we are running sbt, and if so, shut it down
     sbtInstall.disconnect()
 
     bspSession match {
       case None => Future.successful(())
-      case Some(value) =>
+      case Some(session) =>
         bspSession = None
         diagnostics.reset()
         buildTargets.resetConnections(List.empty)
-        value.shutdown()
+        session.shutdown()
     }
   }
 

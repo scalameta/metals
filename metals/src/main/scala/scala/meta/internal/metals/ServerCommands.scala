@@ -94,10 +94,17 @@ object ServerCommands {
     """Cancel the currently ongoing compilation, if any."""
   )
 
-  val InstallSbtBsp = new Command(
-    "sbt-bsp-install",
-    "???",
-    "???"
+  val BuildServerStart = new Command(
+    "build-server-start",
+    "Build server start",
+    """|Start the given build server if Metals knows how to. Following the start of then
+       |server Metals will then connect.
+       |
+       |The build servers that Metals knows how to start:
+       | - Bloop
+       | - sbt
+       |""".stripMargin,
+    "[string], name of the build server."
   )
 
   val BspSwitch = new Command(
@@ -363,7 +370,7 @@ object ServerCommands {
       CancelCompile,
       CleanCompile,
       BspSwitch,
-      InstallSbtBsp,
+      BuildServerStart,
       StartDebugAdapter,
       GotoSymbol,
       GotoPosition,
