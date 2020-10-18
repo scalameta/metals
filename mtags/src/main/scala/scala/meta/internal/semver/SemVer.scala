@@ -10,8 +10,6 @@ object SemVer {
     }
 
     def >=(that: Version): Boolean = this > that || this == that
-
-    override def toString(): String = s"${major}.${minor}.${patch}"
   }
 
   object Version {

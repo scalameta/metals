@@ -30,6 +30,8 @@ import com.zaxxer.nuprocess.NuAbstractProcessHandler
 import com.zaxxer.nuprocess.NuProcess
 import com.zaxxer.nuprocess.NuProcessBuilder
 import java.nio.file.Path
+import scala.util.Failure
+import scala.util.Success
 
 /**
  * This class is really only used in the case where a user is staring in a
@@ -177,13 +179,20 @@ class SbtServer(
         Future.successful(())
       case Some(sessionF) =>
         sessionF.flatMap { session =>
-          val c = runConnect(session)
+          val connectionAttempt = runConnect(session)
           session.mainConnection.onReconnection { newMainConn =>
             val updSession = session.copy(main = newMainConn)
             runConnect(updSession).map(_ => ())
           }
-          c.onComplete(r => scribe.info(s"Completed connection with ${r}"))
-          c.map(_ => ())
+          connectionAttempt.onComplete { whatHappened =>
+            val message = whatHappened match {
+              case Failure(exception) =>
+                s"a failure: ${exception.getMessage()}"
+              case Success(_) => "a success"
+            }
+            scribe.info(s"Completed connection with ${message}")
+          }
+          connectionAttempt
         }
     }
   }

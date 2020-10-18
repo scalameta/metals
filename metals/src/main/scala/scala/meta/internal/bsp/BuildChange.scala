@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.bsp
 
 sealed abstract class BuildChange extends Product with Serializable {
   def isNone: Boolean = this == BuildChange.None

@@ -27,6 +27,7 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConnector
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.BloopInstall
@@ -1823,20 +1824,21 @@ class MetalsLanguageServer(
       session.importBuilds()
     }
     for {
-      i <- statusBar.trackFuture("Importing build", importedBuilds0)
+      bspBuilds <- statusBar.trackFuture("Importing build", importedBuilds0)
       _ = {
-        val idToConnection = i.flatMap { bspBuild =>
+        val idToConnection = bspBuilds.flatMap { bspBuild =>
           val targets =
             bspBuild.build.workspaceBuildTargets.getTargets().asScala
           targets.map(t => (t.getId(), bspBuild.connection))
         }
         buildTargets.resetConnections(idToConnection)
-        lastImportedBuilds = i.map(_.build)
+        lastImportedBuilds = bspBuilds.map(_.build)
       }
       _ <- profiledIndexWorkspace(() => {
         val main = session.mainConnection
         doctor.check(main.name, main.version)
       })
+      // TODO don't need to do this if not running bloop
       _ = checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
