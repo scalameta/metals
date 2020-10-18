@@ -71,7 +71,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.builds.SbtInstall
+import scala.meta.internal.builds.SbtServer
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -193,7 +193,7 @@ class MetalsLanguageServer(
   // this into BspServers and just call it from there if the it's the
   // build tool doesn't provide itself as a BSP server.
   private var bloopServers: BloopServers = _
-  private var sbtInstall: SbtInstall = _
+  private var sbtServer: SbtServer = _
   private var bspServers: BspServers = _
   private var bspConnector: BspConnector = _
   private var codeLensProvider: CodeLensProvider = _
@@ -366,7 +366,7 @@ class MetalsLanguageServer(
       bspGlobalDirectories,
       clientConfig.initialConfig
     )
-    sbtInstall = new SbtInstall(
+    sbtServer = new SbtServer(
       workspace,
       buildTools,
       bspServers,
@@ -374,7 +374,8 @@ class MetalsLanguageServer(
       tables,
       () => userConfig,
       () => disconnectOldBuildServer(),
-      session => connectToNewBuildServer(session).map(_ => ())
+      session => connectToNewBuildServer(session).map(_ => ()),
+      languageClient
     )
     bspConnector = new BspConnector(
       bloopServers,
@@ -1415,7 +1416,7 @@ class MetalsLanguageServer(
         autoConnectToBuildServer().asJavaObject
       // TODO right now this is only handling sbt, but also trigger a start for bloop
       case ServerCommands.BuildServerStart() =>
-        sbtInstall.connect().asJavaObject
+        sbtServer.connect().asJavaObject
       // autoConnectToBuildServer
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
@@ -1727,7 +1728,11 @@ class MetalsLanguageServer(
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     scribe.info("Attempting quick connect to the build server")
     if (!buildTools.isAutoConnectable) {
-      languageClient.showMessage(Messages.FoundNoServerToConnectTo)
+      // TODO this shows a warning and then the prompt to import. Think of a
+      // better flow for this because ideally I'd like to catch the case where
+      // a user triggers a `build-connect` when thre is no server running, and then
+      // we warn them that no server is running
+      //languageClient.showMessage(Messages.FoundNoServerToConnectTo)
       scribe.warn("Build server is not auto-connectable.")
       Future.successful(BuildChange.None)
     } else {
@@ -1792,7 +1797,7 @@ class MetalsLanguageServer(
     )
 
     // TODO make this nicer. Basically check if we are running sbt, and if so, shut it down
-    sbtInstall.disconnect()
+    sbtServer.disconnect()
 
     bspSession match {
       case None => Future.successful(())

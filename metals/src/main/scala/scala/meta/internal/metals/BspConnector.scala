@@ -75,7 +75,6 @@ class BspConnector(
           )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolveBspOne(details) =>
-          pprint.log(details)
           scribe.info(
             s"Attempting to start a new connection to ${details.getName()} from previous choice..."
           )
@@ -92,7 +91,6 @@ class BspConnector(
       if (buildTools.isSbt && buildTools.isBloop) sbtMetaWorkspaces(workspace)
       else List.empty
 
-    pprint.log(metaDirectories)
     connect(workspace).flatMap { possibleBuildServerConn =>
       possibleBuildServerConn match {
         case None => Future.successful(None)

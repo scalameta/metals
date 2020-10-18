@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import scala.meta.internal.builds.SbtBuildTool
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -21,8 +22,14 @@ object Messages {
   // TODO-BSP make sure to improve this message so it's actionable
   val FoundNoServerToConnectTo = new MessageParams(
     MessageType.Warning,
-    "Found no build server to connect to. Try to <enter nice message here later>"
+    "Found no build server to connect to. Try to start a server with the `start-build-server` command."
   )
+
+  val NoSbtBspSupport = new MessageParams(
+    MessageType.Warning,
+    s"Unable to start sbt bsp server. Make sure you have sbt >= ${SbtBuildTool.firstVersionWithBsp} defined in your build.properties file."
+  )
+
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"

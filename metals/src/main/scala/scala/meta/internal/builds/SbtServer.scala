@@ -23,8 +23,18 @@ import java.nio.charset.StandardCharsets
 import scala.concurrent.Promise
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.Messages
+import ch.epfl.scala.bsp4j.BspConnectionDetails
 
-class SbtInstall(
+/**
+ * This class is really only used in the case where a user is staring in a
+ * fresh workspace that is an sbt build, but doesn't contain a `.bsp/sbt.json`.
+ * In this scenario we need to start sbt for the first time and manage it.
+ * All consecutive times after this, the bsp discovery will kick in and
+ * automatically start the server as needed.
+ */
+class SbtServer(
     workspace: AbsolutePath,
     buildTools: BuildTools,
     bspServers: BspServers,
@@ -32,7 +42,8 @@ class SbtInstall(
     tables: Tables,
     userConfig: () => UserConfiguration,
     runDisconnect: () => Future[Unit],
-    runConnect: BspSession => Future[Unit]
+    runConnect: BspSession => Future[Unit],
+    langaugeClient: MetalsLanguageClient
 )(implicit ec: ExecutionContext) {
   var sbtProcess: Option[NuProcess] = None
 
@@ -61,10 +72,8 @@ class SbtInstall(
       scribe.info("Suitable version of sbt found, attempting to connect...")
       launchSbt()
     } else {
-      // TODO we may also want to do a showMessage here to warn the user
-      scribe.info(
-        "Unable to connect to sbt server, please make sure you have sbt >= 1.4.0 defined in your build.properties"
-      )
+      scribe.warn(Messages.NoSbtBspSupport.getMessage())
+      langaugeClient.showMessage(Messages.NoSbtBspSupport)
       Future.successful(())
     }
   }
@@ -75,6 +84,8 @@ class SbtInstall(
     if (!metalsPluginFile.isFile) {
       scribe.info(s"Installalling plugin to ${metalsPluginFile}")
       BuildTool.copyFromResource("MetalsSbtBsp.scala", metalsPluginFile.toNIO)
+    } else {
+      scribe.info("Skipping installing sbt pluign as it already exists")
     }
   }
 
@@ -113,9 +124,9 @@ class SbtInstall(
       val (sbt, handler) = runSbtShell()
       sbtProcess = Some(sbt)
 
-      scribe.info(s"SBT process started: ${sbt.isRunning}")
+      scribe.info(s"sbt process started: ${sbt.isRunning}")
       handler.initialized.future.flatMap { _ =>
-        scribe.info(s"sbt up and running")
+        scribe.info(s"sbt up and running, attempting to start a bsp session...")
         initialize()
       }
     }
@@ -123,18 +134,43 @@ class SbtInstall(
   }
 
   def initialize(): Future[Unit] = {
-    val detailsMaybe =
-      bspServers.findAvailableServers().find(_.getName() == "sbt")
-    val sessionMaybe = detailsMaybe.map(c =>
-      bspServers.newServer(workspace, c).map(bsc => BspSession(bsc, Nil))
+
+    /**
+     * The sbt server just came up at this point, so instead of just searching
+     * for .bsp/sbt.json and moving on, we may need to wait a bit for that to
+     * be popoulated. Without this, it just misses the creation and moves on.
+     *
+     * There is a one second delay between each retry
+     * @param maxTries max amount of tries to find the .bsp/sbt.json file.
+     */
+    def findOrWait(maxTries: Int): Option[BspConnectionDetails] = {
+      bspServers.findAvailableServers().find(_.getName() == "sbt") match {
+        case Some(connectDetails) => Some(connectDetails)
+        case None if maxTries > 0 =>
+          Thread.sleep(1000)
+          findOrWait(maxTries - 1)
+        case _ => None
+      }
+    }
+
+    val possibleConnectionDetails = findOrWait(maxTries = 10)
+
+    val possibleSession = possibleConnectionDetails.map(connectionDetails =>
+      bspServers
+        .newServer(workspace, connectionDetails)
+        .map(BspSession(_, Nil))
     )
 
-    detailsMaybe.foreach(details =>
-      tables.buildServers.chooseServer(details.getName)
+    possibleConnectionDetails.foreach(connectionDetails =>
+      tables.buildServers.chooseServer(connectionDetails.getName)
     )
 
-    sessionMaybe match {
-      case None => Future.successful(())
+    possibleSession match {
+      case None =>
+        scribe.warn(
+          "Started sbt server, but was unable to start a bsp session."
+        )
+        Future.successful(())
       case Some(sessionF) =>
         sessionF.flatMap { session =>
           val c = runConnect(session)
@@ -164,6 +200,7 @@ class SbtInstall(
     }
     val runningProcess = pb.start()
     handler.completeProcess.future.foreach { result =>
+      // TODO figure out what's happening here as I never hit this
       scribe.info(s"sbt background process stopped. Ran for $elapsed")
     }
     (runningProcess, handler)

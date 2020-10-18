@@ -140,7 +140,7 @@ case class SbtBuildTool(
 
 object SbtBuildTool {
 
-  private val firstVersionWithBsp = "1.4.0"
+  val firstVersionWithBsp = "1.4.0"
 
   def workspaceSupportsBsp(workspace: AbsolutePath) = {
     loadVersion(workspace) match {
