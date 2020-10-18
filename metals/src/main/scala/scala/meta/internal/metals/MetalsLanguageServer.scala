@@ -76,6 +76,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.builds.SbtBuildTool
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1418,9 +1419,37 @@ class MetalsLanguageServer(
       case ServerCommands.RestartBuildServer() =>
         bloopServers.shutdownServer()
         autoConnectToBuildServer().asJavaObject
-      // TODO right now this is only handling sbt, but also trigger a start for bloop
+
+      // NOTE: this command is only being used for sbt at the moment, but should
+      // probably should also handle the case where someone sends in bloop. More
+      // than likely that won't happen since bloop with be either running or it will
+      // be started with the user does a build import. However, in the future before
+      // we move away for "bloop-first", we should handle the others here.
+      // TODO-BSP make a ticket for this.
       case ServerCommands.BuildServerStart() =>
-        sbtServer.connect().asJavaObject
+        val possibleArg =
+          Option(params.getArguments())
+            .flatMap(_.asScala.headOption)
+
+        val possibleBuildServer = possibleArg match {
+          case Some(arg: JsonPrimitive) =>
+            Some(arg.getAsString())
+          case _ => None
+        }
+
+        possibleBuildServer match {
+          case Some(SbtBuildTool.name) => sbtServer.connect().asJavaObject
+          case Some(buildTool) =>
+            scribe.warn(
+              Messages.UnableToStartServer(buildTool).getMessage()
+            )
+            languageClient.showMessage(Messages.UnableToStartServer(buildTool))
+            Future.successful(()).asJavaObject
+          case _ =>
+            scribe.error("Must pass in arg to `build-server-start`.")
+            Future.successful(()).asJavaObject
+        }
+
       // autoConnectToBuildServer
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject

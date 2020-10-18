@@ -101,8 +101,10 @@ object ServerCommands {
        |server Metals will then connect.
        |
        |The build servers that Metals knows how to start:
-       | - Bloop
        | - sbt
+       |
+       |Note: while Metals does know how to start Bloop, Bloop will be started when you trigger a build
+       |import or when you use `bsp-switch` to switch to Bloop.
        |""".stripMargin,
     "[string], name of the build server."
   )

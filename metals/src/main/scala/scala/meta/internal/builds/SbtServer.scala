@@ -123,6 +123,8 @@ class SbtServer(
     )
   }
 
+  // TODO there isn't a lot of feedback for the user here to know what's happening until the connection is made.
+  // It'd be nice to have a progress thing in here
   private def launchSbt(): Future[Unit] = {
     installSbtPlugin()
 

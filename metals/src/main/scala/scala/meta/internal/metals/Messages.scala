@@ -30,6 +30,11 @@ object Messages {
     s"Unable to start sbt bsp server. Make sure you have sbt >= ${SbtBuildTool.firstVersionWithBsp} defined in your build.properties file."
   )
 
+  def UnableToStartServer(buildTool: String) = new MessageParams(
+    MessageType.Warning,
+    s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually."
+  )
+
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"

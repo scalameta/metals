@@ -133,13 +133,14 @@ case class SbtBuildTool(
     }
   }
 
-  override def toString: String = "sbt"
+  override def toString: String = SbtBuildTool.name
 
-  def executableName = "sbt"
+  def executableName = SbtBuildTool.name
 }
 
 object SbtBuildTool {
 
+  val name = "sbt"
   val firstVersionWithBsp = "1.4.0"
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
