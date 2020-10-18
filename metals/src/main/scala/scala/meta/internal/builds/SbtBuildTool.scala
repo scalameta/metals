@@ -6,10 +6,10 @@ import java.util.Properties
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
-import scala.meta.internal.semver.SemVer.isCompatibleVersion
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
@@ -142,7 +142,7 @@ object SbtBuildTool {
 
   val firstVersionWithBsp = "1.4.0"
 
-  def workspaceSupportsBsp(workspace: AbsolutePath) = {
+  def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
     loadVersion(workspace) match {
       case Some(version) =>
         scribe.info(s"sbt ${version} found for workspace.")

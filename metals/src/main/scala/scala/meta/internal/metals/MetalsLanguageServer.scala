@@ -26,10 +26,14 @@ import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.internal.bsp.BspConnector
+import scala.meta.internal.bsp.BspServers
+import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.builds.SbtServer
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
@@ -71,7 +75,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.builds.SbtServer
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,

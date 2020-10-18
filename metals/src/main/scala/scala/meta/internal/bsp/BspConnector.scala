@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.bsp
 
 import java.nio.file.Files
 
@@ -6,23 +6,19 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.metals.BloopServers
+import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.Messages.BspSwitch
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
-import scala.meta.internal.metals.Messages.BspSwitch
-import org.eclipse.lsp4j.services.LanguageClient
-import scala.meta.internal.metals.MetalsEnrichments._
 import com.google.common.collect.ImmutableList
+import org.eclipse.lsp4j.services.LanguageClient
 
-// TODO move this ADT out of here and also probably rename? BspResolvedResult
-sealed trait BspResolveResult
-case object ResolveNone extends BspResolveResult
-case object ResolveBloop extends BspResolveResult
-case class ResolveBspOne(details: BspConnectionDetails) extends BspResolveResult
-case class ResolveMultiple(md5: String, details: List[BspConnectionDetails])
-    extends BspResolveResult
-
-// TODO this seems weird here, where should we move it?
 object BspConnector {
   final val BLOOP_SELECTED = "BLOOP"
 }
@@ -39,21 +35,21 @@ class BspConnector(
     userConfig: () => UserConfiguration
 )(implicit ec: ExecutionContext) {
 
-  def resolve(): BspResolveResult = {
+  def resolve(): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      if (buildTools.isBloop) ResolveBloop
+      if (buildTools.isBloop) ResolvedBloop
       else bspServers.resolve()
     }
   }
 
-  private def resolveExplicit(): Option[BspResolveResult] = {
+  private def resolveExplicit(): Option[BspResolvedResult] = {
     tables.buildServers.selectedServer().flatMap { sel =>
-      if (sel == BspConnector.BLOOP_SELECTED) Some(ResolveBloop)
+      if (sel == BspConnector.BLOOP_SELECTED) Some(ResolvedBloop)
       else
         bspServers
           .findAvailableServers()
           .find(_.getName == sel)
-          .map(x => ResolveBspOne(x))
+          .map(x => ResolvedBspOne(x))
     }
   }
 
@@ -66,20 +62,20 @@ class BspConnector(
     ): Future[Option[BuildServerConnection]] = {
       scribe.info("Attempting to connect to the build server...")
       resolve() match {
-        case ResolveNone =>
+        case ResolvedNone =>
           scribe.info("No build server found")
           Future.successful(None)
-        case ResolveBloop =>
+        case ResolvedBloop =>
           scribe.info(
             "Attempting to start a bloop connection from previous choice"
           )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
-        case ResolveBspOne(details) =>
+        case ResolvedBspOne(details) =>
           scribe.info(
             s"Attempting to start a new connection to ${details.getName()} from previous choice..."
           )
           bspServers.newServer(workspace, details).map(Some(_))
-        case ResolveMultiple(_, _) => Future.successful(None)
+        case ResolvedMultiple(_, _) => Future.successful(None)
       }
     }
 
@@ -121,7 +117,7 @@ class BspConnector(
   private def askUser(
       bspServerConnections: List[BspConnectionDetails],
       isBloop: Boolean
-  ): Future[BspResolveResult] = {
+  ): Future[BspResolvedResult] = {
     val bloop = new BspConnectionDetails(
       "bloop (default)",
       ImmutableList.of(),
@@ -140,12 +136,12 @@ class BspConnector(
       val result = chosenMaybe
         .map { chosen =>
           if (chosen == bloop) {
-            ResolveBloop
+            ResolvedBloop
           } else {
-            ResolveBspOne(chosen)
+            ResolvedBspOne(chosen)
           }
         }
-        .getOrElse(ResolveNone)
+        .getOrElse(ResolvedNone)
       scribe.info(s"selected build server: $chosenMaybe")
       result
     }
@@ -169,13 +165,13 @@ class BspConnector(
       case availableServers =>
         val currentBsp = tables.buildServers.selectedServer()
         askUser(availableServers, bloopPresent).map {
-          case ResolveBloop =>
+          case ResolvedBloop =>
             if (currentBsp.contains(BspConnector.BLOOP_SELECTED)) false
             else {
               tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
               true
             }
-          case ResolveBspOne(details) =>
+          case ResolvedBspOne(details) =>
             if (currentBsp.contains(details.getName)) false
             else {
               tables.buildServers.chooseServer(details.getName)

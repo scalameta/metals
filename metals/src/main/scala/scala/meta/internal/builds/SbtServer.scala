@@ -1,31 +1,35 @@
 package scala.meta.internal.builds
 
-import sys.process._
-import scala.concurrent.Future
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.BspServers
-import java.nio.file.Files
-import scala.meta.internal.metals.SbtOpts
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.JvmOpts
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
-import com.zaxxer.nuprocess.NuProcessBuilder
-import scala.concurrent.ExecutionContext
-import com.zaxxer.nuprocess.NuProcess
-import scala.meta.internal.metals.BspSession
-import com.zaxxer.nuprocess.NuAbstractProcessHandler
 import java.nio.ByteBuffer
-import scala.meta.internal.metals.Directories
 import java.nio.charset.StandardCharsets
-import scala.concurrent.Promise
+import java.nio.file.Files
 import java.util.concurrent.TimeUnit
-import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.MetalsLanguageClient
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.sys.process._
+
+import scala.meta.internal.bsp.BspServers
+import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.JavaBinary
+import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.SbtOpts
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.io.AbsolutePath
+
 import ch.epfl.scala.bsp4j.BspConnectionDetails
+import com.zaxxer.nuprocess.NuAbstractProcessHandler
+import com.zaxxer.nuprocess.NuProcess
+import com.zaxxer.nuprocess.NuProcessBuilder
+import java.nio.file.Path
 
 /**
  * This class is really only used in the case where a user is staring in a
@@ -47,7 +51,7 @@ class SbtServer(
 )(implicit ec: ExecutionContext) {
   var sbtProcess: Option[NuProcess] = None
 
-  protected lazy val tempDir = {
+  protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")
     dir.toFile.deleteOnExit()
     dir
@@ -210,7 +214,7 @@ class SbtServer(
 
 class SbtProcessHandler(workspace: AbsolutePath)
     extends NuAbstractProcessHandler {
-  val sbtLogFile = workspace.resolve(Directories.sbtlog)
+  val sbtLogFile: AbsolutePath = workspace.resolve(Directories.sbtlog)
 
   val initialized: Promise[Boolean] = Promise[Boolean]()
   val completeProcess: Promise[Int] = Promise[Int]()

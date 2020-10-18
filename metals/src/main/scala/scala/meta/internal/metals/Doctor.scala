@@ -7,6 +7,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
+import scala.meta.internal.bsp.BspResolvedResult
+import scala.meta.internal.bsp.ResolvedBloop
+import scala.meta.internal.bsp.ResolvedBspOne
+import scala.meta.internal.bsp.ResolvedMultiple
+import scala.meta.internal.bsp.ResolvedNone
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
@@ -26,7 +31,7 @@ final class Doctor(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     currentBuildServer: () => Option[String],
-    calculateNewBuildServer: () => BspResolveResult,
+    calculateNewBuildServer: () => BspResolvedResult,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration
@@ -286,10 +291,10 @@ final class Doctor(
   private def selectedBuildServerMessage(): String = {
     val current = currentBuildServer().getOrElse("<none>")
     val onRestart = calculateNewBuildServer() match {
-      case ResolveNone => "<none>"
-      case ResolveBloop => "Bloop"
-      case ResolveBspOne(details) => details.getName
-      case ResolveMultiple(_, _) => "<ask user>"
+      case ResolvedNone => "<none>"
+      case ResolvedBloop => "Bloop"
+      case ResolvedBspOne(details) => details.getName
+      case ResolvedMultiple(_, _) => "<ask user>"
     }
     if (current != onRestart) {
       s"Build server currently used: ${current}. After reload will try connect to: ${onRestart}"

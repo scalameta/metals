@@ -1,7 +1,12 @@
-package scala.meta.internal.metals
+package scala.meta.internal.bsp
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
+import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ImportedBuild
+import scala.meta.internal.metals.MetalsLanguageServer
 
 case class BspSession(
     main: BuildServerConnection,
@@ -29,10 +34,8 @@ case class BspSession(
 }
 
 object BspSession {
-
   case class BspBuild(
       connection: BuildServerConnection,
       build: ImportedBuild
   )
-
 }

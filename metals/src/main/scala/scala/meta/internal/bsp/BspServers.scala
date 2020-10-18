@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.bsp
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -10,7 +10,16 @@ import scala.concurrent.Promise
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.QuietInputStream
+import scala.meta.internal.metals.SocketConnection
+import scala.meta.internal.metals.Tables
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -33,10 +42,10 @@ final class BspServers(
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
-  def resolve(): BspResolveResult = {
+  def resolve(): BspResolvedResult = {
     findAvailableServers() match {
-      case Nil => ResolveNone
-      case head :: Nil => ResolveBspOne(head)
+      case Nil => ResolvedNone
+      case head :: Nil => ResolvedBspOne(head)
       case availableServers =>
         val md5 = digestServerDetails(availableServers)
         val selectedServer = for {
@@ -44,8 +53,8 @@ final class BspServers(
           server <- availableServers.find(_.getName == name)
         } yield server
         selectedServer match {
-          case Some(details) => ResolveBspOne(details)
-          case None => ResolveMultiple(md5, availableServers)
+          case Some(details) => ResolvedBspOne(details)
+          case None => ResolvedMultiple(md5, availableServers)
         }
     }
   }
