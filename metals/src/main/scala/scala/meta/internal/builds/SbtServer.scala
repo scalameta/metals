@@ -3,12 +3,15 @@ package scala.meta.internal.builds
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.sys.process._
+import scala.util.Failure
+import scala.util.Success
 
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
@@ -19,6 +22,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.SbtOpts
+import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
@@ -29,9 +33,6 @@ import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.zaxxer.nuprocess.NuAbstractProcessHandler
 import com.zaxxer.nuprocess.NuProcess
 import com.zaxxer.nuprocess.NuProcessBuilder
-import java.nio.file.Path
-import scala.util.Failure
-import scala.util.Success
 
 /**
  * Used to start an sbt process which will allow for easy bsp connection after
@@ -49,7 +50,8 @@ class SbtServer(
     userConfig: () => UserConfiguration,
     runDisconnect: () => Future[Unit],
     runConnect: BspSession => Future[Unit],
-    langaugeClient: MetalsLanguageClient
+    langaugeClient: MetalsLanguageClient,
+    statusBar: StatusBar
 )(implicit ec: ExecutionContext) {
   var sbtProcess: Option[NuProcess] = None
 
@@ -150,17 +152,17 @@ class SbtServer(
   // TODO there isn't a lot of feedback for the user here to know what's happening until the connection is made.
   // It'd be nice to have a progress thing in here
   private def launchAndInit(): Future[Unit] = {
-
     runDisconnect().map { _ =>
       val (sbt, handler) = runSbtShell()
 
       scribe.info(s"sbt process started: ${sbt.isRunning}")
       handler.initialized.future.flatMap { _ =>
-        scribe.info(s"sbt up and running, attempting to start a bsp session...")
+        scribe.info(
+          s"sbt up and running, attempting to start a bsp session..."
+        )
         initialize()
       }
     }
-
   }
 
   /**

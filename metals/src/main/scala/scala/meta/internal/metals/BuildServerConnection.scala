@@ -60,6 +60,8 @@ class BuildServerConnection private (
   // the name is set before when establishing conenction
   def name: String = initialConnection.socketConnection.serverName
 
+  def isBloop: Boolean = name == "Bloop"
+
   def workspaceDirectory: AbsolutePath = workspace
 
   def onReconnection(
@@ -101,6 +103,12 @@ class BuildServerConnection private (
 
   def clean(params: CleanCacheParams): CompletableFuture[CleanCacheResult] = {
     register(server => server.buildTargetCleanCache(params))
+  }
+
+  // TODO-BSP to be thorough we should probably add in a check here to ensure
+  // the server suppports `canReload`
+  def workspaceReload(): CompletableFuture[Object] = {
+    register(server => server.workspaceReload())
   }
 
   def mainClasses(
@@ -274,7 +282,7 @@ object BuildServerConnection {
     }
   }
 
-  final case class BloopExtraBuildParams(
+  final case class BspExtraBuildParams(
       semanticdbVersion: String,
       supportedScalaVersions: java.util.List[String]
   )
@@ -286,7 +294,7 @@ object BuildServerConnection {
       workspace: AbsolutePath,
       server: MetalsBuildServer
   ): InitializeBuildResult = {
-    val extraParams = BloopExtraBuildParams(
+    val extraParams = BspExtraBuildParams(
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScala2Versions.asJava
     )

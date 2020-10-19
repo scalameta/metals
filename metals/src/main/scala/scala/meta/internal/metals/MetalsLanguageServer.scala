@@ -27,13 +27,14 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConnector
-import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtServer
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
@@ -76,7 +77,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.builds.SbtBuildTool
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -380,7 +380,8 @@ class MetalsLanguageServer(
       () => userConfig,
       () => disconnectOldBuildServer(),
       session => connectToNewBuildServer(session).map(_ => ()),
-      languageClient
+      languageClient,
+      statusBar
     )
     bspConnector = new BspConnector(
       bloopServers,
@@ -585,7 +586,7 @@ class MetalsLanguageServer(
       tables,
       languageClient,
       doctor,
-      () => slowConnectToBuildServer(forceImport = true).map(_ => ())
+      () => slowConnectToBloopServer(forceImport = true).map(_ => ())
     )
 
     val worksheetPublisher =
@@ -796,7 +797,7 @@ class MetalsLanguageServer(
         .sequence(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
-            slowConnectToBuildServer(forceImport = false).ignoreValue,
+            slowConnectToBloopServer(forceImport = false).ignoreValue,
             Future(workspaceSymbols.indexClasspath()),
             Future(startHttpServer()),
             Future(formattingProvider.load())
@@ -1441,19 +1442,25 @@ class MetalsLanguageServer(
         possibleBuildServer match {
           case Some(SbtBuildTool.name) => sbtServer.connect().asJavaObject
           case Some(buildTool) =>
+            val message = Messages.unableToStartServer(buildTool)
             scribe.warn(
-              Messages.UnableToStartServer(buildTool).getMessage()
+              message.getMessage()
             )
-            languageClient.showMessage(Messages.UnableToStartServer(buildTool))
+            languageClient.showMessage(message)
             Future.successful(()).asJavaObject
           case _ =>
             scribe.error("Must pass in arg to `build-server-start`.")
             Future.successful(()).asJavaObject
         }
 
-      // autoConnectToBuildServer
       case ServerCommands.ImportBuild() =>
-        slowConnectToBuildServer(forceImport = true).asJavaObject
+        bspSession
+          .map { session =>
+            if (session.main.isBloop)
+              slowConnectToBloopServer(forceImport = true).asJavaObject
+            else Future.successful().asJavaObject
+          }
+          .getOrElse(Future.successful(()).asJavaObject)
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
@@ -1707,7 +1714,7 @@ class MetalsLanguageServer(
     }
   }
 
-  private def slowConnectToBuildServer(
+  private def slowConnectToBloopServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
     for {
@@ -1719,7 +1726,7 @@ class MetalsLanguageServer(
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
             case Some(digest) =>
-              slowConnectToBuildServer(forceImport, buildTool, digest)
+              slowConnectToBloopServer(forceImport, buildTool, digest)
           }
         case None =>
           Future.successful(BuildChange.None)
@@ -1728,7 +1735,7 @@ class MetalsLanguageServer(
   }
 
   // TODO-BSP this should no longer just connect to bloop
-  private def slowConnectToBuildServer(
+  private def slowConnectToBloopServer(
       forceImport: Boolean,
       buildTool: BuildTool,
       checksum: String
@@ -1869,8 +1876,7 @@ class MetalsLanguageServer(
         val main = session.mainConnection
         doctor.check(main.name, main.version)
       })
-      // TODO don't need to do this if not running bloop
-      _ = checkRunningBloopVersion(session.version)
+      _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
     }
@@ -2236,11 +2242,31 @@ class MetalsLanguageServer(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
     val isBuildChange = paths.exists(buildTools.isBuildRelated(workspace, _))
-    if (isBuildChange) {
-      slowConnectToBuildServer(forceImport = false)
-    } else {
-      Future.successful(BuildChange.None)
-    }
+    bspSession
+      .map { session =>
+        if (isBuildChange && session.main.isBloop) {
+          slowConnectToBloopServer(forceImport = false)
+        } else if (isBuildChange) {
+          scribe.info("Triggering a workspace/reload")
+
+          // TODO-BSP Figure out how we are to forward to the user that their
+          // new configuration may be invalide
+          session.main
+            .workspaceReload()
+            .asScala
+            .flatMap { _ =>
+              profiledIndexWorkspace(() => {
+                pprint.log("About to index")
+                val main = session.mainConnection
+                doctor.check(main.name, main.version)
+              })
+            }
+            .map(_ => BuildChange.Reloaded)
+        } else {
+          Future.successful(BuildChange.None)
+        }
+      }
+      .getOrElse(Future.successful(BuildChange.None))
   }
 
   /**

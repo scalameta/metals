@@ -156,6 +156,8 @@ object Bill {
         new InitializeBuildResult("Bill", "1.0", "2.0.0-M2", capabilities)
       }.logError("initialize").asJava
     }
+    // TODO-BSP look back at this, but add it in to compile
+    override def workspaceReload(): CompletableFuture[Object] = ???
     override def onBuildInitialized(): Unit = {}
     override def buildShutdown(): CompletableFuture[AnyRef] = {
       if (isShutdownTrace()) {

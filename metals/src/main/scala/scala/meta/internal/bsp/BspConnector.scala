@@ -6,6 +6,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.SbtServer
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
@@ -18,8 +20,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
 import org.eclipse.lsp4j.services.LanguageClient
-import scala.meta.internal.builds.SbtServer
-import scala.meta.internal.builds.SbtBuildTool
 
 object BspConnector {
   final val BLOOP_SELECTED = "BLOOP"
@@ -77,7 +77,7 @@ class BspConnector(
           // NOTE: we explicity start another sbt process here as simply using newServer
           // here wil indeed start sbt, but not correctly star the bsp sessions. So before
           // we start the session we ensure that sbt is running, and then connect.
-          val (sbtProcess, processHandler) = sbtServer.runSbtShell()
+          val (_, processHandler) = sbtServer.runSbtShell()
           processHandler.initialized.future.flatMap { _ =>
             scribe.info(
               s"sbt up and running, attempting to start a bsp session..."

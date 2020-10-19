@@ -18,8 +18,8 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath

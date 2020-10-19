@@ -31,6 +31,9 @@ case class BspSession(
   def mainConnection: BuildServerConnection = main
 
   def version: String = main.version
+
+  // TODO-BSP it is probably best to impliment this in here
+  //def reload = connections.map(connection => connection.workspaceReload())
 }
 
 object BspSession {

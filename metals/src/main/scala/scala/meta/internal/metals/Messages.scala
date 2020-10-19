@@ -30,7 +30,7 @@ object Messages {
     s"Unable to start sbt bsp server. Make sure you have sbt >= ${SbtBuildTool.firstVersionWithBsp} defined in your build.properties file."
   )
 
-  def UnableToStartServer(buildTool: String) = new MessageParams(
+  def unableToStartServer(buildTool: String) = new MessageParams(
     MessageType.Warning,
     s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually."
   )
