@@ -193,10 +193,6 @@ class MetalsLanguageServer(
   private var newProjectProvider: NewProjectProvider = _
   private var semanticdbs: Semanticdbs = _
   private var buildClient: ForwardingMetalsBuildClient = _
-  // TODO I think if possible, it'd be nice to get rid of this class.
-  // We still need the functionality, but it'd be nice to instead merge
-  // this into BspServers and just call it from there if the it's the
-  // build tool doesn't provide itself as a BSP server.
   private var bloopServers: BloopServers = _
   private var sbtServer: SbtServer = _
   private var bspServers: BspServers = _
@@ -1042,7 +1038,7 @@ class MetalsLanguageServer(
             compilers.restartAll()
           }
           val expectedBloopVersion = userConfig.currentBloopVersion
-          // TODO there is no gaurantee this is bloop now, this will need to change
+          // TODO-BSP there is no gaurantee this is bloop now, this will need to change
           val correctVersionRunning =
             bspSession.map(_.version).contains(expectedBloopVersion)
           val allVersionsDefined =
@@ -1417,9 +1413,11 @@ class MetalsLanguageServer(
         Future {
           indexWorkspaceSources()
         }.asJavaObject
-      // TODO this should restart whichever build server is attatched
       case ServerCommands.RestartBuildServer() =>
-        bloopServers.shutdownServer()
+        bspSession.foreach { session =>
+          if (session.main.isBloop) bloopServers.shutdownServer()
+          else sbtServer.disconnect()
+        }
         autoConnectToBuildServer().asJavaObject
 
       // NOTE: this command is only being used for sbt at the moment, but should
@@ -1452,13 +1450,12 @@ class MetalsLanguageServer(
             scribe.error("Must pass in arg to `build-server-start`.")
             Future.successful(()).asJavaObject
         }
-
       case ServerCommands.ImportBuild() =>
         bspSession
           .map { session =>
             if (session.main.isBloop)
               slowConnectToBloopServer(forceImport = true).asJavaObject
-            else Future.successful().asJavaObject
+            else reloadWorkspaceAndIndex(session).asJavaObject
           }
           .getOrElse(Future.successful(()).asJavaObject)
       case ServerCommands.ConnectBuildServer() =>
@@ -1719,6 +1716,10 @@ class MetalsLanguageServer(
   ): Future[BuildChange] = {
     for {
       possibleBuildTool <- supportedBuildTool
+      choseBuildServer = tables.buildServers.selectedServer()
+      if choseBuildServer.isEmpty || choseBuildServer.exists(
+        _ == BspConnector.BLOOP_SELECTED
+      )
       buildChange <- possibleBuildTool match {
         case Some(buildTool) =>
           buildTool.digest(workspace) match {
@@ -1770,7 +1771,7 @@ class MetalsLanguageServer(
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     scribe.info("Attempting quick connect to the build server")
     if (!buildTools.isAutoConnectable) {
-      // TODO this shows a warning and then the prompt to import. Think of a
+      // TODO-BSP this shows a warning and then the prompt to import. Think of a
       // better flow for this because ideally I'd like to catch the case where
       // a user triggers a `build-connect` when thre is no server running, and then
       // we warn them that no server is running
@@ -1838,8 +1839,8 @@ class MetalsLanguageServer(
       scribe.info(s"Disconnecting from ${connection.main.name} session...")
     )
 
-    // TODO make this nicer. Basically check if we are running sbt, and if so, shut it down
-    sbtServer.disconnect()
+    // TODO-BSP make this nicer. Basically check if we are running sbt, and if so, shut it down
+    //sbtServer.disconnect()
 
     bspSession match {
       case None => Future.successful(())
@@ -2250,23 +2251,28 @@ class MetalsLanguageServer(
           scribe.info("Triggering a workspace/reload")
 
           // TODO-BSP Figure out how we are to forward to the user that their
-          // new configuration may be invalide
-          session.main
-            .workspaceReload()
-            .asScala
-            .flatMap { _ =>
-              profiledIndexWorkspace(() => {
-                pprint.log("About to index")
-                val main = session.mainConnection
-                doctor.check(main.name, main.version)
-              })
-            }
-            .map(_ => BuildChange.Reloaded)
+          // new configuration may be invalid
+          reloadWorkspaceAndIndex(session).map(_ => BuildChange.Reloaded)
         } else {
           Future.successful(BuildChange.None)
         }
       }
       .getOrElse(Future.successful(BuildChange.None))
+  }
+
+  // TODO-BSP there needs to be a prompt here for the user to dismiss etc like we
+  // do in BloopInstall. Ideally we can re-use the logic because it's almost
+  // identical, but I'm unsure where to put it. For now, just reload every time.
+  private def reloadWorkspaceAndIndex(session: BspSession): Future[Unit] = {
+    session.main
+      .workspaceReload()
+      .asScala
+      .flatMap { _ =>
+        profiledIndexWorkspace(() => {
+          val main = session.mainConnection
+          doctor.check(main.name, main.version)
+        })
+      }
   }
 
   /**
