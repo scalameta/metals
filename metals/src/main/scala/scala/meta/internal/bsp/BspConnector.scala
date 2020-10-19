@@ -18,16 +18,16 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
 import org.eclipse.lsp4j.services.LanguageClient
+import scala.meta.internal.builds.SbtServer
+import scala.meta.internal.builds.SbtBuildTool
 
 object BspConnector {
   final val BLOOP_SELECTED = "BLOOP"
 }
 
-// TODO the more I mess around with all this stuff, a nice refactoring would be to
-// create a BSP package, and move all the connector, discovery, management of the
-// BSP related things into its own package.
 class BspConnector(
     bloopServers: BloopServers,
+    sbtServer: SbtServer,
     bspServers: BspServers,
     buildTools: BuildTools,
     client: LanguageClient,
@@ -70,6 +70,20 @@ class BspConnector(
             "Attempting to start a bloop connection from previous choice"
           )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
+        case ResolvedBspOne(details) if details.getName == SbtBuildTool.name =>
+          scribe.info(
+            s"Attempting to start a new connection to ${details.getName()} from previous choice..."
+          )
+          // NOTE: we explicity start another sbt process here as simply using newServer
+          // here wil indeed start sbt, but not correctly star the bsp sessions. So before
+          // we start the session we ensure that sbt is running, and then connect.
+          val (sbtProcess, processHandler) = sbtServer.runSbtShell()
+          processHandler.initialized.future.flatMap { _ =>
+            scribe.info(
+              s"sbt up and running, attempting to start a bsp session..."
+            )
+            bspServers.newServer(workspace, details).map(Some(_))
+          }
         case ResolvedBspOne(details) =>
           scribe.info(
             s"Attempting to start a new connection to ${details.getName()} from previous choice..."

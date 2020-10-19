@@ -384,6 +384,7 @@ class MetalsLanguageServer(
     )
     bspConnector = new BspConnector(
       bloopServers,
+      sbtServer,
       bspServers,
       buildTools,
       languageClient,
@@ -1726,6 +1727,7 @@ class MetalsLanguageServer(
     } yield buildChange
   }
 
+  // TODO-BSP this should no longer just connect to bloop
   private def slowConnectToBuildServer(
       forceImport: Boolean,
       buildTool: BuildTool,
