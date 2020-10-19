@@ -1839,9 +1839,6 @@ class MetalsLanguageServer(
       scribe.info(s"Disconnecting from ${connection.main.name} session...")
     )
 
-    // TODO-BSP make this nicer. Basically check if we are running sbt, and if so, shut it down
-    //sbtServer.disconnect()
-
     bspSession match {
       case None => Future.successful(())
       case Some(session) =>

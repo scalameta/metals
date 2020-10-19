@@ -17,7 +17,6 @@ object MetalsPlugin extends AutoPlugin {
         .cross(CrossVersion.full)
     },
     allDependencies ++= {
-      val m = semanticdbCompilerPlugin.value
       val sv = scalaVersion.value
       if (!ScalaInstance.isDotty(sv)) {
         List(
@@ -34,15 +33,11 @@ object MetalsPlugin extends AutoPlugin {
   lazy val configurationSettings: Seq[Def.Setting[_]] = List(
     scalacOptions := {
       val old = scalacOptions.value
-      val sdb = true
       val sdbOptions = semanticdbOptions.value
       val sv = scalaVersion.value
-      if (sdb) {
-        (
-          old.toVector ++ sdbOptions ++
-            (if (ScalaInstance.isDotty(sv)) Some("-Ysemanticdb") else None)
-        ).distinct
-      } else old
+      (old.toVector ++ sdbOptions ++
+        (if (ScalaInstance.isDotty(sv)) Some("-Ysemanticdb")
+         else None)).distinct
     },
     semanticdbTargetRoot := {
       val in = semanticdbIncludeInJar.value

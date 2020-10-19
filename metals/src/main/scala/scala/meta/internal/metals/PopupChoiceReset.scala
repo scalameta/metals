@@ -73,5 +73,5 @@ class PopupChoiceReset(
 object PopupChoiceReset {
   final val BuildTool = "Build tool selection"
   final val BuildImport = "Build import"
-  final val BuildServer = "Build server"
+  final val BuildServer = "Build server selection"
 }
