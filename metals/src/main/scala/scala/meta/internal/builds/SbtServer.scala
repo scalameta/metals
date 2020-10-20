@@ -109,6 +109,9 @@ class SbtServer(
    * not, create it.
    */
   private def installSbtPlugin(): Unit = {
+    // TODO-BSP right now we just check to see if the file is there, but rather
+    // this should be a more intelligent check to see if the file is the same
+    // to catch updates in the plugin
     val metalsPluginFile =
       workspace.resolve("project").resolve("MetalsSbtBsp.scala")
     if (!metalsPluginFile.isFile) {
@@ -124,10 +127,8 @@ class SbtServer(
    * and then starting and managing the connection.
    */
   def runSbtShell(): (NuProcess, SbtProcessHandler) = {
-    // TODO there should probably be a check in here to not run another shell
-    // if there is already a server running.
     installSbtPlugin()
-    // TODO just a placeholder for now. Is there anything extra needed?
+    // TODO-BSP just a placeholder for now. Is there anything extra needed?
     val sbtArgs = List()
 
     val javaArgs = List[String](
@@ -157,11 +158,6 @@ class SbtServer(
     (sbt, handler)
   }
 
-  // TODO there isn't a lot of feedback for the user here to know what's happening until the connection is made.
-  // It'd be nice to have a progress thing in here
-  // I hit on this today when updating to 1.4.1, and since it takes a long time, I it actually failed to connect
-  // and didn't give a lot of info to the user. If possible, we should even capture that message and show it to
-  // the user
   private def launchAndInit(): Future[Unit] = {
     runDisconnect().map { _ =>
       val (sbt, handler) = runSbtShell()
@@ -171,7 +167,10 @@ class SbtServer(
         scribe.info(
           s"sbt up and running, attempting to start a bsp session..."
         )
-        initialize()
+        statusBar.trackFuture(
+          "Starting an sbt bsp session",
+          initialize()
+        )
       }
     }
   }

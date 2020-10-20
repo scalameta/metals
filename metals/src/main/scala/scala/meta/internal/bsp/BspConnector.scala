@@ -74,15 +74,16 @@ class BspConnector(
           scribe.info(
             s"Attempting to start a new connection to ${details.getName()} from previous choice..."
           )
-          // NOTE: we explicity start another sbt process here as simply using newServer
-          // here wil indeed start sbt, but not correctly star the bsp sessions. So before
-          // we start the session we ensure that sbt is running, and then connect.
+          // NOTE: we explicity start another sbt process here as simply using
+          // newServer here wil indeed start sbt, but not correctly star the
+          // bsp sessions. So before we start the session we ensure that sbt is
+          // running, and then connect. However, this isn't needed with sbt >=
+          // 1.4.1
           val (_, processHandler) = sbtServer.runSbtShell()
           processHandler.initialized.future.flatMap { _ =>
             scribe.info(
               s"sbt up and running, attempting to start a bsp session..."
             )
-            bspServers.newServer(workspace, details).map(Some(_))
           }
         case ResolvedBspOne(details) =>
           scribe.info(
@@ -93,22 +94,20 @@ class BspConnector(
       }
     }
 
-    // TODO-BSP ensure the timing of this is correct, we don't want the metabuilds yet for sbt BSP
-    // because afaik, they don't support it? So if the user has chosen bloop, but this point, there
-    // will have been a .bloop directory created alraedy, and therefore we check for both to avoid
-    // passing the metabuild to sbt.
-    val metaDirectories =
-      if (buildTools.isSbt && buildTools.isBloop) sbtMetaWorkspaces(workspace)
-      else List.empty
-
     connect(workspace).flatMap { possibleBuildServerConn =>
       possibleBuildServerConn match {
         case None => Future.successful(None)
-        case Some(buildServerConn) =>
-          val metaConns = metaDirectories.map(connect(_))
+        case Some(buildServerConn)
+            if buildServerConn.isBloop && buildTools.isSbt =>
+          // NOTE: (ckipp01) we special case this here since sbt bsp server
+          // doesn't yet support metabuilds. So in the future when that
+          // changes, re-work this and move the creation of this out above
+          val metaConns = sbtMetaWorkspaces(workspace).map(connect(_))
           Future
             .sequence(metaConns)
             .map(meta => Some(BspSession(buildServerConn, meta.flatten)))
+        case Some(buildServerConn) =>
+          Future(Some(BspSession(buildServerConn, List.empty)))
       }
     }
   }
