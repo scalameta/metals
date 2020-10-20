@@ -84,6 +84,7 @@ class BspConnector(
             scribe.info(
               s"sbt up and running, attempting to start a bsp session..."
             )
+            bspServers.newServer(workspace, details).map(Some(_))
           }
         case ResolvedBspOne(details) =>
           scribe.info(

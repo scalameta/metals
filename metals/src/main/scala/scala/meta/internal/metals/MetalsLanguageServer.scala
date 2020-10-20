@@ -582,7 +582,7 @@ class MetalsLanguageServer(
       tables,
       languageClient,
       doctor,
-      () => slowConnectToBloopServer(forceImport = true).map(_ => ())
+      () => slowConnectToBuildServer(forceImport = true).map(_ => ())
     )
 
     val worksheetPublisher =
@@ -793,7 +793,7 @@ class MetalsLanguageServer(
         .sequence(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
-            slowConnectToBloopServer(forceImport = false).ignoreValue,
+            slowConnectToBuildServer(forceImport = false).ignoreValue,
             Future(workspaceSymbols.indexClasspath()),
             Future(startHttpServer()),
             Future(formattingProvider.load())
@@ -1443,13 +1443,7 @@ class MetalsLanguageServer(
             Future.successful(()).asJavaObject
         }
       case ServerCommands.ImportBuild() =>
-        bspSession
-          .map { session =>
-            if (session.main.isBloop)
-              slowConnectToBloopServer(forceImport = true).asJavaObject
-            else reloadWorkspaceAndIndex(session).asJavaObject
-          }
-          .getOrElse(Future.successful(()).asJavaObject)
+        slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
@@ -1703,13 +1697,13 @@ class MetalsLanguageServer(
     }
   }
 
-  private def slowConnectToBloopServer(
+  private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
     for {
       possibleBuildTool <- supportedBuildTool
-      choseBuildServer = tables.buildServers.selectedServer()
-      if choseBuildServer.isEmpty || choseBuildServer.exists(
+      chosenBuildServer = tables.buildServers.selectedServer()
+      isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
         _ == BspConnector.BLOOP_SELECTED
       )
       buildChange <- possibleBuildTool match {
@@ -1718,8 +1712,10 @@ class MetalsLanguageServer(
             case None =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
-            case Some(digest) =>
+            case Some(digest) if isBloopOrEmpty =>
               slowConnectToBloopServer(forceImport, buildTool, digest)
+            case Some(digest) =>
+              reloadWorkspaceAndIndex(forceImport, buildTool, digest)
           }
         case None =>
           Future.successful(BuildChange.None)
@@ -2226,38 +2222,67 @@ class MetalsLanguageServer(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
     val isBuildChange = paths.exists(buildTools.isBuildRelated(workspace, _))
-    bspSession
-      .map { session =>
-        if (isBuildChange && session.main.isBloop) {
-          slowConnectToBloopServer(forceImport = false)
-        } else if (isBuildChange) {
-          scribe.info("Triggering a workspace/reload")
-
-          // TODO-BSP Figure out how we are to forward to the user that their
-          // new configuration may be invalid
-          reloadWorkspaceAndIndex(session).map(_ => BuildChange.Reloaded)
-        } else {
-          Future.successful(BuildChange.None)
-        }
-      }
-      .getOrElse(Future.successful(BuildChange.None))
+    if (isBuildChange) {
+      slowConnectToBuildServer(forceImport = false)
+    } else {
+      Future.successful(BuildChange.None)
+    }
   }
 
-  // TODO-BSP there needs to be a prompt here for the user to dismiss etc like we
-  // do in BloopInstall. Ideally we can re-use the logic because it's almost
-  // identical, but I'm unsure where to put it. For now, just reload every time.
-  private def reloadWorkspaceAndIndex(session: BspSession): Future[Unit] = {
-    session.main
-      .workspaceReload()
-      .asScala
-      .flatMap { _ =>
-        // TODO-BSP ensure that this is fully needed and not just a
-        // workspaceSymbols.indexClasspath() which would be much faster
-        profiledIndexWorkspace(() => {
-          val main = session.mainConnection
-          doctor.check(main.name, main.version)
-        })
-      }
+  // TODO-BSP in order for this to work correctly we need for this to
+  // be solved https://github.com/sbt/sbt/issues/5988
+  private def reloadWorkspaceAndIndex(
+      forceRefresh: Boolean,
+      buildTool: BuildTool,
+      checksum: String
+  ): Future[BuildChange] = {
+    bspSession match {
+      case None =>
+        scribe.warn("No build session currently active to reload.")
+        Future.successful(BuildChange.None)
+      case Some(session) =>
+        // TODO-BSP Much of this is duplicated from in BloopInstall, it prompts the user
+        // every time, and doesn't store the digest. Ideally we could re-use all of it,
+        // so refactor this down to do so.
+        val notification = tables.dismissedNotifications.ImportChanges
+        synchronized {
+
+          val (params, yes) =
+            Messages.ImportBuildChanges.params(buildTool.toString) ->
+              Messages.ImportBuild.yes
+
+          for {
+            userResponse <- languageClient
+              .showMessageRequest(params)
+              .asScala
+              .map { item =>
+                if (item == Messages.dontShowAgain) {
+                  notification.dismissForever()
+                }
+                Confirmation.fromBoolean(item == yes)
+              }
+            installResult <- {
+              if (userResponse.isYes) {
+                session.main
+                  .workspaceReload()
+                  .asScala
+                  .flatMap { _ =>
+                    // TODO-BSP ensure that this is fully needed and not just a
+                    // workspaceSymbols.indexClasspath() which would be much faster
+                    profiledIndexWorkspace(() => {
+                      val main = session.mainConnection
+                      doctor.check(main.name, main.version)
+                    })
+                  }
+                  .map(_ => BuildChange.Reloaded)
+              } else {
+                notification.dismiss(2, TimeUnit.MINUTES)
+                Future.successful(BuildChange.None)
+              }
+            }
+          } yield installResult
+        }
+    }
   }
 
   /**
