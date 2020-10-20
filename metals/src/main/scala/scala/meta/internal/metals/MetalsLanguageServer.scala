@@ -33,10 +33,12 @@ import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtServer
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
@@ -217,6 +219,7 @@ class MetalsLanguageServer(
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
+  private var workspaceReload: WorkspaceReload = _
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
   var tables: Tables = _
@@ -279,6 +282,11 @@ class MetalsLanguageServer(
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, clientConfig))
     buildTargets.setTables(tables)
+    workspaceReload = new WorkspaceReload(
+      workspace,
+      languageClient,
+      tables
+    )
     buildTools = new BuildTools(
       workspace,
       bspGlobalDirectories,
@@ -1052,19 +1060,12 @@ class MetalsLanguageServer(
                 userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
                   .exists(Ammonite.isAmmBuildTarget)
               ) {
-                // TODO-BSP Since we refactored the top part with Bloop out, we might as well
-                // refactor this logic out into the Ammonite package to clean this up a bit
                 languageClient
                   .showMessageRequest(AmmoniteJvmParametersChange.params())
                   .asScala
                   .flatMap {
                     case item if item == AmmoniteJvmParametersChange.restart =>
-                      ammonite
-                        .stop()
-                        .asScala
-                        .flatMap { _ =>
-                          ammonite.start()
-                        }
+                      ammonite.reload()
                     case _ =>
                       Future.successful(())
                   }
@@ -2231,56 +2232,58 @@ class MetalsLanguageServer(
 
   // TODO-BSP in order for this to work correctly we need for this to
   // be solved https://github.com/sbt/sbt/issues/5988
+  // For now we are just triggering the reload, and then persisting it
+  // as "Installed"
   private def reloadWorkspaceAndIndex(
       forceRefresh: Boolean,
       buildTool: BuildTool,
       checksum: String
   ): Future[BuildChange] = {
+    def reloadAndIndex(session: BspSession) = {
+      workspaceReload.persistChecksumStatus(Status.Started, buildTool)
+      session.main
+        .workspaceReload()
+        .asScala
+        .flatMap { _ =>
+          profiledIndexWorkspace(() => {
+            val main = session.mainConnection
+            doctor.check(main.name, main.version)
+          })
+        }
+        .map { _ =>
+          workspaceReload.persistChecksumStatus(Status.Installed, buildTool)
+          BuildChange.Reloaded
+        }
+    }
+
     bspSession match {
       case None =>
         scribe.warn("No build session currently active to reload.")
         Future.successful(BuildChange.None)
+      case Some(session) if forceRefresh => reloadAndIndex(session)
       case Some(session) =>
-        // TODO-BSP Much of this is duplicated from in BloopInstall, it prompts the user
-        // every time, and doesn't store the digest. Ideally we could re-use all of it,
-        // so refactor this down to do so.
-        val notification = tables.dismissedNotifications.ImportChanges
-        synchronized {
-
-          val (params, yes) =
-            Messages.ImportBuildChanges.params(buildTool.toString) ->
-              Messages.ImportBuild.yes
-
-          for {
-            userResponse <- languageClient
-              .showMessageRequest(params)
-              .asScala
-              .map { item =>
-                if (item == Messages.dontShowAgain) {
-                  notification.dismissForever()
-                }
-                Confirmation.fromBoolean(item == yes)
-              }
-            installResult <- {
-              if (userResponse.isYes) {
-                session.main
-                  .workspaceReload()
-                  .asScala
-                  .flatMap { _ =>
-                    // TODO-BSP ensure that this is fully needed and not just a
-                    // workspaceSymbols.indexClasspath() which would be much faster
-                    profiledIndexWorkspace(() => {
-                      val main = session.mainConnection
-                      doctor.check(main.name, main.version)
-                    })
+        workspaceReload.oldReloadResult(checksum) match {
+          case Some(status) =>
+            scribe.info(s"Skipping reload with status '${status.name}'")
+            Future.successful(BuildChange.None)
+          case None =>
+            synchronized {
+              for {
+                userResponse <- workspaceReload.requestReload(
+                  buildTool,
+                  checksum
+                )
+                installResult <- {
+                  if (userResponse.isYes) {
+                    reloadAndIndex(session)
+                  } else {
+                    tables.dismissedNotifications.ImportChanges
+                      .dismiss(2, TimeUnit.MINUTES)
+                    Future.successful(BuildChange.None)
                   }
-                  .map(_ => BuildChange.Reloaded)
-              } else {
-                notification.dismiss(2, TimeUnit.MINUTES)
-                Future.successful(BuildChange.None)
-              }
+                }
+              } yield installResult
             }
-          } yield installResult
         }
     }
   }

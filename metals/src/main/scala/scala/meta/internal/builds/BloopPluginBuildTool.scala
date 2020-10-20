@@ -12,8 +12,8 @@ abstract class BloopPluginBuildTool extends BuildTool {
   def bloopInstall(
       workspace: AbsolutePath,
       languageClient: MetalsLanguageClient,
-      systemProcess: List[String] => Future[BloopInstallResult]
-  ): Future[BloopInstallResult] =
+      systemProcess: List[String] => Future[WorkspaceReloadStatus]
+  ): Future[WorkspaceReloadStatus] =
     systemProcess(args(workspace))
 
   def args(workspace: AbsolutePath): List[String]

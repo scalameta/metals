@@ -45,6 +45,7 @@ object Messages {
     new MessageActionItem("Don't show again")
   def notNow: MessageActionItem =
     new MessageActionItem("Not now")
+
   object ImportBuildChanges {
     def yes: MessageActionItem =
       new MessageActionItem("Import changes")

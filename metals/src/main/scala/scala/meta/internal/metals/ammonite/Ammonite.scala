@@ -220,6 +220,8 @@ final class Ammonite(
     } else
       Future.unit
 
+  def reload(): Future[Unit] = stop().asScala.flatMap(_ => start())
+
   def start(doc: Option[AbsolutePath] = None): Future[Unit] = {
 
     disconnectOldBuildServer().onComplete {

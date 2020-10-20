@@ -1,0 +1,68 @@
+package scala.meta.internal.builds
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.builds.Digest.Status
+import scala.meta.internal.metals.Confirmation
+import scala.meta.internal.metals.Messages.ImportBuildChanges
+import scala.meta.internal.metals.Messages.dontShowAgain
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.Tables
+import scala.meta.io.AbsolutePath
+
+/**
+ * Class meant to help with the faciliation of reloading the bsp build.
+ *
+ * Note: (ckipp01) Some of this is very closely duplicated with that of
+ * the code in BloopInstall. A good refactoring would lead to being able
+ * to combine the logic from both of them to reduce duplication.
+ */
+final class WorkspaceReload(
+    workspace: AbsolutePath,
+    languageClient: MetalsLanguageClient,
+    tables: Tables
+) {
+
+  private val notification = tables.dismissedNotifications.ImportChanges
+
+  def oldReloadResult(digest: String): Option[WorkspaceReloadStatus] = {
+    if (tables.dismissedNotifications.ImportChanges.isDismissed) {
+      Some(WorkspaceReloadStatus.Dismissed)
+    } else {
+      tables.digests.last().collect {
+        case Digest(md5, status, _) if md5 == digest =>
+          WorkspaceReloadStatus.Duplicate(status)
+      }
+    }
+  }
+
+  def persistChecksumStatus(
+      status: Status,
+      buildTool: BuildTool
+  ): Unit = {
+    buildTool.digest(workspace).foreach { checksum =>
+      tables.digests.setStatus(checksum, status)
+    }
+  }
+
+  def requestReload(
+      buildTool: BuildTool,
+      digest: String
+  )(implicit ec: ExecutionContext): Future[Confirmation] = {
+    tables.digests.setStatus(digest, Status.Requested)
+    val (params, yes) =
+      ImportBuildChanges.params(buildTool.toString) ->
+        ImportBuildChanges.yes
+    languageClient
+      .showMessageRequest(params)
+      .asScala
+      .map { item =>
+        if (item == dontShowAgain) {
+          notification.dismissForever()
+        }
+        Confirmation.fromBoolean(item == yes)
+      }
+  }
+}

@@ -36,7 +36,9 @@ final class BloopInstall(
 
   override def toString: String = s"BloopInstall($workspace)"
 
-  def runUnconditionally(buildTool: BuildTool): Future[BloopInstallResult] = {
+  def runUnconditionally(
+      buildTool: BuildTool
+  ): Future[WorkspaceReloadStatus] = {
     buildTool.bloopInstall(
       workspace,
       languageClient,
@@ -57,7 +59,7 @@ final class BloopInstall(
   private def runArgumentsUnconditionally(
       buildTool: BuildTool,
       args: List[String]
-  ): Future[BloopInstallResult] = {
+  ): Future[WorkspaceReloadStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
       .run(
@@ -72,9 +74,9 @@ final class BloopInstall(
         )
       )
       .map {
-        case ExitCodes.Success => BloopInstallResult.Installed
-        case ExitCodes.Cancel => BloopInstallResult.Cancelled
-        case result => BloopInstallResult.Failed(result)
+        case ExitCodes.Success => WorkspaceReloadStatus.Installed
+        case ExitCodes.Cancel => WorkspaceReloadStatus.Cancelled
+        case result => WorkspaceReloadStatus.Failed(result)
       }
     processFuture.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
@@ -87,13 +89,15 @@ final class BloopInstall(
 
   private val notification = tables.dismissedNotifications.ImportChanges
 
-  private def oldInstallResult(digest: String): Option[BloopInstallResult] = {
+  private def oldInstallResult(
+      digest: String
+  ): Option[WorkspaceReloadStatus] = {
     if (notification.isDismissed) {
-      Some(BloopInstallResult.Dismissed)
+      Some(WorkspaceReloadStatus.Dismissed)
     } else {
       tables.digests.last().collect {
         case Digest(md5, status, _) if md5 == digest =>
-          BloopInstallResult.Duplicate(status)
+          WorkspaceReloadStatus.Duplicate(status)
       }
     }
   }
@@ -105,7 +109,7 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BuildTool,
       digest: String
-  ): Future[BloopInstallResult] =
+  ): Future[WorkspaceReloadStatus] =
     synchronized {
       oldInstallResult(digest) match {
         case Some(result) =>
@@ -125,7 +129,7 @@ final class BloopInstall(
               } else {
                 // Don't spam the user with requests during rapid build changes.
                 notification.dismiss(2, TimeUnit.MINUTES)
-                Future.successful(BloopInstallResult.Rejected)
+                Future.successful(WorkspaceReloadStatus.Rejected)
               }
             }
           } yield installResult
