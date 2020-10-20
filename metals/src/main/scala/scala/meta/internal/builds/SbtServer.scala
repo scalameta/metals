@@ -82,16 +82,24 @@ class SbtServer(
    * where the user has a fresh project and no `.bsp/sbt.json` even created
    * yet. This will kick off the process of ensuring that the version of sbt
    * being used supports bsp, launches it, and then attempts to initialize
-   * a bsp session.
+   * a bsp session. This will also prevent us from every starting multiple
+   * sessions.
    */
   def connect(): Future[Unit] = {
-    scribe.info("Attempting to connect to sbt BSP server...")
-    if (buildTools.isSbt && SbtBuildTool.workspaceSupportsBsp(workspace)) {
-      scribe.info("Suitable version of sbt found, attempting to connect...")
-      launchAndInit()
+    if (sbtProcess.isEmpty) {
+      scribe.info("Attempting to connect to sbt BSP server...")
+      if (buildTools.isSbt && SbtBuildTool.workspaceSupportsBsp(workspace)) {
+        scribe.info("Suitable version of sbt found, attempting to connect...")
+        launchAndInit()
+      } else {
+        scribe.warn(Messages.NoSbtBspSupport.getMessage())
+        langaugeClient.showMessage(Messages.NoSbtBspSupport)
+        Future.successful(())
+      }
     } else {
-      scribe.warn(Messages.NoSbtBspSupport.getMessage())
-      langaugeClient.showMessage(Messages.NoSbtBspSupport)
+      scribe.info(
+        "Skipping starting sbt process as Metals already has one running."
+      )
       Future.successful(())
     }
   }
@@ -151,6 +159,9 @@ class SbtServer(
 
   // TODO there isn't a lot of feedback for the user here to know what's happening until the connection is made.
   // It'd be nice to have a progress thing in here
+  // I hit on this today when updating to 1.4.1, and since it takes a long time, I it actually failed to connect
+  // and didn't give a lot of info to the user. If possible, we should even capture that message and show it to
+  // the user
   private def launchAndInit(): Future[Unit] = {
     runDisconnect().map { _ =>
       val (sbt, handler) = runSbtShell()

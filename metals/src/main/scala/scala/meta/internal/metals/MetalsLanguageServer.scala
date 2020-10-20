@@ -1027,9 +1027,9 @@ class MetalsLanguageServer(
         case Left(errors) =>
           errors.foreach { error => scribe.error(s"config error: $error") }
           Future.successful(())
-        case Right(value) =>
+        case Right(newUserConfig) =>
           val old = userConfig
-          userConfig = value
+          userConfig = newUserConfig
           if (userConfig.excludedPackages != old.excludedPackages) {
             excludedPackageHandler.update(userConfig.excludedPackages)
             workspaceSymbols.indexClasspath()
@@ -1037,51 +1037,42 @@ class MetalsLanguageServer(
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
-          val expectedBloopVersion = userConfig.currentBloopVersion
-          // TODO-BSP there is no gaurantee this is bloop now, this will need to change
-          val correctVersionRunning =
-            bspSession.map(_.version).contains(expectedBloopVersion)
-          val allVersionsDefined =
-            bspSession.nonEmpty && userConfig.bloopVersion.nonEmpty
-          val changedToNoVersion =
-            old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
-          val versionChanged = allVersionsDefined && !correctVersionRunning
-          val versionRevertedToDefault =
-            changedToNoVersion && !correctVersionRunning
-          if (versionRevertedToDefault || versionChanged) {
-            languageClient
-              .showMessageRequest(
-                Messages.BloopVersionChange.params()
-              )
-              .asScala
-              .flatMap {
-                case item if item == Messages.BloopVersionChange.reconnect =>
-                  bloopServers.shutdownServer()
-                  autoConnectToBuildServer().ignoreValue
-                case _ =>
-                  Future.successful(())
+
+          bspSession
+            .map { session =>
+              if (session.main.isBloop) {
+                bloopServers.ensureDesiredVersion(
+                  userConfig.currentBloopVersion,
+                  session.version,
+                  userConfig.bloopVersion.nonEmpty,
+                  old.bloopVersion.isDefined,
+                  () => autoConnectToBuildServer
+                )
+              } else if (
+                userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+                  .exists(Ammonite.isAmmBuildTarget)
+              ) {
+                // TODO-BSP Since we refactored the top part with Bloop out, we might as well
+                // refactor this logic out into the Ammonite package to clean this up a bit
+                languageClient
+                  .showMessageRequest(AmmoniteJvmParametersChange.params())
+                  .asScala
+                  .flatMap {
+                    case item if item == AmmoniteJvmParametersChange.restart =>
+                      ammonite
+                        .stop()
+                        .asScala
+                        .flatMap { _ =>
+                          ammonite.start()
+                        }
+                    case _ =>
+                      Future.successful(())
+                  }
+              } else {
+                Future.successful(())
               }
-          } else if (
-            userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
-              .exists(Ammonite.isAmmBuildTarget)
-          ) {
-            languageClient
-              .showMessageRequest(AmmoniteJvmParametersChange.params())
-              .asScala
-              .flatMap {
-                case item if item == AmmoniteJvmParametersChange.restart =>
-                  ammonite
-                    .stop()
-                    .asScala
-                    .flatMap { _ =>
-                      ammonite.start()
-                    }
-                case _ =>
-                  Future.successful(())
-              }
-          } else {
-            Future.successful(())
-          }
+            }
+            .getOrElse(Future.successful(()))
       }
     }.flatten.asJava
 
@@ -1420,12 +1411,13 @@ class MetalsLanguageServer(
         }
         autoConnectToBuildServer().asJavaObject
 
-      // NOTE: this command is only being used for sbt at the moment, but should
-      // probably should also handle the case where someone sends in bloop. More
-      // than likely that won't happen since bloop with be either running or it will
-      // be started with the user does a build import. However, in the future before
-      // we move away for "bloop-first", we should handle the others here.
-      // TODO-BSP make a ticket for this.
+      // NOTE: (ckipp01) this command is only being used for sbt at the moment,
+      // but should probably should also handle the case where someone sends in
+      // bloop. More than likely that won't happen since bloop with be either
+      // running or it will be started with the user does a build import.
+      // However, in the future before we move away for "bloop-first", we
+      // should handle the others here. A good time to possibly do this is if
+      // we also add in the ability to start Mill bsp.
       case ServerCommands.BuildServerStart() =>
         val possibleArg =
           Option(params.getArguments())
@@ -1735,7 +1727,6 @@ class MetalsLanguageServer(
     } yield buildChange
   }
 
-  // TODO-BSP this should no longer just connect to bloop
   private def slowConnectToBloopServer(
       forceImport: Boolean,
       buildTool: BuildTool,
@@ -1771,11 +1762,6 @@ class MetalsLanguageServer(
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     scribe.info("Attempting quick connect to the build server")
     if (!buildTools.isAutoConnectable) {
-      // TODO-BSP this shows a warning and then the prompt to import. Think of a
-      // better flow for this because ideally I'd like to catch the case where
-      // a user triggers a `build-connect` when thre is no server running, and then
-      // we warn them that no server is running
-      //languageClient.showMessage(Messages.FoundNoServerToConnectTo)
       scribe.warn("Build server is not auto-connectable.")
       Future.successful(BuildChange.None)
     } else {
@@ -2265,6 +2251,8 @@ class MetalsLanguageServer(
       .workspaceReload()
       .asScala
       .flatMap { _ =>
+        // TODO-BSP ensure that this is fully needed and not just a
+        // workspaceSymbols.indexClasspath() which would be much faster
         profiledIndexWorkspace(() => {
           val main = session.mainConnection
           doctor.check(main.name, main.version)

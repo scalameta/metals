@@ -9,6 +9,8 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
+import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import bloop.bloopgun.BloopgunCli
@@ -26,7 +28,7 @@ import org.eclipse.lsp4j.services.LanguageClient
  * coursier launch ch.epfl.scala:bloopgun-core_2.12:{bloop-version} -- about
  *
  * Eventually, this class may be superseded by "BSP connection protocol":
- * https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#bsp-connection-protocol
+ * https://build-server-protocol.github.io/docs/server-discovery.html
  */
 final class BloopServers(
     workspace: AbsolutePath,
@@ -69,6 +71,49 @@ final class BloopServers(
         tables.dismissedNotifications.ReconnectBsp,
         config
       )
+  }
+
+  /**
+   * Ensure Bloop is running the inteded version that the user has passed
+   * in via UserConfiguration. If not, shut Bloop down and reconnect to it.
+   *
+   * @param expectedVersion desired version that the user has passed in. This
+   *                        could either be a newly passed in version from the
+   *                            user or the default Bloop version.
+   * @param runningVersion the current running version of Bloop.
+   * @param userDefinedNew whether or not the user has defined a new version.
+   * @param userDefinedOld whether or not the user has the version running
+   *                       defined or if they are just running the default.
+   * @param reconnect      function to connect back to the build server.
+   */
+  def ensureDesiredVersion(
+      expectedVersion: String,
+      runningVersion: String,
+      userDefinedNew: Boolean,
+      userDefinedOld: Boolean,
+      reconnect: () => Future[BuildChange]
+  ): Future[Unit] = {
+    val correctVersionRunning = expectedVersion == runningVersion
+    val changedToNoVersion = userDefinedOld && !userDefinedNew
+    val versionChanged = userDefinedNew && !correctVersionRunning
+    val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
+
+    if (versionRevertedToDefault || versionChanged) {
+      languageClient
+        .showMessageRequest(
+          Messages.BloopVersionChange.params()
+        )
+        .asScala
+        .flatMap {
+          case item if item == Messages.BloopVersionChange.reconnect =>
+            shutdownServer()
+            reconnect().ignoreValue
+          case _ =>
+            Future.successful(())
+        }
+    } else {
+      Future.successful(())
+    }
   }
 
   private def connectToLauncher(

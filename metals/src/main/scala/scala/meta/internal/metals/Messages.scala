@@ -19,12 +19,6 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  */
 object Messages {
 
-  // TODO-BSP make sure to improve this message so it's actionable
-  val FoundNoServerToConnectTo = new MessageParams(
-    MessageType.Warning,
-    "Found no build server to connect to. Try to start a server with the `start-build-server` command."
-  )
-
   val NoSbtBspSupport = new MessageParams(
     MessageType.Warning,
     s"Unable to start sbt bsp server. Make sure you have sbt >= ${SbtBuildTool.firstVersionWithBsp} defined in your build.properties file."
