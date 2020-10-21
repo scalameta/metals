@@ -268,6 +268,9 @@ class SbtProcessHandler(workspace: AbsolutePath)
   val initialized: Promise[Boolean] = Promise[Boolean]()
   val completeProcess: Promise[Int] = Promise[Int]()
 
+  // TODO-BSP I need to also add in a check to catch the scenario where the
+  // user tries to start sbt, but their build is invalid right away. Probably
+  // not that common, but this bit me when testing
   override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
     val msg = StandardCharsets.UTF_8.decode(buffer).toString()
     if (sbtLogFile.isFile) sbtLogFile.appendText(msg)

@@ -39,6 +39,11 @@ object Messages {
       "See the logs for more details. "
   )
 
+  val ReloadProjectFailed = new MessageParams(
+    MessageType.Error,
+    "Reloading your project failed, no functionality will work. See the log for more details"
+  )
+
   def bloopInstallProgress(buildToolExecName: String) =
     new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
   def dontShowAgain: MessageActionItem =

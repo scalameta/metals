@@ -2230,29 +2230,30 @@ class MetalsLanguageServer(
     }
   }
 
-  // TODO-BSP in order for this to work correctly we need for this to
-  // be solved https://github.com/sbt/sbt/issues/5988
-  // For now we are just triggering the reload, and then persisting it
-  // as "Installed"
   private def reloadWorkspaceAndIndex(
       forceRefresh: Boolean,
       buildTool: BuildTool,
       checksum: String
   ): Future[BuildChange] = {
-    def reloadAndIndex(session: BspSession) = {
+    def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload.persistChecksumStatus(Status.Started, buildTool)
-      session.main
+
+      session
         .workspaceReload()
-        .asScala
-        .flatMap { _ =>
+        .map { _ =>
+          scribe.info("Correctly reloaded workspace")
           profiledIndexWorkspace(() => {
             val main = session.mainConnection
             doctor.check(main.name, main.version)
           })
-        }
-        .map { _ =>
           workspaceReload.persistChecksumStatus(Status.Installed, buildTool)
           BuildChange.Reloaded
+        }
+        .recoverWith { case NonFatal(e) =>
+          scribe.error(s"Unable to reload workspace: ${e.getMessage()}")
+          workspaceReload.persistChecksumStatus(Status.Failed, buildTool)
+          languageClient.showMessage(Messages.ReloadProjectFailed)
+          Future.successful(BuildChange.Failed)
         }
     }
 

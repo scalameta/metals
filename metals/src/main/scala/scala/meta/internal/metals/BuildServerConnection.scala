@@ -105,10 +105,15 @@ class BuildServerConnection private (
     register(server => server.buildTargetCleanCache(params))
   }
 
-  // TODO-BSP to be thorough we should probably add in a check here to ensure
-  // the server suppports `canReload`
-  def workspaceReload(): CompletableFuture[Object] = {
-    register(server => server.workspaceReload())
+  def workspaceReload(): Future[Object] = {
+    if (initialConnection.capabilities.getCanReload()) {
+      register(server => server.workspaceReload()).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `workspace/reload`, unable to reload"
+      )
+      Future.successful(null)
+    }
   }
 
   def mainClasses(
@@ -265,7 +270,8 @@ object BuildServerConnection {
           server,
           result.getDisplayName(),
           stopListening,
-          result.getVersion()
+          result.getVersion(),
+          result.getCapabilities()
         )
       }
     }
@@ -337,7 +343,8 @@ object BuildServerConnection {
       server: MetalsBuildServer,
       displayName: String,
       cancelServer: Cancelable,
-      version: String
+      version: String,
+      capabilities: BuildServerCapabilities
   ) {
 
     def cancelables: List[Cancelable] =

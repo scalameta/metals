@@ -32,8 +32,8 @@ case class BspSession(
 
   def version: String = main.version
 
-  // TODO-BSP it is probably best to impliment this in here
-  //def reload = connections.map(connection => connection.workspaceReload())
+  def workspaceReload(): Future[List[Object]] =
+    Future.sequence(connections.map(conn => conn.workspaceReload()))
 }
 
 object BspSession {
