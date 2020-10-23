@@ -33,6 +33,11 @@ public interface PresentationCompilerConfig {
     }
 
     /**
+     * Returns true if user didn't modify symbol prefixes
+     */
+    boolean isDefaultSymbolPrefixes();
+
+    /**
      * What text format to use for rendering `override def` labels for completion items.
      */
     OverrideDefFormat overrideDefFormat();

@@ -125,13 +125,13 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |  def foo(param: ArrayDeque@@)
         |}
         |""".stripMargin,
-    """|ju.ArrayDeque[$0]
+    """|ArrayDeque[$0]
        |""".stripMargin,
     compat = Map(
       "2.13" ->
-        """|ju.ArrayDeque[$0]
-           |mutable.ArrayDeque
-           |mutable.ArrayDequeOps
+        """|ArrayDeque[$0]
+           |ArrayDeque
+           |ArrayDequeOps
            |""".stripMargin
     )
   )

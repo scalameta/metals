@@ -125,11 +125,11 @@ class ImportMissingSymbolLspSuite
        |
        |import scala.concurrent.Future
        |import java.time.Instant
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ListBuffer
        |
        |object A {
        |  val f = Future.successful(Instant.now)
-       |  val b = mutable.ListBuffer.newBuilder[Int]
+       |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
     expectNoDiagnostics = false
@@ -156,11 +156,11 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |import java.time.Instant
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ListBuffer
        |
        |object A {
        |  val f = Future.successful(Instant.now)
-       |  val b = mutable.ListBuffer.newBuilder[Int]
+       |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
     expectNoDiagnostics = false
@@ -188,12 +188,12 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |import java.time.Instant
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ListBuffer
        |
        |object A {
        |  val f = Future.successful(Instant.now)
-       |  val b = mutable.ListBuffer.newBuilder[Int]
-       |  val t = Future.successful(mutable.ListBuffer.empty)
+       |  val b = ListBuffer.newBuilder[Int]
+       |  val t = Future.successful(ListBuffer.empty)
        |}
        |""".stripMargin,
     expectNoDiagnostics = false

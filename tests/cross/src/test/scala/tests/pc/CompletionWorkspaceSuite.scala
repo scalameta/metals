@@ -231,10 +231,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|import java.{util => ju}
+    """|import java.util.ArrayDeque
        |object Main {
        |  def foo(): Unit = null match {
-       |    case x: ju.ArrayDeque =>
+       |    case x: ArrayDeque =>
        |  }
        |}
        |""".stripMargin,
@@ -386,11 +386,11 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  def foo: ArrayBuffer@@[Int] = ???
        |}
        |""".stripMargin,
-    """|import scala.collection.mutable
+    """|import scala.collection.mutable.ArrayBuffer
        |
        |object Main {
        |  @noinline
-       |  def foo: mutable.ArrayBuffer[Int] = ???
+       |  def foo: ArrayBuffer[Int] = ???
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable"
@@ -406,10 +406,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|package annotationclass
        |
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ArrayBuffer
        |object Main {
        |  @deprecated("", "")
-       |  class Foo extends mutable.ArrayBuffer[Int]
+       |  class Foo extends ArrayBuffer[Int]
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable"
@@ -425,10 +425,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|package annotationtrait
        |
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ArrayBuffer
        |object Main {
        |  @deprecated("", "")
-       |  trait Foo extends mutable.ArrayBuffer[Int]
+       |  trait Foo extends ArrayBuffer[Int]
        |}
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable"

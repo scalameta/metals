@@ -8,6 +8,7 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.pc.AutoImportsResult
 
 import munit.Location
+import munit.TestOptions
 import tests.BaseCodeActionSuite
 import tests.BuildInfoVersions
 
@@ -53,11 +54,47 @@ class AutoImportsSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "symbol-prefix-edit",
+    "symbol-no-prefix",
     """|package a
        |
        |object A {
-       |  val l = new <<ArrayList>>[Int]
+       |  val uuid = <<UUID>>.randomUUID()
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.util.UUID
+       |
+       |object A {
+       |  val uuid = UUID.randomUUID()
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "symbol-prefix-existing",
+    """|package a
+       |
+       |object A {
+       |  val uuid = <<UUID>>.randomUUID()
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.util.UUID
+       |
+       |object A {
+       |  val uuid = UUID.randomUUID()
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "symbol-prefix",
+    """|package a
+       |
+       |object A {
+       |  val l : <<Map>>[String, Int] = ???
        |}
        |""".stripMargin,
     """|package a
@@ -65,7 +102,7 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |import java.{util => ju}
        |
        |object A {
-       |  val l = new ju.ArrayList[Int]
+       |  val l : ju.Map[String, Int] = ???
        |}
        |""".stripMargin
   )
@@ -75,7 +112,7 @@ class AutoImportsSuite extends BaseCodeActionSuite {
     """|package a
        |
        |object A {
-       |  val l = s"${<<ListBuffer>>(2)}"
+       |  val l = s"${<<Seq>>(2)}"
        |}
        |""".stripMargin,
     """|package a
@@ -83,9 +120,10 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |import scala.collection.mutable
        |
        |object A {
-       |  val l = s"${mutable.ListBuffer(2)}"
+       |  val l = s"${mutable.Seq(2)}"
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    selection = 1
   )
 
   checkEdit(
@@ -119,10 +157,10 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     """|package a
        |
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ListBuffer
        |
        |package object b {
-       |  val l = s"${mutable.ListBuffer(2)}"
+       |  val l = s"${ListBuffer(2)}"
        |}
        |""".stripMargin
   )
@@ -141,10 +179,10 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |package b
        |package c
        |
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ListBuffer
        |
        |object A {
-       |  val l = s"${mutable.ListBuffer(2)}"
+       |  val l = s"${ListBuffer(2)}"
        |}
        |""".stripMargin
   )
@@ -166,17 +204,16 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |package c
        |
        |import scala.concurrent.Future
-       |import scala.collection.mutable
+       |import scala.collection.mutable.ListBuffer
        |
        |object A {
-       |  val l = s"${mutable.ListBuffer(2)}"
+       |  val l = s"${ListBuffer(2)}"
        |}
        |""".stripMargin
   )
 
-  checkEdit(
+  checkAmmoniteEdit(
     "first-auto-import-amm-script",
-    "script.sc.scala",
     ammoniteWrapper(
       """val p: <<Path>> = ???
         |""".stripMargin
@@ -192,9 +229,8 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       )
   )
 
-  checkEdit(
+  checkAmmoniteEdit(
     "second-auto-import-amm-script",
-    "script.sc.scala",
     ammoniteWrapper(
       """import java.nio.file.Files
         |val p: <<Path>> = ???
@@ -239,23 +275,39 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       )
     }
 
-  def checkEdit(name: String, original: String, expected: String)(implicit
+  def checkEdit(
+      name: TestOptions,
+      original: String,
+      expected: String,
+      selection: Int = 0
+  )(implicit
       loc: Location
   ): Unit =
-    checkEdit(name, "A.scala", original, expected)
+    checkEditSelection(name, "A.scala", original, expected, selection)
 
-  def checkEdit(
-      name: String,
+  def checkAmmoniteEdit(
+      name: TestOptions,
+      original: String,
+      expected: String,
+      selection: Int = 0
+  )(implicit
+      loc: Location
+  ): Unit =
+    checkEditSelection(name, "script.sc.scala", original, expected, selection)
+
+  def checkEditSelection(
+      name: TestOptions,
       filename: String,
       original: String,
-      expected: String
+      expected: String,
+      selection: Int
   )(implicit
       loc: Location
   ): Unit =
     test(name) {
       val imports = getAutoImports(original, filename)
-      if (imports.isEmpty) fail("obtained no imports")
-      val edits = imports.head.edits().asScala.toList
+      if (imports.size <= selection) fail("obtained no expected imports")
+      val edits = imports(selection).edits().asScala.toList
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
       assertNoDiff(obtained, expected)
