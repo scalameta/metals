@@ -298,6 +298,11 @@ object Messages {
     }
   }
 
+  // Don't confuse this with the "multiple build tools that can be servers"
+  // message up above.  That one focuses not on multiple .bsp/<tool>.json
+  // entries, but rather having multiple build tools in a workspace that could
+  // potentially be a build server, whereas this one focuses on existing .bsp
+  // files that already exist.
   object SelectBspServer {
     case class Request(
         params: ShowMessageRequestParams,
