@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
 
+import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
@@ -26,17 +27,18 @@ import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
+import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.NewProjectProvider
-import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.builds.SbtServer
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
@@ -187,6 +189,7 @@ class MetalsLanguageServer(
   // These can't be instantiated until we know the workspace root directory.
   private var shellRunner: ShellRunner = _
   private var bloopInstall: BloopInstall = _
+  private var bspConfigGenerator: BspConfigGenerator = _
   private var diagnostics: Diagnostics = _
   private var warnings: Warnings = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
@@ -196,7 +199,6 @@ class MetalsLanguageServer(
   private var semanticdbs: Semanticdbs = _
   private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
-  private var sbtServer: SbtServer = _
   private var bspServers: BspServers = _
   private var bspConnector: BspConnector = _
   private var codeLensProvider: CodeLensProvider = _
@@ -351,6 +353,12 @@ class MetalsLanguageServer(
       tables,
       shellRunner
     )
+    bspConfigGenerator = new BspConfigGenerator(
+      workspace,
+      languageClient,
+      buildTools,
+      shellRunner
+    )
     newProjectProvider = new NewProjectProvider(
       languageClient,
       statusBar,
@@ -375,21 +383,8 @@ class MetalsLanguageServer(
       bspGlobalDirectories,
       clientConfig.initialConfig
     )
-    sbtServer = new SbtServer(
-      workspace,
-      buildTools,
-      bspServers,
-      shellRunner,
-      tables,
-      () => userConfig,
-      () => disconnectOldBuildServer(),
-      session => connectToNewBuildServer(session).map(_ => ()),
-      languageClient,
-      statusBar
-    )
     bspConnector = new BspConnector(
       bloopServers,
-      sbtServer,
       bspServers,
       buildTools,
       languageClient,
@@ -1408,41 +1403,70 @@ class MetalsLanguageServer(
       case ServerCommands.RestartBuildServer() =>
         bspSession.foreach { session =>
           if (session.main.isBloop) bloopServers.shutdownServer()
-          else sbtServer.disconnect()
         }
         autoConnectToBuildServer().asJavaObject
 
-      // NOTE: (ckipp01) this command is only being used for sbt at the moment,
-      // but should probably should also handle the case where someone sends in
-      // bloop. More than likely that won't happen since bloop with be either
-      // running or it will be started with the user does a build import.
-      // However, in the future before we move away for "bloop-first", we
-      // should handle the others here. A good time to possibly do this is if
-      // we also add in the ability to start Mill bsp.
-      case ServerCommands.BuildServerStart() =>
-        val possibleArg =
-          Option(params.getArguments())
-            .flatMap(_.asScala.headOption)
+      case ServerCommands.GenerateBspConfig() =>
+        val servers: List[BuildTool with BuildServerProvider] =
+          buildTools.loadSupported().collect {
+            case buildTool: BuildServerProvider => buildTool
+          }
 
-        val possibleBuildServer = possibleArg match {
-          case Some(arg: JsonPrimitive) =>
-            Some(arg.getAsString())
-          case _ => None
-        }
+        def ensureAndConnect(
+            buildTool: BuildTool,
+            status: BspConfigGenerationStatus
+        ): Unit =
+          status match {
+            case Generated =>
+              tables.buildServers.chooseServer(buildTool.executableName)
+              quickConnectToBuildServer().ignoreValue
+            case Cancelled => ()
+            case Failed(exit) =>
+              exit match {
+                case Left(exitCode) =>
+                  scribe.error(
+                    s"Create of .bsp failed with exit code: $exitCode"
+                  )
+                  languageClient.showMessage(
+                    Messages.BspProvider.genericUnableToCreateConfig
+                  )
+                case Right(message) =>
+                  languageClient.showMessage(
+                    Messages.BspProvider.unableToCreateConfigFromMessage(
+                      message
+                    )
+                  )
+              }
+          }
 
-        possibleBuildServer match {
-          case Some(SbtBuildTool.name) => sbtServer.connect().asJavaObject
-          case Some(buildTool) =>
-            val message = Messages.unableToStartServer(buildTool)
-            scribe.warn(
-              message.getMessage()
-            )
-            languageClient.showMessage(message)
-            Future.successful(()).asJavaObject
-          case _ =>
-            scribe.error("Must pass in arg to `build-server-start`.")
-            Future.successful(()).asJavaObject
-        }
+        (servers match {
+          case Nil =>
+            scribe.warn(Messages.BspProvider.noBuildToolFound.toString())
+            languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
+            Future.successful(())
+          case buildTool :: Nil =>
+            buildTool
+              .generateBspConfig(
+                workspace,
+                languageClient,
+                args =>
+                  bspConfigGenerator.runUnconditionally(
+                    buildTool,
+                    args
+                  )
+              )
+              .map(status => ensureAndConnect(buildTool, status))
+          case buildTools =>
+            bspConfigGenerator
+              .chooseAndGenerate(buildTools)
+              .map {
+                case (
+                      buildTool: BuildTool,
+                      status: BspConfigGenerationStatus
+                    ) =>
+                  ensureAndConnect(buildTool, status)
+              }
+        }).asJavaObject
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
@@ -1455,7 +1479,7 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
         (for {
-          isSwitched <- bspConnector.switchBuildServer()
+          isSwitched <- bspConnector.switchBuildServer(workspace)
           _ <- {
             if (isSwitched) quickConnectToBuildServer()
             else Future.successful(())
@@ -1693,6 +1717,7 @@ class MetalsLanguageServer(
       case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
       case buildTools =>
         for {
+          // TODO-BSP this check shouldn't just be for bloop probably
           Some(buildTool) <- bloopInstall.checkForChosenBuildTool(buildTools)
         } yield isCompatibleVersion(buildTool)
     }

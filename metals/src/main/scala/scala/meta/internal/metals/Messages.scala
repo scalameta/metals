@@ -24,6 +24,34 @@ object Messages {
     s"Unable to start sbt bsp server. Make sure you have sbt >= ${SbtBuildTool.firstVersionWithBsp} defined in your build.properties file."
   )
 
+  object BspProvider {
+    val noBuildToolFound = new MessageParams(
+      MessageType.Warning,
+      "No build tool found to generate a BSP config."
+    )
+    val genericUnableToCreateConfig = new MessageParams(
+      MessageType.Error,
+      "Unable to create bsp config."
+    )
+
+    def unableToCreateConfigFromMessage(message: String) = new MessageParams(
+      MessageType.Error,
+      message
+    )
+
+    def params(buildTools: List[BuildTool]): ShowMessageRequestParams = {
+      val messageActionItems =
+        buildTools.map(bt => new MessageActionItem(bt.executableName))
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        "Multiple build tools found that could be build servers. Which would you like to use?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(messageActionItems.asJava)
+      params
+    }
+  }
+
   def unableToStartServer(buildTool: String) = new MessageParams(
     MessageType.Warning,
     s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually."
@@ -622,6 +650,6 @@ object Messages {
       )
       params
     }
-
   }
+
 }

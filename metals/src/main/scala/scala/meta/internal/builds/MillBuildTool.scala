@@ -9,7 +9,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 case class MillBuildTool(userConfig: () => UserConfiguration)
-    extends BloopPluginBuildTool {
+    extends BuildTool
+    with BloopInstallProvider {
 
   private val predefScriptName = "predef.sc"
 
@@ -24,7 +25,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def redirectErrorOutput: Boolean = true
 
-  override def args(workspace: AbsolutePath): List[String] = {
+  override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
 
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")

@@ -7,7 +7,7 @@ import ch.epfl.scala.bsp4j.BspConnectionDetails
  * or not, and also distinguises between multiple resolved .bsp/<entries> and a
  * single resolved entry such as .bsp/sbt.json
  */
-sealed trait BspResolvedResult
+sealed trait BspResolvedResult extends Product with Serializable
 case object ResolvedNone extends BspResolvedResult
 case object ResolvedBloop extends BspResolvedResult
 case class ResolvedBspOne(details: BspConnectionDetails)

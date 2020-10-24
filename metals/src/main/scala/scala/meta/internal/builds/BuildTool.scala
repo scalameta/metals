@@ -9,7 +9,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
-abstract class BuildTool {
+trait BuildTool {
 
   /**
    * Export the build to Bloop

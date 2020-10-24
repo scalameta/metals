@@ -7,7 +7,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.builds.SbtServer
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
@@ -27,7 +26,6 @@ object BspConnector {
 
 class BspConnector(
     bloopServers: BloopServers,
-    sbtServer: SbtServer,
     bspServers: BspServers,
     buildTools: BuildTools,
     client: LanguageClient,
@@ -70,22 +68,13 @@ class BspConnector(
             "Attempting to start a bloop connection from previous choice"
           )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
-        case ResolvedBspOne(details) if details.getName == SbtBuildTool.name =>
+        case ResolvedBspOne(details)
+            if details.getName() == SbtBuildTool.name =>
           scribe.info(
             s"Attempting to start a new connection to ${details.getName()} from previous choice..."
           )
-          // NOTE: we explicity start another sbt process here as simply using
-          // newServer here wil indeed start sbt, but not correctly star the
-          // bsp sessions. So before we start the session we ensure that sbt is
-          // running, and then connect. However, this isn't needed with sbt >=
-          // 1.4.1
-          val (_, processHandler) = sbtServer.runSbtShell()
-          processHandler.initialized.future.flatMap { _ =>
-            scribe.info(
-              s"sbt up and running, attempting to start a bsp session..."
-            )
-            bspServers.newServer(workspace, details).map(Some(_))
-          }
+          SbtBuildTool.writeSbtBspPlugin(workspace)
+          bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedBspOne(details) =>
           scribe.info(
             s"Attempting to start a new connection to ${details.getName()} from previous choice..."
@@ -132,6 +121,10 @@ class BspConnector(
       bspServerConnections: List[BspConnectionDetails],
       isBloop: Boolean
   ): Future[BspResolvedResult] = {
+    // TODO-BSP instead of showing bloop (default) it might be better
+    // to show the chosen build server instead like
+    // bloop (current)
+    // sbt
     val bloop = new BspConnectionDetails(
       "bloop (default)",
       ImmutableList.of(),
@@ -164,7 +157,7 @@ class BspConnector(
   /**
    * Runs "Switch build server" command, returns true if build server was changed
    */
-  def switchBuildServer(): Future[Boolean] = {
+  def switchBuildServer(workspace: AbsolutePath): Future[Boolean] = {
     val bloopPresent = buildTools.isBloop
     bspServers.findAvailableServers() match {
       case Nil =>
@@ -185,12 +178,10 @@ class BspConnector(
               tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
               true
             }
-          case ResolvedBspOne(details) =>
-            if (currentBsp.contains(details.getName)) false
-            else {
-              tables.buildServers.chooseServer(details.getName)
-              true
-            }
+          case ResolvedBspOne(details)
+              if !currentBsp.contains(details.getName) =>
+            tables.buildServers.chooseServer(details.getName)
+            true
           case _ =>
             false
         }
