@@ -20,10 +20,6 @@ import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
 import org.eclipse.lsp4j.services.LanguageClient
 
-object BspConnector {
-  final val BLOOP_SELECTED = "BLOOP"
-}
-
 class BspConnector(
     bloopServers: BloopServers,
     bspServers: BspServers,
@@ -47,7 +43,7 @@ class BspConnector(
         bspServers
           .findAvailableServers()
           .find(_.getName == sel)
-          .map(x => ResolvedBspOne(x))
+          .map(ResolvedBspOne)
     }
   }
 
@@ -64,21 +60,12 @@ class BspConnector(
           scribe.info("No build server found")
           Future.successful(None)
         case ResolvedBloop =>
-          scribe.info(
-            "Attempting to start a bloop connection from previous choice"
-          )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
-          scribe.info(
-            s"Attempting to start a new connection to ${details.getName()} from previous choice..."
-          )
           SbtBuildTool.writeSbtBspPlugin(workspace)
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedBspOne(details) =>
-          scribe.info(
-            s"Attempting to start a new connection to ${details.getName()} from previous choice..."
-          )
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedMultiple(_, _) => Future.successful(None)
       }
@@ -119,23 +106,21 @@ class BspConnector(
 
   private def askUser(
       bspServerConnections: List[BspConnectionDetails],
-      isBloop: Boolean
+      isBloop: Boolean,
+      currentBsp: Option[String]
   ): Future[BspResolvedResult] = {
-    // TODO-BSP instead of showing bloop (default) it might be better
-    // to show the chosen build server instead like
-    // bloop (current)
-    // sbt
     val bloop = new BspConnectionDetails(
-      "bloop (default)",
+      "bloop",
       ImmutableList.of(),
       userConfig().currentBloopVersion,
       "",
       ImmutableList.of()
     )
+
     val availableServers =
       if (isBloop) bloop :: bspServerConnections else bspServerConnections
 
-    val query = Messages.SelectBspServer.request(availableServers)
+    val query = Messages.SelectBspServer.request(availableServers, currentBsp)
     for {
       item <- client.showMessageRequest(query.params).asScala
     } yield {
@@ -149,7 +134,6 @@ class BspConnector(
           }
         }
         .getOrElse(ResolvedNone)
-      scribe.info(s"selected build server: $chosenMaybe")
       result
     }
   }
@@ -171,7 +155,7 @@ class BspConnector(
         Future.successful(false)
       case availableServers =>
         val currentBsp = tables.buildServers.selectedServer()
-        askUser(availableServers, bloopPresent).map {
+        askUser(availableServers, bloopPresent, currentBsp).map {
           case ResolvedBloop =>
             if (currentBsp.contains(BspConnector.BLOOP_SELECTED)) false
             else {
@@ -187,5 +171,8 @@ class BspConnector(
         }
     }
   }
+}
 
+object BspConnector {
+  final val BLOOP_SELECTED = "BLOOP"
 }

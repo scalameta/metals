@@ -16,7 +16,7 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.MessageActionItem
 
 /**
- * Runs a process to create a .bsp entry for a give buildtool.
+ * Runs a process to create a .bsp entry for a givev buildtool.
  */
 final class BspConfigGenerator(
     workspace: AbsolutePath,
@@ -37,6 +37,10 @@ final class BspConfigGenerator(
       )
       .map(BspConfigGenerationStatus.fromExitCode)
 
+  /**
+   * Given multiple build tools that are all BuildServerProviders, allow the
+   * choose the desired build server and then connect to it.
+   */
   def chooseAndGenerate(
       buildTools: List[BuildTool with BuildServerProvider]
   ): Future[(BuildTool, BspConfigGenerationStatus)] = {

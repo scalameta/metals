@@ -14,10 +14,6 @@ import scala.meta.io.AbsolutePath
 
 /**
  * Class meant to help with the faciliation of reloading the bsp build.
- *
- * Note: (ckipp01) Some of this is very closely duplicated with that of
- * the code in BloopInstall. A good refactoring would lead to being able
- * to combine the logic from both of them to reduce duplication.
  */
 final class WorkspaceReload(
     workspace: AbsolutePath,

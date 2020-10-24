@@ -308,7 +308,8 @@ object Messages {
     def isSelectBspServer(params: ShowMessageRequestParams): Boolean =
       params.getMessage == message
     def request(
-        candidates: List[BspConnectionDetails]
+        candidates: List[BspConnectionDetails],
+        currentBsp: Option[String]
     ): Request = {
       val params = new ShowMessageRequestParams()
       params.setMessage(message)
@@ -322,9 +323,17 @@ object Messages {
       // - name conflicts: disambiguate conflicting names by version number
       // - name+version conflicts: append random characters to the title.
       val items = candidates.map { candidate =>
+        val currentlyUsing =
+          if (
+            currentBsp.exists(
+              _.toLowerCase == candidate.getName().toLowerCase()
+            )
+          )
+            " (currently using)"
+          else ""
         val nameConflicts = candidates.count(_.getName == candidate.getName)
         val title: String = if (nameConflicts < 2) {
-          candidate.getName
+          candidate.getName + currentlyUsing
         } else {
           val versionConflicts = candidates.count { c =>
             c.getName == candidate.getName &&
