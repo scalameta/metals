@@ -57,6 +57,46 @@ Finally, once `bloopInstall` is finished, execute the "Connect to build server"
 command (id: `build.connect`) command to tell Metals to establish a connection
 with the Bloop build server.
 
+## sbt Build Server
+
+As of sbt 1.4.1, Metals has integrated support for the sbt BSP server. If you'd
+like to use the sbt server as an alternative to Bloop (which is the default),
+then at any time while in an sbt workspace you can choose to switch in multiple
+ways.
+
+_Note_: that if you are unfamiliar with the differences that the different build
+servers may offer, then simply stick with the default (Bloop), which is has
+great integrated stable support in Metals.
+
+### Generating a `.bsp/sbt.json` file if one doesn't exist
+
+More than likely if you're using sbt >= 1.4.1, you'll have already see this file
+exist. However, if you're in a fresh workspace or it doesn't exist for some
+reason, you can execute a `metals.generate-bsp-config` command via the command
+palette, which will automatically detect that you're in a sbt workspace and
+generate the necessary file. After the file generation, Metals will then
+automatically connect to sbt. From this point on, you'll be using sbt instead of
+Bloop as your build server.
+
+### Connect to sbt build server
+
+If your workspace already has a `.bsp/sbt.json` file, then you can switch from
+using Bloop to sbt as a build server by executing a `metals.bsp-switch` command
+from the command palette.  This command will recognize the `.bsp/sbt.json` file,
+and then connect to the sbt build server. After the connection is made, you'll
+be using sbt instead of Bloop as your build server.
+
+### Switching back to Bloop
+
+If you'd like to switch back to using Bloop as your build server, there are
+multiple ways for you to do this.
+
+1. Using the same `metals.bsp-switch` command as up above, and select "bloop".
+2. Use the `metals.reset-choice` functionality and choose to reset the "Build
+   Server Selection". Then follow this with the `metals.build-restart` command
+   which will disconnect you from the sbt build server, and then connect you
+   back to the default Bloop server.
+
 ## Troubleshooting
 
 Before reporting an issue, check if your problem is solved with one of the
