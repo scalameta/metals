@@ -19,12 +19,14 @@ class PopupChoiceReset(
 
   def reset(value: String)(implicit ec: ExecutionContext): Future[Unit] = {
     val result = if (value == BuildTool) {
+      scribe.info("Resetting built tool selection.")
       tables.buildTool.reset()
       reconnectToBuildServer()
     } else if (value == BuildImport) {
       tables.dismissedNotifications.ImportChanges.reset()
       Future.successful(())
     } else if (value == BuildServer) {
+      scribe.info("Resetting built server selection.")
       tables.buildServers.reset()
       Future.successful(())
     } else {
