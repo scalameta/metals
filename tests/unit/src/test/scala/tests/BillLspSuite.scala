@@ -86,6 +86,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
       }
     } yield ()
   }
+
   test("reconnect") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)

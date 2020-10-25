@@ -112,7 +112,9 @@ case class SbtBuildTool(
         if (valid) {
           writeSbtBspPlugin(workspace)
         } else {
-          scribe.warn(Messages.NoSbtBspSupport.getMessage())
+          scribe.warn(
+            s"Unable to start sbt bsp server. Make sure you have sbt >= $firstVersionWithBsp defined in your build.properties file."
+          )
         }
         valid
       case None =>

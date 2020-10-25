@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
-import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -21,7 +20,7 @@ object Messages {
 
   val NoSbtBspSupport = new MessageParams(
     MessageType.Warning,
-    s"Unable to start sbt bsp server. Make sure you have sbt >= ${SbtBuildTool.firstVersionWithBsp} defined in your build.properties file."
+    "Workspace doesn't support BSP, please see logs."
   )
 
   object BspProvider {

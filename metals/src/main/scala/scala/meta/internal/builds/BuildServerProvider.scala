@@ -3,6 +3,7 @@ package scala.meta.internal.builds
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -24,7 +25,7 @@ trait BuildServerProvider { this: BuildTool =>
       systemProcess(createBspFileArgs(workspace))
     } else {
       Future.successful(
-        Failed(Right("Workspace doesn't support BSP, please see logs."))
+        Failed(Right(Messages.NoSbtBspSupport.toString()))
       )
     }
 
