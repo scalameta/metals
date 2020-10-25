@@ -15,8 +15,6 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.MessageActionItem
-
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
  *
@@ -135,15 +133,6 @@ final class BloopInstall(
       }
     }
 
-  def checkForChosenBuildTool(
-      buildTools: List[BuildTool]
-  ): Future[Option[BuildTool]] =
-    tables.buildTool.selectedBuildTool match {
-      case Some(chosen) =>
-        Future(buildTools.find(_.executableName == chosen))
-      case None => requestBuildToolChoice(buildTools)
-    }
-
   private def persistChecksumStatus(
       status: Status,
       buildTool: BuildTool
@@ -176,23 +165,6 @@ final class BloopInstall(
           notification.dismissForever()
         }
         Confirmation.fromBoolean(item == yes)
-      }
-  }
-
-  private def requestBuildToolChoice(
-      buildTools: List[BuildTool]
-  ): Future[Option[BuildTool]] = {
-    languageClient
-      .showMessageRequest(ChooseBuildTool.params(buildTools))
-      .asScala
-      .map { choice =>
-        val foundBuildTool = buildTools.find(buildTool =>
-          new MessageActionItem(buildTool.executableName) == choice
-        )
-        foundBuildTool.foreach(buildTool =>
-          tables.buildTool.chooseBuildTool(buildTool.executableName)
-        )
-        foundBuildTool
       }
   }
 }

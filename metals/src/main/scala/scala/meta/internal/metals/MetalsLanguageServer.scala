@@ -36,6 +36,7 @@ import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.NewProjectProvider
@@ -222,6 +223,7 @@ class MetalsLanguageServer(
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
   private var workspaceReload: WorkspaceReload = _
+  private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
   var tables: Tables = _
@@ -382,6 +384,10 @@ class MetalsLanguageServer(
       tables,
       bspGlobalDirectories,
       clientConfig.initialConfig
+    )
+    buildToolSelector = new BuildToolSelector(
+      languageClient,
+      tables
     )
     bspConnector = new BspConnector(
       bloopServers,
@@ -1717,8 +1723,9 @@ class MetalsLanguageServer(
       case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
       case buildTools =>
         for {
-          // TODO-BSP this check shouldn't just be for bloop probably
-          Some(buildTool) <- bloopInstall.checkForChosenBuildTool(buildTools)
+          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+            buildTools
+          )
         } yield isCompatibleVersion(buildTool)
     }
   }

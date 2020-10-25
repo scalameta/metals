@@ -113,8 +113,8 @@ class SbtServerSuite
             |""".stripMargin
       )
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
-      // We simply pause here for a bit to ensure the connection is made.
-      _ = Thread.sleep(TimeUnit.SECONDS.toMillis(10))
+      // A bit obnoxious, but this taks a long time to connect in CI
+      _ = Thread.sleep(TimeUnit.SECONDS.toMillis(20))
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
            |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
