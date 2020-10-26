@@ -20,15 +20,26 @@ import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 
+/**
+ * Class to generate the Run and Test code lenses to trigger debugging.
+ *
+ * NOTE: (ckipp01) the buildServerCanDebug param is really only checking to
+ * see if the build server connection is bloop, which supports DAP. In the
+ * case of sbt, it doesn't so we don't want to generate these.  In the future,
+ * if this becomes part of the BSP spec, we should be able to somply check to
+ * see if the build server is a DAP provider, and then generate these based
+ * off that.
+ */
 final class RunTestCodeLens(
     buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
     buildTargets: BuildTargets,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    buildServerCanDebug: () => Boolean
 ) extends CodeLens {
 
   override def isEnabled: Boolean =
-    clientConfig.isDebuggingProvider
+    clientConfig.isDebuggingProvider && buildServerCanDebug()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
