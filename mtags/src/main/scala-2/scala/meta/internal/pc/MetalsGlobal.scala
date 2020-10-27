@@ -195,9 +195,20 @@ class MetalsGlobal(
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
           val ownerSymbol = pre.termSymbol
+          def hasConflictingMembersInScope =
+            history.lookupSymbol(sym.name).exists {
+              case _: LookupSucceeded => true
+              case _ => false
+            }
+
+          def shouldRenamePrefix =
+            !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+
           history.config.get(ownerSymbol) match {
             case Some(rename)
-                if history.tryShortenName(ShortName(rename, ownerSymbol)) =>
+                if shouldRenamePrefix && history.tryShortenName(
+                  ShortName(rename, ownerSymbol)
+                ) =>
               TypeRef(
                 new PrettyType(rename.toString),
                 sym,

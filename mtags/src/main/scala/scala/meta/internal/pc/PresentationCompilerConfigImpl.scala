@@ -37,6 +37,11 @@ case class PresentationCompilerConfigImpl(
   override def completionCommand: Optional[String] =
     Optional.ofNullable(_completionCommand.orNull)
 
+  override val isDefaultSymbolPrefixes: Boolean =
+    _symbolPrefixes == PresentationCompilerConfig
+      .defaultSymbolPrefixes()
+      .asScala
+
   /**
    * Used to update the compiler config after we recieve the InitializationOptions.
    * If the user sets a value in the InitializationOptions, then the value will be
