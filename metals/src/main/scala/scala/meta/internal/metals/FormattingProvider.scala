@@ -303,9 +303,10 @@ final class FormattingProvider(
 }
 
 object FormattingProvider {
-  def newScalafmt(): Scalafmt =
+  def newScalafmt(respectVersion: Boolean = true): Scalafmt =
     Scalafmt
       .create(this.getClass.getClassLoader)
       .withReporter(EmptyScalafmtReporter)
       .withDefaultVersion(BuildInfo.scalafmtVersion)
+      .withRespectVersion(respectVersion)
 }

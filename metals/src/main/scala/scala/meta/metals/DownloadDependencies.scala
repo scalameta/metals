@@ -57,7 +57,7 @@ object DownloadDependencies {
 
   def downloadScalafmt(): Unit = {
     scribe.info("Downloading scalafmt")
-    val scalafmt = FormattingProvider.newScalafmt()
+    val scalafmt = FormattingProvider.newScalafmt(respectVersion = false)
     val tmp = Files.createTempFile("scalafmt", "Foo.scala")
     val config = Files.createTempFile("scalafmt", ".scalafmt.conf")
     scalafmt.format(config, tmp, "object Foo { }")
