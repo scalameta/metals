@@ -452,7 +452,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
         ".metals/readonly/sbt/Keys.scala",
-        expectedLine = 170
+        expectedLine = 189
       )
     } yield ()
   }

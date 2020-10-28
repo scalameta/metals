@@ -12,6 +12,7 @@ src_managed/
 project/boot/
 project/plugins/project/
 **/.bloop
+.bsp/
 
 # Scala-IDE specific
 .scala_dependencies
