@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.TextDocuments
 
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import com.google.protobuf.InvalidProtocolBufferException
 
 class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,
@@ -86,6 +87,12 @@ class SemanticdbIndexer(
           implementationProvider.onChange(doc, file)
           implicitDecorator.onChange(doc, file)
         } catch {
+          /* @note in some cases file might be created or modified, but not actually finished
+           * being written. In that case, exception here is expected and a new event will
+           * follow after it was finished.
+           */
+          case e: InvalidProtocolBufferException =>
+            scribe.debug(s"$file is not yet ready", e)
           case NonFatal(e) =>
             scribe.warn(s"unexpected error processing the file $file", e)
         }
