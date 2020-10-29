@@ -103,7 +103,8 @@ final class BspServers(
       client,
       newConnection,
       tables.dismissedNotifications.ReconnectBsp,
-      config
+      config,
+      details.getName()
     )
   }
 

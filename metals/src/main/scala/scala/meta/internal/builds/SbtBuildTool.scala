@@ -34,11 +34,33 @@ case class SbtBuildTool(
 
   override def version: String = workspaceVersion.getOrElse(recommendedVersion)
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
-    val sbtArgs = List[String](
+    val bloopInstallArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
       "bloopInstall"
     )
-    val allArgs = userConfig().sbtScript match {
+    val allArgs = composeArgs(bloopInstallArgs, workspace)
+    removeLegacyGlobalPlugin()
+    writeBloopPlugin(workspace)
+    allArgs
+  }
+
+  override def digest(workspace: AbsolutePath): Option[String] =
+    SbtDigest.current(workspace)
+  override val minimumVersion: String = "0.13.17"
+  override val recommendedVersion: String = BuildInfo.sbtVersion
+
+  override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
+    val bspConfigArgs = List[String](
+      "bspConfig"
+    )
+    composeArgs(bspConfigArgs, workspace)
+  }
+
+  private def composeArgs(
+      sbtArgs: List[String],
+      workspace: AbsolutePath
+  ): List[String] = {
+    userConfig().sbtScript match {
       case Some(script) =>
         script :: sbtArgs
       case None =>
@@ -63,43 +85,6 @@ case class SbtBuildTool(
           sbtArgs
         ).flatten
     }
-    removeLegacyGlobalPlugin()
-    writeBloopPlugin(workspace)
-    allArgs
-  }
-
-  override def digest(workspace: AbsolutePath): Option[String] =
-    SbtDigest.current(workspace)
-  override val minimumVersion: String = "0.13.17"
-  override val recommendedVersion: String = BuildInfo.sbtVersion
-
-  override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
-    val sbtArgs = List[String](
-      "bspConfig"
-    )
-    val allArgs = userConfig().sbtScript match {
-      case Some(script) =>
-        script :: sbtArgs
-      case None =>
-        val javaArgs = List[String](
-          JavaBinary(userConfig().javaHome),
-          "-Djline.terminal=jline.UnsupportedTerminal",
-          "-Dsbt.log.noformat=true",
-          "-Dfile.encoding=UTF-8"
-        )
-        val jarArgs = List(
-          "-jar",
-          embeddedSbtLauncher.toString()
-        )
-        List(
-          javaArgs,
-          SbtOpts.fromWorkspace(workspace),
-          JvmOpts.fromWorkspace(workspace),
-          jarArgs,
-          sbtArgs
-        ).flatten
-    }
-    allArgs
   }
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {

@@ -30,9 +30,7 @@ class SbtServerSuite
     with ScriptsAssertions {
 
   val preBspVersion = "1.3.13"
-  // TODO after we go past 1.4.1 in Metals, this can just be pulled from
-  // V.sbtVersion
-  val bspVersion = "1.4.1"
+  val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala212
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
@@ -64,7 +62,7 @@ class SbtServerSuite
     } yield {
       assertNoDiff(
         client.workspaceShowMessages,
-        Messages.NoSbtBspSupport.toString
+        Messages.NoBspSupport.toString
       )
     }
   }
@@ -76,7 +74,7 @@ class SbtServerSuite
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=$bspVersion
+            |sbt.version=$supportedBspVersion
             |/build.sbt
             |scalaVersion := "${V.scala212}"
             |""".stripMargin
@@ -106,7 +104,7 @@ class SbtServerSuite
     for {
       _ <- server.initialize(
         s"""|/project/build.properties
-            |sbt.version=$bspVersion
+            |sbt.version=$supportedBspVersion
             |/build.sbt
             |scalaVersion := "${V.scala212}"
             |""".stripMargin

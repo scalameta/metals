@@ -23,13 +23,13 @@ final class WorkspaceReload(
 
   private val notification = tables.dismissedNotifications.ImportChanges
 
-  def oldReloadResult(digest: String): Option[WorkspaceReloadStatus] = {
+  def oldReloadResult(digest: String): Option[WorkspaceLoadedStatus] = {
     if (tables.dismissedNotifications.ImportChanges.isDismissed) {
-      Some(WorkspaceReloadStatus.Dismissed)
+      Some(WorkspaceLoadedStatus.Dismissed)
     } else {
       tables.digests.last().collect {
         case Digest(md5, status, _) if md5 == digest =>
-          WorkspaceReloadStatus.Duplicate(status)
+          WorkspaceLoadedStatus.Duplicate(status)
       }
     }
   }

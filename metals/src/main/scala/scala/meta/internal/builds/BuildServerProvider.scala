@@ -25,7 +25,7 @@ trait BuildServerProvider { this: BuildTool =>
       systemProcess(createBspFileArgs(workspace))
     } else {
       Future.successful(
-        Failed(Right(Messages.NoSbtBspSupport.toString()))
+        Failed(Right(Messages.NoBspSupport.toString()))
       )
     }
 

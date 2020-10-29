@@ -1412,68 +1412,8 @@ class MetalsLanguageServer(
           if (session.main.isBloop) bloopServers.shutdownServer()
         }
         autoConnectToBuildServer().asJavaObject
-
       case ServerCommands.GenerateBspConfig() =>
-        val servers: List[BuildTool with BuildServerProvider] =
-          buildTools.loadSupported().collect {
-            case buildTool: BuildServerProvider => buildTool
-          }
-
-        def ensureAndConnect(
-            buildTool: BuildTool,
-            status: BspConfigGenerationStatus
-        ): Unit =
-          status match {
-            case Generated =>
-              tables.buildServers.chooseServer(buildTool.executableName)
-              quickConnectToBuildServer().ignoreValue
-            case Cancelled => ()
-            case Failed(exit) =>
-              exit match {
-                case Left(exitCode) =>
-                  scribe.error(
-                    s"Create of .bsp failed with exit code: $exitCode"
-                  )
-                  languageClient.showMessage(
-                    Messages.BspProvider.genericUnableToCreateConfig
-                  )
-                case Right(message) =>
-                  languageClient.showMessage(
-                    Messages.BspProvider.unableToCreateConfigFromMessage(
-                      message
-                    )
-                  )
-              }
-          }
-
-        (servers match {
-          case Nil =>
-            scribe.warn(Messages.BspProvider.noBuildToolFound.toString())
-            languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
-            Future.successful(())
-          case buildTool :: Nil =>
-            buildTool
-              .generateBspConfig(
-                workspace,
-                languageClient,
-                args =>
-                  bspConfigGenerator.runUnconditionally(
-                    buildTool,
-                    args
-                  )
-              )
-              .map(status => ensureAndConnect(buildTool, status))
-          case buildTools =>
-            bspConfigGenerator
-              .chooseAndGenerate(buildTools)
-              .map {
-                case (
-                      buildTool: BuildTool,
-                      status: BspConfigGenerationStatus
-                    ) =>
-                  ensureAndConnect(buildTool, status)
-              }
-        }).asJavaObject
+        generateBspConfig().asJavaObject
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
@@ -1696,6 +1636,69 @@ class MetalsLanguageServer(
         )
         .orNull
     }.asJava
+
+  private def generateBspConfig(): Future[Unit] = {
+    val servers: List[BuildTool with BuildServerProvider] =
+      buildTools.loadSupported().collect {
+        case buildTool: BuildServerProvider => buildTool
+      }
+
+    def ensureAndConnect(
+        buildTool: BuildTool,
+        status: BspConfigGenerationStatus
+    ): Unit =
+      status match {
+        case Generated =>
+          tables.buildServers.chooseServer(buildTool.executableName)
+          quickConnectToBuildServer().ignoreValue
+        case Cancelled => ()
+        case Failed(exit) =>
+          exit match {
+            case Left(exitCode) =>
+              scribe.error(
+                s"Create of .bsp failed with exit code: $exitCode"
+              )
+              languageClient.showMessage(
+                Messages.BspProvider.genericUnableToCreateConfig
+              )
+            case Right(message) =>
+              languageClient.showMessage(
+                Messages.BspProvider.unableToCreateConfigFromMessage(
+                  message
+                )
+              )
+          }
+      }
+
+    (servers match {
+      case Nil =>
+        scribe.warn(Messages.BspProvider.noBuildToolFound.toString())
+        languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
+        Future.successful(())
+      case buildTool :: Nil =>
+        buildTool
+          .generateBspConfig(
+            workspace,
+            languageClient,
+            args =>
+              bspConfigGenerator.runUnconditionally(
+                buildTool,
+                args
+              )
+          )
+          .map(status => ensureAndConnect(buildTool, status))
+      case buildTools =>
+        bspConfigGenerator
+          .chooseAndGenerate(buildTools)
+          .map {
+            case (
+                  buildTool: BuildTool,
+                  status: BspConfigGenerationStatus
+                ) =>
+              ensureAndConnect(buildTool, status)
+          }
+    })
+  }
 
   private def supportedBuildTool(): Future[Option[BuildTool]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {

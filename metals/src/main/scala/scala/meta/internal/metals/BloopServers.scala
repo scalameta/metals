@@ -38,6 +38,8 @@ final class BloopServers(
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
+  private val bloop = "Bloop"
+
   def shutdownServer(): Boolean = {
     val dummyIn = new ByteArrayInputStream(new Array(0))
     val cli = new BloopgunCli(
@@ -69,7 +71,8 @@ final class BloopServers(
         languageClient,
         () => connectToLauncher(bloopVersion),
         tables.dismissedNotifications.ReconnectBsp,
-        config
+        config,
+        bloop
       )
   }
 
@@ -160,7 +163,7 @@ final class BloopServers(
 
     serverStarted.future.map { _ =>
       SocketConnection(
-        "Bloop",
+        bloop,
         clientOut,
         clientIn,
         List(

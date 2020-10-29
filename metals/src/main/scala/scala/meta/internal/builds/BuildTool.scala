@@ -21,8 +21,8 @@ trait BuildTool {
   def bloopInstall(
       workspace: AbsolutePath,
       languageClient: MetalsLanguageClient,
-      systemProcess: List[String] => Future[WorkspaceReloadStatus]
-  ): Future[WorkspaceReloadStatus]
+      systemProcess: List[String] => Future[WorkspaceLoadedStatus]
+  ): Future[WorkspaceLoadedStatus]
 
   def digest(workspace: AbsolutePath): Option[String]
 
@@ -56,14 +56,5 @@ object BuildTool {
     Files.createDirectories(outFile.getParent)
     Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
     outFile
-  }
-
-  def copyFromResource(
-      resourceFile: String,
-      destination: Path
-  ): Unit = {
-    val embeddedFile = this.getClass.getResourceAsStream(s"/$resourceFile")
-    Files.createDirectories(destination.getParent)
-    Files.copy(embeddedFile, destination, StandardCopyOption.REPLACE_EXISTING)
   }
 }

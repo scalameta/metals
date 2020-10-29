@@ -18,7 +18,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  */
 object Messages {
 
-  val NoSbtBspSupport = new MessageParams(
+  val NoBspSupport = new MessageParams(
     MessageType.Warning,
     "Workspace doesn't support BSP, please see logs."
   )

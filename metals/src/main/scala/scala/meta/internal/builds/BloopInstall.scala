@@ -35,7 +35,7 @@ final class BloopInstall(
 
   def runUnconditionally(
       buildTool: BuildTool
-  ): Future[WorkspaceReloadStatus] = {
+  ): Future[WorkspaceLoadedStatus] = {
     buildTool.bloopInstall(
       workspace,
       languageClient,
@@ -56,7 +56,7 @@ final class BloopInstall(
   private def runArgumentsUnconditionally(
       buildTool: BuildTool,
       args: List[String]
-  ): Future[WorkspaceReloadStatus] = {
+  ): Future[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
       .run(
@@ -71,9 +71,9 @@ final class BloopInstall(
         )
       )
       .map {
-        case ExitCodes.Success => WorkspaceReloadStatus.Installed
-        case ExitCodes.Cancel => WorkspaceReloadStatus.Cancelled
-        case result => WorkspaceReloadStatus.Failed(result)
+        case ExitCodes.Success => WorkspaceLoadedStatus.Installed
+        case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
+        case result => WorkspaceLoadedStatus.Failed(result)
       }
     processFuture.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
@@ -88,13 +88,13 @@ final class BloopInstall(
 
   private def oldInstallResult(
       digest: String
-  ): Option[WorkspaceReloadStatus] = {
+  ): Option[WorkspaceLoadedStatus] = {
     if (notification.isDismissed) {
-      Some(WorkspaceReloadStatus.Dismissed)
+      Some(WorkspaceLoadedStatus.Dismissed)
     } else {
       tables.digests.last().collect {
         case Digest(md5, status, _) if md5 == digest =>
-          WorkspaceReloadStatus.Duplicate(status)
+          WorkspaceLoadedStatus.Duplicate(status)
       }
     }
   }
@@ -106,7 +106,7 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BuildTool,
       digest: String
-  ): Future[WorkspaceReloadStatus] =
+  ): Future[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
         case Some(result) =>
@@ -126,7 +126,7 @@ final class BloopInstall(
               } else {
                 // Don't spam the user with requests during rapid build changes.
                 notification.dismiss(2, TimeUnit.MINUTES)
-                Future.successful(WorkspaceReloadStatus.Rejected)
+                Future.successful(WorkspaceLoadedStatus.Rejected)
               }
             }
           } yield installResult

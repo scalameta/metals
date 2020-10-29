@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Try
 
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
@@ -244,7 +245,8 @@ object BuildServerConnection {
       languageClient: LanguageClient,
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
-      config: MetalsServerConfig
+      config: MetalsServerConfig,
+      serverName: String
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -262,7 +264,8 @@ object BuildServerConnection {
           .create()
         val listening = launcher.startListening()
         val server = launcher.getRemoteProxy
-        val result = BuildServerConnection.initialize(workspace, server)
+        val result =
+          BuildServerConnection.initialize(workspace, server, serverName)
         val stopListening =
           Cancelable(() => listening.cancel(false))
         LauncherConnection(
@@ -298,7 +301,8 @@ object BuildServerConnection {
    */
   private def initialize(
       workspace: AbsolutePath,
-      server: MetalsBuildServer
+      server: MetalsBuildServer,
+      serverName: String
   ): InitializeBuildResult = {
     val extraParams = BspExtraBuildParams(
       BuildInfo.scalametaVersion,
@@ -324,11 +328,11 @@ object BuildServerConnection {
     // and we want to fail fast if the connection is not
     val result =
       try {
-        def isCI: Boolean = "true" == System.getenv("CI")
-        if (isCI)
+        if (serverName == SbtBuildTool.name) {
+          initializeResult.get(60, TimeUnit.SECONDS)
+        } else {
           initializeResult.get(20, TimeUnit.SECONDS)
-        else
-          initializeResult.get(205, TimeUnit.SECONDS)
+        }
       } catch {
         case e: TimeoutException =>
           scribe.error("Timeout waiting for 'build/initialize' response")

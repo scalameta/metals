@@ -260,7 +260,8 @@ final class Ammonite(
               workspace()
             ),
         tables().dismissedNotifications.ReconnectAmmonite,
-        config
+        config,
+        "Ammonite"
       )
       for {
         conn <- futureConn

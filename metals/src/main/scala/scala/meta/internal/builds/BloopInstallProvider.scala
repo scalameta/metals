@@ -16,8 +16,8 @@ trait BloopInstallProvider { this: BuildTool =>
   def bloopInstall(
       workspace: AbsolutePath,
       languageClient: MetalsLanguageClient,
-      systemProcess: List[String] => Future[WorkspaceReloadStatus]
-  ): Future[WorkspaceReloadStatus] =
+      systemProcess: List[String] => Future[WorkspaceLoadedStatus]
+  ): Future[WorkspaceLoadedStatus] =
     systemProcess(bloopInstallArgs(workspace))
 
   /**
