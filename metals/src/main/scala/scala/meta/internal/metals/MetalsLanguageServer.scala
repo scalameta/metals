@@ -529,7 +529,7 @@ class MetalsLanguageServer(
     )
     scalafixProvider = ScalafixProvider(
       buffers,
-      userConfig.scalafixConfigPath,
+      () => userConfig,
       workspace,
       embedded,
       statusBar,

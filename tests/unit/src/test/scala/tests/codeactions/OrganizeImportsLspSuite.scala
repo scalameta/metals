@@ -6,28 +6,28 @@ class OrganizeImportsLspSuite
     extends BaseCodeActionLspSuite("OrganizeImports") {
   val kind: String = OrganizeImports.kind
   val scalacOption: List[String] = List("-Ywarn-unused-import")
-  val scalafixConf: String =
-    """|/.scalafix.conf
-       |rules = [
-       |  OrganizeImports,
-       |  ExplicitResultTypes,
-       |  RemoveUnused
-       |]
-       |
-       |ExplicitResultTypes.rewriteStructuralTypesToNamedSubclass = false
-       |
-       |RemoveUnused.imports = false
-       |
-       |OrganizeImports.groupedImports = Explode
-       |OrganizeImports.expandRelative = true
-       |OrganizeImports.removeUnused = true
-       |OrganizeImports.groups = [
-       |  "scala."
-       |  "re:javax?\\."
-       |  "*"
-       |]
-       |
-       |""".stripMargin
+  def scalafixConf(path: String = "/.scalafix.conf"): String =
+    s"""|$path
+        |rules = [
+        |  OrganizeImports,
+        |  ExplicitResultTypes,
+        |  RemoveUnused
+        |]
+        |
+        |ExplicitResultTypes.rewriteStructuralTypesToNamedSubclass = false
+        |
+        |RemoveUnused.imports = false
+        |
+        |OrganizeImports.groupedImports = Explode
+        |OrganizeImports.expandRelative = true
+        |OrganizeImports.removeUnused = true
+        |OrganizeImports.groups = [
+        |  "scala."
+        |  "re:javax?\\\\."
+        |  "*"
+        |]
+        |
+        |""".stripMargin
 
   check(
     "basic",
@@ -58,6 +58,47 @@ class OrganizeImportsLspSuite
   )
 
   check(
+    "basic-with-custom-config",
+    """
+      |package a
+      |import scala.concurrent.duration._
+      |import java.util.Optional<<>>
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val optional = Optional.empty()
+      |}
+      |""".stripMargin,
+    s"${OrganizeImports.title}",
+    """
+      |package a
+      |import scala.concurrent.duration._
+      |
+      |import java.util.Optional
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val optional = Optional.empty()
+      |}
+      |""".stripMargin,
+    kind = List(kind),
+    scalafixConf = scalafixConf("/project/scalafix.conf"),
+    scalacOptions = scalacOption,
+    configuration = Some {
+      val configPath = workspace
+        .resolve(
+          "project/scalafix.conf"
+        )
+        .toString()
+        .replace("\\", "\\\\")
+
+      s"""|{
+          |  "scalafixConfigPath": "$configPath"
+          |}""".stripMargin
+    }
+  )
+
+  check(
     "basic-with-existing-config",
     """
       |package a
@@ -82,7 +123,7 @@ class OrganizeImportsLspSuite
       |}
       |""".stripMargin,
     kind = List(kind),
-    scalafixConf = scalafixConf,
+    scalafixConf = scalafixConf(),
     scalacOptions = scalacOption
   )
 }

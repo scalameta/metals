@@ -7,9 +7,9 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.RelativePath
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.Symbol
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 
 import com.google.gson.JsonElement
@@ -25,8 +25,8 @@ case class UserConfiguration(
     gradleScript: Option[String] = None,
     mavenScript: Option[String] = None,
     millScript: Option[String] = None,
-    scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf"),
-    scalafixConfigPath: RelativePath = RelativePath(".scalafix.conf"),
+    scalafmtConfigPath: Option[AbsolutePath] = None,
+    scalafixConfigPath: Option[AbsolutePath] = None,
     symbolPrefixes: Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
@@ -106,12 +106,20 @@ object UserConfiguration {
       ),
       UserConfigurationOption(
         "scalafmt-config-path",
-        default.scalafmtConfigPath.toString,
+        """empty string `""`.""",
         """"project/.scalafmt.conf"""",
         "Scalafmt config path",
         """Optional custom path to the .scalafmt.conf file.
-          |Should be relative to the workspace root directory and use forward slashes / for file
-          |separators (even on Windows).
+          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "scalafix-config-path",
+        """empty string `""`.""",
+        """"project/.scalafix.conf"""",
+        "Scalafix config path",
+        """Optional custom path to the .scalafix.conf file.
+          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
           |""".stripMargin
       ),
       UserConfigurationOption(
@@ -313,12 +321,10 @@ object UserConfiguration {
       getStringKey("java-home")
     val scalafmtConfigPath =
       getStringKey("scalafmt-config-path")
-        .map(RelativePath(_))
-        .getOrElse(default.scalafmtConfigPath)
+        .map(AbsolutePath(_))
     val scalafixConfigPath =
       getStringKey("scalafix-config-path")
-        .map(RelativePath(_))
-        .getOrElse(default.scalafixConfigPath)
+        .map(AbsolutePath(_))
     val sbtScript =
       getStringKey("sbt-script")
     val gradleScript =

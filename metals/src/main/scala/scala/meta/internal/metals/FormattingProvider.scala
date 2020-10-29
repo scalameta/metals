@@ -218,10 +218,7 @@ final class FormattingProvider(
 
   private def scalafmtConf: AbsolutePath = {
     val configpath = userConfig().scalafmtConfigPath
-    (workspace :: workspaceFolders).iterator
-      .map(_.resolve(configpath))
-      .collectFirst { case path if path.isFile => path }
-      .getOrElse(workspace.resolve(configpath))
+    configpath.getOrElse(workspace.resolve(".scalafmt.conf"))
   }
 
   private val activeReporter: ScalafmtReporter = new ScalafmtReporter {

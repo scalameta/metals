@@ -76,7 +76,9 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         val config = new JsonObject
         config.add(
           "scalafmt-config-path",
-          new JsonPrimitive("project/.scalafmt.conf")
+          new JsonPrimitive(
+            workspace.resolve("./project/.scalafmt.conf").toString()
+          )
         )
         server.didChangeConfiguration(config.toString)
       }
@@ -324,30 +326,4 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       }
     } yield ()
   }
-
-  test("workspace-folder") {
-    for {
-      _ <- server.initialize(
-        s"""|/a/.scalafmt.conf
-            |version=${V.scalafmtVersion}
-            |maxColumn=10
-            |/Main.scala
-            |object   Main { val x = 2 }
-            |""".stripMargin,
-        expectError = true,
-        workspaceFolders = List("a")
-      )
-      _ <- server.didOpen("Main.scala")
-      _ <- server.formatting("Main.scala")
-      _ = assertNoDiff(
-        server.bufferContents("Main.scala"),
-        """object Main {
-          |  val x =
-          |    2
-          |}
-          |""".stripMargin
-      )
-    } yield ()
-  }
-
 }

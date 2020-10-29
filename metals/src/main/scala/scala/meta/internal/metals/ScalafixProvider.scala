@@ -21,7 +21,7 @@ import scalafix.interfaces.Scalafix
 
 case class ScalafixProvider(
     buffers: Buffers,
-    scalafixConfigPath: RelativePath,
+    userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
     embedded: Embedded,
     statusBar: StatusBar,
@@ -50,7 +50,8 @@ case class ScalafixProvider(
       Future.successful(Nil)
     } else {
       compilations.compilationFinished(file).flatMap { _ =>
-        val scalafixConfPath = workspace.resolve(scalafixConfigPath)
+        val scalafixConfPath = userConfig().scalafixConfigPath
+          .getOrElse(workspace.resolve(".scalafix.conf"))
         val scalafixConf =
           if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
           else None
