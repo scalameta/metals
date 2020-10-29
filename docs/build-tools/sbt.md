@@ -65,8 +65,8 @@ then at any time while in an sbt workspace you can choose to switch in multiple
 ways.
 
 _Note_: that if you are unfamiliar with the features that the different build
-servers may offer, then simply stick with the default (Bloop), which is has
-great integrated stable support in Metals.
+servers may offer, then simply stick with the default (Bloop), which has great
+integrated stable support in Metals.
 
 ### Generating a `.bsp/sbt.json` file if one doesn't exist
 

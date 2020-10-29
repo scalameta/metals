@@ -123,7 +123,7 @@ class BspConnector(
       currentBsp: Option[String]
   ): Future[BspResolvedResult] = {
     val bloop = new BspConnectionDetails(
-      "bloop",
+      "Bloop",
       ImmutableList.of(),
       userConfig().currentBloopVersion,
       "",
@@ -159,7 +159,7 @@ class BspConnector(
     bspServers.findAvailableServers() match {
       case Nil =>
         if (bloopPresent)
-          client.showMessage(BspSwitch.onlyOneServer(name = "bloop"))
+          client.showMessage(BspSwitch.onlyOneServer(name = "Bloop"))
         else
           client.showMessage(BspSwitch.noInstalledServer)
         Future.successful(false)
