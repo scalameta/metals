@@ -4,12 +4,13 @@ import sbt._
 import sbt.Keys._
 import Project.inConfig
 import sbt.internal.inc.ScalaInstance
+import scala.meta.internal.sbtmetals.BuildInfo
 
 object MetalsPlugin extends AutoPlugin {
   override def requires = plugins.JvmPlugin
   override def trigger = allRequirements
 
-  val semanticdbVersion = "4.3.21"
+  val semanticdbVersion = BuildInfo.semanticdbVersion
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = Seq(
     semanticdbCompilerPlugin := {
@@ -17,11 +18,11 @@ object MetalsPlugin extends AutoPlugin {
         .cross(CrossVersion.full)
     },
     allDependencies ++= {
-      val sv = scalaVersion.value
-      if (!ScalaInstance.isDotty(sv)) {
+      val versionOfScala = scalaVersion.value
+      if (!ScalaInstance.isDotty(versionOfScala)) {
         List(
           compilerPlugin(
-            "org.scalameta" % s"semanticdb-scalac_${sv}" % semanticdbVersion
+            "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion
           )
         )
       } else Nil
@@ -45,15 +46,15 @@ object MetalsPlugin extends AutoPlugin {
       else semanticdbTargetRoot.value
     },
     semanticdbOptions ++= {
-      val tr = semanticdbTargetRoot.value
-      val sv = scalaVersion.value
-      if (ScalaInstance.isDotty(sv)) List("-semanticdb-target", tr.toString)
+      val targetRoot = semanticdbTargetRoot.value
+      val versionOfScala = scalaVersion.value
+      if (ScalaInstance.isDotty(versionOfScala))
+        List("-semanticdb-target", targetRoot.toString)
       else
         List(
           s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
-          s"-P:semanticdb:targetroot:$tr",
+          s"-P:semanticdb:targetroot:$targetRoot",
           "-Yrangepos",
-          //test
           // Needed for "find references" on implicits and `apply` methods.
           s"-P:semanticdb:synthetics:on",
           // Don't fail compilation in case of Scalameta crash during SemanticDB generation.

@@ -63,7 +63,11 @@ class BspConnector(
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
-          SbtBuildTool.writeSbtBspPlugin(workspace)
+          SbtBuildTool.writeSingleSbtMetalsPlugin(
+            workspace.resolve("project"),
+            userConfig,
+            isBloop = false
+          )
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedBspOne(details) =>
           bspServers.newServer(workspace, details).map(Some(_))

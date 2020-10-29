@@ -18,6 +18,8 @@ case class SbtBuildTool(
     with BloopInstallProvider
     with BuildServerProvider {
 
+  import SbtBuildTool._
+
   /**
    * Returns path to a local copy of sbt-launch.jar.
    *
@@ -62,7 +64,7 @@ case class SbtBuildTool(
         ).flatten
     }
     removeLegacyGlobalPlugin()
-    writeSbtMetalsPlugins(workspace)
+    writeBloopPlugin(workspace)
     allArgs
   }
 
@@ -101,16 +103,16 @@ case class SbtBuildTool(
   }
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
-    import SbtBuildTool.loadVersion
-    import SbtBuildTool.firstVersionWithBsp
-    import SbtBuildTool.writeSbtBspPlugin
-
     loadVersion(workspace) match {
       case Some(version) =>
         scribe.info(s"sbt ${version} found for workspace.")
         val valid = isCompatibleVersion(firstVersionWithBsp, version)
         if (valid) {
-          writeSbtBspPlugin(workspace)
+          writeSingleSbtMetalsPlugin(
+            workspace.resolve("project"),
+            userConfig,
+            isBloop = false
+          )
         } else {
           scribe.warn(
             s"Unable to start sbt bsp server. Make sure you have sbt >= $firstVersionWithBsp defined in your build.properties file."
@@ -141,7 +143,7 @@ case class SbtBuildTool(
     Files.deleteIfExists(metalsFile.toNIO)
   }
 
-  private def writeSbtMetalsPlugins(
+  private def writeBloopPlugin(
       workspace: AbsolutePath
   ): Unit = {
 
@@ -165,26 +167,9 @@ case class SbtBuildTool(
 
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
-    sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(
-      writeSingleSbtMetalsPlugin
+    sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
+      writeSingleSbtMetalsPlugin(dir, userConfig, isBloop = true)
     )
-  }
-
-  private def writeSingleSbtMetalsPlugin(
-      projectDir: AbsolutePath
-  ): Unit = {
-    if (userConfig().bloopSbtAlreadyInstalled) return
-    val versionToUse = userConfig().currentBloopVersion
-    val bytes = SbtBuildTool
-      .sbtPlugin(versionToUse)
-      .getBytes(StandardCharsets.UTF_8)
-    projectDir.toFile.mkdirs()
-    val metalsPluginFile = projectDir.resolve("metals.sbt")
-    val pluginFileShouldChange = !metalsPluginFile.isFile ||
-      !metalsPluginFile.readAllBytes.sameElements(bytes)
-    if (pluginFileShouldChange) {
-      Files.write(metalsPluginFile.toNIO, bytes)
-    }
   }
 
   override def toString: String = SbtBuildTool.name
@@ -201,19 +186,74 @@ object SbtBuildTool {
   // first actually supported sbt version for bsp support in Metals.
   val firstVersionWithBsp = "1.4.1"
 
-  def writeSbtBspPlugin(workspace: AbsolutePath): Unit = {
-    // TODO-BSP right now we just check to see if the file is there, but rather
-    // this should be a more intelligent check to see if the file is the same
-    // to catch updates in the plugin
-    // Also refactor out common logic with other write plugins
-    val metalsPluginFile =
-      workspace.resolve("project").resolve("MetalsSbtBsp.scala")
-    if (!metalsPluginFile.isFile) {
-      scribe.info(s"Installalling plugin to ${metalsPluginFile}")
-      BuildTool.copyFromResource("MetalsSbtBsp.scala", metalsPluginFile.toNIO)
+  /**
+   * Based on whether sbt or Bloop is being used ensure that the correct
+   * plugin is included in the workspace
+   */
+  def writeSingleSbtMetalsPlugin(
+      projectDir: AbsolutePath,
+      userConfig: () => UserConfiguration,
+      isBloop: Boolean
+  ): Unit = {
+    if (isBloop && userConfig().bloopSbtAlreadyInstalled) {
+      return
     } else {
-      scribe.info("Skipping installing sbt pluign as it already exists")
+      val versionToUse =
+        if (isBloop) userConfig().currentBloopVersion
+        else BuildInfo.metalsVersion
+
+      val bytes =
+        sbtPlugin(versionToUse, isBloop).getBytes(StandardCharsets.UTF_8)
+
+      projectDir.toFile.mkdirs()
+      val metalsPluginFile = projectDir.resolve("metals.sbt")
+      val pluginFileShouldChange = !metalsPluginFile.isFile ||
+        !metalsPluginFile.readAllBytes.sameElements(bytes)
+
+      if (pluginFileShouldChange) {
+        Files.write(metalsPluginFile.toNIO, bytes)
+      }
     }
+  }
+
+  /**
+   * Short description and artifact for the sbt-bloop plugin
+   */
+  private def bloopPluginDetails(version: String) =
+    (
+      "This file enables sbt-bloop to create bloop config files.",
+      s""""ch.epfl.scala" % "sbt-bloop" % "$version""""
+    )
+
+  /**
+   * Short description and artifact for the sbt-metals plugin
+   */
+  private def metalsPluginDetails(version: String) =
+    (
+      "This file enables semsantic information to be produced by sbt.",
+      s""""org.scalameta" % "sbt-metals" % "$version""""
+    )
+
+  /**
+   * Contents of metals.sbt file that is to be installed in the workspace.
+   */
+  private def sbtPlugin(version: String, isBloop: Boolean): String = {
+    val isSnapshotVersion = version.contains("+")
+    val resolvers = if (isSnapshotVersion) {
+      """resolvers += Resolver.bintrayRepo("scalacenter", "releases")"""
+    } else {
+      ""
+    }
+
+    val (description, artifact) =
+      if (isBloop) bloopPluginDetails(version)
+      else metalsPluginDetails(version)
+
+    s"""|// DO NOT EDIT! This file is auto-generated.
+        |// $description
+        |$resolvers
+        |addSbtPlugin($artifact)
+        |""".stripMargin
   }
 
   def isSbtRelatedPath(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
@@ -229,23 +269,6 @@ object SbtBuildTool {
       filename.endsWith(".sbt") ||
       filename.endsWith(".scala")
     }
-  }
-
-  /**
-   * Contents of metals.sbt file that is installed in the workspace.
-   */
-  private def sbtPlugin(bloopSbtVersion: String): String = {
-    val isSnapshotVersion = bloopSbtVersion.contains("+")
-    val resolvers = if (isSnapshotVersion) {
-      """resolvers += Resolver.bintrayRepo("scalacenter", "releases")"""
-    } else {
-      ""
-    }
-    s"""|// DO NOT EDIT! This file is auto-generated.
-        |// This file enables sbt-bloop to create bloop config files.
-        |$resolvers
-        |addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "$bloopSbtVersion")
-        |""".stripMargin
   }
 
   def apply(

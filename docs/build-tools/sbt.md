@@ -64,7 +64,7 @@ like to use the sbt server as an alternative to Bloop (which is the default),
 then at any time while in an sbt workspace you can choose to switch in multiple
 ways.
 
-_Note_: that if you are unfamiliar with the differences that the different build
+_Note_: that if you are unfamiliar with the features that the different build
 servers may offer, then simply stick with the default (Bloop), which is has
 great integrated stable support in Metals.
 

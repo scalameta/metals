@@ -14,14 +14,14 @@ import tests.BaseImportSuite
 import tests.ScriptsAssertions
 
 /**
- * TODO make a BaseLspSuite powered by sbt
+ * TODO make a TestingServer powered by sbt
  *
  * Note that this entire suite will probably change. For now the entire way we
  * have the Test server setup is to do a bloopInstall during initialize, but
  * for these we don't really want that. For now since the flow will always be
  * to favor Bloop to start, this is fine, and these tests all start with the
  * assumption that we are starting with Bloop, and then switching. Eventually,
- * We should probably have an entirely different BaseLspSuite powered by sbt.
+ * We should probably have an entirely different TestingServer powered by sbt.
  * That will be a huge task in intself, so for now, I've decided to simply
  * include these here and mark this as a TODO.
  */
@@ -71,7 +71,7 @@ class SbtServerSuite
 
   test("generate") {
     def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
-    def sbtBspPlugin = workspace.resolve("project/MetalsSbtBsp.scala")
+    def sbtBspPlugin = workspace.resolve("project/metals.sbt")
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -93,7 +93,6 @@ class SbtServerSuite
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
       _ = assert(!sbtBspConfig.exists)
-      _ = assert(!sbtBspPlugin.exists)
       // At this point, we want to use sbt server, so create the sbt.json file.
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
     } yield {
