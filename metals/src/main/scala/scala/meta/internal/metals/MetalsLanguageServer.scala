@@ -841,7 +841,6 @@ class MetalsLanguageServer(
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
-    val didChangeFuture = compilers.didChange(path)
 
     packageProvider
       .workspaceEdit(path)
@@ -863,7 +862,7 @@ class MetalsLanguageServer(
       val compileFuture =
         compilations.compileFile(path)
       Future
-        .sequence(List(didChangeFuture, loadFuture, compileFuture))
+        .sequence(List(parseTrees(path), loadFuture, compileFuture))
         .ignoreValue
         .asJava
     }
@@ -1354,7 +1353,11 @@ class MetalsLanguageServer(
   def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
-    CancelTokens.future { token => compilers.foldingRange(params, token) }
+    CancelTokens.future { token =>
+      parseTrees.currentFuture.flatMap(_ =>
+        compilers.foldingRange(params, token)
+      )
+    }
   }
 
   @JsonRequest("workspace/symbol")
