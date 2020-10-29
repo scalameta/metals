@@ -26,7 +26,10 @@ case class ScalaTarget(
 
   def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
 
-  def baseDirectory: String = info.getBaseDirectory()
+  def baseDirectory: String = {
+    val baseDir = info.getBaseDirectory()
+    if (baseDir != null) baseDir else ""
+  }
 
   def fullClasspath: ju.List[Path] = {
     scalac.getClasspath().map(_.toAbsolutePath.toNIO)
