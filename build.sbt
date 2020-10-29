@@ -292,6 +292,8 @@ val mtagsSettings = List(
     baseDirectory.in(ThisBuild).value / "mtags",
     scalaVersion.value
   ),
+  // @note needed to deal with issues in https://github.com/scalameta/metals/pull/2157
+  sources in (Compile, doc) := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
