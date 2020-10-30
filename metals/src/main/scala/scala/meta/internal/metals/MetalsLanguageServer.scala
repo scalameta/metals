@@ -1426,7 +1426,10 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
         (for {
-          isSwitched <- bspConnector.switchBuildServer(workspace)
+          isSwitched <- bspConnector.switchBuildServer(
+            workspace,
+            () => slowConnectToBuildServer(forceImport = true)
+          )
           _ <- {
             if (isSwitched) quickConnectToBuildServer()
             else Future.successful(())

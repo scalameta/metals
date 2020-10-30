@@ -14,16 +14,7 @@ import tests.BaseImportSuite
 import tests.ScriptsAssertions
 
 /**
- * TODO make a TestingServer powered by sbt
- *
- * Note that this entire suite will probably change. For now the entire way we
- * have the Test server setup is to do a bloopInstall during initialize, but
- * for these we don't really want that. For now since the flow will always be
- * to favor Bloop to start, this is fine, and these tests all start with the
- * assumption that we are starting with Bloop, and then switching. Eventually,
- * We should probably have an entirely different TestingServer powered by sbt.
- * That will be a huge task in intself, so for now, I've decided to simply
- * include these here and mark this as a TODO.
+ * Basic suite to ensure that a connection to sbt server can be made.
  */
 class SbtServerSuite
     extends BaseImportSuite("sbt-server")

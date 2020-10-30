@@ -119,7 +119,6 @@ class BspConnector(
 
   private def askUser(
       bspServerConnections: List[BspConnectionDetails],
-      isBloop: Boolean,
       currentBsp: Option[String]
   ): Future[BspResolvedResult] = {
     val bloop = new BspConnectionDetails(
@@ -130,10 +129,10 @@ class BspConnector(
       ImmutableList.of()
     )
 
-    val availableServers =
-      if (isBloop) bloop :: bspServerConnections else bspServerConnections
-
-    val query = Messages.SelectBspServer.request(availableServers, currentBsp)
+    val query = Messages.SelectBspServer.request(
+      bloop :: bspServerConnections,
+      currentBsp
+    )
     for {
       item <- client.showMessageRequest(query.params).asScala
     } yield {
@@ -154,7 +153,10 @@ class BspConnector(
   /**
    * Runs "Switch build server" command, returns true if build server was changed
    */
-  def switchBuildServer(workspace: AbsolutePath): Future[Boolean] = {
+  def switchBuildServer(
+      workspace: AbsolutePath,
+      createBloopAndConnect: () => Future[BuildChange]
+  ): Future[Boolean] = {
     val bloopPresent = buildTools.isBloop
     bspServers.findAvailableServers() match {
       case Nil =>
@@ -163,17 +165,25 @@ class BspConnector(
         else
           client.showMessage(BspSwitch.noInstalledServer)
         Future.successful(false)
-      case head :: Nil if !bloopPresent =>
-        client.showMessage(BspSwitch.onlyOneServer(head.getName))
-        Future.successful(false)
       case availableServers =>
         val currentBsp = tables.buildServers.selectedServer()
-        askUser(availableServers, bloopPresent, currentBsp).map {
+        askUser(availableServers, currentBsp).map {
+          case ResolvedBloop
+              if currentBsp.contains(BspConnector.BLOOP_SELECTED) =>
+            false
           case ResolvedBloop =>
-            if (currentBsp.contains(BspConnector.BLOOP_SELECTED)) false
-            else {
-              tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
+            tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
+            // If a .bloop/ is already in the workspace, then we can just
+            // return true for a build change and let the bsp connection be
+            // made. However, if not, then we do a createBloopAndConnect()
+            // instead to first generate the .bloop/ to ensure a connection can
+            // be made. We return false since the the method will take care of
+            // connecting after the .bloop/ dir is made
+            if (bloopPresent) {
               true
+            } else {
+              createBloopAndConnect().ignoreValue
+              false
             }
           case ResolvedBspOne(details)
               if !currentBsp.contains(details.getName) =>
