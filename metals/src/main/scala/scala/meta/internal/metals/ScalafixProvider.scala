@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import java.net.URLClassLoader
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Collections
 
 import scala.collection.concurrent.TrieMap
@@ -18,6 +20,7 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
+import scalafix.interfaces.ScalafixEvaluation
 
 case class ScalafixProvider(
     buffers: Buffers,
@@ -35,6 +38,32 @@ case class ScalafixProvider(
   private val organizeImportRuleCache =
     TrieMap.empty[ScalaBinaryVersion, URLClassLoader]
 
+  // Warms up the Scalafix instance so that the first organize imports request responds faster.
+  def load(): Unit = {
+    if (!Testing.isEnabled) {
+      try {
+        val targets = buildTargets.all.toList.groupBy(_.scalaVersion).flatMap {
+          case (_, targets) => targets.headOption
+        }
+        val tmp = AbsolutePath(Files.createTempFile("metals", ".scala"))
+        tmp.writeText("object Main{}\n")
+        for (target <- targets)
+          scalafixEvaluate(
+            tmp,
+            target.scalaVersion,
+            target.scalaBinaryVersion,
+            target.fullClasspath
+          )
+        tmp.delete()
+      } catch {
+        case e: Throwable =>
+          scribe.debug(
+            s"Scalafix issue while warming up due to issue: ${e.getMessage()}"
+          )
+      }
+    }
+  }
+
   def organizeImports(
       file: AbsolutePath,
       scalaTarget: ScalaTarget
@@ -50,35 +79,13 @@ case class ScalafixProvider(
       Future.successful(Nil)
     } else {
       compilations.compilationFinished(file).flatMap { _ =>
-        val scalafixConfPath = userConfig().scalafixConfigPath
-          .getOrElse(workspace.resolve(".scalafix.conf"))
-        val scalafixConf =
-          if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
-          else None
         val scalaBinaryVersion = scalaTarget.scalaBinaryVersion
-        val scalafixEvaluation = for {
-          api <- getScalafix(scalaBinaryVersion)
-          urlClassLoaderWithExternalRule <- getRuleClassLoader(
-            scalaBinaryVersion,
-            api.getClass.getClassLoader
-          )
-        } yield {
-          val scalacOption =
-            if (scalaBinaryVersion == "2.13") "-Wunused:imports"
-            else "-Ywarn-unused-import"
-
-          api
-            .newArguments()
-            .withScalaVersion(scalaTarget.scalaVersion)
-            .withClasspath(scalaTarget.fullClasspath)
-            .withToolClasspath(urlClassLoaderWithExternalRule)
-            .withConfig(scalafixConf.asJava)
-            .withRules(List(organizeImportRuleName).asJava)
-            .withPaths(List(file.toNIO).asJava)
-            .withSourceroot(workspace.toNIO)
-            .withScalacOptions(Collections.singletonList(scalacOption))
-            .evaluate()
-        }
+        val scalafixEvaluation = scalafixEvaluate(
+          file,
+          scalaTarget.scalaVersion,
+          scalaBinaryVersion,
+          scalaTarget.fullClasspath
+        )
 
         scalafixEvaluation match {
           case Failure(exception) =>
@@ -106,6 +113,44 @@ case class ScalafixProvider(
             }
         }
       }
+    }
+  }
+
+  private def scalafixConf: Option[Path] = {
+    val scalafixConfPath = userConfig().scalafixConfigPath
+      .getOrElse(workspace.resolve(".scalafix.conf"))
+    if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
+    else None
+  }
+
+  private def scalafixEvaluate(
+      file: AbsolutePath,
+      scalaVersion: String,
+      scalaBinaryVersion: String,
+      fullClasspath: java.util.List[Path]
+  ): Try[ScalafixEvaluation] = {
+    for {
+      api <- getScalafix(scalaBinaryVersion)
+      urlClassLoaderWithExternalRule <- getRuleClassLoader(
+        scalaBinaryVersion,
+        api.getClass.getClassLoader
+      )
+    } yield {
+      val scalacOption =
+        if (scalaBinaryVersion == "2.13") "-Wunused:imports"
+        else "-Ywarn-unused-import"
+
+      api
+        .newArguments()
+        .withScalaVersion(scalaVersion)
+        .withClasspath(fullClasspath)
+        .withToolClasspath(urlClassLoaderWithExternalRule)
+        .withConfig(scalafixConf.asJava)
+        .withRules(List(organizeImportRuleName).asJava)
+        .withPaths(List(file.toNIO).asJava)
+        .withSourceroot(workspace.toNIO)
+        .withScalacOptions(Collections.singletonList(scalacOption))
+        .evaluate()
     }
   }
 
