@@ -224,8 +224,10 @@ object SbtBuildTool {
    */
   private def sbtPlugin(version: String, isBloop: Boolean): String = {
     val isSnapshotVersion = version.contains("+")
-    val resolvers = if (isSnapshotVersion) {
+    val resolvers = if (isSnapshotVersion && isBloop) {
       """resolvers += Resolver.bintrayRepo("scalacenter", "releases")"""
+    } else if (isSnapshotVersion && !isBloop) {
+      """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
     } else {
       ""
     }
