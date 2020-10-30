@@ -171,9 +171,12 @@ class MetalsLanguageServer(
     )
   )
   private val indexingPromise: Promise[Unit] = Promise[Unit]()
+  private val buildServerPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(
-      Future.sequence(paths.distinct.map(compilers.didChange)).ignoreValue,
+      buildServerPromise.future
+        .flatMap(_ => Future.sequence(paths.distinct.map(compilers.didChange)))
+        .ignoreValue,
       Cancelable.empty
     )
   )
@@ -1803,11 +1806,16 @@ class MetalsLanguageServer(
     } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
-    if (!buildTools.isAutoConnectable) {
+    val connected = if (!buildTools.isAutoConnectable) {
       scribe.warn("Build server is not auto-connectable.")
       Future.successful(BuildChange.None)
     } else {
       autoConnectToBuildServer()
+    }
+
+    connected.map { change =>
+      buildServerPromise.trySuccess(())
+      change
     }
   }
 

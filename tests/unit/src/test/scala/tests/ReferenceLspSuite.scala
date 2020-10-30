@@ -38,11 +38,11 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
           |  val z: Int = y.a
           |  val param: String = a.A.param(arg = 2)
           |}
-          |""".stripMargin,
-        preInitialized = { () => server.didOpen("a/src/main/scala/a/A.scala") }
+          |""".stripMargin
       )
-      _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("b/src/main/scala/b/B.scala")
+      _ = assertNoDiagnostics()
       _ = server.assertReferenceDefinitionDiff(
         """|^
            |+a/src/main/scala/a/A.scala:4:36: a/A#
@@ -86,9 +86,9 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
           |object B {
           |  val a = A(1)
           |}
-          |""".stripMargin,
-        preInitialized = { () => server.didOpen("a/src/main/scala/a/A.scala") }
+          |""".stripMargin
       )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionDiff(
@@ -236,9 +236,9 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
           |object B {
           |  val b = new a.A().bar(2)
           |}
-          |""".stripMargin,
-        preInitialized = { () => server.didOpen("a/src/main/scala/a/A.scala") }
+          |""".stripMargin
       )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
       // Assert that goto definition and reference are still bijective after buffer changes
       // in both the definition source and reference sources.
