@@ -1,5 +1,7 @@
 package tests.codeactions
 
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import munit.Location
@@ -18,7 +20,8 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectNoDiagnostics: Boolean = true,
       kind: List[String] = Nil,
       scalafixConf: String = "",
-      scalacOptions: List[String] = Nil
+      scalacOptions: List[String] = Nil,
+      configuration: => Option[String] = None
   )(implicit loc: Location): Unit = {
     val fileName: String = "A.scala"
     val scalacOptionsJson =
@@ -34,6 +37,12 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
                                   |/$path
                                   |$fileContent""".stripMargin)
         _ <- server.didOpen(path)
+        _ <- {
+          configuration match {
+            case Some(conf) => server.didChangeConfiguration(conf)
+            case None => Future {}
+          }
+        }
         codeActions <-
           server.assertCodeAction(path, input, expectedActions, kind)
         _ <- server.didSave(path) { _ =>
