@@ -1,7 +1,12 @@
-package scala.meta.internal.metals
+package scala.meta.internal.bsp
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
+import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ImportedBuild
+import scala.meta.internal.metals.MetalsLanguageServer
 
 case class BspSession(
     main: BuildServerConnection,
@@ -26,13 +31,14 @@ case class BspSession(
   def mainConnection: BuildServerConnection = main
 
   def version: String = main.version
+
+  def workspaceReload(): Future[List[Object]] =
+    Future.sequence(connections.map(conn => conn.workspaceReload()))
 }
 
 object BspSession {
-
   case class BspBuild(
       connection: BuildServerConnection,
       build: ImportedBuild
   )
-
 }

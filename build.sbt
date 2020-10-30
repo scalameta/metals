@@ -175,7 +175,7 @@ lazy val V = new {
   val scala213 = "2.13.3"
   val scalameta = "4.3.24"
   val semanticdb = scalameta
-  val bsp = "2.0.0-M12"
+  val bsp = "2.0.0-M13"
   val bloop = "1.4.4-17-6e43cbfd"
   val scala3 = "0.26.0"
   val scala3Candidate = "0.27.0-RC1"
@@ -391,7 +391,7 @@ lazy val metals = project
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "7.0.3",
       "com.h2database" % "h2" % "1.4.200",
-      // for starting `sbt bloopInstall` process
+      // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
       "net.java.dev.jna" % "jna" % "5.6.0",
       "net.java.dev.jna" % "jna-platform" % "5.6.0",
@@ -464,6 +464,17 @@ lazy val metals = project
   )
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
+
+lazy val `sbt-metals` = project
+  .settings(
+    sbtPlugin := true,
+    buildInfoPackage := "scala.meta.internal.sbtmetals",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "semanticdbVersion" -> V.semanticdb
+    )
+  )
+  .enablePlugins(BuildInfoPlugin)
+  .disablePlugins(ScalafixPlugin)
 
 lazy val input = project
   .in(file("tests/input"))
@@ -624,8 +635,14 @@ lazy val slow = project
     testSettings,
     sharedSettings,
     testOnly
-      .in(Test) := testOnly.in(Test).dependsOn(publishBinaryMtags).evaluated,
-    test.in(Test) := test.in(Test).dependsOn(publishBinaryMtags).value
+      .in(Test) := testOnly
+      .in(Test)
+      .dependsOn(publishLocal.in(`sbt-metals`), publishBinaryMtags)
+      .evaluated,
+    test.in(Test) := test
+      .in(Test)
+      .dependsOn(publishLocal.in(`sbt-metals`), publishBinaryMtags)
+      .value
   )
   .dependsOn(unit)
 

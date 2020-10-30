@@ -9,11 +9,12 @@ import munit.Location
 class SelectBspServerSuite extends BaseSuite {
   def check(
       name: String,
+      currentlyUsing: Option[String],
       candidates: List[BspConnectionDetails],
       expected: String
   )(implicit loc: Location): Unit = {
     test(name) {
-      val query = Messages.SelectBspServer.request(candidates)
+      val query = Messages.SelectBspServer.request(candidates, currentlyUsing)
       val obtained =
         query.params.getActions.asScala.map(_.getTitle).mkString("\n")
       assertNoDiff(obtained, expected)
@@ -26,6 +27,7 @@ class SelectBspServerSuite extends BaseSuite {
 
   check(
     "basic",
+    None,
     List(
       name("Bloop"),
       name("Mill")
@@ -37,7 +39,21 @@ class SelectBspServerSuite extends BaseSuite {
   )
 
   check(
+    "with-label",
+    Some("Bloop"),
+    List(
+      name("Bloop"),
+      name("Mill")
+    ),
+    """
+      |Bloop (currently using)
+      |Mill
+      |""".stripMargin
+  )
+
+  check(
     "version",
+    None,
     List(
       name("Bloop", "1.0"),
       name("Bloop", "2.0")
@@ -50,6 +66,7 @@ class SelectBspServerSuite extends BaseSuite {
 
   check(
     "conflict",
+    None,
     List(
       name("Bloop", "1.0"),
       name("Bloop", "1.0")

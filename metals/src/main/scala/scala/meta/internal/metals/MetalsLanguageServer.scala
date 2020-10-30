@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
 
+import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
@@ -26,11 +27,21 @@ import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.bsp.BspConfigGenerator
+import scala.meta.internal.bsp.BspConnector
+import scala.meta.internal.bsp.BspServers
+import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
+import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
@@ -179,6 +190,7 @@ class MetalsLanguageServer(
   // These can't be instantiated until we know the workspace root directory.
   private var shellRunner: ShellRunner = _
   private var bloopInstall: BloopInstall = _
+  private var bspConfigGenerator: BspConfigGenerator = _
   private var diagnostics: Diagnostics = _
   private var warnings: Warnings = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
@@ -210,6 +222,8 @@ class MetalsLanguageServer(
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
+  private var workspaceReload: WorkspaceReload = _
+  private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
   var tables: Tables = _
@@ -262,7 +276,7 @@ class MetalsLanguageServer(
       case None => ""
     }
     scribe.info(
-      s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+      s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
     )
 
     clientConfig.experimentalCapabilities =
@@ -272,6 +286,11 @@ class MetalsLanguageServer(
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, clientConfig))
     buildTargets.setTables(tables)
+    workspaceReload = new WorkspaceReload(
+      workspace,
+      languageClient,
+      tables
+    )
     buildTools = new BuildTools(
       workspace,
       bspGlobalDirectories,
@@ -336,6 +355,12 @@ class MetalsLanguageServer(
       tables,
       shellRunner
     )
+    bspConfigGenerator = new BspConfigGenerator(
+      workspace,
+      languageClient,
+      buildTools,
+      shellRunner
+    )
     newProjectProvider = new NewProjectProvider(
       languageClient,
       statusBar,
@@ -360,9 +385,17 @@ class MetalsLanguageServer(
       bspGlobalDirectories,
       clientConfig.initialConfig
     )
+    buildToolSelector = new BuildToolSelector(
+      languageClient,
+      tables
+    )
     bspConnector = new BspConnector(
       bloopServers,
-      bspServers
+      bspServers,
+      buildTools,
+      languageClient,
+      tables,
+      () => userConfig
     )
     semanticdbs = AggregateSemanticdbs(
       List(
@@ -429,7 +462,8 @@ class MetalsLanguageServer(
         buildTargetClasses,
         buffers,
         buildTargets,
-        clientConfig
+        clientConfig,
+        () => bspSession.map(_.main.isBloop).getOrElse(false)
       )
 
     val goSuperLensProvider = new SuperMethodCodeLens(
@@ -549,7 +583,7 @@ class MetalsLanguageServer(
       buildTargets,
       languageClient,
       () => bspSession.map(_.mainConnection.name),
-      () => bspConnector.resolve(buildTools),
+      () => bspConnector.resolve(),
       () => httpServer,
       tables,
       clientConfig
@@ -1002,9 +1036,9 @@ class MetalsLanguageServer(
         case Left(errors) =>
           errors.foreach { error => scribe.error(s"config error: $error") }
           Future.successful(())
-        case Right(value) =>
+        case Right(newUserConfig) =>
           val old = userConfig
-          userConfig = value
+          userConfig = newUserConfig
           if (userConfig.excludedPackages != old.excludedPackages) {
             excludedPackageHandler.update(userConfig.excludedPackages)
             workspaceSymbols.indexClasspath()
@@ -1012,50 +1046,35 @@ class MetalsLanguageServer(
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
-          val expectedBloopVersion = userConfig.currentBloopVersion
-          val correctVersionRunning =
-            bspSession.map(_.version).contains(expectedBloopVersion)
-          val allVersionsDefined =
-            bspSession.nonEmpty && userConfig.bloopVersion.nonEmpty
-          val changedToNoVersion =
-            old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
-          val versionChanged = allVersionsDefined && !correctVersionRunning
-          val versionRevertedToDefault =
-            changedToNoVersion && !correctVersionRunning
-          if (versionRevertedToDefault || versionChanged) {
-            languageClient
-              .showMessageRequest(
-                Messages.BloopVersionChange.params()
-              )
-              .asScala
-              .flatMap {
-                case item if item == Messages.BloopVersionChange.reconnect =>
-                  bloopServers.shutdownServer()
-                  autoConnectToBuildServer().ignoreValue
-                case _ =>
-                  Future.successful(())
+
+          bspSession
+            .map { session =>
+              if (session.main.isBloop) {
+                bloopServers.ensureDesiredVersion(
+                  userConfig.currentBloopVersion,
+                  session.version,
+                  userConfig.bloopVersion.nonEmpty,
+                  old.bloopVersion.isDefined,
+                  () => autoConnectToBuildServer
+                )
+              } else if (
+                userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+                  .exists(Ammonite.isAmmBuildTarget)
+              ) {
+                languageClient
+                  .showMessageRequest(AmmoniteJvmParametersChange.params())
+                  .asScala
+                  .flatMap {
+                    case item if item == AmmoniteJvmParametersChange.restart =>
+                      ammonite.reload()
+                    case _ =>
+                      Future.successful(())
+                  }
+              } else {
+                Future.successful(())
               }
-          } else if (
-            userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
-              .exists(Ammonite.isAmmBuildTarget)
-          ) {
-            languageClient
-              .showMessageRequest(AmmoniteJvmParametersChange.params())
-              .asScala
-              .flatMap {
-                case item if item == AmmoniteJvmParametersChange.restart =>
-                  ammonite
-                    .stop()
-                    .asScala
-                    .flatMap { _ =>
-                      ammonite.start()
-                    }
-                case _ =>
-                  Future.successful(())
-              }
-          } else {
-            Future.successful(())
-          }
+            }
+            .getOrElse(Future.successful(()))
       }
     }.flatten.asJava
 
@@ -1392,8 +1411,12 @@ class MetalsLanguageServer(
           indexWorkspaceSources()
         }.asJavaObject
       case ServerCommands.RestartBuildServer() =>
-        bloopServers.shutdownServer()
+        bspSession.foreach { session =>
+          if (session.main.isBloop) bloopServers.shutdownServer()
+        }
         autoConnectToBuildServer().asJavaObject
+      case ServerCommands.GenerateBspConfig() =>
+        generateBspConfig().asJavaObject
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
@@ -1406,7 +1429,10 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
         (for {
-          isSwitched <- bspServers.switchBuildServer()
+          isSwitched <- bspConnector.switchBuildServer(
+            workspace,
+            () => slowConnectToBuildServer(forceImport = true)
+          )
           _ <- {
             if (isSwitched) quickConnectToBuildServer()
             else Future.successful(())
@@ -1617,6 +1643,69 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
+  private def generateBspConfig(): Future[Unit] = {
+    val servers: List[BuildTool with BuildServerProvider] =
+      buildTools.loadSupported().collect {
+        case buildTool: BuildServerProvider => buildTool
+      }
+
+    def ensureAndConnect(
+        buildTool: BuildTool,
+        status: BspConfigGenerationStatus
+    ): Unit =
+      status match {
+        case Generated =>
+          tables.buildServers.chooseServer(buildTool.executableName)
+          quickConnectToBuildServer().ignoreValue
+        case Cancelled => ()
+        case Failed(exit) =>
+          exit match {
+            case Left(exitCode) =>
+              scribe.error(
+                s"Create of .bsp failed with exit code: $exitCode"
+              )
+              languageClient.showMessage(
+                Messages.BspProvider.genericUnableToCreateConfig
+              )
+            case Right(message) =>
+              languageClient.showMessage(
+                Messages.BspProvider.unableToCreateConfigFromMessage(
+                  message
+                )
+              )
+          }
+      }
+
+    (servers match {
+      case Nil =>
+        scribe.warn(Messages.BspProvider.noBuildToolFound.toString())
+        languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
+        Future.successful(())
+      case buildTool :: Nil =>
+        buildTool
+          .generateBspConfig(
+            workspace,
+            languageClient,
+            args =>
+              bspConfigGenerator.runUnconditionally(
+                buildTool,
+                args
+              )
+          )
+          .map(status => ensureAndConnect(buildTool, status))
+      case buildTools =>
+        bspConfigGenerator
+          .chooseAndGenerate(buildTools)
+          .map {
+            case (
+                  buildTool: BuildTool,
+                  status: BspConfigGenerationStatus
+                ) =>
+              ensureAndConnect(buildTool, status)
+          }
+    })
+  }
+
   private def supportedBuildTool(): Future[Option[BuildTool]] = {
     def isCompatibleVersion(buildTool: BuildTool) = {
       val isCompatibleVersion = SemVer.isCompatibleVersion(
@@ -1644,7 +1733,9 @@ class MetalsLanguageServer(
       case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
       case buildTools =>
         for {
-          Some(buildTool) <- bloopInstall.checkForChosenBuildTool(buildTools)
+          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
+            buildTools
+          )
         } yield isCompatibleVersion(buildTool)
     }
   }
@@ -1654,14 +1745,20 @@ class MetalsLanguageServer(
   ): Future[BuildChange] = {
     for {
       possibleBuildTool <- supportedBuildTool
+      chosenBuildServer = tables.buildServers.selectedServer()
+      isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
+        _ == BspConnector.BLOOP_SELECTED
+      )
       buildChange <- possibleBuildTool match {
         case Some(buildTool) =>
           buildTool.digest(workspace) match {
             case None =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
+            case Some(digest) if isBloopOrEmpty =>
+              slowConnectToBloopServer(forceImport, buildTool, digest)
             case Some(digest) =>
-              slowConnectToBuildServer(forceImport, buildTool, digest)
+              reloadWorkspaceAndIndex(forceImport, buildTool, digest)
           }
         case None =>
           Future.successful(BuildChange.None)
@@ -1669,7 +1766,7 @@ class MetalsLanguageServer(
     } yield buildChange
   }
 
-  private def slowConnectToBuildServer(
+  private def slowConnectToBloopServer(
       forceImport: Boolean,
       buildTool: BuildTool,
       checksum: String
@@ -1703,6 +1800,7 @@ class MetalsLanguageServer(
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isAutoConnectable) {
+      scribe.warn("Build server is not auto-connectable.")
       Future.successful(BuildChange.None)
     } else {
       autoConnectToBuildServer()
@@ -1727,8 +1825,8 @@ class MetalsLanguageServer(
     {
       for {
         _ <- disconnectOldBuildServer()
-        maybeSession <- timed("connected to build server") {
-          bspConnector.connect(workspace, userConfig, buildTools)
+        maybeSession <- timed("connected to build server", true) {
+          bspConnector.connect(workspace, userConfig)
         }
         result <- maybeSession match {
           case Some(session) =>
@@ -1761,16 +1859,17 @@ class MetalsLanguageServer(
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
-    if (bspSession.isDefined) {
-      scribe.info("disconnected: build server")
-    }
+    bspSession.foreach(connection =>
+      scribe.info(s"Disconnecting from ${connection.main.name} session...")
+    )
+
     bspSession match {
       case None => Future.successful(())
-      case Some(value) =>
+      case Some(session) =>
         bspSession = None
         diagnostics.reset()
         buildTargets.resetConnections(List.empty)
-        value.shutdown()
+        session.shutdown()
     }
   }
 
@@ -1785,21 +1884,21 @@ class MetalsLanguageServer(
       session.importBuilds()
     }
     for {
-      i <- statusBar.trackFuture("Importing build", importedBuilds0)
+      bspBuilds <- statusBar.trackFuture("Importing build", importedBuilds0)
       _ = {
-        val idToConnection = i.flatMap { bspBuild =>
+        val idToConnection = bspBuilds.flatMap { bspBuild =>
           val targets =
             bspBuild.build.workspaceBuildTargets.getTargets().asScala
           targets.map(t => (t.getId(), bspBuild.connection))
         }
         buildTargets.resetConnections(idToConnection)
-        lastImportedBuilds = i.map(_.build)
+        lastImportedBuilds = bspBuilds.map(_.build)
       }
       _ <- profiledIndexWorkspace(() => {
         val main = session.mainConnection
         doctor.check(main.name, main.version)
       })
-      _ = checkRunningBloopVersion(session.version)
+      _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
     }
@@ -2169,6 +2268,65 @@ class MetalsLanguageServer(
       slowConnectToBuildServer(forceImport = false)
     } else {
       Future.successful(BuildChange.None)
+    }
+  }
+
+  private def reloadWorkspaceAndIndex(
+      forceRefresh: Boolean,
+      buildTool: BuildTool,
+      checksum: String
+  ): Future[BuildChange] = {
+    def reloadAndIndex(session: BspSession): Future[BuildChange] = {
+      workspaceReload.persistChecksumStatus(Status.Started, buildTool)
+
+      session
+        .workspaceReload()
+        .map { _ =>
+          scribe.info("Correctly reloaded workspace")
+          profiledIndexWorkspace(() => {
+            val main = session.mainConnection
+            doctor.check(main.name, main.version)
+          })
+          workspaceReload.persistChecksumStatus(Status.Installed, buildTool)
+          BuildChange.Reloaded
+        }
+        .recoverWith { case NonFatal(e) =>
+          scribe.error(s"Unable to reload workspace: ${e.getMessage()}")
+          workspaceReload.persistChecksumStatus(Status.Failed, buildTool)
+          languageClient.showMessage(Messages.ReloadProjectFailed)
+          Future.successful(BuildChange.Failed)
+        }
+    }
+
+    bspSession match {
+      case None =>
+        scribe.warn("No build session currently active to reload.")
+        Future.successful(BuildChange.None)
+      case Some(session) if forceRefresh => reloadAndIndex(session)
+      case Some(session) =>
+        workspaceReload.oldReloadResult(checksum) match {
+          case Some(status) =>
+            scribe.info(s"Skipping reload with status '${status.name}'")
+            Future.successful(BuildChange.None)
+          case None =>
+            synchronized {
+              for {
+                userResponse <- workspaceReload.requestReload(
+                  buildTool,
+                  checksum
+                )
+                installResult <- {
+                  if (userResponse.isYes) {
+                    reloadAndIndex(session)
+                  } else {
+                    tables.dismissedNotifications.ImportChanges
+                      .dismiss(2, TimeUnit.MINUTES)
+                    Future.successful(BuildChange.None)
+                  }
+                }
+              } yield installResult
+            }
+        }
     }
   }
 

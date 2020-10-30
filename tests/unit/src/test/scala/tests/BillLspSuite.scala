@@ -51,6 +51,42 @@ class BillLspSuite extends BaseLspSuite("bill") {
     testRoundtripCompilation()
   }
 
+  test("reconnect-manual") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace.toNIO)
+    for {
+      _ <- server.initialize(
+        """
+          |/src/com/App.scala
+          |object App {
+          |  val x: Int = ""
+          |}
+          |/shutdown-trace
+          |true
+        """.stripMargin
+      )
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ = {
+        val logs = workspace
+          .resolve(Directories.log)
+          .readText
+          .linesIterator
+          .filter(_.startsWith("trace:"))
+          .mkString("\n")
+        assertNoDiff(
+          logs,
+          // Assert that we can manually shut downn the server, and then
+          // manually connect back up with no issues.
+          """|trace: initialize
+             |trace: shutdown
+             |trace: initialize
+             |""".stripMargin
+        )
+      }
+    } yield ()
+  }
+
   test("reconnect") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
@@ -78,6 +114,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
           logs,
           // Assert that "Connect to build server" waits for the shutdown
           // response from the build server before sending "initialize".
+          // Essentially the same from above without needing to manually
+          // disconnect first
           """|trace: initialize
              |trace: shutdown
              |trace: initialize

@@ -19,6 +19,8 @@ You will need the following applications installed:
 ## Project structure
 
 - `metals` the main project with sources of the Metals language server.
+- `sbt-metals` the sbt plugin used when users are using the BSP support from
+    sbt to ensure semanticDB is being produced by sbt.
 - `mtags` Scala version specific module used to interact with the Scala
   presentation compiler. It's a dependency of the `metals` project and can
   additionally be used by via `mtags-interfaces` to support multiple Scala

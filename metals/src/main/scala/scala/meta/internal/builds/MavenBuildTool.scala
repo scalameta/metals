@@ -6,7 +6,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 case class MavenBuildTool(userConfig: () => UserConfiguration)
-    extends BloopPluginBuildTool {
+    extends BuildTool
+    with BloopInstallProvider {
 
   private lazy val embeddedMavenLauncher: AbsolutePath = {
     val out = BuildTool.copyFromResource(tempDir, "maven-wrapper.jar")
@@ -18,7 +19,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
     AbsolutePath(out)
   }
 
-  def args(workspace: AbsolutePath): List[String] = {
+  def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     def command(versionToUse: String) =
       List(
         s"ch.epfl.scala:maven-bloop_2.12:$versionToUse:bloopInstall",

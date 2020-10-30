@@ -290,6 +290,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     statusParams.add(params)
+
   }
 
   override def metalsInputBox(

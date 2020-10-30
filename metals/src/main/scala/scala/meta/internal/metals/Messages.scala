@@ -17,6 +17,45 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
  */
 object Messages {
+
+  val NoBspSupport = new MessageParams(
+    MessageType.Warning,
+    "Workspace doesn't support BSP, please see logs."
+  )
+
+  object BspProvider {
+    val noBuildToolFound = new MessageParams(
+      MessageType.Warning,
+      "No build tool found to generate a BSP config."
+    )
+    val genericUnableToCreateConfig = new MessageParams(
+      MessageType.Error,
+      "Unable to create bsp config."
+    )
+
+    def unableToCreateConfigFromMessage(message: String) = new MessageParams(
+      MessageType.Error,
+      message
+    )
+
+    def params(buildTools: List[BuildTool]): ShowMessageRequestParams = {
+      val messageActionItems =
+        buildTools.map(bt => new MessageActionItem(bt.executableName))
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        "Multiple build tools found that could be build servers. Which would you like to use?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(messageActionItems.asJava)
+      params
+    }
+  }
+
+  def unableToStartServer(buildTool: String) = new MessageParams(
+    MessageType.Warning,
+    s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually."
+  )
+
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"
@@ -27,12 +66,18 @@ object Messages {
       "See the logs for more details. "
   )
 
+  val ReloadProjectFailed = new MessageParams(
+    MessageType.Error,
+    "Reloading your project failed, no functionality will work. See the log for more details"
+  )
+
   def bloopInstallProgress(buildToolExecName: String) =
     new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
   def notNow: MessageActionItem =
     new MessageActionItem("Not now")
+
   object ImportBuildChanges {
     def yes: MessageActionItem =
       new MessageActionItem("Import changes")
@@ -252,6 +297,11 @@ object Messages {
     }
   }
 
+  // Don't confuse this with the "multiple build tools that can be servers"
+  // message up above.  That one focuses not on multiple .bsp/<tool>.json
+  // entries, but rather having multiple build tools in a workspace that could
+  // potentially be a build server, whereas this one focuses on existing .bsp
+  // files that already exist.
   object SelectBspServer {
     case class Request(
         params: ShowMessageRequestParams,
@@ -262,7 +312,8 @@ object Messages {
     def isSelectBspServer(params: ShowMessageRequestParams): Boolean =
       params.getMessage == message
     def request(
-        candidates: List[BspConnectionDetails]
+        candidates: List[BspConnectionDetails],
+        currentBsp: Option[String]
     ): Request = {
       val params = new ShowMessageRequestParams()
       params.setMessage(message)
@@ -276,9 +327,17 @@ object Messages {
       // - name conflicts: disambiguate conflicting names by version number
       // - name+version conflicts: append random characters to the title.
       val items = candidates.map { candidate =>
+        val currentlyUsing =
+          if (
+            currentBsp.exists(
+              _.toLowerCase == candidate.getName().toLowerCase()
+            )
+          )
+            " (currently using)"
+          else ""
         val nameConflicts = candidates.count(_.getName == candidate.getName)
         val title: String = if (nameConflicts < 2) {
-          candidate.getName
+          candidate.getName + currentlyUsing
         } else {
           val versionConflicts = candidates.count { c =>
             c.getName == candidate.getName &&
@@ -604,6 +663,6 @@ object Messages {
       )
       params
     }
-
   }
+
 }

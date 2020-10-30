@@ -12,13 +12,13 @@ import scala.meta.io.AbsolutePath
  * Detects what build tool is used in this workspace.
  *
  * Although we only support a limited set of build tools, knowing
- * what build tool is used in the workspace helps to produce better error
+ * what build tool is used in the workspace helps to produce better errors
  * for people using unsupported build tools. For example: "Gradle is not supported"
  * instead of "Unsupported build tool".
  *
  * @param bspGlobalDirectories Directories for user and system installed BSP connection
  *                            details according to BSP spec:
- *                            https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#default-locations-for-bsp-connection-files
+ *                            https://build-server-protocol.github.io/docs/server-discovery.html#default-locations-for-bsp-connection-files
  */
 final class BuildTools(
     workspace: AbsolutePath,

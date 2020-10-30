@@ -94,6 +94,25 @@ object ServerCommands {
     """Cancel the currently ongoing compilation, if any."""
   )
 
+  val GenerateBspConfig = new Command(
+    "generate-bsp-config",
+    "Generate BSP Config",
+    """|Checks to see if your build tool can serve as a BSP server. If so, generate
+       |the necessary BSP config to connect to the server. If there is more than one
+       |build tool for a workspace, you can then choose the desired one and that
+       |one will be used to generate the config.
+       |
+       |After the config is generated, Metals will attempt to auto-connect to it.
+       |
+       |The build servers that Metals knows how to detect and start:
+       | - sbt
+       |
+       |Note: while Metals does know how to start Bloop, Bloop will be started when you trigger a build
+       |import or when you use `bsp-switch` to switch to Bloop.
+       |""".stripMargin,
+    "[string], name of the build server."
+  )
+
   val BspSwitch = new Command(
     "bsp-switch",
     "Switch build server",
@@ -357,6 +376,7 @@ object ServerCommands {
       CancelCompile,
       CleanCompile,
       BspSwitch,
+      GenerateBspConfig,
       StartDebugAdapter,
       GotoSymbol,
       GotoPosition,

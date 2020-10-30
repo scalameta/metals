@@ -19,10 +19,15 @@ class PopupChoiceReset(
 
   def reset(value: String)(implicit ec: ExecutionContext): Future[Unit] = {
     val result = if (value == BuildTool) {
+      scribe.info("Resetting built tool selection.")
       tables.buildTool.reset()
       reconnectToBuildServer()
     } else if (value == BuildImport) {
       tables.dismissedNotifications.ImportChanges.reset()
+      Future.successful(())
+    } else if (value == BuildServer) {
+      scribe.info("Resetting built server selection.")
+      tables.buildServers.reset()
       Future.successful(())
     } else {
       Future.successful(())
@@ -41,7 +46,8 @@ class PopupChoiceReset(
       params.setActions(
         List(
           new MessageActionItem(PopupChoiceReset.BuildTool),
-          new MessageActionItem(PopupChoiceReset.BuildImport)
+          new MessageActionItem(PopupChoiceReset.BuildImport),
+          new MessageActionItem(PopupChoiceReset.BuildServer)
         ).asJava
       )
       params
@@ -57,6 +63,8 @@ class PopupChoiceReset(
           reset(PopupChoiceReset.BuildTool)
         } else if (item.getTitle() == PopupChoiceReset.BuildImport) {
           reset(PopupChoiceReset.BuildImport)
+        } else if (item.getTitle() == PopupChoiceReset.BuildServer) {
+          reset(PopupChoiceReset.BuildServer)
         } else {
           Future.successful(())
         }
@@ -67,4 +75,5 @@ class PopupChoiceReset(
 object PopupChoiceReset {
   final val BuildTool = "Build tool selection"
   final val BuildImport = "Build import"
+  final val BuildServer = "Build server selection"
 }

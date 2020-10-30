@@ -7,6 +7,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
+import scala.meta.internal.bsp.BspResolvedResult
+import scala.meta.internal.bsp.ResolvedBloop
+import scala.meta.internal.bsp.ResolvedBspOne
+import scala.meta.internal.bsp.ResolvedMultiple
+import scala.meta.internal.bsp.ResolvedNone
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
@@ -26,7 +31,7 @@ final class Doctor(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     currentBuildServer: () => Option[String],
-    calculateNewBuildServer: () => BspResolveResult,
+    calculateNewBuildServer: () => BspResolvedResult,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration
@@ -268,7 +273,7 @@ final class Doctor(
 
   private def selectedBuildToolMessage(): Option[String] = {
     tables.buildTool.selectedBuildTool().map { value =>
-      s"Build definition is coming from ${value}"
+      s"Build definition is coming from ${value}."
     }
   }
 
@@ -284,17 +289,20 @@ final class Doctor(
   }
 
   private def selectedBuildServerMessage(): String = {
-    val current = currentBuildServer().getOrElse("<none>")
-    val onRestart = calculateNewBuildServer() match {
-      case ResolveNone => "<none>"
-      case ResolveBloop => "Bloop"
-      case ResolveBspOne(details) => details.getName
-      case ResolveMultiple(_, _) => "<ask user>"
-    }
-    if (current != onRestart) {
-      s"Build server currently used: ${current}. After reload will try connect to: ${onRestart}"
-    } else {
-      s"Build server currently used: ${current}."
+    val current = currentBuildServer()
+
+    current match {
+      case Some(server) => s"Build server currenlty being used is $server."
+      case None =>
+        calculateNewBuildServer() match {
+          case ResolvedNone =>
+            "No build server found. Try to run the generate-bsp-config command."
+          case ResolvedBloop => "Build server currenlty being used is Bloop."
+          case ResolvedBspOne(details) =>
+            s"Build server currenlty being used is ${details.getName()}."
+          case ResolvedMultiple(_, _) =>
+            "Multiple build servers found for your workspace. Attempt to connect to choose your desired server."
+        }
     }
   }
 
@@ -308,10 +316,16 @@ final class Doctor(
   private def buildTargetsJson(): String = {
     val targets = allTargets()
     val buildToolHeading = selectedBuildToolMessage()
+    val buildServerHeading = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
 
     val heading =
-      List(buildToolHeading, importBuildHeading, Some(doctorHeading)).flatten
+      List(
+        buildToolHeading,
+        Some(buildServerHeading),
+        importBuildHeading,
+        Some(doctorHeading)
+      ).flatten
         .mkString("\n\n")
 
     val results = if (targets.isEmpty) {

@@ -156,6 +156,7 @@ object Bill {
         new InitializeBuildResult("Bill", "1.0", "2.0.0-M2", capabilities)
       }.logError("initialize").asJava
     }
+    override def workspaceReload(): CompletableFuture[Object] = ???
     override def onBuildInitialized(): Unit = {}
     override def buildShutdown(): CompletableFuture[AnyRef] = {
       if (isShutdownTrace()) {

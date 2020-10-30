@@ -10,7 +10,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 case class GradleBuildTool(userConfig: () => UserConfiguration)
-    extends BloopPluginBuildTool {
+    extends BuildTool
+    with BloopInstallProvider {
 
   private val initScriptName = "init-script.gradle"
   private def initScript(versionToUse: String) =
@@ -66,7 +67,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
   override def digest(workspace: AbsolutePath): Option[String] =
     GradleDigest.current(workspace)
 
-  override def args(workspace: AbsolutePath): List[String] = {
+  override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val cmd = {
       if (isBloopConfigured(workspace)) List("--console=plain", "bloopInstall")
       else {

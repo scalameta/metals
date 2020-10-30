@@ -18,6 +18,7 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -219,6 +220,8 @@ final class Ammonite(
     } else
       Future.unit
 
+  def reload(): Future[Unit] = stop().asScala.flatMap(_ => start())
+
   def start(doc: Option[AbsolutePath] = None): Future[Unit] = {
 
     disconnectOldBuildServer().onComplete {
@@ -257,7 +260,8 @@ final class Ammonite(
               workspace()
             ),
         tables().dismissedNotifications.ReconnectAmmonite,
-        config
+        config,
+        "Ammonite"
       )
       for {
         conn <- futureConn

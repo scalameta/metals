@@ -20,7 +20,9 @@ import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
 
-class SbtLspSuite extends BaseImportSuite("sbt-import") with ScriptsAssertions {
+class SbtBloopLspSuite
+    extends BaseImportSuite("sbt-bloop-import")
+    with ScriptsAssertions {
 
   val sbtVersion = V.sbtVersion
   val scalaVersion = V.scala212

@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Try
 
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
@@ -60,6 +61,8 @@ class BuildServerConnection private (
   // the name is set before when establishing conenction
   def name: String = initialConnection.socketConnection.serverName
 
+  def isBloop: Boolean = name == "Bloop"
+
   def workspaceDirectory: AbsolutePath = workspace
 
   def onReconnection(
@@ -77,6 +80,7 @@ class BuildServerConnection private (
         if (isShuttingDown.compareAndSet(false, true)) {
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
+          scribe.info("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
         }
@@ -100,6 +104,17 @@ class BuildServerConnection private (
 
   def clean(params: CleanCacheParams): CompletableFuture[CleanCacheResult] = {
     register(server => server.buildTargetCleanCache(params))
+  }
+
+  def workspaceReload(): Future[Object] = {
+    if (initialConnection.capabilities.getCanReload()) {
+      register(server => server.workspaceReload()).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `workspace/reload`, unable to reload"
+      )
+      Future.successful(null)
+    }
   }
 
   def mainClasses(
@@ -230,7 +245,8 @@ object BuildServerConnection {
       languageClient: LanguageClient,
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
-      config: MetalsServerConfig
+      config: MetalsServerConfig,
+      serverName: String
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -248,7 +264,8 @@ object BuildServerConnection {
           .create()
         val listening = launcher.startListening()
         val server = launcher.getRemoteProxy
-        val result = BuildServerConnection.initialize(workspace, server)
+        val result =
+          BuildServerConnection.initialize(workspace, server, serverName)
         val stopListening =
           Cancelable(() => listening.cancel(false))
         LauncherConnection(
@@ -256,7 +273,8 @@ object BuildServerConnection {
           server,
           result.getDisplayName(),
           stopListening,
-          result.getVersion()
+          result.getVersion(),
+          result.getCapabilities()
         )
       }
     }
@@ -273,7 +291,7 @@ object BuildServerConnection {
     }
   }
 
-  final case class BloopExtraBuildParams(
+  final case class BspExtraBuildParams(
       semanticdbVersion: String,
       supportedScalaVersions: java.util.List[String]
   )
@@ -283,9 +301,10 @@ object BuildServerConnection {
    */
   private def initialize(
       workspace: AbsolutePath,
-      server: MetalsBuildServer
+      server: MetalsBuildServer,
+      serverName: String
   ): InitializeBuildResult = {
-    val extraParams = BloopExtraBuildParams(
+    val extraParams = BspExtraBuildParams(
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScala2Versions.asJava
     )
@@ -309,11 +328,11 @@ object BuildServerConnection {
     // and we want to fail fast if the connection is not
     val result =
       try {
-        def isCI: Boolean = "true" == System.getenv("CI")
-        if (isCI)
+        if (serverName == SbtBuildTool.name) {
+          initializeResult.get(60, TimeUnit.SECONDS)
+        } else {
           initializeResult.get(20, TimeUnit.SECONDS)
-        else
-          initializeResult.get(5, TimeUnit.SECONDS)
+        }
       } catch {
         case e: TimeoutException =>
           scribe.error("Timeout waiting for 'build/initialize' response")
@@ -328,7 +347,8 @@ object BuildServerConnection {
       server: MetalsBuildServer,
       displayName: String,
       cancelServer: Cancelable,
-      version: String
+      version: String,
+      capabilities: BuildServerCapabilities
   ) {
 
     def cancelables: List[Cancelable] =
