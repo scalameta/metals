@@ -215,7 +215,7 @@ object SbtBuildTool {
    */
   private def metalsPluginDetails(version: String) =
     (
-      "This file enables semsantic information to be produced by sbt.",
+      "This file enables semantic information to be produced by sbt.",
       s""""org.scalameta" % "sbt-metals" % "$version""""
     )
 

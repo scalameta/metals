@@ -3,32 +3,43 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.bsp.BspConnector
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class PopupChoiceReset(
+    workspace: AbsolutePath,
     tables: Tables,
     languageClient: MetalsLanguageClient,
     doctor: Doctor,
-    reconnectToBuildServer: () => Future[Unit]
+    slowConnect: () => Future[BuildChange],
+    bspConnector: BspConnector,
+    quickConnect: () => Future[BuildChange]
 ) {
   import PopupChoiceReset._
 
   def reset(value: String)(implicit ec: ExecutionContext): Future[Unit] = {
     val result = if (value == BuildTool) {
-      scribe.info("Resetting built tool selection.")
+      scribe.info("Resetting build tool selection.")
       tables.buildTool.reset()
-      reconnectToBuildServer()
+      slowConnect().ignoreValue
     } else if (value == BuildImport) {
       tables.dismissedNotifications.ImportChanges.reset()
       Future.successful(())
     } else if (value == BuildServer) {
-      scribe.info("Resetting built server selection.")
-      tables.buildServers.reset()
-      Future.successful(())
+      scribe.info("Resetting build server selection.")
+      (for {
+        didChange <- bspConnector.switchBuildServer(
+          workspace,
+          slowConnect
+        )
+        if didChange
+      } yield quickConnect()).ignoreValue
     } else {
       Future.successful(())
     }
