@@ -176,7 +176,7 @@ lazy val V = new {
   val scalameta = "4.3.24"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.4-17-6e43cbfd"
+  val bloop = "1.4.4-23-dbacf644"
   val scala3 = "0.26.0"
   val scala3Candidate = "0.27.0-RC1"
   val bloopNightly = bloop
@@ -213,12 +213,12 @@ lazy val V = new {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  def guava = "com.google.guava" % "guava" % "29.0-jre"
+  def guava = "com.google.guava" % "guava" % "30.0-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
-  val coursier = "2.0.3"
   val coursierInterfaces = "1.0.1"
+  val coursier = "2.0.5"
   val ammonite = "2.2.0-4-4bd225e"
   val mill = "0.8.0"
   val organizeImportRule = "0.4.2"
@@ -389,7 +389,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.2.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.2.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.0.3",
+      "org.flywaydb" % "flyway-core" % "7.0.4",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -418,8 +418,8 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "2.8.3",
-      "com.outr" %% "scribe-slf4j" % "2.8.3", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "2.8.6",
+      "com.outr" %% "scribe-slf4j" % "2.8.6", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.0",
       // for JSON formatted doctor
