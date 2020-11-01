@@ -395,7 +395,8 @@ class MetalsLanguageServer(
       buildTools,
       languageClient,
       tables,
-      () => userConfig
+      () => userConfig,
+      statusBar
     )
     semanticdbs = AggregateSemanticdbs(
       List(

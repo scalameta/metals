@@ -12,6 +12,7 @@ import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
@@ -26,7 +27,8 @@ class BspConnector(
     buildTools: BuildTools,
     client: LanguageClient,
     tables: Tables,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
+    statusBar: StatusBar
 )(implicit ec: ExecutionContext) {
 
   def resolve(): BspResolvedResult = {
@@ -68,7 +70,10 @@ class BspConnector(
             userConfig,
             isBloop = false
           )
-          bspServers.newServer(workspace, details).map(Some(_))
+          val connectionF = bspServers.newServer(workspace, details)
+          statusBar
+            .trackFuture("Connecting to sbt", connectionF, showTimer = true)
+            .map(Some(_))
         case ResolvedBspOne(details) =>
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
