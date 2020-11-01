@@ -213,7 +213,7 @@ lazy val V = new {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  def guava = "com.google.guava" % "guava" % "29.0-jre"
+  def guava = "com.google.guava" % "guava" % "30.0-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
