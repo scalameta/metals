@@ -288,20 +288,41 @@ final class Doctor(
     }
   }
 
-  private def selectedBuildServerMessage(): String = {
+  /**
+   * @return Selected build server message and also whether or not the server was chosen
+   *         explicity. For example, if the user is just using Bloop and never made and
+   *         explicit choice to use another server and then come back to Bloop, it's
+   *         not explict and won't get the option to reset the choice, since no choice
+   *         exists. (Message, Explict Choice)
+   */
+  private def selectedBuildServerMessage(): (String, Boolean) = {
     val current = currentBuildServer()
+    val chosen = tables.buildServers.selectedServer()
 
-    current match {
-      case Some(server) => s"Build server currenlty being used is $server."
-      case None =>
+    (current, chosen) match {
+      case (Some(server), Some(_)) =>
+        (s"Build server currenlty being used is $server.", true)
+      case (Some(server), None) =>
+        (s"Build server currenlty being used is $server.", false)
+      case (None, _) =>
         calculateNewBuildServer() match {
           case ResolvedNone =>
-            "No build server found. Try to run the generate-bsp-config command."
-          case ResolvedBloop => "Build server currenlty being used is Bloop."
+            (
+              "No build server found. Try to run the generate-bsp-config command.",
+              false
+            )
+          case ResolvedBloop =>
+            ("Build server currenlty being used is Bloop.", false)
           case ResolvedBspOne(details) =>
-            s"Build server currenlty being used is ${details.getName()}."
+            (
+              s"Build server currenlty being used is ${details.getName()}.",
+              false
+            )
           case ResolvedMultiple(_, _) =>
-            "Multiple build servers found for your workspace. Attempt to connect to choose your desired server."
+            (
+              "Multiple build servers found for your workspace. Attempt to connect to choose your desired server.",
+              false
+            )
         }
     }
   }
@@ -316,9 +337,8 @@ final class Doctor(
   private def buildTargetsJson(): String = {
     val targets = allTargets()
     val buildToolHeading = selectedBuildToolMessage()
-    val buildServerHeading = selectedBuildServerMessage()
+    val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
-
     val heading =
       List(
         buildToolHeading,
@@ -361,7 +381,7 @@ final class Doctor(
       html.element("p")(
         _.text(msg)
           .optionally(!clientConfig.isHttpEnabled)(
-            _.text("(")
+            _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
               .text(")")
           )
@@ -372,16 +392,29 @@ final class Doctor(
       html.element("p")(
         _.text(msg)
           .optionally(!clientConfig.isHttpEnabled)(
-            _.text("(")
+            _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildImport), "Reset")
               .text(")")
           )
       )
     }
 
-    html.element("p")(
-      _.text(selectedBuildServerMessage())
-    )
+    val (message, explicitChoice) = selectedBuildServerMessage()
+
+    if (explicitChoice) {
+      html.element("p")(
+        _.text(message)
+          .optionally(!clientConfig.isHttpEnabled)(
+            _.text(" (")
+              .link(resetChoiceCommand(PopupChoiceReset.BuildServer), "Reset")
+              .text(")")
+          )
+      )
+    } else {
+      html.element("p")(
+        _.text(message)
+      )
+    }
 
     html
       .element("p")(

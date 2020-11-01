@@ -590,10 +590,13 @@ class MetalsLanguageServer(
       clientConfig
     )
     popupChoiceReset = new PopupChoiceReset(
+      workspace,
       tables,
       languageClient,
       doctor,
-      () => slowConnectToBuildServer(forceImport = true).map(_ => ())
+      () => slowConnectToBuildServer(forceImport = true),
+      bspConnector,
+      () => quickConnectToBuildServer()
     )
 
     val worksheetPublisher =
