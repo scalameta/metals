@@ -2027,6 +2027,7 @@ class MetalsLanguageServer(
         timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)
           finally {
+            Future(scalafixProvider.load())
             indexingPromise.trySuccess(())
           }
         }

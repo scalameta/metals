@@ -3,6 +3,7 @@ package tests
 import scala.concurrent.duration.Duration
 import scala.util.Properties
 
+import scala.meta.internal.metals.Testing
 import scala.meta.internal.semver.SemVer
 
 import munit.Flaky
@@ -14,6 +15,8 @@ class BaseSuite extends munit.FunSuite with Assertions {
    * Tests that are only flaky on Windows
    */
   val FlakyWindows = new Tag("FlakyWindows")
+
+  Testing.enable()
 
   def isJava8: Boolean =
     !Properties.isJavaAtLeast("9")
