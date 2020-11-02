@@ -189,6 +189,7 @@ class MetalsLanguageServer(
       parseTrees ::
       compilations.pauseables
   )
+  private val timerProvider: TimerProvider = new TimerProvider(time)
 
   // These can't be instantiated until we know the workspace root directory.
   private var shellRunner: ShellRunner = _
@@ -670,68 +671,70 @@ class MetalsLanguageServer(
   def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
-    timed("initialize")(Future {
-      setupJna()
-      initializeParams = Option(params)
-      updateWorkspaceDirectory(params)
-      val capabilities = new ServerCapabilities()
-      capabilities.setExecuteCommandProvider(
-        new ExecuteCommandOptions(
-          ServerCommands.all.map(_.id).asJava
-        )
-      )
-      capabilities.setFoldingRangeProvider(true)
-      capabilities.setCodeLensProvider(new CodeLensOptions(false))
-      capabilities.setDefinitionProvider(true)
-      capabilities.setImplementationProvider(true)
-      capabilities.setHoverProvider(true)
-      capabilities.setReferencesProvider(true)
-      val renameOptions = new RenameOptions()
-      renameOptions.setPrepareProvider(true)
-      capabilities.setRenameProvider(renameOptions)
-      capabilities.setDocumentHighlightProvider(true)
-      capabilities.setDocumentOnTypeFormattingProvider(
-        new DocumentOnTypeFormattingOptions("\n", List("\"").asJava)
-      )
-      capabilities.setDocumentRangeFormattingProvider(
-        initialConfig.allowMultilineStringFormatting
-      )
-      capabilities.setSignatureHelpProvider(
-        new SignatureHelpOptions(List("(", "[", ",").asJava)
-      )
-      capabilities.setCompletionProvider(
-        new CompletionOptions(
-          clientConfig.isCompletionItemResolve,
-          List(".", "*").asJava
-        )
-      )
-      capabilities.setWorkspaceSymbolProvider(true)
-      capabilities.setDocumentSymbolProvider(true)
-      capabilities.setDocumentFormattingProvider(true)
-      if (initializeParams.supportsCodeActionLiterals) {
-        capabilities.setCodeActionProvider(
-          new CodeActionOptions(
-            List(
-              CodeActionKind.QuickFix,
-              CodeActionKind.Refactor,
-              CodeActionKind.SourceOrganizeImports
-            ).asJava
+    timerProvider
+      .timed("initialize")(Future {
+        setupJna()
+        initializeParams = Option(params)
+        updateWorkspaceDirectory(params)
+        val capabilities = new ServerCapabilities()
+        capabilities.setExecuteCommandProvider(
+          new ExecuteCommandOptions(
+            ServerCommands.all.map(_.id).asJava
           )
         )
-      } else {
-        capabilities.setCodeActionProvider(true)
-      }
+        capabilities.setFoldingRangeProvider(true)
+        capabilities.setCodeLensProvider(new CodeLensOptions(false))
+        capabilities.setDefinitionProvider(true)
+        capabilities.setImplementationProvider(true)
+        capabilities.setHoverProvider(true)
+        capabilities.setReferencesProvider(true)
+        val renameOptions = new RenameOptions()
+        renameOptions.setPrepareProvider(true)
+        capabilities.setRenameProvider(renameOptions)
+        capabilities.setDocumentHighlightProvider(true)
+        capabilities.setDocumentOnTypeFormattingProvider(
+          new DocumentOnTypeFormattingOptions("\n", List("\"").asJava)
+        )
+        capabilities.setDocumentRangeFormattingProvider(
+          initialConfig.allowMultilineStringFormatting
+        )
+        capabilities.setSignatureHelpProvider(
+          new SignatureHelpOptions(List("(", "[", ",").asJava)
+        )
+        capabilities.setCompletionProvider(
+          new CompletionOptions(
+            clientConfig.isCompletionItemResolve,
+            List(".", "*").asJava
+          )
+        )
+        capabilities.setWorkspaceSymbolProvider(true)
+        capabilities.setDocumentSymbolProvider(true)
+        capabilities.setDocumentFormattingProvider(true)
+        if (initializeParams.supportsCodeActionLiterals) {
+          capabilities.setCodeActionProvider(
+            new CodeActionOptions(
+              List(
+                CodeActionKind.QuickFix,
+                CodeActionKind.Refactor,
+                CodeActionKind.SourceOrganizeImports
+              ).asJava
+            )
+          )
+        } else {
+          capabilities.setCodeActionProvider(true)
+        }
 
-      val textDocumentSyncOptions = new TextDocumentSyncOptions
-      textDocumentSyncOptions.setChange(TextDocumentSyncKind.Full)
-      textDocumentSyncOptions.setSave(new SaveOptions(true))
-      textDocumentSyncOptions.setOpenClose(true)
+        val textDocumentSyncOptions = new TextDocumentSyncOptions
+        textDocumentSyncOptions.setChange(TextDocumentSyncKind.Full)
+        textDocumentSyncOptions.setSave(new SaveOptions(true))
+        textDocumentSyncOptions.setOpenClose(true)
 
-      capabilities.setTextDocumentSync(textDocumentSyncOptions)
+        capabilities.setTextDocumentSync(textDocumentSyncOptions)
 
-      val serverInfo = new ServerInfo("Metals", BuildInfo.metalsVersion)
-      new InitializeResult(capabilities, serverInfo)
-    }).asJava
+        val serverInfo = new ServerInfo("Metals", BuildInfo.metalsVersion)
+        new InitializeResult(capabilities, serverInfo)
+      })
+      .asJava
   }
 
   private def registerNiceToHaveFilePatterns(): Unit = {
@@ -1369,7 +1372,10 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
-      timedThunk("code lens generation", thresholdMillis = 1.second.toMillis) {
+      timerProvider.timedThunk(
+        "code lens generation",
+        thresholdMillis = 1.second.toMillis
+      ) {
         val path = params.getTextDocument.getUri.toAbsolutePath
         codeLensProvider.findLenses(path).toList.asJava
       }
@@ -1837,7 +1843,7 @@ class MetalsLanguageServer(
     {
       for {
         _ <- disconnectOldBuildServer()
-        maybeSession <- timed("connected to build server", true) {
+        maybeSession <- timerProvider.timed("connected to build server", true) {
           bspConnector.connect(workspace, userConfig)
         }
         result <- maybeSession match {
@@ -1892,7 +1898,7 @@ class MetalsLanguageServer(
     cancelables.add(session)
     compilers.cancel()
     bspSession = Some(session)
-    val importedBuilds0 = timed("imported build") {
+    val importedBuilds0 = timerProvider.timed("imported build") {
       session.importBuilds()
     }
     for {
@@ -1991,48 +1997,11 @@ class MetalsLanguageServer(
     }
   }
 
-  private def timed[T](
-      didWhat: String,
-      reportStatus: Boolean = false
-  )(thunk: => Future[T]): Future[T] = {
-    withTimer(didWhat, reportStatus)(thunk).map { case (_, value) =>
-      value
-    }
-  }
-
-  def timedThunk[T](
-      didWhat: String,
-      onlyIf: Boolean = true,
-      thresholdMillis: Long = 0
-  )(thunk: => T): T = {
-    val elapsed = new Timer(time)
-    val result = thunk
-    if (
-      onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)
-    ) {
-      scribe.info(s"time: $didWhat in $elapsed")
-    }
-    result
-  }
-
-  private def withTimer[T](didWhat: String, reportStatus: Boolean)(
-      thunk: => Future[T]
-  ): Future[(Timer, T)] = {
-    val elapsed = new Timer(time)
-    val result = thunk
-    result.map { value =>
-      if (reportStatus || elapsed.isLogWorthy) {
-        scribe.info(s"time: $didWhat in $elapsed")
-      }
-      (elapsed, value)
-    }
-  }
-
   private def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
       Future {
-        timedThunk("indexed workspace", onlyIf = true) {
+        timerProvider.timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)
           finally {
             Future(scalafixProvider.load())
@@ -2080,7 +2049,7 @@ class MetalsLanguageServer(
 
   private def indexWorkspace(check: () => Unit): Unit = {
     val i = (ammonite.lastImportedBuild :: lastImportedBuilds).reduce(_ ++ _)
-    timedThunk(
+    timerProvider.timedThunk(
       "updated build targets",
       clientConfig.initialConfig.statistics.isIndex
     ) {
@@ -2104,7 +2073,7 @@ class MetalsLanguageServer(
       buildTools
         .loadSupported()
     }
-    timedThunk(
+    timerProvider.timedThunk(
       "started file watcher",
       clientConfig.initialConfig.statistics.isIndex
     ) {
@@ -2117,25 +2086,25 @@ class MetalsLanguageServer(
           scribe.warn("File watching failed, indexes will not be updated.", e)
       }
     }
-    timedThunk(
+    timerProvider.timedThunk(
       "indexed library classpath",
       clientConfig.initialConfig.statistics.isIndex
     ) {
       workspaceSymbols.indexClasspath()
     }
-    timedThunk(
+    timerProvider.timedThunk(
       "indexed workspace SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex
     ) {
       semanticDBIndexer.onScalacOptions(i.scalacOptions)
     }
-    timedThunk(
+    timerProvider.timedThunk(
       "indexed workspace sources",
       clientConfig.initialConfig.statistics.isIndex
     ) {
       indexWorkspaceSources()
     }
-    timedThunk(
+    timerProvider.timedThunk(
       "indexed library sources",
       clientConfig.initialConfig.statistics.isIndex
     ) {
@@ -2420,7 +2389,7 @@ class MetalsLanguageServer(
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename) {
       val result =
-        timedThunk(
+        timerProvider.timedThunk(
           "definition",
           clientConfig.initialConfig.statistics.isDefinition
         )(
