@@ -404,3 +404,9 @@ case class DebugUnresolvedTestClassParams(
     testClass: String,
     @Nullable buildTarget: String = null
 )
+
+case class DebugUnresolvedAttachRemoteParams(
+    hostName: String,
+    port: Int,
+    buildTarget: String
+)
