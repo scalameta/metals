@@ -1,13 +1,14 @@
 package metals
 
-import sbt._
-import sbt.Keys._
-import Project.inConfig
-import sbt.internal.inc.ScalaInstance
 import scala.meta.internal.sbtmetals.BuildInfo
 
+import sbt._
+import sbt.Keys._
+import sbt.internal.inc.ScalaInstance
+import sbt.plugins.JvmPlugin
+
 object MetalsPlugin extends AutoPlugin {
-  override def requires = plugins.JvmPlugin
+  override def requires = JvmPlugin
   override def trigger = allRequirements
 
   val semanticdbVersion = BuildInfo.semanticdbVersion
@@ -49,7 +50,7 @@ object MetalsPlugin extends AutoPlugin {
       val targetRoot = semanticdbTargetRoot.value
       val versionOfScala = scalaVersion.value
       if (ScalaInstance.isDotty(versionOfScala))
-        List("-semanticdb-target", targetRoot.toString)
+        List.empty
       else
         List(
           s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
