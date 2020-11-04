@@ -7,7 +7,7 @@ import tests.BaseRenameLspSuite
 class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
 
   renamed(
-    "dotty-outer",
+    "scala3-outer",
     """|/a/src/main/scala/a/Main.scala
        |
        |@main def main() = {

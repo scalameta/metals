@@ -115,7 +115,7 @@ class ClassBreakpointSuite extends BasePCSuite {
   )
 
   check(
-    "method-dotty".tag(RunForScalaVersion(BuildInfoVersions.scala3Versions)),
+    "method-scala3".tag(RunForScalaVersion(BuildInfoVersions.scala3Versions)),
     """|package a.b
        |def method() = {
        |>>  println(0)

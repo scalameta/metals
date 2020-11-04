@@ -205,6 +205,6 @@ object PackageIndex {
 
   def scalaLibrary: Seq[Path] = findJar("scala-library")
 
-  def dottyLibrary: Seq[Path] = findJar("dotty-library")
+  def scala3Library: Seq[Path] = findJar("scala3-library")
 
 }

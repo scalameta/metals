@@ -15,7 +15,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filterText = "type",
     compat = Map(
-      "0." -> "type: Int"
+      "3.0" -> "type: Int"
     )
   )
 
@@ -30,7 +30,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filterText = "hello world",
     compat = Map(
-      "0." -> "hello world: Int"
+      "3.0" -> "hello world: Int"
     )
   )
 
@@ -45,7 +45,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filterText = "///",
     compat = Map(
-      "0." -> "///: Int"
+      "3.0" -> "///: Int"
     )
   )
 
@@ -60,7 +60,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
       |""".stripMargin,
     filterText = "type",
     compat = Map(
-      "0." -> ""
+      "3.0" -> ""
     )
   )
 

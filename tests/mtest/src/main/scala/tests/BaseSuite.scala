@@ -28,7 +28,7 @@ class BaseSuite extends munit.FunSuite with Assertions {
     this.isJava8 || SemVer.isCompatibleVersion(
       BaseSuite.minScalaVersionForJDK9OrHigher,
       scalaVersion
-    ) || scalaVersion.startsWith("0.")
+    ) || scalaVersion.startsWith("0.") || scalaVersion.startsWith("3.")
 
   override def munitTimeout: Duration = Duration("10min")
 

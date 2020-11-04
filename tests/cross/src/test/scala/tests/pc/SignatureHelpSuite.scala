@@ -17,7 +17,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |assert(assertion: Boolean): Unit
        |""".stripMargin,
     compat = Map(
-      "0.2" ->
+      "3.0" ->
         """|assert(assertion: Boolean @InlineParam): Unit
            |assert(assertion: Boolean @InlineParam, message: => Any @InlineParam): Unit
            |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -36,7 +36,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |       ^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0.2" ->
+      "3.0" ->
         """|
            |assert(assertion: Boolean @InlineParam): Unit
            |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -55,7 +55,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|fold[B](ifEmpty: => B)(f: A => B): B
            |                       ^^^^^^^^^
            |""".stripMargin
@@ -77,7 +77,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|map[B](f: A => B): List[B]
            |       ^^^^^^^^^
            |""".stripMargin
@@ -97,7 +97,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |<init>(self: java.util.Random): Random
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|Random()
            |Random(seed: Int)
            |Random(seed: Long)
@@ -117,10 +117,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |<init>(x$1: List[String]): ProcessBuilder
        |""".stripMargin,
     compat = Map(
-      "0." -> """|ProcessBuilder(x$0: String*)
-                 |               ^^^^^^^^^^^^
-                 |ProcessBuilder(x$0: java.util.List[String])
-                 |""".stripMargin
+      "3.0" -> """|ProcessBuilder(x$0: String*)
+                  |               ^^^^^^^^^^^^
+                  |ProcessBuilder(x$0: java.util.List[String])
+                  |""".stripMargin
     )
   )
 
@@ -139,7 +139,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|<init>(x: Int): Some[Int]
            |       ^^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|Some[A](value: A)
            |        ^^^^^^^^
            |""".stripMargin
@@ -160,7 +160,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |<init>(x$1: String): File
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|File(x$0: java.net.URI)
            |     ^^^^^^^^^^^^^^^^^
            |File(x$0: java.io.File, x$1: String)
@@ -182,7 +182,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |<init>(x$1: String): File
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|File(x$0: java.net.URI)
            |     ^^^^^^^^^^^^^^^^^
            |File(x$0: java.io.File, x$1: String)
@@ -219,7 +219,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|collect[B](pf: PartialFunction[A, B]): Option[B]
            |           ^^^^^^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
@@ -252,7 +252,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|apply[A](elems: A*): List[A]
            |         ^^^^^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|apply[A](x: A): Option[A]
            |         ^^^^
            |""".stripMargin
@@ -284,7 +284,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|apply[A](elems: A*): List[A]
            |         ^^^^^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|apply[A](elems: A*): CC[A]
            |         ^^^^^^^^^
            |""".stripMargin
@@ -302,7 +302,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       // TODO type signatures aren't handled
-      "0." ->
+      "3.0" ->
         """|identity[A](x: A): A
            |            ^^^^
            |""".stripMargin
@@ -333,7 +333,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     // TODO type signatures aren't handled
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|apply[A](x: A): Option[A]
            |         ^^^^
            |""".stripMargin
@@ -373,7 +373,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |              ^^^^^^^^
            |lengthCompare(that: Iterable[_]): Int
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|lengthCompare(len: Int): Int
            |              ^^^^^^^^
            |lengthCompare(that: Iterable[?]): Int
@@ -391,7 +391,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     "",
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|->[B](y: B): (A, B)
            |      ^^^^
            |""".stripMargin
@@ -459,7 +459,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |to(end: Int, step: Int): Range.Inclusive
            |to(end: T, step: T): NumericRange.Inclusive[T]
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|^^^^^^^^
            |to(end: Int): scala.collection.immutable.Range.Inclusive
            |to(end: Int, step: Int): scala.collection.immutable.Range.Inclusive
@@ -491,7 +491,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|applyOrElse[A1 <: Int, B1 >: String](x: A1, default: A1 => B1): B1
            |                                     ^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|applyOrElse[K1 <: K, V1 >: V](x: K1, default: K1 => V1): V1
            |                              ^^^^^
            |""".stripMargin
@@ -508,7 +508,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     "",
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|->[B](y: B): (A, B)
            |      ^^^^
            |""".stripMargin
@@ -527,7 +527,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|apply(name: String, age: Int): named.User
            |                    ^^^^^^^^
            |""".stripMargin
@@ -546,7 +546,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |                         ^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|apply(name: String, age: Int): named1.User
            |                    ^^^^^^^^
            |""".stripMargin
@@ -580,7 +580,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |user(name: String, age: Int): Int
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|user(name: String, age: Int, street: Int): Int
            |                             ^^^^^^^^^^^
            |user(name: String, age: Int): Int
@@ -612,7 +612,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       // TODO short names are not supported yet
-      "0." ->
+      "3.0" ->
         """|Catch[T](pf: scala.util.control.Exception.Catcher[T], fin: Option[scala.util.control.Exception.Finally], rethrow: Throwable => Boolean)
            |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
@@ -631,7 +631,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       // TODO short names are not supported yet
-      "0." ->
+      "3.0" ->
         """|computeIfAbsent(x$0: K, x$1: java.util.function.Function[? >: K, ? <: V]): V
            |                ^^^^^^
            |""".stripMargin
@@ -678,7 +678,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|map[B](f: A => B): List[B]
            |       ^^^^^^^^^
            |""".stripMargin
@@ -700,7 +700,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
            |""".stripMargin,
-      "0." ->
+      "3.0" ->
         """|map[B](f: A => B): List[B]
            |       ^^^^^^^^^
            |""".stripMargin
@@ -725,7 +725,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |          ^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|map[G[_$3]](fn: A => G[A])(implicit T: last-arg3.TypeClass[F]): G[A]
            |            ^^^^^^^^^^^^^
            |""".stripMargin
@@ -744,7 +744,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        | """.stripMargin,
     compat = Map(
       // TODO type signatures are not yet supported
-      "0." ->
+      "3.0" ->
         """|empty[T](implicit evidence$4: scala.reflect.ClassTag[T]): Array[T]
            |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
@@ -767,7 +767,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |       ^^^^^^^^^^
        | """.stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|conv[T](e: T): implicit-conv.Text[T]
            |        ^^^^
            |""".stripMargin
@@ -902,7 +902,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|identity[A](x: A): A
            |            ^^^^
            |""".stripMargin
@@ -930,7 +930,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|fold[B](ifEmpty: => B)(f: A => B): B
            |        ^^^^^^^^^^^^^
            |""".stripMargin
@@ -948,7 +948,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |        ^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|fold[B](ifEmpty: => B)(f: A => B): B
            |        ^^^^^^^^^^^^^
            |""".stripMargin
@@ -966,7 +966,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|+(x: Double): Double
            |+(x: Float): Float
            |+(x: Long): Long

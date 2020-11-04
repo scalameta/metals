@@ -95,6 +95,12 @@ class ScalaVersionsSuite extends BaseSuite {
     )
   }
 
+  test("future-315") {
+    assert(
+      ScalaVersions.isFutureVersion("3.15.10")
+    )
+  }
+
   test("2.12.11-comapatible-with-2.12.5") {
     assert(
       SemVer.isCompatibleVersion("2.12.5", "2.12.11")

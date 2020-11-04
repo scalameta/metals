@@ -41,7 +41,7 @@ object DownloadDependencies {
     }
 
     BuildInfo.supportedScala3Versions.foreach { scalaVersion =>
-      Embedded.downloadDottySources(scalaVersion)
+      Embedded.downloadScala3Sources(scalaVersion)
     }
   }
 

@@ -35,10 +35,8 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.DiagnosticSeverity
 
-import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.interactive.Completion
-import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Types._
@@ -47,16 +45,19 @@ import dotty.tools.dotc.core.SymDenotations._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.NameKinds._
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.interactive.Completion
+import dotty.tools.dotc.printing.PlainPrinter
+import dotty.tools.dotc.reporting.StoreReporter
+import dotty.tools.dotc.transform.SymUtils._
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.ScriptSourceFile
-import dotty.tools.dotc.printing.PlainPrinter
 import dotty.tools.io.VirtualFile
-import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.ast.tpd
 
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.ClassFinder
@@ -448,7 +449,7 @@ case class ScalaPresentationCompiler(
       item.setDocumentation(hoverContent(None, None, documentation))
     }
 
-    item.setDeprecated(completion.symbols.forall(Symbols.isDeprecated))
+    item.setDeprecated(completion.symbols.forall(_.isDeprecated))
     completion.symbols.headOption
       .foreach(s => item.setKind(completionItemKind(s)))
     item
