@@ -246,7 +246,8 @@ object BuildServerConnection {
       connect: () => Future[SocketConnection],
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
-      serverName: String
+      serverName: String,
+      retry: Int = 5
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -264,10 +265,18 @@ object BuildServerConnection {
           .create()
         val listening = launcher.startListening()
         val server = launcher.getRemoteProxy
-        val result =
-          BuildServerConnection.initialize(workspace, server, serverName)
         val stopListening =
           Cancelable(() => listening.cancel(false))
+        val result =
+          try {
+            BuildServerConnection.initialize(workspace, server, serverName)
+          } catch {
+            case e: TimeoutException =>
+              conn.cancelables.foreach(_.cancel())
+              stopListening.cancel()
+              scribe.error("Timeout waiting for 'build/initialize' response")
+              throw e
+          }
         LauncherConnection(
           conn,
           server,
@@ -279,16 +288,34 @@ object BuildServerConnection {
       }
     }
 
-    setupServer().map { connection =>
-      new BuildServerConnection(
-        setupServer,
-        connection,
-        languageClient,
-        reconnectNotification,
-        config,
-        workspace
-      )
-    }
+    setupServer()
+      .map { connection =>
+        new BuildServerConnection(
+          setupServer,
+          connection,
+          languageClient,
+          reconnectNotification,
+          config,
+          workspace
+        )
+      }
+      .recoverWith { case e: TimeoutException =>
+        if (retry > 0) {
+          scribe.warn(s"Retrying connection to the build server $serverName")
+          fromSockets(
+            workspace,
+            localClient,
+            languageClient,
+            connect,
+            reconnectNotification,
+            config,
+            serverName,
+            retry - 1
+          )
+        } else {
+          Future.failed(e)
+        }
+      }
   }
 
   final case class BspExtraBuildParams(
@@ -327,17 +354,12 @@ object BuildServerConnection {
     // Block on the `build/initialize` request because it should respond instantly
     // and we want to fail fast if the connection is not
     val result =
-      try {
-        if (serverName == SbtBuildTool.name) {
-          initializeResult.get(60, TimeUnit.SECONDS)
-        } else {
-          initializeResult.get(20, TimeUnit.SECONDS)
-        }
-      } catch {
-        case e: TimeoutException =>
-          scribe.error("Timeout waiting for 'build/initialize' response")
-          throw e
+      if (serverName == SbtBuildTool.name) {
+        initializeResult.get(60, TimeUnit.SECONDS)
+      } else {
+        initializeResult.get(20, TimeUnit.SECONDS)
       }
+
     server.onBuildInitialized()
     result
   }
