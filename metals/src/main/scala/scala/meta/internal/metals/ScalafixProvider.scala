@@ -95,7 +95,7 @@ case class ScalafixProvider(
             )
             Future.failed(exception)
           case Success(results) if !results.isSuccessful =>
-            val scalafixError = results.getMessageError().asScala
+            val scalafixError = results.getErrorMessage().asScala
             val message = scalafixError.getOrElse(defaultErrorMessage)
             val exception = ScalafixRunException(message)
             reportScalafixError(

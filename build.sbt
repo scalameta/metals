@@ -186,7 +186,7 @@ lazy val V = new {
   val mdoc = "2.2.9"
   val scalafmt = "2.7.4"
   val munit = "0.7.12"
-  val scalafix = "0.9.21"
+  val scalafix = "0.9.23"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
