@@ -15,7 +15,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|
            |object Main {
            |  val <<abc>> = 42
@@ -85,7 +85,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|
            |object Main {
            |  val <<increment>>: Int => Int = _ + 2
@@ -147,7 +147,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|
            |object <<Main>> extends java.io.Serializable {
            |}
@@ -192,7 +192,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|
            |object Main {
            |  def foo(<<arg>>: Int): Unit = ()
@@ -231,7 +231,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "0." ->
+      "3.0" ->
         """|
            |object Main {
            |  val <<number>>: Int = 1

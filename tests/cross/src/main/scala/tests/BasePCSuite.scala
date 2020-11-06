@@ -64,7 +64,7 @@ abstract class BasePCSuite extends BaseSuite {
   protected lazy val presentationCompiler: PresentationCompiler = {
     val scalaLibrary =
       if (isScala3Version(scalaVersion))
-        PackageIndex.scalaLibrary ++ PackageIndex.dottyLibrary
+        PackageIndex.scalaLibrary ++ PackageIndex.scala3Library
       else
         PackageIndex.scalaLibrary
 

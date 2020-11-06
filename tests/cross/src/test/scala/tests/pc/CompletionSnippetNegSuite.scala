@@ -30,12 +30,12 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
            |unapplySeq
            |apply
            |""".stripMargin,
-      "0." -> "apply"
+      "3.0" -> "apply"
     )
   )
 
   checkSnippet(
-    "scope".tag(IgnoreScalaVersion("0.27.0-RC1")),
+    "scope",
     """
       |object Main {
       |  printl@@
@@ -46,7 +46,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
        |println
        |""".stripMargin,
     compat = Map(
-      "0.26" -> "println"
+      "3.0" -> "println"
     )
   )
 
@@ -66,7 +66,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     """|toString()
        |""".stripMargin,
     compat = Map(
-      "0." -> "toString"
+      "3.0" -> "toString"
     )
   )
 

@@ -99,7 +99,8 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     } yield ()
   }
 
-  test("unsupported-scala-3") {
+  // We no longer run 0.2 version in tests
+  test("unsupported-scala-3".ignore) {
     cleanWorkspace()
     val using = "0.21.0"
     for {

@@ -4,6 +4,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -17,60 +18,62 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   override def munitIgnore: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
-  test("completion") {
-    assume(!isWindows, "This test is flaky on Windows")
-    for {
-      _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "$scalaVersion",
-           |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.2.1"]
-           |  }
-           |}
-           |/a/src/main/scala/foo/Main.worksheet.sc
-           |identity(42)
-           |val name = sourcecode.Name.generate.value
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
-      identity <- server.completion(
-        "a/src/main/scala/foo/Main.worksheet.sc",
-        "identity@@"
-      )
-      _ = assertNoDiff(identity, "identity[A](x: A): A")
-      generate <- server.completion(
-        "a/src/main/scala/foo/Main.worksheet.sc",
-        "generate@@"
-      )
-      _ = assertNoDiff(
-        generate,
-        getExpected(
-          "generate: Name",
-          Map(V.scala3 -> "generate=> sourcecode.Name"),
-          scalaVersion
+  // sourcecode is not yet published for Scala 3
+  if (!ScalaVersions.isScala3Version(scalaVersion))
+    test("completion") {
+      assume(!isWindows, "This test is flaky on Windows")
+      for {
+        _ <- server.initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": {
+             |    "scalaVersion": "$scalaVersion",
+             |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.2.1"]
+             |  }
+             |}
+             |/a/src/main/scala/foo/Main.worksheet.sc
+             |identity(42)
+             |val name = sourcecode.Name.generate.value
+             |""".stripMargin
         )
-      )
-      _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        getExpected(
-          """|identity(42) // : Int = 42
-             |val name = sourcecode.Name.generate.value // : String = "name"
-             |""".stripMargin,
-          Map(
-            V.scala3 ->
-              """|identity(42) // : Int = 42
-                 |val name = sourcecode.Name.generate.value // : String = name
-                 |""".stripMargin
-          ),
-          scalaVersion
+        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+        identity <- server.completion(
+          "a/src/main/scala/foo/Main.worksheet.sc",
+          "identity@@"
         )
-      )
-    } yield ()
-  }
+        _ = assertNoDiff(identity, "identity[A](x: A): A")
+        generate <- server.completion(
+          "a/src/main/scala/foo/Main.worksheet.sc",
+          "generate@@"
+        )
+        _ = assertNoDiff(
+          generate,
+          getExpected(
+            "generate: Name",
+            Map(V.scala3 -> "generate=> sourcecode.Name"),
+            scalaVersion
+          )
+        )
+        _ = assertNoDiagnostics()
+        _ = assertNoDiff(
+          client.workspaceDecorations,
+          getExpected(
+            """|identity(42) // : Int = 42
+               |val name = sourcecode.Name.generate.value // : String = "name"
+               |""".stripMargin,
+            Map(
+              V.scala3 ->
+                """|identity(42) // : Int = 42
+                   |val name = sourcecode.Name.generate.value // : String = name
+                   |""".stripMargin
+            ),
+            scalaVersion
+          )
+        )
+      } yield ()
+    }
 
   test("outside-target") {
     for {

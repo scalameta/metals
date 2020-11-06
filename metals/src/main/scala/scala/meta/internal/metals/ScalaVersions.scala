@@ -60,10 +60,14 @@ object ScalaVersions {
         latest != scalaVersion && SemVer
           .isCompatibleVersion(latest, scalaVersion)
       )
-      .getOrElse(
-        isLatestScalaVersion
-          .forall(ver => SemVer.isCompatibleVersion(ver, scalaVersion))
-      )
+      .getOrElse {
+        val versions =
+          if (isScala3Version(scalaVersion))
+            isLatestScalaVersion.filter(isScala3Version)
+          else
+            isLatestScalaVersion.filter(!isScala3Version(_))
+        versions.forall(ver => SemVer.isCompatibleVersion(ver, scalaVersion))
+      }
   }
 
   def isCurrentScalaCompilerVersion(version: String): Boolean =
@@ -71,6 +75,10 @@ object ScalaVersions {
       version
     ) == mtags.BuildInfo.scalaCompilerVersion
 
-  def scalaBinaryVersionFromFullVersion(scalaVersion: String): String =
-    scalaVersion.split('.').take(2).mkString(".")
+  def scalaBinaryVersionFromFullVersion(scalaVersion: String): String = {
+    if (scalaVersion == "3.0.0-M1")
+      scalaVersion
+    else
+      scalaVersion.split('.').take(2).mkString(".")
+  }
 }

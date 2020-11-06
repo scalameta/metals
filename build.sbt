@@ -10,19 +10,25 @@ def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean =
-  v.exists(_._1 == 0) || v.exists(_._1 == 3)
+  v.exists(_._1 == 3) || v.exists(_._1 == 0)
+def isScala30(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
+def isScala3Prerelease(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 0)
 
 def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
     if2: List[A] = Nil,
     ifLaterThan211: List[A] = Nil,
-    if3: List[A] = Nil
+    if3: List[A] = Nil,
+    if30: List[A] = Nil,
+    if3pre: List[A] = Nil
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
     case partialVersion if isScala212(partialVersion) => ifLaterThan211 ::: if2
     case partialVersion if isScala213(partialVersion) => ifLaterThan211 ::: if2
+    case partialVersion if isScala3Prerelease(partialVersion) => if3pre ::: if3
+    case partialVersion if isScala30(partialVersion) => if30 ::: if3
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -176,16 +182,15 @@ lazy val V = new {
   val scalameta = "4.3.24"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.4-25-7e876299"
-  val scala3 = "0.26.0"
-  val scala3Candidate = "0.27.0-RC1"
+  val bloop = "1.4.5-2-eb51d668"
+  val scala3 = "3.0.0-M1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.9"
+  val mdoc = "2.2.11"
   val scalafmt = "2.7.4"
-  val munit = "0.7.12"
+  val munit = "0.7.16"
   val scalafix = "0.9.23"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -203,8 +208,8 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(scala3, scala3Candidate)
-  def deprecatedScala3Versions = Seq("0.25.0", "0.26.0-RC1")
+  def nonDeprecatedScala3Versions = Seq(scala3)
+  def deprecatedScala3Versions = Seq("0.27.0-RC1", "0.26.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions
@@ -306,7 +311,6 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.3",
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value),
@@ -314,6 +318,12 @@ val mtagsSettings = List(
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
         .withDottyCompat(scalaVersion.value)
+    ),
+    if3pre = List(
+      "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value
+    ),
+    if30 = List(
+      "org.scala-lang" %% "scala3-compiler" % scalaVersion.value
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.7.1"),

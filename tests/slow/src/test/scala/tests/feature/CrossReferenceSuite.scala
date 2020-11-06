@@ -9,7 +9,7 @@ import tests.BaseRangesSuite
 class CrossReferenceSuite extends BaseRangesSuite("cross-reference-suite") {
 
   check(
-    "references-dotty",
+    "references-scala3",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |

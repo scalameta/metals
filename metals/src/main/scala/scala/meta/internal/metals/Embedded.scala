@@ -153,10 +153,14 @@ object Embedded {
   private def scalaDependency(scalaVersion: String): Dependency =
     Dependency.of("org.scala-lang", "scala-library", scalaVersion)
 
-  private def dottyDependency(scalaVersion: String): Dependency = {
+  private def scala3Dependency(scalaVersion: String): Dependency = {
     val binaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
-    Dependency.of("ch.epfl.lamp", s"dotty-library_$binaryVersion", scalaVersion)
+    Dependency.of(
+      "org.scala-lang",
+      s"scala3-library_$binaryVersion",
+      scalaVersion
+    )
   }
 
   private def mtagsDependency(scalaVersion: String): Dependency =
@@ -204,9 +208,9 @@ object Embedded {
       classfiers = Seq("sources")
     )
 
-  def downloadDottySources(scalaVersion: String): List[Path] =
+  def downloadScala3Sources(scalaVersion: String): List[Path] =
     downloadDependency(
-      dottyDependency(scalaVersion),
+      scala3Dependency(scalaVersion),
       scalaVersion,
       classfiers = Seq("sources")
     )

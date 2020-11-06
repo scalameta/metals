@@ -86,7 +86,7 @@ case class QuickBuild(
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
   def scalaBinaryVersion: String =
-    scalaVersion.split("\\.").take(2).mkString(".")
+    ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
   def toBloop(workspace: AbsolutePath): C.Project = {
     val baseDirectory: Path = workspace.resolve(id).toNIO
     val binaryVersion: String = scalaBinaryVersion
@@ -110,7 +110,7 @@ case class QuickBuild(
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         Array(
           s"org.scala-lang:scala-library:2.13.1",
-          s"ch.epfl.lamp:dotty-library_$binaryVersion:$scalaVersion"
+          s"org.scala-lang:scala3-library_$binaryVersion:$scalaVersion"
         )
       } else {
         Array(
@@ -193,15 +193,12 @@ case class QuickBuild(
 
     val scalaCompiler =
       if (ScalaVersions.isScala3Version(scalaVersion))
-        s"ch.epfl.lamp:dotty-compiler_$binaryVersion:$scalaVersion"
+        s"org.scala-lang:scala3-compiler_$binaryVersion:$scalaVersion"
       else s"org.scala-lang:scala-compiler:$scalaVersion"
-    val scalaOrg =
-      if (ScalaVersions.isScala3Version(scalaVersion))
-        "ch.epfl.lamp"
-      else "org.scala-lang"
+    val scalaOrg = "org.scala-lang"
     val scalaCompilerName =
       if (ScalaVersions.isScala3Version(scalaVersion))
-        s"dotty-compiler_$binaryVersion"
+        s"scala3-compiler_$binaryVersion"
       else s"scala-compiler"
 
     val sbt = Option(sbtVersion).map { version =>
@@ -249,8 +246,9 @@ case class QuickBuild(
       java = Some(C.Java(Nil)),
       sbt = sbt,
       test = testFrameworks,
-      platform =
-        Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None, None, None)),
+      platform = Some(
+        C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None, None, None, None)
+      ),
       resolution = Some(C.Resolution(resolution)),
       resources = None,
       tags = Some(tags)

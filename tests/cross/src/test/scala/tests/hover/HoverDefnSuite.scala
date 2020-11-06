@@ -53,7 +53,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|def empty[T]: Option[T]
        |""".stripMargin.hover,
     compat = Map(
-      "0." -> "def empty[T] => Option[T]".hover
+      "3.0" -> "def empty[T] => Option[T]".hover
     )
   )
 
@@ -68,7 +68,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |def empty[T: Ordering]: Option[T]
       |""".stripMargin.hover,
     compat = Map(
-      "0." -> "def empty[T](implicit evidence$1: Ordering[T]): Option[T]".hover
+      "3.0" -> "def empty[T](implicit evidence$1: Ordering[T]): Option[T]".hover
     )
   )
 
@@ -107,7 +107,7 @@ class HoverDefnSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "0." -> "def <init>(x: Int): ctor.a".hover
+      "3.0" -> "def <init>(x: Int): ctor.a".hover
     )
   )
 
@@ -153,7 +153,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "0." -> "object MyObject: object.MyObject".hover
+      "3.0" -> "object MyObject: object.MyObject".hover
     )
   )
 
@@ -163,7 +163,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "0." -> "trait MyTrait: trait.MyTrait".hover
+      "3.0" -> "trait MyTrait: trait.MyTrait".hover
     )
   )
 
@@ -173,7 +173,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "0." -> "trait MyClass: class.MyClass".hover
+      "3.0" -> "trait MyClass: class.MyClass".hover
     )
   )
 
@@ -189,7 +189,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     automaticPackage = false,
     compat = Map(
       // TODO hover doesn't show information on package
-      "0." -> "".hover
+      "3.0" -> "".hover
     )
   )
 
@@ -204,7 +204,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "head: Int".hover,
     compat = Map(
-      "0." -> "val head: Int".hover
+      "3.0" -> "val head: Int".hover
     )
   )
 
@@ -219,7 +219,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "value: Int".hover,
     compat = Map(
-      "0." -> "val value: Int".hover
+      "3.0" -> "val value: Int".hover
     )
   )
 
