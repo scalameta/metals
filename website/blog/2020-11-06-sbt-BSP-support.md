@@ -11,7 +11,7 @@ features, one of those being BSP support. This effort was initiated by community
 members and proposed to the [Scala Center Advisory
 Board.](https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md).
 Then thanks to the work of [Adrien Piquerez](https://twitter.com/adrienpi2) and
-[Eugene Yokota ](https://twitter.com/eed3si9n) BSP support became a reality in
+[Eugene Yokota](https://twitter.com/eed3si9n) BSP support became a reality in
 1.4.0. You can read a more about the reason behind the work and some of the
 details of the implementation in this blog post: [BSP Support in sbt
 1.4](https://www.scala-lang.org/blog/2020/10/27/bsp-in-sbt.html).
