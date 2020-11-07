@@ -23,6 +23,7 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
@@ -325,19 +326,25 @@ class WorksheetProvider(
         .isSupportedScalaVersion(scalaVersion)
     }
 
+    def isSupportedScalaVersion(scalaVersion: String) =
+      isSupportedScala3Version(scalaVersion) || isSupportedScala2Version(
+        scalaVersion
+      )
+
     mdocs.get(target).orElse {
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
-        isSupported = isSupportedScala2Version(
-          scalaVersion
-        ) || isSupportedScala3Version(scalaVersion)
+        isSupported = isSupportedScalaVersion(scalaVersion)
         _ = {
           if (!isSupported) {
-            scribe.warn(
-              s"worksheet: unsupported Scala version '${scalaVersion}', using Scala version '${BuildInfo.scala212}' without classpath instead.\n" +
-                s"worksheet: to fix this problem use Scala version '${ScalaVersions.recommendedVersion(scalaVersion)}'."
+            val message = Messages.Worksheets.unsupportedScalaVersion(
+              scalaVersion,
+              BuildInfo.scala212,
+              ScalaVersions.recommendedVersion(scalaVersion)
             )
+            languageClient.showMessage(message)
+            scribe.warn(message.getMessage())
           }
         }
         if isSupported
