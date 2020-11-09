@@ -34,8 +34,8 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.didChangeConfiguration(
         """{
-          |  "implicit-argument-annotations-enabled": true,
-          |  "type-annotations-enabled": true
+          |  "show-implicit-arguments": true,
+          |  "show-inferred-type": true
           |}
           |""".stripMargin
       )

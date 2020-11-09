@@ -122,7 +122,7 @@ object SemanticdbTreePrinter {
        *  hello()<<(str)>>
        */
       case tree @ s.ApplyTree(_: s.OriginalTree, _)
-          if userConfig.implicitArgumentAnnotationsEnabled =>
+          if userConfig.showImplicitArguments =>
         printTree(tree)
 
       /**
@@ -130,7 +130,7 @@ object SemanticdbTreePrinter {
        *  hello<<[String]>>("")
        */
       case tree @ s.TypeApplyTree(_: s.OriginalTree, _)
-          if userConfig.typeAnnotationsEnabled =>
+          if userConfig.showInferredType =>
         printTree(tree)
       case _ => None
     }

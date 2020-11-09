@@ -49,8 +49,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.didChangeConfiguration(
         """{
-          |  "implicit-argument-annotations-enabled": true,
-          |  "type-annotations-enabled": true
+          |  "show-implicit-arguments": true,
+          |  "show-inferred-type": true
           |}
           |""".stripMargin
       )
@@ -159,8 +159,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.didChangeConfiguration(
         """{
-          |  "implicit-argument-annotations-enabled": true,
-          |  "type-annotations-enabled": false
+          |  "show-implicit-arguments": true,
+          |  "show-inferred-type": false
           |}
           |""".stripMargin
       )
@@ -181,8 +181,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.didChangeConfiguration(
         """{
-          |  "implicit-argument-annotations-enabled": false,
-          |  "type-annotations-enabled": true
+          |  "show-implicit-arguments": false,
+          |  "show-inferred-type": true
           |}
           |""".stripMargin
       )

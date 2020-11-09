@@ -139,7 +139,7 @@ final class SyntheticsDecorationProvider(
     }
 
   private def isSyntheticsEnabled: Boolean = {
-    userConfig().implicitArgumentAnnotationsEnabled || userConfig().typeAnnotationsEnabled
+    userConfig().showImplicitArguments || userConfig().showInferredType
   }
 
   private def createHoverAtPoint(
