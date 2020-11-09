@@ -35,8 +35,8 @@ case class UserConfiguration(
     bloopVersion: Option[String] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
-    typeAnnotationsEnabled: Boolean = false,
-    implicitArgumentAnnotationsEnabled: Boolean = false,
+    showInferredType: Boolean = false,
+    showImplicitArguments: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
     excludedPackages: Option[List[String]] = None
@@ -180,17 +180,17 @@ object UserConfiguration {
            |""".stripMargin
       ),
       UserConfigurationOption(
-        "type-annotations-enabled",
+        "show-inferred-type",
         "false",
         "false",
-        "Should display type annotations for infered types",
+        "Should display type annotations for inferred types",
         """|When this option is enabled, each method that can have inferred types has them
            |displayed either as additional decorations if they are supported by the editor or
            |shown in hover otherwise.
            |""".stripMargin
       ),
       UserConfigurationOption(
-        "implicit-argument-annotations-enabled",
+        "show-implicit-arguments",
         "false",
         "false",
         "Should display implicit parameter at usage sites",
@@ -352,10 +352,10 @@ object UserConfiguration {
       getStringKey("bloop-version")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
-    val typeAnnotationsEnabled =
-      getBooleanKey("type-annotations-enabled").getOrElse(false)
-    val implicitArgumentAnnotationsEnabled =
-      getBooleanKey("implicit-argument-annotations-enabled").getOrElse(false)
+    val showInferredType =
+      getBooleanKey("show-inferred-type").getOrElse(false)
+    val showImplicitArguments =
+      getBooleanKey("show-implicit-arguments").getOrElse(false)
     val remoteLanguageServer =
       getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
@@ -379,8 +379,8 @@ object UserConfiguration {
           bloopVersion,
           ammoniteProperties,
           superMethodLensesEnabled,
-          typeAnnotationsEnabled,
-          implicitArgumentAnnotationsEnabled,
+          showInferredType,
+          showImplicitArguments,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
           excludedPackages
