@@ -18,10 +18,11 @@ title: Making a release
     sends out a notification to repository watchers, and the release isn't ready
     for that yet.
 
-- Wait for [the Travis CI job](https://travis-ci.org/scalameta/metals/branches)
-  in Active Branches to build the binaries and stage them to Sonatype.
+- Wait for
+  [the Github Actions job](https://github.com/scalameta/metals/actions?query=workflow%3ARelease)
+  to build the binaries and stage them to Sonatype.
 
-- While waiting for Travis, update the milestones:
+- While waiting for Github Actions, update the milestones:
 
   - https://github.com/scalameta/metals/milestones
   - Close the milestone or milestones corresponding to the release. For example,
@@ -30,9 +31,8 @@ title: Making a release
   - Create the milestone or milestones corresponding to future releases. For
     example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.
 
-- While waiting for Travis, draft the release notes:
+- While waiting for Github Actions, draft the release notes:
 
-  - Copy `website/blog/2018-12-06-iron.md` as a template
   - You might use `./bin/merged_prs.sc` script to generate merged PRs list
     between two last release tags. It can be run using ammonite:
 
@@ -44,6 +44,12 @@ title: Making a release
   It will need a basic github API token to run, which may be specified via
   environment variable `GITHUB_TOKEN` or via the last argument.
 
+  The script will generate a new markdown file in `website/blog` filled with a
+  basic release template.
+
+  Alternatively, you can copy `website/blog/2020-11-10-lithium.md` as a
+  template.
+
   - Update Metals SNAPSHOT version in `build.sbt` and the default version in
     Github issue templates.
   - Open a PR to the repo.
@@ -53,6 +59,8 @@ title: Making a release
 
   - Make sure that the release shows up at
     https://oss.sonatype.org/content/repositories/releases/org/scalameta/.
+  - Update `./bin/test-release.sh` - remove any unsupported Scala versions and
+    add newly supported ones.
   - Run `./bin/test-release.sh $VERSION` to ensure that all artifacts have
     successfully been released. It's important to ensure that this script passes
     before announcing the release since it takes a while for all published
@@ -84,5 +92,6 @@ title: Making a release
   - Once the VS Code extension has been updated on the Marketplace, click
     "Publish release".
 
-- Announce on Gitter: https://gitter.im/scalameta/metals
-  - Tag everybody with `@/all`
+- Announce the new release with the link to the release notes:
+  - on [Gitter](https://gitter.im/scalameta/metals) - tag everybody with `@/all`
+  - on [Discord](https://discord.com/invite/RFpSVth)
