@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Mon, 21 Sep 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 06 Nov 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[sbt BSP support]]></title>
+            <link>http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html</guid>
+            <pubDate>Fri, 06 Nov 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>If you've been following the <a href="https://github.com/sbt/sbt/releases">sbt releases</a>, 1.4.x introduced some great new features, one of those being BSP support. This effort was initiated by community members and proposed to the <a href="https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md">Scala Center Advisory Board.</a>. Then thanks to the work of <a href="https://twitter.com/adrienpi2">Adrien Pi...</a></p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.9.4 - Lithium]]></title>
             <link>http://scalameta.org/metals/blog/2020/09/21/lithium.html</link>

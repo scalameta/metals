@@ -2,12 +2,23 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-09-21T06:00:00.000Z</updated>
+    <updated>2020-11-06T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[sbt BSP support]]></title>
+        <id>http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html"/>
+        <updated>2020-11-06T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>If you've been following the <a href="https://github.com/sbt/sbt/releases">sbt releases</a>, 1.4.x introduced some great new features, one of those being BSP support. This effort was initiated by community members and proposed to the <a href="https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md">Scala Center Advisory Board.</a>. Then thanks to the work of <a href="https://twitter.com/adrienpi2">Adrien Pi...</a></p>]]></summary>
+        <author>
+            <name>Chris Kipp</name>
+            <uri>https://twitter.com/ckipp01</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.4 - Lithium]]></title>
         <id>http://scalameta.org/metals/blog/2020/09/21/lithium.html</id>
