@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Fri, 06 Nov 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 10 Nov 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.9.5 - Lithium]]></title>
+            <link>http://scalameta.org/metals/blog/2020/11/10/lithium.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/11/10/lithium.html</guid>
+            <pubDate>Tue, 10 Nov 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We're happy to announce the release of Metals v0.9.5, which brings about some of the long awaited features such as implicit decorations and the organize imports code action. We also greatly simplified connecting to the sbt BSP server and added suppor...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[sbt BSP support]]></title>
             <link>http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html</link>
