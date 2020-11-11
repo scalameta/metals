@@ -156,11 +156,19 @@ object Embedded {
   private def scala3Dependency(scalaVersion: String): Dependency = {
     val binaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
-    Dependency.of(
-      "org.scala-lang",
-      s"scala3-library_$binaryVersion",
-      scalaVersion
-    )
+    if (binaryVersion.startsWith("3")) {
+      Dependency.of(
+        "org.scala-lang",
+        s"scala3-library_$binaryVersion",
+        scalaVersion
+      )
+    } else {
+      Dependency.of(
+        "ch.epfl.lamp",
+        s"dotty-library_$binaryVersion",
+        scalaVersion
+      )
+    }
   }
 
   private def mtagsDependency(scalaVersion: String): Dependency =
