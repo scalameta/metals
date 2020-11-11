@@ -9,10 +9,10 @@ If you've been following the [sbt
 releases](https://github.com/sbt/sbt/releases), 1.4.x introduced some great new
 features, one of those being BSP support. This effort was initiated by community
 members and proposed to the [Scala Center Advisory
-Board.](https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md).
+Board](https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md).
 Then thanks to the work of [Adrien Piquerez](https://twitter.com/adrienpi2) and
 [Eugene Yokota](https://twitter.com/eed3si9n) BSP support became a reality in
-1.4.0. You can read a more about the reason behind the work and some of the
+1.4.0. You can read more about the reason behind the work and some of the
 details of the implementation in this blog post: [BSP Support in sbt
 1.4](https://www.scala-lang.org/blog/2020/10/27/bsp-in-sbt.html).
 
@@ -59,8 +59,8 @@ and how it's used in Metals.
 Another question you may have is "what does sbt BSP support mean for Metals"?
 This means a couple different things. Up until this point, if you wanted to use
 sbt BSP, you needed to clear your `.metals/` and `.bloop` directories, and then
-start sbt with a specific flag before connecting to it. None of this necessary
-anymore. In order for [BSP
+start sbt with a specific flag before connecting to it. None of this is
+necessary anymore. In order for [BSP
 discovery](https://build-server-protocol.github.io/docs/server-discovery.html)
 to happen, you need a `.bsp/*json` file with instructions on how to
 start/connect to the build server. A new command has been added to Metals (which
