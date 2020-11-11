@@ -59,15 +59,8 @@ jobs:
       matrix:
         type:
           [
-            gradle-mac,
-            sbt,
-            maven,
-            gradle,
-            mill,
             feature,
-            cross,
-            scalafmt,
-            scalafix,
+            cross
           ]
         include:
           - type: gradle-mac
@@ -119,3 +112,6 @@ jobs:
             ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON:
             ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+      - name: "download dependencies"
+        run: sbt downloadDependencies
+        if: matrix.type == 'cross'
