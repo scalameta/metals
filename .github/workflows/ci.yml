@@ -95,7 +95,7 @@ jobs:
             name: LSP integration tests
             os: ubuntu-latest
           - type: cross
-            command: sbt +cross/test
+            command: sbt '+cross/test; downloadDependencies'
             name: Scala cross tests
             os: ubuntu-latest
           - type: scalafix

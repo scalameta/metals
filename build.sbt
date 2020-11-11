@@ -167,6 +167,10 @@ crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
+addCommandAlias(
+  "downloadDependencies",
+  "+publishLocal; metals/runMain scala.meta.metals.DownloadDependencies "
+)
 
 commands += Command.command("save-expect") { s =>
   "unit/test:runMain tests.SaveExpect" ::
