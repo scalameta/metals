@@ -301,9 +301,9 @@ final class Doctor(
 
     (current, chosen) match {
       case (Some(server), Some(_)) =>
-        (s"Build server currenlty being used is $server.", true)
+        (s"Build server currently being used is $server.", true)
       case (Some(server), None) =>
-        (s"Build server currenlty being used is $server.", false)
+        (s"Build server currently being used is $server.", false)
       case (None, _) =>
         calculateNewBuildServer() match {
           case ResolvedNone =>
@@ -312,10 +312,10 @@ final class Doctor(
               false
             )
           case ResolvedBloop =>
-            ("Build server currenlty being used is Bloop.", false)
+            ("Build server currently being used is Bloop.", false)
           case ResolvedBspOne(details) =>
             (
-              s"Build server currenlty being used is ${details.getName()}.",
+              s"Build server currently being used is ${details.getName()}.",
               false
             )
           case ResolvedMultiple(_, _) =>
