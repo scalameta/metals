@@ -179,10 +179,15 @@ generic methods they are using:</li>
 <p>Both new options are disabled by default, since they add a great number of
 information, which might not be necessary for all users. Full name with package
 for each of the additional types or values will be available on hover.</p>
+<p>These options can be set in Metals options in VS Code or in Emacs
+<a href="https://github.com/emacs-lsp/lsp-metals">(lsp-metals)</a> using
+<code>lsp-metals-show-implicit-arguments</code> and <code>lsp-metals-show-inferred-type</code>
+variables set to <code>t</code>.</p>
 <p>Unfortunately, due to current limitations, additional decorations are only
-possible in Visual Studio Code. In other editors the additional information is
-available via hover and new <code>With synthetics added</code> section, which shows how the
-whole current line would look with the additional decorations.</p>
+possible in Visual Studio Code and Emacs. In other editors the additional
+information is available via hover and new <code>With synthetics added</code> section,
+which shows how the whole current line would look with the additional
+decorations.</p>
 <p>Example of how this alternative approach looks in Vim:</p>
 <p><img src="https://user-images.githubusercontent.com/13974112/94804295-e094a280-03ea-11eb-8282-2a783446e7c8.png" alt="vim-sample"></p>
 <h2><a class="anchor" aria-hidden="true" id="improved-sbt-bsp-support"></a><a href="#improved-sbt-bsp-support" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Improved sbt BSP support</h2>
@@ -287,9 +292,9 @@ a.b.<span class="hljs-attribute">key8</span>=value 8   # will be ignored
 </code></pre>
 <p>The format is adapted from
 <a href="https://github.com/mefellows/sbt-dotenv">mefellows/sbt-dotenv</a> and
-<a href="https://github.com/bkeepers/dotenv">bkeepers/dotenv</a>. Example
-json configurations above are defined for Visual Studio Code, the <code>type</code> and
-<code>name</code> fields can be omitted when using in other clients.</p>
+<a href="https://github.com/bkeepers/dotenv">bkeepers/dotenv</a>. Example json
+configurations above are defined for Visual Studio Code, the <code>type</code> and <code>name</code>
+fields can be omitted when using in other clients.</p>
 <p>This new feature has been contributed by <a href="https://github.com/mwz">mwz</a>. Thanks
 for the great work!</p>
 <h2><a class="anchor" aria-hidden="true" id="miscellaneous"></a><a href="#miscellaneous" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Miscellaneous</h2>
