@@ -119,6 +119,7 @@ The currently available settings for `InitializationOptions` are listed below.
       "executeClientCommandProvider": boolean,
       "globSyntax": "vscode" | "uri"
       "icons": "octicons" | "vscode" | "unicode" | "atom",
+      "inlineDecorationProvider": boolean,
       "inputBoxProvider": boolean,
       "isExitOnShutdown" : boolean,
       "isHttpEnabled": boolean,
@@ -131,6 +132,10 @@ The currently available settings for `InitializationOptions` are listed below.
       "openNewWindowProvider": boolean
     }
 ```
+
+You can also always check these in the
+[`InitializationOptions.scala`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/InitializationOptions.scala)
+file where you'll find all of the options and descriptions.
 
 ##### `compilerOptions.completionCommand`
 
@@ -274,6 +279,13 @@ Possible values:
   macOS+Linux and `\` on Windows) and forward slashes `/` for relative parts.
   For example, `C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}`.
   This mode is used by the VS Code client.
+
+##### `inlineDecorationProvider`
+
+If the client implements the Metals Decoration Protocol **and** supports decorations
+to be shown inline and not only at the end of a line.
+
+Default: `false`
 
 ##### `icons`
 

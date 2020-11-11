@@ -19,7 +19,7 @@ import org.eclipse.{lsp4j => l}
  * @param debuggingProvider if the client supports debugging.
  * @param decorationProvider if the client implements the Metals Decoration Protocol.
  * @param inlineDecorationProvider if the client implements the Metals Decoration Protocol
- *                                 and supports decorations to be show inside text and not
+ *                                 and supports decorations to be shown inline and not
  *                                 only at the end of a line.
  * @param didFocusProvider if the client implements the `metals/didFocusTextDocument` command.
  * @param doctorProvider format that the client would like the Doctor to be returned in.
