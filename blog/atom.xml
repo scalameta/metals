@@ -24,7 +24,7 @@
         <id>http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html</id>
         <link href="http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html"/>
         <updated>2020-11-06T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>If you've been following the <a href="https://github.com/sbt/sbt/releases">sbt releases</a>, 1.4.x introduced some great new features, one of those being BSP support. This effort was initiated by community members and proposed to the <a href="https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md">Scala Center Advisory Board.</a>. Then thanks to the work of <a href="https://twitter.com/adrienpi2">Adrien Pi...</a></p>]]></summary>
+        <summary type="html"><![CDATA[<p>If you've been following the <a href="https://github.com/sbt/sbt/releases">sbt releases</a>, 1.4.x introduced some great new features, one of those being BSP support. This effort was initiated by community members and proposed to the <a href="https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md">Scala Center Advisory Board</a>. Then thanks to the work of <a href="https://twitter.com/adrienpi2">Adrien Piq...</a></p>]]></summary>
         <author>
             <name>Chris Kipp</name>
             <uri>https://twitter.com/ckipp01</uri>
