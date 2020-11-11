@@ -78,9 +78,10 @@
 sends out a notification to repository watchers, and the release isn't ready
 for that yet.</li>
 </ul></li>
-<li><p>Wait for <a href="https://travis-ci.org/scalameta/metals/branches">the Travis CI job</a>
-in Active Branches to build the binaries and stage them to Sonatype.</p></li>
-<li><p>While waiting for Travis, update the milestones:</p>
+<li><p>Wait for
+<a href="https://github.com/scalameta/metals/actions?query=workflow%3ARelease">the Github Actions job</a>
+to build the binaries and stage them to Sonatype.</p></li>
+<li><p>While waiting for Github Actions, update the milestones:</p>
 <ul>
 <li><a href="https://github.com/scalameta/metals/milestones">https://github.com/scalameta/metals/milestones</a></li>
 <li>Close the milestone or milestones corresponding to the release. For example,
@@ -89,9 +90,8 @@ released 3.2.1, so all its tickets went straight to 3.3.0).</li>
 <li>Create the milestone or milestones corresponding to future releases. For
 example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.</li>
 </ul></li>
-<li><p>While waiting for Travis, draft the release notes:</p>
+<li><p>While waiting for Github Actions, draft the release notes:</p>
 <ul>
-<li>Copy <code>website/blog/2018-12-06-iron.md</code> as a template</li>
 <li>You might use <code>./bin/merged_prs.sc</code> script to generate merged PRs list
 between two last release tags. It can be run using ammonite:</li>
 </ul>
@@ -100,6 +100,10 @@ amm .<span class="hljs-meta-keyword">/bin/</span>merged_prs.sc <span class="hljs
 </code></pre>
 <p>It will need a basic github API token to run, which may be specified via
 environment variable <code>GITHUB_TOKEN</code> or via the last argument.</p>
+<p>The script will generate a new markdown file in <code>website/blog</code> filled with a
+basic release template.</p>
+<p>Alternatively, you can copy <code>website/blog/2020-11-10-lithium.md</code> as a
+template.</p>
 <ul>
 <li>Update Metals SNAPSHOT version in <code>build.sbt</code> and the default version in
 Github issue templates.</li>
@@ -110,6 +114,8 @@ Github issue templates.</li>
 <ul>
 <li>Make sure that the release shows up at
 <a href="https://oss.sonatype.org/content/repositories/releases/org/scalameta/">https://oss.sonatype.org/content/repositories/releases/org/scalameta/</a>.</li>
+<li>Update <code>./bin/test-release.sh</code> - remove any unsupported Scala versions and
+add newly supported ones.</li>
 <li>Run <code>./bin/test-release.sh $VERSION</code> to ensure that all artifacts have
 successfully been released. It's important to ensure that this script passes
 before announcing the release since it takes a while for all published
@@ -144,9 +150,10 @@ the website</li>
 <li>Once the VS Code extension has been updated on the Marketplace, click
 &quot;Publish release&quot;.</li>
 </ul></li>
-<li><p>Announce on Gitter: <a href="https://gitter.im/scalameta/metals">https://gitter.im/scalameta/metals</a></p>
+<li><p>Announce the new release with the link to the release notes:</p>
 <ul>
-<li>Tag everybody with <code>@/all</code></li>
+<li>on <a href="https://gitter.im/scalameta/metals">Gitter</a> - tag everybody with <code>@/all</code></li>
+<li>on <a href="https://discord.com/invite/RFpSVth">Discord</a></li>
 </ul></li>
 </ul>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/contributors/updating-website.html"><span class="arrow-prev">← </span><span>Contributing to the website</span></a><a class="docs-next button" href="/metals/docs/contributors/tests.html"><span>Tests overview</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
