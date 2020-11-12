@@ -119,3 +119,6 @@ jobs:
             ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON:
             ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+      - name: "test download dependencies"
+        run: sbt downloadDependencies
+        if: matrix.type == 'cross'
