@@ -212,8 +212,8 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(scala3)
-  def deprecatedScala3Versions = Seq("0.27.0-RC1", "0.26.0")
+  def nonDeprecatedScala3Versions = Seq(scala3, "0.27.0-RC1")
+  def deprecatedScala3Versions = Seq("0.26.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions

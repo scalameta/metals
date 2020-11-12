@@ -61,8 +61,18 @@ class BaseSuite extends munit.FunSuite with Assertions {
       .getOrElse(identity[String] _)
 
     val result = compat
-      .collect { case (ver, code) if scalaVersion.startsWith(ver) => code }
+      .collect {
+        case (ver, code) if scalaVersion.startsWith(ver) => code
+      }
       .headOption
+      .orElse {
+        compat.collect {
+          // fallback to 3.0 for 0. pre-release versions
+          case (ver, code)
+              if scalaVersion.startsWith("0.") && ver.startsWith("3.") =>
+            code
+        }.headOption
+      }
       .getOrElse(default)
 
     postProcess(result)

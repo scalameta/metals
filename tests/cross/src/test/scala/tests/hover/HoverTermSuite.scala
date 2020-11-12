@@ -103,7 +103,9 @@ class HoverTermSuite extends BaseHoverSuite {
        |def f[A >: Any](args: A*): String = macro
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "def f[A >: Any](args: A*): String".hover
+      "3.0" -> "def f[A >: Any](args: A*): String".hover,
+      "0." -> ("def f: String".stripMargin.hover +
+        "\nImplementation of scala.StringContext.f used in Dotty")
     )
   )
 
@@ -465,7 +467,8 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """final val CONTINUE: FileVisitResult""".hover,
     compat = Map(
-      "3.0" -> "val CONTINUE: java.nio.file.FileVisitResult".hover
+      "3.0" -> "val CONTINUE: java.nio.file.FileVisitResult".hover,
+      "0." -> "val CONTINUE: (CONTINUE : java.nio.file.FileVisitResult)".hover
     )
   )
 }

@@ -27,7 +27,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.util
            |JList - javax.swing
            |""".stripMargin,
-      "3.0" -> "List=> collection.immutable.List.type"
+      "3.0" -> "List=> collection.immutable.List.type",
+      "0." -> ""
     ),
     topLines = Some(5)
   )
@@ -53,7 +54,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |  "".stripSu@@
       |}""".stripMargin,
     """|stripSuffix(suffix: String): String
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> ""
+    )
   )
 
   check(
@@ -474,7 +478,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|identity[A](x: A): A (commit: '')
        |""".stripMargin,
-    includeCommitCharacter = true
+    includeCommitCharacter = true,
+    compat = Map(
+      "0." -> ""
+    )
   )
 
   check(
@@ -807,7 +814,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "Some: Some$"
+      "3.0" -> "Some: Some$",
+      "0." -> ""
     )
   )
 
@@ -821,7 +829,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "Some: Some$"
+      "3.0" -> "Some: Some$",
+      "0." -> ""
     )
   )
 
@@ -840,7 +849,8 @@ class CompletionSuite extends BaseCompletionSuite {
       "3.0" ->
         """|NoClassDefFoundError: NoClassDefFoundError$
            |NoManifest=> reflect.NoManifest.type
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> ""
     )
   )
 
@@ -866,7 +876,8 @@ class CompletionSuite extends BaseCompletionSuite {
         """|SafeVarargs: SafeVarargs$
            |ScalaReflectionException: ScalaReflectionException$
            |SecurityException: SecurityException$
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> ""
     )
   )
 
@@ -892,7 +903,8 @@ class CompletionSuite extends BaseCompletionSuite {
         """|SafeVarargs: class and object SafeVarargs
            |ScalaReflectionException: class and object ScalaReflectionException
            |SecurityException: class and object SecurityException
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> ""
     )
   )
 
@@ -920,6 +932,10 @@ class CompletionSuite extends BaseCompletionSuite {
         """|NegativeArraySizeException: NegativeArraySizeException$
            |Nil=> collection.immutable.Nil.type
            |NoClassDefFoundError: NoClassDefFoundError$
+           |""".stripMargin,
+      "0." ->
+        """|NotString: Int
+           |Number: scala.util.matching.Regex
            |""".stripMargin
     )
   )
@@ -942,6 +958,9 @@ class CompletionSuite extends BaseCompletionSuite {
         """|NegativeArraySizeException: class and object NegativeArraySizeException
            |Nil=> collection.immutable.Nil.type
            |NoClassDefFoundError: class and object NoClassDefFoundError
+           |""".stripMargin,
+      "0." ->
+        """|Number: scala.util.matching.Regex
            |""".stripMargin
     )
   )
@@ -964,6 +983,9 @@ class CompletionSuite extends BaseCompletionSuite {
         """|NegativeArraySizeException: class and object NegativeArraySizeException
            |Nil=> collection.immutable.Nil.type
            |NoClassDefFoundError: class and object NoClassDefFoundError
+           |""".stripMargin,
+      "0." ->
+        """|Number: scala.util.matching.Regex
            |""".stripMargin
     )
   )
@@ -1028,6 +1050,11 @@ class CompletionSuite extends BaseCompletionSuite {
            |printf(text: String, xs: Any*): Unit
            |println(x: Any): Unit
            |printmmm=> String
+           |""".stripMargin,
+      "0." ->
+        """|printmmm=> String
+           |printnnn=> String
+           |printxxx: String
            |""".stripMargin
     )
   )

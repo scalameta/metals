@@ -314,9 +314,9 @@ class WorksheetProvider(
   private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
 
     def isSupportedScala3Version(scalaVersion: String) = {
-      // Worksheet support for Scala 3 is only working currently for 3.0.0-M1
+      // Worksheet support for Scala 3 is only working currently for 0.27.0-RC1 and 3.0.0-M1 upwards
       ScalaVersions.isScala3Version(scalaVersion) && SemVer.isCompatibleVersion(
-        "3.0.0",
+        "0.27.0",
         scalaVersion
       )
     }
