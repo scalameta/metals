@@ -176,3 +176,23 @@ WARN  Stopped configuration of SemanticDB in Scala 2.13.1 projects: Error downlo
 
 This might mean you need to specify proxy settings for Bloop or add custom
 repositories as specified above.
+
+### Mirrors still do not work for all dependencies
+
+In some specific configurations it might be needed to define additional mirrors
+like:
+
+```
+jcenter.from=https://repo1.maven.org/maven2
+jcenter.to=https://artifactory.mycomany.com/maven2
+
+typesafe.from=https://repo.typesafe.com/typesafe/ivy-releases
+typesafe.to=https://artifactory.mycompany.com/typesafe-ivy-releases/
+```
+
+The number of repositories to add depends on how the company's infrastructure is
+set up. The key is to keep adding mirror entries until you've fixed each resolve
+error. In case of sbt you can find out what the repos are named like
+typesafe.from|to by checking
+[the official documentation](https://www.scala-sbt.org/1.x/docs/Resolvers.html#Predefined+resolvers)
+and any custom resolvers your workspace has defined.
