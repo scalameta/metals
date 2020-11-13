@@ -95,7 +95,8 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       "3.0" ->
         """|assert(assertion: Boolean @InlineParam): Unit
            |assertFail(message: => Any): Nothing
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> ""
     )
   )
 

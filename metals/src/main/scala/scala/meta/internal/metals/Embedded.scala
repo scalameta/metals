@@ -181,13 +181,16 @@ object Embedded {
   private def mdocDependency(
       scalaVersion: String,
       scalaBinaryVersion: String
-  ): Dependency =
+  ): Dependency = {
+    // Mdoc support for 0.27.0-RC1 was dropped with "2.2.11"
+    val mdocVersion =
+      if (scalaVersion == "0.27.0-RC1") "2.2.10" else BuildInfo.mdocVersion
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
-      BuildInfo.mdocVersion
+      mdocVersion
     )
-
+  }
   private def semanticdbScalacDependency(scalaVersion: String): Dependency =
     Dependency.of(
       "org.scalameta",
