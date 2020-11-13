@@ -221,7 +221,7 @@ final class SyntheticsDecorationProvider(
         new l.Hover(
           new l.MarkupContent(
             l.MarkupKind.MARKDOWN,
-            previousContent + text
+            previousContent + "\n" + text
           )
         )
       )

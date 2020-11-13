@@ -226,7 +226,7 @@ class Compilers(
       ds.asScala.headOption match {
         case None =>
           diagnostics.onNoSyntaxError(path)
-        case Some(diagnostic) =>
+        case Some(diagnostic) if !path.isInReadonlyDirectory(workspace) =>
           diagnostics.onSyntaxError(path, adjust.adjustDiagnostic(diagnostic))
       }
     }

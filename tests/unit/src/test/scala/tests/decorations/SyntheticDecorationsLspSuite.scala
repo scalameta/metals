@@ -104,6 +104,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |```scala
            |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
            |```
+           |
            |**Synthetics**:
            |```scala
            |[scala.Char, scala.Predef.String]
