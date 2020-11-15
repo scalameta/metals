@@ -13,8 +13,9 @@ object SemanticdbTreePrinter {
       synthetic: s.Synthetic,
       printSymbol: String => String,
       userConfig: UserConfiguration,
-      simple: Boolean
-  ): Option[String] = {
+      isHover: Boolean,
+      isFullLine: Boolean = false
+  ): List[(String, s.Range)] = {
 
     lazy val symtab = PrinterSymtab.fromTextDocument(textDocument)
 
@@ -86,17 +87,17 @@ object SemanticdbTreePrinter {
           s"$mapped ${printType(tp)}"
         // this should not need to be printed but just in case we revert to semanticdb printer
         case s.UniversalType(_, tpe) =>
-          if (simple)
-            s"[ ... ] => ${printType(tpe)}"
-          else Print.tpe(Format.Detailed, t, symtab)
+          if (isHover)
+            Print.tpe(Format.Detailed, t, symtab)
+          else s"[ ... ] => ${printType(tpe)}"
         case s.ExistentialType(tpe, _) =>
-          if (simple)
-            s"${printType(tpe)} forSome { ... }"
-          else Print.tpe(Format.Detailed, t, symtab)
+          if (isHover)
+            Print.tpe(Format.Detailed, t, symtab)
+          else s"${printType(tpe)} forSome { ... }"
         case s.StructuralType(tpe, _) =>
-          if (simple)
-            s" ${printType(tpe)} { ... }"
-          else Print.tpe(Format.Detailed, t, symtab)
+          if (isHover)
+            Print.tpe(Format.Detailed, t, symtab)
+          else s" ${printType(tpe)} { ... }"
       }
 
     def printConstant(c: s.Constant): String =
@@ -123,7 +124,10 @@ object SemanticdbTreePrinter {
        */
       case tree @ s.ApplyTree(_: s.OriginalTree, _)
           if userConfig.showImplicitArguments =>
-        printTree(tree)
+        for {
+          syntheticString <- printTree(tree).toList
+          range <- synthetic.range.toList
+        } yield (syntheticString, range)
 
       /**
        *  def hello[T](T object) = object
@@ -131,8 +135,37 @@ object SemanticdbTreePrinter {
        */
       case tree @ s.TypeApplyTree(_: s.OriginalTree, _)
           if userConfig.showInferredType =>
-        printTree(tree)
-      case _ => None
+        for {
+          syntheticString <- printTree(tree).toList
+          range <- synthetic.range.toList
+        } yield (syntheticString, range)
+      /**
+       *  implicit def implicitFun(object: T): R = ???
+       *  def fun(r: R) = ???
+       *  fun(<<implicitFun(>>new T<<)>>)
+       */
+      case s.ApplyTree(id: s.IdTree, _) if userConfig.showImplicitConversions =>
+        def synthetics(syntheticString: String, range: s.Range) = {
+          if (isHover && !isFullLine)
+            List(
+              (syntheticString, range.withEndCharacter(range.startCharacter))
+            )
+          else
+            List(
+              (
+                syntheticString + "(",
+                range.withEndCharacter(range.startCharacter)
+              ),
+              (")", range)
+            )
+        }
+        for {
+          syntheticString <- printTree(id).toList
+          range <- synthetic.range.toList
+          synth <- synthetics(syntheticString, range)
+        } yield synth
+
+      case _ => Nil
     }
   }
 }

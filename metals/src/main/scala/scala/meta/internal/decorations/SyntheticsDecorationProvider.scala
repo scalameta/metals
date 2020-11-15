@@ -106,14 +106,16 @@ final class SyntheticsDecorationProvider(
             range <- synthetic.range.toIterable
             lspRange <- edit.toRevisedStrict(range).toIterable
             if lspRange.getEnd.getLine == line
-            fullSnippet <- printSyntheticInfo(
+            (fullSnippet, range) <- printSyntheticInfo(
               textDocument,
               synthetic,
               toHoverString(textDocument),
               userConfig(),
-              simple = false
+              isHover = true,
+              isFullLine = !clientConfig.isInlineDecorationProvider()
             ).toIterable
-          } yield (lspRange, fullSnippet)
+            realRange <- edit.toRevisedStrict(range).toIterable
+          } yield (realRange, fullSnippet)
 
           if (syntheticsAtLine.size > 0) {
             if (clientConfig.isInlineDecorationProvider()) {
@@ -297,13 +299,12 @@ final class SyntheticsDecorationProvider(
         val edit = buffer.tokenEditDistance(path, textDocument.text)
         val decorations = for {
           synthetic <- textDocument.synthetics
-          range <- synthetic.range.toIterable
-          decoration <- printSyntheticInfo(
+          (decoration, range) <- printSyntheticInfo(
             textDocument,
             synthetic,
             toDecorationString(textDocument),
             userConfig(),
-            simple = true
+            isHover = false
           ).toIterable
           lspRange <- edit.toRevisedStrict(range).toIterable
         } yield decorationOptions(lspRange, decoration)

@@ -14,7 +14,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     )
 
-  test("basic") {
+  test("all-synthetics") {
     for {
       _ <- server.initialize(
         s"""
@@ -50,6 +50,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions": true,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -73,8 +74,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    hello()(andy, boston);    hello()(andy, boston)
            |  }
            |  
-           |  "foo".map[Char, String](c => c.toUpper)(StringCanBuildFrom)
-           |  "foo".map[Int, IndexedSeq[Int]](c => c.toInt)(fallbackStringCanBuildFrom[Int])
+           |  augmentString("foo").map[Char, String](c => charWrapper(c).toUpper)(StringCanBuildFrom)
+           |  augmentString("foo").map[Int, IndexedSeq[Int]](c => c.toInt)(fallbackStringCanBuildFrom[Int])
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
            |  Future{
            |    println("")
@@ -89,6 +90,16 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|**Synthetics**:
            |```scala
            |(Main.andy, boston)
+           |```
+           |""".stripMargin
+      )
+      // Implicit converions
+      _ <- server.assertHoverAtLine(
+        "a/src/main/scala/Main.scala",
+        "  @@\"foo\".map(c => c.toUpper)",
+        """|**Synthetics**:
+           |```scala
+           |scala.Predef.augmentString
            |```
            |""".stripMargin
       )
@@ -154,13 +165,14 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  "foo".map(c => c.toUpper)
+           |  ("1" + "2").map(c => c.toUpper)
            |}
            |""".stripMargin
       )
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions": false,
           |  "show-inferred-type": false
           |}
           |""".stripMargin
@@ -176,13 +188,14 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()(andy)
-           |  "foo".map(c => c.toUpper)(StringCanBuildFrom)
+           |  ("1" + "2").map(c => c.toUpper)(StringCanBuildFrom)
            |}
            |""".stripMargin
       )
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
+          |  "show-implicit-conversions": false,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -197,7 +210,29 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  "foo".map[Char, String](c => c.toUpper)
+           |  ("1" + "2").map[Char, String](c => c.toUpper)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": false,
+          |  "show-implicit-conversions": true,
+          |  "show-inferred-type": false
+          |}
+          |""".stripMargin
+      )
+      _ = client.decorations.clear()
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  def hello()(implicit name: String) = {
+           |    println(s"Hello $name!")
+           |  }
+           |  implicit val andy : String = "Andy"
+           |  hello()
+           |  (augmentString("1" + "2")).map(c => charWrapper(c).toUpper)
            |}
            |""".stripMargin
       )

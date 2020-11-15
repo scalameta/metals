@@ -35,6 +35,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions": true,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -55,7 +56,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
         "  \"foo\".map(c @@=> c.toUpper)",
         """|**With synthetics added**:
            |```scala
-           |"foo".map[scala.Char, scala.Predef.String](c => c.toUpper)(scala.Predef.StringCanBuildFrom)
+           |scala.Predef.augmentString("foo").map[scala.Char, scala.Predef.String](c => scala.LowPriorityImplicits.charWrapper(c).toUpper)(scala.Predef.StringCanBuildFrom)
            |```
            |""".stripMargin
       )
