@@ -192,9 +192,9 @@ lazy val V = new {
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.11"
+  val mdoc = "2.2.12"
   val scalafmt = "2.7.4"
-  val munit = "0.7.16"
+  val munit = "0.7.17"
   val scalafix = "0.9.23"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -403,7 +403,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.2.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.2.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.0.4",
+      "org.flywaydb" % "flyway-core" % "7.2.0",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
