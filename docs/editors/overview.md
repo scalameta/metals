@@ -199,7 +199,7 @@ functionality.
     <td>Metals Extensions</td>
     <td align="center">✅</td>
     <td align="center">Status bar</td>
-    <td align="center">Status bar, Quick pick</td>
+    <td align="center">✅</td>
     <td align="center">Status bar, Input box</td>
     <td align="center">Status bar</td>
     <td align="center">Status bar, Slow task</td>
@@ -332,11 +332,14 @@ projects.
 
 ## Worksheets
 
-**✅**: Worksheets work via Decoration protocol and are added as a non-editable
+**✅**: Worksheets work via the Decoration protocol and are added as a non-editable
 side decoration.
 
 **Comments**: Worksheets work via `workspace/applyEdit` by adding comments to
-the source code and support hover to show larger output.
+the source code and support hover to show larger output.  You can find more
+information about worksheets under the editor specific worksheet section. For
+example, [here for VS
+Code](vscode.md#worksheets).
 
 ## Document symbols
 
@@ -390,8 +393,11 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 
 **Status bar**: Editor client implements the `metals/status` notification.
 
+**Decoration protocol**: Editor client impliments the [Decoration
+Protocol](../integrations/decoration-protocol.md).
+
 **Tree view**: Editor client implements the
-[Tree View Protocol](tree-view-protocol.md).
+[Tree View Protocol](../integrations/tree-view-protocol.md).
 
 **Did focus**: Editor client implements the `metals/didFocusTextDocument`
 notification.
@@ -410,7 +416,7 @@ notification.
 The Metals language server supports custom extensions that are not part of the
 Language Server Protocol (LSP). These extensions are not necessary for Metals to
 function but they improve the user experience. To learn more about Metals
-extensions, see [integrating a new editor](new-editor.md).
+extensions, see [integrating a new editor](../integrations/new-editor.md).
 
 ## Additional file types
 

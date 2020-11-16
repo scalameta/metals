@@ -226,14 +226,14 @@ Possible values:
 ##### `debuggingProvider`
 
 Boolean value to signify that the client supports the [Debug Adapter
-Protocol](debug-adapter-protocol.md).
+Protocol](../integrations/debug-adapter-protocol.md).
 
 Default value: `false`
 
 ##### `decorationProvider`
 
 Boolean value to signify that the client supports the [Decoration
-Protocol](decoration-protocol.md).
+Protocol](../integrations/decoration-protocol.md).
 
 Default value: `false`
 
@@ -375,7 +375,7 @@ Possible values:
 ##### `treeViewProvider`
 
 Boolean value signifying whether or not the client supports the [Tree View
-Protocol](tree-view-protocol.md).
+Protocol](../integrations/tree-view-protocol.md).
 
 Default value: `false`
 
@@ -665,17 +665,17 @@ To enable Metals extensions, start the main process with the system property
 ### Debug Adapter Protocol
 
 Metals implements and additional protocol for running and debugging inside the
-editor, see the [Debug Adapter Protocol](debug-adapter-protocol.md).
+editor, see the [Debug Adapter Protocol](../integrations/debug-adapter-protocol.md).
 
 ### Tree View Protocol
 
 Metals implements several custom JSON-RPC endpoints related to rendering tree
-views in the editor client, the [Tree View Protocol](tree-view-protocol.md).
+views in the editor client, the [Tree View Protocol](../integrations/tree-view-protocol.md).
 
 ### Decoration Protocol
 
 Metals implements an LSP extension to display non-editable text in the editor,
-see the [Decoration Protocol](decoration-protocol.md).
+see the [Decoration Protocol](../integrations/decoration-protocol.md).
 
 ### `metals/slowTask`
 
