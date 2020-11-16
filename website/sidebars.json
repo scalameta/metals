@@ -15,21 +15,28 @@
       "build-tools/gradle",
       "build-tools/maven",
       "build-tools/mill",
-      "build-tools/sbt",
-      "build-tools/proxy"
+      "build-tools/sbt"
     ],
     "Contributing": [
-      "build-tools/new-build-tool",
-      "editors/new-editor",
-      "editors/tree-view-protocol",
-      "editors/decoration-protocol",
-      "editors/debug-adapter-protocol",
-      "contributors/remote-language-server",
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",
       "contributors/releasing",
       "contributors/tests"
+    ],
+    "LSP Extensions/DAP": [
+      "lsp-extensions/tree-view-protocol",
+      "lsp-extensions/decoration-protocol",
+      "lsp-extensions/debug-adapter-protocol"
+    ],
+    "Integrating with Metals": [
+      "integrations/remote-language-server",
+      "integrations/new-build-tool",
+      "integrations/new-editor"
+    ],
+    "Troubleshooting": [
+      "troubleshooting/proxy",
+      "troubleshooting/faq"
     ]
   }
 }
