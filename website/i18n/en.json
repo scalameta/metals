@@ -84,6 +84,14 @@
       "editors/vscode": {
         "title": "Visual Studio Code"
       },
+      "integrations/debug-adapter-protocol": {
+        "title": "Debug Adapter Protocol",
+        "sidebar_label": "Debug Adapter Protocol"
+      },
+      "integrations/decoration-protocol": {
+        "title": "Decoration Protocol v0.2.0",
+        "sidebar_label": "Decoration Protocol"
+      },
       "integrations/new-build-tool": {
         "title": "Integrating a new build tool"
       },
@@ -92,6 +100,9 @@
       },
       "integrations/remote-language-server": {
         "title": "Remote Language Servers"
+      },
+      "integrations/tree-view-protocol": {
+        "title": "Tree View Protocol"
       },
       "lsp-extensions/debug-adapter-protocol": {
         "title": "Debug Adapter Protocol",
@@ -120,7 +131,6 @@
       "Text Editors": "Text Editors",
       "Build Tools": "Build Tools",
       "Contributing": "Contributing",
-      "LSP Extensions/DAP": "LSP Extensions/DAP",
       "Integrating with Metals": "Integrating with Metals",
       "Troubleshooting": "Troubleshooting"
     }

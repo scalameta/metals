@@ -394,10 +394,10 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 **Status bar**: Editor client implements the `metals/status` notification.
 
 **Decoration protocol**: Editor client impliments the [Decoration
-Protocol](../lsp-extensions/decoration-protocol.md).
+Protocol](../integrations/decoration-protocol.md).
 
 **Tree view**: Editor client implements the
-[Tree View Protocol](../lsp-extensions/tree-view-protocol.md).
+[Tree View Protocol](../integrations/tree-view-protocol.md).
 
 **Did focus**: Editor client implements the `metals/didFocusTextDocument`
 notification.

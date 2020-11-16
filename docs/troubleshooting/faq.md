@@ -6,7 +6,7 @@ title: Frequently asked questions
 This is a collection of frequently asked questions. We do our best to ensure
 everything is included in the docs in the relevant places, but sometimes it's
 either hard to explain in the context of the docs or there just isn't a good
-place to stick it. This is an attempt to document some of the most common
+enough place to stick it. This is an attempt to document some of the most common
 questions that we see related to Metals.
 
 ## I'm using Scala 2.13.x but doctor shows me `*-build` and `*-build-build` at 2.12.x
@@ -116,4 +116,4 @@ is used for this feature) needs your code saved before it can organize your
 imports. There are some conversations going on about how to achieve this in the
 future, but for now you'll need to save your file before using this feature.
 
-For context: https://github.com/scalameta/metals/issues/2120
+For context: [#2120](https://github.com/scalameta/metals/issues/2120)
