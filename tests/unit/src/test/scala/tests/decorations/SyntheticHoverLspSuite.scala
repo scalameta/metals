@@ -35,7 +35,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions": true,
+          |  "show-implicit-conversions-and-classes": true,
           |  "show-inferred-type": true
           |}
           |""".stripMargin

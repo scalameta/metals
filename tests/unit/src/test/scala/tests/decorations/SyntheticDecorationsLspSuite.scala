@@ -50,7 +50,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions": true,
+          |  "show-implicit-conversions-and-classes": true,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -172,7 +172,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions": false,
+          |  "show-implicit-conversions-and-classes": false,
           |  "show-inferred-type": false
           |}
           |""".stripMargin
@@ -195,7 +195,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions": false,
+          |  "show-implicit-conversions-and-classes": false,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -217,7 +217,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions": true,
+          |  "show-implicit-conversions-and-classes": true,
           |  "show-inferred-type": false
           |}
           |""".stripMargin
@@ -234,6 +234,54 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  hello()
            |  (augmentString("1" + "2")).map(c => charWrapper(c).toUpper)
            |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("augment-string") {
+    for {
+      _ <- server.initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |
+            |/a/src/main/scala/Main.scala
+            |object Main{
+            |  ("1" + "2")
+            |    .stripSuffix(".")
+            |    .stripSuffix("#")
+            |    .stripPrefix("_empty_.")
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """|{
+           |  "show-implicit-conversions-and-classes": true
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  (augmentString(augmentString(augmentString("1" + "2"))
+           |    .stripSuffix("."))
+           |    .stripSuffix("#"))
+           |    .stripPrefix("_empty_.")
+           |}
+           |""".stripMargin
+      )
+      _ <- server.assertHoverAtLine(
+        "a/src/main/scala/Main.scala",
+        "  (@@\"1\" + \"2\")",
+        """|**Synthetics**:
+           |```scala
+           |scala.Predef.augmentString
+           |```
            |""".stripMargin
       )
     } yield ()

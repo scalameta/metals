@@ -14,7 +14,7 @@ object SemanticdbTreePrinter {
       printSymbol: String => String,
       userConfig: UserConfiguration,
       isHover: Boolean,
-      isFullLine: Boolean = false
+      isInlineProvider: Boolean = false
   ): List[(String, s.Range)] = {
 
     lazy val symtab = PrinterSymtab.fromTextDocument(textDocument)
@@ -116,6 +116,12 @@ object SemanticdbTreePrinter {
         case s.StringConstant(value) => value
       }
 
+    def gatherSynthetics(tree: s.Tree) = {
+      for {
+        syntheticString <- printTree(tree).toList
+        range <- synthetic.range.toList
+      } yield (syntheticString, range)
+    }
     synthetic.tree match {
       /**
        *  implicit val str = ""
@@ -124,10 +130,7 @@ object SemanticdbTreePrinter {
        */
       case tree @ s.ApplyTree(_: s.OriginalTree, _)
           if userConfig.showImplicitArguments =>
-        for {
-          syntheticString <- printTree(tree).toList
-          range <- synthetic.range.toList
-        } yield (syntheticString, range)
+        gatherSynthetics(tree)
 
       /**
        *  def hello[T](T object) = object
@@ -135,26 +138,31 @@ object SemanticdbTreePrinter {
        */
       case tree @ s.TypeApplyTree(_: s.OriginalTree, _)
           if userConfig.showInferredType =>
-        for {
-          syntheticString <- printTree(tree).toList
-          range <- synthetic.range.toList
-        } yield (syntheticString, range)
+        gatherSynthetics(tree)
       /**
        *  implicit def implicitFun(object: T): R = ???
        *  def fun(r: R) = ???
        *  fun(<<implicitFun(>>new T<<)>>)
        */
-      case s.ApplyTree(id: s.IdTree, _) if userConfig.showImplicitConversions =>
+      case s.ApplyTree(id: s.IdTree, _)
+          if userConfig.showImplicitConversionsAndClasses =>
         def synthetics(syntheticString: String, range: s.Range) = {
-          if (isHover && !isFullLine)
+          if (isHover && isInlineProvider)
             List(
-              (syntheticString, range.withEndCharacter(range.startCharacter))
+              (
+                syntheticString,
+                range
+                  .withEndCharacter(range.startCharacter)
+                  .withEndLine(range.startLine)
+              )
             )
           else
             List(
               (
                 syntheticString + "(",
-                range.withEndCharacter(range.startCharacter)
+                range
+                  .withEndCharacter(range.startCharacter)
+                  .withEndLine(range.startLine)
               ),
               (")", range)
             )
