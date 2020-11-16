@@ -196,6 +196,7 @@ lazy val V = new {
   val scalafmt = "2.7.4"
   val munit = "0.7.17"
   val scalafix = "0.9.23"
+  val lsp4jV = "0.10.0"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
@@ -223,9 +224,8 @@ lazy val V = new {
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
   def guava = "com.google.guava" % "guava" % "30.0-jre"
-  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
-  def dap4j =
-    "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.9.0"
+  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
+  def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.1"
   val coursier = "2.0.6"
   val ammonite = "2.2.0-4-4bd225e"
