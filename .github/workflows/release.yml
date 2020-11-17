@@ -11,7 +11,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: olafurpg/setup-scala@v10
-      - uses: olafurpg/setup-gpg@v2
+      - uses: olafurpg/setup-gpg@v3
       - uses: coursier/cache-action@v5
       - name: Publish
         run: |
