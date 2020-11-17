@@ -652,7 +652,8 @@ class MetalsLanguageServer(
         definitionIndex,
         clientConfig.initialConfig.statistics,
         id => compilations.compileTarget(id),
-        sh
+        sh,
+        () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
       )
     }
   }

@@ -30,6 +30,8 @@ case class BspSession(
 
   def mainConnection: BuildServerConnection = main
 
+  def mainConnectionIsBloop: Boolean = main.name == "Bloop"
+
   def version: String = main.version
 
   def workspaceReload(): Future[List[Object]] =
