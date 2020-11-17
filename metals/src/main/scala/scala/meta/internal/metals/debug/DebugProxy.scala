@@ -10,6 +10,8 @@ import scala.concurrent.Promise
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.GlobalTrace
+import scala.meta.internal.metals.StacktraceAnalyzer
+import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
@@ -26,7 +28,8 @@ private[debug] final class DebugProxy(
     sourcePathProvider: SourcePathProvider,
     client: RemoteEndpoint,
     server: ServerAdapter,
-    compilers: Compilers
+    compilers: Compilers,
+    stackTraceAnalyzer: StacktraceAnalyzer
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -110,6 +113,18 @@ private[debug] final class DebugProxy(
       }
       response.setResult(args.toJson)
       client.consume(response)
+    case message @ ErrorOutputNotification(output) =>
+      stackTraceAnalyzer
+        .fileLocationFromLine(output.getOutput())
+        .map { location =>
+          val response =
+            DebugProtocol.stacktraceOutputResponse(output, location)
+          client.consume(response)
+        }
+        .getOrElse {
+          client.consume(message)
+        }
+
     case message =>
       client.consume(message)
   }
@@ -139,7 +154,8 @@ private[debug] object DebugProxy {
       sourcePathProvider: SourcePathProvider,
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket],
-      compilers: Compilers
+      compilers: Compilers,
+      stacktraceAnalyzer: StacktraceAnalyzer
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -151,7 +167,14 @@ private[debug] object DebugProxy {
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, DebugProtocol.clientName))
         .map(new MessageIdAdapter(_))
-    } yield new DebugProxy(name, sourcePathProvider, client, server, compilers)
+    } yield new DebugProxy(
+      name,
+      sourcePathProvider,
+      client,
+      server,
+      compilers,
+      stacktraceAnalyzer
+    )
   }
 
   private def withLogger(

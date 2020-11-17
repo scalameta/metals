@@ -66,6 +66,17 @@ class StacktraceAnalyzer(
     } yield makeGotoLocationCodeLens(location, range)).toSeq
   }
 
+  def fileLocationFromLine(line: String): Option[l.Location] = {
+    def findLocationForSymbol(s: String): Option[Location] =
+      definitionProvider.fromSymbol(s).asScala.headOption
+
+    for {
+      symbol <- symbolFromLine(line)
+      location <- toToplevelSymbol(symbol)
+        .collectFirst(Function.unlift(findLocationForSymbol))
+    } yield trySetLineFromStacktrace(location, line)
+  }
+
   /**
    * Strip out the `[E]` when the line is coming from bloop-cli.
    * Or
@@ -134,18 +145,9 @@ class StacktraceAnalyzer(
     location
   }
 
-  private def fileLocationFromLine(line: String): Option[l.Location] = {
-    def findLocationForSymbol(s: String): Option[Location] =
-      definitionProvider.fromSymbol(s).asScala.headOption
-
-    toToplevelSymbol(symbolFromLine(line))
-      .collectFirst(Function.unlift(findLocationForSymbol))
-      .map(location => trySetLineFromStacktrace(location, line))
-  }
-
-  private def symbolFromLine(line: String): String = {
+  private def symbolFromLine(line: String): Option[String] = Try {
     line.substring(line.indexOf("at ") + 3, line.indexOf("("))
-  }
+  }.toOption
 
   private def makeHtmlCommandParams(
       stacktrace: String

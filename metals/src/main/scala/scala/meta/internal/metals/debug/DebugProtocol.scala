@@ -4,15 +4,18 @@ import scala.reflect.ClassTag
 import scala.util.Failure
 import scala.util.Try
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.LaunchRequestArguments
+import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
+import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugNotificationMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugRequestMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.IdentifiableMessage
@@ -22,6 +25,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.eclipse.lsp4j.{debug => dap}
+import org.eclipse.{lsp4j => l}
 
 object DebugProtocol {
   import scala.meta.internal.metals.JsonParser._
@@ -61,6 +65,24 @@ object DebugProtocol {
     response
   }
 
+  def stacktraceOutputResponse(
+      output: OutputEventArguments,
+      location: l.Location
+  ): DebugNotificationMessage = {
+    val source = new Source()
+    source.setName(location.getUri().toAbsolutePath.filename)
+    source.setPath(location.getUri())
+
+    // seems lines here start at 1
+    output.setLine(location.getRange().getStart().getLine() + 1)
+    output.setSource(source)
+
+    val response = new DebugNotificationMessage()
+    response.setMethod("output")
+    response.setParams(output.toJson)
+    response
+  }
+
   def syntheticFailure(
       request: DebugResponseMessage,
       cause: String
@@ -78,6 +100,17 @@ object DebugProtocol {
     def unapply(msg: IdentifiableMessage): Option[IdentifiableMessage] = {
       if (msg.getId == null) Some(msg)
       else None
+    }
+  }
+
+  object ErrorOutputNotification {
+    def unapply(
+        notification: NotificationMessage
+    ): Option[OutputEventArguments] = {
+      if (notification.getMethod != "output") None
+      else
+        parse[OutputEventArguments](notification.getParams).toOption
+          .filter(_.getCategory() == "stderr")
     }
   }
 
