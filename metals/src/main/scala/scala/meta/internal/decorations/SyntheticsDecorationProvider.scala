@@ -103,17 +103,17 @@ final class SyntheticsDecorationProvider(
 
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
-            range <- synthetic.range.toIterable
-            lspRange <- edit.toRevisedStrict(range).toIterable
-            if lspRange.getEnd.getLine == line
-            fullSnippet <- printSyntheticInfo(
+            (fullSnippet, range) <- printSyntheticInfo(
               textDocument,
               synthetic,
               toHoverString(textDocument),
               userConfig(),
-              simple = false
-            ).toIterable
-          } yield (lspRange, fullSnippet)
+              isHover = true,
+              isInlineProvider = clientConfig.isInlineDecorationProvider()
+            )
+            realRange <- edit.toRevisedStrict(range).toIterable
+            if realRange.getEnd.getLine == line
+          } yield (realRange, fullSnippet)
 
           if (syntheticsAtLine.size > 0) {
             if (clientConfig.isInlineDecorationProvider()) {
@@ -139,7 +139,7 @@ final class SyntheticsDecorationProvider(
     }
 
   private def isSyntheticsEnabled: Boolean = {
-    userConfig().showImplicitArguments || userConfig().showInferredType
+    userConfig().showImplicitArguments || userConfig().showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
   private def createHoverAtPoint(
@@ -148,21 +148,22 @@ final class SyntheticsDecorationProvider(
       pcHover: Option[l.Hover],
       position: l.Position
   ): Option[l.Hover] = {
-    syntheticsAtLine
-      .find { case (range, _) =>
-        range.getEnd().getCharacter() == position.getCharacter()
-      }
-      .flatMap { case (_, synthetic) =>
-        addToHover(
-          pcHover,
-          "**Synthetics**:\n"
-            +
-              HoverMarkup(
-                synthetic
-              )
-        )
-      }
+    val interestingSynthetics = syntheticsAtLine.collect {
+      case (range, text)
+          if range.getEnd().getCharacter() == position.getCharacter() =>
+        text
+    }.distinct
 
+    if (interestingSynthetics.nonEmpty)
+      addToHover(
+        pcHover,
+        "**Synthetics**:\n"
+          +
+            HoverMarkup(
+              interestingSynthetics.mkString("\n")
+            )
+      )
+    else None
   }
 
   private def createHoverAtLine(
@@ -297,14 +298,13 @@ final class SyntheticsDecorationProvider(
         val edit = buffer.tokenEditDistance(path, textDocument.text)
         val decorations = for {
           synthetic <- textDocument.synthetics
-          range <- synthetic.range.toIterable
-          decoration <- printSyntheticInfo(
+          (decoration, range) <- printSyntheticInfo(
             textDocument,
             synthetic,
             toDecorationString(textDocument),
             userConfig(),
-            simple = true
-          ).toIterable
+            isHover = false
+          )
           lspRange <- edit.toRevisedStrict(range).toIterable
         } yield decorationOptions(lspRange, decoration)
 

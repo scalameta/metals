@@ -37,6 +37,7 @@ case class UserConfiguration(
     superMethodLensesEnabled: Boolean = false,
     showInferredType: Boolean = false,
     showImplicitArguments: Boolean = false,
+    showImplicitConversionsAndClasses: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
     excludedPackages: Option[List[String]] = None
@@ -186,7 +187,7 @@ object UserConfiguration {
         "Should display type annotations for inferred types",
         """|When this option is enabled, each method that can have inferred types has them
            |displayed either as additional decorations if they are supported by the editor or
-           |shown in hover otherwise.
+           |shown in the hover.
            |""".stripMargin
       ),
       UserConfigurationOption(
@@ -196,7 +197,17 @@ object UserConfiguration {
         "Should display implicit parameter at usage sites",
         """|When this option is enabled, each method that has implicit arguments has them 
            |displayed either as additional decorations if they are supported by the editor or 
-           |shown in hover otherwise.
+           |shown in the hover.
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "show-implicit-conversions-and-classes",
+        "false",
+        "false",
+        "Should display implicit conversion at usage sites",
+        """|When this option is enabled, each place where an implicit method or class is used has it 
+           |displayed either as additional decorations if they are supported by the editor or 
+           |shown in the hover.
            |""".stripMargin
       ),
       UserConfigurationOption(
@@ -356,6 +367,8 @@ object UserConfiguration {
       getBooleanKey("show-inferred-type").getOrElse(false)
     val showImplicitArguments =
       getBooleanKey("show-implicit-arguments").getOrElse(false)
+    val showImplicitConversionsAndClasses =
+      getBooleanKey("show-implicit-conversions-and-classes").getOrElse(false)
     val remoteLanguageServer =
       getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
@@ -381,6 +394,7 @@ object UserConfiguration {
           superMethodLensesEnabled,
           showInferredType,
           showImplicitArguments,
+          showImplicitConversionsAndClasses,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
           excludedPackages
