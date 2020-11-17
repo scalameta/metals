@@ -26,7 +26,8 @@ class MetalsTreeViewProvider(
     definitionIndex: GlobalSymbolIndex,
     statistics: StatisticsConfig,
     doCompile: BuildTargetIdentifier => Unit,
-    sh: ScheduledExecutorService
+    sh: ScheduledExecutorService,
+    isBloop: () => Boolean
 ) extends TreeViewProvider {
   private val ticks =
     TrieMap.empty[String, ScheduledFuture[_]]
@@ -67,7 +68,7 @@ class MetalsTreeViewProvider(
       )
     },
     { (id, symbol) =>
-      doCompile(id)
+      if (isBloop()) doCompile(id)
       buildTargets.scalacOptions(id) match {
         case None =>
           Nil.iterator
