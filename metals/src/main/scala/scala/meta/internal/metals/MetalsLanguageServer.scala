@@ -1059,6 +1059,14 @@ class MetalsLanguageServer(
             compilers.restartAll()
           }
 
+          if (
+            userConfig.showImplicitArguments != old.showImplicitArguments ||
+            userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
+            userConfig.showInferredType != old.showInferredType
+          ) {
+            syntheticsDecorator.refresh()
+          }
+
           bspSession
             .map { session =>
               if (session.main.isBloop) {

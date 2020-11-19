@@ -13,7 +13,6 @@ specific sections.
 
 ```
 
-
 ## Editor support
 
 Metals works with the following text editors with varying degree of
@@ -213,6 +212,15 @@ functionality.
      <td align="center">✅</td>
      <td align="center"></td>
   </tr>
+  <tr>
+     <td>Implicit decorations</td>
+     <td align="center">✅</td>
+     <td align="center">Shown in hover</td>
+     <td align="center">Shown in hover</td>
+     <td align="center">Shown in hover</td>
+     <td align="center">✅</td>
+     <td align="center">Shown in hover</td>
+  </tr>
 </tbody>
 </table>
 
@@ -332,14 +340,13 @@ projects.
 
 ## Worksheets
 
-**✅**: Worksheets work via the Decoration protocol and are added as a non-editable
-side decoration.
+**✅**: Worksheets work via the Decoration protocol and are added as a
+non-editable side decoration.
 
 **Comments**: Worksheets work via `workspace/applyEdit` by adding comments to
-the source code and support hover to show larger output.  You can find more
+the source code and support hover to show larger output. You can find more
 information about worksheets under the editor specific worksheet section. For
-example, [here for VS
-Code](vscode.md#worksheets).
+example, [here for VS Code](vscode.md#worksheets).
 
 ## Document symbols
 
@@ -393,8 +400,8 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 
 **Status bar**: Editor client implements the `metals/status` notification.
 
-**Decoration protocol**: Editor client impliments the [Decoration
-Protocol](../integrations/decoration-protocol.md).
+**Decoration protocol**: Editor client impliments the
+[Decoration Protocol](../integrations/decoration-protocol.md).
 
 **Tree view**: Editor client implements the
 [Tree View Protocol](../integrations/tree-view-protocol.md).
@@ -417,6 +424,15 @@ The Metals language server supports custom extensions that are not part of the
 Language Server Protocol (LSP). These extensions are not necessary for Metals to
 function but they improve the user experience. To learn more about Metals
 extensions, see [integrating a new editor](../integrations/new-editor.md).
+
+## Implicit decorations
+
+**✅**: Additional information inferred from the code can be show within the
+code using virtual text.
+
+**Shown in hover**: Additional information inferred from the code can be show
+when hovering over a specific line. That hover only shows the additional symbols
+on the current line.
 
 ## Additional file types
 
@@ -546,6 +562,13 @@ scripts.
      <td align="center"></td>
      <td align="center"></td>
      <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Implicit decorations</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center"></td>
   </tr>
 </tbody>
 </table>

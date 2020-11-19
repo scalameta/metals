@@ -90,6 +90,10 @@ final class SyntheticsDecorationProvider(
     }
   }
 
+  def refresh(): Unit = {
+    focusedDocument().foreach(publishSynthetics)
+  }
+
   def addSyntheticsHover(
       params: TextDocumentPositionParams,
       pcHover: Option[l.Hover]
