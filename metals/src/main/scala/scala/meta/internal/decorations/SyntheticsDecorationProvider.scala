@@ -90,7 +90,7 @@ final class SyntheticsDecorationProvider(
     }
   }
 
-  def refresh() = {
+  def refresh(): Unit = {
     focusedDocument().foreach(publishSynthetics)
   }
 
