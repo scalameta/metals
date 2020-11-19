@@ -142,55 +142,65 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
-  def predefDocString: String =
-    """|
-       |> The `Predef` object provides definitions that are accessible in all Scala
-       | compilation units without explicit qualification.
-       |
-       |###  Commonly Used Types
+
+  val commonlyUsedTypesPre2134: String =
+    """|###  Commonly Used Types
        | Predef provides type aliases for types which are commonly used, such as
        | the immutable collection types [scala.collection.immutable.Map](scala.collection.immutable.Map),
        | [scala.collection.immutable.Set](scala.collection.immutable.Set), and the [scala.collection.immutable.List](scala.collection.immutable.List)
        | constructors ([scala.collection.immutable.::](scala.collection.immutable.::) and
-       | [scala.collection.immutable.Nil](scala.collection.immutable.Nil)).
-       |
-       |###  Console Output
-       | For basic console output, `Predef` provides convenience methods [print(x:Any* print](print(x:Any* print) and [println(x:Any* println](println(x:Any* println),
-       | which are aliases of the methods in the object [scala.Console](scala.Console).
-       |
-       |###  Assertions
-       | A set of `assert` functions are provided for use as a way to document
-       | and dynamically check invariants in code. Invocations of `assert` can be elided
-       | at compile time by providing the command line option `-Xdisable-assertions`,
-       | which raises `-Xelide-below` above `elidable.ASSERTION`, to the `scalac` command.
-       |
-       | Variants of `assert` intended for use with static analysis tools are also
-       | provided: `assume`, `require` and `ensuring`. `require` and `ensuring` are
-       | intended for use as a means of design-by-contract style specification
-       | of pre- and post-conditions on functions, with the intention that these
-       | specifications could be consumed by a static analysis tool. For instance,
-       |
-       |```
-       |def addNaturals(nats: List[Int]): Int = {
-       |  require(nats forall (_ >= 0), "List contains negative numbers")
-       |  nats.foldLeft(0)(_ + _)
-       |} ensuring(_ >= 0)
-       |```
-       | The declaration of `addNaturals` states that the list of integers passed should
-       | only contain natural numbers (i.e. non-negative), and that the result returned
-       | will also be natural. `require` is distinct from `assert` in that if the
-       | condition fails, then the caller of the function is to blame rather than a
-       | logical error having been made within `addNaturals` itself. `ensuring` is a
-       | form of `assert` that declares the guarantee the function is providing with
-       | regards to its return value.
-       |
-       |###  Implicit Conversions
-       | A number of commonly applied implicit conversions are also defined here, and
-       | in the parent type [scala.LowPriorityImplicits](scala.LowPriorityImplicits). Implicit conversions
-       | are provided for the "widening" of numeric values, for instance, converting a
-       | Short value to a Long value as required, and to add additional higher-order
-       | functions to Array values. These are described in more detail in the documentation of [scala.Array](scala.Array).
-       |""".stripMargin.trim
+       | [scala.collection.immutable.Nil](scala.collection.immutable.Nil)).""".stripMargin
+
+  val commonlyUsedTypesPost2134: String =
+    """|###  Commonly Used Types
+       | Predef provides type aliases for types which are commonly used, such as
+       | the immutable collection types [scala.collection.immutable.Map](scala.collection.immutable.Map) and
+       | [scala.collection.immutable.Set](scala.collection.immutable.Set).""".stripMargin
+
+  def predefDocString(commonlyUsedTypes: String): String =
+    s"""|
+        |> The `Predef` object provides definitions that are accessible in all Scala
+        | compilation units without explicit qualification.
+        |
+        |$commonlyUsedTypes
+        |
+        |###  Console Output
+        | For basic console output, `Predef` provides convenience methods [print(x:Any* print](print(x:Any* print) and [println(x:Any* println](println(x:Any* println),
+        | which are aliases of the methods in the object [scala.Console](scala.Console).
+        |
+        |###  Assertions
+        | A set of `assert` functions are provided for use as a way to document
+        | and dynamically check invariants in code. Invocations of `assert` can be elided
+        | at compile time by providing the command line option `-Xdisable-assertions`,
+        | which raises `-Xelide-below` above `elidable.ASSERTION`, to the `scalac` command.
+        |
+        | Variants of `assert` intended for use with static analysis tools are also
+        | provided: `assume`, `require` and `ensuring`. `require` and `ensuring` are
+        | intended for use as a means of design-by-contract style specification
+        | of pre- and post-conditions on functions, with the intention that these
+        | specifications could be consumed by a static analysis tool. For instance,
+        |
+        |```
+        |def addNaturals(nats: List[Int]): Int = {
+        |  require(nats forall (_ >= 0), "List contains negative numbers")
+        |  nats.foldLeft(0)(_ + _)
+        |} ensuring(_ >= 0)
+        |```
+        | The declaration of `addNaturals` states that the list of integers passed should
+        | only contain natural numbers (i.e. non-negative), and that the result returned
+        | will also be natural. `require` is distinct from `assert` in that if the
+        | condition fails, then the caller of the function is to blame rather than a
+        | logical error having been made within `addNaturals` itself. `ensuring` is a
+        | form of `assert` that declares the guarantee the function is providing with
+        | regards to its return value.
+        |
+        |###  Implicit Conversions
+        | A number of commonly applied implicit conversions are also defined here, and
+        | in the parent type [scala.LowPriorityImplicits](scala.LowPriorityImplicits). Implicit conversions
+        | are provided for the "widening" of numeric values, for instance, converting a
+        | Short value to a Long value as required, and to add additional higher-order
+        | functions to Array values. These are described in more detail in the documentation of [scala.Array](scala.Array).
+        |""".stripMargin.trim
 
   check(
     "scala3",
@@ -200,15 +210,25 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     s"""
-       |$predefDocString
+       |${predefDocString(commonlyUsedTypesPre2134)}
        |Predef scala
        |DeprecatedPredef scala
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" ->
+      "2.13.2" ->
         s"""
-           |$predefDocString
+           |${predefDocString(commonlyUsedTypesPre2134)}
+           |Predef scala
+           |""".stripMargin,
+      "2.13.3" ->
+        s"""
+           |${predefDocString(commonlyUsedTypesPre2134)}
+           |Predef scala
+           |""".stripMargin,
+      "2.13.4" ->
+        s"""
+           |${predefDocString(commonlyUsedTypesPost2134)}
            |Predef scala
            |""".stripMargin
     )
@@ -348,13 +368,13 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13.1" -> iteratorDocs213,
       "2.13.2" -> iteratorDocs213,
-      "2.13.3" -> iteratorDocs213.replace("it.next  ", "it.next()")
+      "2.13.3" -> iteratorDocs213.replace("it.next  ", "it.next()"),
+      "2.13.4" -> iteratorDocs213.replace("it.next  ", "it.next()")
     )
   )
 
-  def executionDocstring: String =
+  def executionDocstringPre2134: String =
     """|> The implicit global `ExecutionContext`. Import `global` when you want to provide the global
        |`ExecutionContext` implicitly.
        |
@@ -362,6 +382,12 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |the thread pool uses a target number of worker threads equal to the number of
        |[available processors](https://docs.oracle.com/javase/8/docs/api/java/lang/Runtime.html#availableProcessors--).
        |""".stripMargin.trim
+
+  def executionDocstringPost2134: String =
+    """|> An accessor that can be used to import the global `ExecutionContext` into the implicit scope,
+       |see [ExecutionContext.global](ExecutionContext.global).
+       |""".stripMargin.trim
+
   check(
     "scala5",
     """
@@ -369,14 +395,17 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |  scala.concurrent.ExecutionContext.Implicits.global@@
       |}
     """.stripMargin,
-    s"""|$executionDocstring
+    s"""|$executionDocstringPre2134
         |global: ExecutionContext
         |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.11" -> s"""|$executionDocstring
+      "2.11" -> s"""|$executionDocstringPre2134
                     |global: ExecutionContextExecutor
-                    |""".stripMargin
+                    |""".stripMargin,
+      "2.13.4" -> s"""|$executionDocstringPost2134
+                      |global: ExecutionContext
+                      |""".stripMargin
     )
   )
   check(
@@ -526,29 +555,9 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13.1" ->
-        """|> ### class Vector
-           |Vector is a general-purpose, immutable data structure.  It provides random access and updates
-           | in effectively constant time, as well as very fast append and prepend.  Because vectors strike
-           | a good balance between fast random selections and fast random functional updates, they are
-           | currently the default implementation of immutable indexed sequences.  It is backed by a little
-           | endian bit-mapped vector trie with a branching factor of 32.  Locality is very good, but not
-           | contiguous, which is good for very large sequences.
-           |
-           |
-           |**Type Parameters**
-           |- `A`: the element type
-           |
-           |**See**
-           |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-immutable-collection-classes.html#vectors)
-           | section on `Vectors` for more information.
-
-           |### object Vector
-           |$factoryInfo
-           |Vector scala.collection.immutable
-           |""".stripMargin,
       "2.13.2" -> vectorDocs213,
-      "2.13.3" -> vectorDocs213
+      "2.13.3" -> vectorDocs213,
+      "2.13.4" -> vectorDocs213
     )
   )
   check(
