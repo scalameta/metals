@@ -564,7 +564,8 @@ class MetalsLanguageServer(
       buildClient,
       statusBar,
       compilers,
-      definitionIndex
+      definitionIndex,
+      stacktraceAnalyzer
     )
     scalafixProvider = ScalafixProvider(
       buffers,

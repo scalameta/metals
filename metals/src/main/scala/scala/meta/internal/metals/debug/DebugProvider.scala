@@ -32,6 +32,7 @@ import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
@@ -55,7 +56,8 @@ class DebugProvider(
     buildClient: MetalsBuildClient,
     statusBar: StatusBar,
     compilers: Compilers,
-    index: OnDemandSymbolIndex
+    index: OnDemandSymbolIndex,
+    stacktraceAnalyzer: StacktraceAnalyzer
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -112,7 +114,8 @@ class DebugProvider(
             sourcePathProvider,
             awaitClient,
             connectToServer,
-            compilers
+            compilers,
+            stacktraceAnalyzer
           )
       }
       val server = new DebugServer(sessionName, uri, proxyFactory)
