@@ -182,8 +182,8 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val sbtScala = "2.12.10"
   val scala212 = "2.12.12"
-  val scala213 = "2.13.3"
-  val scalameta = "4.3.24"
+  val scala213 = "2.13.4"
+  val scalameta = "4.4.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
   val bloop = "1.4.5-6-4768184c"
@@ -207,9 +207,10 @@ lazy val V = new {
       .distinct
 
   // Scala 2
-  def deprecatedScala2Versions = Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
+  def deprecatedScala2Versions =
+    Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.11", "2.12.10", "2.13.1", "2.13.2")
+    Seq(scala213, scala212, "2.12.11", "2.12.10", "2.13.2", "2.13.3")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
@@ -316,18 +317,21 @@ val mtagsSettings = List(
     ),
     if3 = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.3",
-      ("org.scalameta" %% "scalameta" % V.scalameta)
-        .withDottyCompat(scalaVersion.value),
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
         .withDottyCompat(scalaVersion.value)
     ),
     if3pre = List(
-      "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value
+      "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
+      // 0.27.0-RC1 does not compile with 2.13.4 release scalameta
+      ("org.scalameta" %% "scalameta" % "4.3.24")
+        .withDottyCompat(scalaVersion.value)
     ),
     if30 = List(
-      "org.scala-lang" %% "scala3-compiler" % scalaVersion.value
+      "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
+      ("org.scalameta" %% "scalameta" % V.scalameta)
+        .withDottyCompat(scalaVersion.value)
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.7.1"),
@@ -562,7 +566,8 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        List(V.scala211, V.sbtScala, V.scala212, V.scala213, V.scala3)
+        // TODO https://github.com/scalameta/metals/issues/2248 remove 2.13.3 once resolved
+        List(V.scala211, V.sbtScala, V.scala212, "2.13.3", V.scala213, V.scala3)
       )
     )
 
