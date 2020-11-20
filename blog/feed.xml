@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Tue, 10 Nov 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 20 Nov 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.9.6 - Lithium]]></title>
+            <link>http://scalameta.org/metals/blog/2020/11/20/lithium.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/11/20/lithium.html</guid>
+            <pubDate>Fri, 20 Nov 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We're happy to announce the release of Metals v0.9.6, which mostly concentrates on adding support for the newly released Scala 2.13.4, but also adds some improvements for already existing features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">59</td> </tr> <tr> <td>Merged PRs</td> <td align="center">31</td> </tr> <tr> <td>C...</td></tr></tbody></table>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.9.5 - Lithium]]></title>
             <link>http://scalameta.org/metals/blog/2020/11/10/lithium.html</link>
