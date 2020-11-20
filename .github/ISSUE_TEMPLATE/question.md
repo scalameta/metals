@@ -18,7 +18,7 @@ labels: "question"
 
 - Operating system: macOS/Windows/Linux
 - Editor: Visual Studio Code/Atom/Vim/Sublime/Emacs
-- Metals version: v0.9.5
+- Metals version: v0.9.6
 
 **Additional context**
 
