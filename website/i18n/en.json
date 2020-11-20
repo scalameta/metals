@@ -104,17 +104,6 @@
       "integrations/tree-view-protocol": {
         "title": "Tree View Protocol"
       },
-      "lsp-extensions/debug-adapter-protocol": {
-        "title": "Debug Adapter Protocol",
-        "sidebar_label": "Debug Adapter Protocol"
-      },
-      "lsp-extensions/decoration-protocol": {
-        "title": "Decoration Protocol v0.2.0",
-        "sidebar_label": "Decoration Protocol"
-      },
-      "lsp-extensions/tree-view-protocol": {
-        "title": "Tree View Protocol"
-      },
       "troubleshooting/faq": {
         "title": "Frequently asked questions"
       },
