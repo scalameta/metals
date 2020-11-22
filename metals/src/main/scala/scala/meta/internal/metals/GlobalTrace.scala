@@ -9,7 +9,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 
-import io.github.soc.directories.ProjectDirectories
+import dev.dirs.ProjectDirectories
 
 /**
  * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.

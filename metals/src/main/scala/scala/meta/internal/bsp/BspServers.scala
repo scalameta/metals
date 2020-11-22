@@ -25,7 +25,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.gson.Gson
-import io.github.soc.directories.ProjectDirectories
+import dev.dirs.ProjectDirectories
 
 /**
  * Implements BSP server discovery, named "BSP Connection Protocol" in the spec.
