@@ -177,31 +177,30 @@ guide them. In the end users should end up with something like this:
       "type": "scala",
       "request": "launch",
       // configuration name visible for the user
-      "name": "Main class",
+      "name": "Launch Main",
       // full name of the class to run
       "mainClass": "com.example.Main",
       // optional arguments for the main class
       "args": [],
       // optional jvm properties to use
-      "jvmOptions": [],
-      // optional build target name in case there more than one
-      // class with the same name
-      "buildTarget": "root"
+      "jvmOptions": []
     },
     // Test class configuration
     {
       "type": "scala",
       "request": "launch",
       // configuration name visible for the user
-      "name": "Test class",
+      "name": "Launch Test",
       // full name of the class to run
-      "testClass": "com.example.Test",
-      // optional build target name in case there more than one
-      // class with the same name
-      "buildTarget": "root"
+      "testClass": "com.example.Test"
     }
   ]
 }
+```
+
+You can add an optional build target name in case there more than one class with the same name. Inside `"configurations":` add the key `buildTarget` with your target name, e.g. `root`:
+```json
+      "buildTarget": "root"
 ```
 
 Multiple configurations can be stored in that file and can be chosen either
