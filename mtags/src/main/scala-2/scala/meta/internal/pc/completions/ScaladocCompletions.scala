@@ -21,7 +21,7 @@ trait ScaladocCompletions { this: MetalsGlobal =>
    */
   case class ScaladocCompletion(
       editRange: l.Range,
-      associatedDef: MemberDef,
+      associatedDef: Option[MemberDef],
       pos: Position,
       text: String
   ) extends CompletionPosition {
@@ -33,7 +33,8 @@ trait ScaladocCompletions { this: MetalsGlobal =>
     override def contribute: List[Member] = {
       val necessaryIndent = inferIndent(pos)
       val indent = s"${necessaryIndent}${scaladocIndent}"
-      val params: List[String] = getParams(associatedDef)
+      val params: List[String] =
+        associatedDef.map(getParams).getOrElse(List.empty)
 
       // Construct the following new text.
       // """
@@ -48,9 +49,17 @@ trait ScaladocCompletions { this: MetalsGlobal =>
       val builder = new StringBuilder()
 
       val hasConstructor =
-        associatedDef.symbol.primaryConstructor.isDefined && !associatedDef.symbol.isAbstractClass
-      val hasReturnValue = associatedDef.symbol.isMethod &&
-        !(associatedDef.symbol.asMethod.returnType.finalResultType =:= definitions.UnitTpe)
+        associatedDef
+          .map(d =>
+            d.symbol.primaryConstructor.isDefined && !d.symbol.isAbstractClass
+          )
+          .getOrElse(false)
+      val hasReturnValue = associatedDef
+        .map(d =>
+          d.symbol.isMethod &&
+            !(d.symbol.asMethod.returnType.finalResultType =:= definitions.UnitTpe)
+        )
+        .getOrElse(false)
 
       // newline after `/**`
       builder.append("\n")
@@ -81,7 +90,9 @@ trait ScaladocCompletions { this: MetalsGlobal =>
             editRange,
             newText
           ),
-          completionsSymbol(associatedDef.name.toString()),
+          completionsSymbol(
+            associatedDef.map(d => d.name.toString()).getOrElse("Scaladoc")
+          ),
           label = Some("/** */"),
           detail = Some("Scaladoc Comment")
         )
