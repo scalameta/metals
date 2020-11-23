@@ -436,9 +436,9 @@ trait Completions { this: MetalsGlobal =>
         }
         associatedDef
           .map(definition =>
-            ScaladocCompletion(editRange, definition, pos, text)
+            ScaladocCompletion(editRange, Some(definition), pos, text)
           )
-          .getOrElse(NoneCompletion)
+          .getOrElse(ScaladocCompletion(editRange, None, pos, text))
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
