@@ -198,7 +198,7 @@ guide them. In the end users should end up with something like this:
 }
 ```
 
-You can add an optional build target name in case there more than one class with the same name. Inside `"configurations":` add the key `buildTarget` with your target name, e.g. `root`:
+You can also add an optional build target name, which is needed in case there are more than one class with the same name or when launching a class from outside the project. Inside `"configurations":` add the key `buildTarget` with your target name, e.g. `root`:
 ```json
       "buildTarget": "root"
 ```
