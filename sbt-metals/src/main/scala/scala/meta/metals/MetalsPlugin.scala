@@ -12,6 +12,7 @@ object MetalsPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   val semanticdbVersion = BuildInfo.semanticdbVersion
+  val supportedScala2Versions = BuildInfo.supportedScala2Versions.toList
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = Seq(
     semanticdbCompilerPlugin := {
@@ -20,13 +21,17 @@ object MetalsPlugin extends AutoPlugin {
     },
     allDependencies ++= {
       val versionOfScala = scalaVersion.value
-      if (!ScalaInstance.isDotty(versionOfScala)) {
+      if (
+        ScalaInstance.isDotty(versionOfScala) || !supportedScala2Versions
+          .contains(versionOfScala)
+      )
+        Nil
+      else
         List(
           compilerPlugin(
             "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion
           )
         )
-      } else Nil
     }
   ) ++ inConfig(Compile)(configurationSettings) ++ inConfig(Test)(
     configurationSettings
@@ -34,12 +39,16 @@ object MetalsPlugin extends AutoPlugin {
 
   lazy val configurationSettings: Seq[Def.Setting[_]] = List(
     scalacOptions := {
+      val versionOfScala = scalaVersion.value
       val old = scalacOptions.value
-      val sdbOptions = semanticdbOptions.value
-      val sv = scalaVersion.value
-      (old.toVector ++ sdbOptions ++
-        (if (ScalaInstance.isDotty(sv)) Some("-Ysemanticdb")
-         else None)).distinct
+      if (!supportedScala2Versions.contains(versionOfScala)) {
+        old
+      } else {
+        val sdbOptions = semanticdbOptions.value
+        (old.toVector ++ sdbOptions ++
+          (if (ScalaInstance.isDotty(versionOfScala)) Some("-Ysemanticdb")
+           else None)).distinct
+      }
     },
     semanticdbTargetRoot := {
       val in = semanticdbIncludeInJar.value
@@ -49,8 +58,11 @@ object MetalsPlugin extends AutoPlugin {
     semanticdbOptions ++= {
       val targetRoot = semanticdbTargetRoot.value
       val versionOfScala = scalaVersion.value
-      if (ScalaInstance.isDotty(versionOfScala))
-        List.empty
+      if (
+        ScalaInstance.isDotty(versionOfScala) || !supportedScala2Versions
+          .contains(versionOfScala)
+      )
+        Nil
       else
         List(
           s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
