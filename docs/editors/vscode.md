@@ -198,10 +198,19 @@ guide them. In the end users should end up with something like this:
 }
 ```
 
-You can also add an optional build target name, which is needed in case there are more than one class with the same name or when launching a class from outside the project. Inside `"configurations":` add the key `buildTarget` with your target name, e.g. `root`:
+You can also add an optional build target name, which is needed in case there
+are more than one class with the same name or when launching a class from
+outside the project. Inside `"configurations":` add the key `buildTarget` with
+your target name, e.g. `root`:
+
 ```json
       "buildTarget": "root"
 ```
+
+The build target name corresponds to your project name. For example in sbt for
+`lazy val interfaces = project` the name of the build target will be
+`interfaces` for sources and `interfaces-test` for tests. To make sure you have
+the correct target names please run the command `Metals: Run Doctor`.
 
 Multiple configurations can be stored in that file and can be chosen either
 manually in the `Run` view or can be picked by invoking a shortcut defined under
