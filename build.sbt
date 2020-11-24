@@ -402,7 +402,7 @@ lazy val metals = project
       "org.openjdk.jol" % "jol-core" % "0.14",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.10.1",
-      "com.swoval" % "file-tree-views" % "2.1.5",
+      "com.swoval" % "file-tree-views" % "2.1.6",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.2.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.2.Final",
