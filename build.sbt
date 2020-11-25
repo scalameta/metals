@@ -488,7 +488,8 @@ lazy val `sbt-metals` = project
     sbtPlugin := true,
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
-      "semanticdbVersion" -> V.semanticdb
+      "semanticdbVersion" -> V.semanticdb,
+      "supportedScala2Versions" -> V.scala2Versions
     )
   )
   .enablePlugins(BuildInfoPlugin)
