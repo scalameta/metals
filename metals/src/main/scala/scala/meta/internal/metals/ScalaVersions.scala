@@ -60,7 +60,7 @@ object ScalaVersions {
     latestBinaryVersionFor(scalaVersion)
       .map(latest =>
         latest != scalaVersion && SemVer
-          .isCompatibleVersion(latest, scalaVersion)
+          .isLaterVersion(latest, scalaVersion)
       )
       .getOrElse {
         val versions =
@@ -68,7 +68,7 @@ object ScalaVersions {
             isLatestScalaVersion.filter(isScala3Version)
           else
             isLatestScalaVersion.filter(!isScala3Version(_))
-        versions.forall(ver => SemVer.isCompatibleVersion(ver, scalaVersion))
+        versions.forall(ver => SemVer.isLaterVersion(ver, scalaVersion))
       }
   }
 

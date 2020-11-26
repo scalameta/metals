@@ -99,10 +99,9 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     } yield ()
   }
 
-  // We no longer run 0.2 version in tests
-  test("unsupported-scala-3".ignore) {
+  test("no-warnings-scala-3") {
     cleanWorkspace()
-    val using = "0.21.0"
+    val using = "3.0.0-M1"
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -116,10 +115,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
            |object Main
            |""".stripMargin
       )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        Messages.UnsupportedScalaVersion.message(Set(using))
-      )
+      _ = assertEmpty(client.workspaceMessageRequests)
     } yield ()
   }
 }
