@@ -68,11 +68,43 @@
 <li><code>x.0.0</code> is reserved for incompatible changes and require a milestone cycle.</li>
 <li><code>x.y.0</code> is reserved for compatible changes.</li>
 <li><code>x.y.z</code> is reserved for bugfixes that don't change the public API,</li>
-</ul></li>
+</ul>
+<p>For most releases bumping <code>z</code> is enough especially that Metals not being used
+as a library anywhere and do not have a public API.</p></li>
 <li><p>Tag the release:</p>
 <ul>
 <li>The tag must be called <code>vx.y.z</code>, e.g. <code>v3.0.0</code>.</li>
 <li><code>git tag -a vx.y.z -m &quot;vx.y.z&quot;</code></li>
+</ul>
+<p>You will need the tag to fill in some information in the release notes. It can
+always be deleted and tagged again if you want to include more commits.</p>
+<p>Please wait with pushing the tag until the release notes are accepted.</p></li>
+<li><p>Draft the release notes:</p>
+<ul>
+<li>You might use <code>./bin/merged_prs.sc</code> script to generate merged PRs list
+between two last release tags. It can be run using ammonite:</li>
+</ul>
+<pre><code class="hljs">cs install ammonite
+amm .<span class="hljs-meta-keyword">/bin/</span>merged_prs.sc <span class="hljs-params">&lt;tag1&gt;</span> <span class="hljs-params">&lt;tag2&gt;</span> <span class="hljs-string">"&lt;github_api_token&gt;"</span>
+</code></pre>
+<p>It will need a basic github API token to run, which may be specified via
+environment variable <code>GITHUB_TOKEN</code> or via the last argument.</p>
+<p>The script will generate a new markdown file in <code>website/blog</code> filled with a
+basic release template.</p>
+<p>Alternatively, you can copy <code>website/blog/2020-11-10-lithium.md</code> as a
+template.</p>
+<p>You can fill in the number of closed issues from the last milestone, though
+you will need to make sure everything is included there.</p>
+<ul>
+<li>Update Metals SNAPSHOT version in <code>build.sbt</code> and the default version in
+Github issue templates.</li>
+<li>Update <code>./bin/test-release.sh</code> - remove any unsupported Scala versions and
+add newly supported ones. This will be needed later to test the new release.</li>
+<li>Open a PR to the repo.</li>
+<li><a href="https://github.com/scalameta/metals/releases/new">https://github.com/scalameta/metals/releases/new</a>.</li>
+</ul></li>
+<li><p>Start the release process:</p>
+<ul>
 <li><code>git push upstream --tags</code></li>
 <li>Do not create a release on GitHub just yet. Creating a release on GitHub
 sends out a notification to repository watchers, and the release isn't ready
@@ -90,32 +122,10 @@ released 3.2.1, so all its tickets went straight to 3.3.0).</li>
 <li>Create the milestone or milestones corresponding to future releases. For
 example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.</li>
 </ul></li>
-<li><p>While waiting for Github Actions, draft the release notes:</p>
-<ul>
-<li>You might use <code>./bin/merged_prs.sc</code> script to generate merged PRs list
-between two last release tags. It can be run using ammonite:</li>
-</ul>
-<pre><code class="hljs">cs install ammonite
-amm .<span class="hljs-meta-keyword">/bin/</span>merged_prs.sc <span class="hljs-params">&lt;tag1&gt;</span> <span class="hljs-params">&lt;tag2&gt;</span> <span class="hljs-string">"&lt;github_api_token&gt;"</span>
-</code></pre>
-<p>It will need a basic github API token to run, which may be specified via
-environment variable <code>GITHUB_TOKEN</code> or via the last argument.</p>
-<p>The script will generate a new markdown file in <code>website/blog</code> filled with a
-basic release template.</p>
-<p>Alternatively, you can copy <code>website/blog/2020-11-10-lithium.md</code> as a
-template.</p>
-<ul>
-<li>Update Metals SNAPSHOT version in <code>build.sbt</code> and the default version in
-Github issue templates.</li>
-<li>Open a PR to the repo.</li>
-<li><a href="https://github.com/scalameta/metals/releases/new">https://github.com/scalameta/metals/releases/new</a>.</li>
-</ul></li>
 <li><p>Verify the Sonatype release:</p>
 <ul>
 <li>Make sure that the release shows up at
 <a href="https://oss.sonatype.org/content/repositories/releases/org/scalameta/">https://oss.sonatype.org/content/repositories/releases/org/scalameta/</a>.</li>
-<li>Update <code>./bin/test-release.sh</code> - remove any unsupported Scala versions and
-add newly supported ones.</li>
 <li>Run <code>./bin/test-release.sh $VERSION</code> to ensure that all artifacts have
 successfully been released. It's important to ensure that this script passes
 before announcing the release since it takes a while for all published
@@ -138,7 +148,9 @@ yet available on Maven Central run:
 the website</li>
 </ul></li>
 <li>open a PR, feel free to merge after CI is green</li>
-<li>tag a new release and publish to Marketplace</li>
+<li>open the last generated release draft, tag with a new version and publish
+the release. This will start github actions job and publish the extension
+to both the Visual Studio Code Code Marketplace and openvsx.</li>
 </ul></li>
 </ul></li>
 <li><p>Publish the release on GitHub:</p>
