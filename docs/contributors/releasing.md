@@ -9,29 +9,20 @@ title: Making a release
   - `x.y.0` is reserved for compatible changes.
   - `x.y.z` is reserved for bugfixes that don't change the public API,
 
+  For most releases bumping `z` is enough especially that Metals not being used
+  as a library anywhere and do not have a public API.
+
 - Tag the release:
 
   - The tag must be called `vx.y.z`, e.g. `v3.0.0`.
   - `git tag -a vx.y.z -m "vx.y.z"`
-  - `git push upstream --tags`
-  - Do not create a release on GitHub just yet. Creating a release on GitHub
-    sends out a notification to repository watchers, and the release isn't ready
-    for that yet.
 
-- Wait for
-  [the Github Actions job](https://github.com/scalameta/metals/actions?query=workflow%3ARelease)
-  to build the binaries and stage them to Sonatype.
+  You will need the tag to fill in some information in the release notes. It can
+  always be deleted and tagged again if you want to include more commits.
 
-- While waiting for Github Actions, update the milestones:
+  Please wait with pushing the tag until the release notes are accepted.
 
-  - https://github.com/scalameta/metals/milestones
-  - Close the milestone or milestones corresponding to the release. For example,
-    for a v3.3.0 release, we close both 3.3.0 and 3.2.1 (because we never
-    released 3.2.1, so all its tickets went straight to 3.3.0).
-  - Create the milestone or milestones corresponding to future releases. For
-    example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.
-
-- While waiting for Github Actions, draft the release notes:
+- Draft the release notes:
 
   - You might use `./bin/merged_prs.sc` script to generate merged PRs list
     between two last release tags. It can be run using ammonite:
@@ -50,17 +41,40 @@ title: Making a release
   Alternatively, you can copy `website/blog/2020-11-10-lithium.md` as a
   template.
 
+  You can fill in the number of closed issues from the last milestone, though
+  you will need to make sure everything is included there.
+
   - Update Metals SNAPSHOT version in `build.sbt` and the default version in
     Github issue templates.
+  - Update `./bin/test-release.sh` - remove any unsupported Scala versions and
+    add newly supported ones. This will be needed later to test the new release.
   - Open a PR to the repo.
   - https://github.com/scalameta/metals/releases/new.
+
+- Start the release process:
+
+  - `git push upstream --tags`
+  - Do not create a release on GitHub just yet. Creating a release on GitHub
+    sends out a notification to repository watchers, and the release isn't ready
+    for that yet.
+
+- Wait for
+  [the Github Actions job](https://github.com/scalameta/metals/actions?query=workflow%3ARelease)
+  to build the binaries and stage them to Sonatype.
+
+- While waiting for Github Actions, update the milestones:
+
+  - https://github.com/scalameta/metals/milestones
+  - Close the milestone or milestones corresponding to the release. For example,
+    for a v3.3.0 release, we close both 3.3.0 and 3.2.1 (because we never
+    released 3.2.1, so all its tickets went straight to 3.3.0).
+  - Create the milestone or milestones corresponding to future releases. For
+    example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.
 
 - Verify the Sonatype release:
 
   - Make sure that the release shows up at
     https://oss.sonatype.org/content/repositories/releases/org/scalameta/.
-  - Update `./bin/test-release.sh` - remove any unsupported Scala versions and
-    add newly supported ones.
   - Run `./bin/test-release.sh $VERSION` to ensure that all artifacts have
     successfully been released. It's important to ensure that this script passes
     before announcing the release since it takes a while for all published
@@ -81,7 +95,9 @@ title: Making a release
       - remove "Using latest SNAPSHOT" section, this table is only up-to-date on
         the website
     - open a PR, feel free to merge after CI is green
-    - tag a new release and publish to Marketplace
+    - open the last generated release draft, tag with a new version and publish
+      the release. This will start github actions job and publish the extension
+      to both the Visual Studio Code Code Marketplace and openvsx.
 
 - Publish the release on GitHub:
 
