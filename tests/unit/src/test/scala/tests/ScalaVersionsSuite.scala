@@ -143,4 +143,137 @@ class ScalaVersionsSuite extends BaseSuite {
         V.scala3
     )
   }
+
+  test("compare-3.0.0-M1<=3.0.0-M2") {
+    assert(
+      SemVer.isCompatibleVersion("3.0.0-M1", "3.0.0-M2")
+    )
+  }
+
+  test("compare-3.0.0-M2>=3.0.0-M1") {
+    assert(
+      !SemVer.isCompatibleVersion("3.0.0-M2", "3.0.0-M1")
+    )
+  }
+
+  test("compare-3.0.0-RC1<=3.0.0-RC2") {
+    assert(
+      SemVer.isCompatibleVersion("3.0.0-RC1", "3.0.0-RC2")
+    )
+  }
+
+  test("compare-3.0.0-RC2>=3.0.0-RC1") {
+    assert(
+      !SemVer.isCompatibleVersion("3.0.0-RC2", "3.0.0-RC1")
+    )
+  }
+
+  test("compare-3.0.0-RC1<=3.0.0") {
+    assert(
+      SemVer.isCompatibleVersion("3.0.0-RC1", "3.0.0")
+    )
+  }
+
+  test("compare-3.0.0>=3.0.0-RC1") {
+    assert(
+      !SemVer.isCompatibleVersion("3.0.0", "3.0.0-RC1")
+    )
+  }
+
+  test("compare-3.0.0-M1<=3.0.0") {
+    assert(
+      SemVer.isCompatibleVersion("3.0.0-M1", "3.0.0")
+    )
+  }
+
+  test("compare-3.0.0>=3.0.0-M1") {
+    assert(
+      !SemVer.isCompatibleVersion("3.0.0", "3.0.0-M1")
+    )
+  }
+
+  test("compare-3.0.0-RC1<3.0.0") {
+    assert(
+      SemVer.isLaterVersion("3.0.0-RC1", "3.0.0")
+    )
+  }
+
+  test("compare-3.0.0>3.0.0-RC1") {
+    assert(
+      !SemVer.isLaterVersion("3.0.0", "3.0.0-RC1")
+    )
+  }
+
+  test("compare-3.0.0-M1<3.0.0") {
+    assert(
+      SemVer.isLaterVersion("3.0.0-M1", "3.0.0")
+    )
+  }
+
+  test("compare-3.0.0>3.0.0-M1") {
+    assert(
+      !SemVer.isLaterVersion("3.0.0", "3.0.0-M1")
+    )
+  }
+
+  test("compare-3.0.0-M1<3.0.0-RC1") {
+    assert(
+      SemVer.isLaterVersion("3.0.0-M1", "3.0.0-RC1")
+    )
+  }
+
+  test("compare-3.0.0-RC1>3.0.0-M1") {
+    assert(
+      !SemVer.isLaterVersion("3.0.0-RC1", "3.0.0-M1")
+    )
+  }
+
+  test("compare-RC1<=RC1-SNAPSHOT") {
+    assert(
+      SemVer.isCompatibleVersion(
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY"
+      )
+    )
+  }
+
+  test("compare-RC2>=RC1-SNAPSHOT") {
+    assert(
+      !SemVer.isCompatibleVersion(
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY"
+      )
+    )
+  }
+
+  test("compare-RC1<RC2-SNAPSHOT") {
+    assert(
+      SemVer.isLaterVersion(
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY"
+      )
+    )
+  }
+
+  test("compare-RC2>RC1-SNAPSHOT") {
+    assert(
+      !SemVer.isLaterVersion(
+        "3.0.0-RC2-bin-20201125-1c3538a-NIGHTLY",
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY"
+      )
+    )
+  }
+
+  test("not-future-3-M1") {
+    assert(
+      !ScalaVersions.isFutureVersion("3.0.0-M1")
+    )
+  }
+
+  test("not-future-3-M2") {
+    assert(
+      !ScalaVersions.isFutureVersion("3.0.0-M2")
+    )
+  }
+
 }
