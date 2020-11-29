@@ -548,7 +548,8 @@ class MetalsLanguageServer(
           diagnostics,
           () => focusedDocument,
           clientConfig,
-          () => userConfig
+          () => userConfig,
+          trees
         )
         semanticDBIndexer = new SemanticdbIndexer(
           referencesProvider,
@@ -920,7 +921,6 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     focusedDocument = Some(path)
     openedFiles.add(path)
-    syntheticsDecorator.publishSynthetics(path)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -950,7 +950,14 @@ class MetalsLanguageServer(
         compilations.compileFile(path)
       Future
         .sequence(
-          List(loadInteractive, parseTrees(path), loadFuture, compileFuture)
+          List(
+            loadInteractive,
+            parseTrees(path).flatMap(_ =>
+              syntheticsDecorator.publishSynthetics(path)
+            ),
+            loadFuture,
+            compileFuture
+          )
         )
         .ignoreValue
         .asJava
@@ -1025,10 +1032,8 @@ class MetalsLanguageServer(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        Future
-          .sequence(
-            List(parseTrees(path), syntheticsDecorator.publishSynthetics(path))
-          )
+        parseTrees(path)
+          .flatMap { _ => syntheticsDecorator.publishSynthetics(path) }
           .ignoreValue
           .asJava
     }

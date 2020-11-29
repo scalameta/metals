@@ -4,23 +4,34 @@ import java.nio.charset.Charset
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
+import scala.{meta => m}
 
+import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.TokenEditDistance
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.HoverMarkup
+import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.internal.semanticdb.ValueSignature
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.tokens.Token.RightParen
+import scala.meta.tokens.{Token => T}
 
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
@@ -35,10 +46,9 @@ final class SyntheticsDecorationProvider(
     diagnostics: Diagnostics,
     focusedDocument: () => Option[AbsolutePath],
     clientConfig: ClientConfiguration,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
+    trees: Trees
 )(implicit ec: ExecutionContext) {
-
-  import SemanticdbTreePrinter.printSyntheticInfo
 
   private object Document {
     /* We update it with each compilation in order not read the same file on
@@ -107,20 +117,30 @@ final class SyntheticsDecorationProvider(
       val newHover = currentDocument(path) match {
         case Some(textDocument) =>
           val edit = buffer.tokenEditDistance(path, textDocument.text)
-
+          val printer = new SemanticdbTreePrinter(
+            isHover = true,
+            toHoverString(textDocument),
+            PrinterSymtab.fromTextDocument(textDocument)
+          )
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
-            (fullSnippet, range) <- printSyntheticInfo(
-              textDocument,
-              synthetic,
-              toHoverString(textDocument),
-              userConfig(),
-              isHover = true,
-              isInlineProvider = clientConfig.isInlineDecorationProvider()
-            )
+            range <- synthetic.range.toIterable
+            currentRange <- edit.toRevisedStrict(range).toIterable
+            lspRange = currentRange.toLSP
+            if lspRange.getEnd.getLine == line
+
+            (fullSnippet, range) <- printer
+              .printSyntheticInfo(
+                textDocument,
+                synthetic,
+                userConfig(),
+                isInlineProvider = clientConfig.isInlineDecorationProvider()
+              )
+              .toIterable
             realRange <- edit.toRevisedStrict(range).toIterable
-            if realRange.getEnd.getLine == line
-          } yield (realRange, fullSnippet)
+            lspRealRange = realRange.toLSP
+            if lspRealRange.getEnd.getLine == line
+          } yield (lspRealRange, fullSnippet)
 
           if (syntheticsAtLine.size > 0) {
             if (clientConfig.isInlineDecorationProvider()) {
@@ -299,26 +319,147 @@ final class SyntheticsDecorationProvider(
   private def publishSyntheticDecorations(
       path: AbsolutePath,
       textDocument: TextDocument
-  ): Unit =
+  ): Unit = {
     if (clientConfig.isInlineDecorationProvider()) {
-      val edit = buffer.tokenEditDistance(path, textDocument.text)
+
+      lazy val edit = buffer.tokenEditDistance(path, textDocument.text)
+
+      val decorationPrinter = new SemanticdbTreePrinter(
+        isHover = false,
+        toDecorationString(textDocument),
+        PrinterSymtab.fromTextDocument(textDocument)
+      )
+
       val decorations = for {
         synthetic <- textDocument.synthetics
-        (decoration, range) <- printSyntheticInfo(
-          textDocument,
-          synthetic,
-          toDecorationString(textDocument),
-          userConfig(),
-          isHover = false
-        )
-        lspRange <- edit.toRevisedStrict(range).toIterable
+        (decoration, range) <- decorationPrinter
+          .printSyntheticInfo(
+            textDocument,
+            synthetic,
+            userConfig()
+          )
+          .toIterable
+        currentRange <- edit.toRevisedStrict(range).toIterable
+        lspRange = currentRange.toLSP
       } yield decorationOptions(lspRange, decoration)
 
+      val typDecorations =
+        if (userConfig().showInferredType)
+          typeDecorations(path, textDocument, decorationPrinter)
+        else Nil
       val params =
         new PublishDecorationsParams(
           path.toURI.toString(),
-          decorations.toArray
+          (decorations ++ typDecorations).toArray
         )
+
       client.metalsPublishDecorations(params)
     }
+  }
+
+  private def typeDecorations(
+      path: AbsolutePath,
+      textDocument: TextDocument,
+      decorationPrinter: SemanticdbTreePrinter
+  ) = {
+
+    val methodPositions = mutable.Map.empty[s.Range, s.Range]
+
+    def explorePatterns(pats: List[m.Pat]): List[s.Range] = {
+      pats.flatMap {
+        case m.Pat.Var(nm @ m.Term.Name(_)) =>
+          List(nm.pos.toSemanticdb)
+        case m.Pat.Extract((_, pats)) =>
+          explorePatterns(pats)
+        case m.Pat.ExtractInfix(lhs, _, pats) =>
+          explorePatterns(lhs :: pats)
+        case m.Pat.Tuple(tuplePats) =>
+          explorePatterns(tuplePats)
+        case m.Pat.Bind(lhs, rhs) =>
+          List(lhs.pos.toSemanticdb) ++ explorePatterns(List(rhs))
+        case _ => Nil
+      }
+    }
+
+    def visit(tree: m.Tree): List[s.Range] = {
+      tree match {
+        case vl: m.Defn.Val =>
+          val values =
+            if (vl.decltpe.isEmpty) explorePatterns(vl.pats) else Nil
+          values ++ visit(vl.rhs)
+        case vr: m.Defn.Var =>
+          val values =
+            if (vr.decltpe.isEmpty) explorePatterns(vr.pats) else Nil
+          values ++ vr.rhs.toList.flatMap(visit)
+        case df: m.Defn.Def =>
+          val namePos = df.name.pos.toSemanticdb
+
+          def lastParamPos = for {
+            group <- df.paramss.lastOption
+            param <- group.lastOption
+            token <- param.findFirstTrailing(_.is[T.RightParen])
+          } yield token.pos.toSemanticdb
+
+          def lastTypeParamPos = for {
+            typ <- df.tparams.lastOption
+            token <- typ.findFirstTrailing(_.is[T.RightBracket])
+          } yield token.pos.toSemanticdb
+
+          def lastParen = if (df.paramss.nonEmpty)
+            df.name.findFirstTrailing(_.is[RightParen]).map(_.pos.toSemanticdb)
+          else None
+
+          val values =
+            if (df.decltpe.isEmpty) {
+              val destination =
+                lastParamPos
+                  .orElse(lastTypeParamPos)
+                  .orElse(lastParen)
+                  .getOrElse(namePos)
+              methodPositions += namePos -> destination
+              List(namePos)
+            } else {
+              Nil
+            }
+          values ++ visit(df.body)
+        case other =>
+          other.children.flatMap(visit)
+      }
+    }
+
+    val declarationsWithoutTypes = for {
+      tree <- trees.get(path).toIterable
+      pos <- visit(tree)
+    } yield pos
+
+    val allTypes = declarationsWithoutTypes.toSet
+    val typeDecorations = for {
+      tree <- trees.get(path).toIterable
+      textDocumentInput = Input.VirtualFile(textDocument.uri, textDocument.text)
+      treeInput = Input.VirtualFile(textDocument.uri, tree.pos.input.text)
+      semanticDbToTreeEdit = TokenEditDistance(textDocumentInput, treeInput)
+      treeToBufferEdit = buffer.tokenEditDistance(path, tree.pos.input.text)
+      occ <- textDocument.occurrences
+      range <- occ.range.toIterable
+      treeRange <- semanticDbToTreeEdit.toRevisedStrict(range).toIterable
+      if occ.role.isDefinition && allTypes(treeRange)
+      signature <- textDocument.symbols.find(_.symbol == occ.symbol).toIterable
+      decorationPosition = methodPositions.getOrElse(treeRange, treeRange)
+      realPosition <- treeToBufferEdit.toRevisedStrict(decorationPosition)
+    } yield {
+      val lspRange = realPosition.toLSP
+      signature.signature match {
+        case m: MethodSignature =>
+          val decoration = " : " + decorationPrinter.printType(m.returnType)
+          Some(decorationOptions(lspRange, decoration))
+        case m: ValueSignature =>
+          val decoration = " : " + decorationPrinter.printType(m.tpe)
+          Some(decorationOptions(lspRange, decoration))
+        case other =>
+          pprint.log(other)
+          None
+      }
+    }
+    typeDecorations.flatten
+  }
 }

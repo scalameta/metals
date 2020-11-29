@@ -145,8 +145,8 @@ final class TokenEditDistance private (
     toRevised(pos.getLine, pos.getCharacter)
   }
 
-  def toRevisedStrict(range: s.Range): Option[l.Range] = {
-    if (isUnchanged) Some(range.toLSP)
+  def toRevisedStrict(range: s.Range): Option[s.Range] = {
+    if (isUnchanged) Some(range)
     else {
       (
         toRevised(range.startLine, range.startCharacter),
@@ -154,9 +154,11 @@ final class TokenEditDistance private (
       ) match {
         case (Right(start), Right(end)) =>
           Some(
-            new l.Range(
-              new l.Position(start.startLine, start.startColumn),
-              new l.Position(end.startLine, end.startColumn)
+            s.Range(
+              start.startLine,
+              start.startColumn,
+              end.startLine,
+              end.startColumn
             )
           )
         case _ => None
@@ -186,6 +188,27 @@ final class TokenEditDistance private (
           (mt, _) => compare(mt.original.pos, originalOffset)
         )
         .fold(EmptyResult.noMatch)(m => Right(m.revised.pos))
+    }
+  }
+
+  def toOriginalStrict(range: s.Range): Option[s.Range] = {
+    if (isUnchanged) Some(range)
+    else {
+      (
+        toOriginal(range.startLine, range.startCharacter),
+        toOriginal(range.endLine, range.endCharacter)
+      ) match {
+        case (Right(start), Right(end)) =>
+          Some(
+            s.Range(
+              start.startLine,
+              start.startColumn,
+              end.endLine,
+              end.endColumn
+            )
+          )
+        case _ => None
+      }
     }
   }
 
