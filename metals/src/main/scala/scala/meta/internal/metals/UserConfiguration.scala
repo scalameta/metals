@@ -227,8 +227,7 @@ object UserConfiguration {
         """empty int ``.""",
         "8212",
         "Bloop Nailgun listen port",
-        """|This port be used for the Bloop build tool plugin, for any supported build tool,
-           |while importing in Metals as well as for running the embedded server""".stripMargin
+        """|Instead of using the default port for the Bloop build server, use the port specified.""".stripMargin
       )
     )
 
