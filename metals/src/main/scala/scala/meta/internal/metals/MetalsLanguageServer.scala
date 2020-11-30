@@ -677,6 +677,9 @@ class MetalsLanguageServer(
       .timed("initialize")(Future {
         setupJna()
         initializeParams = Option(params)
+        val bloopPort = UserConfiguration.getIntFromJavaOptions("metals.bloop-port")
+        if (bloopPort.isDefined)
+          userConfig = userConfig.copy(bloopNailgunPort = bloopPort)
         updateWorkspaceDirectory(params)
         val capabilities = new ServerCapabilities()
         capabilities.setExecuteCommandProvider(

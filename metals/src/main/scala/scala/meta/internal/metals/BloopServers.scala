@@ -69,7 +69,7 @@ final class BloopServers(
         workspace,
         client,
         languageClient,
-        () => connectToLauncher(bloopVersion),
+        () => connectToLauncher(bloopVersion, userConfiguration.bloopNailgunPort),
         tables.dismissedNotifications.ReconnectBsp,
         config,
         bloop
@@ -120,7 +120,8 @@ final class BloopServers(
   }
 
   private def connectToLauncher(
-      bloopVersion: String
+      bloopVersion: String,
+      bloopNailgunPort: Option[Int]
   ): Future[SocketConnection] = {
     val launcherInOutPipe = Pipe.open()
     val launcherIn = new QuietInputStream(
@@ -145,7 +146,7 @@ final class BloopServers(
         StandardCharsets.UTF_8,
         Shell.default,
         userNailgunHost = None,
-        userNailgunPort = None,
+        userNailgunPort = bloopNailgunPort,
         serverStarted
       )
 

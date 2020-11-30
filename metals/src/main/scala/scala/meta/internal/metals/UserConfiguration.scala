@@ -40,7 +40,8 @@ case class UserConfiguration(
     showImplicitConversionsAndClasses: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
-    excludedPackages: Option[List[String]] = None
+    excludedPackages: Option[List[String]] = None,
+    bloopNailgunPort: Option[Int] = None
 ) {
 
   def currentBloopVersion: String =
@@ -220,8 +221,22 @@ object UserConfiguration {
           |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
           |documentation on remote language servers.
           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "bloop-port",
+        """empty int ``.""",
+        "8212",
+        "Bloop Nailgun listen port",
+        """|This port be used for the Bloop build tool plugin, for any supported build tool,
+           |while importing in Metals as well as for running the embedded server""".stripMargin
       )
     )
+
+  def getIntFromJavaOptions(key: String): Option[Int] = {
+    Option(System.getProperty(key))
+      .filter(_ forall(Character.isDigit(_)))
+      .map(_.toInt)
+  }
 
   def fromJson(
       json: JsonObject,
@@ -375,6 +390,8 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val excludedPackages =
       getStringListKey("excluded-packages")
+    val bloopNailgunPort =
+      getIntKey("bloop-port")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -397,7 +414,8 @@ object UserConfiguration {
           showImplicitConversionsAndClasses,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
-          excludedPackages
+          excludedPackages,
+          bloopNailgunPort
         )
       )
     } else {

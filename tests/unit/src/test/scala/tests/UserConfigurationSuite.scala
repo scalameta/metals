@@ -56,12 +56,14 @@ class UserConfigurationSuite extends BaseSuite {
       |{
       | "java-home": "home",
       | "compile-on-save": "current-project",
-      | "sbt-script": "script"
+      | "sbt-script": "script",
+      | "bloop-port": 8213
       |}
     """.stripMargin
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
+    assert(obtained.bloopNailgunPort == Some(8213))
   }
 
   checkOK(
