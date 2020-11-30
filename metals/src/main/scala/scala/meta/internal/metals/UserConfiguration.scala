@@ -226,7 +226,7 @@ object UserConfiguration {
         "bloop-port",
         """empty int ``.""",
         "8212",
-        "Bloop Nailgun listen port",
+        "Bloop Nailgun port",
         """|Instead of using the default port for the Bloop build server, use the port specified.""".stripMargin
       )
     )
