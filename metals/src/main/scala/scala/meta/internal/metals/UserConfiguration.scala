@@ -233,7 +233,7 @@ object UserConfiguration {
 
   def getIntFromJavaOptions(key: String): Option[Int] = {
     Option(System.getProperty(key))
-      .filter(_ forall(Character.isDigit(_)))
+      .filter(_.forall(Character.isDigit(_)))
       .map(_.toInt)
   }
 

@@ -69,7 +69,8 @@ final class BloopServers(
         workspace,
         client,
         languageClient,
-        () => connectToLauncher(bloopVersion, userConfiguration.bloopNailgunPort),
+        () =>
+          connectToLauncher(bloopVersion, userConfiguration.bloopNailgunPort),
         tables.dismissedNotifications.ReconnectBsp,
         config,
         bloop
