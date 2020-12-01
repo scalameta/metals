@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import scribe.LogRecord
 import scribe.output.LogOutput
+import scribe.output.format.OutputFormat
 import scribe.writer.Writer
 
 /**
@@ -11,7 +12,11 @@ import scribe.writer.Writer
  */
 object LanguageClientLogger extends Writer {
   var languageClient: Option[MetalsLanguageClient] = None
-  override def write[M](record: LogRecord[M], output: LogOutput): Unit = {
+  override def write[M](
+      record: LogRecord[M],
+      output: LogOutput,
+      outputFormat: OutputFormat
+  ): Unit = {
     languageClient.foreach { client =>
       client.logMessage(new MessageParams(MessageType.Log, output.plainText))
     }
