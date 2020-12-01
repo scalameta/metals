@@ -195,7 +195,7 @@ lazy val V = new {
   val mdoc = "2.2.13"
   val scalafmt = "2.7.4"
   val munit = "0.7.19"
-  val scalafix = "0.9.23"
+  val scalafix = "0.9.24"
   val lsp4jV = "0.10.0"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -227,10 +227,10 @@ lazy val V = new {
   def guava = "com.google.guava" % "guava" % "30.0-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
-  val coursierInterfaces = "1.0.1"
+  val coursierInterfaces = "1.0.2"
   val coursier = "2.0.7"
   val ammonite = "2.2.0-26-61ee0965"
-  val mill = "0.8.0"
+  val mill = "0.9.3"
   val organizeImportRule = "0.4.2"
 }
 
@@ -407,7 +407,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.2.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.2.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.2.0",
+      "org.flywaydb" % "flyway-core" % "7.2.1",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
