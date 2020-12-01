@@ -325,7 +325,7 @@ val mtagsSettings = List(
     if3pre = List(
       "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
       // 0.27.0-RC1 does not compile with 2.13.4 release scalameta
-      ("org.scalameta" %% "scalameta" % "4.3.24")
+      ("org.scalameta" %% "scalameta" % "4.4.0")
         .withDottyCompat(scalaVersion.value)
     ),
     if30 = List(
