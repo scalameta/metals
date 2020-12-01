@@ -489,6 +489,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |import java.time.Instant
            |
            |val x = Instant.now()
+           |val y = List.fill(2)(2)
            |""".stripMargin
       )
       _ <- server.didOpen("Main.worksheet.sc")
@@ -499,6 +500,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |import java.time.Instant/*Instant.java*/
              |
              |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
+             |val y/*L3*/ = List/*List.scala*/.fill/*GenTraversableFactory.scala*/(2)(2)
              |""".stripMargin,
           Map.empty,
           scalaVersion

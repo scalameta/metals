@@ -88,7 +88,9 @@ class Compilers(
   // The "rambo" compiler is used for source files that don't belong to a build target.
   lazy val ramboCompiler: PresentationCompiler = createStandaloneCompiler(
     PackageIndex.scalaLibrary,
-    Try(StandaloneSymbolSearch(workspace, buffers, isExcludedPackage))
+    Try(
+      StandaloneSymbolSearch(workspace, buffers, isExcludedPackage, userConfig)
+    )
       .getOrElse(EmptySymbolSearch),
     "metals-default"
   )
@@ -429,11 +431,6 @@ class Compilers(
     }
 
     created.getOrElse {
-      val sourcesWithJdk = JdkSources(userConfig().javaHome) match {
-        case Some(absPath) => absPath.toNIO :: sources
-        case None => sources
-      }
-
       jworksheetsCache.put(
         path,
         createStandaloneCompiler(
@@ -441,9 +438,10 @@ class Compilers(
           StandaloneSymbolSearch(
             workspace,
             buffers,
-            sourcesWithJdk,
+            sources,
             classpath,
-            isExcludedPackage
+            isExcludedPackage,
+            userConfig
           ),
           path.toString()
         )

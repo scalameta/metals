@@ -95,12 +95,20 @@ object StandaloneSymbolSearch {
       buffers: Buffers,
       sources: Seq[Path],
       classpath: Seq[Path],
-      isExcludedPackage: String => Boolean
+      isExcludedPackage: String => Boolean,
+      userConfig: () => UserConfiguration
   ): StandaloneSymbolSearch = {
+    val (sourcesWithExtras, classpathWithExtras) =
+      addScalaAndJava(
+        sources.map(AbsolutePath(_)),
+        classpath.map(AbsolutePath(_)),
+        userConfig().javaHome
+      )
+
     new StandaloneSymbolSearch(
       workspace,
-      classpath.map(path => AbsolutePath(path)),
-      sources.map(path => AbsolutePath(path)),
+      classpathWithExtras,
+      sourcesWithExtras,
       buffers,
       isExcludedPackage
     )
@@ -108,23 +116,70 @@ object StandaloneSymbolSearch {
   def apply(
       workspace: AbsolutePath,
       buffers: Buffers,
-      isExcludedPackage: String => Boolean
+      isExcludedPackage: String => Boolean,
+      userConfig: () => UserConfiguration
   ): StandaloneSymbolSearch = {
-    val scalaVersion = BuildInfo.scala212
-
-    val jars = Embedded
-      .downloadScalaSources(scalaVersion)
-      .map(path => AbsolutePath(path))
-
-    val (sources, classpath) =
-      jars.partition(_.toString.endsWith("-sources.jar"))
+    val (sourcesWithExtras, classpathWithExtras) =
+      addScalaAndJava(Nil, Nil, userConfig().javaHome)
 
     new StandaloneSymbolSearch(
       workspace,
-      classpath,
-      sources,
+      classpathWithExtras,
+      sourcesWithExtras,
       buffers,
       isExcludedPackage
     )
   }
+
+  /**
+   * When creating the standalone check to see if the sources have Scala. If
+   * not, we add the sources and the classpath. We also add in the JDK sources.
+   *
+   * @param sources the original sources that may be included.
+   * @param classpath the current classpath.
+   * @param javaHome possible JavaHome to get the JDK sources from.
+   * @return (scalaSources, scalaClasspath)
+   */
+  private def addScalaAndJava(
+      sources: Seq[AbsolutePath],
+      classpath: Seq[AbsolutePath],
+      javaHome: Option[String]
+  ): (Seq[AbsolutePath], Seq[AbsolutePath]) = {
+    val missingScala: Boolean =
+      sources.filter(_.toString.contains("scala-library")).isEmpty
+
+    (missingScala, JdkSources(javaHome)) match {
+      case (true, None) =>
+        val (scalaSources, scalaClasspath) = getScala(
+          scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
+        )
+        (sources ++ scalaSources, classpath ++ scalaClasspath)
+      case (true, Some(absPath)) =>
+        val (scalaSources, scalaClasspath) = getScala(
+          scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
+        )
+        (
+          (scalaSources :+ absPath) ++ sources,
+          classpath ++ scalaClasspath
+        )
+      case (false, None) => (sources, classpath)
+      case (false, Some(absPath)) =>
+        (sources :+ absPath, classpath)
+    }
+  }
+
+  /**
+   * Retrieve scala for the given version and partition sources.
+   * @param scalaVersion
+   * @return (scalaSources, scalaClasspath)
+   */
+  private def getScala(
+      scalaVersion: String
+  ): (Seq[AbsolutePath], Seq[AbsolutePath]) =
+    Embedded
+      .downloadScalaSources(scalaVersion)
+      .toSeq
+      .map(path => AbsolutePath(path))
+      .partition(_.toString.endsWith("-sources.jar"))
+
 }
