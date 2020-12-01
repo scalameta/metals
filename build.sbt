@@ -186,7 +186,7 @@ lazy val V = new {
   val scalameta = "4.4.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.5-6-4768184c"
+  val bloop = "1.4.5-8-6cc6911d"
   val scala3 = "3.0.0-M2"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -229,7 +229,7 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.1"
   val coursier = "2.0.6"
-  val ammonite = "2.2.0-4-4bd225e"
+  val ammonite = "2.2.0-26-61ee0965"
   val mill = "0.8.0"
   val organizeImportRule = "0.4.2"
 }
@@ -316,7 +316,7 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.3",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.0",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
@@ -414,7 +414,7 @@ lazy val metals = project
       "net.java.dev.jna" % "jna" % "5.6.0",
       "net.java.dev.jna" % "jna-platform" % "5.6.0",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.1.0",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.3.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-launcher" % V.bloopNightly,
       // for LSP
