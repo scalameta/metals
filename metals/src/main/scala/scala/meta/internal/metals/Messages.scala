@@ -28,6 +28,11 @@ object Messages {
       s"Scala ${unsupportedVersion} is not supported in worksheets. Falling back to ${fallback} without your classpath.\n" +
         s"Consider using ${recommended} instead to fix this."
     )
+
+    val unableToExport = new MessageParams(
+      MessageType.Warning,
+      "Unable to export worksheet. Please fix any diagnostics, save, and try again."
+    )
   }
 
   val NoBspSupport = new MessageParams(

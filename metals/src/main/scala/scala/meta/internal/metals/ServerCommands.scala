@@ -293,6 +293,17 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val CopyWorksheetOutput = new Command(
+    "copy-worksheet-output",
+    "Copy Worksheet Output",
+    """|Copy the contents of a worksheet to your local buffer.
+       |
+       |Note: This command returns the contents of the worksheet, and the LSP client
+       |is in charge of taking that content and putting it into your local buffer.
+       |""".stripMargin,
+    "[uri], the uri of the worksheet that you'd like to copy the contents of."
+  )
+
   /**
    * Open the browser at the given url.
    */

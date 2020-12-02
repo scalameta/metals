@@ -1616,6 +1616,23 @@ class MetalsLanguageServer(
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
+      case ServerCommands.CopyWorksheetOutput() =>
+        val args = params.getArguments.asScala
+        val worksheet = args.lift(0).collect {
+          case ws: JsonPrimitive if ws.isString =>
+            val a = new URI(ws.getAsString())
+            AbsolutePath.fromAbsoluteUri(a)
+        }
+
+        val output = worksheet.flatMap(worksheetProvider.copyWorksheetOutput(_))
+
+        if (output.nonEmpty) {
+          Future(output).asJavaObject
+        } else {
+          languageClient.showMessage(Messages.Worksheets.unableToExport)
+          Future.successful(()).asJavaObject
+        }
+
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

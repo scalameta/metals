@@ -13,6 +13,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta._
+import scala.meta.inputs.Input.VirtualFile
 import scala.meta.internal.metals.AdjustLspData
 import scala.meta.internal.metals.AdjustedLspData
 import scala.meta.internal.metals.Buffers
@@ -81,6 +82,8 @@ class WorksheetProvider(
   private val cancelables = new MutableCancelable()
   private val mdocs = new TrieMap[BuildTargetIdentifier, Mdoc]()
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
+  private val exportableEvaluations =
+    new TrieMap[VirtualFile, EvaluatedWorksheet]()
   private val currentScalaVersion =
     scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
   private val currentBinaryVersion =
@@ -136,6 +139,48 @@ class WorksheetProvider(
    */
   def hover(path: AbsolutePath, position: Position): Option[Hover] = {
     publisher.hover(path, position)
+  }
+
+  /**
+   * Check to see for a given path if there is an evaluated worksheet that
+   * matches thie exact input.
+   *
+   * @param path to the input used to search previous  evaluations.
+   * @return possible evaluated output.
+   */
+  def copyWorksheetOutput(path: AbsolutePath): Option[String] = {
+    val input = path.toInputFromBuffers(buffers)
+    exportableEvaluations.get(input) match {
+      case None => None
+      case Some(evalutatedWorksheet) =>
+        val toExport = new StringBuilder
+        val originalLines = input.value.split("\n").toBuffer.zipWithIndex
+
+        originalLines.foreach { case (lineContent, lineNumber) =>
+          val lineHasOutput = evalutatedWorksheet
+            .statements()
+            .asScala
+            .find(_.position.endLine() == lineNumber)
+
+          lineHasOutput match {
+            case Some(statement) =>
+              val detailLines = statement
+                .details()
+                .split("\n")
+                .map { line =>
+                  // println in worksheets already come with //
+                  if (line.trim().startsWith("//")) line
+                  else s"// ${line}"
+                }
+                .mkString("\n")
+
+              toExport.append(s"\n${lineContent}\n${detailLines}")
+            case None => toExport.append(s"\n${lineContent}")
+          }
+        }
+
+        Some(toExport.result())
+    }
   }
 
   private def evaluateAsync(
@@ -274,14 +319,22 @@ class WorksheetProvider(
     val mdoc = getMdoc(path)
     val input = path.toInputFromBuffers(buffers)
     val relativePath = path.toRelative(workspace)
-    val worksheet = mdoc.evaluateWorksheet(relativePath.toString(), input.value)
-    val classpath = worksheet.classpath().asScala.toList
+    val evaluatedWorksheet =
+      mdoc.evaluateWorksheet(relativePath.toString(), input.value)
+    val classpath = evaluatedWorksheet.classpath().asScala.toList
     val previousDigest = worksheetsDigests.getOrElse(path, "")
     val newDigest = calculateDigest(classpath)
 
+    exportableEvaluations.update(
+      input,
+      evaluatedWorksheet
+    )
+
     if (newDigest != previousDigest) {
       worksheetsDigests.put(path, newDigest)
-      val sourceDeps = fetchDependencySources(worksheet.dependencies().asScala)
+      val sourceDeps = fetchDependencySources(
+        evaluatedWorksheet.dependencies().asScala
+      )
       compilers.restartWorksheetPresentationCompiler(
         path,
         classpath,
@@ -289,7 +342,7 @@ class WorksheetProvider(
       )
     }
 
-    val toPublish = worksheet
+    val toPublish = evaluatedWorksheet
       .diagnostics()
       .iterator()
       .asScala
@@ -300,7 +353,7 @@ class WorksheetProvider(
       toPublish,
       isReset = true
     )
-    worksheet
+    evaluatedWorksheet
   }
 
   private def getMdoc(path: AbsolutePath): Mdoc = {
