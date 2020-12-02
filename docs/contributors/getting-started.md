@@ -77,16 +77,16 @@ To run the unit tests open an sbt shell and run `unit/test`
 ```sh
 sbt
 # (recommended) run a specific test suite, great for edit/test/debug workflows.
-> metals/testOnly tests.DefinitionSuite
+> unit/testOnly tests.DefinitionSuite
 # run a specific test case inside the suite.
-> metals/testOnly tests.DefinitionSuite -- *exact-test-name*
+> unit/testOnly tests.DefinitionSuite -- *exact-test-name*
 # run unit tests, moderately fast but still a bit too slow for edit/test/debug workflows.
 > unit/test
 # run slow integration tests, takes several minutes.
 > slow/test
-# run slow presentation compiler tests
+# run presentation compiler tests, these are the quickest tests to run.
 > cross/test
-# run slow presentation compiler tests for all Scala versions
+# run presentation compiler tests for all Scala versions.
 > +cross/test
 # (not recommended) run all tests, slow. It's better to target individual projects.
 > test

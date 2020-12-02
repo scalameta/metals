@@ -45,6 +45,9 @@ val scala212CompilerOptions = List(
   "-Ywarn-unused:implicits"
 )
 
+logo := Welcome.logo
+usefulTasks := Welcome.tasks
+
 inThisBuild(
   List(
     version ~= { dynVer =>
