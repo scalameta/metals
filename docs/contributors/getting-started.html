@@ -127,16 +127,16 @@ refactoring and linting.</li>
 <p>To run the unit tests open an sbt shell and run <code>unit/test</code></p>
 <pre><code class="hljs css language-sh">sbt
 <span class="hljs-comment"># (recommended) run a specific test suite, great for edit/test/debug workflows.</span>
-&gt; metals/testOnly tests.DefinitionSuite
+&gt; unit/testOnly tests.DefinitionSuite
 <span class="hljs-comment"># run a specific test case inside the suite.</span>
-&gt; metals/testOnly tests.DefinitionSuite -- *exact-test-name*
+&gt; unit/testOnly tests.DefinitionSuite -- *exact-test-name*
 <span class="hljs-comment"># run unit tests, moderately fast but still a bit too slow for edit/test/debug workflows.</span>
 &gt; unit/<span class="hljs-built_in">test</span>
 <span class="hljs-comment"># run slow integration tests, takes several minutes.</span>
 &gt; slow/<span class="hljs-built_in">test</span>
-<span class="hljs-comment"># run slow presentation compiler tests</span>
+<span class="hljs-comment"># run presentation compiler tests, these are the quickest tests to run.</span>
 &gt; cross/<span class="hljs-built_in">test</span>
-<span class="hljs-comment"># run slow presentation compiler tests for all Scala versions</span>
+<span class="hljs-comment"># run presentation compiler tests for all Scala versions.</span>
 &gt; +cross/<span class="hljs-built_in">test</span>
 <span class="hljs-comment"># (not recommended) run all tests, slow. It's better to target individual projects.</span>
 &gt; <span class="hljs-built_in">test</span>
