@@ -106,7 +106,8 @@ final case class MetalsServerConfig(
       s"input-box=$isInputBoxEnabled",
       s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
-      s"statistics=$statistics"
+      s"statistics=$statistics",
+      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
