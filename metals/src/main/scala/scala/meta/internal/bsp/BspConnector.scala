@@ -62,9 +62,6 @@ class BspConnector(
           scribe.info("No build server found")
           Future.successful(None)
         case ResolvedBloop =>
-          scribe.info(
-            s"Start new Bloop server on port ${userConfiguration.bloopNailgunPort.getOrElse("default port")}"
-          )
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
