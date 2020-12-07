@@ -342,8 +342,8 @@ object NewProjectProvider {
         description = "Scala Native"
       ),
       MetalsQuickPickItem(
-        id = "lampepfl/scala3.g8",
-        label = "lampepfl/scala3.g8",
+        id = "scala/scala3.g8",
+        label = "scala/scala3.g8",
         description = "A template for trying out Scala 3"
       ),
       MetalsQuickPickItem(
