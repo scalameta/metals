@@ -319,6 +319,7 @@ object Messages {
         params: ShowMessageRequestParams,
         details: Map[String, BspConnectionDetails]
     )
+    // TODO This is currently only being used in tests. This can probably be removed
     def message: String =
       "Multiple build servers detected, which one do you want to use?"
     def isSelectBspServer(params: ShowMessageRequestParams): Boolean =

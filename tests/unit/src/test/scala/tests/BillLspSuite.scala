@@ -47,12 +47,16 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("diagnostics") {
     cleanWorkspace()
+    createTablesAndConnect()
+    chooseBuildServer("Bill")
     Bill.installWorkspace(workspace.toNIO)
     testRoundtripCompilation()
   }
 
   test("reconnect-manual") {
     cleanWorkspace()
+    createTablesAndConnect()
+    chooseBuildServer("Bill")
     Bill.installWorkspace(workspace.toNIO)
     for {
       _ <- server.initialize(
@@ -89,6 +93,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("reconnect") {
     cleanWorkspace()
+    createTablesAndConnect()
+    chooseBuildServer("Bill")
     Bill.installWorkspace(workspace.toNIO)
     for {
       _ <- server.initialize(
@@ -182,6 +188,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
   test("global") {
     RecursivelyDelete(globalBsp)
     cleanWorkspace()
+    createTablesAndConnect()
+    chooseBuildServer("Bill")
     Bill.installGlobal(globalBsp.toNIO)
     testRoundtripCompilation()
   }
@@ -202,20 +210,5 @@ class BillLspSuite extends BaseLspSuite("bill") {
         ).mkString("\n")
       )
     } yield ()
-  }
-
-  test("conflict") {
-    cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO, "Bill")
-    Bill.installWorkspace(workspace.toNIO, "Bob")
-    testSelectServerDialogue()
-  }
-
-  test("mix") {
-    cleanWorkspace()
-    RecursivelyDelete(globalBsp)
-    Bill.installWorkspace(workspace.toNIO, "Bill")
-    Bill.installGlobal(globalBsp.toNIO, "Bob")
-    testSelectServerDialogue()
   }
 }

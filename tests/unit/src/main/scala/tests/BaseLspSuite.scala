@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.InitializationOptions
@@ -16,6 +17,7 @@ import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.SlowTaskConfig
+import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
@@ -125,5 +127,16 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
           scribe.warn(s"Unable to delete workspace $workspace")
       }
     }
+  }
+  def createTablesAndConnect(): Unit = {
+    server.server.tables = new Tables(
+      workspace,
+      time,
+      ClientConfiguration.Default()
+    )
+    server.server.tables.connect()
+  }
+  def chooseBuildServer(buildServerName: String): Unit = {
+    server.server.tables.buildServers.chooseServer(buildServerName)
   }
 }

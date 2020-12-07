@@ -10,7 +10,6 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
-import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -316,11 +315,6 @@ final class Doctor(
           case ResolvedBspOne(details) =>
             (
               s"Build server currently being used is ${details.getName()}.",
-              false
-            )
-          case ResolvedMultiple(_, _) =>
-            (
-              "Multiple build servers found for your workspace. Attempt to connect to choose your desired server.",
               false
             )
         }

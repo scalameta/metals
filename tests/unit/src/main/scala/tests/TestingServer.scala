@@ -134,6 +134,7 @@ final class TestingServer(
     // relying on the macOS/Windows file watchers causes flaky test failures.
     isReliableFileWatcher = Properties.isLinux
   )
+
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
   def statusBarHistory: String = {

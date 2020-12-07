@@ -71,16 +71,6 @@ class BspConnector(
             .map(Some(_))
         case ResolvedBspOne(details) =>
           bspServers.newServer(workspace, details).map(Some(_))
-        case ResolvedMultiple(_, availableServers) =>
-          val query =
-            Messages.SelectBspServer.request(availableServers, None)
-          for {
-            Some(item) <- client
-              .showMessageRequest(query.params)
-              .asScala
-              .map(item => query.details.get(item.getTitle))
-            conn <- bspServers.newServer(workspace, item)
-          } yield Some(conn)
       }
     }
 
