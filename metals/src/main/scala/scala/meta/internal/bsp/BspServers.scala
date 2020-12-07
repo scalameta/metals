@@ -1,8 +1,6 @@
 package scala.meta.internal.bsp
 
 import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -20,7 +18,6 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
-import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -41,23 +38,6 @@ final class BspServers(
     bspGlobalInstallDirectories: List[AbsolutePath],
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
-
-  def resolve(): BspResolvedResult = {
-    findAvailableServers() match {
-      case Nil => ResolvedNone
-      case head :: Nil => ResolvedBspOne(head)
-      case availableServers =>
-        val md5 = digestServerDetails(availableServers)
-        val selectedServer = for {
-          name <- tables.buildServers.selectedServer(md5)
-          server <- availableServers.find(_.getName == name)
-        } yield server
-        selectedServer match {
-          case Some(details) => ResolvedBspOne(details)
-          case None => ResolvedMultiple(md5, availableServers)
-        }
-    }
-  }
 
   def newServer(
       projectDirectory: AbsolutePath,
@@ -142,17 +122,6 @@ final class BspServers(
     bspGlobalInstallDirectories.foreach(visit)
     buf.result()
   }
-
-  private def digestServerDetails(
-      candidates: List[BspConnectionDetails]
-  ): String = {
-    val md5 = MessageDigest.getInstance("MD5")
-    candidates.foreach { details =>
-      md5.update(details.getName.getBytes(StandardCharsets.UTF_8))
-    }
-    MD5.bytesToHex(md5.digest())
-  }
-
 }
 
 object BspServers {

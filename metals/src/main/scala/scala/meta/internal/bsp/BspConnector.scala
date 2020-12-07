@@ -31,12 +31,7 @@ class BspConnector(
     statusBar: StatusBar
 )(implicit ec: ExecutionContext) {
 
-  def resolve(): BspResolvedResult = {
-    resolveExplicit().getOrElse {
-      if (buildTools.isBloop) ResolvedBloop
-      else bspServers.resolve()
-    }
-  }
+  def resolve(): BspResolvedResult = resolveExplicit().getOrElse(ResolvedBloop)
 
   private def resolveExplicit(): Option[BspResolvedResult] = {
     tables.buildServers.selectedServer().flatMap { sel =>
