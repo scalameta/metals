@@ -91,7 +91,9 @@ final case class MetalsServerConfig(
       "metals.allow-multiline-string-formatting",
       default = true
     ),
-    bloopPort: Option[Int] = None
+    bloopPort: Option[Int] = Option(System.getProperty("metals.bloop-port"))
+      .filter(_.forall(Character.isDigit(_)))
+      .map(_.toInt)
 ) {
   override def toString: String =
     List[String](
@@ -128,14 +130,9 @@ object MetalsServerConfig {
     System.getProperty("metals.client")
   )
 
-  val metalsBloopPort: Option[Int] = Option(
-    System.getProperty("metals.bloop-port")
-  ).filter(_.forall(Character.isDigit(_)))
-    .map(_.toInt)
-
   def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
-    var msConfig = metalsClientType.getOrElse("default") match {
+    metalsClientType.getOrElse("default") match {
       case "vscode" =>
         base.copy(
           icons = Icons.vscode,
@@ -201,8 +198,5 @@ object MetalsServerConfig {
       case _ =>
         base
     }
-    if (metalsBloopPort.isDefined)
-      msConfig = msConfig.copy(bloopPort = metalsBloopPort)
-    msConfig
   }
 }
