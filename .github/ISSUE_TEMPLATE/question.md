@@ -1,6 +1,6 @@
 ---
 name: ❓ Question
-about: This issue tracker is not for questions. Please ask a question using GitHub Discussions: https://github.com/scalameta/metals/discussions/new
+about: This issue tracker is not for questions. Please ask a question using GitHub Discussions https://github.com/scalameta/metals/discussions/new
 title: DO NOT ASK QUESTIONS IN ISSUES
 labels: ''
 assignees: ''
