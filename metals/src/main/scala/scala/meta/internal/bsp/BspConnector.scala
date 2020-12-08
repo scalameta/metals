@@ -33,7 +33,8 @@ class BspConnector(
 
   def resolve(): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      if (buildTools.isBloop) ResolvedBloop
+      if (buildTools.loadSupported().nonEmpty || buildTools.isBloop)
+        ResolvedBloop
       else bspServers.resolve()
     }
   }
