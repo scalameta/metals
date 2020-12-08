@@ -4,7 +4,6 @@ about: This issue tracker is not for feature requests. Please suggest your idea 
 title: DO NOT OPEN FEATURE REQUESTS HERE
 labels: ''
 assignees: ''
-
 ---
 
 Please open feature requests here https://github.com/scalameta/metals-feature-requests
