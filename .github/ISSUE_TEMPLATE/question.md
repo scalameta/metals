@@ -1,29 +1,12 @@
 ---
 name: ❓ Question
 about:
-  Ask a question about Metals. You can also ask questions in the Gitter channel
-  https://gitter.im/scalameta/metals/
-labels: "question"
+  This issue tracker is not for questions. Please ask a question using [GitHub Discussions](https://github.com/scalameta/metals/discussions/new
+title: DO NOT ASK QUESTIONS IN ISSUES
+labels: ''
+assignees: ''
 ---
 
-**Question**
+Please ask a question using [GitHub Discussions](https://github.com/scalameta/metals/discussions/new
 
-<!-- Your question -->
-
-**Screenshots**
-
-<!-- If applicable, add screenshots to help explain your problem. -->
-
-**Installation:**
-
-- Operating system: macOS/Windows/Linux
-- Editor: Visual Studio Code/Atom/Vim/Sublime/Emacs
-- Metals version: v0.9.6
-
-**Additional context**
-
-<!-- Add any other context about the problem here. -->
-
-**Search terms**
-
-<!-- Help other people discover your question by writing words they might search for. -->
+The main issue tracker is reserved for bug reports and issues with an assigned milestone.
