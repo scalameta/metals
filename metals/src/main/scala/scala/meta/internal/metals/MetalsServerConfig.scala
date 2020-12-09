@@ -90,7 +90,10 @@ final case class MetalsServerConfig(
     allowMultilineStringFormatting: Boolean = MetalsServerConfig.binaryOption(
       "metals.allow-multiline-string-formatting",
       default = true
-    )
+    ),
+    bloopPort: Option[Int] = Option(System.getProperty("metals.bloop-port"))
+      .filter(_.forall(Character.isDigit(_)))
+      .map(_.toInt)
 ) {
   override def toString: String =
     List[String](
@@ -105,7 +108,8 @@ final case class MetalsServerConfig(
       s"input-box=$isInputBoxEnabled",
       s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
-      s"statistics=$statistics"
+      s"statistics=$statistics",
+      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
