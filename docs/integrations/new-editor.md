@@ -19,8 +19,8 @@ of Metals:
 coursier bootstrap org.scalameta:metals_2.12:@VERSION@ -o metals -f
 ```
 
-(optional) It's recommended to enable JVM string de-duplication and provide
-a generous stack size and memory options.
+(optional) It's recommended to enable JVM string de-duplication and provide a
+generous stack size and memory options.
 
 ```sh
 coursier bootstrap \
@@ -93,9 +93,9 @@ specification.
 
 During `initialize` we also have the ability to pass in `InitializationOptions`.
 This is the primary way to configure Metals. In Metals we have a few different
-"providers".  Some are LSP extensions, such as `metals/inputBox` which you
-read about below, and others used to be server properties that have been
-migrated to `InitializationOptions`. M
+"providers". Some are LSP extensions, such as `metals/inputBox` which you read
+about below, and others used to be server properties that have been migrated to
+`InitializationOptions`. M
 
 The currently available settings for `InitializationOptions` are listed below.
 
@@ -145,7 +145,7 @@ An optional string value for a command identifier to trigger completion
 Possible values:
 
 - `"editor.action.triggerSuggest"`: currently used by Visual Studio Code and
-    coc.nvim.
+  coc.nvim.
 - empty: for all other editors.
 
 ##### `compilerOptions.isCompletionItemDetailEnabled`
@@ -206,8 +206,8 @@ setting is provided by the editor.
 
 Possible values:
 
-- `"editor.action.triggerParameterHints"`: Used by Visual Studio
-    Code and coc.nvim.
+- `"editor.action.triggerParameterHints"`: Used by Visual Studio Code and
+  coc.nvim.
 - empty: for all other editors.
 
 ##### `compilerOptions.snippetAutoIndent`
@@ -219,21 +219,21 @@ multiline textEdits such as the "implement all methods" completion.
 Possible values:
 
 - `on`: (default): the client automatically adds in the indentation. This is the
-    case for VS Code, Atom, Sublime, and coc.nvim.
+  case for VS Code, Atom, Sublime, and coc.nvim.
 - `off`: the client does not add any indentation when receiving a multi-line
-    textEdit
+  textEdit
 
 ##### `debuggingProvider`
 
-Boolean value to signify that the client supports the [Debug Adapter
-Protocol](../integrations/debug-adapter-protocol.md).
+Boolean value to signify that the client supports the
+[Debug Adapter Protocol](../integrations/debug-adapter-protocol.md).
 
 Default value: `false`
 
 ##### `decorationProvider`
 
-Boolean value to signify that the client supports the [Decoration
-Protocol](../integrations/decoration-protocol.md).
+Boolean value to signify that the client supports the
+[Decoration Protocol](../integrations/decoration-protocol.md).
 
 Default value: `false`
 
@@ -259,10 +259,10 @@ Possible values:
 Possible values:
 
 - `off` (default): the `metals/executeClientCommand` notification is not
-    supported. Client commands can still be handled by enabling
-    `-Dmetals.http=on`.
+  supported. Client commands can still be handled by enabling
+  `-Dmetals.http=on`.
 - `on`: the `metals/executeClientCommand` notification is supported and all
-    [Metals client commands](#metals-client-commands) are handled.
+  [Metals client commands](#metals-client-commands) are handled.
 
 ##### `globSyntax`
 
@@ -282,8 +282,8 @@ Possible values:
 
 ##### `inlineDecorationProvider`
 
-If the client implements the Metals Decoration Protocol **and** supports decorations
-to be shown inline and not only at the end of a line.
+If the client implements the Metals Decoration Protocol **and** supports
+decorations to be shown inline and not only at the end of a line.
 
 Default: `false`
 
@@ -293,11 +293,11 @@ Possible values:
 
 - `none` (default): don't display icons in messages.
 - `vscode`: use [Octicons](https://octicons.github.com) such as `$(rocket)` for
-    status bar messages, as supported by th
-    [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
+  status bar messages, as supported by th
+  [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
 - `atom`: use HTML-formatted [Octicons](https://octicons.github.com) such as
-    `<span class='icon icon-rocket'></span>` for status bar messages, as supported
-    by the Atom status bar.
+  `<span class='icon icon-rocket'></span>` for status bar messages, as supported
+  by the Atom status bar.
 - `unicode`: use unicode emojis like 🚀 for status bar messages.
 
 ##### `inputBoxProvider`
@@ -305,7 +305,7 @@ Possible values:
 Possible values:
 
 - `off` (default): the `metals/inputBox` request is not supported. In this case,
-    Metals tries to fallback to `window/showMessageRequest` when possible.
+  Metals tries to fallback to `window/showMessageRequest` when possible.
 - `on`: the `metals/inputBox` request is fully supported.
 
 ##### `isExitOnShutdown`
@@ -313,13 +313,13 @@ Possible values:
 Possible values:
 
 - `off` (default): run `System.exit` only on the `exit` notification, as
-    required by the LSP specification.
+  required by the LSP specification.
 - `on`: run `System.exit` after the `shutdown` request, going against the LSP
-    specification. This option is enabled by default for Sublime Text to prevent
-    the Metals process from staying alive after Sublime Text has quit with
-    `Cmd+Q`.  It's not possible for Sublime Text packages to register a callback
-    when the editor has quit. See
-    [LSP#410](https://github.com/tomv564/LSP/issues/410) for more details.
+  specification. This option is enabled by default for Sublime Text to prevent
+  the Metals process from staying alive after Sublime Text has quit with
+  `Cmd+Q`. It's not possible for Sublime Text packages to register a callback
+  when the editor has quit. See
+  [LSP#410](https://github.com/tomv564/LSP/issues/410) for more details.
 
 ##### `isHttpEnabled`
 
@@ -327,8 +327,8 @@ Possible values:
 
 - `off` (default): don't start a server with the Metals HTTP client.
 - `on`: start a server with the [Metals HTTP client] to interact with the server
-    through a basic web UI. This option is needed for editor clients that don't
-    support necessary requests such as `window/showMessageRequest`.
+  through a basic web UI. This option is needed for editor clients that don't
+  support necessary requests such as `window/showMessageRequest`.
 
 ##### `openFilesOnRenameProvider`
 
@@ -358,7 +358,7 @@ Possible values:
 - `off` (default): the `metals/slowTask` request is not supported.
 - `on`: the `metals/slowTask` request is fully supported.
 - `status-bar`: the `metals/slowTask` request is not supported, but send updates
-    about slow tasks via `metals/status`.
+  about slow tasks via `metals/status`.
 
 ##### `statusBarProvider`
 
@@ -367,15 +367,15 @@ Possible values:
 - `off` (default): the `metals/status` notification is not supported.
 - `on`: the `metals/status` notification is supported.
 - `log-message`: translate `metals/status` notifications to `window/logMessage`
-    notifications.
+  notifications.
 - `show-message`: translate `metals/status` notifications to
-    `window/showMessage` show notifications however the client displays messages
-    to the user.
+  `window/showMessage` show notifications however the client displays messages
+  to the user.
 
 ##### `treeViewProvider`
 
-Boolean value signifying whether or not the client supports the [Tree View
-Protocol](../integrations/tree-view-protocol.md).
+Boolean value signifying whether or not the client supports the
+[Tree View Protocol](../integrations/tree-view-protocol.md).
 
 Default value: `false`
 
@@ -601,8 +601,16 @@ The below properties are also available as user configuration options. It's
 preferable to set these there:
 
 ```scala mdoc:user-config:system-property
+
 ```
 
+### `-Dmetals.bloop-port`
+
+Port number of the Bloop server to connect to. Should only be used if Bloop
+server was setup in a custom way. Default value is `8212`.
+
+Possible values are any allowed port number that the Bloop server is able to run
+on.
 
 ## Metals user configuration
 
@@ -665,12 +673,14 @@ To enable Metals extensions, start the main process with the system property
 ### Debug Adapter Protocol
 
 Metals implements and additional protocol for running and debugging inside the
-editor, see the [Debug Adapter Protocol](../integrations/debug-adapter-protocol.md).
+editor, see the
+[Debug Adapter Protocol](../integrations/debug-adapter-protocol.md).
 
 ### Tree View Protocol
 
 Metals implements several custom JSON-RPC endpoints related to rendering tree
-views in the editor client, the [Tree View Protocol](../integrations/tree-view-protocol.md).
+views in the editor client, the
+[Tree View Protocol](../integrations/tree-view-protocol.md).
 
 ### Decoration Protocol
 
@@ -859,11 +869,11 @@ _Request_:
 
 - method: `metals/quickPick`
 - params: `MetalsQuickInputParams` defined as follows. It partially matches
-    [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions)
-    in the Visual Studio Code API, but it also contains `items` of
-    [`MetalsQuickPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem),
-    which, in it's turn, partially matches `QuickPickItem`, but these interfaces
-    do not contain options for picking many items:
+  [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions)
+  in the Visual Studio Code API, but it also contains `items` of
+  [`MetalsQuickPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem),
+  which, in it's turn, partially matches `QuickPickItem`, but these interfaces
+  do not contain options for picking many items:
 
 ```ts
 export interface MetalsQuickPickParams {
@@ -943,7 +953,7 @@ interface WindowStateDidChangeParams( {
 
 ### `metals/openWindow`
 
-The  `metals/openWindow` params are used with the New Scala Project
+The `metals/openWindow` params are used with the New Scala Project
 functionality. After the new project has been created, if the editor has the
 ability to open the project in a new window then these params are used with the
 the `metals-open-folder` command.
@@ -956,4 +966,3 @@ interface MetalsOpenWindowParams {
   openNewWindow: boolean;
 }
 ```
-
