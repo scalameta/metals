@@ -234,7 +234,7 @@ lazy val V = new {
   val coursier = "2.0.7"
   val ammonite = "2.2.0-26-61ee0965"
   val mill = "0.9.3"
-  val organizeImportRule = "0.4.2"
+  val organizeImportRule = "0.4.4"
 }
 
 val genyVersion = Def.setting {
