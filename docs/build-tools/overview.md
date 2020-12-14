@@ -57,4 +57,4 @@ build tool pages for details.
 Metals works with any build tool that supports the
 [Build Server Protocol](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md).
 For more information, see the
-[guide to integrate new build tools](new-build-tool.md).
+[guide to integrate new build tools](../integrations/new-build-tool.md).
