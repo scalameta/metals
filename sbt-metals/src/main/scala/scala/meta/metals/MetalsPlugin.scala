@@ -55,16 +55,17 @@ object MetalsPlugin extends AutoPlugin {
       if (in) classDirectory.value
       else semanticdbTargetRoot.value
     },
-    semanticdbOptions ++= {
+    semanticdbOptions := {
+      val old = semanticdbOptions.value
       val targetRoot = semanticdbTargetRoot.value
       val versionOfScala = scalaVersion.value
       if (
         ScalaInstance.isDotty(versionOfScala) || !supportedScala2Versions
           .contains(versionOfScala)
       )
-        Nil
+        old
       else
-        List(
+        (Seq(
           s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
           s"-P:semanticdb:targetroot:$targetRoot",
           "-Yrangepos",
@@ -72,7 +73,7 @@ object MetalsPlugin extends AutoPlugin {
           s"-P:semanticdb:synthetics:on",
           // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
           s"-P:semanticdb:failures:warning"
-        )
+        ) ++ old).distinct
     }
   )
 }
