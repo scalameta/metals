@@ -15,7 +15,6 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
-
   override def munitIgnore: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
   // sourcecode is not yet published for Scala 3
@@ -594,4 +593,117 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("export") {
+    assume(!isWindows, "This test is flaky on Windows")
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "${scalaVersion}"}}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |case class Hi(a: Int, b: Int, c: Int)
+           |val hi1 =
+           |  Hi(1, 2, 3)
+           |val hi2 = Hi(4, 5, 6)
+           |
+           |val hellos = List(hi1, hi2)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      export = server.exportEvaluation(
+        "a/src/main/scala/foo/Main.worksheet.sc"
+      )
+      _ = assertEquals(
+        export,
+        Some(
+          getExpected(
+            """|
+               |case class Hi(a: Int, b: Int, c: Int)
+               |val hi1 =
+               |  Hi(1, 2, 3)
+               |// hi1: Hi = Hi(1, 2, 3)
+               |val hi2 = Hi(4, 5, 6)
+               |// hi2: Hi = Hi(4, 5, 6)
+               |
+               |val hellos = List(hi1, hi2)
+               |// hellos: List[Hi] = List(Hi(1, 2, 3), Hi(4, 5, 6))""".stripMargin,
+            Map(
+              V.scala213 -> """|
+                               |case class Hi(a: Int, b: Int, c: Int)
+                               |val hi1 =
+                               |  Hi(1, 2, 3)
+                               |// hi1: Hi = Hi(a = 1, b = 2, c = 3)
+                               |val hi2 = Hi(4, 5, 6)
+                               |// hi2: Hi = Hi(a = 4, b = 5, c = 6)
+                               |
+                               |val hellos = List(hi1, hi2)
+                               |// hellos: List[Hi] = List(Hi(a = 1, b = 2, c = 3), Hi(a = 4, b = 5, c = 6))""".stripMargin,
+              V.scala3 -> """|
+                             |case class Hi(a: Int, b: Int, c: Int)
+                             |val hi1 =
+                             |  Hi(1, 2, 3)
+                             |// hi1: Hi = Hi(1,2,3)
+                             |val hi2 = Hi(4, 5, 6)
+                             |// hi2: Hi = Hi(4,5,6)
+                             |
+                             |val hellos = List(hi1, hi2)
+                             |// hellos: List[Hi] = List(Hi(1,2,3), Hi(4,5,6))""".stripMargin
+            ),
+            scalaVersion
+          )
+        )
+      )
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(
+        _.replace(
+          "Hi(1, 2, 3)",
+          "Hi(7, 8, 9)"
+        )
+      )
+      export = server.exportEvaluation(
+        "a/src/main/scala/foo/Main.worksheet.sc"
+      )
+      _ = assertEquals(
+        export,
+        Some(
+          getExpected(
+            """|
+               |case class Hi(a: Int, b: Int, c: Int)
+               |val hi1 =
+               |  Hi(7, 8, 9)
+               |// hi1: Hi = Hi(7, 8, 9)
+               |val hi2 = Hi(4, 5, 6)
+               |// hi2: Hi = Hi(4, 5, 6)
+               |
+               |val hellos = List(hi1, hi2)
+               |// hellos: List[Hi] = List(Hi(7, 8, 9), Hi(4, 5, 6))""".stripMargin,
+            Map(
+              V.scala213 -> """|
+                               |case class Hi(a: Int, b: Int, c: Int)
+                               |val hi1 =
+                               |  Hi(7, 8, 9)
+                               |// hi1: Hi = Hi(a = 7, b = 8, c = 9)
+                               |val hi2 = Hi(4, 5, 6)
+                               |// hi2: Hi = Hi(a = 4, b = 5, c = 6)
+                               |
+                               |val hellos = List(hi1, hi2)
+                               |// hellos: List[Hi] = List(Hi(a = 7, b = 8, c = 9), Hi(a = 4, b = 5, c = 6))""".stripMargin,
+              V.scala3 -> """|
+                             |case class Hi(a: Int, b: Int, c: Int)
+                             |val hi1 =
+                             |  Hi(7, 8, 9)
+                             |// hi1: Hi = Hi(7,8,9)
+                             |val hi2 = Hi(4, 5, 6)
+                             |// hi2: Hi = Hi(4,5,6)
+                             |
+                             |val hellos = List(hi1, hi2)
+                             |// hellos: List[Hi] = List(Hi(7,8,9), Hi(4,5,6))""".stripMargin
+            ),
+            scalaVersion
+          )
+        )
+      )
+    } yield ()
+
+  }
 }

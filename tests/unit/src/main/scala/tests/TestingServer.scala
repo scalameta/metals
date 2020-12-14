@@ -558,6 +558,11 @@ final class TestingServer(
     server.stacktraceAnalyzer.stacktraceLenses(stacktrace.split('\n').toList)
   }
 
+  def exportEvaluation(filename: String): Option[String] = {
+    val path = toPath(filename)
+    server.worksheetProvider.copyWorksheetOutput(path)
+  }
+
   def didOpen(filename: String): Future[Unit] = {
     Debug.printEnclosing()
     val abspath = toPath(filename)
