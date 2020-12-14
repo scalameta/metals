@@ -145,7 +145,7 @@ class WorksheetProvider(
    * Check to see for a given path if there is an evaluated worksheet that
    * matches thie exact input.
    *
-   * @param path to the input used to search previous  evaluations.
+   * @param path to the input used to search previous evaluations.
    * @return possible evaluated output.
    */
   def copyWorksheetOutput(path: AbsolutePath): Option[String] = {

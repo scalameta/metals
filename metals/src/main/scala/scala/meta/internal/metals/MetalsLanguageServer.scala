@@ -1620,8 +1620,7 @@ class MetalsLanguageServer(
         val args = params.getArguments.asScala
         val worksheet = args.lift(0).collect {
           case ws: JsonPrimitive if ws.isString =>
-            val a = new URI(ws.getAsString())
-            AbsolutePath.fromAbsoluteUri(a)
+            ws.getAsString().toAbsolutePath
         }
 
         val output = worksheet.flatMap(worksheetProvider.copyWorksheetOutput(_))

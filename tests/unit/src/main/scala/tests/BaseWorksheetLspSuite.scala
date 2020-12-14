@@ -594,6 +594,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("export") {
+    assume(!isWindows, "This test is flaky on Windows")
     for {
       _ <- server.initialize(
         s"""
