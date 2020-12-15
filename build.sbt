@@ -232,7 +232,7 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.2"
   val coursier = "2.0.7"
-  val ammonite = "2.2.0-26-61ee0965"
+  val ammonite = "2.3.8"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
 }
