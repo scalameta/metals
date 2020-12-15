@@ -17,23 +17,23 @@ class A >>region>>{
 
   def longSingleLineBlock = { ???; ???; ???; }
 
-  def chain = >>region>>Seq(1).map{
-    >>region>>x =>
+  def chain = >>region>>Seq(1).map>>region>>{
+    x =>
     x + 1
      + 1
      + 1
      + 1
      + 1
      + 1
-     + 1<<region<<
-  }.map{
-    >>region>>_ + 1
+     + 1
+  }<<region<<.map>>region>>{
+    _ + 1
     + 1
     + 1
     + 1
     + 1
-    + 1<<region<<
-  }<<region<<
+    + 1
+  }<<region<<<<region<<
 
   def chain = >>region>>Seq(1).map(
     x =>
