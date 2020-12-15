@@ -189,7 +189,7 @@ lazy val V = new {
   val scalameta = "4.4.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.5-8-6cc6911d"
+  val bloop = "1.4.5-28-e52cd3ad"
   val scala3 = "3.0.0-M2"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -227,12 +227,12 @@ lazy val V = new {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  def guava = "com.google.guava" % "guava" % "30.0-jre"
+  def guava = "com.google.guava" % "guava" % "30.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.2"
   val coursier = "2.0.7"
-  val ammonite = "2.2.0-26-61ee0965"
+  val ammonite = "2.3.8"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
 }
@@ -407,10 +407,10 @@ lazy val metals = project
       "io.methvin" % "directory-watcher" % "0.10.1",
       "com.swoval" % "file-tree-views" % "2.1.6",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.2.Final",
+      "io.undertow" % "undertow-core" % "2.2.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.2.1",
+      "org.flywaydb" % "flyway-core" % "7.3.1",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -439,8 +439,8 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.1.5",
-      "com.outr" %% "scribe-slf4j" % "3.1.5", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.1.7",
+      "com.outr" %% "scribe-slf4j" % "3.1.7", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.0",
       // for JSON formatted doctor
