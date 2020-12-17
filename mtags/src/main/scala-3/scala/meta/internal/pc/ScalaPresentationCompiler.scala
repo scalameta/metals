@@ -119,7 +119,7 @@ case class ScalaPresentationCompiler(
       val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
       driver.run(uri, sourceFile)
 
-      given ctx as Context = driver.currentCtx
+      val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
@@ -128,7 +128,7 @@ case class ScalaPresentationCompiler(
       }
       new CompletionList(
         /*isIncomplete = */ false,
-        items.map(completionItem).asJava
+        items.map(completionItem(_)(using ctx)).asJava
       )
     }
   }
@@ -139,17 +139,17 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      given ctx as Context = driver.currentCtx
+      val ctx = driver.currentCtx
       val uri = params.uri
       val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
       driver.run(uri, sourceFile)
       val pos = sourcePosition(driver, params, uri)
-      val path = Interactive.pathTo(driver.openedTrees(uri), pos)
+      val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
       val definitions = Interactive.findDefinitions(path, pos, driver).toList
 
       DefinitionResultImpl(
         "",
-        definitions.flatMap(d => location(d.namePos)).asJava
+        definitions.flatMap(d => location(d.namePos(using ctx))).asJava
       )
 
     }
@@ -253,22 +253,22 @@ case class ScalaPresentationCompiler(
       val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
       driver.run(uri, sourceFile)
 
-      given ctx as Context = driver.currentCtx
+      val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
-      val path = Interactive.pathTo(trees, pos)
-      val tp = Interactive.enclosingType(trees, pos)
-      val tpw = tp.widenTermRefExpr
+      val path = Interactive.pathTo(trees, pos)(using ctx)
+      val tp = Interactive.enclosingType(trees, pos)(using ctx)
+      val tpw = tp.widenTermRefExpr(using ctx)
 
-      if (tp.isError || tpw == NoType || tpw.isError)
+      if (tp.isError(using ctx) || tpw == NoType || tpw.isError(using ctx))
         ju.Optional.empty()
       else {
-        Interactive.enclosingSourceSymbols(path, pos) match {
+        Interactive.enclosingSourceSymbols(path, pos)(using ctx) match {
           case Nil =>
             ju.Optional.empty()
           case symbols =>
-            val printer = SymbolPrinter()
-            val docComments = symbols.flatMap(ParsedComment.docOf)
+            val printer = SymbolPrinter()(using ctx)
+            val docComments = symbols.flatMap(ParsedComment.docOf(_)(using ctx))
             val keywordName = symbols.headOption.map { symbol =>
               printer.fullDefinition(
                 symbol,
@@ -279,7 +279,7 @@ case class ScalaPresentationCompiler(
               tpw match {
                 // https://github.com/lampepfl/dotty/issues/8891
                 case _: ImportType =>
-                  printer.typeString(symbol.typeRef)
+                  printer.typeString(symbol.paramRef(using ctx))
                 case _ =>
                   printer.typeString(tpw)
               }
@@ -288,7 +288,7 @@ case class ScalaPresentationCompiler(
               keywordName,
               typeString,
               docComments
-            )
+            )(using ctx)
             ju.Optional.of(new Hover(content))
         }
       }
@@ -315,19 +315,19 @@ case class ScalaPresentationCompiler(
       val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
       driver.run(uri, sourceFile)
 
-      given ctx as Context = driver.currentCtx
+      val ctx = driver.currentCtx
 
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
 
       // @tgodzik tpd.TypeApply doesn't seem to be handled here
       val path =
-        Interactive.pathTo(trees, pos).dropWhile(!_.isInstanceOf[tpd.Apply])
+        Interactive.pathTo(trees, pos)(using ctx).dropWhile(!_.isInstanceOf[tpd.Apply])
 
       val (paramN, callableN, alternatives) =
-        Signatures.callInfo(path, pos.span)
+        Signatures.callInfo(path, pos.span)(using ctx)
 
-      val signatureInfos = alternatives.flatMap(Signatures.toSignature)
+      val signatureInfos = alternatives.flatMap(Signatures.toSignature(_)(using ctx))
       new SignatureHelp(
         signatureInfos.map(signatureToSignatureInformation).asJava,
         callableN,

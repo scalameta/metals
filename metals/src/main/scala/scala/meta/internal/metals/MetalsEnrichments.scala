@@ -585,7 +585,9 @@ object MetalsEnrichments
 
     def isSemanticdbEnabled(scalaVersion: String): Boolean = {
       if (ScalaVersions.isScala3Version(scalaVersion)) {
-        item.getOptions.asScala.exists { opt => opt == "-Ysemanticdb" }
+        item.getOptions.asScala.exists { opt =>
+          opt == "-Ysemanticdb" || opt == "-Xsemanticdb"
+        }
       } else {
         item.getOptions.asScala.exists { opt =>
           opt.startsWith("-Xplugin:") && opt

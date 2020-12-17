@@ -46,8 +46,15 @@ object MetalsPlugin extends AutoPlugin {
       } else {
         val sdbOptions = semanticdbOptions.value
         (old.toVector ++ sdbOptions ++
-          (if (ScalaInstance.isDotty(versionOfScala)) Some("-Ysemanticdb")
-           else None)).distinct
+          (if (ScalaInstance.isDotty(versionOfScala)) {
+             if (
+               versionOfScala == "3.0.0-M1" || versionOfScala == "3.0.0-M2" || versionOfScala
+                 .startsWith("0.")
+             )
+               Some("-Ysemanticdb")
+             else
+               Some("-Xsemanticdb")
+           } else None)).distinct
       }
     },
     semanticdbEnabled := {
