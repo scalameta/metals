@@ -233,7 +233,7 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.2"
   val coursier = "2.0.7"
-  val ammonite = "2.3.8"
+  val ammonite = "2.3.8-4-88785969"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
 }
@@ -571,8 +571,7 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        // TODO https://github.com/scalameta/metals/issues/2248 remove 2.13.3 once resolved
-        List(V.scala211, V.sbtScala, V.scala212, "2.13.3", V.scala213, V.scala3)
+        List(V.scala211, V.sbtScala, V.scala212, V.scala213, V.scala3)
       )
     )
 
