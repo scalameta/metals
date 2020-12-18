@@ -97,6 +97,34 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("invalid-version") {
+    val fakeScalaVersion = "30.3.4"
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/main.sc
+           | // scala ${fakeScalaVersion}
+           |
+           |val cantStandTheHeat = "stay off the street"
+           |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand("ammonite-start")
+    } yield {
+      assertNoDiff(
+        client.workspaceErrorShowMessages,
+        s"Error fetching Ammonite ${V.ammoniteVersion} for scala ${fakeScalaVersion}"
+      )
+    }
+  }
+
   // https://github.com/scalameta/metals/issues/1801
   test("hover".flaky) {
     for {

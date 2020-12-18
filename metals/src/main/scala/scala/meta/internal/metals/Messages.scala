@@ -278,6 +278,14 @@ object Messages {
     }
   }
 
+  def errorFromThrowable(
+      throwable: Throwable
+  ): MessageParams =
+    new MessageParams(
+      MessageType.Error,
+      throwable.getMessage()
+    )
+
   object IncompatibleBloopVersion {
     def manually: MessageActionItem =
       new MessageActionItem("I'll update manually")

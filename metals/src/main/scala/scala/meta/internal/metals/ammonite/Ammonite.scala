@@ -22,6 +22,7 @@ import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.ammonite.Ammonite.AmmoniteMetalsException
 import scala.meta.io.AbsolutePath
 
 import ammrunner.AmmoniteFetcher
@@ -239,35 +240,41 @@ final class Ammonite(
           if (docs.isEmpty) "No Ammonite script is opened"
           else "No open document is not an Ammonite script"
         scribe.error(msg)
-        Future.failed(new Exception(msg))
+        Future.failed(new AmmoniteMetalsException(msg))
       }
 
-    commandScriptOpt.flatMap { case (command, script) =>
-      val extraScripts = buffers.open.toVector
-        .filter(path => path.isAmmoniteScript && path != script)
-      val jvmOpts = userConfig().ammoniteJvmProperties.getOrElse(Nil)
-      val commandWithJVMOpts =
-        command.addJvmArgs(jvmOpts: _*)
-      val futureConn = BuildServerConnection.fromSockets(
-        workspace(),
-        buildClient,
-        languageClient,
-        () =>
-          Ammonite
-            .socketConn(
-              commandWithJVMOpts,
-              script +: extraScripts,
-              workspace()
-            ),
-        tables().dismissedNotifications.ReconnectAmmonite,
-        config,
-        "Ammonite"
-      )
-      for {
-        conn <- futureConn
-        _ <- connectToNewBuildServer(conn)
-      } yield ()
-    }
+    commandScriptOpt
+      .flatMap { case (command, script) =>
+        val extraScripts = buffers.open.toVector
+          .filter(path => path.isAmmoniteScript && path != script)
+        val jvmOpts = userConfig().ammoniteJvmProperties.getOrElse(Nil)
+        val commandWithJVMOpts =
+          command.addJvmArgs(jvmOpts: _*)
+        val futureConn = BuildServerConnection.fromSockets(
+          workspace(),
+          buildClient,
+          languageClient,
+          () =>
+            Ammonite
+              .socketConn(
+                commandWithJVMOpts,
+                script +: extraScripts,
+                workspace()
+              ),
+          tables().dismissedNotifications.ReconnectAmmonite,
+          config,
+          "Ammonite"
+        )
+        for {
+          conn <- futureConn
+          _ <- connectToNewBuildServer(conn)
+        } yield ()
+      }
+      .recoverWith {
+        case t @ (_: AmmoniteFetcherException | _: AmmoniteMetalsException) =>
+          languageClient.showMessage(Messages.errorFromThrowable(t))
+          Future(())
+      }
   }
 
   def stop(): CompletableFuture[Object] = {
@@ -358,6 +365,8 @@ object Ammonite {
 
   private def startTag: String =
     "/*<start>*/\n"
+
+  case class AmmoniteMetalsException(msg: String) extends Exception(msg)
 
   def isAmmBuildTarget(id: BuildTargetIdentifier): Boolean =
     id.getUri.endsWith(".sc")
