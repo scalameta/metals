@@ -20,6 +20,7 @@ import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
@@ -81,6 +82,8 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
 ) extends PresentationCompiler {
+
+  import ScalaPresentationCompiler._
 
   def this() = this(Nil, Nil)
 
@@ -449,7 +452,9 @@ case class ScalaPresentationCompiler(
       item.setDocumentation(hoverContent(None, None, documentation))
     }
 
-    item.setDeprecated(completion.symbols.forall(_.isDeprecated))
+    if (completion.symbols.forall(_.isDeprecated)) {
+      setCompletionItemDeprecated(item)
+    }
     completion.symbols.headOption
       .foreach(s => item.setKind(completionItemKind(s)))
     item
@@ -540,4 +545,13 @@ case class ScalaPresentationCompiler(
       )
     }
   }
+}
+
+object ScalaPresentationCompiler {
+  private[this] val deprecatedTagList: List[CompletionItemTag] =
+    List(CompletionItemTag.Deprecated)
+
+  /** Add the `Deprecated` tag to the completion item. */
+  private def setCompletionItemDeprecated(value: CompletionItem): Unit =
+    value.setTags(deprecatedTagList.asJava)
 }
