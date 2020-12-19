@@ -7,6 +7,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import munit.Location
+import munit.TestOptions
 import tests.BasePCSuite
 import tests.RangeReplace
 import tests.TestHovers
@@ -17,16 +18,16 @@ abstract class BaseHoverSuite
     with RangeReplace {
 
   def check(
-      name: String,
+      testOpt: TestOptions,
       original: String,
       expected: String,
       includeRange: Boolean = false,
       automaticPackage: Boolean = true,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    test(name) {
+    test(testOpt) {
       val filename = "Hover.scala"
-      val pkg = scala.meta.Term.Name(name).syntax
+      val pkg = scala.meta.Term.Name(testOpt.name).syntax
       val noRange = original
         .replace("<<", "")
         .replace(">>", "")

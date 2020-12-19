@@ -189,15 +189,15 @@ lazy val V = new {
   val scalameta = "4.4.2"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.5-28-e52cd3ad"
-  val scala3 = "3.0.0-M2"
+  val bloop = "1.4.6-15-209c2a5c"
+  val scala3 = "3.0.0-M3"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.13"
+  val mdoc = "2.2.14"
   val scalafmt = "2.7.4"
-  val munit = "0.7.19"
+  val munit = "0.7.20"
   val scalafix = "0.9.24"
   val lsp4jV = "0.10.0"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
@@ -217,8 +217,9 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(scala3, "3.0.0-M1", "0.27.0-RC1")
-  def deprecatedScala3Versions = Seq("0.26.0")
+  def nonDeprecatedScala3Versions =
+    Seq(scala3, "3.0.0-M2", "3.0.0-M1", "0.27.0-RC1")
+  def deprecatedScala3Versions = Seq()
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions
@@ -305,7 +306,7 @@ val mtagsSettings = List(
     baseDirectory.in(ThisBuild).value / "mtags",
     scalaVersion.value
   ),
-  // @note needed to deal with issues in https://github.com/scalameta/metals/pull/2157
+  // @note needed to deal with issues with dottyDoc
   sources in (Compile, doc) := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
@@ -581,7 +582,13 @@ lazy val mtest = project
     testSettings,
     sharedSettings,
     libraryDependencies ++= List(
-      "org.scalameta" %% "munit" % V.munit,
+      // munit had to drop support for 3.0.0-M1 and 0.27.0-RC1
+      if (
+        scalaVersion.value == "0.27.0-RC1" || scalaVersion.value == "3.0.0-M1"
+      )
+        "org.scalameta" %% "munit" % "0.7.19"
+      else
+        "org.scalameta" %% "munit" % V.munit,
       "io.get-coursier" % "interface" % V.coursierInterfaces
     ),
     buildInfoPackage := "tests",
