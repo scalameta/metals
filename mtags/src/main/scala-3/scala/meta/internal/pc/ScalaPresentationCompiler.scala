@@ -446,6 +446,10 @@ case class ScalaPresentationCompiler(
       doc <- ParsedComment.docOf(sym)
     } yield doc
 
+    if (documentation.nonEmpty) {
+      item.setDocumentation(hoverContent(None, None, documentation))
+    }
+
     if (completion.symbols.forall(_.isDeprecated)) {
       item.setTags((item.getTags.asScala.toSet ++ Set(CompletionItemTag.Deprecated)).toList.asJava)
     }
