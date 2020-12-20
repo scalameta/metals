@@ -234,13 +234,13 @@ object ScaladocParser {
    * The start of a Scaladoc code block
    */
   private val CodeBlockStartRegex =
-    new Regex("""(.*?)((?:\{\{\{)|(?:\u000E<pre(?: [^>]*)?>\u000E))(.*)""")
+    new Regex("""(.*?)((?:\{\{\{)|(?:<pre(?: [^>]*)?>))(.*)""")
 
   /**
    * The end of a Scaladoc code block
    */
   private val CodeBlockEndRegex =
-    new Regex("""(.*?)((?:\}\}\})|(?:\u000E</pre>\u000E))(.*)""")
+    new Regex("""(.*?)((?:\}\}\})|(?:</pre>))(.*)""")
 
   /**
    * A key used for a tag map. The key is built from the name of the tag and
