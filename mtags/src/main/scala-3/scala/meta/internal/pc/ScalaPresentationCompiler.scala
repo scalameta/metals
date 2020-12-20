@@ -83,8 +83,6 @@ case class ScalaPresentationCompiler(
     workspace: Option[Path] = None
 ) extends PresentationCompiler {
 
-  import ScalaPresentationCompiler._
-
   def this() = this(Nil, Nil)
 
   import InteractiveDriver._
@@ -448,13 +446,10 @@ case class ScalaPresentationCompiler(
       doc <- ParsedComment.docOf(sym)
     } yield doc
 
-    if (documentation.nonEmpty) {
-      item.setDocumentation(hoverContent(None, None, documentation))
+    if (completion.symbols.forall(_.isDeprecated)) {
+      item.setTags((item.getTags.asScala.toSet ++ Set(CompletionItemTag.Deprecated)).toList.asJava)
     }
 
-    if (completion.symbols.forall(_.isDeprecated)) {
-      setCompletionItemDeprecated(item)
-    }
     completion.symbols.headOption
       .foreach(s => item.setKind(completionItemKind(s)))
     item
@@ -545,13 +540,4 @@ case class ScalaPresentationCompiler(
       )
     }
   }
-}
-
-object ScalaPresentationCompiler {
-  private[this] val deprecatedTagList: List[CompletionItemTag] =
-    List(CompletionItemTag.Deprecated)
-
-  /** Add the `Deprecated` tag to the completion item. */
-  private def setCompletionItemDeprecated(value: CompletionItem): Unit =
-    value.setTags(deprecatedTagList.asJava)
 }
