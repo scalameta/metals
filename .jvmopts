@@ -3,5 +3,4 @@
 -Xmx2G
 -XX:ReservedCodeCacheSize=1024m
 -XX:+TieredCompilation
--XX:+CMSClassUnloadingEnabled
 -Dfile.encoding=UTF-8
