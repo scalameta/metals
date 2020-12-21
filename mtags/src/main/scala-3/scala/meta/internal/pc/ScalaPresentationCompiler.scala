@@ -451,7 +451,7 @@ case class ScalaPresentationCompiler(
     }
 
     if (completion.symbols.forall(_.isDeprecated)) {
-      item.setTags((item.getTags.asScala.toSet ++ Set(CompletionItemTag.Deprecated)).toList.asJava)
+      item.setTags((Option(item.getTags).fold(Set.empty[CompletionItemTag])(_.asScala.toSet) ++ Set(CompletionItemTag.Deprecated)).toList.asJava)
     }
 
     completion.symbols.headOption
