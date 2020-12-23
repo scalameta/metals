@@ -230,7 +230,7 @@ class SbtBloopLspSuite
            |scalaVersion := "${V.scala212}"
            |lazy val a = project.settings(scalaVersion := "2.12.4")
            |lazy val b = project.settings(scalaVersion := "2.12.3")
-           |lazy val c = project.settings(scalaVersion := "2.11.12")
+           |lazy val c = project.settings(scalaVersion := "2.11.11")
            |lazy val d = project.settings(scalaVersion := "2.11.8")
            |lazy val e = project.settings(scalaVersion := "2.10.7")
            |lazy val f = project.settings(scalaVersion := "${V.scala212}")
@@ -243,7 +243,7 @@ class SbtBloopLspSuite
            |object A
            |/c/src/main/scala/a/A.scala
            |package a
-           |object A // 2.11.12
+           |object A // 2.11.11
            |/d/src/main/scala/a/A.scala
            |package a
            |object A // 2.11.8
@@ -263,7 +263,7 @@ class SbtBloopLspSuite
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
         UnsupportedScalaVersion.message(
-          Seq("2.12.4", "2.12.3", "2.11.8", "2.10.7")
+          Set("2.12.4", "2.12.3", "2.11.8", "2.11.11", "2.10.7")
         )
       )
       sourceJars <- server.buildTargetSourceJars("a")
