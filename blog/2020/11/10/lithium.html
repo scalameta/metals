@@ -131,7 +131,7 @@ code action is consistent with how sbt's scalafix plugin will behave.</p>
 <p>An example scalafix configuration for the organize imports rule can look like
 this:</p>
 <pre><code class="hljs css language-scala"><span class="hljs-type">OrganizeImports</span> {
-  groups = [<span class="hljs-string">"javax?\\."</span>, <span class="hljs-string">"scala."</span>, <span class="hljs-string">"*"</span>]
+  groups = [<span class="hljs-string">"re:javax?\\."</span>, <span class="hljs-string">"scala."</span>, <span class="hljs-string">"*"</span>]
   removeUnused = <span class="hljs-literal">true</span>
 }
 </code></pre>
