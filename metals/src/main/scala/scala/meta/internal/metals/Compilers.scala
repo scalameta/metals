@@ -333,10 +333,23 @@ class Compilers(
         .asScala
         .map { c =>
           adjust.adjustLocations(c.locations())
+          val definitionPaths = c
+            .locations()
+            .map { loc =>
+              loc.getUri().toAbsolutePath
+            }
+            .asScala
+            .toSet
+
+          val definitionPath = if (definitionPaths.size == 1) {
+            Some(definitionPaths.head)
+          } else {
+            None
+          }
           DefinitionResult(
             c.locations(),
             c.symbol(),
-            None,
+            definitionPath,
             None
           )
         }

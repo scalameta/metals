@@ -286,4 +286,60 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     } yield ()
   }
+
+  test("readonly-files") {
+    for {
+      _ <- server.initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |
+            |/standalone/Main.scala
+            |object Main{
+            |  "asd.".stripSuffix(".")
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """|{
+           |  "show-implicit-conversions-and-classes": true
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("standalone/Main.scala")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  augmentString("asd.").stripSuffix(".")
+           |}
+           |""".stripMargin
+      )
+      _ <- server.assertHoverAtLine(
+        "standalone/Main.scala",
+        "  @@\"asd.\".stripSuffix(\".\")",
+        """|**Synthetics**:
+           |```scala
+           |scala.Predef.augmentString
+           |```
+           |""".stripMargin
+      )
+      _ <- server.didSave("standalone/Main.scala") { _ =>
+        s"""|object Main{
+            |  "asd.".stripSuffix(".")
+            |  "asd.".stripSuffix(".")
+            |}
+            |""".stripMargin
+      }
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  augmentString("asd.").stripSuffix(".")
+           |  augmentString("asd.").stripSuffix(".")
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

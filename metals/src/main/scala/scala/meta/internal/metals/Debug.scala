@@ -9,11 +9,11 @@ object Debug {
     e.setStackTrace(e.getStackTrace.slice(2, 30))
     e.printStackTrace()
   }
-  def printEnclosing()(implicit
+  def printEnclosing(additionalInfo: String = "")(implicit
       enclosing: sourcecode.Enclosing
   ): Unit = {
     val enclosingTrimmed =
       enclosing.value.split(' ').filter(_ != "$anonfun").mkString(" ")
-    scribe.info(enclosingTrimmed)
+    scribe.info(enclosingTrimmed + " " + additionalInfo)
   }
 }

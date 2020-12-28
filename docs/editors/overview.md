@@ -492,7 +492,7 @@ scripts.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Run/Debug</td>
@@ -506,14 +506,14 @@ scripts.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Rename symbol</td>
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Code actions</td>
@@ -534,7 +534,7 @@ scripts.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Formatting</td>
@@ -555,7 +555,7 @@ scripts.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
   </tr>
   <tr>
      <td>Organize imports</td>
@@ -569,7 +569,7 @@ scripts.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
   </tr>
 </tbody>
 </table>
