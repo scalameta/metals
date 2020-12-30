@@ -6,6 +6,7 @@ import java.util.Properties
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath
 
@@ -96,7 +97,8 @@ case class SbtBuildTool(
           writeSingleSbtMetalsPlugin(
             workspace.resolve("project"),
             userConfig,
-            isBloop = false
+            isBloop = false,
+            version
           )
         } else {
           scribe.warn(
@@ -153,7 +155,7 @@ case class SbtBuildTool(
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
     sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
-      writeSingleSbtMetalsPlugin(dir, userConfig, isBloop = true)
+      writeSingleSbtMetalsPlugin(dir, userConfig, isBloop = true, version)
     )
   }
 
@@ -178,14 +180,21 @@ object SbtBuildTool {
   def writeSingleSbtMetalsPlugin(
       projectDir: AbsolutePath,
       userConfig: () => UserConfiguration,
-      isBloop: Boolean
+      isBloop: Boolean,
+      sbtVersion: String
   ): Unit = {
     if (isBloop && userConfig().bloopSbtAlreadyInstalled) {
       return
     } else {
       val versionToUse =
-        if (isBloop) userConfig().currentBloopVersion
-        else BuildInfo.metalsVersion
+        if (isBloop) {
+          def default = userConfig().currentBloopVersion
+          // from 1.4.6 Bloop is not compatible with sbt < 1.3.0
+          if (SemVer.isLaterVersion(sbtVersion, "1.3.0"))
+            "1.4.6"
+          else
+            default
+        } else BuildInfo.metalsVersion
 
       val bytes =
         sbtPlugin(versionToUse, isBloop).getBytes(StandardCharsets.UTF_8)

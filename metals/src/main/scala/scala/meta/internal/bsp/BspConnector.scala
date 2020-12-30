@@ -69,7 +69,8 @@ class BspConnector(
           SbtBuildTool.writeSingleSbtMetalsPlugin(
             workspace.resolve("project"),
             userConfig,
-            isBloop = false
+            isBloop = false,
+            details.getVersion()
           )
           val connectionF = bspServers.newServer(workspace, details)
           statusBar
