@@ -66,7 +66,7 @@ final class SyntheticsDecorationProvider(
       val textDocument = currentDocument(path)
       textDocument match {
         case Some(doc) =>
-          publishSyntheticDecorations(path, doc)
+          Future(publishSyntheticDecorations(path, doc))
         case _ =>
           Future.successful(())
       }
@@ -79,7 +79,9 @@ final class SyntheticsDecorationProvider(
     for {
       focused <- focusedDocument()
       filePath = AbsolutePath(path)
-      sourcePath <- SemanticdbClasspath.toScala(workspace, filePath)
+      sourcePath <-
+        if (!filePath.isScala) SemanticdbClasspath.toScala(workspace, filePath)
+        else Some(filePath)
       if sourcePath == focused || !clientConfig.isDidFocusProvider()
       textDoc <- textDocument.documents.headOption
       source <- fingerprints.loadLastValid(sourcePath, textDoc.md5, charset)
@@ -296,30 +298,26 @@ final class SyntheticsDecorationProvider(
   private def publishSyntheticDecorations(
       path: AbsolutePath,
       textDocument: TextDocument
-  ): Future[Unit] =
-    Future {
-      if (clientConfig.isInlineDecorationProvider()) {
-        val edit = buffer.tokenEditDistance(path, textDocument.text)
-        val decorations = for {
-          synthetic <- textDocument.synthetics
-          (decoration, range) <- printSyntheticInfo(
-            textDocument,
-            synthetic,
-            toDecorationString(textDocument),
-            userConfig(),
-            isHover = false
-          )
-          lspRange <- edit.toRevisedStrict(range).toIterable
-        } yield decorationOptions(lspRange, decoration)
+  ): Unit =
+    if (clientConfig.isInlineDecorationProvider()) {
+      val edit = buffer.tokenEditDistance(path, textDocument.text)
+      val decorations = for {
+        synthetic <- textDocument.synthetics
+        (decoration, range) <- printSyntheticInfo(
+          textDocument,
+          synthetic,
+          toDecorationString(textDocument),
+          userConfig(),
+          isHover = false
+        )
+        lspRange <- edit.toRevisedStrict(range).toIterable
+      } yield decorationOptions(lspRange, decoration)
 
-        val params =
-          new PublishDecorationsParams(
-            path.toURI.toString(),
-            decorations.toArray
-          )
-
-        client.metalsPublishDecorations(params)
-      }
+      val params =
+        new PublishDecorationsParams(
+          path.toURI.toString(),
+          decorations.toArray
+        )
+      client.metalsPublishDecorations(params)
     }
-
 }

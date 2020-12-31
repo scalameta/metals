@@ -23,6 +23,8 @@ final class Tables(
     new Digests(() => connection, time)
   val dependencySources =
     new DependencySources(() => connection)
+  val worksheetSources =
+    new WorksheetDependencySources(() => connection)
   val dismissedNotifications =
     new DismissedNotifications(() => connection, time)
   val buildServers =

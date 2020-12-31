@@ -522,7 +522,7 @@ final class TestingServer(
   }
 
   def didSave(filename: String)(fn: String => String): Future[Unit] = {
-    Debug.printEnclosing()
+    Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
@@ -540,7 +540,7 @@ final class TestingServer(
   }
 
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
-    Debug.printEnclosing()
+    Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
@@ -564,7 +564,7 @@ final class TestingServer(
   }
 
   def didOpen(filename: String): Future[Unit] = {
-    Debug.printEnclosing()
+    Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val uri = abspath.toURI.toString
     val extension = PathIO.extension(abspath.toNIO)
@@ -579,7 +579,7 @@ final class TestingServer(
   }
 
   def didClose(filename: String): Future[Unit] = {
-    Debug.printEnclosing()
+    Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val uri = abspath.toURI.toString
     Future.successful {

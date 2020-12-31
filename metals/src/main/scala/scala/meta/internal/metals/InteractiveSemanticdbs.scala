@@ -11,6 +11,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.semanticdb.TextDocument
@@ -67,14 +68,28 @@ final class InteractiveSemanticdbs(
   }
 
   override def textDocument(source: AbsolutePath): TextDocumentLookup = {
+
+    def shouldTryCalculateInteractiveSemanticdb =
+      source.isDependencySource(workspace) || buildTargets
+        .inverseSources(source)
+        .isEmpty
+
     if (
-      !source.toLanguage.isScala ||
-      !source.isDependencySource(workspace)
+      source.isWorksheet || !source.toLanguage.isScala || !shouldTryCalculateInteractiveSemanticdb
     ) {
       TextDocumentLookup.NotFound(source)
     } else {
-      val result =
-        textDocumentCache.computeIfAbsent(source, path => compile(path).orNull)
+      val result = textDocumentCache.compute(
+        source,
+        (path, existingDoc) => {
+          val text = FileIO.slurp(source, charset)
+          val sha = MD5.compute(text)
+          if (existingDoc == null || existingDoc.md5 != sha)
+            compile(path, text)
+          else
+            existingDoc
+        }
+      )
       TextDocumentLookup.fromOption(source, Option(result))
     }
   }
@@ -86,9 +101,15 @@ final class InteractiveSemanticdbs(
     for {
       destination <- result.definition
       if destination.isDependencySource(workspace)
-      buildTarget <- buildTargets.inverseSources(source)
+      buildTarget = buildTargets.inverseSources(source)
     } {
-      tables.dependencySources.setBuildTarget(destination, buildTarget)
+      if (source.isWorksheet) {
+        tables.worksheetSources.setWorksheet(destination, source)
+      } else {
+        buildTarget.foreach { target =>
+          tables.dependencySources.setBuildTarget(destination, target)
+        }
+      }
     }
   }
 
@@ -104,7 +125,8 @@ final class InteractiveSemanticdbs(
     }
     if (path.isDependencySource(workspace)) {
       textDocument(path).toOption.foreach { doc =>
-        activeDocument.set(Some(doc.uri))
+        val uri = path.toURI.toString()
+        activeDocument.set(Some(uri))
         val diagnostics = for {
           diag <- doc.diagnostics
           if diag.severity.isError
@@ -118,7 +140,7 @@ final class InteractiveSemanticdbs(
         if (diagnostics.nonEmpty) {
           statusBar.addMessage(partialNavigation(clientConfig.icons))
           client.publishDiagnostics(
-            new PublishDiagnosticsParams(doc.uri, diagnostics.asJava)
+            new PublishDiagnosticsParams(uri, diagnostics.asJava)
           )
         }
       }
@@ -134,25 +156,33 @@ final class InteractiveSemanticdbs(
     fromDatabase.orElse(inferBuildTarget(source))
   }
 
-  private def compile(source: AbsolutePath): Option[s.TextDocument] = {
-    for {
+  private def compile(source: AbsolutePath, text: String): s.TextDocument = {
+    val fromTarget = for {
       buildTarget <- getBuildTarget(source)
       pc <- compilers().loadCompiler(buildTarget)
-    } yield {
-      val text = FileIO.slurp(source, charset)
-      val uri = source.toURI.toString
-      // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
-      // here but to avoid it we would need to refactor the `Semanticdbs` trait,
-      // which requires more effort than it's worth.
-      val bytes = pc
-        .semanticdbTextDocument(uri, text)
-        .get(
-          clientConfig.initialConfig.compilers.timeoutDelay,
-          clientConfig.initialConfig.compilers.timeoutUnit
-        )
-      val textDocument = TextDocument.parseFrom(bytes)
-      textDocument
-    }
+    } yield pc
+
+    val pc = fromTarget
+      .orElse {
+        tables.worksheetSources
+          .getWorksheet(source)
+          .flatMap(compilers().loadWorksheetCompiler)
+      }
+      .getOrElse(compilers().ramboCompiler)
+
+    val uri = source.toURI.toString
+    // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
+    // here but to avoid it we would need to refactor the `Semanticdbs` trait,
+    // which requires more effort than it's worth.
+    val bytes = pc
+      .semanticdbTextDocument(uri, text)
+      .get(
+        clientConfig.initialConfig.compilers.timeoutDelay,
+        clientConfig.initialConfig.compilers.timeoutUnit
+      )
+    val textDocument = TextDocument.parseFrom(bytes)
+    textDocument
+
   }
 
   private def inferBuildTarget(

@@ -517,7 +517,8 @@ class MetalsLanguageServer(
       referencesProvider,
       implementationProvider,
       syntheticsDecorator,
-      buildTargets
+      buildTargets,
+      interactiveSemanticdbs
     )
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
@@ -893,10 +894,12 @@ class MetalsLanguageServer(
       .map(new ApplyWorkspaceEditParams(_))
       .foreach(languageClient.applyEdit)
 
+    // trigger compilation in preparation for definition requests for dependency sources and standalone files
+    val loadInteractive = Future {
+      interactiveSemanticdbs.textDocument(path)
+    }
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
-        // trigger compilation in preparation for definition requests
-        interactiveSemanticdbs.textDocument(path)
         // publish diagnostics
         interactiveSemanticdbs.didFocus(path)
         ()
@@ -908,7 +911,9 @@ class MetalsLanguageServer(
       val compileFuture =
         compilations.compileFile(path)
       Future
-        .sequence(List(parseTrees(path), loadFuture, compileFuture))
+        .sequence(
+          List(loadInteractive, parseTrees(path), loadFuture, compileFuture)
+        )
         .ignoreValue
         .asJava
     }
@@ -1163,6 +1168,8 @@ class MetalsLanguageServer(
           Future(reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue
+        ) ++ paths.map(f =>
+          Future(semanticDBIndexer.onStandaloneFilesChange(f))
         )
       )
       .ignoreValue

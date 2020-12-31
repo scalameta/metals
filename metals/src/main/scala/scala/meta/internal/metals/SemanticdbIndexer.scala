@@ -8,7 +8,9 @@ import scala.util.control.NonFatal
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.TextDocumentLookup.Success
 import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import com.google.protobuf.InvalidProtocolBufferException
@@ -17,7 +19,8 @@ class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider,
     implicitDecorator: SyntheticsDecorationProvider,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    interactiveSemanticdbs: InteractiveSemanticdbs
 ) {
 
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
@@ -75,6 +78,22 @@ class SemanticdbIndexer(
       } finally {
         stream.close()
       }
+    }
+  }
+
+  def onStandaloneFilesChange(path: AbsolutePath): Unit = {
+    if (!path.isWorksheet && buildTargets.inverseSources(path).isEmpty) {
+      interactiveSemanticdbs.textDocument(path) match {
+        case Success(document) =>
+          val docs = TextDocuments(Seq(document))
+          val nioPath = path.toNIO
+          referenceProvider.onChange(docs, nioPath)
+          implementationProvider.onChange(docs, nioPath)
+          implicitDecorator.onChange(docs, nioPath)
+        case _ =>
+          scribe.warn(s"Unable to produce semanticdb for $path")
+      }
+
     }
   }
 
