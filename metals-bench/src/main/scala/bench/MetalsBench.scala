@@ -7,10 +7,10 @@ import scala.tools.nsc.interactive.Global
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsLogger
-import scala.meta.internal.metals.Trees
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
@@ -82,7 +82,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaTokenize(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
-      val scanner = new LegacyScanner(input, meta.dialects.Scala213)
+      val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)
       var i = 0
       scanner.foreach(_ => i += 1)
     }
@@ -109,7 +109,7 @@ class MetalsBench {
   def scalametaParse(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       import scala.meta._
-      Trees.defaultDialect(input).parse[Source].get
+      Trees.defaultTokenizerDialect(input).parse[Source].get
     }
   }
 

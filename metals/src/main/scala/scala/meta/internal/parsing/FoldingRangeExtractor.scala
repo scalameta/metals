@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.parsing
 
 import java.util
 
@@ -6,8 +6,8 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 import scala.meta._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.KwMatch
 

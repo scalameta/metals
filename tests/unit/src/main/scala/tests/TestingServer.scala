@@ -29,6 +29,7 @@ import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuic
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.DebugSession
@@ -44,12 +45,12 @@ import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Trees
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
@@ -58,6 +59,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
+import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.ClientCapabilities
@@ -122,6 +124,8 @@ final class TestingServer(
     initializationOptions: Option[InitializationOptions]
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
+
+  val testTrees = new Trees(new BuildTargets(_ => None), buffers)
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
@@ -340,7 +344,7 @@ final class TestingServer(
       source <- workspaceSources()
       input = source.toInputFromBuffers(buffers)
       identifier = source.toTextDocumentIdentifier
-      token <- Trees.defaultDialect(input).tokenize.get
+      token <- Trees.defaultTokenizerDialect(input).tokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server.definitionResult(params).asJava.get()
@@ -391,6 +395,9 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
+    val documentSymbolCapabilities = new DocumentSymbolCapabilities()
+    documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
+    textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)
     val initOptions = initializationOptions.getOrElse(
       InitializationOptions.Default.copy(
         debuggingProvider = Some(true),
@@ -1208,7 +1215,7 @@ final class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    Trees.defaultDialect(input).tokenize.get.foreach { token =>
+    Trees.defaultTokenizerDialect(input).tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
       val definition = server
         .definitionOrReferences(params, definitionOnly = true)
@@ -1273,9 +1280,9 @@ final class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val params = new DocumentSymbolParams(identifier)
     for {
-      documentSymbols <- server.documentSymbolResult(params)
+      documentSymbols <- server.documentSymbol(params).asScala
     } yield {
-      val symbols = documentSymbols.asScala.toSymbolInformation(uri)
+      val symbols = documentSymbols.getLeft.asScala.toSymbolInformation(uri)
       val textDocument = s.TextDocument(
         schema = s.Schema.SEMANTICDB4,
         language = s.Language.SCALA,

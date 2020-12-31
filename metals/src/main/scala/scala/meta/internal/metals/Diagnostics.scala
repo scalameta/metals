@@ -6,17 +6,16 @@ import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.{meta => m}
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
@@ -39,7 +38,8 @@ final class Diagnostics(
     buffers: Buffers,
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
-    config: () => UserConfiguration
+    config: () => UserConfiguration,
+    workspace: Option[AbsolutePath]
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -77,6 +77,16 @@ final class Diagnostics(
     compileTimer.remove(target)
   }
 
+  def onSyntaxError(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
+    diags.headOption match {
+      case Some(diagnostic) if !workspace.exists(path.isInReadonlyDirectory) =>
+        syntaxError(path) = diagnostic
+        publishDiagnostics(path)
+      case None =>
+        onNoSyntaxError(path)
+    }
+  }
+
   def onNoSyntaxError(path: AbsolutePath): Unit = {
     syntaxError.remove(path) match {
       case Some(_) =>
@@ -84,27 +94,6 @@ final class Diagnostics(
       case None =>
         () // Do nothing, there was no previous syntax error.
     }
-  }
-
-  def onSyntaxError(
-      path: AbsolutePath,
-      pos: m.Position,
-      shortMessage: String
-  ): Unit = {
-    onSyntaxError(
-      path,
-      new Diagnostic(
-        pos.toLSP,
-        shortMessage,
-        DiagnosticSeverity.Error,
-        "scalameta"
-      )
-    )
-  }
-
-  def onSyntaxError(path: AbsolutePath, d: Diagnostic): Unit = {
-    syntaxError(path) = d
-    publishDiagnostics(path)
   }
 
   def didDelete(path: AbsolutePath): Unit = {

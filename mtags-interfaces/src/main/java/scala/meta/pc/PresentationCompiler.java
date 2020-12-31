@@ -94,26 +94,6 @@ public abstract class PresentationCompiler {
     public abstract void didClose(URI uri);
 
     /**
-     * Ranges where the document can be collapsed.
-     */
-    public abstract CompletableFuture<List<FoldingRange>> foldingRange(VirtualFileParams params);
-
-    /**
-     * Formatting changes after pressing specified keys
-     */
-    public abstract CompletableFuture<List<TextEdit>> onTypeFormatting(DocumentOnTypeFormattingParams params, String source);
-    
-    /**
-     * Formatting changes after pasting a part of a file
-     */
-    public abstract CompletableFuture<List<TextEdit>> rangeFormatting(DocumentRangeFormattingParams params, String source);
-
-    /**
-     * All symbols inside a text document
-     */
-    public abstract CompletableFuture<List<DocumentSymbol>> documentSymbols(VirtualFileParams params);
-    
-    /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
     public abstract CompletableFuture<byte[]> semanticdbTextDocument(String filename, String code);
@@ -212,8 +192,4 @@ public abstract class PresentationCompiler {
      */
     public abstract String scalaVersion();
 
-    /**
-     * Returns enclosing class or object for a cursor position
-     */
-    public abstract CompletableFuture<Optional<String>> enclosingClass(OffsetParams params);
 }

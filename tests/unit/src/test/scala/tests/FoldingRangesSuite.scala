@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.FoldingRanges
+import scala.meta.internal.parsing.FoldingRanges
 
 import org.eclipse.lsp4j.FoldingRange
 

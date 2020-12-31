@@ -1,18 +1,21 @@
-package tests.pc
+package tests
 
 import java.nio.file.Paths
 
-import scala.compat.java8.FutureConverters._
-import scala.concurrent.ExecutionContext
+import scala.meta.Dialect
+import scala.meta.dialects
+import scala.meta.inputs.Input
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.parsing.ClassFinder
+import scala.meta.internal.parsing.Trees
+import scala.meta.io.AbsolutePath
 
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.EmptyCancelToken
-
+import munit.FunSuite
 import munit.TestOptions
-import tests.BasePCSuite
-import tests.BuildInfoVersions
 
-class ClassBreakpointSuite extends BasePCSuite {
+class ClassBreakpointSuite extends FunSuite {
 
   check(
     "simple",
@@ -115,33 +118,52 @@ class ClassBreakpointSuite extends BasePCSuite {
   )
 
   check(
-    "method-scala3".tag(RunForScalaVersion(BuildInfoVersions.scala3Versions)),
+    "method-scala3",
     """|package a.b
        |def method() = {
        |>>  println(0)
        |}
        |""".stripMargin,
-    "a.b.Main$package"
+    "a.b.Main$package",
+    dialect = dialects.Scala3
+  )
+
+  check(
+    "inner-class-scala3",
+    """|package a
+       |
+       |@main 
+       |def helloWorld(): Unit = {
+       |  object Even {
+       |>>  def unapply(s: String): Boolean = s.size % 2 == 0
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    "a.Main$package",
+    dialect = dialects.Scala3
   )
 
   def check(
       name: TestOptions,
       original: String,
-      expected: String
+      expected: String,
+      dialect: Dialect = dialects.Scala213
   ): Unit =
     test(name) {
-      implicit val ec: ExecutionContext = ExecutionContext.global
+      val buffers = Buffers()
+      val trees = new Trees(new BuildTargets(_ => None), buffers, dialect)
+      val classFinder = new ClassFinder(trees)
       val filename: String = "Main.scala"
-      val uri = Paths.get(filename).toUri()
-      val offsetParams = CompilerOffsetParams.apply(
-        uri,
-        original.replace(">>", ""),
-        original.indexOf(">>"),
-        EmptyCancelToken
-      )
-      presentationCompiler.enclosingClass(offsetParams).toScala.map { result =>
-        assert(result.isPresent())
-        assertNoDiff(result.get(), expected)
-      }
+      val path = AbsolutePath(Paths.get(filename))
+      val sourceText = original.replace(">>", "")
+      val offset = original.indexOf(">>")
+      val input = Input.VirtualFile(filename, sourceText)
+      val pos: scala.meta.Position =
+        scala.meta.Position.Range(input, offset, offset)
+      buffers.put(path, sourceText)
+      val sym = classFinder.findClass(path, pos.toLSP.getStart())
+      assert(sym.isDefined)
+      assertNoDiff(sym.get, expected)
     }
 }

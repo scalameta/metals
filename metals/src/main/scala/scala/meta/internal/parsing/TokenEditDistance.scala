@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.parsing
 
 import java.util.logging.Logger
 
@@ -313,10 +313,10 @@ object TokenEditDistance {
       noMatch
     } else {
       val result = for {
-        revised <- Trees.defaultDialect(revisedInput).tokenize.toOption
+        revised <- Trees.defaultTokenizerDialect(revisedInput).tokenize.toOption
         original <- {
           if (originalInput == revisedInput) Some(revised)
-          else Trees.defaultDialect(originalInput).tokenize.toOption
+          else Trees.defaultTokenizerDialect(originalInput).tokenize.toOption
         }
       } yield {
         if (doNothingWhenUnchanged && revised == original) unchanged

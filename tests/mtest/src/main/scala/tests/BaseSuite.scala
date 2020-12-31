@@ -28,7 +28,7 @@ class BaseSuite extends munit.FunSuite with Assertions {
     this.isJava8 || SemVer.isCompatibleVersion(
       BaseSuite.minScalaVersionForJDK9OrHigher,
       scalaVersion
-    ) || scalaVersion.startsWith("0.") || scalaVersion.startsWith("3.")
+    ) || scalaVersion.startsWith("3.")
 
   override def munitTimeout: Duration = Duration("10min")
 
@@ -65,13 +65,6 @@ class BaseSuite extends munit.FunSuite with Assertions {
         case (ver, code) if scalaVersion.startsWith(ver) => code
       }
       .headOption
-      .orElse {
-        compat.collect {
-          // fallback to 3.0 for 0. pre-release versions
-          case (ver, code) if scalaVersion.startsWith("0.") && ver == "3.0" =>
-            code
-        }.headOption
-      }
       .getOrElse(default)
 
     postProcess(result)

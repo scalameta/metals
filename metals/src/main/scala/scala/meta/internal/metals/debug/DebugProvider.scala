@@ -20,7 +20,6 @@ import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Compilations
-import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
@@ -35,6 +34,7 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.parsing.ClassFinder
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -55,7 +55,7 @@ class DebugProvider(
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
     statusBar: StatusBar,
-    compilers: Compilers,
+    classFinder: ClassFinder,
     index: OnDemandSymbolIndex,
     stacktraceAnalyzer: StacktraceAnalyzer
 ) {
@@ -114,7 +114,7 @@ class DebugProvider(
             sourcePathProvider,
             awaitClient,
             connectToServer,
-            compilers,
+            classFinder,
             stacktraceAnalyzer
           )
       }

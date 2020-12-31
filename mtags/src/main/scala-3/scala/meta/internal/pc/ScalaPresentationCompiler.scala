@@ -61,7 +61,6 @@ import dotty.tools.dotc.util.ScriptSourceFile
 import dotty.tools.io.VirtualFile
 
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.ClassFinder
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.pc.DefinitionResultImpl
@@ -186,43 +185,6 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[CompletionItem] = {
     CompletableFuture.completedFuture(
       null
-    )
-  }
-
-  // TODO NOT IMPLEMENTED
-  def foldingRange(
-      params: VirtualFileParams
-  ): CompletableFuture[ju.List[FoldingRange]] = {
-    CompletableFuture.completedFuture(
-      List.empty[FoldingRange].asJava
-    )
-  }
-
-  // TODO NOT IMPLEMENTED
-  def documentSymbols(
-      params: VirtualFileParams
-  ): CompletableFuture[ju.List[DocumentSymbol]] = {
-    CompletableFuture.completedFuture(
-      List.empty[DocumentSymbol].asJava
-    )
-  }
-
-  // TODO NOT IMPLEMENTED
-  def onTypeFormatting(
-      params: DocumentOnTypeFormattingParams,
-      source: String
-  ): CompletableFuture[ju.List[TextEdit]] =
-    CompletableFuture.completedFuture(
-      List.empty[TextEdit].asJava
-    )
-
-  // TODO NOT IMPLEMENTED
-  def rangeFormatting(
-      params: DocumentRangeFormattingParams,
-      source: String
-  ): CompletableFuture[ju.List[TextEdit]] = {
-    CompletableFuture.completedFuture(
-      List.empty[TextEdit].asJava
     )
   }
 
@@ -528,23 +490,4 @@ case class ScalaPresentationCompiler(
 
   override def isLoaded() = compilerAccess.isLoaded()
 
-  override def enclosingClass(
-      params: OffsetParams
-  ): CompletableFuture[ju.Optional[String]] = {
-    compilerAccess.withInterruptableCompiler(
-      Optional.empty,
-      params.token
-    ) { access =>
-      val driver = access.compiler()
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(params.uri, sourceFile)
-      val filename =
-        Paths.get(params.uri()).getFileName.toString.stripSuffix(".scala")
-      Optional.of(
-        ClassFinder.findClassForOffset(params.offset, filename)(
-          using driver.currentCtx
-        )
-      )
-    }
-  }
 }

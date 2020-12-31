@@ -31,8 +31,10 @@ import scala.{meta => m}
 
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments
+import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
@@ -692,6 +694,31 @@ object MetalsEnrichments
       state.map(
         _.map(f)
       )
+  }
+
+  implicit class XtensionTreeTokenStream(tree: m.Tree) {
+    import scala.meta._
+    def leadingTokens: Iterator[m.Token] =
+      tree.origin match {
+        case Origin.Parsed(input, dialect, pos) =>
+          val tokens = dialect(input).tokenize.get
+          tokens.slice(0, pos.start - 1).reverseIterator
+        case _ => Iterator.empty
+      }
+
+    def trailingTokens: Iterator[m.Token] =
+      tree.origin match {
+        case Origin.Parsed(input, dialect, pos) =>
+          val tokens = dialect(input).tokenize.get
+          tokens.slice(pos.end + 1, tokens.length).iterator
+        case _ => Iterator.empty
+      }
+
+    def findFirstLeading(predicate: m.Token => Boolean): Option[m.Token] =
+      leadingTokens.find(predicate)
+
+    def findFirstTrailing(predicate: m.Token => Boolean): Option[m.Token] =
+      trailingTokens.find(predicate)
   }
 
 }

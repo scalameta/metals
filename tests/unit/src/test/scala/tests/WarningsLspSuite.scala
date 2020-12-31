@@ -128,7 +128,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
 
   test("no-warnings-scala-3") {
     cleanWorkspace()
-    val using = "3.0.0-M1"
+    val using = V.scala3
     for {
       _ <- server.initialize(
         s"""/metals.json

@@ -3,19 +3,20 @@ package tests
 import java.nio.file.Paths
 import java.util.UUID
 
-import scala.meta.internal.metals.FoldingRangeProvider
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.metals.Trees
+import scala.meta.internal.parsing.FoldingRangeProvider
+import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
 import tests.BuildInfo.testResourceDirectory
 
 class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
-  private val trees = new Trees()
-
-  private val foldingRangeProvider =
-    new FoldingRangeProvider(trees, foldOnlyLines = false)
+  private val buffers = Buffers()
+  private val trees = new Trees(new BuildTargets(_ => None), buffers)
+  private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
 
   override def testCases(): List[ExpectTestCase] = {
     val inputDirectory = AbsolutePath(testResourceDirectory)
@@ -45,13 +46,13 @@ class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
       source: String
   ): java.util.List[l.FoldingRange] = {
     val path = registerSource(source)
-    foldingRangeProvider.getRangedFor(path.toURI, source)
+    foldingRangeProvider.getRangedFor(path)
   }
 
   private def registerSource(source: String): AbsolutePath = {
     val name = UUID.randomUUID().toString + ".scala"
     val path = AbsolutePath(Paths.get(name))
-    trees.didChange(path.toURI, source)
+    buffers.put(path, source)
     path
   }
 }

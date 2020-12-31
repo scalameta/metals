@@ -3,10 +3,10 @@ package tests
 import scala.meta._
 import scala.meta.internal.inputs._
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.Trees
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 
@@ -45,7 +45,7 @@ class DefinitionSuite extends DirectoryExpectSuite("definition") {
         file,
         { () =>
           val input = file.input
-          val tokens = Trees.defaultDialect(input).tokenize.get
+          val tokens = Trees.defaultTokenizerDialect(input).tokenize.get
           val sb = new StringBuilder
           tokens.foreach(token => {
             sb.append(token.syntax)

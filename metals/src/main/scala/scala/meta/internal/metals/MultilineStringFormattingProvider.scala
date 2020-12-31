@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.parsing.Trees
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
@@ -13,7 +14,11 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextEdit
 
-object MultilineStringFormattingProvider {
+class MultilineStringFormattingProvider(
+    buffers: Buffers,
+    trees: Trees,
+    userConfig: () => UserConfiguration
+) {
 
   private val quote = '"'
   private val space = " "
@@ -310,7 +315,7 @@ object MultilineStringFormattingProvider {
       val virtualFile = Input.VirtualFile(source.toString(), sourceText)
       val startPos = range.getStart.toMeta(virtualFile)
       val endPos = range.getEnd.toMeta(virtualFile)
-      val tokens = Trees.defaultDialect(virtualFile).tokenize.toOption
+      val tokens = Trees.defaultTokenizerDialect(sourceText).tokenize.toOption
       fn(startPos, endPos, tokens)
     } else Nil
   }
@@ -408,65 +413,75 @@ object MultilineStringFormattingProvider {
   }
 
   def format(
-      params: DocumentOnTypeFormattingParams,
-      sourceText: String,
-      enableStripMargin: Boolean
+      params: DocumentOnTypeFormattingParams
   ): List[TextEdit] = {
+    val uri = params.getTextDocument().getUri().toAbsolutePath
+    val enableStripMargin = userConfig().enableStripMarginOnTypeFormatting
     val range = new Range(params.getPosition, params.getPosition)
     val doc = params.getTextDocument()
     val triggerChar = params.getCh
-    val splitLines = sourceText.split('\n')
     val position = params.getPosition
-    withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
-      tokens match {
-        case Some(tokens) =>
-          indentTokensOnTypeFormatting(
-            startPos,
-            endPos,
-            tokens,
-            triggerChar,
-            splitLines,
-            position,
-            sourceText,
-            enableStripMargin
-          )
-        case None =>
-          if (triggerChar == "\"" && onlyFourQuotes(splitLines, position))
-            replaceWithSixQuotes(position)
-          else if (
-            triggerChar == "\n" && doubleQuoteNotClosed(
-              splitLines,
-              position
-            )
-          )
-            fixStringNewline(position, splitLines)
-          else Nil
+    buffers
+      .get(uri)
+      .map { sourceText =>
+        val splitLines = sourceText.split('\n')
+        withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
+          tokens match {
+            case Some(tokens) =>
+              indentTokensOnTypeFormatting(
+                startPos,
+                endPos,
+                tokens,
+                triggerChar,
+                splitLines,
+                position,
+                sourceText,
+                enableStripMargin
+              )
+            case None =>
+              if (triggerChar == "\"" && onlyFourQuotes(splitLines, position))
+                replaceWithSixQuotes(position)
+              else if (
+                triggerChar == "\n" && doubleQuoteNotClosed(
+                  splitLines,
+                  position
+                )
+              )
+                fixStringNewline(position, splitLines)
+              else Nil
+          }
+        }
       }
-    }
+      .getOrElse(Nil)
   }
 
   def format(
-      params: DocumentRangeFormattingParams,
-      sourceText: String
+      params: DocumentRangeFormattingParams
   ): List[TextEdit] = {
+    val uri = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
     val doc = params.getTextDocument()
-    val splitLines = sourceText.split('\n')
-    withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
-      tokens match {
-        case Some(tokens) =>
-          indentOnRangeFormatting(
-            startPos,
-            endPos,
-            tokens,
-            false,
-            splitLines,
-            range,
-            sourceText
-          )
-        case None => Nil
+    buffers
+      .get(uri)
+      .map { sourceText =>
+        val splitLines = sourceText.split('\n')
+        withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
+          tokens match {
+            case Some(tokens) =>
+              indentOnRangeFormatting(
+                startPos,
+                endPos,
+                tokens,
+                false,
+                splitLines,
+                range,
+                sourceText
+              )
+            case None => Nil
+          }
+        }
       }
-    }
+      .getOrElse(Nil)
   }
 
 }

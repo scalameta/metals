@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.parsing
 
 import scala.annotation.tailrec
 

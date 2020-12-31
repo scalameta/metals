@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.codeactions._
+import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -13,13 +14,14 @@ final class CodeActionProvider(
     compilers: Compilers,
     buffers: Buffers,
     buildTargets: BuildTargets,
-    scalafixProvider: ScalafixProvider
+    scalafixProvider: ScalafixProvider,
+    trees: Trees
 )(implicit ec: ExecutionContext) {
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol(),
-    new StringActions(buffers),
+    new StringActions(buffers, trees),
     new OrganizeImports(scalafixProvider, buildTargets)
   )
 

@@ -14,13 +14,12 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.dialects.Scala213
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.Trees
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
-import scala.meta.quasiquotes._
 import scala.meta.transversers.SimpleTraverser
 
 object ScalaMtags {
@@ -32,7 +31,7 @@ class ScalaMtags(val input: Input.VirtualFile)
     extends SimpleTraverser
     with MtagsIndexer {
 
-  private val root: Parsed[Source] = Trees.defaultDialect(input).parse[Source]
+  private val root: Parsed[Source] = Scala213(input).parse[Source]
 
   def source: Source = root.get
   override def language: Language = Language.SCALA
@@ -43,7 +42,7 @@ class ScalaMtags(val input: Input.VirtualFile)
     }
   }
   def currentTree: Tree = myCurrentTree
-  private var myCurrentTree: Tree = q"a"
+  private var myCurrentTree: Tree = Source(Nil)
   override def apply(tree: Tree): Unit =
     withOwner() {
       def continue(): Unit = super.apply(tree)

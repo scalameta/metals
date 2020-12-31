@@ -52,10 +52,7 @@ object MetalsPlugin extends AutoPlugin {
         val sdbOptions = semanticdbOptions.value
         (old.toVector ++ sdbOptions ++
           (if (ScalaInstance.isDotty(versionOfScala)) {
-             if (
-               versionOfScala == "3.0.0-M1" || versionOfScala == "3.0.0-M2" || versionOfScala
-                 .startsWith("0.")
-             )
+             if (versionOfScala == "3.0.0-M1" || versionOfScala == "3.0.0-M2")
                Some("-Ysemanticdb")
              else
                Some("-Xsemanticdb")

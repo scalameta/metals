@@ -11,6 +11,7 @@ import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
