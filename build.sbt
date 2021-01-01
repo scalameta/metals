@@ -232,7 +232,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.2"
-  val coursier = "2.0.7"
+  val coursier = "2.0.8"
   val ammonite = "2.3.8-4-88785969"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
@@ -411,7 +411,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.3.1",
+      "org.flywaydb" % "flyway-core" % "7.3.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -428,7 +428,7 @@ lazy val metals = project
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "21",
+      "dev.dirs" % "directories" % "23",
       // ==================
       // Scala dependencies
       // ==================
@@ -440,8 +440,8 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.1.7",
-      "com.outr" %% "scribe-slf4j" % "3.1.7", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.1.8",
+      "com.outr" %% "scribe-slf4j" % "3.1.8", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.0",
       // for JSON formatted doctor
