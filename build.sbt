@@ -428,7 +428,7 @@ lazy val metals = project
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "21",
+      "dev.dirs" % "directories" % "23",
       // ==================
       // Scala dependencies
       // ==================
@@ -440,8 +440,8 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.1.7",
-      "com.outr" %% "scribe-slf4j" % "3.1.7", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.1.8",
+      "com.outr" %% "scribe-slf4j" % "3.1.8", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.0",
       // for JSON formatted doctor
