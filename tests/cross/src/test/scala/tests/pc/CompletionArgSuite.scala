@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionArgSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "arg",
@@ -18,7 +14,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "3.0" ->
+        """|assertion = : Boolean
+           |""".stripMargin
+    )
   )
 
   check(
@@ -31,7 +32,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg1
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map( // findPossibleDefaults and fillAllFields not yet supported
+      "3.0" ->
+        """|message = : => Any
+           |""".stripMargin
+    )
   )
 
   check(
@@ -44,7 +50,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg2
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map( // findPossibleDefaults and fillAllFields not yet supported
+      "3.0" ->
+        """|message = : => Any
+           |""".stripMargin
+    )
   )
 
   def user: String =
@@ -68,7 +79,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg3
        |User arg3
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(4),
+    compat = Map( // findPossibleDefaults and fillAllFields not yet supported
+      "3.0" ->
+        """|age = : Int
+           |followers = : Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -83,7 +100,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |followers = : Int
        |Main arg4
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "3.0" ->
+        """|age = : Int
+           |followers = : Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -99,7 +122,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg5
        |User arg5
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(4),
+    compat = Map(
+      "3.0" ->
+        """|age = : Int
+           |followers = : Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -114,7 +143,14 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |age = : Int
        |followers = : Int
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "3.0" ->
+        """|address = : String
+           |age = : Int
+           |followers = : Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -127,7 +163,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|x = : Int
        |Main arg7
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(2),
+    compat = Map(
+      "3.0" ->
+        """|x = : A
+           |""".stripMargin
+    )
   )
 
   check(
@@ -141,7 +182,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg8
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "3.0" ->
+        """|suffix = : String
+           |""".stripMargin
+    )
   )
 
   check(
@@ -156,7 +202,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |Main arg9
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "3.0" ->
+        """|end = : Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -168,7 +219,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |""".stripMargin,
-    topLines = Option(1)
+    topLines = Option(1),
+    compat = Map(
+      "3.0" ->
+        """|address = : String
+           |""".stripMargin
+    )
   )
 
   check(
@@ -212,7 +268,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|isResourceFile = : Boolean
        |isResourceFile = isLargeBanana : Boolean
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3.0" ->
+        """|isResourceFile = : Boolean
+           |""".stripMargin
+    )
   )
 
   check(
@@ -227,7 +288,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = : Int
        |argument = argument : Int
        |""".stripMargin,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "3.0" -> // sort not yet supported
+        """|argument = : Int
+           |argument: Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -247,7 +314,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = number4 : Int
        |argument = number8 : Int
        |""".stripMargin,
-    topLines = Some(5)
+    topLines = Some(5),
+    compat = Map(
+      "3.0" ->
+        """|argument = : Int
+           |""".stripMargin
+    )
   )
 
   checkEditLine(
