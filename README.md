@@ -47,8 +47,6 @@ case classes remain.
 - [IntelliJ IDEA](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
   the most widely used IDE for Scala using a re-implementation of the Scala
   typechecker.
-- [Scala IDE](http://scala-ide.org/): Eclipse-based IDE using the Scala
-  Presentation Compiler.
 
 ## Why Metals?
 
