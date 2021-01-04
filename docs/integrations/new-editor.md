@@ -118,7 +118,7 @@ The currently available settings for `InitializationOptions` are listed below.
       "doctorProvider": "json" | "html",
       "executeClientCommandProvider": boolean,
       "globSyntax": "vscode" | "uri"
-      "icons": "octicons" | "vscode" | "unicode" | "atom",
+      "icons": "octicons" | "vscode" | "unicode",
       "inlineDecorationProvider": boolean,
       "inputBoxProvider": boolean,
       "isExitOnShutdown" : boolean,
@@ -219,7 +219,7 @@ multiline textEdits such as the "implement all methods" completion.
 Possible values:
 
 - `on`: (default): the client automatically adds in the indentation. This is the
-  case for VS Code, Atom, Sublime, and coc.nvim.
+  case for VS Code, Sublime, and coc.nvim.
 - `off`: the client does not add any indentation when receiving a multi-line
   textEdit
 
@@ -295,9 +295,6 @@ Possible values:
 - `vscode`: use [Octicons](https://octicons.github.com) such as `$(rocket)` for
   status bar messages, as supported by th
   [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
-- `atom`: use HTML-formatted [Octicons](https://octicons.github.com) such as
-  `<span class='icon icon-rocket'></span>` for status bar messages, as supported
-  by the Atom status bar.
 - `unicode`: use unicode emojis like 🚀 for status bar messages.
 
 ##### `inputBoxProvider`

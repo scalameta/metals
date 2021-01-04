@@ -24,7 +24,6 @@ functionality.
   <tr>
     <td />
     <td align="center">Visual Studio Code</td>
-    <td align="center">Atom</td>
     <td align="center">Vim</td>
     <td align="center">Sublime Text 3</td>
     <td align="center">Emacs</td>
@@ -37,13 +36,11 @@ functionality.
     <td align="center">Single click</td>
     <td align="center">Single click</td>
     <td align="center">Single click</td>
-    <td align="center">Single click</td>
     <td align="center">Few steps</td>
     <td align="center">Few steps</td>
   </tr>
   <tr>
     <td>Build import</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -57,11 +54,9 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Goto definition</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -71,7 +66,6 @@ functionality.
   <tr>
     <td>Completions</td>
     <td align="center">✅</td>
-    <td align="center">✅*</td>
     <td align="center">✅*</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -84,12 +78,10 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Parameter hints</td>
     <td align="center">✅</td>
-    <td align="center"></td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -102,12 +94,10 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Run/Debug</td>
     <td align="center">✅</td>
-    <td align="center"></td>
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
@@ -115,7 +105,6 @@ functionality.
   </tr>
   <tr>
     <td>Find implementations</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -129,11 +118,9 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Code actions</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -144,7 +131,6 @@ functionality.
   <tr>
     <td>Worksheets</td>
     <td align="center">✅</td>
-    <td align="center">Comments</td>
     <td align="center">✅</td>
     <td align="center">Comments</td>
     <td align="center">Comments</td>
@@ -152,7 +138,6 @@ functionality.
   </tr>
   <tr>
     <td>Document symbols</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">Flat</td>
     <td align="center">Flat</td>
@@ -162,7 +147,6 @@ functionality.
   <tr>
     <td>Workspace symbols</td>
     <td align="center">✅</td>
-    <td align="center"></td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -174,13 +158,11 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
     <td align="center">✅*</td>
   </tr>
   <tr>
     <td>Folding</td>
     <td align="center">✅</td>
-    <td align="center"> </td>
     <td align="center">✅</td>
     <td align="center"> </td>
     <td align="center">✅</td>
@@ -193,12 +175,10 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Metals Extensions</td>
     <td align="center">✅</td>
-    <td align="center">Status bar</td>
     <td align="center">✅</td>
     <td align="center">Status bar, Input box</td>
     <td align="center">Status bar</td>
@@ -207,7 +187,6 @@ functionality.
   <tr>
      <td>Organize imports</td>
      <td align="center">✅</td>
-     <td align="center"></td>
      <td align="center">✅</td>
      <td align="center"></td>
      <td align="center">✅</td>
@@ -216,7 +195,6 @@ functionality.
   <tr>
      <td>Implicit decorations</td>
      <td align="center">✅</td>
-     <td align="center">Shown in hover</td>
      <td align="center">Shown in hover</td>
      <td align="center">Shown in hover</td>
      <td align="center">✅</td>
@@ -278,9 +256,6 @@ buffer.
   definition.
 
 ## Completions
-
-**✅ Atom**: no auto-import and string interpolator completions produce invalid
-code.
 
 **✅ Vim**: auto-import and snippets require
 [coc.nvim](https://github.com/neoclide/coc.nvim) client.

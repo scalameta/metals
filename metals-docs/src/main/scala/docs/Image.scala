@@ -8,12 +8,6 @@ object Image {
       "importCommand" -> "https://i.imgur.com/QHLKt8u.png",
       "runDoctor" -> "https://i.imgur.com/K02g0UM.png"
     ),
-    "atom" -> Map(
-      "importBuild" -> "https://i.imgur.com/WxfhMFz.png",
-      "importChanges" -> "https://i.imgur.com/xDb9oJU.png",
-      "importCommand" -> "https://i.imgur.com/EGVO5Yb.png",
-      "runDoctor" -> "https://i.imgur.com/8ODqcUj.png"
-    ),
     "vim" -> Map(
       "importBuild" -> "https://i.imgur.com/1EyQPTC.png",
       "importChanges" -> "https://i.imgur.com/iocTVb6.png"

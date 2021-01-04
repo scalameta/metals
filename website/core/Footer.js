@@ -41,7 +41,6 @@ class Footer extends React.Component {
           <div>
             <h5>Editors</h5>
             <a href={`${docsUrl}editors/vscode.html`}>Visual Studio Code</a>
-            <a href={`${docsUrl}editors/atom.html`}>Atom</a>
             <a href={`${docsUrl}editors/vim.html`}>Vim</a>
             <a href={`${docsUrl}editors/sublime.html`}>Sublime Text</a>
             <a href={`${docsUrl}editors/emacs.html`}>Emacs</a>
