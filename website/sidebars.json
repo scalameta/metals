@@ -3,7 +3,6 @@
     "Text Editors": [
       "editors/overview",
       "editors/vscode",
-      "editors/atom",
       "editors/vim",
       "editors/sublime",
       "editors/emacs",
