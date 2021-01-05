@@ -5,10 +5,20 @@ title: Vim
 
 ![Vim demo](https://i.imgur.com/4BYHCCL.gif)
 
-Metals works with most LSP clients for Vim, but we recommend using the
-[coc-metals extension](https://github.com/scalameta/coc-metals) for
-[`coc.nvim`](https://github.com/neoclide/coc.nvim) which will provide the most
-complete implementation of LSP and Metals-specific helpers.
+Metals works with most LSP clients for Vim, but we recommend using one of the
+Metals-specific extensions to get the best experience since they offer
+Metals-specific commands and implement the Metals LSP extensions. 
+
+- [coc-metals](https://github.com/scalameta/coc-metals) An extension for
+    [`coc.nvim`](https://github.com/neoclide/coc.nvim) This provides the most
+    feature-filled experience. This is recommended for most users, and the
+    majority of the documentation below reflects this option.
+- [nvim-metals](https://github.com/scalameta/nvim-metals) A Lua extension for
+    the [built-in LSP support](https://neovim.io/doc/user/lsp.html) in Neovim
+    0.5.x. Recommended for those that like a thinner client. _NOTE_: This option
+    is _not_ as stable as `coc-metals` yet and requires the nightly version of
+    Neovim. You can find detailed instructions for this plugin
+    [here](https://github.com/scalameta/nvim-metals/blob/master/doc/metals.txt).
 
 ```scala mdoc:requirements
 
@@ -115,11 +125,16 @@ function! s:check_back_space() abort
 endfunction
 
 " Use <c-space> to trigger completion.
-inoremap <silent><expr> <c-space> coc#refresh()
+if has('nvim')
+  inoremap <silent><expr> <c-space> coc#refresh()
+else
+  inoremap <silent><expr> <c-@> coc#refresh()
+endif
 
-" Use <cr> to confirm completion, `<C-g>u` means break undo chain at current position.
-" Coc only does snippet and additional edit on confirm.
-inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+" Make <CR> auto-select the first completion item and notify coc.nvim to
+" format on enter, <cr> could be remapped by other vim plugin
+inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
+                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
 " Use `[g` and `]g` to navigate diagnostics
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
@@ -140,8 +155,10 @@ nnoremap <silent> K :call <SID>show_documentation()<CR>
 function! s:show_documentation()
   if (index(['vim','help'], &filetype) >= 0)
     execute 'h '.expand('<cword>')
+  elseif (coc#rpc#ready())
+    call CocActionAsync('doHover')
   else
-    call CocAction('doHover')
+    execute '!' . &keywordprg . " " . expand('<cword>')
   endif
 endfunction
 
@@ -151,23 +168,20 @@ autocmd CursorHold * silent call CocActionAsync('highlight')
 " Remap for rename current word
 nmap <leader>rn <Plug>(coc-rename)
 
-" Remap for format selected region
-xmap <leader>f  <Plug>(coc-format-selected)
-nmap <leader>f  <Plug>(coc-format-selected)
-
 augroup mygroup
   autocmd!
-  " Setup formatexpr specified filetype(s).
-  autocmd FileType scala setl formatexpr=CocAction('formatSelected')
   " Update signature help on jump placeholder
   autocmd User CocJumpPlaceholder call CocActionAsync('showSignatureHelp')
 augroup end
 
-" Remap for do codeAction of current line
-xmap <leader>a  <Plug>(coc-codeaction-line)
-nmap <leader>a  <Plug>(coc-codeaction-line)
+" Applying codeAction to the selected region.
+" Example: `<leader>aap` for current paragraph
+xmap <leader>a  <Plug>(coc-codeaction-selected)
+nmap <leader>a  <Plug>(coc-codeaction-selected)
 
-" Fix autofix problem of current line
+" Remap keys for applying codeAction to the current buffer.
+nmap <leader>ac  <Plug>(coc-codeaction)
+" Apply AutoFix to problem on the current line.
 nmap <leader>qf  <Plug>(coc-fix-current)
 
 " Use `:Format` to format current buffer
@@ -180,22 +194,23 @@ command! -nargs=? Fold :call     CocAction('fold', <f-args>)
 " Make sure `"codeLens.enable": true` is set in your coc config
 nnoremap <leader>cl :<C-u>call CocActionAsync('codeLensAction')<CR>
 
-" Show all diagnostics
-nnoremap <silent> <space>a  :<C-u>CocList diagnostics<cr>
-" Manage extensions
-nnoremap <silent> <space>e  :<C-u>CocList extensions<cr>
-" Show commands
-nnoremap <silent> <space>c  :<C-u>CocList commands<cr>
-" Find symbol of current document
-nnoremap <silent> <space>o  :<C-u>CocList outline<cr>
-" Search workspace symbols
-nnoremap <silent> <space>s  :<C-u>CocList -I symbols<cr>
+" Mappings for CoCList
+" Show all diagnostics.
+nnoremap <silent><nowait> <space>a  :<C-u>CocList diagnostics<cr>
+" Manage extensions.
+nnoremap <silent><nowait> <space>e  :<C-u>CocList extensions<cr>
+" Show commands.
+nnoremap <silent><nowait> <space>c  :<C-u>CocList commands<cr>
+" Find symbol of current document.
+nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
+" Search workspace symbols.
+nnoremap <silent><nowait> <space>s  :<C-u>CocList -I symbols<cr>
 " Do default action for next item.
-nnoremap <silent> <space>j  :<C-u>CocNext<CR>
+nnoremap <silent><nowait> <space>j  :<C-u>CocNext<CR>
 " Do default action for previous item.
-nnoremap <silent> <space>k  :<C-u>CocPrev<CR>
-" Resume latest coc list
-nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
+nnoremap <silent><nowait> <space>k  :<C-u>CocPrev<CR>
+" Resume latest coc list.
+nnoremap <silent><nowait> <space>p  :<C-u>CocListResume<CR>
 
 " Notify coc.nvim that <enter> has been pressed.
 " Currently used for the formatOnType feature.
@@ -489,8 +504,10 @@ This step cleans up resources that are used by the server.
 
 ## Using an alternative LSP Client
 
-While we recommend using the `coc-metals` extension with `coc.nvim`, Metals will work
-with these alternative LSP clients. Keep in mind that they have varying levels of LSP support.
+While we recommend using the `coc-metals` extension with `coc.nvim`, or
+`nvim-metals` with Neovim, Metals will work with these alternative LSP clients.
+Keep in mind that they have varying levels of LSP support, and you need to
+bootstrap Metals yourself.
 
 - [`vim-lsc`](https://github.com/natebosch/vim-lsc/): simple installation and written in Vimscript.
 - [`LanguageClient-neovim`](https://github.com/autozimu/LanguageClient-neovim/): client written in Rust.
@@ -499,12 +516,20 @@ with these alternative LSP clients. Keep in mind that they have varying levels o
 
 ### Generating metals binary
 
-If you now start Vim in a Scala project, it will fail since the `metals-vim`
-binary does not exist yet.
+If you only want to use the latest stable version of Metals, the easiest way to
+install Metals is using [coursier](https://get-coursier.io/). Once installed you
+can simply do a `cs install metals` to install the latest stable version of
+Metals. You can then also do a `cs update metals` to update it.
+
+If you'd like to bootstrap your own Metals for a specific version, you're also
+able to do so like this:
 
 ```scala mdoc:bootstrap:metals-vim vim-lsc
 
 ```
-
-The `-Dmetals.client=vim-lsc` flag is important since it configures Metals for
-usage with the `vim-lsc` client.
+The `-Dmetals.client=vim-lsc` flag is there just as a helper to match your
+potential client. So make sure it matches your client name. This line isn't
+mandatory though as your client can fully be configured via
+`InitializationOptions`, which should be easily configurable by your client. You
+can read more about his
+[here](https://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html#initializationoptions).
