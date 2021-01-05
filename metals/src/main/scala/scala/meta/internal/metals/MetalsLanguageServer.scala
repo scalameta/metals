@@ -589,7 +589,7 @@ class MetalsLanguageServer(
       workspace,
       buildTargets,
       languageClient,
-      () => bspSession.map(_.mainConnection.name),
+      () => bspSession,
       () => bspConnector.resolve(),
       () => httpServer,
       tables,
@@ -1948,10 +1948,7 @@ class MetalsLanguageServer(
         buildTargets.resetConnections(idToConnection)
         lastImportedBuilds = bspBuilds.map(_.build)
       }
-      _ <- profiledIndexWorkspace(() => {
-        val main = session.mainConnection
-        doctor.check(main.name, main.version)
-      })
+      _ <- profiledIndexWorkspace(() => doctor.check())
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
     } yield {
       BuildChange.Reconnected
@@ -2160,7 +2157,7 @@ class MetalsLanguageServer(
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
-    if (doctor.isUnsupportedBloopVersion(bspServerVersion)) {
+    if (doctor.isUnsupportedBloopVersion()) {
       val notification = tables.dismissedNotifications.IncompatibleBloop
       if (!notification.isDismissed) {
         val messageParams = IncompatibleBloopVersion.params(
@@ -2301,10 +2298,7 @@ class MetalsLanguageServer(
         .workspaceReload()
         .map { _ =>
           scribe.info("Correctly reloaded workspace")
-          profiledIndexWorkspace(() => {
-            val main = session.mainConnection
-            doctor.check(main.name, main.version)
-          })
+          profiledIndexWorkspace(() => doctor.check())
           workspaceReload.persistChecksumStatus(Status.Installed, buildTool)
           BuildChange.Reloaded
         }
