@@ -122,7 +122,13 @@ final class BuildTargets(
       scalaTarget <- target.asScalaBuildTarget
     } yield {
       val autoImports = target.asSbtBuildTarget.map(_.getAutoImports.asScala)
-      ScalaTarget(target, scalaTarget, scalac, autoImports)
+      ScalaTarget(
+        target,
+        scalaTarget,
+        scalac,
+        autoImports,
+        target.getDataKind() == "sbt"
+      )
     }
   }
 

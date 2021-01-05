@@ -548,7 +548,7 @@ object Messages {
 
   object DeprecatedScalaVersion {
     def message(
-        usingNow: Iterable[String]
+        usingNow: Set[String]
     ): String = {
       val using = "legacy " + usingString(usingNow)
       val recommended = recommendationString(usingNow)
@@ -559,7 +559,7 @@ object Messages {
 
   object UnsupportedScalaVersion {
     def message(
-        usingNow: Iterable[String]
+        usingNow: Set[String]
     ): String = {
       val using = usingString(usingNow)
       val recommended = recommendationString(usingNow)
@@ -577,13 +577,36 @@ object Messages {
 
   object FutureScalaVersion {
     def message(
-        usingNow: Iterable[String]
+        usingNow: Set[String]
     ): String = {
       val using = usingString(usingNow)
       val recommended = recommendationString(usingNow)
       val isAre = if (usingNow.size == 1) "is" else "are"
       s"You are using $using, which $isAre not yet supported in this version of Metals. " +
         s"Please downgrade to $recommended for the moment until the new Metals release."
+    }
+  }
+
+  object DeprecatedSbtVersion {
+    def message: String = {
+      val recommended = "1.3.2"
+      s"You are using an old sbt version, navigation for which might not be supported in the future versions of Metals. " +
+        s"Please upgrade to at least sbt $recommended."
+    }
+  }
+
+  object UnsupportedSbtVersion {
+    def message: String = {
+      val recommended = "1.3.2"
+      s"You are using an old sbt version, navigation for which is not supported in this version of Metals. " +
+        s"Please upgrade to at least sbt $recommended."
+    }
+  }
+
+  object FutureSbtVersion {
+    def message: String = {
+      s"You are using an sbt version not yet supported in this version of Metals." +
+        s"Please downgrade to sbt ${BuildInfo.sbtVersion}"
     }
   }
 
