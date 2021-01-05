@@ -4,19 +4,18 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.bsp.BspResolvedResult
+import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.internal.metals.config.DoctorFormat
-import scala.meta.internal.semver.SemVer
+import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -30,22 +29,19 @@ final class Doctor(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
-    currentBuildServer: () => Option[String],
+    currentBuildServer: () => Option[BspSession],
     calculateNewBuildServer: () => BspResolvedResult,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
-  private var bspServerName: Option[String] = None
-  private var bspServerVersion: Option[String] = None
-
-  def isUnsupportedBloopVersion(serverVersion: String): Boolean = {
-    bspServerName.contains("Bloop") && !SemVer.isCompatibleVersion(
-      BuildInfo.bloopVersion,
-      serverVersion
+  private val problemResolver =
+    new ProblemResolver(
+      workspace,
+      currentBuildServer,
+      clientConfig.isCommandInHtmlSupported()
     )
-  }
 
   /**
    * Returns a full HTML page for the HTTP client.
@@ -70,6 +66,9 @@ final class Doctor(
       }
     )
   }
+
+  def isUnsupportedBloopVersion(): Boolean =
+    problemResolver.isUnsupportedBloopVersion()
 
   /**
    * Executes the "Reload doctor" server command.
@@ -123,10 +122,8 @@ final class Doctor(
   /**
    * Checks if there are any potential problems and if any, notifies the user.
    */
-  def check(serverName: String, serverVersion: String): Unit = {
-    bspServerName = Some(serverName)
-    bspServerVersion = Some(serverVersion)
-    val summary = problemSummary
+  def check(): Unit = {
+    val summary = problemResolver.problemMessage(allTargets())
     executeReloadDoctor(summary)
     summary match {
       case Some(problem) =>
@@ -146,126 +143,6 @@ final class Doctor(
         }
       case None =>
         () // All OK.
-    }
-  }
-
-  private def recommendation(
-      scalaVersion: String,
-      isSemanticdbEnabled: Boolean,
-      scala: ScalaTarget
-  ): String = {
-    def isMaven: Boolean = workspace.resolve("pom.xml").isFile
-    def hint() =
-      if (isMaven) {
-        val website = clientConfig.doctorFormat match {
-          case DoctorFormat.Json =>
-            "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
-          case DoctorFormat.Html =>
-            "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
-        }
-        "enable SemanticDB following instructions on the " + website
-      } else s"run 'Build import' to enable code navigation."
-
-    if (!isSemanticdbEnabled) {
-      if (bspServerVersion.exists(isUnsupportedBloopVersion)) {
-        s"""|The installed Bloop server version is ${bspServerVersion.get} while Metals requires at least Bloop version ${BuildInfo.bloopVersion},
-            |To fix this problem please update your Bloop server.""".stripMargin
-      } else if (
-        isSupportedScalaVersion(
-          scalaVersion
-        )
-      ) {
-        hint.capitalize
-      } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
-        val recommended = recommendedVersion(scalaVersion)
-        val isRecommenedVersionNewer =
-          SemVer.isCompatibleVersion(scalaVersion, recommended)
-        if (isRecommenedVersionNewer) {
-          s"Upgrade to Scala $recommended and " + hint
-        } else {
-          s"Scala $scalaVersion is not yet supported"
-        }
-
-      } else {
-        val versionToUpgradeTo =
-          if (ScalaVersions.isScala3Version(scalaVersion)) {
-            s"Scala ${BuildInfo.scala3}"
-          } else {
-            s"Scala ${BuildInfo.scala213} or ${BuildInfo.scala212}"
-          }
-        s"Code navigation is not supported for this compiler version, change to " + versionToUpgradeTo + " and " + hint
-      }
-    } else {
-      val messages = ListBuffer.empty[String]
-      if (ScalaVersions.isDeprecatedScalaVersion(scalaVersion)) {
-        messages += s"This Scala version might not be supported in upcoming versions of Metals, " +
-          s"please upgrade to Scala ${recommendedVersion(scalaVersion)}."
-      } else if (!isLatestScalaVersion(scalaVersion)) {
-        messages += s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
-      }
-      if (!scala.isSourcerootDeclared) {
-        messages += s"Add the compiler option ${workspace.sourcerootOption} to ensure code navigation works."
-      }
-      messages.toList match {
-        case Nil => ""
-        case head :: Nil => head
-        case _ =>
-          val html = new HtmlBuilder()
-          html.unorderedList(messages)(html.text).toString
-      }
-    }
-  }
-
-  private def problemSummary: Option[String] = {
-
-    def message(
-        filter: String => Boolean,
-        apply: Iterable[String] => String
-    ): Option[String] = {
-      val versions = (for {
-        target <- allTargets.toIterator
-        if filter(target.scalaVersion)
-      } yield target.scalaVersion).toSet
-
-      if (versions.nonEmpty) {
-        Some(apply(versions))
-      } else {
-        None
-      }
-    }
-
-    message(
-      ScalaVersions.isFutureVersion,
-      Messages.FutureScalaVersion.message
-    ).orElse {
-      message(
-        ver => !ScalaVersions.isSupportedScalaVersion(ver),
-        Messages.UnsupportedScalaVersion.message
-      )
-    }.orElse {
-      possiblyMissingSemanticDB
-    }.orElse {
-      message(
-        ScalaVersions.isDeprecatedScalaVersion,
-        Messages.DeprecatedScalaVersion.message
-      )
-    }
-  }
-
-  private def possiblyMissingSemanticDB: Option[String] = {
-    val targets = allTargets()
-    val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
-    val count = isMissingSemanticdb.length
-    val isAllProjects = count == targets.size
-    if (isMissingSemanticdb.isEmpty) {
-      None
-    } else if (isAllProjects) {
-      Some(CheckDoctor.allProjectsMisconfigured)
-    } else if (count == 1) {
-      val name = isMissingSemanticdb.head.displayName
-      Some(CheckDoctor.singleMisconfiguredProject(name))
-    } else {
-      Some(CheckDoctor.multipleMisconfiguredProjects(count))
     }
   }
 
@@ -489,8 +366,7 @@ final class Doctor(
       } else {
         Icons.unicode.check
       }
-    val recommenedFix =
-      recommendation(scalaVersion, target.isSemanticdbEnabled, target)
+    val recommenedFix = problemResolver.recommendation(target)
     DoctorTargetInfo(
       target.displayName,
       scalaVersion,

@@ -15,7 +15,8 @@ case class ScalaTarget(
     info: BuildTarget,
     scalaInfo: ScalaBuildTarget,
     scalac: ScalacOptionsItem,
-    autoImports: Option[Seq[String]]
+    autoImports: Option[Seq[String]],
+    isSbt: Boolean
 ) {
 
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
