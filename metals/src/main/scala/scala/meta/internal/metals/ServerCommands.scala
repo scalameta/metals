@@ -378,27 +378,28 @@ object ServerCommands {
 
   def all: List[Command] =
     List(
-      ImportBuild,
-      RestartBuildServer,
-      ConnectBuildServer,
-      ScanWorkspaceSources,
-      RunDoctor,
-      CascadeCompile,
-      CancelCompile,
-      CleanCompile,
+      AnalyzeStacktrace,
       BspSwitch,
+      ConnectBuildServer,
+      CancelCompile,
+      CascadeCompile,
+      CleanCompile,
+      CopyWorksheetOutput,
       GenerateBspConfig,
-      StartDebugAdapter,
-      GotoSymbol,
       GotoPosition,
+      GotoSuperMethod,
+      GotoSymbol,
+      ImportBuild,
       NewScalaFile,
       NewScalaProject,
-      GotoSuperMethod,
-      AnalyzeStacktrace,
-      SuperMethodHierarchy,
       ResetChoicePopup,
+      RestartBuildServer,
+      RunDoctor,
+      ScanWorkspaceSources,
       StartAmmoniteBuildServer,
-      StopAmmoniteBuildServer
+      StartDebugAdapter,
+      StopAmmoniteBuildServer,
+      SuperMethodHierarchy
     )
 }
 
