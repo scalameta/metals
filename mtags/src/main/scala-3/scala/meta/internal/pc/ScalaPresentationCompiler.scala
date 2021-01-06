@@ -126,8 +126,8 @@ case class ScalaPresentationCompiler(
         case Some(unit) =>
           val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
           val completions = Completion.completions(pos)(using ctx.fresh.setCompilationUnit(unit))._2
-          val completions2 = completionPosition(pos, path)(using ctx)
-          completions ++ completions2
+          val metalsCompletions = completionPosition(pos, path)(using ctx)
+          completions ++ metalsCompletions
         case None => Nil
       }
       new CompletionList(
