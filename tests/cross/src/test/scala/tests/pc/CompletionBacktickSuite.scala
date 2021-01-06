@@ -50,7 +50,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   )
 
   check(
-    "named-arg",
+    munit.TestOptions("named-arg").ignoreIf(isScala3),
     """|object Main {
        |  def foo(`type`: Int) = 42
        |  foo(type@@)

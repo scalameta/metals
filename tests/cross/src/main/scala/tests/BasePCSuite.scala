@@ -34,7 +34,7 @@ abstract class BasePCSuite extends BaseSuite {
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
   val scalaVersion = BuildInfoVersions.scalaVersion
-  val isScala3 = isScala3Version(scalaVersion)
+  val isScala3: Boolean = isScala3Version(scalaVersion)
   protected val index = new DelegatingGlobalSymbolIndex()
   protected val workspace = new TestingWorkspaceSearch
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
