@@ -1,12 +1,11 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import munit.TestOptions
 
 class CompletionArgSuite extends BaseCompletionSuite {
 
   check(
-    TestOptions("arg").ignoreIf(isScala3),
+    "arg",
     s"""|object Main {
         |  assert(@@)
         |}
@@ -20,7 +19,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3.0" ->
         """|assertion = : Boolean
            |""".stripMargin
-    )
+    ),
+    assumeCond = Some(!isScala3)
   )
 
   check(
@@ -90,7 +90,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    TestOptions("arg4").ignoreIf(isScala3),
+    "arg4",
     s"""|
         |$user
         |object Main {
@@ -107,7 +107,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         """|age = : Int
            |followers = : Int
            |""".stripMargin
-    )
+    ),
+    assumeCond = Some(!isScala3)
   )
 
   check(
@@ -133,7 +134,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    TestOptions("arg6").ignoreIf(isScala3),
+    "arg6",
     s"""|
         |$user
         |object Main {
@@ -144,7 +145,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |age = : Int
        |followers = : Int
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    assumeCond = Some(!isScala3)
   )
 
   check(
@@ -185,7 +187,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    TestOptions("arg9").ignoreIf(isScala3),
+    "arg9",
     // `until` has multiple implicit conversion alternatives
     s"""|
         |object Main {
@@ -201,7 +203,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3.0" ->
         """|end = : Int
            |""".stripMargin
-    )
+    ),
+    assumeCond = Some(!isScala3)
   )
 
   check(
@@ -266,7 +269,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    TestOptions("priority").ignoreIf(isScala3),
+    "priority",
     s"""|object Main {
         |  def foo(argument : Int) : Int = argument
         |  val argument = 5
@@ -277,11 +280,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = : Int
        |argument = argument : Int
        |""".stripMargin,
-    topLines = Some(3)
+    topLines = Some(3),
+    assumeCond = Some(!isScala3)
   )
 
   check(
-    TestOptions("named-multiple").ignoreIf(isScala3),
+    "named-multiple",
     s"""|object Main {
         |  def foo(argument : Int) : Int = argument
         |  val number = 1
@@ -302,11 +306,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3.0" ->
         """|argument = : Int
            |""".stripMargin
-    )
+    ),
+    assumeCond = Some(!isScala3)
   )
 
   checkEditLine(
-    TestOptions("auto-no-show").ignoreIf(isScala3),
+    "auto-no-show",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -316,11 +321,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(rele@@)",
-    "foo(relevant)"
+    "foo(relevant)",
+    assumeCond = Some(!isScala3)
   )
 
   checkEditLine(
-    TestOptions("auto").ignoreIf(isScala3),
+    "auto",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -329,11 +335,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:number}, other = ${2:hello})"
+    "foo(argument = ${1:number}, other = ${2:hello})",
+    assumeCond = Some(!isScala3)
   )
 
   checkEditLine(
-    TestOptions("auto-inheritance").ignoreIf(isScala3),
+    "auto-inheritance",
     s"""|object Main {
         |  trait Animal
         |  class Dog extends Animal
@@ -347,11 +354,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(animal = ${1:dog}, furniture = ${2:chair})"
+    "foo(animal = ${1:dog}, furniture = ${2:chair})",
+    assumeCond = Some(!isScala3)
   )
 
   checkEditLine(
-    TestOptions("auto-multiple-type").ignoreIf(isScala3),
+    "auto-multiple-type",
     s"""|object Main {
         |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
@@ -361,11 +369,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})"
+    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})",
+    assumeCond = Some(!isScala3)
   )
 
   checkEditLine(
-    TestOptions("auto-not-found").ignoreIf(isScala3),
+    "auto-not-found",
     s"""|object Main {
         |  val number = 234
         |  val nothing = throw new Exception
@@ -375,11 +384,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})"
+    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})",
+    assumeCond = Some(!isScala3)
   )
 
   checkEditLine(
-    TestOptions("auto-list").ignoreIf(isScala3),
+    "auto-list",
     s"""|object Main {
         |  def foo(argument : List[String], other : List[Int]) : Int = 0
         |  val list1 = List(1,2,3)
@@ -390,7 +400,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})"
+    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})",
+    assumeCond = Some(!isScala3)
   )
 
 }

@@ -71,7 +71,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      assumeCond: Option[Boolean] = None
   )(implicit loc: Location): Unit = {
     val compatTemplate = compat.map { case (key, value) =>
       key -> template.replace("___", value)
@@ -84,7 +85,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem = assertSingleItem,
       filter = filter,
       command = command,
-      compat = compatTemplate
+      compat = compatTemplate,
+      assumeCond = assumeCond
     )
   }
 
@@ -96,9 +98,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      assumeCond: Option[Boolean] = None
   )(implicit loc: Location): Unit = {
     test(name) {
+      assumeCond.foreach(assume(_))
       val items = getItems(original).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
@@ -162,9 +166,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       includeDetail: Boolean = true,
       filename: String = "A.scala",
       filter: String => Boolean = _ => true,
-      enablePackageWrap: Boolean = true
+      enablePackageWrap: Boolean = true,
+      assumeCond: Option[Boolean] = None
   )(implicit loc: Location): Unit = {
     test(name) {
+      assumeCond.foreach(assume(_))
       val out = new StringBuilder()
       val withPkg =
         if (original.contains("package") || !enablePackageWrap) original
