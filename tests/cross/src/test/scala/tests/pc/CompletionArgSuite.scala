@@ -1,11 +1,12 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import munit.TestOptions
 
 class CompletionArgSuite extends BaseCompletionSuite {
 
   check(
-    "arg",
+    TestOptions("arg").ignoreIf(isScala3),
     s"""|object Main {
         |  assert(@@)
         |}
@@ -89,7 +90,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "arg4",
+    TestOptions("arg4").ignoreIf(isScala3),
     s"""|
         |$user
         |object Main {
@@ -132,7 +133,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "arg6",
+    TestOptions("arg6").ignoreIf(isScala3),
     s"""|
         |$user
         |object Main {
@@ -143,14 +144,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |age = : Int
        |followers = : Int
        |""".stripMargin,
-    topLines = Option(3),
-    compat = Map(
-      "3.0" ->
-        """|address = : String
-           |age = : Int
-           |followers = : Int
-           |""".stripMargin
-    )
+    topLines = Option(3)
   )
 
   check(
@@ -191,7 +185,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "arg9",
+    TestOptions("arg9").ignoreIf(isScala3),
     // `until` has multiple implicit conversion alternatives
     s"""|
         |object Main {
@@ -219,12 +213,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |""".stripMargin,
-    topLines = Option(1),
-    compat = Map(
-      "3.0" ->
-        """|address = : String
-           |""".stripMargin
-    )
+    topLines = Option(1)
   )
 
   check(
@@ -277,7 +266,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "priority",
+    TestOptions("priority").ignoreIf(isScala3),
     s"""|object Main {
         |  def foo(argument : Int) : Int = argument
         |  val argument = 5
@@ -288,17 +277,11 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |argument = : Int
        |argument = argument : Int
        |""".stripMargin,
-    topLines = Some(3),
-    compat = Map(
-      "3.0" -> // sort not yet supported
-        """|argument = : Int
-           |argument: Int
-           |""".stripMargin
-    )
+    topLines = Some(3)
   )
 
   check(
-    "named-multiple",
+    TestOptions("named-multiple").ignoreIf(isScala3),
     s"""|object Main {
         |  def foo(argument : Int) : Int = argument
         |  val number = 1
@@ -323,7 +306,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-no-show",
+    TestOptions("auto-no-show").ignoreIf(isScala3),
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -337,7 +320,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto",
+    TestOptions("auto").ignoreIf(isScala3),
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -350,7 +333,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-inheritance",
+    TestOptions("auto-inheritance").ignoreIf(isScala3),
     s"""|object Main {
         |  trait Animal
         |  class Dog extends Animal
@@ -368,7 +351,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-multiple-type",
+    TestOptions("auto-multiple-type").ignoreIf(isScala3),
     s"""|object Main {
         |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
@@ -382,7 +365,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-not-found",
+    TestOptions("auto-not-found").ignoreIf(isScala3),
     s"""|object Main {
         |  val number = 234
         |  val nothing = throw new Exception
@@ -396,7 +379,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-list",
+    TestOptions("auto-list").ignoreIf(isScala3),
     s"""|object Main {
         |  def foo(argument : List[String], other : List[Int]) : Int = 0
         |  val list1 = List(1,2,3)
