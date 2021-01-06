@@ -7,6 +7,8 @@ import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.NameKinds.DefaultGetterName
+import dotty.tools.dotc.core.Flags
 
 trait Completions {
   def completionPosition(
@@ -55,10 +57,11 @@ case class ArgCompletion(
 
   val isNamed: Set[Name] = args.iterator
     .zip(baseParams.iterator)
-    // filter out synthesized default args
+    // filter out synthesized args and default arg getters
     .filterNot {
-      case (Ident(name), _) => name.toString.contains("$")
-      case (Select(Ident(_), name), _) => name.toString.contains("$") // apply method of case class
+      case (arg, _) if arg.symbol.denot.is(Flags.Synthetic) => true
+      case (Ident(name), _) => name.is(DefaultGetterName) // default args
+      case (Select(Ident(_), name), _) => name.is(DefaultGetterName) // default args for apply method
       case _ => false
     }
     .map {
@@ -69,7 +72,7 @@ case class ArgCompletion(
   val allParams: List[Symbol] = {
     baseParams.filterNot(param =>
       isNamed(param.name) ||
-      param.name.toString.contains("$") // filter out synthesized param, like evidence
+      param.denot.is(Flags.Synthetic) // filter out synthesized param, like evidence
     )
   }
 
