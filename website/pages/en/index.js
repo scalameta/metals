@@ -29,6 +29,25 @@ class Button extends React.Component {
   }
 }
 
+class Dropdown extends React.Component {
+  render() {
+    const gitpod = template => `https://gitpod.io/#template=${template}/https://github.com/MichalBednarz/gitpod-g8`
+
+    const links = [
+      { template: "scala-seed", label: "Scala Seed"}, 
+      { template: "hello-world", label: "Hello World"}, 
+      { template: "scalatest-example", label: "Scalatest Example"}
+    ].map(({ template, label }) => <a target="_blank" rel="noopener noreferrer" href={gitpod(template)}>{label}</a>)
+    
+    return (
+      <div class="dropdown">
+        <Button>GITPOD EXAMPLES</Button>
+        <div class="dropdown-content">{links}</div>
+      </div>       
+    )
+  }
+}
+
 Button.defaultProps = {
   target: "_self"
 };
@@ -67,6 +86,7 @@ class HomeSplash extends React.Component {
             <Button href={docUrl("editors/overview.html", language)}>
               Get Started
             </Button>
+            <Dropdown/>
           </PromoSection>
         </div>
       </SplashContainer>
@@ -86,6 +106,14 @@ const Block = props => (
 
 const Features = props => {
   const features = [
+    {
+      title: "Try it out in an online IDE",
+      content: 
+        `With Gitpod online IDE, you can try out Metals with just one click. 
+         In the Gitpod Examples dropdown above, select Scala repository template that you want to set up.`,
+      image: "https://imgur.com/LmJRqVs.gif",
+      imageAlign: "right",
+    },
     {
       title: "Simple installation",
       content: "Open a directory, import your build and start coding.",
