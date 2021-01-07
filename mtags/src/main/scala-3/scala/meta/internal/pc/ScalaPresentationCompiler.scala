@@ -15,6 +15,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.io.Codec
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.language.implicitConversions
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Location
@@ -124,14 +125,14 @@ case class ScalaPresentationCompiler(
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
           val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
-          val completions = Completion.completions(pos)(using ctx.fresh.setCompilationUnit(unit))._2
+          val completions = CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit)).completions()
           val metalsCompletions = completionPosition(pos, path)(using ctx)
           completions ++ metalsCompletions
         case None => Nil
       }
       new CompletionList(
         /*isIncomplete = */ false,
-        items.map(completionItem(_)(using ctx)).asJava
+        items.zipWithIndex.map { case(item, idx) => completionItem(item, idx)(using ctx) }.asJava
       )
     }
   }
@@ -389,7 +390,8 @@ case class ScalaPresentationCompiler(
   }
 
   private def completionItem(
-      completion: Completion
+      completion: Completion,
+      idx: Int
   )(using ctx: Context): CompletionItem = {
     def completionItemKind(
         sym: Symbol
@@ -411,6 +413,8 @@ case class ScalaPresentationCompiler(
     val colon = if (colonNotNeeded) "" else ": "
     val label = s"${completion.label}$colon${completion.description}"
     val item = new CompletionItem(label)
+
+    item.setSortText(f"${idx}%05d")
 
     item.setFilterText(completion.label)
     // TODO we should use edit text
