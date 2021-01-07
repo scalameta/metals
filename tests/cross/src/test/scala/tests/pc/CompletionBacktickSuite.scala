@@ -50,7 +50,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   )
 
   check(
-    "named-arg",
+    "named-arg".tag(IgnoreScala3Version),
     """|object Main {
        |  def foo(`type`: Int) = 42
        |  foo(type@@)
@@ -61,8 +61,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     filterText = "type",
     compat = Map(
       "3.0" -> ""
-    ),
-    assumeCond = Some(!isScala3)
+    )
   )
 
   check(
