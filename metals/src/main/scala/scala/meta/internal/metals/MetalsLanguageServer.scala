@@ -937,6 +937,7 @@ class MetalsLanguageServer(
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
       syntheticsDecorator.publishSynthetics(path)
+      worksheetProvider.onDidFocus(path)
       buildTargets.inverseSources(path) match {
         case Some(target) =>
           val isAffectedByCurrentCompilation =

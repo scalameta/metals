@@ -110,6 +110,17 @@ class WorksheetProvider(
     reset()
   }
 
+  def onDidFocus(path: AbsolutePath): Future[Unit] = Future {
+    if (path.isWorksheet) {
+      val input = path.toInputFromBuffers(buffers)
+      exportableEvaluations.get(input) match {
+        case Some(evaluatedWorksheet) =>
+          publisher.publish(languageClient, path, evaluatedWorksheet)
+        case None =>
+      }
+    }
+  }
+
   def evaluateAndPublish(
       path: AbsolutePath,
       token: CancelToken
