@@ -173,7 +173,7 @@ final class Doctor(
    *         exists. (Message, Explict Choice)
    */
   private def selectedBuildServerMessage(): (String, Boolean) = {
-    val current = currentBuildServer()
+    val current = currentBuildServer().map(_.main.name)
     val chosen = tables.buildServers.selectedServer()
 
     (current, chosen) match {
