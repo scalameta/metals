@@ -25,6 +25,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.MavenRepository
 import coursierapi.Repository
 
 /**
@@ -304,7 +305,13 @@ object QuickBuild {
 
     val repositories =
       Repository.defaults().asScala ++
-        List(Repository.central(), Repository.ivy2Local())
+        List(
+          Repository.central(),
+          Repository.ivy2Local(),
+          MavenRepository.of(
+            "https://oss.sonatype.org/content/repositories/public"
+          )
+        )
 
     Fetch
       .create()

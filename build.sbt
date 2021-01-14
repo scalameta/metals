@@ -186,7 +186,7 @@ lazy val V = new {
   val sbtScala = "2.12.10"
   val scala212 = "2.12.12"
   val scala213 = "2.13.4"
-  val scalameta = "4.4.4"
+  val scalameta = "4.4.6"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
   val bloop = "1.4.6-21-464e4ec4"
@@ -198,7 +198,7 @@ lazy val V = new {
   val mdoc = "2.2.14"
   val scalafmt = "2.7.4"
   val munit = "0.7.20"
-  val scalafix = "0.9.24"
+  val scalafix = "0.9.25"
   val lsp4jV = "0.10.0"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -213,7 +213,7 @@ lazy val V = new {
   def deprecatedScala2Versions =
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.11", "2.12.10", "2.13.2", "2.13.3")
+    Seq(scala213, scala212, "2.12.13", "2.12.11", "2.12.10", "2.13.2", "2.13.3")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
