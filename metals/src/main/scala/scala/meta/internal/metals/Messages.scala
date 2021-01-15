@@ -18,6 +18,12 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  */
 object Messages {
 
+  val noRoot = new MessageParams(
+    MessageType.Error,
+    """|No rootUri or rootPath detected.
+       |Metals will not function correctly without either of these set since a workspace is needed.
+       |Try opening your project at the workspace root.""".stripMargin
+  )
   object Worksheets {
     def unsupportedScalaVersion(
         unsupportedVersion: String,
