@@ -81,7 +81,7 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
-) extends PresentationCompiler {
+) extends PresentationCompiler with Completions {
 
   def this() = this(Nil, Nil)
 
@@ -124,7 +124,10 @@ case class ScalaPresentationCompiler(
       val pos = sourcePosition(driver, params, uri)
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
-          Completion.completions(pos)(using ctx.fresh.setCompilationUnit(unit))._2
+          val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+          val completions = Completion.completions(pos)(using ctx.fresh.setCompilationUnit(unit))._2
+          val metalsCompletions = completionPosition(pos, path)(using ctx)
+          completions ++ metalsCompletions
         case None => Nil
       }
       new CompletionList(

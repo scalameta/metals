@@ -238,6 +238,9 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
 
+  object IgnoreScala3
+      extends IgnoreScalaVersion(BuildInfoVersions.scala3Versions.toSet)
+
   case class RunForScalaVersion(versions: Set[String])
       extends Tag("RunScalaVersion")
 
