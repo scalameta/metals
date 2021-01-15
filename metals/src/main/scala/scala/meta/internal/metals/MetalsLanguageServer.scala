@@ -426,12 +426,6 @@ class MetalsLanguageServer(
       clientConfig,
       statusBar,
       clientConfig.icons,
-      Option(params.getWorkspaceFolders) match {
-        case Some(folders) =>
-          folders.asScala.map(_.getUri.toAbsolutePath).toList
-        case _ =>
-          Nil
-      },
       tables
     )
     newFileProvider = new NewFileProvider(

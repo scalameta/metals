@@ -39,7 +39,6 @@ final class FormattingProvider(
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     icons: Icons,
-    workspaceFolders: List[AbsolutePath],
     tables: Tables
 )(implicit ec: ExecutionContext)
     extends Cancelable {
