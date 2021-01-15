@@ -9,7 +9,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   // Might be good to fixed in Dotty.
   // see: https://github.com/scalameta/metals/pull/2369
   check(
-    "arg".tag(IgnoreScala3Version),
+    "arg".tag(IgnoreScala3),
     s"""|object Main {
         |  assert(@@)
         |}
@@ -91,7 +91,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   // This might be good to fix in Dotty.
   // see: https://github.com/scalameta/metals/pull/2369
   check(
-    "arg4".tag(IgnoreScala3Version),
+    "arg4".tag(IgnoreScala3),
     s"""|
         |$user
         |object Main {
@@ -128,7 +128,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "arg6".tag(IgnoreScala3Version),
+    "arg6".tag(IgnoreScala3),
     s"""|
         |$user
         |object Main {
@@ -185,7 +185,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   // Might be good to fixed in Dotty.
   // see: https://github.com/scalameta/metals/pull/2369
   check(
-    "arg9".tag(IgnoreScala3Version),
+    "arg9".tag(IgnoreScala3),
     // `until` has multiple implicit conversion alternatives
     s"""|
         |object Main {
@@ -307,7 +307,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-no-show".tag(IgnoreScala3Version),
+    "auto-no-show".tag(IgnoreScala3),
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -321,7 +321,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto".tag(IgnoreScala3Version),
+    "auto".tag(IgnoreScala3),
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
         |  val number = 5
@@ -334,7 +334,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-inheritance".tag(IgnoreScala3Version),
+    "auto-inheritance".tag(IgnoreScala3),
     s"""|object Main {
         |  trait Animal
         |  class Dog extends Animal
@@ -352,7 +352,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-multiple-type".tag(IgnoreScala3Version),
+    "auto-multiple-type".tag(IgnoreScala3),
     s"""|object Main {
         |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
@@ -366,7 +366,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-not-found".tag(IgnoreScala3Version),
+    "auto-not-found".tag(IgnoreScala3),
     s"""|object Main {
         |  val number = 234
         |  val nothing = throw new Exception
@@ -380,7 +380,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-list".tag(IgnoreScala3Version),
+    "auto-list".tag(IgnoreScala3),
     s"""|object Main {
         |  def foo(argument : List[String], other : List[Int]) : Int = 0
         |  val list1 = List(1,2,3)

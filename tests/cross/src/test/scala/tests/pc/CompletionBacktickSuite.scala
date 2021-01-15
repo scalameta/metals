@@ -50,7 +50,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   )
 
   check(
-    "named-arg".tag(IgnoreScala3Version),
+    "named-arg".tag(IgnoreScala3),
     """|object Main {
        |  def foo(`type`: Int) = 42
        |  foo(type@@)

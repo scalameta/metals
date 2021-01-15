@@ -25,7 +25,6 @@ import scala.meta.pc.PresentationCompilerConfig
 import coursierapi.Dependency
 import coursierapi.Fetch
 import munit.Tag
-import munit.TestOptions
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
@@ -34,17 +33,9 @@ abstract class BasePCSuite extends BaseSuite {
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
   val scalaVersion = BuildInfoVersions.scalaVersion
-  val isScala3: Boolean = isScala3Version(scalaVersion)
   protected val index = new DelegatingGlobalSymbolIndex()
   protected val workspace = new TestingWorkspaceSearch
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
-
-  implicit class RichTestOptions(options: TestOptions) {
-    def ignoreIf(skip: Boolean): TestOptions = {
-      if (skip) options.ignore
-      else options
-    }
-  }
 
   /**
    * Note: (ckipp01) Normally this method comes from the `ExludedPackagesHandler`.
@@ -247,7 +238,7 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
 
-  object IgnoreScala3Version
+  object IgnoreScala3
       extends IgnoreScalaVersion(BuildInfoVersions.scala3Versions.toSet)
 
   case class RunForScalaVersion(versions: Set[String])
