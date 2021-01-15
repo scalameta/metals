@@ -189,7 +189,7 @@ lazy val V = new {
   val scalameta = "4.4.4"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.6-15-209c2a5c"
+  val bloop = "1.4.6-21-464e4ec4"
   val scala3 = "3.0.0-M3"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -320,7 +320,7 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.1",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
