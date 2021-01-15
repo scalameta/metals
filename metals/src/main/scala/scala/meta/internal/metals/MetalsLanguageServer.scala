@@ -273,390 +273,397 @@ class MetalsLanguageServer(
   }
 
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
-    workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri))).dealias
-    MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-    val clientInfo = MetalsServerConfig.metalsClientType match {
-      case Some(clientType) => s"for client ${clientType}"
-      case None => ""
-    }
-    scribe.info(
-      s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
-    )
 
-    clientConfig.experimentalCapabilities =
-      ClientExperimentalCapabilities.from(params.getCapabilities)
-    clientConfig.initializationOptions = InitializationOptions.from(params)
+    // NOTE: we purposefully don't check workspaceFolders here
+    // since Metals technically doesn't support it. Once we implement
+    // https://github.com/scalameta/metals-feature-requests/issues/87 we'll
+    // have to change this.
+    val root =
+      Option(params.getRootUri()).orElse(Option(params.getRootPath()))
 
-    buildTargets.setWorkspaceDirectory(workspace)
-    tables = register(new Tables(workspace, time, clientConfig))
-    buildTargets.setTables(tables)
-    workspaceReload = new WorkspaceReload(
-      workspace,
-      languageClient,
-      tables
-    )
-    buildTools = new BuildTools(
-      workspace,
-      bspGlobalDirectories,
-      () => userConfig
-    )
-    fileSystemSemanticdbs = new FileSystemSemanticdbs(
-      buildTargets,
-      charset,
-      workspace,
-      fingerprints
-    )
-    interactiveSemanticdbs = register(
-      new InteractiveSemanticdbs(
-        workspace,
-        buildTargets,
-        charset,
-        languageClient,
-        tables,
-        statusBar,
-        () => compilers,
-        clientConfig
-      )
-    )
-    warnings = new Warnings(
-      workspace,
-      buildTargets,
-      statusBar,
-      clientConfig.icons,
-      buildTools,
-      compilations.isCurrentlyCompiling
-    )
-    diagnostics = new Diagnostics(
-      buildTargets,
-      buffers,
-      languageClient,
-      clientConfig.initialConfig.statistics,
-      () => userConfig
-    )
-    buildClient = new ForwardingMetalsBuildClient(
-      languageClient,
-      diagnostics,
-      buildTargets,
-      buildTargetClasses,
-      clientConfig,
-      statusBar,
-      time,
-      report => {
-        didCompileTarget(report)
-        compilers.didCompile(report)
-      },
-      () => treeView,
-      () => worksheetProvider,
-      () => ammonite
-    )
-    shellRunner = register(
-      new ShellRunner(languageClient, () => userConfig, time, statusBar)
-    )
-    bloopInstall = new BloopInstall(
-      workspace,
-      languageClient,
-      buildTools,
-      tables,
-      shellRunner
-    )
-    bspConfigGenerator = new BspConfigGenerator(
-      workspace,
-      languageClient,
-      buildTools,
-      shellRunner
-    )
-    newProjectProvider = new NewProjectProvider(
-      languageClient,
-      statusBar,
-      clientConfig,
-      shellRunner,
-      clientConfig.icons,
-      workspace
-    )
-    bloopServers = new BloopServers(
-      workspace,
-      buildClient,
-      languageClient,
-      tables,
-      clientConfig.initialConfig
-    )
-    bspServers = new BspServers(
-      workspace,
-      charset,
-      languageClient,
-      buildClient,
-      tables,
-      bspGlobalDirectories,
-      clientConfig.initialConfig
-    )
-    buildToolSelector = new BuildToolSelector(
-      languageClient,
-      tables
-    )
-    bspConnector = new BspConnector(
-      bloopServers,
-      bspServers,
-      buildTools,
-      languageClient,
-      tables,
-      () => userConfig,
-      statusBar
-    )
-    semanticdbs = AggregateSemanticdbs(
-      List(
-        fileSystemSemanticdbs,
-        interactiveSemanticdbs
-      )
-    )
-    definitionProvider = new DefinitionProvider(
-      workspace,
-      mtags,
-      buffers,
-      definitionIndex,
-      semanticdbs,
-      warnings,
-      () => compilers,
-      remote
-    )
-    formattingProvider = new FormattingProvider(
-      workspace,
-      buffers,
-      () => userConfig,
-      languageClient,
-      clientConfig,
-      statusBar,
-      clientConfig.icons,
-      Option(params.getWorkspaceFolders) match {
-        case Some(folders) =>
-          folders.asScala.map(_.getUri.toAbsolutePath).toList
-        case _ =>
-          Nil
-      },
-      tables
-    )
-    newFileProvider = new NewFileProvider(
-      workspace,
-      languageClient,
-      packageProvider,
-      () => focusedDocument
-    )
-    referencesProvider = new ReferenceProvider(
-      workspace,
-      semanticdbs,
-      buffers,
-      definitionProvider,
-      remote
-    )
-    implementationProvider = new ImplementationProvider(
-      semanticdbs,
-      workspace,
-      definitionIndex,
-      buildTargets,
-      buffers,
-      definitionProvider
-    )
+    root match {
+      case None =>
+        languageClient.showMessage(Messages.noRoot)
+      case Some(path) =>
+        workspace = AbsolutePath(Paths.get(URI.create(path))).dealias
+        MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+        val clientInfo = MetalsServerConfig.metalsClientType match {
+          case Some(clientType) => s"for client ${clientType}"
+          case None => ""
+        }
+        scribe.info(
+          s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+        )
 
-    supermethods = new Supermethods(
-      languageClient,
-      definitionProvider,
-      implementationProvider
-    )
+        clientConfig.experimentalCapabilities =
+          ClientExperimentalCapabilities.from(params.getCapabilities)
+        clientConfig.initializationOptions = InitializationOptions.from(params)
 
-    val runTestLensProvider =
-      new RunTestCodeLens(
-        buildTargetClasses,
-        buffers,
-        buildTargets,
-        clientConfig,
-        () => bspSession.map(_.main.isBloop).getOrElse(false)
-      )
+        buildTargets.setWorkspaceDirectory(workspace)
+        tables = register(new Tables(workspace, time, clientConfig))
+        buildTargets.setTables(tables)
+        workspaceReload = new WorkspaceReload(
+          workspace,
+          languageClient,
+          tables
+        )
+        buildTools = new BuildTools(
+          workspace,
+          bspGlobalDirectories,
+          () => userConfig
+        )
+        fileSystemSemanticdbs = new FileSystemSemanticdbs(
+          buildTargets,
+          charset,
+          workspace,
+          fingerprints
+        )
+        interactiveSemanticdbs = register(
+          new InteractiveSemanticdbs(
+            workspace,
+            buildTargets,
+            charset,
+            languageClient,
+            tables,
+            statusBar,
+            () => compilers,
+            clientConfig
+          )
+        )
+        warnings = new Warnings(
+          workspace,
+          buildTargets,
+          statusBar,
+          clientConfig.icons,
+          buildTools,
+          compilations.isCurrentlyCompiling
+        )
+        diagnostics = new Diagnostics(
+          buildTargets,
+          buffers,
+          languageClient,
+          clientConfig.initialConfig.statistics,
+          () => userConfig
+        )
+        buildClient = new ForwardingMetalsBuildClient(
+          languageClient,
+          diagnostics,
+          buildTargets,
+          buildTargetClasses,
+          clientConfig,
+          statusBar,
+          time,
+          report => {
+            didCompileTarget(report)
+            compilers.didCompile(report)
+          },
+          () => treeView,
+          () => worksheetProvider,
+          () => ammonite
+        )
+        shellRunner = register(
+          new ShellRunner(languageClient, () => userConfig, time, statusBar)
+        )
+        bloopInstall = new BloopInstall(
+          workspace,
+          languageClient,
+          buildTools,
+          tables,
+          shellRunner
+        )
+        bspConfigGenerator = new BspConfigGenerator(
+          workspace,
+          languageClient,
+          buildTools,
+          shellRunner
+        )
+        newProjectProvider = new NewProjectProvider(
+          languageClient,
+          statusBar,
+          clientConfig,
+          shellRunner,
+          clientConfig.icons,
+          workspace
+        )
+        bloopServers = new BloopServers(
+          workspace,
+          buildClient,
+          languageClient,
+          tables,
+          clientConfig.initialConfig
+        )
+        bspServers = new BspServers(
+          workspace,
+          charset,
+          languageClient,
+          buildClient,
+          tables,
+          bspGlobalDirectories,
+          clientConfig.initialConfig
+        )
+        buildToolSelector = new BuildToolSelector(
+          languageClient,
+          tables
+        )
+        bspConnector = new BspConnector(
+          bloopServers,
+          bspServers,
+          buildTools,
+          languageClient,
+          tables,
+          () => userConfig,
+          statusBar
+        )
+        semanticdbs = AggregateSemanticdbs(
+          List(
+            fileSystemSemanticdbs,
+            interactiveSemanticdbs
+          )
+        )
+        definitionProvider = new DefinitionProvider(
+          workspace,
+          mtags,
+          buffers,
+          definitionIndex,
+          semanticdbs,
+          warnings,
+          () => compilers,
+          remote
+        )
+        formattingProvider = new FormattingProvider(
+          workspace,
+          buffers,
+          () => userConfig,
+          languageClient,
+          clientConfig,
+          statusBar,
+          clientConfig.icons,
+          tables
+        )
+        newFileProvider = new NewFileProvider(
+          workspace,
+          languageClient,
+          packageProvider,
+          () => focusedDocument
+        )
+        referencesProvider = new ReferenceProvider(
+          workspace,
+          semanticdbs,
+          buffers,
+          definitionProvider,
+          remote
+        )
+        implementationProvider = new ImplementationProvider(
+          semanticdbs,
+          workspace,
+          definitionIndex,
+          buildTargets,
+          buffers,
+          definitionProvider
+        )
 
-    val goSuperLensProvider = new SuperMethodCodeLens(
-      implementationProvider,
-      buffers,
-      () => userConfig,
-      clientConfig
-    )
+        supermethods = new Supermethods(
+          languageClient,
+          definitionProvider,
+          implementationProvider
+        )
 
-    stacktraceAnalyzer = new StacktraceAnalyzer(
-      workspace,
-      buffers,
-      definitionProvider,
-      clientConfig.icons,
-      clientConfig.isCommandInHtmlSupported
-    )
+        val runTestLensProvider =
+          new RunTestCodeLens(
+            buildTargetClasses,
+            buffers,
+            buildTargets,
+            clientConfig,
+            () => bspSession.map(_.main.isBloop).getOrElse(false)
+          )
 
-    codeLensProvider = new CodeLensProvider(
-      List(runTestLensProvider, goSuperLensProvider),
-      semanticdbs,
-      stacktraceAnalyzer
-    )
-    renameProvider = new RenameProvider(
-      referencesProvider,
-      implementationProvider,
-      definitionProvider,
-      workspace,
-      languageClient,
-      buffers,
-      compilations,
-      clientConfig
-    )
-    syntheticsDecorator = new SyntheticsDecorationProvider(
-      workspace,
-      semanticdbs,
-      buffers,
-      languageClient,
-      fingerprints,
-      charset,
-      diagnostics,
-      () => focusedDocument,
-      clientConfig,
-      () => userConfig
-    )
-    semanticDBIndexer = new SemanticdbIndexer(
-      referencesProvider,
-      implementationProvider,
-      syntheticsDecorator,
-      buildTargets,
-      interactiveSemanticdbs
-    )
-    documentHighlightProvider = new DocumentHighlightProvider(
-      definitionProvider,
-      semanticdbs
-    )
-    workspaceSymbols = new WorkspaceSymbolProvider(
-      workspace,
-      clientConfig.initialConfig.statistics,
-      buildTargets,
-      definitionIndex,
-      interactiveSemanticdbs.toFileOnDisk,
-      excludedPackageHandler.isExcludedPackage
-    )
-    symbolSearch = new MetalsSymbolSearch(
-      symbolDocs,
-      workspaceSymbols,
-      definitionProvider
-    )
-    compilers = register(
-      new Compilers(
-        workspace,
-        clientConfig,
-        () => userConfig,
-        () => ammonite,
-        buildTargets,
-        buffers,
-        symbolSearch,
-        embedded,
-        statusBar,
-        sh,
-        Option(params),
-        diagnostics,
-        excludedPackageHandler.isExcludedPackage
-      )
-    )
-    debugProvider = new DebugProvider(
-      workspace,
-      definitionProvider,
-      () => bspSession.map(_.mainConnection),
-      buildTargets,
-      buildTargetClasses,
-      compilations,
-      languageClient,
-      buildClient,
-      statusBar,
-      compilers,
-      definitionIndex,
-      stacktraceAnalyzer
-    )
-    scalafixProvider = ScalafixProvider(
-      buffers,
-      () => userConfig,
-      workspace,
-      embedded,
-      statusBar,
-      compilations,
-      clientConfig.icons(),
-      languageClient,
-      buildTargets
-    )
-    codeActionProvider = new CodeActionProvider(
-      compilers,
-      buffers,
-      buildTargets,
-      scalafixProvider
-    )
-    doctor = new Doctor(
-      workspace,
-      buildTargets,
-      languageClient,
-      () => bspSession,
-      () => bspConnector.resolve(),
-      () => httpServer,
-      tables,
-      clientConfig
-    )
-    popupChoiceReset = new PopupChoiceReset(
-      workspace,
-      tables,
-      languageClient,
-      doctor,
-      () => slowConnectToBuildServer(forceImport = true),
-      bspConnector,
-      () => quickConnectToBuildServer()
-    )
+        val goSuperLensProvider = new SuperMethodCodeLens(
+          implementationProvider,
+          buffers,
+          () => userConfig,
+          clientConfig
+        )
 
-    val worksheetPublisher =
-      if (clientConfig.isDecorationProvider)
-        new DecorationWorksheetPublisher()
-      else
-        new WorkspaceEditWorksheetPublisher(buffers)
-    worksheetProvider = register(
-      new WorksheetProvider(
-        workspace,
-        buffers,
-        buildTargets,
-        languageClient,
-        () => userConfig,
-        statusBar,
-        diagnostics,
-        embedded,
-        worksheetPublisher,
-        compilers,
-        compilations
-      )
-    )
-    ammonite = register(
-      new Ammonite(
-        buffers,
-        compilers,
-        compilations,
-        statusBar,
-        diagnostics,
-        doctor,
-        () => tables,
-        languageClient,
-        buildClient,
-        () => userConfig,
-        () => profiledIndexWorkspace(() => ()),
-        () => workspace,
-        () => focusedDocument,
-        buildTargets,
-        () => buildTools,
-        clientConfig.initialConfig
-      )
-    )
-    if (clientConfig.isTreeViewProvider) {
-      treeView = new MetalsTreeViewProvider(
-        () => workspace,
-        languageClient,
-        buildTargets,
-        () => buildClient.ongoingCompilations(),
-        definitionIndex,
-        clientConfig.initialConfig.statistics,
-        id => compilations.compileTarget(id),
-        sh,
-        () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
-      )
+        stacktraceAnalyzer = new StacktraceAnalyzer(
+          workspace,
+          buffers,
+          definitionProvider,
+          clientConfig.icons,
+          clientConfig.isCommandInHtmlSupported
+        )
+
+        codeLensProvider = new CodeLensProvider(
+          List(runTestLensProvider, goSuperLensProvider),
+          semanticdbs,
+          stacktraceAnalyzer
+        )
+        renameProvider = new RenameProvider(
+          referencesProvider,
+          implementationProvider,
+          definitionProvider,
+          workspace,
+          languageClient,
+          buffers,
+          compilations,
+          clientConfig
+        )
+        syntheticsDecorator = new SyntheticsDecorationProvider(
+          workspace,
+          semanticdbs,
+          buffers,
+          languageClient,
+          fingerprints,
+          charset,
+          diagnostics,
+          () => focusedDocument,
+          clientConfig,
+          () => userConfig
+        )
+        semanticDBIndexer = new SemanticdbIndexer(
+          referencesProvider,
+          implementationProvider,
+          syntheticsDecorator,
+          buildTargets,
+          interactiveSemanticdbs
+        )
+        documentHighlightProvider = new DocumentHighlightProvider(
+          definitionProvider,
+          semanticdbs
+        )
+        workspaceSymbols = new WorkspaceSymbolProvider(
+          workspace,
+          clientConfig.initialConfig.statistics,
+          buildTargets,
+          definitionIndex,
+          interactiveSemanticdbs.toFileOnDisk,
+          excludedPackageHandler.isExcludedPackage
+        )
+        symbolSearch = new MetalsSymbolSearch(
+          symbolDocs,
+          workspaceSymbols,
+          definitionProvider
+        )
+        compilers = register(
+          new Compilers(
+            workspace,
+            clientConfig,
+            () => userConfig,
+            () => ammonite,
+            buildTargets,
+            buffers,
+            symbolSearch,
+            embedded,
+            statusBar,
+            sh,
+            Option(params),
+            diagnostics,
+            excludedPackageHandler.isExcludedPackage
+          )
+        )
+        debugProvider = new DebugProvider(
+          workspace,
+          definitionProvider,
+          () => bspSession.map(_.mainConnection),
+          buildTargets,
+          buildTargetClasses,
+          compilations,
+          languageClient,
+          buildClient,
+          statusBar,
+          compilers,
+          definitionIndex,
+          stacktraceAnalyzer
+        )
+        scalafixProvider = ScalafixProvider(
+          buffers,
+          () => userConfig,
+          workspace,
+          embedded,
+          statusBar,
+          compilations,
+          clientConfig.icons(),
+          languageClient,
+          buildTargets
+        )
+        codeActionProvider = new CodeActionProvider(
+          compilers,
+          buffers,
+          buildTargets,
+          scalafixProvider
+        )
+        doctor = new Doctor(
+          workspace,
+          buildTargets,
+          languageClient,
+          () => bspSession,
+          () => bspConnector.resolve(),
+          () => httpServer,
+          tables,
+          clientConfig
+        )
+        popupChoiceReset = new PopupChoiceReset(
+          workspace,
+          tables,
+          languageClient,
+          doctor,
+          () => slowConnectToBuildServer(forceImport = true),
+          bspConnector,
+          () => quickConnectToBuildServer()
+        )
+
+        val worksheetPublisher =
+          if (clientConfig.isDecorationProvider)
+            new DecorationWorksheetPublisher()
+          else
+            new WorkspaceEditWorksheetPublisher(buffers)
+        worksheetProvider = register(
+          new WorksheetProvider(
+            workspace,
+            buffers,
+            buildTargets,
+            languageClient,
+            () => userConfig,
+            statusBar,
+            diagnostics,
+            embedded,
+            worksheetPublisher,
+            compilers,
+            compilations
+          )
+        )
+        ammonite = register(
+          new Ammonite(
+            buffers,
+            compilers,
+            compilations,
+            statusBar,
+            diagnostics,
+            doctor,
+            () => tables,
+            languageClient,
+            buildClient,
+            () => userConfig,
+            () => profiledIndexWorkspace(() => ()),
+            () => workspace,
+            () => focusedDocument,
+            buildTargets,
+            () => buildTools,
+            clientConfig.initialConfig
+          )
+        )
+        if (clientConfig.isTreeViewProvider) {
+          treeView = new MetalsTreeViewProvider(
+            () => workspace,
+            languageClient,
+            buildTargets,
+            () => buildClient.ongoingCompilations(),
+            definitionIndex,
+            clientConfig.initialConfig.statistics,
+            id => compilations.compileTarget(id),
+            sh,
+            () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
+          )
+        }
     }
   }
 
