@@ -11,20 +11,33 @@ import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ScalaVersions
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
 object Main {
   def main(args: Array[String]): Unit = {
     if (args.exists(Set("-v", "--version", "-version"))) {
-      val supportedScalaVersions =
-        BuildInfo.supportedScalaVersions.sorted.mkString(", ")
+      val supportedScala2Versions =
+        BuildInfo.supportedScala2Versions
+          .groupBy(ScalaVersions.scalaBinaryVersionFromFullVersion)
+          .toSeq
+          .sortBy(_._1)
+          .map { case (_, versions) => versions.mkString(", ") }
+          .mkString("\n#       ")
+
+      val supportedScala3Versions =
+        BuildInfo.supportedScala3Versions.sorted.mkString(", ")
 
       println(
         s"""|metals ${BuildInfo.metalsVersion}
             |
             |# Note:
-            |#   supported Scala versions: $supportedScalaVersions""".stripMargin
+            |#   Supported Scala versions:
+            |#     Scala 3: $supportedScala3Versions
+            |#     Scala 2:
+            |#       $supportedScala2Versions
+            |""".stripMargin
       )
 
       sys.exit(0)
