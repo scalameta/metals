@@ -580,12 +580,12 @@ class SbtBloopLspSuite
       _ <- server.didOpen("project/MetaValues.scala")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """|/project/MetaValues.scala
-           |import scala.util.Success/*Try.scala*/
-           |object MetaValues/*L1*/ {
-           |  val scalaVersion/*L2*/ = "2.12.12"
-           |}
-           |""".stripMargin
+        s"""|/project/MetaValues.scala
+            |import scala.util.Success/*Try.scala*/
+            |object MetaValues/*L1*/ {
+            |  val scalaVersion/*L2*/ = "$scalaVersion"
+            |}
+            |""".stripMargin
       )
     } yield ()
 
