@@ -13,14 +13,16 @@ object MetalsPlugin extends AutoPlugin {
 
   val supportedScala2Versions = BuildInfo.supportedScala2Versions.toList
 
-  override lazy val globalSettings: Seq[Def.Setting[_]] = Seq(
-    semanticdbVersion := BuildInfo.semanticdbVersion
-  )
+  val semanticdbVersion = BuildInfo.semanticdbVersion
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = Seq(
     semanticdbCompilerPlugin := {
-      ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion.value)
-        .cross(CrossVersion.full)
+      if (supportedScala2Versions.contains(scalaVersion.value))
+        ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion)
+          .cross(CrossVersion.full)
+      else {
+        semanticdbCompilerPlugin.value
+      }
     },
     allDependencies ++= {
       val versionOfScala = scalaVersion.value
@@ -32,7 +34,7 @@ object MetalsPlugin extends AutoPlugin {
       else
         List(
           compilerPlugin(
-            "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion.value
+            "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion
           )
         )
     }
