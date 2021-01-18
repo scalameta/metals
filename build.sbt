@@ -184,7 +184,7 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val sbtScala = "2.12.10"
-  val scala212 = "2.12.12"
+  val scala212 = "2.12.13"
   val scala213 = "2.13.4"
   val scalameta = "4.4.6"
   val semanticdb = scalameta
@@ -213,7 +213,7 @@ lazy val V = new {
   def deprecatedScala2Versions =
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.13", "2.12.11", "2.12.10", "2.13.2", "2.13.3")
+    Seq(scala213, scala212, "2.12.12", "2.12.11", "2.12.10", "2.13.2", "2.13.3")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
@@ -571,7 +571,15 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        List(V.scala211, V.sbtScala, V.scala212, V.scala213, V.scala3)
+        List(
+          V.scala211,
+          V.sbtScala,
+          V.scala212,
+          // TODO https://github.com/scalameta/metals/issues/2392
+          "2.12.12",
+          V.scala213,
+          V.scala3
+        )
       )
     )
 
