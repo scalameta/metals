@@ -287,10 +287,13 @@ class MetalsLanguageServer(
       case Some(path) =>
         workspace = AbsolutePath(Paths.get(URI.create(path))).dealias
         MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-        val clientInfo = MetalsServerConfig.metalsClientType match {
-          case Some(clientType) => s"for client ${clientType}"
+
+        val clientInfo = Option(params.getClientInfo()) match {
+          case Some(info) =>
+            s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
           case None => ""
         }
+
         scribe.info(
           s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
         )
