@@ -11,12 +11,15 @@ object MetalsPlugin extends AutoPlugin {
   override def requires = JvmPlugin
   override def trigger = allRequirements
 
-  val semanticdbVersion = BuildInfo.semanticdbVersion
   val supportedScala2Versions = BuildInfo.supportedScala2Versions.toList
+
+  override lazy val globalSettings: Seq[Def.Setting[_]] = Seq(
+    semanticdbVersion := BuildInfo.semanticdbVersion
+  )
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = Seq(
     semanticdbCompilerPlugin := {
-      ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion)
+      ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion.value)
         .cross(CrossVersion.full)
     },
     allDependencies ++= {
@@ -29,7 +32,7 @@ object MetalsPlugin extends AutoPlugin {
       else
         List(
           compilerPlugin(
-            "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion
+            "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion.value
           )
         )
     }
