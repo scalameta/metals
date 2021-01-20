@@ -80,7 +80,8 @@ final class SyntheticsDecorationProvider(
       focused <- focusedDocument()
       filePath = AbsolutePath(path)
       sourcePath <-
-        if (!filePath.isScala) SemanticdbClasspath.toScala(workspace, filePath)
+        if (!filePath.isScalaFilename)
+          SemanticdbClasspath.toScala(workspace, filePath)
         else Some(filePath)
       if sourcePath == focused || !clientConfig.isDidFocusProvider()
       textDoc <- textDocument.documents.headOption

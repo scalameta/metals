@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
 
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -18,7 +19,6 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.builds.SbtBuildTool
 
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.

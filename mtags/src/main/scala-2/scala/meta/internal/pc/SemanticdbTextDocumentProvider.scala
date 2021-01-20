@@ -3,10 +3,10 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.nio.file.Paths
 
-import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.dialects
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
+import scala.meta.internal.{semanticdb => s}
 
 class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
   import compiler._
