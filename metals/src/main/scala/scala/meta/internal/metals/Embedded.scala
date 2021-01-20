@@ -187,12 +187,14 @@ object Embedded {
       if (scalaVersion == "0.27.0-RC1") "2.2.10"
       else if (scalaVersion == "3.0.0-M1") "2.2.12"
       else BuildInfo.mdocVersion
+
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
       mdocVersion
     )
   }
+
   private def semanticdbScalacDependency(scalaVersion: String): Dependency =
     Dependency.of(
       "org.scalameta",

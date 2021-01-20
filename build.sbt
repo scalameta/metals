@@ -2,7 +2,7 @@ import scala.collection.mutable
 import scala.sys.process._
 import Tests._
 
-def localSnapshotVersion = "0.9.9-SNAPSHOT"
+def localSnapshotVersion = "0.9.11-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -184,7 +184,9 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val sbtScala = "2.12.10"
-  val scala212 = "2.12.12"
+  // TODO https://github.com/scalameta/metals/issues/2392
+  val ammonite212Version = "2.12.12"
+  val scala212 = "2.12.13"
   val scala213 = "2.13.4"
   val scalameta = "4.4.6"
   val semanticdb = scalameta
@@ -195,7 +197,7 @@ lazy val V = new {
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.14"
+  val mdoc = "2.2.15"
   val scalafmt = "2.7.4"
   val munit = "0.7.20"
   val scalafix = "0.9.25"
@@ -213,7 +215,7 @@ lazy val V = new {
   def deprecatedScala2Versions =
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.13", "2.12.11", "2.12.10", "2.13.2", "2.13.3")
+    Seq(scala213, scala212, "2.12.12", "2.12.11", "2.12.10", "2.13.2", "2.13.3")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
@@ -480,6 +482,7 @@ lazy val metals = project
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
+      "ammonite212" -> V.ammonite212Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3
     )
@@ -571,7 +574,14 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        List(V.scala211, V.sbtScala, V.scala212, V.scala213, V.scala3)
+        List(
+          V.scala211,
+          V.sbtScala,
+          V.scala212,
+          V.ammonite212Version,
+          V.scala213,
+          V.scala3
+        )
       )
     )
 

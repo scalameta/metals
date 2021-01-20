@@ -94,7 +94,7 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
     instrument = steps =>
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .at(".metals/readonly/scala/Predef.scala", line = 397)(Continue)
+        .at(".metals/readonly/scala/Predef.scala", line = 404)(Continue)
   )
 
   assertSteps("step-into-java-lib")(

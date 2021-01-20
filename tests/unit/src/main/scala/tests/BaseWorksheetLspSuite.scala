@@ -526,7 +526,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         getExpected(
-          """|a/src/main/scala/Main.worksheet.sc:1:1: warning: there was one feature warning; re-run with -feature for details
+          """|a/src/main/scala/Main.worksheet.sc:1:1: warning: one feature warning; re-run with -feature for details
              |type Structural = {
              |^
              |""".stripMargin,
