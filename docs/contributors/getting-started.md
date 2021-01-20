@@ -227,3 +227,15 @@ This property will make your server run in debug mode on port 5005 without
 waiting for the debugger to connect:
 
 `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y`
+
+### Updating sbt-launcher
+
+The easiest way to update the sbt-launcher is with the following coursier
+command:
+
+```sh
+cp "$(cs fetch org.scala-sbt:sbt-launch:<version>)" sbt-launch.jar
+```
+
+This will allow you to not have to do some of the manual steps with the launcher
+properties file listed [here](https://github.com/sbt/launcher).
