@@ -147,7 +147,7 @@ final class Ammonite(
       .getOrElse(
         AmmVersions(
           ammoniteVersion = BuildInfo.ammoniteVersion,
-          scalaVersion = BuildInfo.scala212
+          scalaVersion = BuildInfo.ammonite212
         )
       )
     val res = AmmoniteFetcher(versions)
