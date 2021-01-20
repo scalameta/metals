@@ -614,4 +614,57 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  test("sbt-references") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/build.sbt
+            |def foo(): String = "2.13.2"
+            |def bar(): String = foo() 
+            |scalaVersion := "2.13.2"
+         """.stripMargin
+      )
+      references <- server.references("build.sbt", "foo")
+      _ = assertNoDiff(
+        references,
+        """|build.sbt:1:5: info: reference
+           |def foo(): String = "2.13.2"
+           |    ^^^
+           |build.sbt:2:21: info: reference
+           |def bar(): String = foo() 
+           |                    ^^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("sbt-rename") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""|/build.sbt
+            |def foo(): String = "2.13.2"
+            |def bar(): String = foo() 
+            |scalaVersion := "2.13.2"
+         """.stripMargin
+      )
+      _ <- server.assertRename(
+        "build.sbt",
+        s"""|def foo(): String = "2.13.2"
+            |def bar(): String = foo@@() 
+            |scalaVersion := "2.13.2"
+         """.stripMargin,
+        Map(
+          "build.sbt" ->
+            s"""|def foo2(): String = "2.13.2"
+                |def bar(): String = foo2() 
+                |scalaVersion := "2.13.2"
+          """.stripMargin
+        ),
+        Set("build.sbt"),
+        "foo2"
+      )
+    } yield ()
+  }
 }

@@ -1411,7 +1411,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CancelTokens.future { token =>
-      compilers.signatureHelp(params, token, interactiveSemanticdbs)
+      compilers.signatureHelp(params, token)
     }
 
   @JsonRequest("textDocument/codeAction")

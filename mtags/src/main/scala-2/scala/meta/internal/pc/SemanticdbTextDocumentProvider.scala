@@ -5,9 +5,12 @@ import java.nio.file.Paths
 
 import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.dialects
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
   import compiler._
+
   def textDocument(
       filename: String,
       code: String
@@ -18,6 +21,7 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
       cursor = None
     )
     typeCheck(unit)
+
     import semanticdbOps._
     // This cache is never updated in semanticdb and will contain the old source
     gSourceFileInputCache.remove(unit.source)
@@ -31,7 +35,10 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
       compiler.reporter,
       SemanticdbConfig.default
     )
-    val document = unit.toTextDocument
+
+    // TODO: worksheets support
+    val explicitDialect = if (filename.isSbt) Some(dialects.Sbt1) else None
+    val document = unit.toTextDocument(explicitDialect)
     val fileUri = Paths.get(new URI(filename))
     compiler.workspace
       .map { workspacePath =>
