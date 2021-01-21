@@ -80,7 +80,7 @@ except for the standard lib on your classpath.
 ### How do I use Scala 2.x.x for my script?
 
 Under the hood Metals uses
-`[alexarchambault/ammonite-runner](https://github.com/alexarchambault/ammonite-runner)`
+[alexarchambault/ammonite-runner](https://github.com/alexarchambault/ammonite-runner)
 to help with Ammonite support. One of the features of `ammonite-runner` is that
 it allows you to specify the version of Scala for your script in a comment
 before you code.
