@@ -93,13 +93,26 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
-        """|import java.nio.file.Files
-           |val name = "Susan" // : String = "Susan"
-           |val greeting = s"Hello $name" // : String = "Hello Susan"
-           |println(greeting + "\nHow are you?") // Hello Susan…
-           |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-           |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
-           |""".stripMargin
+        getExpected(
+          """|import java.nio.file.Files
+             |val name = "Susan" // : String = "Susan"
+             |val greeting = s"Hello $name" // : String = "Hello Susan"
+             |println(greeting + "\nHow are you?") // Hello Susan…
+             |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+             |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+             |""".stripMargin,
+          Map(
+            V.scala3 ->
+              """|import java.nio.file.Files
+                 |val name = "Susan" // : String = Susan
+                 |val greeting = s"Hello $name" // : String = Hello Susan
+                 |println(greeting + "\nHow are you?") // Hello Susan…
+                 |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                 |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
     } yield ()
   }
@@ -479,6 +492,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("root-outside-definition") {
     assume(!isWindows, "This test fails unpredictably on Window")
+
     for {
       _ <- server.initialize(
         s"""
@@ -495,13 +509,28 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         server.workspaceDefinitions,
         getExpected(
-          """|/Main.worksheet.sc
-             |import java.time.Instant/*Instant.java*/
-             |
-             |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
-             |val y/*L3*/ = List/*List.scala*/.fill/*GenTraversableFactory.scala*/(2)(2)
-             |""".stripMargin,
-          Map.empty,
+          s"""|/Main.worksheet.sc
+              |import java.time.Instant/*Instant.java*/
+              |
+              |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
+              |val y/*L3*/ = List/*List.scala*/.fill/*GenTraversableFactory.scala*/(2)(2)
+              |""".stripMargin,
+          Map(
+            V.scala213 ->
+              s"""|/Main.worksheet.sc
+                  |import java.time.Instant/*Instant.java*/
+                  |
+                  |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
+                  |val y/*L3*/ = List/*package.scala*/.fill/*Factory.scala*/(2)(2)
+                  |""".stripMargin,
+            V.scala3 ->
+              """|/Main.worksheet.sc
+                 |import java/*<no symbol>*/.time/*<no symbol>*/.Instant/*<no symbol>*/
+                 |
+                 |val x/*L2*/ = Instant/*<no symbol>*/.now/*<no symbol>*/()
+                 |val y/*L3*/ = List/*<no symbol>*/.fill/*<no symbol>*/(2)(2)
+                 |""".stripMargin
+          ),
           scalaVersion
         )
       )

@@ -40,7 +40,8 @@ case class UserConfiguration(
     showImplicitConversionsAndClasses: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
-    excludedPackages: Option[List[String]] = None
+    excludedPackages: Option[List[String]] = None,
+    fallbackScalaVersion: Option[String] = None
 ) {
 
   def currentBloopVersion: String =
@@ -220,6 +221,16 @@ object UserConfiguration {
           |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
           |documentation on remote language servers.
           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "fallback-scala-version",
+        BuildInfo.scala212,
+        BuildInfo.scala212,
+        "Default fallback Scala version",
+        """|The Scala compiler version that is used as default or fallback in case a file
+           |doesn't belong to any build target or specified Scala version isn't supported by Metals.
+           |This applies for standalone Scala files, worksheets, and Ammonite scripts
+           |""".stripMargin
       )
     )
 
@@ -375,6 +386,8 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val excludedPackages =
       getStringListKey("excluded-packages")
+    val defaultScalaVersion =
+      getStringKey("fallback-scala-version")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -397,7 +410,8 @@ object UserConfiguration {
           showImplicitConversionsAndClasses,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
-          excludedPackages
+          excludedPackages,
+          defaultScalaVersion
         )
       )
     } else {

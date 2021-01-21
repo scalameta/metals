@@ -49,7 +49,8 @@ final class Ammonite(
     focusedDocument: () => Option[AbsolutePath],
     buildTargets: BuildTargets,
     buildTools: () => BuildTools,
-    config: MetalsServerConfig
+    config: MetalsServerConfig,
+    scalaVersionSelector: ScalaVersionSelector
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -147,7 +148,8 @@ final class Ammonite(
       .getOrElse(
         AmmVersions(
           ammoniteVersion = BuildInfo.ammoniteVersion,
-          scalaVersion = BuildInfo.ammonite212
+          scalaVersion =
+            scalaVersionSelector.fallbackScalaVersion(allowScala3 = false)
         )
       )
     val res = AmmoniteFetcher(versions)

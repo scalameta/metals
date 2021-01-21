@@ -13,9 +13,9 @@ import scala.util.Try
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
-import scala.meta.internal.mtags
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -59,7 +59,8 @@ class Compilers(
     sh: ScheduledExecutorService,
     initializeParams: Option[InitializeParams],
     diagnostics: Diagnostics,
-    isExcludedPackage: String => Boolean
+    isExcludedPackage: String => Boolean,
+    scalaVersionSelector: ScalaVersionSelector
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -67,9 +68,9 @@ class Compilers(
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
   // function is expensive, which is the case here.
-  val jcache: ju.Map[BuildTargetIdentifier, PresentationCompiler] =
+  val jcache: ju.Map[PresentationCompilerKey, PresentationCompiler] =
     Collections.synchronizedMap(
-      new java.util.HashMap[BuildTargetIdentifier, PresentationCompiler]
+      new java.util.HashMap[PresentationCompilerKey, PresentationCompiler]
     )
   private val jworksheetsCache: ju.Map[AbsolutePath, PresentationCompiler] =
     Collections.synchronizedMap(
@@ -77,47 +78,76 @@ class Compilers(
     )
 
   private val cache = jcache.asScala
+  private def buildTargetPCFromCache(
+      id: BuildTargetIdentifier
+  ): Option[PresentationCompiler] =
+    cache.get(PresentationCompilerKey.BuildTarget(id))
 
   private val worksheetsCache = jworksheetsCache.asScala
 
-  // The "rambo" compiler is used for source files that don't belong to a build target.
-  lazy val ramboCompiler: PresentationCompiler = createStandaloneCompiler(
-    PackageIndex.scalaLibrary,
-    Try(
-      StandaloneSymbolSearch(workspace, buffers, isExcludedPackage, userConfig)
-    )
-      .getOrElse(EmptySymbolSearch),
-    "metals-default"
-  )
-
   private def createStandaloneCompiler(
+      scalaVersion: String,
       classpath: Seq[Path],
       standaloneSearch: SymbolSearch,
       name: String
   ): PresentationCompiler = {
     scribe.info(
-      "no build target: using presentation compiler with only scala-library"
+      s"no build target: using presentation compiler with only scala-library: $scalaVersion"
     )
-    val compiler =
-      configure(new ScalaPresentationCompiler(), standaloneSearch)
-        .newInstance(
-          s"$name-${mtags.BuildInfo.scalaCompilerVersion}",
-          classpath.asJava,
-          Nil.asJava
-        )
-    ramboCancelable = Cancelable(() => compiler.shutdown())
-    compiler
+    newCompiler(
+      scalaVersion,
+      List.empty,
+      classpath ++ Embedded.scalaLibrary(scalaVersion),
+      standaloneSearch,
+      name
+    )
   }
 
-  var ramboCancelable = Cancelable.empty
+  // The "fallback" compiler is used for source files that don't belong to a build target.
+  def fallbackCompiler: PresentationCompiler = {
+    jcache.compute(
+      PresentationCompilerKey.Default,
+      (_, value) => {
+        val scalaVersion =
+          scalaVersionSelector.fallbackScalaVersion(allowScala3 = true)
+        val existingPc = Option(value).flatMap { pc =>
+          if (pc.scalaVersion == scalaVersion) {
+            Some(pc)
+          } else {
+            pc.shutdown()
+            None
+          }
+        }
+        existingPc match {
+          case Some(pc) => pc
+          case None =>
+            createStandaloneCompiler(
+              scalaVersion,
+              List.empty,
+              Try(
+                StandaloneSymbolSearch(
+                  scalaVersion,
+                  workspace,
+                  buffers,
+                  isExcludedPackage,
+                  userConfig
+                )
+              ).getOrElse(EmptySymbolSearch),
+              "default"
+            )
+        }
+      }
+    )
+  }
 
   def loadedPresentationCompilerCount(): Int = cache.values.count(_.isLoaded())
 
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
+    Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     cache.clear()
-    ramboCancelable.cancel()
   }
+
   def restartAll(): Unit = {
     val count = cache.size
     cancel()
@@ -148,7 +178,7 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    val pc = loadCompiler(path).getOrElse(fallbackCompiler)
     pc.didClose(path.toNIO.toUri())
   }
 
@@ -158,7 +188,7 @@ class Compilers(
       path
         .toInputFromBuffers(buffers)
 
-    val pc = loadCompiler(path).getOrElse(ramboCompiler)
+    val pc = loadCompiler(path).getOrElse(fallbackCompiler)
     val inputAndAdjust =
       if (
         path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
@@ -185,13 +215,13 @@ class Compilers(
 
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {
-      cache.get(report.getTarget).foreach(_.restart())
+      buildTargetPCFromCache(report.getTarget).foreach(_.restart())
     } else {
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
-        compiler <- cache.get(target)
+        compiler <- buildTargetPCFromCache(target)
       } {
         compiler.restart()
       }
@@ -204,7 +234,7 @@ class Compilers(
   ): Future[CompletionItem] = {
     for {
       data <- item.data
-      compiler <- cache.get(new BuildTargetIdentifier(data.target))
+      compiler <- buildTargetPCFromCache(new BuildTargetIdentifier(data.target))
     } yield compiler.completionItemResolve(item, data.symbol).asScala
   }.getOrElse(Future.successful(item))
 
@@ -319,7 +349,7 @@ class Compilers(
         .inverseSources(path)
       target match {
         case None =>
-          if (path.isScalaFilename) Some(ramboCompiler)
+          if (path.isScalaFilename) Some(fallbackCompiler)
           else None
         case Some(value) => loadCompiler(value)
       }
@@ -373,19 +403,24 @@ class Compilers(
 
     created.getOrElse {
       jworksheetsCache.put(
-        path,
-        createStandaloneCompiler(
-          classpath,
-          StandaloneSymbolSearch(
-            workspace,
-            buffers,
-            sources,
+        path, {
+          val scalaVersion =
+            scalaVersionSelector.fallbackScalaVersion(allowScala3 = true)
+          createStandaloneCompiler(
+            scalaVersion,
             classpath,
-            isExcludedPackage,
-            userConfig
-          ),
-          path.toString()
-        )
+            StandaloneSymbolSearch(
+              scalaVersion,
+              workspace,
+              buffers,
+              sources,
+              classpath,
+              isExcludedPackage,
+              userConfig
+            ),
+            path.toString()
+          )
+        }
       )
     }
   }
@@ -405,7 +440,7 @@ class Compilers(
       None
     } else {
       val out = jcache.computeIfAbsent(
-        scalaTarget.info.getId,
+        PresentationCompilerKey.BuildTarget(scalaTarget.info.getId),
         { _ =>
           statusBar.trackBlockingTask(
             s"${config.icons.sync}Loading presentation compiler"
@@ -441,7 +476,7 @@ class Compilers(
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val compiler =
-      loadCompiler(path).getOrElse(ramboCompiler)
+      loadCompiler(path).getOrElse(fallbackCompiler)
 
     val (input, pos, adjust) =
       sourceAdjustments(
@@ -525,25 +560,48 @@ class Compilers(
       classpath: Seq[Path],
       search: SymbolSearch
   ): PresentationCompiler = {
+    newCompiler(
+      target.scalaInfo.getScalaVersion(),
+      scalac.getOptions().asScala,
+      classpath,
+      search,
+      scalac.getTarget.getUri
+    )
+  }
+
+  def newCompiler(
+      scalaVersion: String,
+      options: Seq[String],
+      classpath: Seq[Path],
+      search: SymbolSearch,
+      name: String
+  ): PresentationCompiler = {
     // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
     // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
     // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
     // skip fetching the mtags module from Maven.
     val pc: PresentationCompiler =
-      if (
-        ScalaVersions.isCurrentScalaCompilerVersion(
-          target.scalaInfo.getScalaVersion()
-        )
-      ) {
+      if (ScalaVersions.isCurrentScalaCompilerVersion(scalaVersion)) {
         new ScalaPresentationCompiler()
       } else {
-        embedded.presentationCompiler(target.scalaInfo, scalac)
+        embedded.presentationCompiler(scalaVersion, classpath)
       }
-    val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
+
+    val filteredOptions = plugins.filterSupportedOptions(options)
     configure(pc, search).newInstance(
-      scalac.getTarget.getUri,
+      name,
       classpath.asJava,
-      (log ++ options).asJava
+      (log ++ filteredOptions).asJava
     )
+  }
+}
+
+object Compilers {
+
+  sealed trait PresentationCompilerKey
+  object PresentationCompilerKey {
+    final case class BuildTarget(id: BuildTargetIdentifier)
+        extends PresentationCompilerKey
+    case object Default extends PresentationCompilerKey
   }
 }

@@ -566,6 +566,21 @@ object Messages {
   object UnsupportedScalaVersion {
     def message(
         usingNow: Set[String]
+    ): String =
+      message(usingNow, None)
+
+    def fallbackScalaVersionParams(
+        scalaVersion: String
+    ): MessageParams = {
+      new MessageParams(
+        MessageType.Warning,
+        message(Set(scalaVersion), Some("fallback"))
+      )
+    }
+
+    def message(
+        usingNow: Set[String],
+        description: Option[String]
     ): String = {
       val using = usingString(usingNow)
       val recommended = recommendationString(usingNow)
@@ -576,7 +591,8 @@ object Messages {
         if (uses211) s" or alternatively to legacy Scala ${BuildInfo.scala211}"
         else ""
       val isAre = if (usingNow.size == 1) "is" else "are"
-      s"You are using $using, which $isAre not supported in this version of Metals. " +
+      val descriptionString = description.map(s => s"$s ").getOrElse("")
+      s"You are using $descriptionString$using, which $isAre not supported in this version of Metals. " +
         s"Please upgrade to $recommended$deprecatedAleternative."
     }
   }
