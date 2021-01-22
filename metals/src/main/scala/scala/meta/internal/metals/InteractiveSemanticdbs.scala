@@ -4,8 +4,6 @@ import java.nio.charset.Charset
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.collection.concurrent.TrieMap
-
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
@@ -45,17 +43,6 @@ final class InteractiveSemanticdbs(
   private val textDocumentCache = Collections.synchronizedMap(
     new java.util.HashMap[AbsolutePath, s.TextDocument]()
   )
-  // keys are created files in .metals/readonly/ and values are the original paths
-  // in *-sources.jar files.
-  private val readonlyToSource = TrieMap.empty[AbsolutePath, AbsolutePath]
-
-  def toFileOnDisk(path: AbsolutePath): AbsolutePath = {
-    val disk = path.toFileOnDisk(workspace)
-    if (disk != path) {
-      readonlyToSource(disk) = path
-    }
-    disk
-  }
 
   def reset(): Unit = {
     textDocumentCache.clear()

@@ -566,7 +566,6 @@ class MetalsLanguageServer(
           clientConfig.initialConfig.statistics,
           buildTargets,
           definitionIndex,
-          interactiveSemanticdbs.toFileOnDisk,
           excludedPackageHandler.isExcludedPackage
         )
         symbolSearch = new MetalsSymbolSearch(

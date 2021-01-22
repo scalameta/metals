@@ -36,7 +36,6 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
       SemanticdbConfig.default
     )
 
-    // TODO: worksheets support
     val explicitDialect = if (filename.isSbt) Some(dialects.Sbt1) else None
     val document = unit.toTextDocument(explicitDialect)
     val fileUri = Paths.get(new URI(filename))
