@@ -94,14 +94,6 @@ final class RenameProvider(
             suggestedName.substring(1, suggestedName.length() - 1)
           else suggestedName
 
-        def includeSynthetic(syn: Synthetic) = {
-          syn.tree match {
-            case SelectTree(_, id) =>
-              id.exists(_.symbol.desc.name.toString == "apply")
-            case _ => false
-          }
-        }
-
         val allReferences = for {
           (occurence, semanticDb) <- symbolOccurrence.toIterable
           definitionLoc <- definition.locations.asScala.headOption.toIterable
@@ -122,7 +114,7 @@ final class RenameProvider(
                 // we can't get definition by name for local symbols
                 toReferenceParams(txtParams, includeDeclaration = isLocal),
                 canSkipExactMatchCheck = false,
-                includeSynthetics = includeSynthetic
+                includeSynthetic
               )
               .locations
           definitionLocation = {
@@ -275,7 +267,11 @@ final class RenameProvider(
         locParams = toReferenceParams(implLoc, includeDeclaration = true)
         loc <-
           referenceProvider
-            .references(locParams, canSkipExactMatchCheck = false)
+            .references(
+              locParams,
+              canSkipExactMatchCheck = false,
+              includeSynthetic
+            )
             .locations
       } yield loc
     } else {
@@ -315,6 +311,14 @@ final class RenameProvider(
     }
 
     symbol.isLocal || isFromWorkspace
+  }
+
+  private def includeSynthetic(syn: Synthetic) = {
+    syn.tree match {
+      case SelectTree(_, id) =>
+        id.exists(_.symbol.desc.name.toString == "apply")
+      case _ => false
+    }
   }
 
   private def textEdit(
