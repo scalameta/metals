@@ -623,6 +623,21 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     newName = "Animal"
   )
 
+  renamed(
+    "implicit-parameter",
+    """|/a/src/main/scala/a/Main.scala
+       |trait A {
+       | implicit def <<foo>>: Double
+       |}
+       |object A extends A {
+       |  implicit def <<fo@@o>>: Double = 0.1
+       |  def bar(implicit x: Double): Double = x
+       |  val x = bar
+       |}
+       |""".stripMargin,
+    newName = "foo2"
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
 
