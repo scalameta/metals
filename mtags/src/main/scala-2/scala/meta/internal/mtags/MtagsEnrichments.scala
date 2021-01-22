@@ -7,14 +7,11 @@ import java.util.concurrent.CancellationException
 import scala.collection.mutable
 import scala.{meta => m}
 
-import scala.meta.XtensionTokenizeInputLike
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.Trees
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
-import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.OffsetParams
@@ -24,7 +21,6 @@ import org.eclipse.{lsp4j => l}
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments extends CommonMtagsEnrichments {
-  import Trees.defaultDialect
 
   implicit class XtensionInputOffset(input: Input) {
     def toLanguage: Language =
@@ -201,29 +197,5 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         pos.getCharacter
       )
     }
-  }
-
-  implicit class XtensionTreeTokenStream(tree: m.Tree) {
-    def leadingTokens: Iterator[m.Token] =
-      tree.origin match {
-        case Origin.Parsed(input, _, pos) =>
-          val tokens = input.tokenize.get
-          tokens.slice(0, pos.start - 1).reverseIterator
-        case _ => Iterator.empty
-      }
-
-    def trailingTokens: Iterator[m.Token] =
-      tree.origin match {
-        case Origin.Parsed(input, _, pos) =>
-          val tokens = input.tokenize.get
-          tokens.slice(pos.end + 1, tokens.length).iterator
-        case _ => Iterator.empty
-      }
-
-    def findFirstLeading(predicate: m.Token => Boolean): Option[m.Token] =
-      leadingTokens.find(predicate)
-
-    def findFirstTrailing(predicate: m.Token => Boolean): Option[m.Token] =
-      trailingTokens.find(predicate)
   }
 }

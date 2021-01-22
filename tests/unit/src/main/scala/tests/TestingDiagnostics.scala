@@ -19,7 +19,8 @@ object TestingDiagnostics {
       buffers,
       new TestingClient(workspace, buffers),
       StatisticsConfig.default,
-      () => UserConfiguration()
+      () => UserConfiguration(),
+      Option(workspace)
     )
   }
 }

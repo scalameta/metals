@@ -1,11 +1,10 @@
-package scala.meta.internal.metals
+package scala.meta.internal.parsing
 
-import java.net.URI
 import java.util
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta._
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.transversers.SimpleTraverser
 
 import org.eclipse.lsp4j.DocumentSymbol
@@ -20,15 +19,25 @@ import org.eclipse.{lsp4j => l}
  */
 class DocumentSymbolProvider(trees: Trees) {
 
+  private val supportsHierarchicalDocumentSymbols = new AtomicBoolean(true)
+
+  def setSupportsHierarchicalDocumentSymbols(value: Boolean): Unit = {
+    supportsHierarchicalDocumentSymbols.set(value)
+  }
+
   def documentSymbols(
-      path: URI,
-      code: String
-  ): util.List[DocumentSymbol] = {
-    trees.get(path, code) match {
-      case Some(tree) =>
-        new SymbolTraverser().symbols(tree)
-      case None =>
-        List.empty[DocumentSymbol].asJava
+      path: AbsolutePath
+  ): Either[util.List[DocumentSymbol], util.List[l.SymbolInformation]] = {
+    val result = for {
+      tree <- trees.get(path)
+    } yield new SymbolTraverser().symbols(tree).asScala
+    val symbols = result.getOrElse(Nil)
+
+    if (supportsHierarchicalDocumentSymbols.get()) {
+      Left(symbols.asJava)
+    } else {
+      val infos = symbols.toSymbolInformation(path.toURI.toString())
+      Right(infos.asJava)
     }
   }
 

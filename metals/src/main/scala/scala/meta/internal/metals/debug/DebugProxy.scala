@@ -8,7 +8,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
@@ -18,6 +17,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
+import scala.meta.internal.parsing.ClassFinder
 
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -28,7 +28,7 @@ private[debug] final class DebugProxy(
     sourcePathProvider: SourcePathProvider,
     client: RemoteEndpoint,
     server: ServerAdapter,
-    compilers: Compilers,
+    classFinder: ClassFinder,
     stackTraceAnalyzer: StacktraceAnalyzer
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
@@ -39,7 +39,7 @@ private[debug] final class DebugProxy(
   private val adapters = new MetalsDebugAdapters
 
   private val handleSetBreakpointsRequest =
-    new SetBreakpointsRequestHandler(server, adapters, compilers)
+    new SetBreakpointsRequestHandler(server, adapters, classFinder)
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -154,7 +154,7 @@ private[debug] object DebugProxy {
       sourcePathProvider: SourcePathProvider,
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket],
-      compilers: Compilers,
+      classFinder: ClassFinder,
       stacktraceAnalyzer: StacktraceAnalyzer
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
@@ -172,7 +172,7 @@ private[debug] object DebugProxy {
       sourcePathProvider,
       client,
       server,
-      compilers,
+      classFinder,
       stacktraceAnalyzer
     )
   }

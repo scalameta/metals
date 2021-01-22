@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
 /**

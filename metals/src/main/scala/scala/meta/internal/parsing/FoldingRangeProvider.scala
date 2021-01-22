@@ -1,33 +1,42 @@
-package scala.meta.internal.metals
+package scala.meta.internal.parsing
 
-import java.net.URI
-import java.nio.file.Paths
 import java.util
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.FoldingRangeProvider._
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.parsing.FoldingRangeProvider._
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.FoldingRange
 
 final class FoldingRangeProvider(
     val trees: Trees,
-    foldOnlyLines: Boolean
+    buffers: Buffers
 ) {
 
-  def getRangedFor(fileUri: URI, code: String): util.List[FoldingRange] = {
-    val filePath = Paths.get(fileUri).toString()
-    trees
-      .get(fileUri, code)
-      .map(tree => {
-        val revised = Input.VirtualFile(filePath, code)
-        val fromTree = Input.VirtualFile(filePath, tree.pos.input.text)
-        val distance = TokenEditDistance(fromTree, revised)
-        val extractor = new FoldingRangeExtractor(distance, foldOnlyLines)
-        extractor.extract(tree)
-      })
-      .getOrElse(util.Collections.emptyList())
+  private val foldOnlyLines = new AtomicBoolean(false)
+
+  def setFoldOnlyLines(value: Boolean): Unit = {
+    foldOnlyLines.set(value)
+  }
+
+  def getRangedFor(
+      filePath: AbsolutePath
+  ): util.List[FoldingRange] = {
+    val result = for {
+      code <- buffers.get(filePath)
+      tree <- trees.get(filePath)
+    } yield {
+      val revised = Input.VirtualFile(filePath.toString(), code)
+      val fromTree = Input.VirtualFile(filePath.toString(), tree.pos.input.text)
+      val distance = TokenEditDistance(fromTree, revised)
+      val extractor = new FoldingRangeExtractor(distance, foldOnlyLines.get())
+      extractor.extract(tree)
+    }
+    result.getOrElse(util.Collections.emptyList())
   }
 }
 

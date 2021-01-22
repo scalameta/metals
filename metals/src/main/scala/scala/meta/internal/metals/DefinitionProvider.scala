@@ -13,6 +13,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
+import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence

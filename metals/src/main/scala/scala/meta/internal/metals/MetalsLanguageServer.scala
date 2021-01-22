@@ -57,6 +57,11 @@ import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.mtags._
+import scala.meta.internal.parsing.ClassFinder
+import scala.meta.internal.parsing.DocumentSymbolProvider
+import scala.meta.internal.parsing.FoldingRangeProvider
+import scala.meta.internal.parsing.TokenEditDistance
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semanticdb.Scala._
@@ -175,7 +180,7 @@ class MetalsLanguageServer(
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(
       buildServerPromise.future
-        .flatMap(_ => Future.sequence(paths.distinct.map(compilers.didChange)))
+        .flatMap(_ => parseTreesAndPublishDiags(paths))
         .ignoreValue,
       Cancelable.empty
     )
@@ -190,7 +195,12 @@ class MetalsLanguageServer(
       compilations.pauseables
   )
   private val timerProvider: TimerProvider = new TimerProvider(time)
-
+  private val trees = new Trees(buildTargets, buffers)
+  private val documentSymbolProvider = new DocumentSymbolProvider(trees)
+  private val multilineStringFormattingProvider =
+    new MultilineStringFormattingProvider(buffers, trees, () => userConfig)
+  private val classFinder = new ClassFinder(trees)
+  private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
   // These can't be instantiated until we know the workspace root directory.
   private var shellRunner: ShellRunner = _
   private var bloopInstall: BloopInstall = _
@@ -247,6 +257,19 @@ class MetalsLanguageServer(
       InitializationOptions.Default
     )
 
+  def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Seq[Unit]] = {
+    Future.traverse(paths.distinct) { path =>
+      if (path.isScalaFilename) {
+        // diagnostics from the compiler are still needed for Scala 3
+        compilers.didChange(path).map { diags =>
+          diagnostics.onSyntaxError(path, diags ++ trees.didChange(path))
+        }
+      } else {
+        Future.successful(())
+      }
+    }
+  }
+
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying =
       new ConfiguredLanguageClient(client, clientConfig)(ec)
@@ -302,6 +325,10 @@ class MetalsLanguageServer(
           ClientExperimentalCapabilities.from(params.getCapabilities)
         clientConfig.initializationOptions = InitializationOptions.from(params)
 
+        foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
+        documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(
+          initializeParams.supportsHierarchicalDocumentSymbols
+        )
         buildTargets.setWorkspaceDirectory(workspace)
         tables = register(new Tables(workspace, time, clientConfig))
         buildTargets.setTables(tables)
@@ -346,7 +373,8 @@ class MetalsLanguageServer(
           buffers,
           languageClient,
           clientConfig.initialConfig.statistics,
-          () => userConfig
+          () => userConfig,
+          Option(workspace)
         )
         buildClient = new ForwardingMetalsBuildClient(
           languageClient,
@@ -573,7 +601,7 @@ class MetalsLanguageServer(
           languageClient,
           buildClient,
           statusBar,
-          compilers,
+          classFinder,
           definitionIndex,
           stacktraceAnalyzer
         )
@@ -592,7 +620,8 @@ class MetalsLanguageServer(
           compilers,
           buffers,
           buildTargets,
-          scalafixProvider
+          scalafixProvider,
+          trees
         )
         doctor = new Doctor(
           workspace,
@@ -1010,6 +1039,7 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     buffers.remove(path)
     compilers.didClose(path)
+    trees.didClose(path)
     diagnostics.onNoSyntaxError(path)
   }
 
@@ -1242,17 +1272,10 @@ class MetalsLanguageServer(
   ): CompletableFuture[
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
   ] =
-    CancelTokens.future { _ =>
-      compilers.documentSymbol(params).map { result =>
-        if (initializeParams.supportsHierarchicalDocumentSymbols) {
-          JEither.forLeft(result)
-        } else {
-          val infos = result.asScala
-            .toSymbolInformation(params.getTextDocument.getUri)
-            .asJava
-          JEither.forRight(infos)
-        }
-      }
+    CancelTokens { _ =>
+      documentSymbolProvider
+        .documentSymbols(params.getTextDocument().getUri().toAbsolutePath)
+        .asJava
     }
 
   @JsonRequest("textDocument/formatting")
@@ -1270,13 +1293,17 @@ class MetalsLanguageServer(
   def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens.future { _ => compilers.onTypeFormatting(params) }
+    CancelTokens { _ =>
+      multilineStringFormattingProvider.format(params).asJava
+    }
 
   @JsonRequest("textDocument/rangeFormatting")
   def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens.future { _ => compilers.rangeFormatting(params) }
+    CancelTokens { _ =>
+      multilineStringFormattingProvider.format(params).asJava
+    }
 
   @JsonRequest("textDocument/prepareRename")
   def prepareRename(
@@ -1414,8 +1441,10 @@ class MetalsLanguageServer(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
     CancelTokens.future { token =>
-      parseTrees.currentFuture.flatMap(_ =>
-        compilers.foldingRange(params, token)
+      parseTrees.currentFuture.map(_ =>
+        foldingRangeProvider.getRangedFor(
+          params.getTextDocument().getUri().toAbsolutePath
+        )
       )
     }
   }
@@ -2448,12 +2477,6 @@ class MetalsLanguageServer(
       // Ignore non-scala files.
       Future.successful(DefinitionResult.empty)
     }
-  }
-
-  def documentSymbolResult(
-      params: DocumentSymbolParams
-  ): Future[util.List[DocumentSymbol]] = {
-    compilers.documentSymbol(params)
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {

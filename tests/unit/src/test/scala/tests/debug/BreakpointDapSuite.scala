@@ -39,6 +39,24 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
+  assertBreakpoints("inner-class")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    class Inside {
+                |       def go = {
+                |>>       println()
+                |       }
+                |    }
+                |    (new Inside).go
+                |    System.exit(0)
+                |  }
+                |}
+                |""".stripMargin
+  )
+
   assertBreakpoints("object")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a

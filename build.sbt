@@ -9,26 +9,19 @@ def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
 def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
-def isScala3(v: Option[(Long, Long)]): Boolean =
-  v.exists(_._1 == 3) || v.exists(_._1 == 0)
-def isScala30(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
-def isScala3Prerelease(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 0)
+def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
 
 def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
     if2: List[A] = Nil,
     ifLaterThan211: List[A] = Nil,
-    if3: List[A] = Nil,
-    if30: List[A] = Nil,
-    if3pre: List[A] = Nil
+    if3: List[A] = Nil
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
     case partialVersion if isScala212(partialVersion) => ifLaterThan211 ::: if2
     case partialVersion if isScala213(partialVersion) => ifLaterThan211 ::: if2
-    case partialVersion if isScala3Prerelease(partialVersion) => if3pre ::: if3
-    case partialVersion if isScala30(partialVersion) => if30 ::: if3
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -219,9 +212,8 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions =
-    Seq(scala3, "3.0.0-M2", "3.0.0-M1", "0.27.0-RC1")
-  def deprecatedScala3Versions = Seq()
+  def nonDeprecatedScala3Versions = Seq(scala3)
+  def deprecatedScala3Versions = Seq("3.0.0-M2", "3.0.0-M1")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions
@@ -326,15 +318,7 @@ val mtagsSettings = List(
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
-        .withDottyCompat(scalaVersion.value)
-    ),
-    if3pre = List(
-      "ch.epfl.lamp" %% "dotty-compiler" % scalaVersion.value,
-      // 0.27.0-RC1 does not compile with 2.13.4 release scalameta
-      ("org.scalameta" %% "scalameta" % "4.3.24")
-        .withDottyCompat(scalaVersion.value)
-    ),
-    if30 = List(
+        .withDottyCompat(scalaVersion.value),
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .withDottyCompat(scalaVersion.value)

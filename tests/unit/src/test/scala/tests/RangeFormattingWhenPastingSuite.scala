@@ -1,6 +1,7 @@
 package tests
 
 import munit.Location
+import munit.TestOptions
 
 class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
   private val indent = "  "
@@ -326,7 +327,7 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
   )
 
   def check(
-      name: String,
+      name: TestOptions,
       testCase: String,
       paste: String,
       expectedCase: String

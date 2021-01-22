@@ -32,12 +32,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.DocumentSymbol
-import org.eclipse.lsp4j.DocumentSymbolParams
-import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.SignatureHelp
@@ -152,53 +147,12 @@ class Compilers(
       }
     }
 
-  def foldingRange(
-      params: FoldingRangeRequestParams,
-      token: CancelToken
-  ): Future[ju.List[FoldingRange]] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
-    val input = path.toInputFromBuffers(buffers)
-    pc.foldingRange(
-      CompilerVirtualFileParams(path.toNIO.toUri, input.value)
-    ).asScala
-  }
-
-  def onTypeFormatting(
-      params: DocumentOnTypeFormattingParams
-  ): Future[ju.List[TextEdit]] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
-    val input = path.toInputFromBuffers(buffers)
-    pc.onTypeFormatting(params, input.value).asScala
-  }
-
-  def rangeFormatting(
-      params: DocumentRangeFormattingParams
-  ): Future[ju.List[TextEdit]] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
-    val input = path.toInputFromBuffers(buffers)
-    pc.rangeFormatting(params, input.value).asScala
-  }
-
-  def documentSymbol(
-      params: DocumentSymbolParams
-  ): Future[ju.List[DocumentSymbol]] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
-    val input = path.toInputFromBuffers(buffers)
-    pc.documentSymbols(
-      CompilerVirtualFileParams(path.toNIO.toUri, input.value)
-    ).asScala
-  }
-
   def didClose(path: AbsolutePath): Unit = {
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     pc.didClose(path.toNIO.toUri())
   }
 
-  def didChange(path: AbsolutePath): Future[Unit] = {
+  def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
 
     def originInput =
       path
@@ -225,12 +179,7 @@ class Compilers(
           .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
           .asScala
     } yield {
-      ds.asScala.headOption match {
-        case None =>
-          diagnostics.onNoSyntaxError(path)
-        case Some(diagnostic) if !path.isInReadonlyDirectory(workspace) =>
-          diagnostics.onSyntaxError(path, adjust.adjustDiagnostic(diagnostic))
-      }
+      ds.asScala.map(adjust.adjustDiagnostic).toList
     }
   }
 
@@ -364,21 +313,6 @@ class Compilers(
       (pc, pos, adjust) =>
         pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
     }
-
-  def enclosingClass(
-      pos: LspPosition,
-      path: AbsolutePath,
-      token: CancelToken = EmptyCancelToken
-  ): Future[Option[String]] = {
-    val input = path.toInputFromBuffers(buffers)
-    val offset = pos.toMeta(input).start
-    val params = CompilerOffsetParams(path.toURI, input.text, offset, token)
-    loadCompiler(path, None) match {
-      case Some(pc) =>
-        pc.enclosingClass(params).asScala.map(_.asScala)
-      case None => Future.successful(None)
-    }
-  }
 
   def loadCompiler(
       path: AbsolutePath,
@@ -582,7 +516,6 @@ class Compilers(
             _symbolPrefixes = userConfig().symbolPrefixes,
             isCompletionSnippetsEnabled =
               initializeParams.supportsCompletionSnippets,
-            isFoldOnlyLines = initializeParams.foldOnlyLines,
             _isStripMarginOnTypeFormattingEnabled =
               () => userConfig().enableStripMarginOnTypeFormatting
           )

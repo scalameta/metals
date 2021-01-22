@@ -6,13 +6,13 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Trees
+import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 
 import org.eclipse.{lsp4j => l}
 
-class StringActions(buffers: Buffers) extends CodeAction {
+class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
@@ -24,11 +24,14 @@ class StringActions(buffers: Buffers) extends CodeAction {
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
     val range = params.getRange
-
     Future
       .successful {
-        val input = path.toInputFromBuffers(buffers)
-        Trees.defaultDialect(input).tokenize.toOption match {
+        val tokenized = buffers
+          .get(path)
+          .flatMap(source =>
+            Trees.defaultTokenizerDialect(source).tokenize.toOption
+          )
+        tokenized match {
           case Some(tokens) =>
             tokens
               .filter(t =>

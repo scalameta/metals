@@ -60,6 +60,14 @@ trait CommonMtagsEnrichments {
       else Right(either.getRight)
   }
 
+  implicit class XtensionEitherCross[A, B](either: Either[A, B]) {
+    def asJava: JEither[A, B] =
+      either match {
+        case Left(value) => JEither.forLeft(value)
+        case Right(value) => JEither.forRight(value)
+      }
+  }
+
   implicit class XtensionMetaPosition(pos: m.Position) {
     def toSemanticdb: s.Range = {
       new s.Range(
@@ -341,6 +349,14 @@ trait CommonMtagsEnrichments {
 
     def readText: String = {
       FileIO.slurp(path, StandardCharsets.UTF_8)
+    }
+
+    def readTextOpt: Option[String] = {
+      if (path.exists) {
+        Option(path.readText)
+      } else {
+        None
+      }
     }
 
     def filename: String = path.toNIO.filename

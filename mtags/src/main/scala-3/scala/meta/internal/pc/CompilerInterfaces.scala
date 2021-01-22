@@ -63,7 +63,7 @@ object CompilerInterfaces {
           r,
           mc.message,
           severity(mc.level),
-          /*source =*/ "",
+          /*source =*/ "dotty",
           code
         )
       )

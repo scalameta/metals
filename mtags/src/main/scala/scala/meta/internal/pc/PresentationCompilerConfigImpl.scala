@@ -19,7 +19,6 @@ case class PresentationCompilerConfigImpl(
     isCompletionItemDocumentationEnabled: Boolean = true,
     isHoverDocumentationEnabled: Boolean = true,
     snippetAutoIndent: Boolean = true,
-    isFoldOnlyLines: Boolean = false,
     isSignatureHelpDocumentationEnabled: Boolean = true,
     isCompletionSnippetsEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,

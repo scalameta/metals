@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.{util => ju}
 
+import scala.meta.Dialect
+import scala.meta.dialects._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -18,6 +20,17 @@ case class ScalaTarget(
     autoImports: Option[Seq[String]],
     isSbt: Boolean
 ) {
+
+  def dialect: Dialect = {
+    scalaBinaryVersion match {
+      case _ if info.getDataKind() == "sbt" => Sbt
+      case "2.11" => Scala211
+      case "2.12" => Scala212
+      case "2.13" => Scala213
+      case version if version.startsWith("3.") => Scala3
+      case _ => Scala213
+    }
+  }
 
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
 
