@@ -21,11 +21,12 @@ final class SourcePathProvider(
   }
 
   private def searchAsClassPathSymbol(source: Source): Option[AbsolutePath] = {
-    val symbolBase = source.getPath
+    val base = source.getPath
       .stripSuffix(".scala")
       .stripSuffix(".java")
       .replace("\\", "/") // adapt windows paths to the expected format
 
+    val symbolBase = if (base.contains("/")) base else "_empty_/" + base
     val symbols = for {
       symbol <- Set(symbolBase + ".", symbolBase + "#")
       definition <- definitionProvider.fromSymbol(symbol).asScala
