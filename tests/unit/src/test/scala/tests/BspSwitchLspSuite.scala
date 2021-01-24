@@ -16,6 +16,18 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
       _ = {
         client.messageRequests.clear()
         assertConnectedToBuildServer("Bill")
+      }
+      _ <- server.executeCommand(ServerCommands.BspSwitch.id)
+      _ = {
+        assertConnectedToBuildServer("Bill")
+        assertNoDiff(
+          client.workspaceShowMessages,
+          BspSwitch.onlyOneServer("Bill").getMessage()
+        )
+      }
+      _ = {
+        client.messageRequests.clear()
+        assertConnectedToBuildServer("Bill")
         Bill.installWorkspace(workspace.toNIO, "Bob")
       }
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)

@@ -402,7 +402,7 @@ object Messages {
     def onlyOneServer(name: String): MessageParams =
       new MessageParams(
         MessageType.Warning,
-        s"Unable to switch build server since there is only one installed build server '$name' on this computer."
+        s"Unable to switch build server since there is only one supported build server '$name' detected for this workspace."
       )
   }
 
