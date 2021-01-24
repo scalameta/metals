@@ -28,7 +28,7 @@ final class SourcePathProvider(
 
     val symbolBase = if (base.contains("/")) base else "_empty_/" + base
     val symbols = for {
-      symbol <- Set(symbolBase + ".", symbolBase + "#")
+      symbol <- Set(symbolBase + ".", symbolBase + "#").toIterator
       definition <- definitionProvider.fromSymbol(symbol).asScala
     } yield definition.getUri.toAbsolutePath
 
@@ -42,7 +42,7 @@ final class SourcePathProvider(
   private def searchAsSourceFile(source: Source): Option[AbsolutePath] = {
     val files = for {
       target <- targets.view
-      sourceFile <- buildTargets.buildTargetSources(target)
+      sourceFile <- buildTargets.buildTargetTransitiveSources(target)
       if sourceFile.filename == source.getName
     } yield sourceFile
 
