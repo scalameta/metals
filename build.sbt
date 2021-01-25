@@ -508,6 +508,15 @@ lazy val input = project
   )
   .disablePlugins(ScalafixPlugin)
 
+lazy val input3 = project
+  .in(file("tests/input3"))
+  .settings(
+    sharedSettings,
+    scalaVersion := V.scala3,
+    skip.in(publish) := true
+  )
+  .disablePlugins(ScalafixPlugin)
+
 lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
   skip.in(publish) := true,
@@ -641,9 +650,16 @@ lazy val unit = project
       "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive ()
     ),
     buildInfoPackage := "tests",
-    resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
+    resourceGenerators
+      .in(Compile) += InputProperties.resourceGenerator(input, input3),
     compile.in(Compile) :=
-      compile.in(Compile).dependsOn(compile.in(input, Test)).value,
+      compile
+        .in(Compile)
+        .dependsOn(
+          compile.in(input, Test),
+          compile.in(input3, Test)
+        )
+        .value,
     buildInfoKeys := Seq[BuildInfoKey](
       "sourceroot" -> baseDirectory.in(ThisBuild).value,
       "targetDirectory" -> target.in(Test).value,

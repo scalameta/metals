@@ -35,9 +35,15 @@ case class InputProperties(
 }
 
 object InputProperties {
-  def default(): InputProperties = {
+
+  def scala2(): InputProperties =
+    fromResource("metals-input.properties")
+
+  def scala3(): InputProperties =
+    fromResource("metals-input3.properties")
+
+  def fromResource(path: String): InputProperties = {
     val props = new java.util.Properties()
-    val path = "metals-input.properties"
     val in = this.getClass.getClassLoader.getResourceAsStream(path)
     assert(in != null, s"no such resource: $path")
     try props.load(in)

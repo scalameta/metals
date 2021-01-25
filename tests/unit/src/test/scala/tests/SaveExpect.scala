@@ -7,7 +7,8 @@ object SaveExpect {
       new SemanticdbSuite,
       new MtagsSuite,
       new ToplevelSuite,
-      new DocumentSymbolSuite,
+      new DocumentSymbolScala2Suite,
+      new DocumentSymbolScala3Suite,
       new FoldingRangeSuite,
       new WorkspaceSymbolExpectSuite
     ).foreach { suite =>
