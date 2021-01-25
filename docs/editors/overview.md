@@ -188,7 +188,7 @@ functionality.
      <td>Organize imports</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center"></td>
+     <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center"></td>
   </tr>
