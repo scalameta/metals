@@ -119,14 +119,7 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
             |$workspaceLayout
             |""".stripMargin
 
-      val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
-        file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
-      }
-
-      val navigator = expectedBreakpoints.foldLeft(StepNavigator(workspace)) {
-        (navigator, breakpoint) =>
-          navigator.at(breakpoint.relativePath, breakpoint.line + 1)(Continue)
-      }
+      val navigator = navigateExpectedBreakpoints(workspaceLayout)
 
       for {
         _ <- server.initialize(layout)
@@ -138,6 +131,20 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
       } yield ()
+    }
+  }
+
+  def navigateExpectedBreakpoints(
+      workspaceLayout: DebugWorkspaceLayout
+  ): StepNavigator = {
+
+    val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
+      file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
+    }
+
+    expectedBreakpoints.foldLeft(StepNavigator(workspace)) {
+      (navigator, breakpoint) =>
+        navigator.at(breakpoint.relativePath, breakpoint.line + 1)(Continue)
     }
   }
 
