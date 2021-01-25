@@ -2,7 +2,6 @@ package scala.meta.internal.bsp
 
 import java.nio.file.Files
 
-import scala.collection.immutable.Nil
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -156,7 +155,7 @@ class BspConnector(
       val found = bspServers.findAvailableServers()
       if (bloopPresent || buildTools.loadSupported().nonEmpty)
         new BspConnectionDetails(
-          "Bloop",
+          BloopServers.name,
           ImmutableList.of(),
           userConfig().currentBloopVersion,
           "",

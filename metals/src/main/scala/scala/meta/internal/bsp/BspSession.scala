@@ -3,6 +3,7 @@ package scala.meta.internal.bsp
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ImportedBuild
@@ -30,7 +31,7 @@ case class BspSession(
 
   def mainConnection: BuildServerConnection = main
 
-  def mainConnectionIsBloop: Boolean = main.name == "Bloop"
+  def mainConnectionIsBloop: Boolean = main.name == BloopServers.name
 
   def version: String = main.version
 

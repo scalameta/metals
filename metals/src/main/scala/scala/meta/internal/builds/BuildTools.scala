@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.util.Properties
 
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
@@ -71,7 +72,7 @@ final class BuildTools(
 
   def all: List[String] = {
     val buf = List.newBuilder[String]
-    if (isBloop) buf += "Bloop"
+    if (isBloop) buf += BloopServers.name
     if (isSbt) buf += "sbt"
     if (isMill) buf += "Mill"
     if (isGradle) buf += "Gradle"
