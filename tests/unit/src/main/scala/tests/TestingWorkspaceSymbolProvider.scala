@@ -3,7 +3,6 @@ package tests
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.CompressedPackageIndex
 import scala.meta.internal.metals.ExcludedPackagesHandler
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -21,7 +20,6 @@ object TestingWorkspaceSymbolProvider {
       statistics = statistics,
       buildTargets = BuildTargets.withoutAmmonite,
       index = index,
-      _.toFileOnDisk(workspace),
       new ExcludedPackagesHandler().isExcludedPackage,
       bucketSize = bucketSize
     )

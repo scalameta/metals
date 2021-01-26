@@ -148,7 +148,7 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
     pc.didClose(path.toNIO.toUri())
   }
 
@@ -158,7 +158,7 @@ class Compilers(
       path
         .toInputFromBuffers(buffers)
 
-    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val pc = loadCompiler(path).getOrElse(ramboCompiler)
     val inputAndAdjust =
       if (
         path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
@@ -224,7 +224,7 @@ class Compilers(
       params: CompletionParams,
       token: CancelToken
   ): Future[CompletionList] =
-    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.complete(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { list =>
@@ -238,7 +238,7 @@ class Compilers(
       name: String,
       token: CancelToken
   ): Future[ju.List[AutoImportsResult]] = {
-    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { list =>
@@ -252,7 +252,7 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.implementAbstractMembers(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { edits =>
@@ -266,18 +266,17 @@ class Compilers(
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Future[Option[Hover]] =
-    withPCAndAdjustLsp(params, Some(interactiveSemanticdbs)) {
-      (pc, pos, adjust) =>
-        pc.hover(CompilerOffsetParams.fromPos(pos, token))
-          .asScala
-          .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.hover(CompilerOffsetParams.fromPos(pos, token))
+        .asScala
+        .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
 
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[DefinitionResult] =
-    withPCAndAdjustLsp(params, None) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.definition(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { c =>
@@ -306,23 +305,19 @@ class Compilers(
 
   def signatureHelp(
       params: TextDocumentPositionParams,
-      token: CancelToken,
-      interactiveSemanticdbs: InteractiveSemanticdbs
+      token: CancelToken
   ): Future[SignatureHelp] =
-    withPCAndAdjustLsp(params, Some(interactiveSemanticdbs)) {
-      (pc, pos, adjust) =>
-        pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
     }
 
   def loadCompiler(
-      path: AbsolutePath,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+      path: AbsolutePath
   ): Option[PresentationCompiler] = {
 
     def fromBuildTarget: Option[PresentationCompiler] = {
       val target = buildTargets
         .inverseSources(path)
-        .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
       target match {
         case None =>
           if (path.isScalaFilename) Some(ramboCompiler)
@@ -426,15 +421,13 @@ class Compilers(
 
   private def ammoniteInputPosOpt(
       path: AbsolutePath,
-      position: LspPosition,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+      position: LspPosition
   ): Option[(Input.VirtualFile, LspPosition)] =
     if (path.isAmmoniteScript)
       for {
         target <-
           buildTargets
             .inverseSources(path)
-            .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
         res <- ammonite().generatedScalaInputForPc(
           target,
           path,
@@ -445,17 +438,15 @@ class Compilers(
       None
 
   private def withPCAndAdjustLsp[T](
-      params: TextDocumentPositionParams,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+      params: TextDocumentPositionParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val compiler =
-      loadCompiler(path, interactiveSemanticdbs).getOrElse(ramboCompiler)
+      loadCompiler(path).getOrElse(ramboCompiler)
 
     val (input, pos, adjust) =
       sourceAdjustments(
         params,
-        interactiveSemanticdbs,
         compiler.scalaVersion()
       )
     val metaPos = pos.toMeta(input)
@@ -465,7 +456,6 @@ class Compilers(
 
   private def sourceAdjustments(
       params: TextDocumentPositionParams,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs],
       scalaVersion: String
   ): (Input.VirtualFile, LspPosition, AdjustLspData) = {
 
@@ -478,7 +468,7 @@ class Compilers(
 
     val forScripts =
       if (path.isAmmoniteScript) {
-        ammoniteInputPosOpt(path, position, interactiveSemanticdbs)
+        ammoniteInputPosOpt(path, position)
           .map { case (input, pos) =>
             (input, pos, Ammonite.adjustLspData(input.text))
           }

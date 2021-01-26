@@ -30,8 +30,7 @@ class WorkspaceSearchVisitor(
     workspace: AbsolutePath,
     query: WorkspaceSymbolQuery,
     token: CancelChecker,
-    index: GlobalSymbolIndex,
-    fileOnDisk: AbsolutePath => AbsolutePath
+    index: GlobalSymbolIndex
 ) extends SymbolSearchVisitor {
   private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
   private val fromClasspath = new ju.ArrayList[l.SymbolInformation]()
@@ -127,10 +126,10 @@ class WorkspaceSearchVisitor(
     } {
       isVisited += defn.path
       val input = defn.path.toInput
-      lazy val uri = fileOnDisk(defn.path).toURI.toString
-      SemanticdbDefinition.foreach(input) { defn =>
-        if (query.matches(defn.info)) {
-          fromClasspath.add(defn.toLSP(uri))
+      SemanticdbDefinition.foreach(input) { semanticDefn =>
+        if (query.matches(semanticDefn.info)) {
+          val uri = defn.path.toFileOnDisk(workspace).toURI.toString
+          fromClasspath.add(semanticDefn.toLSP(uri))
           isHit = true
         }
       }

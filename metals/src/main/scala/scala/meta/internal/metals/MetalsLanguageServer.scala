@@ -566,7 +566,6 @@ class MetalsLanguageServer(
           clientConfig.initialConfig.statistics,
           buildTargets,
           definitionIndex,
-          interactiveSemanticdbs.toFileOnDisk,
           excludedPackageHandler.isExcludedPackage
         )
         symbolSearch = new MetalsSymbolSearch(
@@ -1411,7 +1410,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CancelTokens.future { token =>
-      compilers.signatureHelp(params, token, interactiveSemanticdbs)
+      compilers.signatureHelp(params, token)
     }
 
   @JsonRequest("textDocument/codeAction")

@@ -25,7 +25,6 @@ final class WorkspaceSymbolProvider(
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: GlobalSymbolIndex,
-    fileOnDisk: AbsolutePath => AbsolutePath,
     isExcludedPackage: String => Boolean,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
 ) {
@@ -144,7 +143,7 @@ final class WorkspaceSymbolProvider(
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor =
-      new WorkspaceSearchVisitor(workspace, query, token, index, fileOnDisk)
+      new WorkspaceSearchVisitor(workspace, query, token, index)
     search(query, visitor, None)
     visitor.allResults()
   }
