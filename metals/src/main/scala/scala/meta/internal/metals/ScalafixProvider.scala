@@ -94,12 +94,11 @@ case class ScalafixProvider(
               exception
             )
             Future.failed(exception)
-          case Success(results) if !results.isSuccessful =>
-            val scalafixError = results.getErrorMessage().asScala
-            val message = scalafixError.getOrElse(defaultErrorMessage)
-            val exception = ScalafixRunException(message)
+          case Success(results) if !scalafixSucceded(results) =>
+            val scalafixError = getMessageErrorFromScalafix(results)
+            val exception = ScalafixRunException(scalafixError)
             reportScalafixError(
-              message,
+              scalafixError,
               exception
             )
             Future.failed(exception)
@@ -114,6 +113,22 @@ case class ScalafixProvider(
         }
       }
     }
+  }
+  private def scalafixSucceded(evaluation: ScalafixEvaluation): Boolean =
+    evaluation.isSuccessful && evaluation
+      .getFileEvaluations()
+      .forall(_.isSuccessful)
+
+  private def getMessageErrorFromScalafix(
+      evaluation: ScalafixEvaluation
+  ): String = {
+    (if (!evaluation.isSuccessful)
+       evaluation.getErrorMessage().asScala
+     else
+       evaluation
+         .getFileEvaluations()
+         .headOption
+         .flatMap(_.getErrorMessage.asScala)).getOrElse(defaultErrorMessage)
   }
 
   private def scalafixConf: Option[Path] = {
