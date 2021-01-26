@@ -277,7 +277,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertBreakpoints("for-each-comprehension".flaky)(
+  assertBreakpoints("for-each-comprehension")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
@@ -428,6 +428,30 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |
                 |  void call() {
                 |>>  System.out.println();
+                |  }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("multi-files")(
+    source = """|/a/src/main/scala/a/Foo.scala
+                |package a
+                |
+                |trait Foo {
+                |  object Bar {
+                |    def call() = {
+                |>>    println()
+                |    }
+                |  }
+                |}
+                |
+                |/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    val foo = new Foo {}
+                |    foo.Bar.call()
+                |>>  System.exit(0)
                 |  }
                 |}
                 |""".stripMargin
@@ -665,6 +689,55 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
       _ <- debugger.launch
       _ <- setBreakpoints(debugger, workspaceLayout)
       _ <- removeBreakpoints(debugger, workspaceLayout)
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "1\n2\n3\n")
+  }
+
+  test("remove-some-breakpoints") {
+    val firstBreakpoints = DebugWorkspaceLayout(
+      """|/a/src/main/scala/a/Main.scala
+         |package a
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |>>  println(1)
+         |>>  println(2)
+         |>>  println(3)
+         |    System.exit(0)
+         |  }
+         |}
+         |""".stripMargin
+    )
+
+    val modifiedBreakpoints = DebugWorkspaceLayout(
+      """|/a/src/main/scala/a/Main.scala
+         |package a
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |>>  println(1)
+         |>>  println(2)
+         |    println(3)
+         |    System.exit(0)
+         |  }
+         |}
+         |""".stripMargin
+    )
+
+    val navigator = navigateExpectedBreakpoints(modifiedBreakpoints)
+    for {
+      _ <- server.initialize(
+        s"""|/metals.json
+            |{ "a": {} }
+            |
+            |$firstBreakpoints
+            |""".stripMargin
+      )
+      debugger <- debugMain("a", "a.Main", navigator)
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- setBreakpoints(debugger, firstBreakpoints)
+      _ <- setBreakpoints(debugger, modifiedBreakpoints)
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
