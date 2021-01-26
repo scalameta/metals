@@ -700,4 +700,4 @@ lazy val docs = project
     )
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin, MUnitReportPlugin)
+  .enablePlugins(DocusaurusPlugin)
