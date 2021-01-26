@@ -1,4 +1,5 @@
 package scala.meta.internal.metals.debug
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -8,6 +9,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
@@ -21,7 +23,8 @@ private[debug] final class SetBreakpointsRequestHandler(
     classFinder: ClassFinder
 )(implicit ec: ExecutionContext) {
 
-  @volatile private var previousBreakpointUris = Set.empty[String]
+  private val previousBreakpointClassNames =
+    new TrieMap[AbsolutePath, Set[String]]
 
   def apply(
       request: SetBreakpointsArguments
@@ -31,6 +34,9 @@ private[debug] final class SetBreakpointsRequestHandler(
 
     val originalSource = DebugProtocol.copy(request.getSource)
 
+    /* Get symbol for each breakpoint location to figure out the
+     * class file that we need to register the breakpoint for.
+     */
     val symbols: Array[(SourceBreakpoint, Option[String])] =
       path.toLanguage match {
         case Language.JAVA =>
@@ -57,17 +63,32 @@ private[debug] final class SetBreakpointsRequestHandler(
             breakpoints.map(_._1).toArray
           )
         )
-      case _ => None
+      case (None, nonRegisteredBreakpoints) =>
+        val message = nonRegisteredBreakpoints.map { case (br, _) =>
+          s"$path:${br.getLine()}:${br.getColumn()}"
+        }
+        scribe.debug(s"No class found for $message")
+        None
     }
 
-    val allUris = partitions.map(_.getSource().getPath()).toSet
-    val removed = previousBreakpointUris.diff(allUris)
-    previousBreakpointUris = allUris
+    /* Get previously registered class file names (fully qualified class names) for
+     * breakpoints to figure out if we might need to send an empty message to
+     * remove breakpoints from one. This is not a problem if we are sending
+     * new breakpoints, but it's a problem if breakpoints were removed as
+     * partitions will not contain a class file name in case all breakpoints
+     * that were pointing to a certain class file were removed.
+     */
+    val previousClassNames =
+      previousBreakpointClassNames.getOrElse(path, Set.empty[String])
+    val currentClassNames = partitions.map(_.getSource().getPath()).toSet
+    val classFilesToRemoveBreakpointsFrom =
+      previousClassNames.diff(currentClassNames)
 
-    val requests = partitions ++ removed.map { uri =>
-      createEmptyPartition(request, uri)
-    }
+    previousBreakpointClassNames += path -> currentClassNames
 
+    val requests = partitions ++ classFilesToRemoveBreakpointsFrom.map(
+      createEmptyPartition(request, _)
+    )
     server
       .sendPartitioned(requests.map(DebugProtocol.syntheticRequest))
       .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
