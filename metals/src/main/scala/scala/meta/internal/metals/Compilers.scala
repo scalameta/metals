@@ -263,8 +263,7 @@ class Compilers(
 
   def hover(
       params: TextDocumentPositionParams,
-      token: CancelToken,
-      interactiveSemanticdbs: InteractiveSemanticdbs
+      token: CancelToken
   ): Future[Option[Hover]] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.hover(CompilerOffsetParams.fromPos(pos, token))

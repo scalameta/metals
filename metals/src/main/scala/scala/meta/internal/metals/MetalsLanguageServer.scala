@@ -1244,7 +1244,7 @@ class MetalsLanguageServer(
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CancelTokens.future { token =>
       compilers
-        .hover(params, token, interactiveSemanticdbs)
+        .hover(params, token)
         .map { hover =>
           syntheticsDecorator.addSyntheticsHover(params, hover)
         }
