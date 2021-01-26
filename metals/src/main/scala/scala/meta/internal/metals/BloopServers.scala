@@ -38,7 +38,7 @@ final class BloopServers(
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
-  private val bloop = "Bloop"
+  import BloopServers._
 
   def shutdownServer(): Boolean = {
     val dummyIn = new ByteArrayInputStream(new Array(0))
@@ -72,7 +72,7 @@ final class BloopServers(
         () => connectToLauncher(bloopVersion, config.bloopPort),
         tables.dismissedNotifications.ReconnectBsp,
         config,
-        bloop
+        name
       )
   }
 
@@ -164,7 +164,7 @@ final class BloopServers(
 
     serverStarted.future.map { _ =>
       SocketConnection(
-        bloop,
+        name,
         clientOut,
         clientIn,
         List(
@@ -178,4 +178,8 @@ final class BloopServers(
       )
     }
   }
+}
+
+object BloopServers {
+  val name = "Bloop"
 }

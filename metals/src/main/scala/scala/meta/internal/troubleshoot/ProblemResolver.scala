@@ -3,6 +3,7 @@ package scala.meta.internal.troubleshoot
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -20,10 +21,11 @@ class ProblemResolver(
   def isUnsupportedBloopVersion(): Boolean = {
     currentBuildServer() match {
       case Some(bspSession) =>
-        bspSession.main.name == "Bloop" && !SemVer.isCompatibleVersion(
-          BuildInfo.bloopVersion,
-          bspSession.main.version
-        )
+        bspSession.main.name == BloopServers.name && !SemVer
+          .isCompatibleVersion(
+            BuildInfo.bloopVersion,
+            bspSession.main.version
+          )
       case None =>
         false
     }

@@ -125,35 +125,20 @@ class BspConnector(
   }
 
   private def askUser(
-      bspServerConnections: List[BspConnectionDetails],
+      availableBspConnections: List[BspConnectionDetails],
       currentBsp: Option[String]
   ): Future[BspResolvedResult] = {
-    val bloop = new BspConnectionDetails(
-      "Bloop",
-      ImmutableList.of(),
-      userConfig().currentBloopVersion,
-      "",
-      ImmutableList.of()
-    )
-
     val query = Messages.SelectBspServer.request(
-      bloop :: bspServerConnections,
+      availableBspConnections,
       currentBsp
     )
     for {
       item <- client.showMessageRequest(query.params).asScala
     } yield {
       val chosenMaybe = Option(item).flatMap(i => query.details.get(i.getTitle))
-      val result = chosenMaybe
-        .map { chosen =>
-          if (chosen == bloop) {
-            ResolvedBloop
-          } else {
-            ResolvedBspOne(chosen)
-          }
-        }
+      chosenMaybe
+        .map(BspResolvedResult.fromDetails)
         .getOrElse(ResolvedNone)
-      result
     }
   }
 
@@ -165,18 +150,36 @@ class BspConnector(
       createBloopAndConnect: () => Future[BuildChange]
   ): Future[Boolean] = {
     val bloopPresent = buildTools.isBloop
-    bspServers.findAvailableServers() match {
+
+    val availableServers = {
+      val found = bspServers.findAvailableServers()
+      if (bloopPresent || buildTools.loadSupported().nonEmpty)
+        new BspConnectionDetails(
+          BloopServers.name,
+          ImmutableList.of(),
+          userConfig().currentBloopVersion,
+          "",
+          ImmutableList.of()
+        ) :: found
+      else found
+    }
+
+    availableServers match {
       case Nil =>
-        if (bloopPresent)
-          client.showMessage(BspSwitch.onlyOneServer(name = "Bloop"))
-        else
-          client.showMessage(BspSwitch.noInstalledServer)
+        client.showMessage(BspSwitch.noInstalledServer)
         Future.successful(false)
-      case availableServers =>
-        val currentBsp = tables.buildServers.selectedServer()
-        askUser(availableServers, currentBsp).map {
+      case singleServer :: Nil =>
+        client.showMessage(
+          BspSwitch.onlyOneServer(name = singleServer.getName())
+        )
+        Future.successful(false)
+      case multipleServers =>
+        val currentSelectedServer = tables.buildServers.selectedServer()
+        askUser(multipleServers, currentSelectedServer).map {
           case ResolvedBloop
-              if currentBsp.contains(BspConnector.BLOOP_SELECTED) =>
+              if currentSelectedServer.contains(
+                BspConnector.BLOOP_SELECTED
+              ) =>
             false
           case ResolvedBloop =>
             tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
@@ -193,7 +196,7 @@ class BspConnector(
               false
             }
           case ResolvedBspOne(details)
-              if !currentBsp.contains(details.getName) =>
+              if !currentSelectedServer.contains(details.getName) =>
             tables.buildServers.chooseServer(details.getName)
             true
           case _ =>

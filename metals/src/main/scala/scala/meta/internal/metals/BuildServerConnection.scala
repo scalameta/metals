@@ -61,7 +61,7 @@ class BuildServerConnection private (
   // the name is set before when establishing conenction
   def name: String = initialConnection.socketConnection.serverName
 
-  def isBloop: Boolean = name == "Bloop"
+  def isBloop: Boolean = name == BloopServers.name
 
   def workspaceDirectory: AbsolutePath = workspace
 

@@ -108,6 +108,11 @@ final class BspServers(
     )
   }
 
+  /**
+   * Returns a list of BspConnectionDetails from reading the .bsp/
+   *  entries. Notes that this will not return Bloop even though it
+   *  may be a server in the current workspace
+   */
   def findAvailableServers(): List[BspConnectionDetails] = {
     val jsonFiles = findJsonFiles(mainWorkspace)
     val gson = new Gson()
