@@ -47,6 +47,8 @@ inThisBuild(
       if (isCI) dynVer
       else localSnapshotVersion // only for local publishing
     },
+    // note bucket created by @tgodzik
+    munitBucketName := Some("scala-metals-test-reports"),
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(
@@ -693,8 +695,6 @@ lazy val docs = project
     sharedSettings,
     skip.in(publish) := true,
     moduleName := "metals-docs",
-    // note bucket created by @tgodzik
-    munitBucketName := Some("scala-metals-test-reports"),
     mdoc := run.in(Compile).evaluated,
     munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
