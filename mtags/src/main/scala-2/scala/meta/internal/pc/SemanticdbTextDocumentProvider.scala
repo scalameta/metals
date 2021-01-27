@@ -36,7 +36,13 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
       SemanticdbConfig.default
     )
 
-    val explicitDialect = if (filename.isSbt) Some(dialects.Sbt1) else None
+    val explicitDialect = if (filename.isSbt) {
+      Some(dialects.Sbt1)
+    } else if (filename.isScalaScript) {
+      Some(dialects.Scala213.withAllowToplevelStatements(true))
+    } else {
+      None
+    }
     val document = unit.toTextDocument(explicitDialect)
     val fileUri = Paths.get(new URI(filename))
     compiler.workspace
