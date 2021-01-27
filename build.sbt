@@ -693,6 +693,8 @@ lazy val docs = project
     sharedSettings,
     skip.in(publish) := true,
     moduleName := "metals-docs",
+    // note bucket created by @tgodzik
+    munitBucketName := Some("scala-metals-test-reports"),
     mdoc := run.in(Compile).evaluated,
     munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
