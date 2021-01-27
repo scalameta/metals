@@ -47,7 +47,7 @@ variables.
 ## Configure Java version
 
 The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
-[`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate the
+[`locate-java-home`](https://www.npmjs.com/package/locate-java-home)) to locate the
 `java` executable. To override the default Java home location, update the "Java
 Home" variable in the settings menu.
 
