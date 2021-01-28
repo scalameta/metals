@@ -63,13 +63,13 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|import scala.concurrent.Future
            |case class Location(city: String)
            |object Main{
-           |  def hello()(implicit name: String, from: Location) = {
+           |  def hello()(implicit name: String, from: Location): Unit = {
            |    println(s"Hello $name from ${from.city}")
            |  }
            |  implicit val andy : String = "Andy"
            |
-           |  def greeting() = {
-           |    implicit val boston = Location("Boston")
+           |  def greeting(): Unit = {
+           |    implicit val boston: Location = Location("Boston")
            |    hello()(andy, boston)
            |    hello()(andy, boston);    hello()(andy, boston)
            |  }
@@ -205,7 +205,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|object Main{
-           |  def hello()(implicit name: String) = {
+           |  def hello()(implicit name: String): Unit = {
            |    println(s"Hello $name!")
            |  }
            |  implicit val andy : String = "Andy"
@@ -337,6 +337,151 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|object Main{
            |  augmentString("asd.").stripSuffix(".")
            |  augmentString("asd.").stripSuffix(".")
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("inferred-type-various") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |object Main{
+           |  val head :: tail = List(0.1, 0.2, 0.3)
+           |  val List(l1, l2) = List(12, 13)
+           |  println("Hello!")
+           |  val abc = 123
+           |  val tupleBound @ (one, two) = ("1", "2")
+           |  var variable = 123
+           |  val bcd: Int = 2
+           |  val (hello, bye) = ("hello", "bye")
+           |  def method() = {
+           |    val local = 1.0
+           |  }
+           |  def methodNoParen = {
+           |    val (local, _) = ("", 1.0)
+           |  }
+           |  def hello()(name: String) = {
+           |    println(s"Hello $$name!")
+           |  }
+           |  def hello2()(name: String = "") = {
+           |    println(s"Hello $$name!")
+           |  }
+           |  val tpl1 = (123, 1)
+           |  val tpl2 = (123, 1, 3)
+           |  val func0 = () => 2
+           |  val func1 = (a : Int) => a + 2
+           |  val func2 = (a : Int, b: Int) => a + b
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  val head: Double :: tail: List[Double] = List(0.1, 0.2, 0.3)
+           |  val List(l1: Int, l2: Int) = List(12, 13)
+           |  println("Hello!")
+           |  val abc: Int = 123
+           |  val tupleBound: (String, String) @ (one: String, two: String) = ("1", "2")
+           |  var variable: Int = 123
+           |  val bcd: Int = 2
+           |  val (hello: String, bye: String) = ("hello", "bye")
+           |  def method(): Unit = {
+           |    val local: Double = 1.0
+           |  }
+           |  def methodNoParen: Unit = {
+           |    val (local: String, _) = ("", 1.0)
+           |  }
+           |  def hello()(name: String): Unit = {
+           |    println(s"Hello $name!")
+           |  }
+           |  def hello2()(name: String = ""): Unit = {
+           |    println(s"Hello $name!")
+           |  }
+           |  val tpl1: (Int, Int) = (123, 1)
+           |  val tpl2: (Int, Int, Int) = (123, 1, 3)
+           |  val func0: () => Int = () => 2
+           |  val func1: (Int) => Int = (a : Int) => a + 2
+           |  val func2: (Int, Int) => Int = (a : Int, b: Int) => a + b
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("inferred-type-changes") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |object Main{
+           |  val abc = 123
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  val abc: Int = 123
+           |}
+           |""".stripMargin
+      )
+      // introduce a change
+      _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
+        "\n" + text
+      }
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |object Main{
+           |  val abc: Int = 123
+           |}
+           |""".stripMargin
+      )
+      // introduce a parsing error
+      _ <- server.didChange("a/src/main/scala/Main.scala") { text =>
+        "}\n" + text
+      }
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|}
+           |
+           |object Main{
+           |  val abc: Int = 123
            |}
            |""".stripMargin
       )

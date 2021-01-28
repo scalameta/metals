@@ -710,7 +710,7 @@ object MetalsEnrichments
       tree.origin match {
         case Origin.Parsed(input, dialect, pos) =>
           val tokens = dialect(input).tokenize.get
-          tokens.slice(pos.end + 1, tokens.length).iterator
+          tokens.slice(pos.end, tokens.length).iterator
         case _ => Iterator.empty
       }
 
