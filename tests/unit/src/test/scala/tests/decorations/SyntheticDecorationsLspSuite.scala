@@ -379,13 +379,21 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val func0 = () => 2
            |  val func1 = (a : Int) => a + 2
            |  val func2 = (a : Int, b: Int) => a + b
+           |  val complex = tail.zip(1 to 12)
+           |  for{
+           |    i <- complex
+           |    c = func1
+           |  } i match {
+           |    case (b, c: Int) =>
+           |    case a =>
+           |  }
            |}
            |""".stripMargin
       )
       _ <- server.didChangeConfiguration(
         """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions": true,
+          |  "show-implicit-arguments": false,
+          |  "show-implicit-conversions": false,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -421,6 +429,14 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val func0: () => Int = () => 2
            |  val func1: (Int) => Int = (a : Int) => a + 2
            |  val func2: (Int, Int) => Int = (a : Int, b: Int) => a + b
+           |  val complex: List[(Double, Int)] = tail.zip[Double, Int, List[(Double, Int)]](1 to 12)
+           |  for{
+           |    i: (Double, Int) <- complex
+           |    c: (Int) => Int = func1
+           |  } i match {
+           |    case (b: Double, c: Int) =>
+           |    case a: (Double, Int) =>
+           |  }
            |}
            |""".stripMargin
       )

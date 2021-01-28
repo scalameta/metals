@@ -385,6 +385,14 @@ final class SyntheticsDecorationProvider(
 
     def visit(tree: m.Tree): List[s.Range] = {
       tree match {
+        case enumerator: m.Enumerator.Generator =>
+          explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case enumerator: m.Enumerator.CaseGenerator =>
+          explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case enumerator: m.Enumerator.Val =>
+          explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case cs: m.Case =>
+          explorePatterns(List(cs.pat)) ++ visit(cs.body)
         case vl: m.Defn.Val =>
           val values =
             if (vl.decltpe.isEmpty) explorePatterns(vl.pats) else Nil
