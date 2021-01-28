@@ -72,18 +72,20 @@ consists of a single JSON-RPC notification.
 
 ### `initialize`
 
-The Decoration Protocol is only enabled when both the client and server declare
-support for the protocol by adding an `decorationProvider: true` field to the
-experimental section of the server and client capabilities in the `initialize`
-response.
+The Decoration Protocol is only enabled when client declares support for the
+protocol by adding an `decorationProvider: true` field to the
+`initializationOptions` during the `initialize` request.
+
+Depending on your editor, it may also allow for inline decorations. This is used
+for features like showing implicit arguments and inferred types, both which are
+user configuration settings that a user can toggle. However, in order for those
+features to use decorations rather than just extra information in your hover,
+your client also needs to declare that it's an `inlineDecorationsProvider`.
 
 ```json
-{
-  "capabilities": {
-    "experimental": {
-      "decorationProvider": true
-    }
-  }
+"initializationOptions": {
+  "decorationProvider": true,
+  "inlineDecorationProvider": true
 }
 ```
 

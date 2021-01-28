@@ -597,10 +597,6 @@ Default value is `-Dbloop.sbt.version=@SBT_BLOOP_VERSION@`.
 The below properties are also available as user configuration options. It's
 preferable to set these there:
 
-```scala mdoc:user-config:system-property
-
-```
-
 ### `-Dmetals.bloop-port`
 
 Port number of the Bloop server to connect to. Should only be used if Bloop

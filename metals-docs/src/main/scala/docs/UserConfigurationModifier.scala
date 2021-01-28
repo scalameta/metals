@@ -15,20 +15,6 @@ class UserConfigurationModifier extends StringModifier {
       reporter: Reporter
   ): String = {
     info match {
-      case "system-property" =>
-        UserConfiguration.options
-          .map { option =>
-            s"""
-               |### `-Dmetals.${option.key}`
-               |
-               |${option.description}
-               |
-               |**Default**: ${option.default}
-               |
-               |**Note**: this property can also be defined as user configuration option [${option.title}](#${option.headerID}).
-               |""".stripMargin
-          }
-          .mkString("\n")
       case "lsp-config-default" =>
         UserConfiguration.options
           .map { option =>
