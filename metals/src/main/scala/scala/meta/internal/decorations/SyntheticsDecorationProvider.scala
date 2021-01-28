@@ -120,7 +120,8 @@ final class SyntheticsDecorationProvider(
           val printer = new SemanticdbTreePrinter(
             isHover = true,
             toHoverString(textDocument),
-            PrinterSymtab.fromTextDocument(textDocument)
+            PrinterSymtab.fromTextDocument(textDocument),
+            clientConfig.icons().rightArrow
           )
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
@@ -327,7 +328,8 @@ final class SyntheticsDecorationProvider(
       val decorationPrinter = new SemanticdbTreePrinter(
         isHover = false,
         toDecorationString(textDocument),
-        PrinterSymtab.fromTextDocument(textDocument)
+        PrinterSymtab.fromTextDocument(textDocument),
+        clientConfig.icons().rightArrow
       )
 
       val decorations = for {
@@ -432,7 +434,7 @@ final class SyntheticsDecorationProvider(
       pos <- visit(tree)
     } yield pos
 
-    val allTypes = declarationsWithoutTypes.toSet
+    val allMissingTypeRanges = declarationsWithoutTypes.toSet
     val typeDecorations = for {
       tree <- trees.get(path).toIterable
       textDocumentInput = Input.VirtualFile(textDocument.uri, textDocument.text)
@@ -442,7 +444,7 @@ final class SyntheticsDecorationProvider(
       occ <- textDocument.occurrences
       range <- occ.range.toIterable
       treeRange <- semanticDbToTreeEdit.toRevisedStrict(range).toIterable
-      if occ.role.isDefinition && allTypes(treeRange)
+      if occ.role.isDefinition && allMissingTypeRanges(treeRange)
       signature <- textDocument.symbols.find(_.symbol == occ.symbol).toIterable
       decorationPosition = methodPositions.getOrElse(treeRange, treeRange)
       realPosition <- treeToBufferEdit.toRevisedStrict(decorationPosition)
@@ -450,13 +452,12 @@ final class SyntheticsDecorationProvider(
       val lspRange = realPosition.toLSP
       signature.signature match {
         case m: MethodSignature =>
-          val decoration = " : " + decorationPrinter.printType(m.returnType)
+          val decoration = ": " + decorationPrinter.printType(m.returnType)
           Some(decorationOptions(lspRange, decoration))
         case m: ValueSignature =>
-          val decoration = " : " + decorationPrinter.printType(m.tpe)
+          val decoration = ": " + decorationPrinter.printType(m.tpe)
           Some(decorationOptions(lspRange, decoration))
-        case other =>
-          pprint.log(other)
+        case _ =>
           None
       }
     }

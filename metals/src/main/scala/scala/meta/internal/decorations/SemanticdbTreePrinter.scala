@@ -9,7 +9,8 @@ import scala.meta.metap.Format
 class SemanticdbTreePrinter(
     isHover: Boolean,
     printSymbol: String => String,
-    createSymtab: => PrinterSymtab
+    createSymtab: => PrinterSymtab,
+    rightArrow: String
 ) {
 
   lazy val symtab = createSymtab
@@ -79,7 +80,7 @@ class SemanticdbTreePrinter(
         typeArgs.map(printType).mkString("(", ", ", ")")
       case _ if isFunction =>
         val argTypes :+ returnType = typeArgs.map(printType)
-        argTypes.mkString("(", ", ", ")") + " => " + returnType
+        argTypes.mkString("(", ", ", ")") + s" $rightArrow $returnType"
       case _ =>
         typeArgs.map(printType).mkString("[", ", ", "]")
     }
