@@ -227,10 +227,10 @@ object UserConfiguration {
         BuildInfo.scala212,
         BuildInfo.scala212,
         "Default fallback Scala version",
-        """|The Scala compiler version that is used as default or fallback in case a file
-           |doesn't belong to any build target or specified Scala version isn't supported by Metals.
-           |This applies for standalone Scala files, worksheets, and Ammonite scripts
-           |""".stripMargin
+        """|The Scala compiler version that is used as the default or fallback in case a file 
+           |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
+           |This applies to standalone Scala files, worksheets, and Ammonite scripts.
+        """.stripMargin
       )
     )
 

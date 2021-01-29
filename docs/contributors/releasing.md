@@ -94,6 +94,8 @@ title: Making a release
       "Requirements" over to the scalameta/metals-vscode README
       - remove "Using latest SNAPSHOT" section, this table is only up-to-date on
         the website
+    - check or update `enum` values of `fallbackScalaVersion` property in `package.json`.
+      They should be the same as `V.supportedScalaVersions` in `build.sbt`
     - open a PR, feel free to merge after CI is green
     - open the last generated release draft, tag with a new version and publish
       the release. This will start github actions job and publish the extension
