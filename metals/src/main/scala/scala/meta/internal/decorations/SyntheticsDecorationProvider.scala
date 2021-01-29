@@ -121,7 +121,8 @@ final class SyntheticsDecorationProvider(
             isHover = true,
             toHoverString(textDocument),
             PrinterSymtab.fromTextDocument(textDocument),
-            clientConfig.icons().rightArrow
+            clientConfig.icons().rightArrow,
+            clientConfig.icons().ellipsis
           )
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
@@ -329,7 +330,8 @@ final class SyntheticsDecorationProvider(
         isHover = false,
         toDecorationString(textDocument),
         PrinterSymtab.fromTextDocument(textDocument),
-        clientConfig.icons().rightArrow
+        clientConfig.icons().rightArrow,
+        clientConfig.icons().ellipsis
       )
 
       val decorations = for {

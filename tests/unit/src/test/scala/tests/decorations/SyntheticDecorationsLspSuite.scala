@@ -443,6 +443,72 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
     } yield ()
   }
 
+  test("inferred-type-complex") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |import scala.concurrent.ExecutionContextExecutorService
+           |
+           |trait A
+           |trait B
+           |
+           |class Main(implicit ec: ExecutionContextExecutorService){
+           |  // structural types
+           |  val anon1 = new A {}
+           |  val anon2 = new A { def a = 123 }
+           |  val anon3 = new A with B {}
+           |  // existential type
+           |  val job = ec.submit(new Runnable {
+           |     override def run(): Unit = {}
+           |  })
+           |  val runnable = new Runnable {
+           |    override def run(): Unit = {}
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": false,
+          |  "show-implicit-conversions": false,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|import scala.concurrent.ExecutionContextExecutorService
+           |
+           |trait A
+           |trait B
+           |
+           |class Main(implicit ec: ExecutionContextExecutorService){
+           |  // structural types
+           |  val anon1: A {} = new A {}
+           |  val anon2: A {...} = new A { def a: Int = 123 }
+           |  val anon3: A with B {} = new A with B {}
+           |  // existential type
+           |  val job: Future[_] = ec.submit(new Runnable {
+           |     override def run(): Unit = {}
+           |  })
+           |  val runnable: Runnable {} = new Runnable {
+           |    override def run(): Unit = {}
+           |  }
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
   test("inferred-type-changes") {
     for {
       _ <- server.initialize(
