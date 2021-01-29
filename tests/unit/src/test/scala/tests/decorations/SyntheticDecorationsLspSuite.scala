@@ -74,8 +74,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    hello()(andy, boston);    hello()(andy, boston)
            |  }
            |  
-           |  augmentString("foo").map[Char, String](c => charWrapper(c).toUpper)(StringCanBuildFrom)
-           |  augmentString("foo").map[Int, IndexedSeq[Int]](c => c.toInt)(fallbackStringCanBuildFrom[Int])
+           |  augmentString("foo").map[Char, String](c: Char => charWrapper(c).toUpper)(StringCanBuildFrom)
+           |  augmentString("foo").map[Int, IndexedSeq[Int]](c: Char => c.toInt)(fallbackStringCanBuildFrom[Int])
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
            |  Future{
            |    println("")
@@ -210,7 +210,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  ("1" + "2").map[Char, String](c => c.toUpper)
+           |  ("1" + "2").map[Char, String](c: Char => c.toUpper)
            |}
            |""".stripMargin
       )
@@ -371,7 +371,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  def hello()(name: String) = {
            |    println(s"Hello $$name!")
            |  }
-           |  def hello2()(name: String = "") = {
+           |  def convert()(name: String => String = _ => "") = {
            |    println(s"Hello $$name!")
            |  }
            |  val tpl1 = (123, 1)
@@ -387,6 +387,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    case (b, c: Int) =>
            |    case a =>
            |  }
+           |  convert(){str => str.stripMargin}
+           |  convert(){str : String => str.stripMargin}
            |}
            |""".stripMargin
       )
@@ -408,7 +410,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val List(l1: Int, l2: Int) = List(12, 13)
            |  println("Hello!")
            |  val abc: Int = 123
-           |  val tupleBound: (String, String) @ (one: String, two: String) = ("1", "2")
+           |  val tupleBound @ (one: String, two: String) = ("1", "2")
            |  var variable: Int = 123
            |  val bcd: Int = 2
            |  val (hello: String, bye: String) = ("hello", "bye")
@@ -421,7 +423,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  def hello()(name: String): Unit = {
            |    println(s"Hello $name!")
            |  }
-           |  def hello2()(name: String = ""): Unit = {
+           |  def convert()(name: String => String = _ => ""): Unit = {
            |    println(s"Hello $name!")
            |  }
            |  val tpl1: (Int, Int) = (123, 1)
@@ -437,6 +439,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    case (b: Double, c: Int) =>
            |    case a: (Double, Int) =>
            |  }
+           |  convert(){str: String => str.stripMargin}
+           |  convert(){str : String => str.stripMargin}
            |}
            |""".stripMargin
       )

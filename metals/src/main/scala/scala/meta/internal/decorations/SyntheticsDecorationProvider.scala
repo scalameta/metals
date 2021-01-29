@@ -378,7 +378,7 @@ final class SyntheticsDecorationProvider(
         case m.Pat.Tuple(tuplePats) =>
           explorePatterns(tuplePats)
         case m.Pat.Bind(lhs, rhs) =>
-          List(lhs.pos.toSemanticdb) ++ explorePatterns(List(rhs))
+          explorePatterns(List(rhs))
         case _ => Nil
       }
     }
@@ -391,6 +391,8 @@ final class SyntheticsDecorationProvider(
           explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
         case enumerator: m.Enumerator.Val =>
           explorePatterns(List(enumerator.pat)) ++ visit(enumerator.rhs)
+        case param: m.Term.Param =>
+          if (param.decltpe.isEmpty) List(param.name.pos.toSemanticdb) else Nil
         case cs: m.Case =>
           explorePatterns(List(cs.pat)) ++ visit(cs.body)
         case vl: m.Defn.Val =>
