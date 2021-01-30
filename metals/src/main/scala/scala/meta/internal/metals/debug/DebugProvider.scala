@@ -84,19 +84,23 @@ class DebugProvider(
       val jvmOptionsTranslatedParams = translateJvmParams(parameters)
       // long timeout, since server might take a while to compile the project
       val connectToServer = () => {
-        buildServer()
-          .map(_.startDebugSession(jvmOptionsTranslatedParams))
-          .getOrElse(BuildServerUnavailableError)
-          .withTimeout(60, TimeUnit.SECONDS)
-          .map { uri =>
-            val socket = connect(uri)
-            connectedToServer.trySuccess(())
-            socket
-          }
-          .recover { case exception =>
-            connectedToServer.tryFailure(exception)
-            throw exception
-          }
+        val targets = jvmOptionsTranslatedParams.getTargets().asScala
+
+        compilations.compilationFinished(targets).flatMap { _ =>
+          buildServer()
+            .map(_.startDebugSession(jvmOptionsTranslatedParams))
+            .getOrElse(BuildServerUnavailableError)
+            .withTimeout(60, TimeUnit.SECONDS)
+            .map { uri =>
+              val socket = connect(uri)
+              connectedToServer.trySuccess(())
+              socket
+            }
+            .recover { case exception =>
+              connectedToServer.tryFailure(exception)
+              throw exception
+            }
+        }
       }
 
       val proxyFactory = { () =>
