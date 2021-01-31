@@ -147,6 +147,8 @@ yet available on Maven Central run:
 <li>remove &quot;Using latest SNAPSHOT&quot; section, this table is only up-to-date on
 the website</li>
 </ul></li>
+<li>check or update <code>enum</code> values of <code>fallbackScalaVersion</code> property in <code>package.json</code>.
+They should be the same as <code>V.supportedScalaVersions</code> in <code>build.sbt</code></li>
 <li>open a PR, feel free to merge after CI is green</li>
 <li>open the last generated release draft, tag with a new version and publish
 the release. This will start github actions job and publish the extension
