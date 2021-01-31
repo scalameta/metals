@@ -12,8 +12,6 @@ import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import coursierapi.Dependency
 import coursierapi.Fetch
 import coursierapi.MavenRepository
@@ -58,13 +56,13 @@ final class Embedded(
   }
 
   def presentationCompiler(
-      info: ScalaBuildTarget,
-      scalac: ScalacOptionsItem
+      scalaVersion: String,
+      classpath: Seq[Path]
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
-      ScalaVersions.dropVendorSuffix(info.getScalaVersion),
+      ScalaVersions.dropVendorSuffix(scalaVersion),
       statusBar.trackSlowTask("Preparing presentation compiler") {
-        Embedded.newPresentationCompilerClassLoader(info, scalac)
+        Embedded.newPresentationCompilerClassLoader(scalaVersion, classpath)
       }
     )
     serviceLoader(
@@ -256,18 +254,17 @@ object Embedded {
   }
 
   def newPresentationCompilerClassLoader(
-      info: ScalaBuildTarget,
-      scalac: ScalacOptionsItem
+      fullScalaVersion: String,
+      classpath: Seq[Path]
   ): URLClassLoader = {
     val scalaVersion = ScalaVersions
-      .dropVendorSuffix(info.getScalaVersion)
+      .dropVendorSuffix(fullScalaVersion)
     val dep = mtagsDependency(scalaVersion)
-    val jars = fetchSettings(dep, info.getScalaVersion())
+    val jars = fetchSettings(dep, fullScalaVersion)
       .fetch()
       .asScala
       .map(_.toPath)
-    val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
-    val allJars = Iterator(jars, scalaJars).flatten
+    val allJars = Iterator(jars, classpath).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =
@@ -281,6 +278,18 @@ object Embedded {
   ): URLClassLoader = {
     val urls = classpath.entries.map(_.toNIO.toUri.toURL).toArray
     new URLClassLoader(urls, classLoader)
+  }
+
+  /**
+   * Provides scala3-library dependency for stadalone PC and mdoc instances
+   */
+  def scalaLibrary(scalaVersion: String): List[Path] = {
+    val dependency =
+      if (ScalaVersions.isScala3Version(scalaVersion))
+        scala3Dependency(scalaVersion)
+      else
+        scalaDependency(scalaVersion)
+    downloadDependency(dependency, scalaVersion)
   }
 
 }

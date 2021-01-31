@@ -29,6 +29,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
@@ -39,6 +40,8 @@ import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.worksheets.MdocEnrichments._
+import scala.meta.internal.worksheets.WorksheetProvider.MdocKey
+import scala.meta.internal.worksheets.WorksheetProvider.MdocRef
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -66,7 +69,8 @@ class WorksheetProvider(
     embedded: Embedded,
     publisher: WorksheetPublisher,
     compilers: Compilers,
-    compilations: Compilations
+    compilations: Compilations,
+    scalaVersionSelector: ScalaVersionSelector
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -80,23 +84,42 @@ class WorksheetProvider(
   private lazy val threadStopper: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
-  private val mdocs = new TrieMap[BuildTargetIdentifier, Mdoc]()
+  private val mdocs = new TrieMap[MdocKey, MdocRef]()
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
   private val exportableEvaluations =
     new TrieMap[VirtualFile, EvaluatedWorksheet]()
-  private val currentScalaVersion =
-    scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
-  private val currentBinaryVersion =
-    ScalaVersions.scalaBinaryVersionFromFullVersion(currentScalaVersion)
-  private lazy val ramboMdoc =
-    embedded.mdoc(currentScalaVersion, currentBinaryVersion)
 
-  def onBuildTargetDidCompile(target: BuildTargetIdentifier): Unit = {
-    clearBuildTarget(target)
+  private def fallabackMdoc: Mdoc = {
+    val scalaVersion =
+      scalaVersionSelector.fallbackScalaVersion(allowScala3 = true)
+    mdocs
+      .get(MdocKey.Default)
+      .flatMap(ref =>
+        if (ref.scalaVersion == scalaVersion) Some(ref.value)
+        else {
+          ref.value.shutdown()
+          None
+        }
+      )
+      .getOrElse {
+        val binary =
+          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+        val mdoc =
+          embedded
+            .mdoc(scalaVersion, binary)
+            .withClasspath(Embedded.scalaLibrary(scalaVersion).asJava)
+        val ref = MdocRef(scalaVersion, mdoc)
+        mdocs.update(MdocKey.Default, ref)
+        ref.value
+      }
   }
 
-  private def clearBuildTarget(target: BuildTargetIdentifier): Unit = {
-    mdocs.remove(target).foreach(_.shutdown())
+  def onBuildTargetDidCompile(target: BuildTargetIdentifier): Unit = {
+    clearBuildTarget(MdocKey.BuildTarget(target))
+  }
+
+  private def clearBuildTarget(key: MdocKey): Unit = {
+    mdocs.remove(key).foreach(_.value.shutdown())
   }
 
   def reset(): Unit = {
@@ -372,7 +395,7 @@ class WorksheetProvider(
       target <- buildTargets.inverseSources(path)
       mdoc <- getMdoc(target)
     } yield mdoc
-    mdoc.getOrElse(ramboMdoc)
+    mdoc.getOrElse(fallabackMdoc)
   }
 
   private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
@@ -395,7 +418,8 @@ class WorksheetProvider(
         scalaVersion
       )
 
-    mdocs.get(target).orElse {
+    val key = MdocKey.BuildTarget(target)
+    mdocs.get(key).map(_.value).orElse {
       for {
         info <- buildTargets.scalaTarget(target)
         scalaVersion = info.scalaVersion
@@ -423,7 +447,7 @@ class WorksheetProvider(
           )
           .withClasspath(info.fullClasspath.asScala.distinct.asJava)
           .withScalacOptions(scalacOptions)
-        mdocs(target) = mdoc
+        mdocs(key) = MdocRef(scalaVersion, mdoc)
         mdoc
       }
     }
@@ -439,6 +463,13 @@ class WorksheetProvider(
 }
 
 object WorksheetProvider {
+
+  sealed trait MdocKey
+  object MdocKey {
+    final case class BuildTarget(id: BuildTargetIdentifier) extends MdocKey
+    case object Default extends MdocKey
+  }
+  final case class MdocRef(scalaVersion: String, value: Mdoc)
 
   def worksheetScala3Adjustments(
       originInput: Input.VirtualFile,

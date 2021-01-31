@@ -91,6 +91,7 @@ class StandaloneSymbolSearch(
 
 object StandaloneSymbolSearch {
   def apply(
+      scalaVersion: String,
       workspace: AbsolutePath,
       buffers: Buffers,
       sources: Seq[Path],
@@ -100,6 +101,7 @@ object StandaloneSymbolSearch {
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
+        scalaVersion,
         sources.map(AbsolutePath(_)),
         classpath.map(AbsolutePath(_)),
         userConfig().javaHome
@@ -114,13 +116,14 @@ object StandaloneSymbolSearch {
     )
   }
   def apply(
+      scalaVersion: String,
       workspace: AbsolutePath,
       buffers: Buffers,
       isExcludedPackage: String => Boolean,
       userConfig: () => UserConfiguration
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
-      addScalaAndJava(Nil, Nil, userConfig().javaHome)
+      addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
 
     new StandaloneSymbolSearch(
       workspace,
@@ -141,23 +144,26 @@ object StandaloneSymbolSearch {
    * @return (scalaSources, scalaClasspath)
    */
   private def addScalaAndJava(
+      scalaVersion: String,
       sources: Seq[AbsolutePath],
       classpath: Seq[AbsolutePath],
       javaHome: Option[String]
   ): (Seq[AbsolutePath], Seq[AbsolutePath]) = {
-    val missingScala: Boolean =
-      sources.filter(_.toString.contains("scala-library")).isEmpty
+    val missingScala: Boolean = {
+      val libraryName =
+        if (ScalaVersions.isScala3Version(scalaVersion))
+          "scala-library"
+        else
+          "scala3-library"
+      sources.filter(_.toString.contains(libraryName)).isEmpty
+    }
 
     (missingScala, JdkSources(javaHome)) match {
       case (true, None) =>
-        val (scalaSources, scalaClasspath) = getScala(
-          scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
-        )
+        val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (sources ++ scalaSources, classpath ++ scalaClasspath)
       case (true, Some(absPath)) =>
-        val (scalaSources, scalaClasspath) = getScala(
-          scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
-        )
+        val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (
           (scalaSources :+ absPath) ++ sources,
           classpath ++ scalaClasspath
@@ -175,11 +181,16 @@ object StandaloneSymbolSearch {
    */
   private def getScala(
       scalaVersion: String
-  ): (Seq[AbsolutePath], Seq[AbsolutePath]) =
-    Embedded
-      .downloadScalaSources(scalaVersion)
-      .toSeq
+  ): (Seq[AbsolutePath], Seq[AbsolutePath]) = {
+    val download =
+      if (ScalaVersions.isScala3Version(scalaVersion))
+        Embedded.downloadScala3Sources _
+      else
+        Embedded.downloadScalaSources _
+
+    download(scalaVersion).toSeq
       .map(path => AbsolutePath(path))
       .partition(_.toString.endsWith("-sources.jar"))
+  }
 
 }

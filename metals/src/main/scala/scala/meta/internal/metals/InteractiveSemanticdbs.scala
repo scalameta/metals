@@ -147,7 +147,7 @@ final class InteractiveSemanticdbs(
           .getWorksheet(source)
           .flatMap(compilers().loadWorksheetCompiler)
       }
-      .getOrElse(compilers().ramboCompiler)
+      .getOrElse(compilers().fallbackCompiler)
 
     val (prependedLinesSize, modifiedText) =
       buildTargets

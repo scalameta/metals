@@ -154,6 +154,11 @@ class MetalsLanguageServer(
   val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
+
+  private val scalaVersionSelector = new ScalaVersionSelector(
+    () => userConfig,
+    buildTargets
+  )
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
@@ -588,7 +593,8 @@ class MetalsLanguageServer(
             sh,
             Option(params),
             diagnostics,
-            excludedPackageHandler.isExcludedPackage
+            excludedPackageHandler.isExcludedPackage,
+            scalaVersionSelector
           )
         )
         debugProvider = new DebugProvider(
@@ -660,7 +666,8 @@ class MetalsLanguageServer(
             embedded,
             worksheetPublisher,
             compilers,
-            compilations
+            compilations,
+            scalaVersionSelector
           )
         )
         ammonite = register(
@@ -680,7 +687,8 @@ class MetalsLanguageServer(
             () => focusedDocument,
             buildTargets,
             () => buildTools,
-            clientConfig.initialConfig
+            clientConfig.initialConfig,
+            scalaVersionSelector
           )
         )
         if (clientConfig.isTreeViewProvider) {
@@ -1105,6 +1113,17 @@ class MetalsLanguageServer(
             excludedPackageHandler.update(userConfig.excludedPackages)
             workspaceSymbols.indexClasspath()
           }
+
+          userConfig.fallbackScalaVersion.foreach { version =>
+            if (!ScalaVersions.isSupportedScalaVersion(version)) {
+              val params =
+                Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
+                  version
+                )
+              languageClient.showMessage(params)
+            }
+          }
+
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
