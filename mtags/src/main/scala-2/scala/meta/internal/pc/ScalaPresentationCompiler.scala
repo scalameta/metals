@@ -183,7 +183,7 @@ case class ScalaPresentationCompiler(
   }
 
   override def semanticdbTextDocument(
-      filename: String,
+      uri: URI,
       code: String
   ): CompletableFuture[Array[Byte]] = {
     compilerAccess.withInterruptableCompiler(
@@ -191,7 +191,7 @@ case class ScalaPresentationCompiler(
       EmptyCancelToken
     ) { pc =>
       new SemanticdbTextDocumentProvider(pc.compiler)
-        .textDocument(filename, code)
+        .textDocument(uri, code)
         .toByteArray
     }
   }

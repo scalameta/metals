@@ -7,17 +7,18 @@ import scala.meta.dialects
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
 
 class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
   import compiler._
 
   def textDocument(
-      filename: String,
+      uri: URI,
       code: String
   ): s.TextDocument = {
     val unit = addCompilationUnit(
       code = code,
-      filename = filename,
+      filename = uri.toString(),
       cursor = None
     )
     typeCheck(unit)
@@ -36,19 +37,21 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
       SemanticdbConfig.default
     )
 
-    val explicitDialect = if (filename.isSbt) {
+    val filePath = AbsolutePath(Paths.get(uri))
+    val explicitDialect = if (filePath.isSbt) {
       Some(dialects.Sbt1)
-    } else if (filename.isScalaScript) {
+    } else if (filePath.isScalaScript) {
       Some(dialects.Scala213.withAllowToplevelStatements(true))
     } else {
       None
     }
     val document = unit.toTextDocument(explicitDialect)
-    val fileUri = Paths.get(new URI(filename))
     compiler.workspace
-      .map { workspacePath =>
-        val relativeUri = workspacePath.relativize(fileUri).toString()
-        document.withUri(relativeUri)
+      .flatMap { workspacePath =>
+        scala.util.Try(workspacePath.relativize(filePath.toNIO)).toOption
+      }
+      .map { relativeUri =>
+        document.withUri(relativeUri.toString())
       }
       .getOrElse(document)
   }

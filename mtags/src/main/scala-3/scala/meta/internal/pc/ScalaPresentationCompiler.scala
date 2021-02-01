@@ -170,7 +170,7 @@ case class ScalaPresentationCompiler(
 
   // TODO NOT IMPLEMENTED
   def semanticdbTextDocument(
-      filename: String,
+      filename: URI,
       code: String
   ): CompletableFuture[Array[Byte]] = {
     CompletableFuture.completedFuture(
