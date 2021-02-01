@@ -54,15 +54,19 @@ final class InteractiveSemanticdbs(
 
   override def textDocument(source: AbsolutePath): TextDocumentLookup = {
 
+    def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
     def shouldTryCalculateInteractiveSemanticdb = {
-      source.isDependencySource(workspace) || source.isSbt || buildTargets
-        .inverseSources(source)
-        .isEmpty
+      source.isLocalFileSystem(workspace) && (
+        source.isInReadonlyDirectory(workspace) || // dependencies
+          source.isSbt || // sbt files
+          doesNotBelongToBuildTarget // standalone files
+      )
     }
 
-    if (
-      source.isWorksheet || !source.isScalaFilename || !shouldTryCalculateInteractiveSemanticdb
-    ) {
+    def isExcludedFile = source.isWorksheet || // worksheets
+      !source.isScalaFilename // anything aside from `*.scala`, `*.sbt` and `*.sc` file
+
+    if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
     } else {
       val result = textDocumentCache.compute(
@@ -156,12 +160,11 @@ final class InteractiveSemanticdbs(
           (imports.size, SbtBuildTool.prependAutoImports(text, imports))
         )
 
-    val uri = source.toURI.toString
     // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
     // here but to avoid it we would need to refactor the `Semanticdbs` trait,
     // which requires more effort than it's worth.
     val bytes = pc
-      .semanticdbTextDocument(uri, modifiedText)
+      .semanticdbTextDocument(source.toURI, modifiedText)
       .get(
         clientConfig.initialConfig.compilers.timeoutDelay,
         clientConfig.initialConfig.compilers.timeoutUnit

@@ -96,7 +96,7 @@ public abstract class PresentationCompiler {
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
-    public abstract CompletableFuture<byte[]> semanticdbTextDocument(String filename, String code);
+    public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
 
     // =================================
     // Configuration and lifecycle APIs.
