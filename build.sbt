@@ -186,7 +186,7 @@ lazy val V = new {
   val scalameta = "4.4.7"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.6-21-464e4ec4"
+  val bloop = "1.4.6-33-1c6f6712"
   val scala3 = "3.0.0-M3"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -228,7 +228,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.2"
-  val coursier = "2.0.8"
+  val coursier = "2.0.9"
   val ammonite = "2.3.8-4-88785969"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
@@ -335,9 +335,9 @@ val mtagsSettings = List(
       crossSetting(
         scalaVersion.value,
         if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.0"),
+        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.1"),
         if3 = List(
-          ("com.lihaoyi" %% "pprint" % "0.6.0")
+          ("com.lihaoyi" %% "pprint" % "0.6.1")
             .withDottyCompat(scalaVersion.value)
         )
       )
@@ -399,7 +399,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.3.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.5.0",
+      "org.flywaydb" % "flyway-core" % "7.5.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -431,9 +431,9 @@ lazy val metals = project
       "com.outr" %% "scribe" % "3.3.1",
       "com.outr" %% "scribe-slf4j" % "3.3.1", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.6.0",
+      "com.lihaoyi" %% "pprint" % "0.6.1",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.2.2",
+      "com.lihaoyi" %% "ujson" % "1.2.3",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.6.5",
       // for producing SemanticDB from Scala source files
