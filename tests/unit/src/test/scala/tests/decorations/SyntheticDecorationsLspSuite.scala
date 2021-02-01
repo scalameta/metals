@@ -192,6 +192,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      _ = client.decorations.clear()
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
@@ -200,7 +201,6 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ = client.decorations.clear()
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
         client.workspaceDecorations,
@@ -214,6 +214,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      _ = client.decorations.clear()
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
@@ -222,7 +223,6 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
           |}
           |""".stripMargin
       )
-      _ = client.decorations.clear()
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
         client.workspaceDecorations,
@@ -297,28 +297,30 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
             |
             |/standalone/Main.scala
             |object Main{
-            |  "asd.".stripSuffix(".")
+            |  val value = "asd.".stripSuffix(".")
             |}
             |""".stripMargin
       )
       _ <- server.didChangeConfiguration(
         """|{
-           |  "show-implicit-conversions-and-classes": true
+           |  "show-implicit-conversions-and-classes": true,
+           |  "show-inferred-type": true
            |}
            |""".stripMargin
       )
       _ <- server.didOpen("standalone/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
+        // currently interactive semanticdb doesn't produce symbol signatures
         client.workspaceDecorations,
         """|object Main{
-           |  augmentString("asd.").stripSuffix(".")
+           |  val value = augmentString("asd.").stripSuffix(".")
            |}
            |""".stripMargin
       )
       _ <- server.assertHoverAtLine(
         "standalone/Main.scala",
-        "  @@\"asd.\".stripSuffix(\".\")",
+        "  val value = @@\"asd.\".stripSuffix(\".\")",
         """|**Synthetics**:
            |```scala
            |scala.Predef.augmentString

@@ -8,7 +8,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
@@ -46,7 +45,7 @@ final class ReferenceProvider(
     index.remove(file)
   }
 
-  def onChange(docs: TextDocuments, file: Path): Unit = {
+  def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
     val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
     val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
     val bloom = BloomFilter.create(
@@ -54,7 +53,7 @@ final class ReferenceProvider(
       Integer.valueOf((count + syntheticsCount) * 2),
       0.01
     )
-    index(file) = bloom
+    index(file.toNIO) = bloom
     docs.documents.foreach { d =>
       d.occurrences.foreach { o =>
         if (o.symbol.endsWith("/")) {
@@ -196,7 +195,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
-    if (occ.symbol.isLocal) {
+    if (occ.symbol.isLocal || source.isDependencySource(workspace)) {
       referenceLocations(
         snapshot,
         isSymbol,
@@ -211,10 +210,7 @@ final class ReferenceProvider(
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
         if isSymbol.exists(bloom.mightContain)
-        scalaPath <-
-          SemanticdbClasspath
-            .toScala(workspace, AbsolutePath(path))
-            .iterator
+        scalaPath = AbsolutePath(path)
         if !visited(scalaPath)
         _ = visited.add(scalaPath)
         if scalaPath.exists

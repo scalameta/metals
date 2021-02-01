@@ -8,7 +8,8 @@ import scala.util.control.NonFatal
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.TextDocumentLookup.Success
+import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
@@ -20,7 +21,7 @@ class SemanticdbIndexer(
     implementationProvider: ImplementationProvider,
     implicitDecorator: SyntheticsDecorationProvider,
     buildTargets: BuildTargets,
-    interactiveSemanticdbs: InteractiveSemanticdbs
+    workspace: AbsolutePath
 ) {
 
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
@@ -81,20 +82,11 @@ class SemanticdbIndexer(
     }
   }
 
-  def onStandaloneFilesChange(path: AbsolutePath): Unit = {
-    if (!path.isWorksheet && buildTargets.inverseSources(path).isEmpty) {
-      interactiveSemanticdbs.textDocument(path) match {
-        case Success(document) =>
-          val docs = TextDocuments(Seq(document))
-          val nioPath = path.toNIO
-          referenceProvider.onChange(docs, nioPath)
-          implementationProvider.onChange(docs, nioPath)
-          implicitDecorator.onChange(docs, nioPath)
-        case _ =>
-          scribe.warn(s"Unable to produce semanticdb for $path")
-      }
-
-    }
+  def onChange(path: AbsolutePath, textDocument: TextDocument): Unit = {
+    val docs = TextDocuments(Seq(textDocument))
+    referenceProvider.onChange(docs, path)
+    implementationProvider.onChange(docs, path)
+    implicitDecorator.onChange(docs, path)
   }
 
   def onChange(file: Path): Unit = {
@@ -102,9 +94,12 @@ class SemanticdbIndexer(
       if (file.isSemanticdb) {
         try {
           val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
-          referenceProvider.onChange(doc, file)
-          implementationProvider.onChange(doc, file)
-          implicitDecorator.onChange(doc, file)
+          SemanticdbClasspath.toScala(workspace, AbsolutePath(file)).foreach {
+            scalaSourceFile =>
+              referenceProvider.onChange(doc, scalaSourceFile)
+              implementationProvider.onChange(doc, scalaSourceFile)
+              implicitDecorator.onChange(doc, scalaSourceFile)
+          }
         } catch {
           /* @note in some cases file might be created or modified, but not actually finished
            * being written. In that case, exception here is expected and a new event will

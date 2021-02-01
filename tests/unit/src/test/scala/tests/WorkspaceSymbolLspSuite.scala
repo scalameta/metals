@@ -143,14 +143,48 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.workspaceSymbol("scala.None")
-      option = ".metals/readonly/scala/Option.scala"
-      _ <- server.didOpen(option)
-      references <- server.references(option, "object None")
+      _ <- server.didOpen(".metals/readonly/scala/Option.scala")
+      references <- server.references("a/src/main/scala/a/A.scala", " None")
       _ = assertNoDiff(
         references,
         """|a/src/main/scala/a/A.scala:4:24: info: reference
            |  val x: Option[Int] = None
            |                       ^^^^
+           |""".stripMargin
+      )
+      optionReferences <- server.references(
+        ".metals/readonly/scala/Option.scala",
+        " None"
+      )
+      _ = assertNoDiff(
+        optionReferences,
+        """|.metals/readonly/scala/Option.scala:29:50: info: reference
+           |  def apply[A](x: A): Option[A] = if (x == null) None else Some(x)
+           |                                                 ^^^^
+           |.metals/readonly/scala/Option.scala:34:30: info: reference
+           |  def empty[A] : Option[A] = None
+           |                             ^^^^
+           |.metals/readonly/scala/Option.scala:230:18: info: reference
+           |    if (isEmpty) None else Some(f(this.get))
+           |                 ^^^^
+           |.metals/readonly/scala/Option.scala:271:18: info: reference
+           |    if (isEmpty) None else f(this.get)
+           |                 ^^^^
+           |.metals/readonly/scala/Option.scala:274:18: info: reference
+           |    if (isEmpty) None else ev(this.get)
+           |                 ^^^^
+           |.metals/readonly/scala/Option.scala:289:43: info: reference
+           |    if (isEmpty || p(this.get)) this else None
+           |                                          ^^^^
+           |.metals/readonly/scala/Option.scala:304:44: info: reference
+           |    if (isEmpty || !p(this.get)) this else None
+           |                                           ^^^^
+           |.metals/readonly/scala/Option.scala:432:42: info: reference
+           |    if (!isEmpty) pf.lift(this.get) else None
+           |                                         ^^^^
+           |.metals/readonly/scala/Option.scala:527:13: info: reference
+           |case object None extends Option[Nothing] {
+           |            ^^^^
            |""".stripMargin
       )
     } yield ()

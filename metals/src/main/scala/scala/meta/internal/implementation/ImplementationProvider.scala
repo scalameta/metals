@@ -54,9 +54,9 @@ final class ImplementationProvider(
     implementationsInPath.remove(path)
   }
 
-  def onChange(docs: TextDocuments, path: Path): Unit = {
+  def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     implementationsInPath.compute(
-      path,
+      path.toNIO,
       { (_, _) => computeInheritance(docs) }
     )
   }
