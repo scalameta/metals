@@ -47,15 +47,16 @@ final class Compilations(
   def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
     lastCompile.contains(buildTarget)
 
-  def compilationFinished(
-      source: AbsolutePath
-  ): Future[Unit] = {
+  def compilationFinished(targets: Seq[BuildTargetIdentifier]): Future[Unit] =
     if (currentlyCompiling.isEmpty) {
       Future(())
     } else {
-      cascadeCompileFiles(Seq(source))
+      cascadeCompile(targets)
     }
-  }
+
+  def compilationFinished(
+      source: AbsolutePath
+  ): Future[Unit] = compilationFinished(expand(source).toSeq)
 
   def compileTarget(
       target: b.BuildTargetIdentifier
@@ -94,14 +95,17 @@ final class Compilations(
     } yield ()
   }
 
-  def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
-    val targets =
-      expand(paths).flatMap(buildTargets.inverseDependencyLeaves).distinct
+  def cascadeCompile(targets: Seq[BuildTargetIdentifier]): Future[Unit] = {
+    val inverseDependencyLeaves =
+      targets.flatMap(buildTargets.inverseDependencyLeaves).distinct
+    cascadeBatch(inverseDependencyLeaves).map(_ => ())
+  }
+
+  def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[Unit] =
     for {
-      _ <- cascadeBatch(targets)
+      _ <- cascadeCompile(expand(paths))
       _ <- compileWorksheets(paths)
     } yield ()
-  }
 
   def cancel(): Unit = {
     compileBatch.cancelCurrentRequest()
