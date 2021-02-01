@@ -429,6 +429,7 @@ lazy val metals = project
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
       "com.outr" %% "scribe" % "3.3.1",
+      "com.outr" %% "scribe-file" % "3.3.1",
       "com.outr" %% "scribe-slf4j" % "3.3.1", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.1",

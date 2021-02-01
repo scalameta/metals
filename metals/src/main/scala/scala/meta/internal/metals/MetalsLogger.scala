@@ -8,13 +8,14 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import scribe._
+import scribe.file.FileWriter
+import scribe.file.PathBuilder
 import scribe.format._
 import scribe.modify.LogModifier
-import scribe.writer.FileWriter
 
 object MetalsLogger {
 
-  val workspaceLogPath: RelativePath =
+  private val workspaceLogPath: RelativePath =
     RelativePath(".metals").resolve("metals.log")
 
   def updateDefaultFormat(): Unit = {
@@ -23,7 +24,7 @@ object MetalsLogger {
       .withHandler(
         formatter = defaultFormat,
         minimumLevel = Some(scribe.Level.Info),
-        modifiers = List(MetalsFilter)
+        modifiers = List(MetalsFilter())
       )
       .replace()
   }
@@ -49,19 +50,19 @@ object MetalsLogger {
         writer = newFileWriter(logfile),
         formatter = defaultFormat,
         minimumLevel = Some(Level.Info),
-        modifiers = List(MetalsFilter)
+        modifiers = List(MetalsFilter())
       )
       .withHandler(
         writer = LanguageClientLogger,
         formatter = MetalsLogger.defaultFormat,
         minimumLevel = Some(Level.Info),
-        modifiers = List(MetalsLogger.MetalsFilter)
+        modifiers = List(MetalsFilter())
       )
       .replace()
   }
 
-  object MetalsFilter extends LogModifier {
-    override def id = "MetalsFilter"
+  case class MetalsFilter(id: String = "MetalsFilter") extends LogModifier {
+    override def withId(id: String): LogModifier = copy(id = id)
     override def priority: Priority = Priority.Normal
     override def apply[M](record: LogRecord[M]): Option[LogRecord[M]] = {
       if (
@@ -88,21 +89,8 @@ object MetalsLogger {
     }
   }
 
-  def newBspLogger(workspace: AbsolutePath): Logger = {
-    val logfile = workspace.resolve(workspaceLogPath)
-    Logger.root
-      .orphan()
-      .clearModifiers()
-      .clearHandlers()
-      .withHandler(
-        writer = newFileWriter(logfile),
-        formatter = defaultFormat,
-        minimumLevel = Some(Level.Info)
-      )
-  }
-
   def newFileWriter(logfile: AbsolutePath): FileWriter =
-    FileWriter().path(_ => logfile.toNIO).autoFlush
+    FileWriter(pathBuilder = PathBuilder.static(logfile.toNIO)).flushAlways
 
   def defaultFormat: Formatter = formatter"$date $levelPaddedRight $message"
 
