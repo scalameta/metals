@@ -7,6 +7,10 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.watcher.DirectoryChangeEvent
+import scala.meta.internal.watcher.DirectoryChangeEvent.EventType
+import scala.meta.internal.watcher.hashing.FileHasher
+import scala.meta.internal.watcher.hashing.HashCode
 import scala.meta.io.AbsolutePath
 
 import com.swoval.files.FileTreeDataViews.CacheObserver
@@ -15,10 +19,6 @@ import com.swoval.files.FileTreeDataViews.Entry
 import com.swoval.files.FileTreeRepositories
 import com.swoval.files.FileTreeRepository
 import com.swoval.files.TypedPath
-import io.methvin.watcher.DirectoryChangeEvent
-import io.methvin.watcher.DirectoryChangeEvent.EventType
-import io.methvin.watcher.hashing.FileHasher
-import io.methvin.watcher.hashing.HashCode
 
 /**
  * Handles file watching of interesting files in this build.
