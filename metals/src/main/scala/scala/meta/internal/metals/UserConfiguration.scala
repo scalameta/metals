@@ -386,8 +386,10 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val excludedPackages =
       getStringListKey("excluded-packages")
+    // `automatic` should be treated as None
+    // It was added only to have a meaningful option value in vscode
     val defaultScalaVersion =
-      getStringKey("fallback-scala-version")
+      getStringKey("fallback-scala-version").filter(_ != "automatic")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
