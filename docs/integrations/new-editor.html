@@ -76,7 +76,7 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="starting-the-server"></a><a href="#starting-the-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting the server</h2>
 <p>Use <a href="https://github.com/coursier/coursier">Coursier</a> to obtain the JVM classpath
 of Metals:</p>
-<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.9.10+92-36843ee6-SNAPSHOT -o metals -f
+<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.9.10+95-375d15a9-SNAPSHOT -o metals -f
 </code></pre>
 <p>(optional) It's recommended to enable JVM string de-duplication and provide a
 generous stack size and memory options.</p>
@@ -85,7 +85,7 @@ generous stack size and memory options.</p>
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms100m \
-  org.scalameta:metals_2.12:0.9.10+92-36843ee6-SNAPSHOT -o metals -f
+  org.scalameta:metals_2.12:0.9.10+95-375d15a9-SNAPSHOT -o metals -f
 </code></pre>
 <p>See <a href="#metals-server-properties">Metals server properties</a> for additional system
 properties that are supported by the server.</p>
@@ -984,10 +984,55 @@ Example:</p>
 <p><strong>Command</strong>: <code>&quot;metals-doctor-run&quot;</code></p>
 <p><strong>Arguments</strong>: <code>string</code>, the HTML to display in the focused window.</p>
 <p>Focus on a window displaying troubleshooting help from the Metals doctor.</p>
+<p>If <code>doctorProvider</code> is set to <code>&quot;json&quot;</code> then the schema is as follows:</p>
+<pre><code class="hljs css language-json">export interface DoctorOutput {
+  /** Metals Doctor title */
+  title: string;
+  /**
+   * Contains decisions that were made about what build tool or build server
+   * the user has chosen. There is also other brief information about understanding
+   * the Doctor placed in here as well.
+   */
+   headerText: string;
+   /**
+    * If build targets are detected in your workspace, they will be listed here with
+    * the status of related functionality of Metals for each build target.
+    */
+   targets?: DoctorBuildTarget[];
+   /** Messages given if build targets cannot be found */
+   messages?: DoctorRecommendation[];
+}
+
+</code></pre>
+<pre><code class="hljs css language-json">export interface DoctorBuildTarget {
+  /** Name of the build target */
+  buildTarget: string;
+  /** Scala version of the build target */
+  scalaVersion: string;
+  /** Status of diagnostics */
+  diagnostics: string;
+  /** Status of goto definitions */
+  gotoDefinition: string;
+  /** Status of completions */
+  completions: string;
+  /** Status of find references */
+  findReferences: string;
+  /** Any recommendations in how to fix any issues that are found above */
+  recommendation: string;
+}
+</code></pre>
+<pre><code class="hljs css language-json">export interface DoctorRecommendation {
+  /** Title of the recommendation */
+  title: string;
+  /** Recommendations related to the found issue. */
+  recommendations: string[]
+}
+</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="reload-doctor"></a><a href="#reload-doctor" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Reload doctor</h3>
 <p><strong>Command</strong>: <code>&quot;metals-doctor-reload&quot;</code></p>
 <p><strong>Arguments</strong>: <code>string</code>, the HTML to display in the focused window.</p>
-<p>Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.</p>
+<p>Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.
+If <code>doctorProvider</code> is set to <code>&quot;json&quot;</code>, then the schema is the same as found above in <code>&quot;metals-run-doctor&quot;</code></p>
 <h3><a class="anchor" aria-hidden="true" id="toggle-logs"></a><a href="#toggle-logs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Toggle logs</h3>
 <p><strong>Command</strong>: <code>&quot;metals-logs-toggle&quot;</code></p>
 <p><strong>Arguments</strong>: <code>null</code></p>
