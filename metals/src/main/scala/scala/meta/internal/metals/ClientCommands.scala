@@ -22,7 +22,56 @@ object ClientCommands {
   val RunDoctor = new Command(
     "metals-doctor-run",
     "Run doctor",
-    """Focus on a window displaying troubleshooting help from the Metals doctor.""".stripMargin,
+    """|Focus on a window displaying troubleshooting help from the Metals doctor.
+       |
+       |If `doctorProvider` is set to `"json"` then the schema is as follows:
+       |```json
+       |export interface DoctorOutput {
+       |  /** Metals Doctor title */
+       |  title: string;
+       |  /**
+       |   * Contains decisions that were made about what build tool or build server
+       |   * the user has chosen. There is also other brief information about understanding
+       |   * the Doctor placed in here as well.
+       |   */
+       |   headerText: string;
+       |   /**
+       |    * If build targets are detected in your workspace, they will be listed here with
+       |    * the status of related functionality of Metals for each build target.
+       |    */
+       |   targets?: DoctorBuildTarget[];
+       |   /** Messages given if build targets cannot be found */
+       |   messages?: DoctorRecommendation[];
+       |}
+       |
+       |```
+       |```json
+       |export interface DoctorBuildTarget {
+       |  /** Name of the build target */
+       |  buildTarget: string;
+       |  /** Scala version of the build target */
+       |  scalaVersion: string;
+       |  /** Status of diagnostics */
+       |  diagnostics: string;
+       |  /** Status of goto definitions */
+       |  gotoDefinition: string;
+       |  /** Status of completions */
+       |  completions: string;
+       |  /** Status of find references */
+       |  findReferences: string;
+       |  /** Any recommendations in how to fix any issues that are found above */
+       |  recommendation: string;
+       |}
+       |```
+       |```json
+       |export interface DoctorRecommendation {
+       |  /** Title of the recommendation */
+       |  title: string;
+       |  /** Recommendations related to the found issue. */
+       |  recommendations: string[]
+       |}
+       |```
+       |""".stripMargin,
     arguments =
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
@@ -30,7 +79,8 @@ object ClientCommands {
   val ReloadDoctor = new Command(
     "metals-doctor-reload",
     "Reload doctor",
-    """Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.""".stripMargin,
+    """|Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.
+       |If `doctorProvider` is set to `"json"`, then the schema is the same as found above in `"metals-run-doctor"`""".stripMargin,
     arguments =
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
