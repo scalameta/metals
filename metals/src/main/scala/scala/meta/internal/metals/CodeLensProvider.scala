@@ -17,14 +17,17 @@ final class CodeLensProvider(
     if (stacktraceAnalyzer.isStackTraceFile(path)) {
       stacktraceAnalyzer.stacktraceLenses(path)
     } else {
-      semanticdbs
+      val enabledCodelenses = codeLensProviders.filter(_.isEnabled)
+      val semanticdbCodeLenses = semanticdbs
         .textDocument(path)
         .documentIncludingStale
         .map { textDocument =>
           val doc = TextDocumentWithPath(textDocument, path)
-          codeLensProviders.filter(_.isEnabled).flatMap(_.codeLenses(doc))
+          enabledCodelenses.flatMap(_.codeLenses(doc))
         }
         .getOrElse(Seq.empty)
+      val otherCodeLenses = enabledCodelenses.flatMap(_.codeLenses(path))
+      semanticdbCodeLenses ++ otherCodeLenses
     }
   }
 }

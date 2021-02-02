@@ -52,6 +52,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
+import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
@@ -528,9 +529,9 @@ class MetalsLanguageServer(
           clientConfig.icons,
           clientConfig.isCommandInHtmlSupported
         )
-
+        val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
         codeLensProvider = new CodeLensProvider(
-          List(runTestLensProvider, goSuperLensProvider),
+          List(runTestLensProvider, goSuperLensProvider, worksheetCodeLens),
           semanticdbs,
           stacktraceAnalyzer
         )

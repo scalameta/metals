@@ -37,6 +37,8 @@ import org.eclipse.{lsp4j => l}
  * @param statusBarProvider if the client implements `metals/status`.
  * @param treeViewProvider if the client implements the Metals Tree View Protocol.
  * @param openNewWindowProvider if the client can open a new window after new project creation.
+ * @param copyWorksheetOutputProvider if the client can execute server CopyWorksheet command and
+ *                                    copy results to the local buffer.
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -58,7 +60,8 @@ final case class InitializationOptions(
     slowTaskProvider: Option[Boolean],
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean],
-    openNewWindowProvider: Option[Boolean]
+    openNewWindowProvider: Option[Boolean],
+    copyWorksheetOutputProvider: Option[Boolean]
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -72,6 +75,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -137,7 +141,9 @@ object InitializationOptions {
       slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
-      openNewWindowProvider = jsonObj.getBooleanOption("openNewWindowProvider")
+      openNewWindowProvider = jsonObj.getBooleanOption("openNewWindowProvider"),
+      copyWorksheetOutputProvider =
+        jsonObj.getBooleanOption("copyWorksheetOutputProvider")
     )
   }
 

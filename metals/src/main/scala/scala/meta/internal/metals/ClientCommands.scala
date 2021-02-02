@@ -193,6 +193,19 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val CopyWorksheetOutput = new Command(
+    "metals.copy-worksheet-output",
+    "Copy Worksheet Output",
+    s"""|Copy the contents of a worksheet to your local buffer.
+        |
+        |Note: This command should execute the ${ServerCommands.CopyWorksheetOutput.id} 
+        |      server command to get the output to copy into the buffer.
+        |
+        |Server will attempt to create code lens with this command if `copyWorksheetOutputProvider` option is set.
+        |""".stripMargin,
+    "[uri], the uri of the worksheet that you'd like to copy the contents of."
+  )
+
   def all: List[Command] =
     List(
       OpenFolder,

@@ -144,6 +144,9 @@ class ClientConfiguration(
 
   def isOpenNewWindowProvider(): Boolean =
     initializationOptions.openNewWindowProvider.getOrElse(false)
+
+  def isCopyWorksheetOutputProvider(): Boolean =
+    initializationOptions.copyWorksheetOutputProvider.getOrElse(false)
 }
 
 object ClientConfiguration {
