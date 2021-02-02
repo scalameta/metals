@@ -7,7 +7,7 @@ authorImageURL: https://avatars2.githubusercontent.com/u/13974112?v=4
 
 ![metals-banner](https://i.imgur.com/FYZXteD.png)
 
-At the end of 2020 the Metal team sent out a survey to gather input from our
+At the end of 2020 the Metals team sent out a survey to gather input from our
 users in hopes to get a better picture of who you are, what you want out of
 Metals, and any other useful feedback you may have wanted to provide. With just
 under 400 responses we got a ton of great data, some interesting insights, and
