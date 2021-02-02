@@ -65,6 +65,21 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     } yield ()
   }
 
+  check(
+    "references-standalone",
+    """|/Main.scala
+       |package a
+       |
+       |object Main{
+       |  def <<hel@@lo>>() = println("Hello world")
+       |  <<hello>>()
+       |  <<hello>>()
+       |  <<hello>>()
+       |}
+       |
+       |""".stripMargin
+  )
+
   test("synthetic") {
     cleanWorkspace()
     for {
