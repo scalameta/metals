@@ -10,7 +10,8 @@ class SemanticdbTreePrinter(
     isHover: Boolean,
     printSymbol: String => String,
     createSymtab: => PrinterSymtab,
-    rightArrow: String
+    rightArrow: String,
+    ellipsis: String
 ) {
 
   lazy val symtab = createSymtab
@@ -25,11 +26,20 @@ class SemanticdbTreePrinter(
       case s.TypeRef(prefix, symbol, typeArguments) =>
         val isTuple = symbol.startsWith("scala/Tuple")
         val isFunction = symbol.startsWith("scala/Function")
-        val sym = if (isTuple || isFunction) "" else printSymbol(symbol)
+        val sym =
+          if (isTuple || isFunction) ""
+          // don't print unnamed types
+          else if (symbol.startsWith("local")) "_"
+          else printSymbol(symbol)
         val typeArgs = printTypeArgs(typeArguments, isTuple, isFunction)
         s"${printPrefix(prefix)}${sym}${typeArgs}"
       case s.WithType(types) =>
-        types.map(printType).mkString(" with ")
+        val simpleTypes = types.dropWhile {
+          case s.TypeRef(_, sym, _) =>
+            sym == "scala/AnyRef#" || sym == "java/lang/Object#"
+          case _ => false
+        }
+        simpleTypes.map(printType).mkString(" with ")
       case s.ConstantType(constant) =>
         printConstant(constant)
       case s.ByNameType(tpe) =>
@@ -48,19 +58,26 @@ class SemanticdbTreePrinter(
           .reduceLeft((x, y) => s"$x $y")
         s"$mapped ${printType(tp)}"
       // this should not need to be printed but just in case we revert to semanticdb printer
-      case s.UniversalType(_, tpe) =>
+      case s.UniversalType(scope, tpe) =>
         if (isHover)
           Print.tpe(Format.Detailed, t, symtab)
-        else s"[ ... ] => ${printType(tpe)}"
+        else s"[${printScope(scope)}] => ${printType(tpe)}"
       case s.ExistentialType(tpe, _) =>
         if (isHover)
           Print.tpe(Format.Detailed, t, symtab)
-        else s"${printType(tpe)} forSome { ... }"
-      case s.StructuralType(tpe, _) =>
-        if (isHover)
+        else
+          s"${printType(tpe)}"
+      case s.StructuralType(tpe, scope) =>
+        if (isHover) {
           Print.tpe(Format.Detailed, t, symtab)
-        else s" ${printType(tpe)} { ... }"
+        } else {
+          s"${printType(tpe)} {${printScope(scope)}}"
+        }
     }
+
+  def printScope(scope: Option[s.Scope]): String = {
+    if (scope.exists(_.hardlinks.nonEmpty)) "..." else ""
+  }
 
   def printPrefix(t: s.Type): String = {
     printType(t) match {
