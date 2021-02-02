@@ -3,6 +3,7 @@ package tests
 import scala.concurrent.Future
 
 import munit.Location
+import munit.TestOptions
 
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
@@ -16,8 +17,12 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       base: Map[String, String]
   ): Future[Unit]
 
-  def check(name: String, input: String, scalaVersion: Option[String] = None)(
-      implicit loc: Location
+  def check(
+      name: TestOptions,
+      input: String,
+      scalaVersion: Option[String] = None
+  )(implicit
+      loc: Location
   ): Unit = {
     val files = FileLayout.mapFromString(input)
     val (filename, edit) = files

@@ -35,7 +35,8 @@ final class InteractiveSemanticdbs(
     tables: Tables,
     statusBar: StatusBar,
     compilers: () => Compilers,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    semanticdbIndexer: () => SemanticdbIndexer
 ) extends Cancelable
     with Semanticdbs {
 
@@ -74,9 +75,15 @@ final class InteractiveSemanticdbs(
         (path, existingDoc) => {
           val text = FileIO.slurp(source, charset)
           val sha = MD5.compute(text)
-          if (existingDoc == null || existingDoc.md5 != sha)
-            compile(path, text)
-          else
+          if (existingDoc == null || existingDoc.md5 != sha) {
+            val compiled = compile(path, text)
+            Option(compiled).foreach(doc =>
+              // don't index dependency source files
+              if (!source.isDependencySource(workspace))
+                semanticdbIndexer().onChange(source, doc)
+            )
+            compiled
+          } else
             existingDoc
         }
       )

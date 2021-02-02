@@ -362,7 +362,8 @@ class MetalsLanguageServer(
             tables,
             statusBar,
             () => compilers,
-            clientConfig
+            clientConfig,
+            () => semanticDBIndexer
           )
         )
         warnings = new Warnings(
@@ -561,7 +562,7 @@ class MetalsLanguageServer(
           implementationProvider,
           syntheticsDecorator,
           buildTargets,
-          interactiveSemanticdbs
+          workspace
         )
         documentHighlightProvider = new DocumentHighlightProvider(
           definitionProvider,
@@ -1232,9 +1233,7 @@ class MetalsLanguageServer(
           Future(reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue
-        ) ++ paths.map(f =>
-          Future(semanticDBIndexer.onStandaloneFilesChange(f))
-        )
+        ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
   }

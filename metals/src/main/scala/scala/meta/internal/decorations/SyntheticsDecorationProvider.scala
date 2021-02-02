@@ -1,7 +1,6 @@
 package scala.meta.internal.decorations
 
 import java.nio.charset.Charset
-import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.mutable
@@ -18,7 +17,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
-import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
@@ -85,21 +83,16 @@ final class SyntheticsDecorationProvider(
       Future.successful(())
   }
 
-  def onChange(textDocument: TextDocuments, path: Path): Unit = {
+  def onChange(textDocument: TextDocuments, path: AbsolutePath): Unit = {
     for {
       focused <- focusedDocument()
-      filePath = AbsolutePath(path)
-      sourcePath <-
-        if (!filePath.isScalaFilename)
-          SemanticdbClasspath.toScala(workspace, filePath)
-        else Some(filePath)
-      if sourcePath == focused || !clientConfig.isDidFocusProvider()
+      if path == focused || !clientConfig.isDidFocusProvider()
       textDoc <- textDocument.documents.headOption
-      source <- fingerprints.loadLastValid(sourcePath, textDoc.md5, charset)
+      source <- fingerprints.loadLastValid(path, textDoc.md5, charset)
     } {
       val docWithText = textDoc.withText(source)
       Document.set(docWithText)
-      publishSyntheticDecorations(sourcePath, docWithText)
+      publishSyntheticDecorations(path, docWithText)
     }
   }
 
@@ -379,7 +372,7 @@ final class SyntheticsDecorationProvider(
           explorePatterns(lhs :: pats)
         case m.Pat.Tuple(tuplePats) =>
           explorePatterns(tuplePats)
-        case m.Pat.Bind(lhs, rhs) =>
+        case m.Pat.Bind(_, rhs) =>
           explorePatterns(List(rhs))
         case _ => Nil
       }
