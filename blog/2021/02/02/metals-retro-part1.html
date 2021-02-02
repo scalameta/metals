@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>A Metals Retrospective (Part 1) · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="At the end of 2020 the Metal team sent out a survey to gather input from our"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="A Metals Retrospective (Part 1) · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1.html"/><meta property="og:description" content="At the end of 2020 the Metal team sent out a survey to gather input from our"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All Blog Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All Blog Posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2021/02/02/metals-retro-part1.html">A Metals Retrospective (Part 1)</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2021/01/19/lithium.html">Metals v0.9.10 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/12/19/lithium.html">Metals v0.9.8 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/11/26/lithium.html">Metals v0.9.7 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/11/20/lithium.html">Metals v0.9.6 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/11/10/lithium.html">Metals v0.9.5 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/11/06/sbt-BSP-support.html">sbt BSP support</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/09/21/lithium.html">Metals v0.9.4 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/08/19/lithium.html">Metals v0.9.3 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/07/23/configuring-a-client.html">A Dive into Configuring Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/07/15/lithium.html">Metals v0.9.2 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/07/01/lithium.html">Metals v0.9.1 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/05/04/lithium.html">Metals v0.9.0 - Lithium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/04/10/cobalt.html">Metals v0.8.4 - Cobalt</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/03/19/cobalt.html">Metals v0.8.3 - Cobalt</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/02/26/cobalt.html">Metals v0.8.1 - Cobalt</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2020/01/10/cobalt.html">Metals v0.8.0 - Cobalt</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/23/thorium.html">Metals v0.7.6 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/12/thorium.html">Metals v0.7.5 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/02/thorium.html">Metals v0.7.2 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/28/thorium.html">Metals v0.7.0 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/11/radium.html">Metals v0.6.1 - Radium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/12/mercury.html">Metals v0.5.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/06/iron.html">Metals v0.3 - Iron</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2021/02/02/metals-retro-part1.html">A Metals Retrospective (Part 1)</a></h1><p class="post-meta">February 2, 2021</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/ckipp01" target="_blank" rel="noreferrer noopener">Chris Kipp</a></p><div class="authorPhoto"><a href="https://twitter.com/ckipp01" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/13974112?v=4" alt="Chris Kipp"/></a></div></div></header><div><span><p><img src="https://i.imgur.com/FYZXteD.png" alt="metals-banner"></p>
+<p>At the end of 2020 the Metal team sent out a survey to gather input from our
+users in hopes to get a better picture of who you are, what you want out of
+Metals, and any other useful feedback you may have wanted to provide. With just
+under 400 responses we got a ton of great data, some interesting insights, and
+a nice picture of what is currently hindering users, and what common
+functionality continually comes up as feature requests. In order to best use this
+data, and also to share some results, we thought it'd be a good idea to go over
+some of the sections, address some of the points that came up, and also clear up
+any misconceptions that may have appeared in the survey results. The idea is for
+this to be a 2 part series. You can expect the following:</p>
+<ul>
+<li>Part 1 - Where we discuss some of the initial results and address some common
+misconceptions and questions.</li>
+<li>Part 2 - Where we go deeper into the desired features, the biggest pain
+points, and our plans for this next year.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="editor-support"></a><a href="#editor-support" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Editor Support</h2>
+<p><img src="https://i.imgur.com/w67gMGW.png" alt="editor-results"></p>
+<p>Surprising no one, VS Code came out on top for editors with the most desire for
+Metals support. Our <a href="https://github.com/scalameta/metals-vscode">VS Code
+extension</a> has over 100k downloads
+and it is safe to say that it offers the best support for overall Metals usage.
+The next most popular of our extensions is probably <code>coc-metals</code> which had just
+over 20k downloads in 2020. There are certain features that do only work in VS
+Code mainly due to the robustness of the LSP support and other extra features.
+Here are a few examples of features that we added this past year that work
+extremely well with VS Code with no hardly no extra effort on the users part:</p>
+<ul>
+<li>Debugging support - Early on in 2020 Metals v0.8.0 added debugging support.
+Now with the click of a button you can run, test, and debug your code right
+from inside VS Code.</li>
+<li>Preview renames - in Metals v0.8.1 functionality was added so that you can now
+preview the changes after triggering a rename for up to 300 files.</li>
+<li>Analyze stacktrace functionality - As of Metals v0.9.4 Metals gained the ability
+to take a stack trace and give you a nice view of the entire stack with
+clickable links to go to that part of your code. This is all found in the
+very useful web view of VS Code.</li>
+<li>Show implicits and type decorations - As of Metals v0.9.5 Metals gained the
+ability to show implicits and type decorations as decorations directly
+inline of your code.</li>
+<li>Show implicits conversion and classes - As of Metals v0.9.6 Metals gained the
+ability to show implicits conversion and classes as decorations directly
+inline of your code.</li>
+<li>Navigativing stacktrace while debugging - Also in Metals v0.9.6 the ability to
+navigate stacktraces during a deubugging sesions was added, which re-used
+the functionality introduced in v0.9.4 to analyze stacktraces.</li>
+</ul>
+<p>Now at this point you may be starting to assume that we heavily favor VS Code
+and that Metals is geared towards it. We got a few comments related to this
+throughout the survey. However, I want to make a specific point that since the
+inception of Metals, the early maintainers did a fantastic job of ensuring that
+everything would work in clients that offered the necessary LSP support, and
+also extra features to clients that offered support for the Metals specific LSP
+extensions that we use. This has remained core for us a we continue to provide
+new features. Pretty much any new feature that is added is added in a way that
+can also be utilized for editors that may not have the same level of support as
+VS Code. Here are a few examples:</p>
+<ul>
+<li>Debugging support - Metals actually offers deubugging support for any client
+that can serve as a DAP client. So for example using <code>coc-metals</code> you can
+also run, test, and debug your code while utilizing
+<a href="https://github.com/puremourning/vimspector"><code>vimspector</code></a>. The same is true
+for emacs clients that are utilizing
+<a href="https://github.com/emacs-lsp/lsp-mode"><code>lsp-mode</code></a>.</li>
+<li>Analyze stacktrace functionality - For clients that don't have a web view,
+this feature is still supported by producing a file with code lens' in it to
+allow you to navigate to the relevant parts of the stacktrace.</li>
+<li>Implicits, type decorations, implicits conversions and classes - VS Code isn't
+the only extension that actually implements this. There is also
+<a href="https://github.com/scalameta/metals-sublime"><code>metals-sublime</code></a> that has
+inline decorations. For other editors that may not support inline
+decorations, this feature is still re-usable and the information is actually
+displayed in hover as another section.</li>
+</ul>
+<p>So again, while VS Code is an incredible editor, that offers incredible support
+for the various Metals features, we work hard to ensure that these features are
+also usable in our other extensions, even if they look a bit different. While
+there are varying levels of support in the various editor extensions, much of
+this is due to the those editors being the editors the current maintainers use.
+We are always open for more help in any of the current editor extensions and
+this is actually a great way to get involved. We are also open to help you
+create a new extension to maybe support an editor that is yet to have a
+Metals-specific extension! Here are links to the various Metals clients:</p>
+<ul>
+<li><a href="https://github.com/scalameta/metals-vscode">scalameta/metals-vscode</a></li>
+<li><a href="https://github.com/scalameta/coc-metals">scalameta/coc-metals</a></li>
+<li><a href="https://github.com/scalameta/nvim-metals">scalameta/nvim-metals</a></li>
+<li><a href="https://github.com/scalameta/metals-sublime">scalameta/metals-sublime</a></li>
+<li><a href="https://github.com/scalameta/metals-eclipse">scalameta/metals-eclipse</a></li>
+<li><a href="https://github.com/emacs-lsp/lsp-metals">emacs-lsp/lsp-metals</a></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="will-you-support-intellij"></a><a href="#will-you-support-intellij" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Will you support IntelliJ?</h3>
+<p>When asked about what editor people wished had Metals support, here were the
+results:</p>
+<table>
+<thead>
+<tr><th>Editor</th><th>Votes</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="https://www.jetbrains.com/idea/">IntelliJ</a></td><td>19</td></tr>
+<tr><td><a href="http://notepad-plus-plus.org/">Notepad++</a></td><td>2</td></tr>
+<tr><td><a href="https://wiki.gnome.org/Apps/Builder">Gnome Builder</a></td><td>2</td></tr>
+<tr><td><a href="https://www.nova.app/">Nova</a></td><td>2</td></tr>
+<tr><td><a href="http://kakoune.org/">Kakoune</a></td><td>2</td></tr>
+<tr><td><a href="https://netbeans.org/">Netbeans</a></td><td>2</td></tr>
+<tr><td><a href="https://theia-ide.org/">Eclipse Theia</a></td><td>1</td></tr>
+<tr><td><a href="http://www.jedit.org/">jEdit</a></td><td>1</td></tr>
+</tbody>
+</table>
+<p>Some of these editors will already actually work with Metals, especially if they
+support VS Code extensions like Eclipse Theia does. However, one question we
+often get is: &quot;Will you support IntelliJ?&quot; The simple answer to this question is
+<em>No</em>, but not for the reason people may think. IntelliJ is a fantastic project
+that is the most widely used editor in Scala. Metals aims to be a language
+server for clients that implement LSP. Since IntelliJ has no <em>official</em> support
+for LSP, we have no intention on adding support for IntelliJ. Many times the
+target audience is different as well.</p>
+<h2><a class="anchor" aria-hidden="true" id="why-do-people-start-using-metals"></a><a href="#why-do-people-start-using-metals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Why do people start using Metals</h2>
+<table>
+<thead>
+<tr><th>Reason</th><th>Very Important</th><th>Somewhat important</th><th>Not important</th></tr>
+</thead>
+<tbody>
+<tr><td>I wanted a lighter alternative to other IDEs.</td><td>245</td><td>74</td><td>27</td></tr>
+<tr><td>I could use my favorite editor.</td><td>223</td><td>62</td><td>56</td></tr>
+<tr><td>I wanted more accurate compiler errors.</td><td>220</td><td>86</td><td>36</td></tr>
+<tr><td>I wanted a fully open source solution.</td><td>133</td><td>138</td><td>69</td></tr>
+<tr><td>Metals had features other IDEs didn't</td><td>56</td><td>112</td><td>160</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="information-and-help-with-metals"></a><a href="#information-and-help-with-metals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Information and Help with Metals</h2>
+<p>Over this past year we've done our best to make sure everyone is aware of all
+the great stuff that is happening in Metals. We have multiple channels of
+communication open with pretty impressive response times if you ever get stuck.
+Here are the results about where people go for question about Metals and also
+where they get their news about Metals.</p>
+<p><img src="https://i.imgur.com/6Ijm9Bv.png" alt="metals info">
+<img src="https://i.imgur.com/2Qysoqe.png" alt="metals help"></p>
+<p>Apart from the places that we had listed in the survey, the place mentioned the
+most for where people hear about Metals related news was <a href="https://scalatimes.com/">Scala
+Times</a>!</p>
+<p>As a reminder, don't ever hesitate to reach out, and if anything is missing in
+the docs, please lend a helping hand or point it out to us.</p>
+<h2><a class="anchor" aria-hidden="true" id="i-wish-metals-had-but-it-does"></a><a href="#i-wish-metals-had-but-it-does" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>I wish Metals had... but it does!</h2>
+<p>Below are some things that appeared in the survey as wishes, but that Metals
+already supports, or has added support for since the survey! Hopefully these
+will help highlight some lesser known features of Metals or serve as a reminder
+of some of the features we have.</p>
+<table>
+<thead>
+<tr><th>Requested</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Renaming symbols</td><td>Available since v0.8.0 and all supported editors support this.</td></tr>
+<tr><td>Better info about Ammonite scripts failing.</td><td>Actually because of this comment, there was some work done to improve the error messages about why Ammonite may not be starting. You can see this here <a href="https://github.com/scalameta/metals/pull/2333">in this pr</a>.</td></tr>
+<tr><td>A check telling me if everything is setup correctly.</td><td>We recently did some work or the Metals Doctor to help you see what issues are going on. You can trigger Doctor by the <code>run-doctor</code> command. It may differ a bit per client. You can see the recent changes made <a href="https://github.com/scalameta/metals/pull/2339">here in this pr</a>.</td></tr>
+<tr><td>Seamless install in Vim</td><td>There are two Metals-specific Vim and Neovim extensions, both which offer an automated install feature. <a href="https://github.com/scalameta/coc-metals">coc-metals</a> and <a href="https://github.com/scalameta/nvim-metals">nvim-metals</a>.</td></tr>
+<tr><td>Navigating stacktrace feature in emacs.</td><td>This actually should work, since it just needs code lenses to work for clients that don't have a web view. Part of this is just documentation, so if you're an emacs user, please help us with docs!</td></tr>
+<tr><td>Use a specific version of Ammonite</td><td>You can currently do this by setting the version in a comment on the top of a file like illustrated <a href="https://scalameta.org/metals/docs/troubleshooting/faq.html#how-do-i-use-scala-2xx-for-my-script">here</a>. Also the next release of Metals will have better support for a fallback version of the compiler that is used for standalone scripts. This will give you more control over what version is used in situations like Ammonite scripts.</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="whats-next"></a><a href="#whats-next" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>What's next?</h2>
+<p>We want to thank you again for taking the time and filling out our year-end
+survey. Keep on the lookout for Part 2 of this, and we'll be discussing the
+biggest pain points and some of the most desired features that we plan to tackle
+this next year. We'll also do a further look into build server and build tool
+support finishing off with an update on our current Scala 3 support and the
+efforts that are going into it.</p>
+<p>Cheers,</p>
+<p>The Metals team</p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog/">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#editor-support">Editor Support</a><ul class="toc-headings"><li><a href="#will-you-support-intellij">Will you support IntelliJ?</a></li></ul></li><li><a href="#why-do-people-start-using-metals">Why do people start using Metals</a></li><li><a href="#information-and-help-with-metals">Information and Help with Metals</a></li><li><a href="#i-wish-metals-had-but-it-does">I wish Metals had... but it does!</a></li><li><a href="#whats-next">What's next?</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2021 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>

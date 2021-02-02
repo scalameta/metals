@@ -2,12 +2,23 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2021-01-19T06:00:00.000Z</updated>
+    <updated>2021-02-02T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2021 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[A Metals Retrospective (Part 1)]]></title>
+        <id>http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1.html</id>
+        <link href="http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1.html"/>
+        <updated>2021-02-02T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p><img src="https://i.imgur.com/FYZXteD.png" alt="metals-banner"></p> <p>At the end of 2020 the Metal team sent out a survey to gather input from our users in hopes to get a better picture of who you are, what you want out of Metals, and any other useful feedback you may have wanted to provide. With just under 400 respon...</p>]]></summary>
+        <author>
+            <name>Chris Kipp</name>
+            <uri>https://twitter.com/ckipp01</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.10 - Lithium]]></title>
         <id>http://scalameta.org/metals/blog/2021/01/19/lithium.html</id>
