@@ -112,6 +112,7 @@ The currently available settings for `InitializationOptions` are listed below.
         "parameterHintsCommand": string,
         "snippetAutoIndent": boolean,
       }
+      "copyWorksheetOutputProvider": boolean,
       "debuggingProvider": boolean,
       "decorationProvider": boolean,
       "didFocusProvider": boolean,
@@ -124,12 +125,12 @@ The currently available settings for `InitializationOptions` are listed below.
       "isExitOnShutdown" : boolean,
       "isHttpEnabled": boolean,
       "openFilesOnRenameProvider": boolean,
+      "openNewWindowProvider": boolean,
       "quickPickProvider": boolean,
       "renameFileThreshold": number,
       "slowTaskProvider": boolean,
       "statusBarProvider": "on" | "off" | "show-message" | "log-message",
       "treeViewProvider": boolean
-      "openNewWindowProvider": boolean
     }
 ```
 
@@ -222,6 +223,14 @@ Possible values:
   case for VS Code, Sublime, and coc.nvim.
 - `off`: the client does not add any indentation when receiving a multi-line
   textEdit
+
+##### `copyWorksheetOutputProvider`
+
+Boolean value signifying whether or not the client supports running
+CopyWorksheetOutput server command and copying it's results into the local
+buffer.
+
+Default value: `false`
 
 ##### `debuggingProvider`
 
@@ -334,6 +343,14 @@ rename.
 
 Default: `false`
 
+##### `openNewWindowProvider`
+
+Boolean value signifying whether or not the client supports opening up a new
+window with the newly created project. Used in conjunction with the New Project
+Provider.
+
+Default value: `false`
+
 ##### `quickPickProvider`
 
 Boolean value to signify whether or not the client implements the
@@ -373,14 +390,6 @@ Possible values:
 
 Boolean value signifying whether or not the client supports the
 [Tree View Protocol](../integrations/tree-view-protocol.md).
-
-Default value: `false`
-
-##### `openNewWindowProvider`
-
-Boolean value signifying whether or not the client supports opening up a new
-window with the newly created project. Used in conjunction with the New Project
-Provider.
 
 Default value: `false`
 
