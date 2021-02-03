@@ -168,21 +168,21 @@
             <description><![CDATA[<p>We are excited to announce the release of Metals v0.6.1, codename &quot;Radium&quot; 🎉 The release mostly focused on adding support for the build tools Gradle, Maven and Mill.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, ...</p>]]></description>
         </item>
         <item>
-            <title><![CDATA[Metals v0.5.1]]></title>
+            <title><![CDATA[Metals v0.5.1 - Mercury]]></title>
             <link>http://scalameta.org/metals/blog/2019/04/26/mercury.html</link>
             <guid>http://scalameta.org/metals/blog/2019/04/26/mercury.html</guid>
             <pubDate>Fri, 26 Apr 2019 06:00:00 GMT</pubDate>
             <description><![CDATA[<p>This release introduces minor improvements and bug fixes with highlights including:</p> <ul> <li>auto-imports are inserted at the toplevel instead of locally</li> <li>document symbol lists inner methods and anonymous classes</li> <li>the recommended Vim client is now coc.nvim</li> <li>dia...</li></ul>]]></description>
         </item>
         <item>
-            <title><![CDATA[Metals v0.5.0]]></title>
+            <title><![CDATA[Metals v0.5.0 - Mercury]]></title>
             <link>http://scalameta.org/metals/blog/2019/04/12/mercury.html</link>
             <guid>http://scalameta.org/metals/blog/2019/04/12/mercury.html</guid>
             <pubDate>Fri, 12 Apr 2019 06:00:00 GMT</pubDate>
             <description><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code fo...</li></ul>]]></description>
         </item>
         <item>
-            <title><![CDATA[Metals v0.4.4]]></title>
+            <title><![CDATA[Metals v0.4.4 - Tin]]></title>
             <link>http://scalameta.org/metals/blog/2019/02/01/tin.html</link>
             <guid>http://scalameta.org/metals/blog/2019/02/01/tin.html</guid>
             <pubDate>Fri, 01 Feb 2019 06:00:00 GMT</pubDate>
@@ -193,7 +193,7 @@ community.</p>
 ]]></description>
         </item>
         <item>
-            <title><![CDATA[Metals v0.4.0]]></title>
+            <title><![CDATA[Metals v0.4.0 - Tin]]></title>
             <link>http://scalameta.org/metals/blog/2019/01/24/tin.html</link>
             <guid>http://scalameta.org/metals/blog/2019/01/24/tin.html</guid>
             <pubDate>Thu, 24 Jan 2019 06:00:00 GMT</pubDate>
@@ -223,7 +223,7 @@ filters. Finally, we evaluate these new features on a real-world project: the
 ]]></description>
         </item>
         <item>
-            <title><![CDATA[Metals v0.3.2]]></title>
+            <title><![CDATA[Metals v0.3.2 - Iron]]></title>
             <link>http://scalameta.org/metals/blog/2018/12/14/iron.html</link>
             <guid>http://scalameta.org/metals/blog/2018/12/14/iron.html</guid>
             <pubDate>Fri, 14 Dec 2018 06:00:00 GMT</pubDate>

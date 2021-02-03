@@ -251,7 +251,7 @@
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Metals v0.5.1]]></title>
+        <title type="html"><![CDATA[Metals v0.5.1 - Mercury]]></title>
         <id>http://scalameta.org/metals/blog/2019/04/26/mercury.html</id>
         <link href="http://scalameta.org/metals/blog/2019/04/26/mercury.html"/>
         <updated>2019-04-26T06:00:00.000Z</updated>
@@ -262,7 +262,7 @@
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Metals v0.5.0]]></title>
+        <title type="html"><![CDATA[Metals v0.5.0 - Mercury]]></title>
         <id>http://scalameta.org/metals/blog/2019/04/12/mercury.html</id>
         <link href="http://scalameta.org/metals/blog/2019/04/12/mercury.html"/>
         <updated>2019-04-12T06:00:00.000Z</updated>
@@ -273,7 +273,7 @@
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Metals v0.4.4]]></title>
+        <title type="html"><![CDATA[Metals v0.4.4 - Tin]]></title>
         <id>http://scalameta.org/metals/blog/2019/02/01/tin.html</id>
         <link href="http://scalameta.org/metals/blog/2019/02/01/tin.html"/>
         <updated>2019-02-01T06:00:00.000Z</updated>
@@ -288,7 +288,7 @@ community.</p>
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Metals v0.4.0]]></title>
+        <title type="html"><![CDATA[Metals v0.4.0 - Tin]]></title>
         <id>http://scalameta.org/metals/blog/2019/01/24/tin.html</id>
         <link href="http://scalameta.org/metals/blog/2019/01/24/tin.html"/>
         <updated>2019-01-24T06:00:00.000Z</updated>
@@ -326,7 +326,7 @@ filters. Finally, we evaluate these new features on a real-world project: the
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Metals v0.3.2]]></title>
+        <title type="html"><![CDATA[Metals v0.3.2 - Iron]]></title>
         <id>http://scalameta.org/metals/blog/2018/12/14/iron.html</id>
         <link href="http://scalameta.org/metals/blog/2018/12/14/iron.html"/>
         <updated>2018-12-14T06:00:00.000Z</updated>
