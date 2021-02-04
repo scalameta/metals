@@ -26,14 +26,14 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     )
 
     val otherLibraries = SortedSet(
-      "animal-sniffer-annotations", "cats-core_2.12", "cats-kernel_2.12",
-      "cats-macros_2.12", "checker-qual", "circe-core_2.12",
-      "circe-numbers_2.12", "error_prone_annotations", "failureaccess", "gson",
-      "guava", "j2objc-annotations", "jsr305", "listenablefuture",
-      "machinist_2.12", "org.eclipse.lsp4j", "org.eclipse.lsp4j.generator",
-      "org.eclipse.lsp4j.jsonrpc", "org.eclipse.xtend.lib",
-      "org.eclipse.xtend.lib.macro", "org.eclipse.xtext.xbase.lib",
-      "scala-library", "scala-reflect", "sourcecode_2.12"
+      "cats-core_2.12", "cats-kernel_2.12", "cats-macros_2.12", "checker-qual",
+      "circe-core_2.12", "circe-numbers_2.12", "error_prone_annotations",
+      "failureaccess", "gson", "guava", "j2objc-annotations", "jsr305",
+      "listenablefuture", "machinist_2.12", "org.eclipse.lsp4j",
+      "org.eclipse.lsp4j.generator", "org.eclipse.lsp4j.jsonrpc",
+      "org.eclipse.xtend.lib", "org.eclipse.xtend.lib.macro",
+      "org.eclipse.xtext.xbase.lib", "scala-library", "scala-reflect",
+      "sourcecode_2.12"
     )
 
     if (scala.util.Properties.isJavaAtLeast(9.toString)) {
