@@ -2,6 +2,7 @@ package scala.tools.nsc.interactive
 
 import java.util.logging.Level
 
+import scala.tools.nsc.util.WorkScheduler
 import scala.util.control.NonFatal
 
 import scala.meta.internal.pc.MetalsGlobal
@@ -38,8 +39,8 @@ trait GlobalProxy { this: MetalsGlobal =>
   private def newRunnerThread(): Thread = {
     if (compileRunner.isAlive) {
       try {
-        val re = askForResponse(() => throw ShutdownReq)
-        re.get
+        this.askShutdown()
+        while (compileRunner.isAlive) Thread.sleep(0)
       } catch {
         case NonFatal(e) =>
           logger.log(
@@ -49,6 +50,7 @@ trait GlobalProxy { this: MetalsGlobal =>
           )
       }
     }
+    this.scheduler = new WorkScheduler
     compileRunner = new MetalsGlobalThread(this, "Metals")
     compileRunner.setDaemon(true)
     compileRunner.start()
