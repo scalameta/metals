@@ -92,12 +92,12 @@ final class Ammonite(
     buildServer0 match {
       case None =>
         Future.failed(new Exception("No Ammonite build server running"))
-      case Some(buildServer) =>
+      case Some(conn) =>
         compilers.cancel()
         for {
           build0 <- statusBar.trackFuture(
             "Importing Ammonite scripts",
-            MetalsLanguageServer.importedBuild(buildServer)
+            ImportedBuild.fromConnection(conn)
           )
           _ = {
             lastImportedBuild0 = build0

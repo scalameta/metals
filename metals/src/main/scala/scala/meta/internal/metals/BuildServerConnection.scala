@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.reflect.ClassTag
 import scala.util.Try
 
 import scala.meta.internal.builds.SbtBuildTool
@@ -205,7 +206,7 @@ class BuildServerConnection private (
     }
 
   }
-  private def register[T](
+  private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T]
   ): CompletableFuture[T] = {
     val original = connection
@@ -224,6 +225,9 @@ class BuildServerConnection private (
           synchronized {
             reconnect().flatMap(conn => action(conn.server).asScala)
           }
+        case _ =>
+          val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
+          Future.failed(MetalsBspException(name))
       }
     CancelTokens.future(_ => actionFuture)
   }
