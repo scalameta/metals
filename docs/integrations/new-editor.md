@@ -667,10 +667,7 @@ When the port 5031 is taken the next free increment is chosen instead (5032,
 Editor clients can opt into receiving Metals-specific JSON-RPC requests and
 notifications. Metals extensions are not defined in LSP and are not strictly
 required for the Metals server to function but it is recommended to implement
-them to improve the user experience.
-
-To enable Metals extensions, start the main process with the system property
-`-Dmetals.extensions=true`.
+them to improve the user experience or provide extra functionality.
 
 ### Debug Adapter Protocol
 
@@ -968,3 +965,24 @@ interface MetalsOpenWindowParams {
   openNewWindow: boolean;
 }
 ```
+
+### `metals/listBuildTargets`
+
+The Metals list build targets request is sent from the client to the server to
+get information about the build targets of the current workspace.
+
+_Request_:
+
+- method: `metals/listBuildTargets`
+- params: There are no params.
+
+_Response_:
+
+- result: An array of `ScalaTarget`s. The Metals Scala Target is defined
+    [here](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ScalaTarget.scala).
+    It includs the BSP
+    [`BuildTarget`](https://build-server-protocol.github.io/docs/specification.html#build-target),
+    [`ScalaBuildTarget`](https://build-server-protocol.github.io/docs/extensions/scala.html#scala-build-target),
+    [`ScalacOptionsItem`](https://build-server-protocol.github.io/docs/extensions/scala.html#scalac-options-request),
+    and a couple other values unique to Metals.
+

@@ -1708,6 +1708,13 @@ class MetalsLanguageServer(
     }
   }
 
+  @JsonRequest("metals/listBuildTargets")
+  def listBuildTargets(): CompletableFuture[ju.List[ScalaTarget]] = {
+    Future {
+      buildTargets.all.toList.asJava
+    }.asJava
+  }
+
   @JsonRequest("metals/treeViewChildren")
   def treeViewChildren(
       params: TreeViewChildrenParams

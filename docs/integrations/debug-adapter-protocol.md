@@ -5,12 +5,16 @@ title: Debug Adapter Protocol
 ---
 
 Metals implements the Debug Adapter Protocol, which can be used by the editor to
-communicate with JVM to run and debug code.
+communicate with the JVM to run and debug code.
 
 ## How to add support for debugging in my editor?
 
 There are two main ways to add support for debugging depending on the
-capabilities exposed by the client.
+capabilities exposed by the client. However, for both of them you'll want to
+make sure that your client sets the `debuggingProvider` key to `true` in the
+`initializationOptions` to ensure that the correct client commands can be sent
+to the client, and so that requests to populate the code lens (if your editor
+supports them) will be answered correct for debugging related features.
 
 ### Via code lenses
 
@@ -18,7 +22,7 @@ The editor needs to handle two commands in its language client extension:
 [`metals-run-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L56)
 and
 [`metals-debug-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L78).
-Those commands should get executed automatically by the lsp client once the user
+These commands should get executed automatically by the lsp client once the user
 activates a code lens. The difference between them is that the former ignores
 all breakpoints being set while the latter respects them. The procedure of
 starting the run/debug session is as follows:
