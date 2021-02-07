@@ -84,6 +84,11 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<List<TextEdit>> implementAbstractMembers(OffsetParams params);
 
     /**
+     * Return the missing implements and imports for the symbol at the given position.
+     */
+    public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
+
+    /**
      * The text contents of the fiven file changed.
      */
     public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);

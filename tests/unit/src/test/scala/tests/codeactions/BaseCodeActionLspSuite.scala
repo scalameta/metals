@@ -11,6 +11,14 @@ import tests.BaseLspSuite
 abstract class BaseCodeActionLspSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
 
+  def checkNoAction(
+      name: TestOptions,
+      input: String
+  ): Unit = {
+    val fileContent = input.replace("<<", "").replace(">>", "")
+    check(name, input, "", fileContent)
+  }
+
   def check(
       name: TestOptions,
       input: String,
@@ -45,15 +53,8 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
         }
         codeActions <-
           server.assertCodeAction(path, input, expectedActions, kind)
+        _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
         _ <- server.didSave(path) { _ =>
-          if (codeActions.nonEmpty) {
-            if (selectedActionIndex >= codeActions.length) {
-              fail(
-                s"selectedActionIndex ($selectedActionIndex) is out of bounds"
-              )
-            }
-            client.applyCodeAction(codeActions(selectedActionIndex), server)
-          }
           server.toPath(path).readText
         }
         _ = assertNoDiff(server.bufferContents(path), expectedCode)

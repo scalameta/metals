@@ -278,6 +278,19 @@ class Compilers(
     }
   }
 
+  def insertInferredType(
+      params: TextDocumentPositionParams,
+      token: CancelToken
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.insertInferredType(CompilerOffsetParams.fromPos(pos, token))
+        .asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
+  }
+
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken

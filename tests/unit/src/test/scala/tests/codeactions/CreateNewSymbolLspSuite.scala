@@ -106,9 +106,6 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         codeActions <-
           server.assertCodeAction(path, input, expectedActions, Nil)
         _ <- {
-          if (selectedActionIndex >= codeActions.length) {
-            fail(s"selectedActionIndex ($selectedActionIndex) is out of bounds")
-          }
           def isSelectTheKindOfFile(params: ShowMessageRequestParams): Boolean =
             params.getMessage() == NewScalaFile.selectTheKindOfFileMessage
           client.showMessageRequestHandler = { params =>
@@ -118,7 +115,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
               None
             }
           }
-          client.applyCodeAction(codeActions(selectedActionIndex), server)
+          client.applyCodeAction(selectedActionIndex, codeActions, server)
         }
         _ <- server.didSave(path)(identity)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
