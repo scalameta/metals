@@ -209,6 +209,15 @@ case class ScalaPresentationCompiler(
     )
   }
 
+  // TODO NOT IMPLEMENTED
+  override def insertInferredType(
+    params: OffsetParams
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    CompletableFuture.completedFuture(
+      List.empty[TextEdit].asJava
+    )
+  }
+
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
     compilerAccess.withNonInterruptableCompiler(
       ju.Optional.empty[Hover](),

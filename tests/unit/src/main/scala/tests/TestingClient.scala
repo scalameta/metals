@@ -391,16 +391,26 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
 
   def applyCodeAction(
-      codeAction: CodeAction,
+      selectedActionIndex: Int,
+      codeActions: List[CodeAction],
       server: TestingServer
   ): Future[Any] = {
-    val edit = codeAction.getEdit()
-    val command = codeAction.getCommand()
-    if (edit != null) {
-      applyWorkspaceEdit(edit)
-    }
-    if (command != null) {
-      executeServerCommand(command, server)
+    if (codeActions.nonEmpty) {
+      if (selectedActionIndex >= codeActions.length) {
+        Assertions.fail(
+          s"selectedActionIndex ($selectedActionIndex) is out of bounds"
+        )
+      }
+      val codeAction = codeActions(selectedActionIndex)
+      val edit = codeAction.getEdit()
+      val command = codeAction.getCommand()
+      if (edit != null) {
+        applyWorkspaceEdit(edit)
+      }
+      if (command != null) {
+        executeServerCommand(command, server)
+      } else Future.unit
+
     } else Future.unit
   }
 

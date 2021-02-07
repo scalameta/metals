@@ -304,6 +304,17 @@ object ServerCommands {
     "[uri], the uri of the worksheet that you'd like to copy the contents of."
   )
 
+  val InsertInferredType = new Command(
+    "insert-inferred-type",
+    "Insert inferred type of a value",
+    """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
+       |calculate the type and insert it in the correct location.
+       |""".stripMargin,
+    """|[uri, line, character], uri to the document that the command needs to be invoked on 
+       |together with line number and character/column.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */
@@ -390,6 +401,7 @@ object ServerCommands {
       GotoSuperMethod,
       GotoSymbol,
       ImportBuild,
+      InsertInferredType,
       NewScalaFile,
       NewScalaProject,
       ResetChoicePopup,

@@ -59,19 +59,12 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |""".stripMargin.replace("'", "\"")
   )
 
-  check(
+  checkNoAction(
     "out-selection-no-codeAction",
     """|package a
        |
        |object A {
-       |  val <<str>> = "this is a string"
-       |}
-       |""".stripMargin,
-    "",
-    """|package a
-       |
-       |object A {
-       |  val str = "this is a string"
+       |  val <<str>>: String = "this is a string"
        |}
        |""".stripMargin
   )
@@ -171,53 +164,32 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |""".stripMargin.replace("'", "\"")
   )
 
-  check(
+  checkNoAction(
     "triple-quotes-no-codeAction",
     """|package a
        |
        |object A {
        |  val str = <<'''>>'''
        |}
-       |""".stripMargin.replace("'", "\""),
-    "",
-    """|package a
-       |
-       |object A {
-       |  val str = ''''''
-       |}
        |""".stripMargin.replace("'", "\"")
   )
 
-  check(
+  checkNoAction(
     "triple-quotes-interpolation-no-codeAction",
     """|package a
        |
        |object A {
        |  val str = s'''this <<is a>> string'''
        |}
-       |""".stripMargin.replace("'", "\""),
-    "",
-    """|package a
-       |
-       |object A {
-       |  val str = s'''this is a string'''
-       |}
        |""".stripMargin.replace("'", "\"")
   )
 
-  check(
+  checkNoAction(
     "mix-triple-quotes-no-codeAction",
     """|package a
        |
        |object A {
        |  val str = s'''|multiline'''.stripMargin + '''an <<other>> multiline'''
-       |}
-       |""".stripMargin.replace("'", "\""),
-    "",
-    """|package a
-       |
-       |object A {
-       |  val str = s'''|multiline'''.stripMargin + '''an other multiline'''
        |}
        |""".stripMargin.replace("'", "\"")
   )

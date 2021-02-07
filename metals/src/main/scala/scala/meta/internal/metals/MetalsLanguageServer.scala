@@ -1564,9 +1564,7 @@ class MetalsLanguageServer(
           for {
             args <- Option(params.getArguments())
             argObject <- args.asScala.headOption
-            arg = argObject.asInstanceOf[JsonPrimitive]
-            if arg.isString()
-            symbol = arg.getAsString()
+            symbol <- Argument.getAsString(argObject)
             location <- definitionProvider.fromSymbol(symbol).asScala.headOption
           } {
             languageClient.metalsExecuteClientCommand(
@@ -1662,18 +1660,10 @@ class MetalsLanguageServer(
 
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala
-        val directoryURI = args.lift(0).collect {
-          case directory: JsonPrimitive if directory.isString =>
-            new URI(directory.getAsString())
-        }
-        val name = args.lift(1).collect {
-          case name: JsonPrimitive if name.isString =>
-            name.getAsString()
-        }
-        val fileType = args.lift(2).collect {
-          case fileType: JsonPrimitive if fileType.isString =>
-            fileType.getAsString()
-        }
+        val directoryURI =
+          args.lift(0).flatMap(Argument.getAsString).map(new URI(_))
+        val name = args.lift(1).flatMap(Argument.getAsString)
+        val fileType = args.lift(2).flatMap(Argument.getAsString)
         newFileProvider
           .handleFileCreation(directoryURI, name, fileType)
           .asJavaObject
@@ -1701,6 +1691,35 @@ class MetalsLanguageServer(
           Future.successful(()).asJavaObject
         }
 
+      case ServerCommands.InsertInferredType() =>
+        CancelTokens.future { token =>
+          val args = params.getArguments().asScala
+          val futureOpt = for {
+            arg0 <- args.lift(0)
+            uri <- Argument.getAsString(arg0)
+            arg1 <- args.lift(1)
+            line <- Argument.getAsInt(arg1)
+            arg2 <- args.lift(2)
+            character <- Argument.getAsInt(arg2)
+            pos = new l.Position(line, character)
+            textDoc = new l.TextDocumentIdentifier(uri)
+            params = new TextDocumentPositionParams(textDoc, pos)
+          } yield {
+            for {
+              edits <- compilers.insertInferredType(params, token)
+              if (!edits.isEmpty())
+              workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+              _ <- languageClient
+                .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
+                .asScala
+            } yield ()
+          }
+
+          futureOpt.getOrElse {
+            languageClient.showMessage(Messages.InsertInferredTypeFailed)
+            Future.unit
+          }.withObjectValue
+        }
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
