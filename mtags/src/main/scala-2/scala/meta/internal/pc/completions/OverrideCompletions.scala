@@ -43,7 +43,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
   ) extends CompletionPosition {
     val prefix: String = name.toString.stripSuffix(CURSOR)
     val typed: Tree = typedTreeAt(t.pos)
-    val isDecl: Set[Symbol] = typed.tpe.decls.toSet
     val range: l.Range = pos.withStart(start).withEnd(pos.point).toLSP
     val lineStart: RunId = pos.source.lineToOffset(pos.line - 1)
 
