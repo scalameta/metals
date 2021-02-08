@@ -2,7 +2,10 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
-import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.MetalsEnrichments._
 
 import ch.epfl.scala.bsp4j._
 
@@ -50,4 +53,26 @@ object ImportedBuild {
       new SourcesResult(ju.Collections.emptyList()),
       new DependencySourcesResult(ju.Collections.emptyList())
     )
+
+  def fromConnection(
+      conn: BuildServerConnection
+  )(implicit ec: ExecutionContext): Future[ImportedBuild] =
+    for {
+      workspaceBuildTargets <- conn.workspaceBuildTargets()
+      ids = workspaceBuildTargets.getTargets.map(_.getId)
+      scalacOptions <- conn.buildTargetScalacOptions(
+        new ScalacOptionsParams(ids)
+      )
+      sources <- conn.buildTargetSources(new SourcesParams(ids))
+      dependencySources <- conn.buildTargetDependencySources(
+        new DependencySourcesParams(ids)
+      )
+    } yield {
+      ImportedBuild(
+        workspaceBuildTargets,
+        scalacOptions,
+        sources,
+        dependencySources
+      )
+    }
 }

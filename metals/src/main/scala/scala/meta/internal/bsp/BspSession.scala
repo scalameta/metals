@@ -7,7 +7,6 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ImportedBuild
-import scala.meta.internal.metals.MetalsLanguageServer
 
 case class BspSession(
     main: BuildServerConnection,
@@ -19,7 +18,7 @@ case class BspSession(
 
   def importBuilds(): Future[List[BspSession.BspBuild]] = {
     def importSingle(conn: BuildServerConnection): Future[BspSession.BspBuild] =
-      MetalsLanguageServer.importedBuild(conn).map(BspSession.BspBuild(conn, _))
+      ImportedBuild.fromConnection(conn).map(BspSession.BspBuild(conn, _))
 
     Future.sequence(connections.map(importSingle))
   }

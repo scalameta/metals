@@ -17,7 +17,6 @@ import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -1939,40 +1938,40 @@ class MetalsLanguageServer(
       case other => Future.successful(other)
     }
 
-    {
-      for {
-        _ <- disconnectOldBuildServer()
-        maybeSession <- timerProvider.timed("connected to build server", true) {
-          bspConnector.connect(workspace, userConfig)
-        }
-        result <- maybeSession match {
-          case Some(session) =>
-            val result = connectToNewBuildServer(session)
-            session.mainConnection.onReconnection { newMainConn =>
-              val updSession = session.copy(main = newMainConn)
-              connectToNewBuildServer(updSession)
-                .flatMap(compileAllOpenFiles)
-                .ignoreValue
-            }
-            result
-          case None =>
-            Future.successful(BuildChange.None)
-        }
-        _ = {
-          treeView.init()
-        }
-      } yield result
-    }.recover { case NonFatal(e) =>
-      disconnectOldBuildServer()
-      val message =
-        "Failed to connect with build server, no functionality will work."
-      val details = " See logs for more details."
-      languageClient.showMessage(
-        new MessageParams(MessageType.Error, message + details)
-      )
-      scribe.error(message, e)
-      BuildChange.Failed
-    }.flatMap(compileAllOpenFiles)
+    (for {
+      _ <- disconnectOldBuildServer()
+      maybeSession <- timerProvider.timed("Connected to build server", true) {
+        bspConnector.connect(workspace, userConfig)
+      }
+      result <- maybeSession match {
+        case Some(session) =>
+          val result = connectToNewBuildServer(session)
+          session.mainConnection.onReconnection { newMainConn =>
+            val updSession = session.copy(main = newMainConn)
+            connectToNewBuildServer(updSession)
+              .flatMap(compileAllOpenFiles)
+              .ignoreValue
+          }
+          result
+        case None =>
+          Future.successful(BuildChange.None)
+      }
+      _ = {
+        treeView.init()
+      }
+    } yield result)
+      .recover { case NonFatal(e) =>
+        disconnectOldBuildServer()
+        val message =
+          "Failed to connect with build server, no functionality will work."
+        val details = " See logs for more details."
+        languageClient.showMessage(
+          new MessageParams(MessageType.Error, message + details)
+        )
+        scribe.error(message, e)
+        BuildChange.Failed
+      }
+      .flatMap(compileAllOpenFiles)
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
@@ -1993,11 +1992,13 @@ class MetalsLanguageServer(
   private def connectToNewBuildServer(
       session: BspSession
   ): Future[BuildChange] = {
-    scribe.info(s"Connected to Build server v${session.version}")
+    scribe.info(
+      s"Connected to Build server: ${session.main.name} v${session.version}"
+    )
     cancelables.add(session)
     compilers.cancel()
     bspSession = Some(session)
-    val importedBuilds0 = timerProvider.timed("imported build") {
+    val importedBuilds0 = timerProvider.timed("Imported build") {
       session.importBuilds()
     }
     for {
@@ -2522,31 +2523,4 @@ class MetalsLanguageServer(
     )
   }
 
-}
-
-object MetalsLanguageServer {
-
-  def importedBuild(
-      build: BuildServerConnection
-  )(implicit ec: ExecutionContext): Future[ImportedBuild] =
-    for {
-      workspaceBuildTargets <- build.workspaceBuildTargets()
-      ids = workspaceBuildTargets.getTargets.map(_.getId)
-      scalacOptions <-
-        build
-          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-      sources <-
-        build
-          .buildTargetSources(new b.SourcesParams(ids))
-      dependencySources <-
-        build
-          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
-    } yield {
-      ImportedBuild(
-        workspaceBuildTargets,
-        scalacOptions,
-        sources,
-        dependencySources
-      )
-    }
 }
