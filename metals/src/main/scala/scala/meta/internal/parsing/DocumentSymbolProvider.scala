@@ -250,6 +250,83 @@ class DocumentSymbolProvider(trees: Trees) {
             t.name.pos,
             ""
           )
+        case t: Defn.Enum =>
+          addChild(
+            t.name.value,
+            SymbolKind.Enum,
+            t.pos,
+            t.name.pos,
+            ""
+          )
+          newOwner()
+        case t: Defn.RepeatedEnumCase =>
+          t.cases.foreach { name =>
+            addChild(
+              name.value,
+              SymbolKind.EnumMember,
+              name.pos,
+              name.pos,
+              ""
+            )
+          }
+          newOwner()
+        case t: Defn.EnumCase =>
+          addChild(
+            t.name.value,
+            SymbolKind.EnumMember,
+            t.pos,
+            t.name.pos,
+            ""
+          )
+        case t: Defn.ExtensionGroup =>
+          val (name, pos) =
+            t.eparam.decltpe.fold(("", t.pos))(tpe => (tpe.syntax, tpe.pos))
+          addChild(
+            s"extension $name",
+            SymbolKind.Module,
+            t.pos,
+            pos,
+            name
+          )
+          newOwner()
+        case t: Defn.GivenAlias =>
+          addChild(
+            t.name.value,
+            SymbolKind.Constant,
+            t.pos,
+            t.name.pos,
+            t.decltpe.syntax
+          )
+          newOwner()
+        case t: Defn.Given =>
+          val (tpeName, initPos) =
+            t.templ.inits match {
+              case Nil => ("(anonymous)", t.pos)
+              case inits =>
+                (inits.map(_.tpe.syntax).mkString(" with "), inits.head.pos)
+            }
+
+          val (name, pos) =
+            t.name match {
+              case Name.Anonymous() => (" ", initPos)
+              case name => (name.value, name.pos)
+            }
+          addChild(
+            name,
+            SymbolKind.Class,
+            t.pos,
+            pos,
+            tpeName
+          )
+          newOwner()
+        case t: Decl.Given =>
+          addChild(
+            t.name.value,
+            SymbolKind.Constant,
+            t.pos,
+            t.name.pos,
+            t.decltpe.syntax
+          )
         case _ =>
       }
     }

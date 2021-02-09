@@ -29,7 +29,7 @@ import tests.Library
 class MetalsBench {
 
   MetalsLogger.updateDefaultFormat()
-  val inputs: InputProperties = InputProperties.default()
+  val inputs: InputProperties = InputProperties.scala2()
   val classpath = new SemanticdbClasspath(inputs.sourceroot, inputs.classpath)
   val documents: List[(AbsolutePath, TextDocument)] =
     inputs.scalaFiles.map { input =>

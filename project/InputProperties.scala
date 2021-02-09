@@ -4,23 +4,33 @@ import sbt._
 
 object InputProperties extends AutoPlugin {
   var file: Option[File] = None
-  def resourceGenerator(input: Reference): Def.Initialize[Task[Seq[File]]] =
+  def resourceGenerator(
+      input: Reference,
+      input3: Reference
+  ): Def.Initialize[Task[Seq[File]]] =
     Def.taskDyn {
       file.synchronized {
         file match {
           case Some(value) if value.isFile =>
             Def.task(List(value))
           case _ =>
-            resourceGeneratorImpl(input)
+            val baseInput = resourceGeneratorImpl(input, "metals-input")
+            val scala3Input = resourceGeneratorImpl(input3, "metals-input3")
+            baseInput.zipWith(scala3Input)((a, b) =>
+              Seq(a, b).join.map(_.flatten)
+            )
         }
       }
     }
-  def resourceGeneratorImpl(input: Reference): Def.Initialize[Task[Seq[File]]] =
+  def resourceGeneratorImpl(
+      input: Reference,
+      resourceName: String
+  ): Def.Initialize[Task[Seq[File]]] =
     Def.task {
       val out = managedResourceDirectories
         .in(Compile)
         .value
-        .head / "metals-input.properties"
+        .head / s"$resourceName.properties"
       val props = new java.util.Properties()
       props.put(
         "sourceroot",

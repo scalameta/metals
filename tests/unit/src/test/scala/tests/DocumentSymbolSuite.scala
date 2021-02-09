@@ -1,5 +1,7 @@
 package tests
 
+import scala.meta.Dialect
+import scala.meta.dialects
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -13,7 +15,13 @@ import tests.MetalsTestEnrichments._
 /**
  * Checks the positions of document symbols inside a document
  */
-class DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
+abstract class DocumentSymbolSuite(
+    directoryName: String,
+    inputProperties: => InputProperties,
+    dialect: Dialect
+) extends DirectoryExpectSuite(directoryName) {
+
+  override lazy val input: InputProperties = inputProperties
 
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>
@@ -25,7 +33,8 @@ class DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
           val documentSymbolProvider = new DocumentSymbolProvider(
             new Trees(
               new BuildTargets(_ => None),
-              buffers
+              buffers,
+              dialect
             )
           )
 
@@ -51,3 +60,17 @@ class DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
   }
 
 }
+
+class DocumentSymbolScala2Suite
+    extends DocumentSymbolSuite(
+      "documentSymbol",
+      InputProperties.scala2(),
+      dialects.Scala213
+    )
+
+class DocumentSymbolScala3Suite
+    extends DocumentSymbolSuite(
+      "documentSymbol-scala3",
+      InputProperties.scala3(),
+      dialects.Scala3
+    )
