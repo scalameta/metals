@@ -93,7 +93,7 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 (use-package yasnippet)
 
 ;; Add company-lsp backend for metals.
-;;   (depending on your lsp-mode version it may be oupdated see:
+;;   (depending on your lsp-mode version it may be outdated see:
 ;;    https://github.com/emacs-lsp/lsp-mode/pull/1983)
 (use-package company-lsp)
 
