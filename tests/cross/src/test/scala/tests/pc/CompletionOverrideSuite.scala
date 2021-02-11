@@ -236,7 +236,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false
   )
 
-  checkEditLine(
+  checkEdit(
     "conflict",
     s"""package a.b
        |abstract class Conflict {
@@ -245,12 +245,23 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |object Main {
        |  class Conflict
        |  new a.b.Conflict {
-       |    ___
+       |    def self@@
        |  }
        |}
        |""".stripMargin,
-    "def self@@",
-    "def self: a.b.Conflict = ${0:???}"
+    """|package a.b
+       |
+       |import a.b
+       |abstract class Conflict {
+       |  def self: Conflict
+       |}
+       |object Main {
+       |  class Conflict
+       |  new a.b.Conflict {
+       |    def self: b.Conflict = ${0:???}
+       |  }
+       |}
+       |""".stripMargin
   )
 
   check(
@@ -270,8 +281,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|def self: _root_.a.c.Conflict
-       |def selfArg: Option[_root_.a.c.Conflict]
+    """|def self: c.Conflict
+       |def selfArg: Option[c.Conflict]
        |def selfPath: Inner
        |Implement all members
        |""".stripMargin,
@@ -377,17 +388,23 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """  def foo: java.util.List[Int] = ${0:???}"""
   )
 
-  checkEditLine(
+  checkEdit(
     "jlang",
-    s"""|abstract class Mutable {
-        |  def foo: java.lang.StringBuilder
-        |}
-        |class Main extends Mutable {
-        |  ___
-        |}
-        |""".stripMargin,
-    "  def foo@@",
-    """  def foo: java.lang.StringBuilder = ${0:???}""".stripMargin
+    """|abstract class Mutable {
+       |  def foo: java.lang.StringBuilder
+       |}
+       |class Main extends Mutable {
+       |  def foo@@
+       |}
+       |""".stripMargin,
+    """|import java.lang
+       |abstract class Mutable {
+       |  def foo: java.lang.StringBuilder
+       |}
+       |class Main extends Mutable {
+       |  def foo: lang.StringBuilder = ${0:???}
+       |}
+       |""".stripMargin
   )
 
   checkEditLine(

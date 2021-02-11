@@ -188,7 +188,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
         }
 
       val history = new ShortenedNames(
-        lookupSymbol = { name => context.lookupSymbol(name, _ => true) :: Nil },
+        lookupSymbol = { name =>
+          context.lookupSymbol(name, sym => !sym.isStale) :: Nil
+        },
         config = renameConfig,
         renames = re,
         owners = owners

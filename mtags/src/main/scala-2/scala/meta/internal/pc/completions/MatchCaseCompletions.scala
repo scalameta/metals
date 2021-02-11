@@ -167,7 +167,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       val tpe = prefix.widen.bounds.hi
       val members = ListBuffer.empty[TextEditMember]
       val importPos = autoImportPosition(pos, text)
-      val context = doLocateImportContext(pos, importPos)
+      val context = doLocateImportContext(pos)
       val subclassesResult = subclassesForType(tpe)
 
       // sort subclasses by declaration order

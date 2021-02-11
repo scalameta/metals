@@ -39,9 +39,10 @@ final class InferredTypeProvider(
     val pos = unit.position(params.offset)
     val typedTree = typedTreeAt(pos)
     val importPosition = autoImportPosition(pos, params.text())
-    val context = doLocateImportContext(pos, importPosition)
+    val context = doLocateImportContext(pos)
     val history = new ShortenedNames(
-      lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
+      lookupSymbol = name =>
+        context.lookupSymbol(name, sym => !sym.isStale) :: Nil
     )
 
     def additionalImports = importPosition match {
@@ -50,13 +51,7 @@ final class InferredTypeProvider(
         // existing symbols in scope, so we just do nothing
         Nil
       case Some(importPosition) =>
-        history.autoImports(
-          pos,
-          context,
-          importPosition.offset,
-          importPosition.indent,
-          importPosition.padTop
-        )
+        history.autoImports(pos, importPosition)
     }
 
     def prettyType(tpe: Type) =

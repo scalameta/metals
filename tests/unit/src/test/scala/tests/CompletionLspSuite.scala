@@ -195,7 +195,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       // The default settings are no longer enabled.
       _ <- assertCompletion(
         "override def set@@",
-        """|def set: scala.collection.mutable.Set[Int]
+        """|def set: mutable.Set[Int]
            |""".stripMargin,
         includeDetail = false
       )

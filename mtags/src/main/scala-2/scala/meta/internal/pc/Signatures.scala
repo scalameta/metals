@@ -10,7 +10,7 @@ import scala.meta.pc.SymbolDocumentation
 
 import org.eclipse.{lsp4j => l}
 
-trait Signatures { this: MetalsGlobal =>
+trait Signatures { compiler: MetalsGlobal =>
 
   case class ShortName(
       name: Name,
@@ -57,13 +57,7 @@ trait Signatures { this: MetalsGlobal =>
         config = renameConfig
       )
       val tpeString = shortType(tpe, history).toString()
-      val edits = history.autoImports(
-        pos,
-        scope,
-        importPosition.offset,
-        importPosition.indent,
-        importPosition.padTop
-      )
+      val edits = history.autoImports(pos, importPosition)
       (tpeString, edits)
     }
 
@@ -138,13 +132,27 @@ trait Signatures { this: MetalsGlobal =>
       nameResolvesToSymbol(top.name.toTermName, top)
     }
 
-    def nameResolvesToSymbol(sym: Symbol): Boolean = {
-      nameResolvesToSymbol(sym.name, sym)
+    def isSymbolInScope(sym: Symbol, prefix: Type = NoPrefix): Boolean = {
+      nameResolvesToSymbol(sym.name, sym, prefix)
     }
-    def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
+    def nameResolvesToSymbol(
+        name: Name,
+        sym: Symbol,
+        prefix: Type = NoPrefix
+    ): Boolean = {
       lookupSymbol(name) match {
-        case Nil => true
-        case lookup => lookup.exists(_.symbol.isKindaTheSameAs(sym))
+        case Nil => false
+        case lookup =>
+          lookup.exists {
+            case LookupSucceeded(qual, symbol) =>
+              symbol.isKindaTheSameAs(sym) && {
+                prefix == NoPrefix ||
+                prefix.isInstanceOf[PrettyType] ||
+                qual.tpe.computeMemberType(symbol) <:<
+                  prefix.computeMemberType(sym)
+              }
+            case l => l.symbol.isKindaTheSameAs(sym)
+          }
       }
     }
 
@@ -152,38 +160,62 @@ trait Signatures { this: MetalsGlobal =>
       val ShortName(name, sym) = short
       history.get(name) match {
         case Some(ShortName(_, other)) =>
-          if (other.isKindaTheSameAs(sym)) true
-          else false
+          other.isKindaTheSameAs(sym)
         case _ =>
-          val isOk = lookupSymbol(name).filter(_ != LookupNotFound) match {
-            case Nil => true
+          val results =
+            Iterator(lookupSymbol(name), lookupSymbol(name.otherName))
+          results.flatten.filter(_ != LookupNotFound).toList match {
+            case Nil =>
+              // Missing imports must be addressable via the dot operator
+              // syntax (as type projection is not allowed in imports).
+              // https://lptk.github.io/programming/2019/09/13/type-projection.html
+              if (
+                sym.isStaticMember || // Java static
+                sym.owner.ownerChain.forall { s =>
+                  // ensure the symbol can be referenced in a static manner, without any instance
+                  s.isPackageClass || s.isPackageObjectClass || s.isModule
+                }
+              ) {
+                history(name) = short
+                true
+              } else false
             case lookup =>
-              lookup.exists(_.symbol.isKindaTheSameAs(sym))
-          }
-          if (isOk) {
-            history(name) = short
-            true
-          } else {
-            false // conflict, do not shorten name.
+              lookup.forall(_.symbol.isKindaTheSameAs(sym))
           }
       }
     }
-    def tryShortenName(name: Option[ShortName]): Boolean =
+
+    def tryShortenName(name: Option[ShortName]): Boolean = {
       name match {
         case Some(short) =>
           tryShortenName(short)
         case _ =>
           false
       }
+    }
+
+    def autoImports(
+        pos: Position,
+        autoImportPosition: AutoImportPosition
+    ): List[l.TextEdit] = {
+      autoImports(
+        pos,
+        compiler.doLocateImportContext(pos, Some(autoImportPosition)),
+        autoImportPosition.offset,
+        autoImportPosition.indent,
+        autoImportPosition.padTop
+      )
+    }
 
     // Returns the list of text edits to insert imports for symbols that got shortened.
     def autoImports(
         pos: Position,
-        context: Context,
+        context: => Context,
         lineStart: Int,
         inferIndent: => Int,
         padTop: Boolean
     ): List[l.TextEdit] = {
+
       val toImport = mutable.Map.empty[Symbol, List[ShortName]]
       val isRootSymbol = Set[Symbol](
         rootMirror.RootClass,
@@ -192,7 +224,7 @@ trait Signatures { this: MetalsGlobal =>
       for {
         (name, sym) <- history.iterator
         owner = sym.owner
-        if !isRootSymbol(owner)
+        if !isRootSymbol(owner) && owner != NoSymbol
         if !context.lookupSymbol(name, _ => true).isSuccess
       } {
         toImport(owner) = sym :: toImport.getOrElse(owner, Nil)
@@ -224,6 +256,12 @@ trait Signatures { this: MetalsGlobal =>
         Nil
       }
     }
+  }
+
+  implicit class XtensionNameMetals(name: Name) {
+    def otherName: Name =
+      if (name.isTermName) name.toTypeName
+      else name.toTermName
   }
 
   class SignaturePrinter(

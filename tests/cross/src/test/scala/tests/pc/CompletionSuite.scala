@@ -195,7 +195,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |apply(from: Any): Builder[A,List[A]]
            |asInstanceOf[T0]: T0
            |equals(obj: Object): Boolean
-           |getClass(): Class[_]
+           |getClass(): Class[_ <: Object]
            |hashCode(): Int
            |isInstanceOf[T0]: Boolean
            |synchronized[T0](x$1: T0): T0
@@ -245,7 +245,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |  }
       |  Xtension@@
       |}""".stripMargin,
-    """|XtensionMethod(a: Int): XtensionMethod
+    """|XtensionMethod(a: Int): A.XtensionMethod
        |""".stripMargin,
     compat = Map(
       "3.0" -> "XtensionMethod(a: Int): implicit-class.A.XtensionMethod"

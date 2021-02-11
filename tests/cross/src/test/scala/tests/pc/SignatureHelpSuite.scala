@@ -94,7 +94,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """|<init>(): Random
        |<init>(seed: Int): Random
        |<init>(seed: Long): Random
-       |<init>(self: java.util.Random): Random
+       |<init>(self: util.Random): Random
        |""".stripMargin,
     compat = Map(
       "3.0" ->
@@ -630,6 +630,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |                ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
+      "2.13" ->
+        """|computeIfAbsent(x$1: String, x$2: Function[_ >: String <: Object, _ <: Int]): Int
+           |                ^^^^^^^^^^^
+           |""".stripMargin,
       // TODO short names are not supported yet
       "3.0" ->
         """|computeIfAbsent(x$0: K, x$1: java.util.function.Function[? >: K, ? <: V]): V
