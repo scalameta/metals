@@ -25,7 +25,7 @@ trait AutoImports { this: MetalsGlobal =>
 
   def doLocateImportContext(
       pos: Position,
-      autoImport: Option[AutoImportPosition]
+      autoImport: Option[AutoImportPosition] = None
   ): Context = {
     try doLocateContext(
       autoImport.fold(pos)(i => pos.focus.withPoint(i.offset))

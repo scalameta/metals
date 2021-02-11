@@ -56,18 +56,16 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |object B {
       |  NestedLea@@
       |}""".stripMargin,
-    """
-      |package a
-      |
-      |import a.A.Nested.NestedLeaf
-      |object A {
-      |  object Nested{
-      |    object NestedLeaf
-      |  }
-      |}
-      |object B {
-      |  NestedLeaf
-      |}""".stripMargin
+    """|package a
+       |object A {
+       |  object Nested{
+       |    object NestedLeaf
+       |  }
+       |}
+       |object B {
+       |  A.Nested.NestedLeaf
+       |}
+       |""".stripMargin
   )
 
   checkEdit(
@@ -91,26 +89,25 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |object B {
       |  val allCountries = Sweden + France + USA + Norway@@
       |}""".stripMargin,
-    """
-      |package all
-      |import all.World.Countries.{
-      |  Sweden,
-      |  USA
-      |}
-      |import all.World.Countries.Norway
-      |
-      |object World {
-      |  object Countries{
-      |    object Sweden
-      |    object Norway
-      |    object France
-      |    object USA
-      |  }
-      |}
-      |import all.World.Countries.France
-      |object B {
-      |  val allCountries = Sweden + France + USA + Norway
-      |}""".stripMargin
+    """|package all
+       |import all.World.Countries.{
+       |  Sweden,
+       |  USA
+       |}
+       |
+       |object World {
+       |  object Countries{
+       |    object Sweden
+       |    object Norway
+       |    object France
+       |    object USA
+       |  }
+       |}
+       |import all.World.Countries.France
+       |object B {
+       |  val allCountries = Sweden + France + USA + World.Countries.Norway
+       |}
+       |""".stripMargin
   )
 
   check(

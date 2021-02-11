@@ -70,7 +70,7 @@ class CompletionProvider(
 
     val sorted = i.results.sorted(memberOrdering(query, history, completion))
     lazy val importPosition = autoImportPosition(pos, params.text())
-    lazy val context = doLocateImportContext(pos, importPosition)
+    lazy val context = doLocateImportContext(pos)
 
     val items = sorted.iterator.zipWithIndex.map { case (member, idx) =>
       params.checkCanceled()

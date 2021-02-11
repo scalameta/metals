@@ -366,13 +366,13 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |    cas@@
       |  }
       |}""".stripMargin,
-    """|case Nil => scala.collection.immutable
-       |case head :: tl => scala.collection.immutable
+    """|case head :: tl => scala.collection.immutable
+       |case Nil => scala.collection.immutable
        |""".stripMargin,
     compat = Map(
       "2.13" ->
-        """|case Nil => scala.collection.immutable
-           |case head :: next => scala.collection.immutable
+        """|case head :: next => scala.collection.immutable
+           |case Nil => scala.collection.immutable
            |""".stripMargin
     )
   )

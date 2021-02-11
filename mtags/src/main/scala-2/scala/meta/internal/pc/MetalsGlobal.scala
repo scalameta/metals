@@ -17,6 +17,7 @@ import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
+import scala.{meta => m}
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
@@ -194,80 +195,120 @@ class MetalsGlobal(
       isVisited += key
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
-          val ownerSymbol = pre.termSymbol
-          def hasConflictingMembersInScope =
-            history.lookupSymbol(sym.name).exists {
-              case _: LookupSucceeded => true
-              case _ => false
-            }
+          if (history.isSymbolInScope(sym, pre)) {
+            TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+          } else {
+            val ownerSymbol = pre.termSymbol
+            def hasConflictingMembersInScope =
+              history.lookupSymbol(sym.name).exists {
+                case _: LookupSucceeded => true
+                case _ => false
+              }
 
-          def shouldRenamePrefix =
-            !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+            def shouldRenamePrefix =
+              !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+            history.config.get(ownerSymbol) match {
+              case Some(rename)
+                  if shouldRenamePrefix && history.tryShortenName(
+                    ShortName(rename, ownerSymbol)
+                  ) =>
+                TypeRef(
+                  new PrettyType(rename.toString),
+                  sym,
+                  args.map(arg => loop(arg, None))
+                )
+              case _ =>
+                history.renames.get(sym) match {
+                  case Some(rename)
+                      if history.nameResolvesToSymbol(rename, sym) =>
+                    TypeRef(
+                      NoPrefix,
+                      sym.newErrorSymbol(rename),
+                      args.map(arg => loop(arg, None))
+                    )
+                  case _ =>
+                    if (
+                      sym.isAliasType &&
+                      (sym.isAbstract ||
+                        sym.overrides.lastOption.exists(_.isAbstract))
+                    ) {
 
-          history.config.get(ownerSymbol) match {
-            case Some(rename)
-                if shouldRenamePrefix && history.tryShortenName(
-                  ShortName(rename, ownerSymbol)
-                ) =>
-              TypeRef(
-                new PrettyType(rename.toString),
-                sym,
-                args.map(arg => loop(arg, None))
-              )
-            case _ =>
-              history.renames.get(sym) match {
-                case Some(rename)
-                    if history.nameResolvesToSymbol(rename, sym) =>
-                  TypeRef(
-                    NoPrefix,
-                    sym.newErrorSymbol(rename),
-                    args.map(arg => loop(arg, None))
-                  )
-                case _ =>
-                  if (
-                    sym.isAliasType &&
-                    (sym.isAbstract ||
-                      sym.overrides.lastOption.exists(_.isAbstract))
-                  ) {
-
-                    // Always dealias abstract type aliases but leave concrete aliases alone.
-                    // trait Generic { type Repr /* dealias */ }
-                    // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
-                    loop(tpe.dealias, name)
-                  } else if (history.owners(pre.typeSymbol)) {
-                    if (history.nameResolvesToSymbol(sym.name, sym)) {
-                      TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                      // Always dealias abstract type aliases but leave concrete aliases alone.
+                      // trait Generic { type Repr /* dealias */ }
+                      // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+                      loop(tpe.dealias, name)
+                    } else if (history.owners(pre.typeSymbol)) {
+                      if (history.nameResolvesToSymbol(sym.name, sym)) {
+                        TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                      } else {
+                        TypeRef(
+                          ThisType(pre.typeSymbol),
+                          sym,
+                          args.map(arg => loop(arg, None))
+                        )
+                      }
                     } else {
                       TypeRef(
-                        ThisType(pre.typeSymbol),
+                        loop(pre, Some(ShortName(sym))),
                         sym,
                         args.map(arg => loop(arg, None))
                       )
                     }
-                  } else {
-                    TypeRef(
-                      loop(pre, Some(ShortName(sym))),
-                      sym,
-                      args.map(arg => loop(arg, None))
-                    )
-                  }
-              }
+                }
+            }
           }
         case SingleType(pre, sym) =>
-          if (sym.hasPackageFlag) {
-            if (history.tryShortenName(name)) NoPrefix
+          if (sym.hasPackageFlag || sym.isPackageObjectOrClass) {
+            val dotSyntaxFriendlyName = name.map { name0 =>
+              if (name0.symbol.isStatic) name0
+              else {
+                // Use the prefix rather than the real owner to maximize the
+                // chances of shortening the reference: when `name` is directly
+                // nested in a non-statically addressable type (class or trait),
+                // its original owner is that type (requiring a type projection
+                // to reference it) while the prefix is its concrete owner value
+                // (for which the dot syntax works).
+                // https://docs.scala-lang.org/tour/inner-classes.html
+                // https://danielwestheide.com/blog/the-neophytes-guide-to-scala-part-13-path-dependent-types/
+                ShortName(name0.symbol.cloneSymbol(sym))
+              }
+            }
+            if (history.tryShortenName(dotSyntaxFriendlyName)) NoPrefix
             else tpe
           } else {
-            pre match {
-              case ThisType(psym) if history.nameResolvesToSymbol(psym) =>
-                SingleType(NoPrefix, sym)
-              case _ =>
-                SingleType(loop(pre, Some(ShortName(sym))), sym)
+            if (history.isSymbolInScope(sym, pre)) SingleType(NoPrefix, sym)
+            else {
+              pre match {
+                case ThisType(psym) if history.isSymbolInScope(psym, pre) =>
+                  SingleType(NoPrefix, sym)
+                case _ =>
+                  SingleType(loop(pre, Some(ShortName(sym))), sym)
+              }
             }
           }
         case ThisType(sym) =>
           if (history.tryShortenName(name)) NoPrefix
-          else new PrettyType(history.fullname(sym))
+          else {
+            val owners = sym.ownerChain
+            val prefix = owners.indexWhere { owner =>
+              owner.owner != definitions.ScalaPackageClass &&
+              history.tryShortenName(
+                Some(ShortName(owner.name, owner))
+              )
+            }
+            if (prefix < 0) {
+              new PrettyType(history.fullname(sym))
+            } else {
+              val names = owners
+                .take(prefix + 1)
+                .reverse
+                .map(s => m.Term.Name(s.nameSyntax))
+              val ref = names.tail.foldLeft(names.head: m.Term.Ref) {
+                case (qual, name) => m.Term.Select(qual, name)
+              }
+              new PrettyType(ref.syntax)
+            }
+          }
         case ConstantType(Constant(sym: TermSymbol))
             if sym.hasFlag(gf.JAVA_ENUM) =>
           loop(SingleType(sym.owner.thisPrefix, sym), None)
@@ -280,7 +321,10 @@ class MetalsGlobal(
         case AnnotatedType(annotations, underlying) =>
           AnnotatedType(annotations, loop(underlying, None))
         case ExistentialType(quantified, underlying) =>
-          ExistentialType(quantified, loop(underlying, None))
+          ExistentialType(
+            quantified.map(sym => sym.setInfo(loop(sym.info, None))),
+            loop(underlying, None)
+          )
         case PolyType(tparams, resultType) =>
           PolyType(tparams, resultType.map(t => loop(t, None)))
         case NullaryMethodType(resultType) =>
@@ -479,13 +523,16 @@ class MetalsGlobal(
   }
 
   implicit class XtensionContextMetals(context: Context) {
-    def nameIsInScope(name: Name): Boolean =
-      context.lookupSymbol(name, _ => true) != LookupNotFound
+    def nameIsInScope(name: Name): Boolean = {
+      def symbolNotFound(name: Name) =
+        context.lookupSymbol(name, sym => !sym.isStale) != LookupNotFound
+      symbolNotFound(name) || symbolNotFound(name.otherName)
+    }
     def symbolIsInScope(sym: Symbol): Boolean =
       nameResolvesToSymbol(sym.name.toTypeName, sym) ||
         nameResolvesToSymbol(sym.name.toTermName, sym)
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean =
-      context.lookupSymbol(name, _ => true).symbol match {
+      context.lookupSymbol(name, sym => !sym.isStale).symbol match {
         case `sym` => true
         case other => other.isKindaTheSameAs(sym)
       }
@@ -554,9 +601,18 @@ class MetalsGlobal(
             false
           }
         }
+    def isScalaPackageObject: Boolean = {
+      sym.isPackageObject &&
+      sym.owner == definitions.ScalaPackageClass
+    }
     def javaClassSymbol: Symbol = {
       if (sym.isJavaModule && !sym.hasPackageFlag) sym.companionClass
       else sym
+    }
+    def nameSyntax: String = {
+      if (sym.isEmptyPackage || sym.isEmptyPackageClass) "_empty_"
+      else if (sym.isRootPackage || sym.isRoot) "_root_"
+      else sym.nameString
     }
     def fullNameSyntax: String = {
       val out = new java.lang.StringBuilder
@@ -564,11 +620,7 @@ class MetalsGlobal(
         if (
           s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot
         ) {
-          val name =
-            if (s.isEmptyPackage || s.isEmptyPackageClass) TermName("_empty_")
-            else if (s.isRootPackage || s.isRoot) TermName("_root_")
-            else s.name
-          out.append(Identifier(name))
+          out.append(Identifier(s.nameSyntax))
         } else if (s.isPackageObjectOrClass) {
           // package object doesn't have a name if we use s.name we will get `package`
           loop(s.effectiveOwner.enclClass)
@@ -601,6 +653,7 @@ class MetalsGlobal(
     def isKindaTheSameAs(other: Symbol): Boolean = {
       if (other == NoSymbol) sym == NoSymbol
       else if (sym == NoSymbol) false
+      else if (sym.isStale) false
       else if (sym.hasPackageFlag) {
         // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
         other.fullName == sym.fullName
@@ -659,7 +712,7 @@ class MetalsGlobal(
       }
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
-      else sym
+      else sym.dealiasedSingleType
   }
 
   def metalsSeenFromType(tree: Tree, symbol: Symbol): Type = {

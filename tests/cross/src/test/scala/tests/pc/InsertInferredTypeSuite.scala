@@ -255,6 +255,40 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |}
        |""".stripMargin
   )
+  checkEdit(
+    "path",
+    """|import java.nio.file.Paths
+       |object ExplicitResultTypesPrefix {
+       |  class Path
+       |  def path = Paths.get("")
+       |  object inner {
+       |    val file = path
+       |    object inner {
+       |      val nio: java.nio.file.Path = path
+       |      object inner {
+       |        val <<java>> = path
+       |      }
+       |    }
+       |  }
+       |
+       |}""".stripMargin,
+    """|import java.nio.file.Paths
+       |object ExplicitResultTypesPrefix {
+       |  class Path
+       |  def path = Paths.get("")
+       |  object inner {
+       |    val file = path
+       |    object inner {
+       |      val nio: java.nio.file.Path = path
+       |      object inner {
+       |        val java: _root_.java.nio.file.Path = path
+       |      }
+       |    }
+       |  }
+       |
+       |}
+       |""".stripMargin
+  )
 
   def checkEdit(
       name: TestOptions,

@@ -56,7 +56,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   // Assert that Workday/Weekend symbols from previous test don't appear in result.
   checkEdit(
-    "stale2".tag(IgnoreScalaVersion("2.11.12")),
+    "stale2",
     """package stale
       |sealed abstract class Weekday
       |object Weekday {
@@ -218,9 +218,8 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive")
   )
 
-  // https://github.com/scalameta/metals/issues/1253
   checkEdit(
-    "exhaustive-fully-qualify".fail,
+    "exhaustive-fully-qualify",
     """
       |package example
       |
