@@ -107,7 +107,7 @@ class HoverDefnSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "def <init>(x: Int): ctor.a".hover
+      "3.0" -> "def <init>(x: Int): a".hover
     )
   )
 
@@ -153,7 +153,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "object MyObject: object.MyObject".hover
+      "3.0" -> "object MyObject: MyObject".hover
     )
   )
 
@@ -163,7 +163,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "trait MyTrait: trait.MyTrait".hover
+      "3.0" -> "trait MyTrait: MyTrait".hover
     )
   )
 
@@ -173,7 +173,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "trait MyClass: class.MyClass".hover
+      "3.0" -> "trait MyClass: MyClass".hover
     )
   )
 
