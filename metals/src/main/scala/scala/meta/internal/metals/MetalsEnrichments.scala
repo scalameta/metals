@@ -158,6 +158,9 @@ object MetalsEnrichments
 
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =
       future.map(_ => ())
+    def withObjectValue: Future[Object] =
+      future.asInstanceOf[Future[Object]]
+
     def logErrorAndContinue(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[Unit] = {
