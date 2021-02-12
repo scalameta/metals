@@ -125,13 +125,25 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
   <span class="hljs-comment">;; Optional - enable lsp-mode automatically in scala files</span>
   <span class="hljs-symbol">:hook</span>  (<span class="hljs-name">scala-mode</span> . lsp)
          (<span class="hljs-name">lsp-mode</span> . lsp-lens-mode)
-  <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
+  <span class="hljs-symbol">:config</span>
+  <span class="hljs-comment">;; Uncomment following section if you would like to tune lsp-mode performance according to</span>
+  <span class="hljs-comment">;; https://emacs-lsp.github.io/lsp-mode/page/performance/</span>
+  <span class="hljs-comment">;;       (setq gc-cons-threshold 100000000) ;; 100mb</span>
+  <span class="hljs-comment">;;       (setq read-process-output-max (* 1024 1024)) ;; 1mb</span>
+  <span class="hljs-comment">;;       (setq lsp-idle-delay 0.500)</span>
+  <span class="hljs-comment">;;       (setq lsp-log-io nil)</span>
+  <span class="hljs-comment">;;       (setq lsp-completion-provider :capf)</span>
+  (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
 
 <span class="hljs-comment">;; Add metals backend for lsp-mode</span>
 (<span class="hljs-name">use-package</span> lsp-metals
   <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-metals-treeview-show-when-views-received <span class="hljs-literal">t</span>))
 
 <span class="hljs-comment">;; Enable nice rendering of documentation on hover</span>
+<span class="hljs-comment">;;   Warning: on some systems this package can reduce your emacs responsiveness significally. </span>
+<span class="hljs-comment">;;   (See: https://emacs-lsp.github.io/lsp-mode/page/performance/)</span>
+<span class="hljs-comment">;;   In that case you have to not only disable this but also remove from the packages since</span>
+<span class="hljs-comment">;;   lsp-mode can activate it automatically.</span>
 (<span class="hljs-name">use-package</span> lsp-ui)
 
 <span class="hljs-comment">;; lsp-mode supports snippets, but in order for them to work you need to use yasnippet</span>
@@ -139,7 +151,9 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <span class="hljs-comment">;;   to avoid odd behavior with snippets and indentation</span>
 (<span class="hljs-name">use-package</span> yasnippet)
 
-<span class="hljs-comment">;; Add company-lsp backend for metals</span>
+<span class="hljs-comment">;; Add company-lsp backend for metals.</span>
+<span class="hljs-comment">;;   (depending on your lsp-mode version it may be outdated see:</span>
+<span class="hljs-comment">;;    https://github.com/emacs-lsp/lsp-mode/pull/1983)</span>
 (<span class="hljs-name">use-package</span> company-lsp)
 
 <span class="hljs-comment">;; Use the Debug Adapter Protocol for running tests and debugging</span>
@@ -173,8 +187,8 @@ not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.9.10+111-f2471a14-SNAPSHOT</td>
-          <td>11 Feb 2021 08:57</td>
+          <td>0.9.10+112-2c3b1d43-SNAPSHOT</td>
+          <td>12 Feb 2021 06:35</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
