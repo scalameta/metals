@@ -66,13 +66,25 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
   ;; Optional - enable lsp-mode automatically in scala files
   :hook  (scala-mode . lsp)
          (lsp-mode . lsp-lens-mode)
-  :config (setq lsp-prefer-flymake nil))
+  :config
+  ;; Uncomment following section if you would like to tune lsp-mode performance according to
+  ;; https://emacs-lsp.github.io/lsp-mode/page/performance/
+  ;;       (setq gc-cons-threshold 100000000) ;; 100mb
+  ;;       (setq read-process-output-max (* 1024 1024)) ;; 1mb
+  ;;       (setq lsp-idle-delay 0.500)
+  ;;       (setq lsp-log-io nil)
+  ;;       (setq lsp-completion-provider :capf)
+  (setq lsp-prefer-flymake nil))
 
 ;; Add metals backend for lsp-mode
 (use-package lsp-metals
   :config (setq lsp-metals-treeview-show-when-views-received t))
 
 ;; Enable nice rendering of documentation on hover
+;;   Warning: on some systems this package can reduce your emacs responsiveness significally. 
+;;   (See: https://emacs-lsp.github.io/lsp-mode/page/performance/)
+;;   In that case you have to not only disable this but also remove from the packages since
+;;   lsp-mode can activate it automatically.
 (use-package lsp-ui)
 
 ;; lsp-mode supports snippets, but in order for them to work you need to use yasnippet
@@ -80,7 +92,9 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 ;;   to avoid odd behavior with snippets and indentation
 (use-package yasnippet)
 
-;; Add company-lsp backend for metals
+;; Add company-lsp backend for metals.
+;;   (depending on your lsp-mode version it may be outdated see:
+;;    https://github.com/emacs-lsp/lsp-mode/pull/1983)
 (use-package company-lsp)
 
 ;; Use the Debug Adapter Protocol for running tests and debugging
