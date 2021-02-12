@@ -928,7 +928,8 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    focusedDocument = Some(path)
+    if (!clientConfig.isDidFocusProvider())
+      focusedDocument = Some(path)
     openedFiles.add(path)
 
     // Update md5 fingerprint from file contents on disk
