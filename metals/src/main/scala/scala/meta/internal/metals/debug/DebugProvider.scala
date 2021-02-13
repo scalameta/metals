@@ -24,6 +24,7 @@ import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
@@ -44,6 +45,12 @@ import com.google.gson.JsonElement
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import scala.meta.internal.metals.DebugFullyUnresolvedParams
+import ch.epfl.scala.bsp4j.ScalaMainClass
+import org.eclipse.lsp4j.MessageActionItem
+import scala.meta.internal.metals.config.RunType
+import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.mtags.Semanticdbs
 
 class DebugProvider(
     workspace: AbsolutePath,
@@ -57,7 +64,9 @@ class DebugProvider(
     statusBar: StatusBar,
     classFinder: ClassFinder,
     index: OnDemandSymbolIndex,
-    stacktraceAnalyzer: StacktraceAnalyzer
+    stacktraceAnalyzer: StacktraceAnalyzer,
+    icons: Icons,
+    semanticdbs: Semanticdbs
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -128,6 +137,129 @@ class DebugProvider(
 
       connectedToServer.future.map(_ => server)
     }
+  }
+
+  /**
+   * Given a BuildTargetIdentifier either get the displayName of that build
+   * target or defaul to the full URI to display to the user.
+   */
+  private def displayName(buildTargetIdentifier: BuildTargetIdentifier) =
+    buildTargets
+      .info(buildTargetIdentifier)
+      .map(_.getDisplayName)
+      .getOrElse(buildTargetIdentifier.getUri)
+
+  private def requestMain(
+      mainClasses: List[ScalaMainClass]
+  )(implicit ec: ExecutionContext): Future[ScalaMainClass] = {
+    languageClient
+      .showMessageRequest(
+        Messages.MainClass.params(mainClasses)
+      )
+      .asScala
+      .map { choice =>
+        mainClasses.find { clazz =>
+          new MessageActionItem(clazz.getClassName()) == choice
+        }
+      }
+      .collect { case Some(main) => main }
+  }
+
+  private def createMainParams(
+      buildTarget: BuildTargetIdentifier,
+      classes: List[ScalaMainClass]
+  )(implicit ec: ExecutionContext) = {
+    classes match {
+      case Nil =>
+        Future.failed(
+          BuildTargetContainsNoMainException(displayName(buildTarget))
+        )
+      case main :: Nil =>
+        Future {
+          new b.DebugSessionParams(
+            singletonList(buildTarget),
+            b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+            main.toJson
+          )
+        }
+      case multiple =>
+        requestMain(multiple).map { main =>
+          new b.DebugSessionParams(
+            singletonList(buildTarget),
+            b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+            main.toJson
+          )
+        }
+    }
+  }
+
+  /**
+   * Given fully unresolved params this figures out the runType that was passed
+   * in and then discovers either the main methods for the build target the
+   * path belongs to or finds the tests for the current file or build target
+   */
+  def debugDiscovery(
+      params: DebugFullyUnresolvedParams
+  )(implicit ec: ExecutionContext) = {
+    val runTypeO = RunType.fromString(params.runType)
+    val path = AbsolutePath.fromAbsoluteUri(new URI(params.path))
+    val buildTargetO = buildTargets.inverseSources(path)
+
+    lazy val mainClasses = (bti: BuildTargetIdentifier) =>
+      buildTargetClasses.classesOf(bti).mainClasses.values.toList
+
+    lazy val testClasses = (bti: BuildTargetIdentifier) =>
+      buildTargetClasses.classesOf(bti).testClasses
+
+    lazy val textDocumentO =
+      semanticdbs.textDocument(path).documentIncludingStale
+
+    val result = (runTypeO, buildTargetO) match {
+      case _ if buildClient.buildHasErrors =>
+        Future.failed(WorkspaceErrorsException)
+      case (_, None) =>
+        Future.failed(BuildTargetNotFoundForPathException(path))
+      case (None, _) =>
+        Future.failed(RunType.UnknownRunTypeException(params.runType))
+      case (Some(Run), Some(target)) =>
+        createMainParams(target, mainClasses(target))
+      case (Some(_), Some(target)) if testClasses(target).isEmpty =>
+        Future.failed(
+          BuildTargetContainsNoTestsException(displayName(target))
+        )
+      case (Some(TestFile), Some(target)) =>
+        textDocumentO
+          .fold[Future[Seq[BuildTargetClasses.ClassName]]] {
+            Future.failed(new Exception("Semanticdb not found for path."))
+          } { textDocument =>
+            Future {
+              for {
+                occurence <- textDocument.occurrences
+                if occurence.role.isDefinition
+                symbol = occurence.symbol
+                testClass <- testClasses(target).get(symbol)
+              } yield testClass
+            }
+          }
+          .map { tests =>
+            new b.DebugSessionParams(
+              singletonList(target),
+              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+              tests.asJava.toJson
+            )
+          }
+      case (Some(TestTarget), Some(target)) =>
+        Future {
+          new b.DebugSessionParams(
+            singletonList(target),
+            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+            testClasses(target).values.toList.asJava.toJson
+          )
+        }
+    }
+
+    result.failed.foreach(reportErrors)
+    result
   }
 
   def resolveMainClassParams(
@@ -243,7 +375,7 @@ class DebugProvider(
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case _ if buildClient.buildHasErrors =>
-      statusBar.addMessage(Messages.DebugErrorsPresent)
+      statusBar.addMessage(Messages.DebugErrorsPresent(icons))
       languageClient.metalsExecuteClientCommand(
         new ExecuteCommandParams(
           ClientCommands.FocusDiagnostics.id,
@@ -264,7 +396,23 @@ class DebugProvider(
         Messages.DebugClassNotFound
           .invalidTarget(target)
       )
-
+    // TODO make a generic pass throw for show
+    case e: BuildTargetNotFoundForPathException =>
+      languageClient.showMessage(
+        Messages.DebugClassNotFound.show(e.getMessage())
+      )
+    case e: BuildTargetContainsNoMainException =>
+      languageClient.showMessage(
+        Messages.DebugClassNotFound.show(e.getMessage())
+      )
+    case e: BuildTargetContainsNoTestsException =>
+      languageClient.showMessage(
+        Messages.DebugClassNotFound.show(e.getMessage())
+      )
+    case e: RunType.UnknownRunTypeException =>
+      languageClient.showMessage(
+        Messages.DebugClassNotFound.show(e.getMessage())
+      )
   }
 
   private def parseSessionName(
@@ -368,6 +516,8 @@ object DebugParametersJsonParsers {
     new JsonParser.Of[DebugUnresolvedTestClassParams]
   lazy val attachRemoteParamsParser =
     new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
+  lazy val unresolvedParamsParser =
+    new JsonParser.Of[DebugFullyUnresolvedParams]
 }
 
 case object WorkspaceErrorsException

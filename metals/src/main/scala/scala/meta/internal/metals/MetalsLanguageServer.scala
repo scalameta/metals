@@ -87,6 +87,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.config.RunType
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -618,7 +619,9 @@ class MetalsLanguageServer(
           statusBar,
           classFinder,
           definitionIndex,
-          stacktraceAnalyzer
+          stacktraceAnalyzer,
+          clientConfig.icons(),
+          semanticdbs
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -1622,6 +1625,8 @@ class MetalsLanguageServer(
           case Seq(attachRemoteParamsParser.Jsonized(params))
               if params.hostName != null =>
             debugProvider.resolveAttachRemoteParams(params)
+          case Seq(unresolvedParamsParser.Jsonized(params)) =>
+            debugProvider.debugDiscovery(params)
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"

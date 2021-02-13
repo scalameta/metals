@@ -434,3 +434,8 @@ case class DebugUnresolvedAttachRemoteParams(
     port: Int,
     buildTarget: String
 )
+
+case class DebugFullyUnresolvedParams(
+    path: String,
+    runType: String
+)

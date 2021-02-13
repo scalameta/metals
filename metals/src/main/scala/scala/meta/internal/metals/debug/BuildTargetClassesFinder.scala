@@ -149,3 +149,15 @@ case class ClassNotFoundInBuildTargetException(
 ) extends Exception(
       s"Class '$className' not found in build target '${buildTarget.getDisplayName()}'"
     )
+case class BuildTargetNotFoundForPathException(path: AbsolutePath)
+    extends Exception(
+      s"No build target could be found for the path: ${path.toString()}"
+    )
+case class BuildTargetContainsNoMainException(buildTargetName: String)
+    extends Exception(
+      s"No main could be found in build target: $buildTargetName"
+    )
+case class BuildTargetContainsNoTestsException(buildTargetName: String)
+    extends Exception(
+      s"No tests could be found in build target: $buildTargetName"
+    )
