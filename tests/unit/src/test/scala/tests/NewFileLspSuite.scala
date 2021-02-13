@@ -81,6 +81,19 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |""".stripMargin
   )
 
+  check("new-class-backticked")(
+    directory = Some("a/src/main/scala/this/"),
+    fileType = Right(Class),
+    fileName = Right("type"),
+    expectedFilePath = "a/src/main/scala/this/type.scala",
+    expectedContent = s"""|package `this`
+                          |
+                          |class `type` {
+                          |$indent
+                          |}
+                          |""".stripMargin
+  )
+
   check("new-class-name-provided")(
     directory = Some("a/src/main/scala/foo/"),
     fileType = Right(Class),
