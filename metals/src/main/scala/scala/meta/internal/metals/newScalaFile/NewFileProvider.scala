@@ -15,6 +15,7 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
+import scala.meta.internal.pc.Identifier
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -140,7 +141,9 @@ class NewFileProvider(
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
     //name can be actually be "foo/Name", where "foo" is a folder to create
-    val className = directory.getOrElse(workspace).resolve(name).filename
+    val className = Identifier.backtickWrap(
+      directory.getOrElse(workspace).resolve(name).filename
+    )
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
       case _ => classTemplate(kind.id, className)
