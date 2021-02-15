@@ -125,6 +125,47 @@ usage with Emacs.
 
 ```
 
+## LSP Tips
+
+### Show navigable stack trace
+
+You can annotate your stack trace with code lenses (which requires the
+following bit of configuration mentioned earlier: `(lsp-mode . lsp-lens-mode)`). 
+These allow you to run actions from your code.
+
+One of these actions allow you to navigate your stack trace.
+
+You can annotate any stack trace that lives in your `lsp` project by
+marking it with your region and using `M-x lsp-metals-analyze-stacktrace`. 
+
+This will open a new Scala buffer that has code lenses annotations:
+just click on the small "open" annotation to navigate to the source
+code relative to your stack trace.
+
+Note that if you try to do that from `sbt-mode`, you will get an error
+unless you patch `lsp-find-workspace` with the following:
+
+```el
+(defun lsp-find-workspace (server-id &optional file-name)
+  "Find workspace for SERVER-ID for FILE-NAME."
+  (-when-let* ((session (lsp-session))
+               (folder->servers (lsp-session-folder->servers session))
+               (workspaces (if file-name
+                               (let ((folder (lsp-find-session-folder session file-name)))
+                                 (gethash (substring folder 0 (- (length folder) 1)) folder->servers))
+                             (lsp--session-workspaces session))))
+
+    (--first (eq (lsp--client-server-id (lsp--workspace-client it)) server-id) workspaces)))
+```
+
+The above shall become unnecessary once [this issue](https://github.com/emacs-lsp/lsp-mode/issues/2610) is solved.
+
+
+### Reference
+
+- [Yurii Ostapchuk at #ScalaUA​ - How I learned to stop worrying and love LSP (and Emacs :))](https://www.youtube.com/watch?v=x7ey0ifcqAg&feature=youtu.be)
+
+
 ## Manually trigger build import
 
 To manually trigger a build import, run `M-x lsp-metals-build-import`.
