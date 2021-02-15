@@ -40,7 +40,11 @@ class CompletionItemResolver(
               .filterNot(_.isEmpty)
               .toSeq
             item.setLabel(replaceScalaDefaultParams(item.getLabel, defaults))
-            if (metalsConfig.isCompletionItemDetailEnabled) {
+            if (
+              metalsConfig.isCompletionItemDetailEnabled && !item
+                .getDetail()
+                .isEmpty()
+            ) {
               item.setDetail(
                 replaceScalaDefaultParams(item.getDetail, defaults)
               )
