@@ -7,4 +7,3 @@
   /*example.`extension String`.asInt(Method):7*/def asInt: Int = s.toInt
   /*example.`extension String`.double(Method):8*/def double: String = s * 2
 }
-
