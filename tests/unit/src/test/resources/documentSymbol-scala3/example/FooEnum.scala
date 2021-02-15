@@ -1,4 +1,3 @@
-
 /*example(Package):4*/package example
 
 /*example.FooEnum(Enum):4*/enum FooEnum:

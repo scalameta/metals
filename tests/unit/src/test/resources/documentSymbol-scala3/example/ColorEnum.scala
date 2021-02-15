@@ -1,4 +1,3 @@
-
 /*example(Package):6*/package example
 
 /*example.Color(Enum):6*/enum Color(val rgb: Int):
