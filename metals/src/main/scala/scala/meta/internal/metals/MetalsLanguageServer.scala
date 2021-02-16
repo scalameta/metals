@@ -146,6 +146,7 @@ class MetalsLanguageServer(
     Option.empty[BspSession]
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
+  private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val excludedPackageHandler: ExcludedPackagesHandler =
@@ -928,6 +929,9 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    // In some cases like peeking definition didOpen might be followed up by close
+    // and we would lose the notion of the focused document
+    focusedDocument.foreach(recentlyFocusedFiles.add)
     focusedDocument = Some(path)
     openedFiles.add(path)
 
@@ -1050,6 +1054,9 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didClose")
   def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    if (focusedDocument.contains(path)) {
+      focusedDocument = recentlyFocusedFiles.pollRecent()
+    }
     buffers.remove(path)
     compilers.didClose(path)
     trees.didClose(path)

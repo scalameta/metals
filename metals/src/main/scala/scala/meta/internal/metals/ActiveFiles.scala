@@ -27,4 +27,9 @@ final class ActiveFiles(time: Time) {
   def isRecentlyActive(path: AbsolutePath): Boolean = {
     paths.asScala.exists(p => p.isActive && p.path == path)
   }
+
+  def pollRecent(): Option[AbsolutePath] = {
+    paths.removeIf(_.isStale)
+    Option(paths.poll()).map(_.path)
+  }
 }
