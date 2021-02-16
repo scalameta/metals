@@ -563,7 +563,8 @@ class Compilers(
       target: ScalaTarget,
       search: SymbolSearch
   ): PresentationCompiler = {
-    val classpath = scalac.classpath.map(_.toNIO).toSeq
+    val classpath =
+      target.optionsClasspath.toAbsoluteClasspath.map(_.toNIO).toSeq
     newCompiler(scalac, target, classpath, search)
   }
 

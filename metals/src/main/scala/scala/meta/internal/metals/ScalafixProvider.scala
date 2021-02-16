@@ -42,9 +42,10 @@ case class ScalafixProvider(
   def load(): Unit = {
     if (!Testing.isEnabled) {
       try {
-        val targets = buildTargets.all.toList.groupBy(_.scalaVersion).flatMap {
-          case (_, targets) => targets.headOption
-        }
+        val targets =
+          buildTargets.allScala.toList.groupBy(_.scalaVersion).flatMap {
+            case (_, targets) => targets.headOption
+          }
         val tmp = AbsolutePath(Files.createTempFile("metals", ".scala"))
         tmp.writeText("object Main{}\n")
         for (target <- targets)

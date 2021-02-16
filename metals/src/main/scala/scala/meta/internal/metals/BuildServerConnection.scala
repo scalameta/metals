@@ -139,6 +139,12 @@ class BuildServerConnection private (
     register(server => server.workspaceBuildTargets()).asScala
   }
 
+  def buildTargetJavacOptions(
+      params: JavacOptionsParams
+  ): Future[JavacOptionsResult] = {
+    register(server => server.buildTargetJavacOptions(params)).asScala
+  }
+
   def buildTargetScalacOptions(
       params: ScalacOptionsParams
   ): Future[ScalacOptionsResult] = {

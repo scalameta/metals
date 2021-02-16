@@ -123,7 +123,7 @@ final class Doctor(
    * Checks if there are any potential problems and if any, notifies the user.
    */
   def check(): Unit = {
-    val summary = problemResolver.problemMessage(allTargets())
+    val summary = problemResolver.problemMessage(scalaTargets())
     executeReloadDoctor(summary)
     summary match {
       case Some(problem) =>
@@ -146,7 +146,9 @@ final class Doctor(
     }
   }
 
-  def allTargets(): List[ScalaTarget] = buildTargets.all.toList
+  private def commonTargets(): List[CommonTarget] =
+    buildTargets.allCommon.toList
+  private def scalaTargets(): List[ScalaTarget] = buildTargets.allScala.toList
 
   private def selectedBuildToolMessage(): Option[String] = {
     tables.buildTool.selectedBuildTool().map { value =>
@@ -212,7 +214,7 @@ final class Doctor(
   }
 
   private def buildTargetsJson(): String = {
-    val targets = allTargets()
+    val targets = commonTargets()
     val buildToolHeading = selectedBuildToolMessage()
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
@@ -298,7 +300,7 @@ final class Doctor(
         _.text(doctorHeading)
       )
 
-    val targets = allTargets()
+    val targets = commonTargets()
     if (targets.isEmpty) {
       html
         .element("p")(
@@ -331,7 +333,7 @@ final class Doctor(
 
   private def buildTargetRows(
       html: HtmlBuilder,
-      targets: List[ScalaTarget]
+      targets: List[CommonTarget]
   ): Unit = {
     targets.sortBy(_.baseDirectory).foreach { target =>
       val targetInfo = extractTargetInfo(target)
@@ -350,7 +352,14 @@ final class Doctor(
     }
   }
 
-  private def extractTargetInfo(target: ScalaTarget) = {
+  private def extractTargetInfo(target: CommonTarget) = {
+    target match {
+      case scalaTarget: ScalaTarget => extractScalaTargetInfo(scalaTarget)
+      case javaTarget: JavaTarget => extractJavaTargetInfo(javaTarget)
+    }
+  }
+
+  private def extractScalaTargetInfo(target: ScalaTarget) = {
     val scalaVersion = target.scalaVersion
     val definition: String =
       if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
@@ -367,6 +376,22 @@ final class Doctor(
         Icons.unicode.check
       }
     val recommenedFix = problemResolver.recommendation(target)
+    DoctorTargetInfo(
+      target.displayName,
+      scalaVersion,
+      definition,
+      completions,
+      references,
+      recommenedFix
+    )
+  }
+
+  private def extractJavaTargetInfo(target: JavaTarget) = {
+    val scalaVersion = "Java"
+    val definition: String = Icons.unicode.alert
+    val completions: String = definition
+    val references: String = Icons.unicode.alert
+    val recommenedFix = "Java not supported yet"
     DoctorTargetInfo(
       target.displayName,
       scalaVersion,
