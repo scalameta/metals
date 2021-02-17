@@ -512,7 +512,7 @@ class MetalsLanguageServer(
             buffers,
             buildTargets,
             clientConfig,
-            () => bspSession.map(_.main.isBloop).getOrElse(false)
+            () => bspSession.map(_.main.hasDebug).getOrElse(false)
           )
 
         val goSuperLensProvider = new SuperMethodCodeLens(

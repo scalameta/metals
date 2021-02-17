@@ -64,6 +64,12 @@ class BuildServerConnection private (
 
   def isBloop: Boolean = name == BloopServers.name
 
+  def isSbt: Boolean = name == SbtBuildTool.name
+
+  // hasDebug is not yet available in BSP capabilities
+  // https://github.com/build-server-protocol/build-server-protocol/pull/161
+  def hasDebug: Boolean = isBloop || isSbt
+
   def workspaceDirectory: AbsolutePath = workspace
 
   def onReconnection(
