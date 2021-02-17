@@ -66,12 +66,7 @@ class BspConnector(
           bloopServers.newServer(workspace, userConfiguration).map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
-          SbtBuildTool.writeSingleSbtMetalsPlugin(
-            workspace.resolve("project"),
-            userConfig,
-            isBloop = false,
-            details.getVersion()
-          )
+          SbtBuildTool.writeSbtMetalsPlugins(workspace)
           val connectionF = bspServers.newServer(workspace, details)
           statusBar
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)

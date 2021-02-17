@@ -61,6 +61,7 @@ class SbtServerSuite
   test("generate") {
     def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
     def sbtBspPlugin = workspace.resolve("project/metals.sbt")
+    def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -87,6 +88,8 @@ class SbtServerSuite
     } yield {
       assert(sbtBspPlugin.exists)
       assert(sbtBspConfig.exists)
+      assert(sbtJdiPlugin.exists)
+      assert(sbtJdiPlugin.readText.contains("sbt-jdi-tools"))
     }
   }
 
