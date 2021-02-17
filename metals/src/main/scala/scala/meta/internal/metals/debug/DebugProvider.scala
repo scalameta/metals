@@ -293,13 +293,6 @@ class DebugProvider(
       case json: JsonElement
           if parameters.getDataKind == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
         json.as[b.ScalaMainClass].foreach { main =>
-          val translated = main.getJvmOptions().asScala.map { param =>
-            if (!param.startsWith("-J"))
-              s"-J$param"
-            else
-              param
-          }
-          main.setJvmOptions(translated.asJava)
           if (main.getEnvironmentVariables() == null) {
             main.setEnvironmentVariables(Nil.asJava)
           }
