@@ -201,6 +201,12 @@ touch ~/.cache/metals/lsp.trace.json # text editor
 touch ~/.cache/metals/bsp.trace.json # build server
 touch ~/.cache/metals/dap-server.trace.json # debug adapter
 touch ~/.cache/metals/dap-client.trace.json # debug adapter
+
+# Windows
+type nul > %LOCALAPPDATA%/scalameta/metals/cache/lsp.trace.json # text editor
+type nul > %LOCALAPPDATA%/scalameta/metals/cache/bsp.trace.json # build server
+type nul > %LOCALAPPDATA%/scalameta/metals/cache/dap-server.trace.json # debug adapter
+type nul > %LOCALAPPDATA%/scalameta/metals/cache/dap-client.trace.json # debug adapter
 ```
 
 Next when you start Metals, watch the logs with `tail -f`.
