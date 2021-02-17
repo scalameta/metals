@@ -426,7 +426,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0.0-M3" -> "Inner: a.Outer.Inner$"
+      "3.0" -> "Inner: a.Outer.Inner$"
     )
   )
 

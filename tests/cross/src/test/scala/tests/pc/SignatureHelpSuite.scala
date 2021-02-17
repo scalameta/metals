@@ -17,6 +17,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |assert(assertion: Boolean): Unit
        |""".stripMargin,
     compat = Map(
+      "3.0.0-RC1" ->
+        """|assert(assertion: Boolean): Unit
+           |assert(assertion: Boolean, message: => Any): Unit
+           |                           ^^^^^^^^^^^^^^^
+           |""".stripMargin,
       "3.0" ->
         """|assert(assertion: Boolean @InlineParam): Unit
            |assert(assertion: Boolean @InlineParam, message: => Any @InlineParam): Unit
@@ -36,6 +41,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |       ^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
+      "3.0.0-RC1" ->
+        """|assert(assertion: Boolean): Unit
+           |       ^^^^^^^^^^^^^^^^^^
+           |assert(assertion: Boolean, message: => Any): Unit
+           |""".stripMargin,
       "3.0" ->
         """|
            |assert(assertion: Boolean @InlineParam): Unit
