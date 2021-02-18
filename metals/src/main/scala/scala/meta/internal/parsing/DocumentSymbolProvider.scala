@@ -279,8 +279,14 @@ class DocumentSymbolProvider(trees: Trees) {
             ""
           )
         case t: Defn.ExtensionGroup =>
-          val (name, pos) =
-            t.eparam.decltpe.fold(("", t.pos))(tpe => (tpe.syntax, tpe.pos))
+          val declaredType = for {
+            eparam <- t.paramss.find(
+              _.headOption.exists(!_.mods.contains(Mod.Using()))
+            )
+            param <- eparam.headOption
+            tpe <- param.decltpe
+          } yield (tpe.syntax, tpe.pos)
+          val (name, pos) = declaredType.getOrElse(("", t.pos))
           addChild(
             s"extension $name",
             SymbolKind.Module,
