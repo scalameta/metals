@@ -64,6 +64,7 @@ import dotty.tools.io.VirtualFile
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.pc.VirtualFileParams
@@ -250,11 +251,11 @@ case class ScalaPresentationCompiler(
                 case _ =>
                   val shortendType = driver.compilationUnits.get(uri) match {
                     case Some(unit) =>
-                      implicit val newctx = ctx.fresh.setCompilationUnit(unit)
-                      val path = Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)
-                      val context = Interactive.contextOfPath(path)
+                      val newctx = ctx.fresh.setCompilationUnit(unit)
+                      val path = Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
+                      val context = Interactive.contextOfPath(path)(using newctx)
                       val history = ShortenedNames(context)
-                      shortType(tpw, history)
+                      shortType(tpw, history)(using newctx)
                     case None => tpw
                   }
                   printer.typeString(shortendType)
@@ -509,22 +510,12 @@ case class ScalaPresentationCompiler(
       ShortName(sym.name, sym)
   }
 
-  private class ShortenedNames(
-    val history: collection.mutable.Map[Name, ShortName] = collection.mutable.Map.empty,
-    val lookupSymbol: ShortName => Type = _ => NoType,
-  ) {
-    def this(context: Context) = 
-      this(lookupSymbol = { (short: ShortName) => {
-        implicit val ctx = context
-        val foundTpe = context.typer.findRef(
-          short.name,
-          defn.AnyType,
-          EmptyFlags,
-          EmptyFlags,
-          NoSourcePosition
-        )
-        foundTpe
-      }})
+  private class ShortenedNames(context: Context) {
+    val history = collection.mutable.Map.empty[Name, ShortName]
+
+    def lookupSymbol(short: ShortName): Type = {
+        context.findRef(short.name)
+    }
 
     def tryShortenName(short: ShortName)(using Context): Boolean = {
       history.get(short.name) match {
@@ -588,8 +579,8 @@ case class ScalaPresentationCompiler(
             if (designator.isInstanceOf[Symbol]) designator.asInstanceOf[Symbol]
             else tpe.termSymbol
           val short = ShortName(sym)
-          if (sym.isOneOf(Flags.Package | Flags.Module) && history.tryShortenName(name)) NoPrefix
-          else TermRef(loop(prefix, Some(short)), sym)
+          if (history.tryShortenName(name)) NoPrefix
+          else TermRef(loop(prefix, None), sym)
 
         case ThisType(tyref) =>
           if (history.tryShortenName(name)) NoPrefix

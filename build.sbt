@@ -603,6 +603,7 @@ lazy val mtest = project
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scala3Versions" -> V.scala3Versions,
+      "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value
     ),
     crossScalaVersions := V.nonDeprecatedScalaVersions,
