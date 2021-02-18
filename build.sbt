@@ -602,6 +602,7 @@ lazy val mtest = project
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "scala2Versions" -> V.scala2Versions,
       "scala3Versions" -> V.scala3Versions,
       "scalaVersion" -> scalaVersion.value
     ),

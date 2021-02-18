@@ -525,8 +525,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3.0" ->
-        """|Function1: Function1$
-           |Function: Function$
+        """|Function: Function$
+           |Function1: Function1$
            |""".stripMargin
     )
   )
@@ -590,7 +590,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
   check(
-    "local1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "local1",
     """
       |import scala.concurrent.DelayedLazyVal
       |
@@ -605,7 +605,11 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|DelayedLazyVal scala.concurrent
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3.0" -> """|DelayedLazyVal: scala.concurrent.DelayedLazyVal$
+                  |""".stripMargin
+    )
   )
 
   check(
@@ -625,14 +629,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|prefixbb: Int
        |prefixaa: Int
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> """|prefixaa: Int
-                  |prefixbb: Int
-                  |prefixcc: Int
-                  |prefixyy: Int
-                  |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -850,8 +847,8 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(2),
     compat = Map(
       "3.0" ->
-        """|NoClassDefFoundError: NoClassDefFoundError$
-           |NoManifest=> reflect.NoManifest.type
+        """|NoManifest=> reflect.NoManifest.type
+           |NoClassDefFoundError: NoClassDefFoundError$
            |""".stripMargin,
       "0." -> ""
     )
@@ -876,9 +873,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3.0" ->
-        """|SafeVarargs: SafeVarargs$
-           |ScalaReflectionException: ScalaReflectionException$
-           |SecurityException: SecurityException$
+        """|Seq=> collection.immutable.Seq.type
+           |SeqCharSequence(sequenceOfChars: scala.collection.IndexedSeq[Char]): SeqCharSequence
+           |Set=> scala.collection.immutable.Set.type
            |""".stripMargin,
       "0." -> ""
     )
@@ -932,9 +929,9 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3.0" ->
-        """|NegativeArraySizeException: NegativeArraySizeException$
+        """|NotString: Int
+           |Number: scala.util.matching.Regex
            |Nil=> collection.immutable.Nil.type
-           |NoClassDefFoundError: NoClassDefFoundError$
            |""".stripMargin,
       "0." ->
         """|NotString: Int
@@ -1049,10 +1046,10 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(4),
     compat = Map(
       "3.0" ->
-        """|print(x: Any): Unit
-           |printf(text: String, xs: Any*): Unit
-           |println(x: Any): Unit
+        """|printxxx: String
            |printmmm=> String
+           |printnnn=> String
+           |print(x: Any): Unit
            |""".stripMargin,
       "0." ->
         """|printmmm=> String
