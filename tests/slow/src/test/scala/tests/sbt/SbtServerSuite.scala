@@ -10,6 +10,8 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
 
@@ -125,5 +127,52 @@ class SbtServerSuite
         assert(client.workspaceErrorShowMessages.isEmpty())
       }
     } yield ()
+  }
+
+  test("debug") {
+    cleanWorkspace()
+    val mainClass = new ScalaMainClass(
+      "a.Main",
+      List("Bar").asJava,
+      List("-Dproperty=Foo").asJava
+    )
+    mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
+    for {
+      _ <- server.initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/build.sbt
+            |import sbt.internal.bsp.BuildTargetIdentifier
+            |import java.net.URI
+            |scalaVersion := "${V.scala212}"
+            |Compile / bspTargetIdentifier := {
+            |  BuildTargetIdentifier(new URI("debug"))
+            |}
+            |/src/main/scala/a/Main.scala
+            |package a
+            |object Main {
+            |  def main(args: Array[String]) = {
+            |    val foo = sys.props.getOrElse("property", "")
+            |    val bar = args(0)
+            |    val env = sys.env.get("HELLO")
+            |    print(foo + bar)
+            |    env.foreach(print)
+            |    System.exit(0)
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.executeCommand(ServerCommands.BspSwitch.id, "sbt")
+      debugger <- server.startDebugging(
+        "debug",
+        DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        mainClass
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "FooBarFoo")
   }
 }
