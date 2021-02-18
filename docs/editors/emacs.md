@@ -135,27 +135,34 @@ These allow you to run actions from your code.
 
 One of these actions allow you to navigate your stack trace.
 
-You can annotate any stack trace that lives in your `lsp` project by
-marking it with your region and using `M-x lsp-metals-analyze-stacktrace`. 
+You can annotate any stack trace by marking a stack trace with your
+region and using `M-x lsp-metals-analyze-stacktrace` on it.
 
 This will open a new Scala buffer that has code lenses annotations:
 just click on the small "open" annotation to navigate to the source
 code relative to your stack trace.
 
-Note that if you try to do that from `sbt-mode`, you will get an error
+This will work as long as the buffer your are marking your stack trace
+on exists within the project directory tracked by `lsp-mode`, because
+`lsp-metals-analyze-stacktrace` needs the `lsp` workspace to find the
+location of your errors.
+
+Note that if you try to do that from `sbt-mode`, you may get an error
 unless you patch `lsp-find-workspace` with the following:
 
 ```el
 (defun lsp-find-workspace (server-id &optional file-name)
-  "Find workspace for SERVER-ID for FILE-NAME."
-  (-when-let* ((session (lsp-session))
-               (folder->servers (lsp-session-folder->servers session))
-               (workspaces (if file-name
-                               (let ((folder (lsp-find-session-folder session file-name)))
-                                 (gethash (substring folder 0 (- (length folder) 1)) folder->servers))
-                             (lsp--session-workspaces session))))
+    "Find workspace for SERVER-ID for FILE-NAME."
+    (-when-let* ((session (lsp-session))
+                 (folder->servers (lsp-session-folder->servers session))
+                 (workspaces (if file-name
+                                 (let* ((folder (lsp-find-session-folder session file-name))
+                                        (folder-last-char (substring folder (- (length folder) 1) (length folder)))
+                                        (key (if (string= folder-last-char "/") (substring folder 0 (- (length folder) 1)) folder)))
+                                   (gethash key folder->servers))
+                               (lsp--session-workspaces session))))
 
-    (--first (eq (lsp--client-server-id (lsp--workspace-client it)) server-id) workspaces)))
+      (--first (eq (lsp--client-server-id (lsp--workspace-client it)) server-id) workspaces)))
 ```
 
 The above shall become unnecessary once [this issue](https://github.com/emacs-lsp/lsp-mode/issues/2610) is solved.
