@@ -94,12 +94,7 @@ case class SbtBuildTool(
         scribe.info(s"sbt ${version} found for workspace.")
         val valid = isCompatibleVersion(firstVersionWithBsp, version)
         if (valid) {
-          writeSingleSbtMetalsPlugin(
-            workspace.resolve("project"),
-            userConfig,
-            isBloop = false,
-            version
-          )
+          writeSbtMetalsPlugins(workspace)
         } else {
           scribe.warn(
             s"Unable to start sbt bsp server. Make sure you have sbt >= $firstVersionWithBsp defined in your build.properties file."
@@ -152,11 +147,20 @@ case class SbtBuildTool(
       }
     }
 
-    val mainMeta = workspace.resolve("project")
-    val metaMeta = workspace.resolve("project").resolve("project")
-    sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
-      writeSingleSbtMetalsPlugin(dir, userConfig, isBloop = true, version)
-    )
+    if (!userConfig().bloopSbtAlreadyInstalled) {
+      val pluginVersion =
+        // from 1.4.6 Bloop is not compatible with sbt < 1.3.0
+        if (SemVer.isLaterVersion(version, "1.3.0"))
+          "1.4.6"
+        else userConfig().currentBloopVersion
+
+      val plugin = bloopPluginDetails(pluginVersion)
+      val mainMeta = workspace.resolve("project")
+      val metaMeta = workspace.resolve("project").resolve("project")
+      sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
+        writeSinglePlugin(dir, plugin)
+      )
+    }
   }
 
   override def toString: String = SbtBuildTool.name
@@ -174,81 +178,110 @@ object SbtBuildTool {
   val firstVersionWithBsp = "1.4.1"
 
   /**
-   * Based on whether sbt or Bloop is being used ensure that the correct
-   * plugin is included in the workspace
+   * Write the sbt plugin in the sbt project directory
    */
-  def writeSingleSbtMetalsPlugin(
+  def writeSinglePlugin(
       projectDir: AbsolutePath,
-      userConfig: () => UserConfiguration,
-      isBloop: Boolean,
-      sbtVersion: String
+      plugin: PluginDetails
   ): Unit = {
-    if (isBloop && userConfig().bloopSbtAlreadyInstalled) {
-      return
-    } else {
-      val versionToUse =
-        if (isBloop) {
-          def default = userConfig().currentBloopVersion
-          // from 1.4.6 Bloop is not compatible with sbt < 1.3.0
-          if (SemVer.isLaterVersion(sbtVersion, "1.3.0"))
-            "1.4.6"
-          else
-            default
-        } else BuildInfo.metalsVersion
+    val bytes =
+      sbtPlugin(plugin).getBytes(StandardCharsets.UTF_8)
 
-      val bytes =
-        sbtPlugin(versionToUse, isBloop).getBytes(StandardCharsets.UTF_8)
+    projectDir.toFile.mkdirs()
+    val metalsPluginFile = projectDir.resolve("metals.sbt")
+    val pluginFileShouldChange = !metalsPluginFile.isFile ||
+      !metalsPluginFile.readAllBytes.sameElements(bytes)
 
-      projectDir.toFile.mkdirs()
-      val metalsPluginFile = projectDir.resolve("metals.sbt")
-      val pluginFileShouldChange = !metalsPluginFile.isFile ||
-        !metalsPluginFile.readAllBytes.sameElements(bytes)
-
-      if (pluginFileShouldChange) {
-        Files.write(metalsPluginFile.toNIO, bytes)
-      }
+    if (pluginFileShouldChange) {
+      Files.write(metalsPluginFile.toNIO, bytes)
     }
   }
 
   /**
+   * Write all the plugins used by Metals when connected to sbt server:
+   * - the sbt-metals plugin in the project directory
+   * - the sbt-jdi-tools plugin in the project/project directory
+   */
+  def writeSbtMetalsPlugins(
+      workspace: AbsolutePath
+  ): Unit = {
+    val mainMeta = workspace.resolve("project")
+    val metaMeta = workspace.resolve("project").resolve("project")
+    writeSinglePlugin(mainMeta, metalsPluginDetails)
+    writeSinglePlugin(metaMeta, jdiToolsPluginDetails)
+  }
+
+  private case class PluginDetails private (
+      description: Seq[String],
+      artifact: String,
+      resolver: Option[String]
+  )
+
+  /**
    * Short description and artifact for the sbt-bloop plugin
    */
-  private def bloopPluginDetails(version: String) =
-    (
-      "This file enables sbt-bloop to create bloop config files.",
-      s""""ch.epfl.scala" % "sbt-bloop" % "$version""""
+  private def bloopPluginDetails(version: String): PluginDetails = {
+    val resolver =
+      if (isSnapshotVersion(version))
+        Some("""Resolver.bintrayRepo("scalacenter", "releases")""")
+      else None
+
+    PluginDetails(
+      description =
+        Seq("This file enables sbt-bloop to create bloop config files."),
+      artifact = s""""ch.epfl.scala" % "sbt-bloop" % "$version"""",
+      resolver
     )
+  }
 
   /**
    * Short description and artifact for the sbt-metals plugin
    */
-  private def metalsPluginDetails(version: String) =
-    (
-      "This file enables semantic information to be produced by sbt.",
-      s""""org.scalameta" % "sbt-metals" % "$version""""
+  private def metalsPluginDetails: PluginDetails = {
+    val resolver =
+      if (isSnapshotVersion(BuildInfo.metalsVersion))
+        Some(
+          """"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
+        )
+      else None
+
+    PluginDetails(
+      Seq(
+        "This file enables semantic information to be produced by sbt.",
+        "It also adds support for debugging using the Debug Adapter Protocol"
+      ),
+      s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
+      resolver
     )
+  }
+
+  /**
+   * Short description and artifact for the sbt-jdi-tools plugin
+   */
+  private def jdiToolsPluginDetails: PluginDetails =
+    PluginDetails(
+      Seq(
+        "This file makes sure that the JDI tools are in the sbt classpath.",
+        "JDI tools are used by the debug adapter server."
+      ),
+      s""""org.scala-debugger" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
+      resolver = None
+    )
+
+  private def isSnapshotVersion(version: String): Boolean =
+    version.contains("+")
 
   /**
    * Contents of metals.sbt file that is to be installed in the workspace.
    */
-  private def sbtPlugin(version: String, isBloop: Boolean): String = {
-    val isSnapshotVersion = version.contains("+")
-    val resolvers = if (isSnapshotVersion && isBloop) {
-      """resolvers += Resolver.bintrayRepo("scalacenter", "releases")"""
-    } else if (isSnapshotVersion && !isBloop) {
-      """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
-    } else {
-      ""
-    }
-
-    val (description, artifact) =
-      if (isBloop) bloopPluginDetails(version)
-      else metalsPluginDetails(version)
+  private def sbtPlugin(plugin: PluginDetails): String = {
+    val resolvers = plugin.resolver.map(r => s"resolvers += $r").getOrElse("")
+    val description = plugin.description.mkString("// ", "\n// ", "")
 
     s"""|// DO NOT EDIT! This file is auto-generated.
-        |// $description
+        |$description
         |$resolvers
-        |addSbtPlugin($artifact)
+        |addSbtPlugin(${plugin.artifact})
         |""".stripMargin
   }
 

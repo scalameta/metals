@@ -197,6 +197,8 @@ lazy val V = new {
   val munit = "0.7.20"
   val scalafix = "0.9.25"
   val lsp4jV = "0.10.0"
+  val sbtJdiTools = "1.1.1"
+
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
@@ -460,6 +462,7 @@ lazy val metals = project
       "ammoniteVersion" -> V.ammonite,
       "organizeImportVersion" -> V.organizeImportRule,
       "millVersion" -> V.mill,
+      "sbtJdiToolsVersion" -> V.sbtJdiTools,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "supportedScala3Versions" -> V.scala3Versions,
@@ -483,7 +486,8 @@ lazy val `sbt-metals` = project
     buildInfoKeys := Seq[BuildInfoKey](
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
-    )
+    ),
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.0.0")
   )
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScalafixPlugin)
