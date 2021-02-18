@@ -3,7 +3,7 @@ package scala.meta.internal.mtags
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j => l}
 
-object MtagsEnrichments extends CommonMtagsEnrichments {
+object MtagsEnrichments extends CommonMtagsEnrichments with VersionSpecificEnrichments{
 
   extension(pos: SourcePosition)
     def toLSP: l.Range = {

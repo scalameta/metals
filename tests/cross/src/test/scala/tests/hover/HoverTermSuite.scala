@@ -56,7 +56,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def apply(name: String): Person
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "case class Person: case-apply.Person".hover
+      "3.0" -> "case class Person: Person".hover
     )
   )
 
@@ -149,7 +149,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       // https://github.com/lampepfl/dotty/issues/8835
-      "3.0" -> "object num: interpolator-unapply.a.Xtension#num".hover
+      "3.0" -> "object num: Xtension#num".hover
     )
   )
 
@@ -164,7 +164,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def this(name: String, age: Int): Foo
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "class Foo: new.Foo".hover
+      "3.0" -> "class Foo: Foo".hover
     )
   )
 
@@ -196,7 +196,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def this(name: String, age: T): Foo[T]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "class Foo: new-tparam2.Foo".hover
+      "3.0" -> "class Foo: Foo".hover
     )
   )
 
@@ -337,7 +337,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "object FileVisitResult: java.nio.file.FileVisitResult".hover
+      "3.0" -> "object FileVisitResult: FileVisitResult".hover
     )
   )
 
