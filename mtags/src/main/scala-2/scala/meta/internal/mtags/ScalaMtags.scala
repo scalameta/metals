@@ -15,6 +15,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.dialects.Scala213
+import scala.meta.dialects.Scala3
 import scala.meta.inputs.Input
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
@@ -31,8 +32,14 @@ class ScalaMtags(val input: Input.VirtualFile)
     extends SimpleTraverser
     with MtagsIndexer {
 
-  private val root: Parsed[Source] = Scala213(input).parse[Source]
-
+  // This needs to be further improved with tests
+  // https://github.com/scalameta/metals/issues/2493
+  private val root: Parsed[Source] = {
+    Scala213(input).parse[Source] match {
+      case r @ Parsed.Success(_) => r
+      case _ => Scala3(input).parse[Source]
+    }
+  }
   def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {
