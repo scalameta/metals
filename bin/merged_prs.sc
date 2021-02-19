@@ -10,7 +10,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 val defaultToken = sys.env.get("GITHUB_TOKEN")
-val codename = "Lithium"
+val codename = "Tungsten"
 
 @main
 def main(
