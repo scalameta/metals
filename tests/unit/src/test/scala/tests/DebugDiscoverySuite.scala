@@ -1,10 +1,10 @@
 package tests
 
-import scala.meta.internal.metals.DebugFullyUnresolvedParams
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
-import scala.meta.internal.metals.debug.WorkspaceErrorsException
 import scala.meta.internal.metals.debug.NoTestsFoundException
+import scala.meta.internal.metals.debug.WorkspaceErrorsException
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -29,7 +29,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       debugger <- server.startDebuggingUnresolved(
-        new DebugFullyUnresolvedParams(
+        new DebugDiscoveryParams(
           s"file://${workspace}/a/src/main/scala/a/Main.scala",
           "run"
         ).toJson
@@ -65,7 +65,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
       // TestingClient handles the choice here to pick a.Main
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       debugger <- server.startDebuggingUnresolved(
-        new DebugFullyUnresolvedParams(
+        new DebugDiscoveryParams(
           s"file://${workspace}/a/src/main/scala/a/Main.scala",
           "run"
         ).toJson
@@ -96,7 +96,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       result <- server
         .startDebuggingUnresolved(
-          new DebugFullyUnresolvedParams(
+          new DebugDiscoveryParams(
             s"file://${workspace}/a/src/main/scala/a/Main.scala",
             "run"
           ).toJson
@@ -128,7 +128,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       result <- server
         .startDebuggingUnresolved(
-          new DebugFullyUnresolvedParams(
+          new DebugDiscoveryParams(
             s"file://${workspace}/a/src/main/scala/a/Main.scala",
             "run"
           ).toJson
@@ -159,8 +159,9 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      _ <- server.didSave("a/src/main/scala/a/Foo.scala")(identity)
       debugger <- server.startDebuggingUnresolved(
-        new DebugFullyUnresolvedParams(
+        new DebugDiscoveryParams(
           s"file://${workspace}/a/src/main/scala/a/Foo.scala",
           "testFile"
         ).toJson
@@ -195,8 +196,9 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Bar.scala")
+      _ <- server.didSave("a/src/main/scala/a/Foo.scala")(identity)
       debugger <- server.startDebuggingUnresolved(
-        new DebugFullyUnresolvedParams(
+        new DebugDiscoveryParams(
           s"file://${workspace}/a/src/main/scala/a/Bar.scala",
           "testTarget"
         ).toJson
@@ -227,7 +229,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
       _ <- server.didOpen("a/src/main/scala/a/NotATest.scala")
       result <- server
         .startDebuggingUnresolved(
-          new DebugFullyUnresolvedParams(
+          new DebugDiscoveryParams(
             s"file://${workspace}/a/src/main/scala/a/NotATest.scala",
             "testTarget"
           ).toJson

@@ -8,11 +8,11 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import ch.epfl.scala.bsp4j.ScalaMainClass
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -505,12 +505,6 @@ object Messages {
       )
     }
 
-    def show(msg: String): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        msg
-      )
-    }
   }
 
   object MissingScalafmtConf {
