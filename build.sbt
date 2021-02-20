@@ -293,6 +293,7 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   if (isScala3(partialVersion)) {
     result += base / "scala-3"
   }
+  result += base / s"scala-$scalaVersion"
   result.toList
 }
 

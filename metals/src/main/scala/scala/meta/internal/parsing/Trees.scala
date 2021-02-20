@@ -5,6 +5,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta._
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.parsers.Parsed
 
@@ -21,7 +22,7 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 final class Trees(
     buildTargets: BuildTargets,
     buffers: Buffers,
-    defaultDialect: Dialect = dialects.Scala213
+    scalaVersionSelector: ScalaVersionSelector
 ) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
@@ -81,18 +82,26 @@ final class Trees(
   }
 
   private def getDialect(path: AbsolutePath): Dialect = {
+
+    def dialectFromBuildTarget = buildTargets
+      .inverseSources(path)
+      .flatMap(id => buildTargets.scalaTarget(id))
+      .map(_.dialect)
+
     Option(path.extension) match {
       case Some("scala") =>
-        buildTargets
-          .inverseSources(path)
-          .flatMap(id => buildTargets.scalaTarget(id))
-          .map(_.dialect)
-          .getOrElse(defaultDialect)
+        dialectFromBuildTarget.getOrElse(
+          scalaVersionSelector.fallbackDialect(allowScala3 = true)
+        )
       case Some("sbt") => dialects.Sbt
       case Some("sc") =>
-        dialects.Scala213
+        // worksheets support Scala 3, but ammonite scripts do not
+        val dialect = dialectFromBuildTarget.getOrElse(
+          scalaVersionSelector.fallbackDialect(allowScala3 = path.isWorksheet)
+        )
+        dialect
           .copy(allowToplevelTerms = true, toplevelSeparator = "")
-      case _ => defaultDialect
+      case _ => scalaVersionSelector.fallbackDialect(allowScala3 = true)
     }
   }
 
@@ -100,7 +109,7 @@ final class Trees(
 
 object Trees {
 
-  /* Tokenzing works perfectly fine with 212 dialect as long as we are only
+  /* Tokenizing works perfectly fine with 212 dialect as long as we are only
    * interested in having stable results. This is not the case for parsing.
    */
   val defaultTokenizerDialect = scala.meta.dialects.Scala213
