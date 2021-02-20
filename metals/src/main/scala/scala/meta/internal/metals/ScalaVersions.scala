@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.Dialect
+import scala.meta.dialects._
 import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 
@@ -83,5 +85,16 @@ object ScalaVersions {
       scalaVersion
     else
       scalaVersion.split('.').take(2).mkString(".")
+  }
+
+  def dialectForScalaVersion(scalaVersion: String): Dialect = {
+    val scalaBinaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
+    scalaBinaryVersion match {
+      case "2.11" => Scala211
+      case "2.12" => Scala212
+      case "2.13" => Scala213
+      case version if version.startsWith("3.") => Scala3
+      case _ => Scala213
+    }
   }
 }

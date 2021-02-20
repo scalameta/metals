@@ -29,7 +29,6 @@ import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuic
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.DebugSession
@@ -125,7 +124,6 @@ final class TestingServer(
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
-  val testTrees = new Trees(new BuildTargets(_ => None), buffers)
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,

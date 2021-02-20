@@ -2,11 +2,12 @@ package tests
 
 import java.nio.file.Paths
 
-import scala.meta.Dialect
-import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.Trees
@@ -125,7 +126,7 @@ class ClassBreakpointSuite extends FunSuite {
        |}
        |""".stripMargin,
     "a.b.Main$package",
-    dialect = dialects.Scala3
+    scalaVersion = V.scala3
   )
 
   check(
@@ -141,18 +142,23 @@ class ClassBreakpointSuite extends FunSuite {
        |
        |""".stripMargin,
     "a.Main$package",
-    dialect = dialects.Scala3
+    scalaVersion = V.scala3
   )
 
   def check(
       name: TestOptions,
       original: String,
       expected: String,
-      dialect: Dialect = dialects.Scala213
+      scalaVersion: String = V.scala213
   ): Unit =
     test(name) {
       val buffers = Buffers()
-      val trees = new Trees(new BuildTargets(_ => None), buffers, dialect)
+      val buildTargets = new BuildTargets(_ => None)
+      val selector = new ScalaVersionSelector(
+        () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
+        buildTargets
+      )
+      val trees = new Trees(buildTargets, buffers, selector)
       val classFinder = new ClassFinder(trees)
       val filename: String = "Main.scala"
       val path = AbsolutePath(Paths.get(filename))

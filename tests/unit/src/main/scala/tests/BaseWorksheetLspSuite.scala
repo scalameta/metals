@@ -17,6 +17,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
   override def munitIgnore: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
+  def versionSpecificCodeToValidate: String = ""
+
   // sourcecode is not yet published for Scala 3
   if (!ScalaVersions.isScala3Version(scalaVersion))
     test("completion") {
@@ -87,7 +89,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |println(greeting + "\\nHow are you?")
            |1.to(10).toVector
            |val List(a, b) = List(42, 10)
-           |""".stripMargin
+           |""".stripMargin + versionSpecificCodeToValidate
       )
       _ <- server.didOpen("a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
@@ -109,6 +111,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |println(greeting + "\nHow are you?") // Hello Susan…
                  |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                  |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+                 |given str: String = ""
                  |""".stripMargin
           ),
           scalaVersion

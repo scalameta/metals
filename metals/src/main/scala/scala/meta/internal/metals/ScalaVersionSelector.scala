@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.Dialect
+
 class ScalaVersionSelector(
     userConfig: () => UserConfiguration,
     buildTargets: BuildTargets
@@ -23,5 +25,9 @@ class ScalaVersionSelector(
       selected
     else
       ScalaVersions.recommendedVersion(selected)
+  }
+
+  def fallbackDialect(allowScala3: Boolean): Dialect = {
+    ScalaVersions.dialectForScalaVersion(fallbackScalaVersion(allowScala3))
   }
 }

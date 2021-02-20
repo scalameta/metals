@@ -22,13 +22,9 @@ case class ScalaTarget(
 ) {
 
   def dialect: Dialect = {
-    scalaBinaryVersion match {
+    scalaVersion match {
       case _ if info.getDataKind() == "sbt" => Sbt
-      case "2.11" => Scala211
-      case "2.12" => Scala212
-      case "2.13" => Scala213
-      case version if version.startsWith("3.") => Scala3
-      case _ => Scala213
+      case other => ScalaVersions.dialectForScalaVersion(other)
     }
   }
 

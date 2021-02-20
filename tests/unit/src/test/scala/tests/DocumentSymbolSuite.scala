@@ -1,10 +1,11 @@
 package tests
 
-import scala.meta.Dialect
-import scala.meta.dialects
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.Trees
@@ -18,7 +19,7 @@ import tests.MetalsTestEnrichments._
 abstract class DocumentSymbolSuite(
     directoryName: String,
     inputProperties: => InputProperties,
-    dialect: Dialect
+    scalaVersion: String
 ) extends DirectoryExpectSuite(directoryName) {
 
   override lazy val input: InputProperties = inputProperties
@@ -30,11 +31,18 @@ abstract class DocumentSymbolSuite(
         { () =>
           val buffers = Buffers()
           buffers.put(file.file, file.code)
+          val buildTargets = new BuildTargets(_ => None)
+          val selector =
+            new ScalaVersionSelector(
+              () =>
+                UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
+              buildTargets
+            )
           val documentSymbolProvider = new DocumentSymbolProvider(
             new Trees(
-              new BuildTargets(_ => None),
+              buildTargets,
               buffers,
-              dialect
+              selector
             )
           )
 
@@ -65,12 +73,12 @@ class DocumentSymbolScala2Suite
     extends DocumentSymbolSuite(
       "documentSymbol",
       InputProperties.scala2(),
-      dialects.Scala213
+      V.scala213
     )
 
 class DocumentSymbolScala3Suite
     extends DocumentSymbolSuite(
       "documentSymbol-scala3",
       InputProperties.scala3(),
-      dialects.Scala3
+      V.scala3
     )
