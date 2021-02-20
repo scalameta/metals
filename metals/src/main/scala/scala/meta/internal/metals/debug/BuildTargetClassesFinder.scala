@@ -157,7 +157,9 @@ case class BuildTargetContainsNoMainException(buildTargetName: String)
     extends Exception(
       s"No main could be found in build target: $buildTargetName"
     )
-case class BuildTargetContainsNoTestsException(buildTargetName: String)
-    extends Exception(
-      s"No tests could be found in build target: $buildTargetName"
+case class NoTestsFoundException(
+    testType: String,
+    name: String
+) extends Exception(
+      s"No tests could be found in ${testType}: $name"
     )

@@ -221,11 +221,16 @@ class DebugProvider(
         Future.failed(BuildTargetNotFoundForPathException(path))
       case (None, _) =>
         Future.failed(RunType.UnknownRunTypeException(params.runType))
+      // TODO make sure env variables are set for run
       case (Some(Run), Some(target)) =>
         createMainParams(target, mainClasses(target))
-      case (Some(_), Some(target)) if testClasses(target).isEmpty =>
+      case (Some(TestFile), Some(target)) if testClasses(target).isEmpty =>
         Future.failed(
-          BuildTargetContainsNoTestsException(displayName(target))
+          NoTestsFoundException("file", path.toString())
+        )
+      case (Some(TestTarget), Some(target)) if testClasses(target).isEmpty =>
+        Future.failed(
+          NoTestsFoundException("build target", displayName(target))
         )
       case (Some(TestFile), Some(target)) =>
         textDocumentO
@@ -405,7 +410,7 @@ class DebugProvider(
       languageClient.showMessage(
         Messages.DebugClassNotFound.show(e.getMessage())
       )
-    case e: BuildTargetContainsNoTestsException =>
+    case e: NoTestsFoundException =>
       languageClient.showMessage(
         Messages.DebugClassNotFound.show(e.getMessage())
       )

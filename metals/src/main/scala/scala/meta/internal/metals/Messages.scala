@@ -150,6 +150,7 @@ object Messages {
   }
 
   object MainClass {
+    val message = "Multiple main classes found. Which would you like to run?"
     def params(
         mainClasses: List[ScalaMainClass]
     ): ShowMessageRequestParams = {
@@ -157,26 +158,7 @@ object Messages {
         mainClasses
           .map(mc => new MessageActionItem(mc.getClassName()))
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        "Multiple main classes found. Which would you like to run?"
-      )
-      params.setType(MessageType.Info)
-      params.setActions(messageActionItems.asJava)
-      params
-    }
-  }
-
-  object TestClass {
-    def params(
-        testClasses: List[String]
-    ): ShowMessageRequestParams = {
-      val messageActionItems =
-        testClasses
-          .map(tc => new MessageActionItem(tc))
-      val params = new ShowMessageRequestParams()
-      params.setMessage(
-        "Multiple test classes found. Which would you like to run?"
-      )
+      params.setMessage(message)
       params.setType(MessageType.Info)
       params.setActions(messageActionItems.asJava)
       params
