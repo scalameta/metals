@@ -23,7 +23,8 @@ final class CodeActionProvider(
     new CreateNewSymbol(),
     new StringActions(buffers, trees),
     new OrganizeImports(scalafixProvider, buildTargets),
-    new InsertInferredType(trees, compilers)
+    new InsertInferredType(trees, compilers),
+    new ImportMissingGiven(compilers)
   )
 
   def codeActions(
