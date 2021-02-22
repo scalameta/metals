@@ -464,8 +464,8 @@ scripts.
   </tr>
   <tr>
     <td>Find references</td>
-    <td align="center"></td>
-    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
@@ -478,15 +478,15 @@ scripts.
   </tr>
   <tr>
     <td>Find implementations</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
     <td align="center"></td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
   <tr>
     <td>Rename symbol</td>
-    <td align="center"></td>
-    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
@@ -506,8 +506,8 @@ scripts.
   </tr>
   <tr>
     <td>Workspace symbols</td>
-    <td align="center"></td>
-    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">All symbols are local</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
@@ -521,14 +521,14 @@ scripts.
   <tr>
     <td>Folding</td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
   <tr>
     <td>Highlight</td>
-    <td align="center"></td>
-    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
@@ -541,7 +541,7 @@ scripts.
   </tr>
   <tr>
     <td>Implicit decorations</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
     <td align="center"></td>
     <td align="center">✅</td>
     <td align="center">✅</td>

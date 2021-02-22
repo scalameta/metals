@@ -345,6 +345,16 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin
   )
 
+  check(
+    "worksheet",
+    """|/a/src/main/scala/a/Main.worksheet.sc
+       |trait <<A@@A>>
+       |trait BB extends <<AA>>
+       |trait CC extends <<AA>>
+       |trait DD extends <<AA>>
+       |""".stripMargin
+  )
+
   override def assertCheck(
       filename: String,
       edit: String,
