@@ -528,10 +528,10 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                   |""".stripMargin,
             V.scala3 ->
               """|/Main.worksheet.sc
-                 |import java/*<no symbol>*/.time/*<no symbol>*/.Instant/*<no symbol>*/
+                 |import java/*<no symbol>*/.time/*<no symbol>*/.Instant/*Instant.java*/
                  |
-                 |val x/*L2*/ = Instant/*<no symbol>*/.now/*<no symbol>*/()
-                 |val y/*L3*/ = List/*<no symbol>*/.fill/*<no symbol>*/(2)(2)
+                 |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
+                 |val y/*L3*/ = List/*package.scala*/.fill/*Factory.scala*/(2)(2)
                  |""".stripMargin
           ),
           scalaVersion

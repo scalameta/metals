@@ -60,12 +60,13 @@ final class InteractiveSemanticdbs(
       source.isLocalFileSystem(workspace) && (
         source.isInReadonlyDirectory(workspace) || // dependencies
           source.isSbt || // sbt files
+          source.isWorksheet || // worksheets
           doesNotBelongToBuildTarget // standalone files
       )
     }
 
-    def isExcludedFile = source.isWorksheet || // worksheets
-      !source.isScalaFilename // anything aside from `*.scala`, `*.sbt` and `*.sc` file
+    // anything aside from `*.scala`, `*.sbt` and `*.sc` file
+    def isExcludedFile = !source.isScalaFilename
 
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
@@ -78,8 +79,8 @@ final class InteractiveSemanticdbs(
           if (existingDoc == null || existingDoc.md5 != sha) {
             val compiled = compile(path, text)
             Option(compiled).foreach(doc =>
-              // don't index dependency source files
-              if (!source.isDependencySource(workspace))
+              // don't index dependency source files or worksheets, since their definitions are local
+              if (!source.isDependencySource(workspace) && !source.isWorksheet)
                 semanticdbIndexer().onChange(source, doc)
             )
             compiled
@@ -147,13 +148,18 @@ final class InteractiveSemanticdbs(
   }
 
   private def compile(source: AbsolutePath, text: String): s.TextDocument = {
-    val fromTarget = for {
+    def worksheetCompiler =
+      if (source.isWorksheet) compilers().loadWorksheetCompiler(source)
+      else None
+    def fromTarget = for {
       buildTarget <- buildTargets.inverseSources(source)
       pc <- compilers().loadCompiler(buildTarget)
     } yield pc
 
-    val pc = fromTarget
+    val pc = worksheetCompiler
+      .orElse(fromTarget)
       .orElse {
+        // load presentation compiler for sources that were create by a worksheet definition request
         tables.worksheetSources
           .getWorksheet(source)
           .flatMap(compilers().loadWorksheetCompiler)

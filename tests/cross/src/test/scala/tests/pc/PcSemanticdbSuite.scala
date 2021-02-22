@@ -31,14 +31,42 @@ class PcSemanticdbSuite extends BasePCSuite {
        |""".stripMargin
   )
 
+  check(
+    "worksheet",
+    """|import $ivy.`org.kohsuke:github-api:1.114`
+       |
+       |object O {
+       |  val a = 123
+       |  val b = a + 1
+       |}""".stripMargin,
+    """|import $ivy.`org.kohsuke:github-api:1.114`
+       |
+       |object O/*local0*/ {
+       |  val a/*local1*/ = 123
+       |  val b/*local2*/ = a/*local1*/ +/*scala.Int#`+`(+4).*/ 1
+       |}
+       |""".stripMargin,
+    filename = "A.worksheet.sc",
+    compat = Map(
+      "3.0" ->
+        """|import $ivy.`org.kohsuke:github-api:1.114`
+           |
+           |object O/*_empty_.O.*/ {
+           |  val a/*_empty_.O.a.*/ = 123
+           |  val b/*_empty_.O.b.*/ = a/*_empty_.O.a.*/ +/*scala.Int#`+`(+4).*/ 1
+           |}
+           |""".stripMargin
+    )
+  )
+
   def check(
       name: String,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      filename: String = "A.scala"
   )(implicit loc: Location): Unit = {
     test(name) {
-      val filename = "A.scala"
       val uri = new URI(s"file:///$filename")
       val doc = presentationCompiler.semanticdbTextDocument(uri, original)
 

@@ -16,17 +16,20 @@ import java.io.ByteArrayOutputStream
 
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.mtags.MtagsEnrichments._
 
-class SemanticdbTextDocumentProvider(driver: InteractiveDriver, workspace: Option[Path]) {
+class SemanticdbTextDocumentProvider(driver: InteractiveDriver, workspace: Option[Path]) 
+  extends WorksheetSemanticdbProvider {
   
   def textDocument(
       uri: URI,
       sourceCode: String
   ): Array[Byte] = {
     val filePath = Paths.get(uri)
+    val validCode = removeMagicImports(sourceCode, AbsolutePath(filePath))
     driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, sourceCode)
+      SourceFile.virtual(filePath.toString, validCode)
     )
     val tree = driver.currentCtx.run.units.head.tpdTree
     val extract = ExtractSemanticDB()

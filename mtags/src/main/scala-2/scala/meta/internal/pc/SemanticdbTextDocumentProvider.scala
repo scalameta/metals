@@ -9,15 +9,20 @@ import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
-class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
+class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal)
+    extends WorksheetSemanticdbProvider {
   import compiler._
 
   def textDocument(
       uri: URI,
       code: String
   ): s.TextDocument = {
+    val filePath = AbsolutePath(Paths.get(uri))
+    val validCode = removeMagicImports(code, filePath)
+
+    println(validCode)
     val unit = addCompilationUnit(
-      code = code,
+      code = validCode,
       filename = uri.toString(),
       cursor = None
     )
@@ -37,11 +42,10 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal) {
       SemanticdbConfig.default
     )
 
-    val filePath = AbsolutePath(Paths.get(uri))
     val explicitDialect = if (filePath.isSbt) {
       Some(dialects.Sbt1)
     } else if (filePath.isScalaScript) {
-      Some(dialects.Scala213.withAllowToplevelStatements(true))
+      Some(dialects.Scala213.withAllowToplevelTerms(true))
     } else {
       None
     }
