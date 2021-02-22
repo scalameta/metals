@@ -176,7 +176,11 @@ final class InteractiveSemanticdbs(
         clientConfig.initialConfig.compilers.timeoutDelay,
         clientConfig.initialConfig.compilers.timeoutUnit
       )
-    val textDocument = s.TextDocument.parseFrom(bytes)
+    val textDocument = {
+      val doc = s.TextDocument.parseFrom(bytes)
+      if (doc.text.isEmpty()) doc.withText(text)
+      else doc
+    }
     if (prependedLinesSize > 0)
       cleanupAutoImports(textDocument, text, prependedLinesSize)
     else textDocument

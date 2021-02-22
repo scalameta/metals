@@ -10,6 +10,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.SymbolOccurrenceOrdering._
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.RelativePath
 
