@@ -171,14 +171,18 @@ case class ScalaPresentationCompiler(
 
   def diagnosticsForDebuggingPurposes(): ju.List[String] = List[String]().asJava
 
-  // TODO NOT IMPLEMENTED
   def semanticdbTextDocument(
       filename: URI,
       code: String
   ): CompletableFuture[Array[Byte]] = {
-    CompletableFuture.completedFuture(
-      List[Byte]().toArray
-    )
+    compilerAccess.withNonInterruptableCompiler(
+      Array.empty[Byte],
+      EmptyCancelToken
+    ) { access =>
+      val driver = access.compiler()
+      val provider = SemanticdbTextDocumentProvider(driver, workspace)
+      provider.textDocument(filename, code)
+    }
   }
 
   // TODO NOT IMPLEMENTED
