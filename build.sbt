@@ -181,9 +181,10 @@ lazy val V = new {
   val sbtScala = "2.12.10"
   // TODO https://github.com/scalameta/metals/issues/2392
   val ammonite212Version = "2.12.12"
+  val ammonite213Version = "2.13.4"
   val scala212 = "2.12.13"
-  val scala213 = "2.13.4"
-  val scalameta = "4.4.9"
+  val scala213 = "2.13.5"
+  val scalameta = "4.4.10"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
   val bloop = "1.4.8"
@@ -210,9 +211,9 @@ lazy val V = new {
 
   // Scala 2
   def deprecatedScala2Versions =
-    Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1")
+    Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1", "2.13.2")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.12", "2.12.11", "2.12.10", "2.13.2", "2.13.3")
+    Seq(scala213, scala212, "2.12.12", "2.12.11", sbtScala, "2.13.3", "2.13.4")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
@@ -473,6 +474,7 @@ lazy val metals = project
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "ammonite212" -> V.ammonite212Version,
+      "ammonite213" -> V.ammonite213Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3
     )
@@ -580,6 +582,7 @@ def publishBinaryMtags =
           V.scala212,
           V.ammonite212Version,
           V.scala213,
+          V.ammonite213Version,
           V.scala3
         )
       )
@@ -591,13 +594,7 @@ lazy val mtest = project
     testSettings,
     sharedSettings,
     libraryDependencies ++= List(
-      // munit had to drop support for 3.0.0-M1 and 0.27.0-RC1
-      if (
-        scalaVersion.value == "0.27.0-RC1" || scalaVersion.value == "3.0.0-M1"
-      )
-        "org.scalameta" %% "munit" % "0.7.19"
-      else
-        "org.scalameta" %% "munit" % V.munit,
+      "org.scalameta" %% "munit" % V.munit,
       "io.get-coursier" % "interface" % V.coursierInterfaces
     ),
     buildInfoPackage := "tests",

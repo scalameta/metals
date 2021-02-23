@@ -80,8 +80,8 @@ trait ArgCompletions { this: MetalsGlobal =>
       }
 
       completions match {
-        case CompletionResult.ScopeMembers(_, results, _) =>
-          results
+        case members: CompletionResult.ScopeMembers =>
+          members.results
             .collect {
               case mem
                   if mem.sym.tpe <:< paramType && notNothingOrNull(

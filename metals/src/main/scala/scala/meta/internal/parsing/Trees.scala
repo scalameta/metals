@@ -91,17 +91,19 @@ final class Trees(
     Option(path.extension) match {
       case Some("scala") =>
         dialectFromBuildTarget.getOrElse(
-          scalaVersionSelector.fallbackDialect(allowScala3 = true)
+          scalaVersionSelector.fallbackDialect(isAmmonite = false)
         )
       case Some("sbt") => dialects.Sbt
       case Some("sc") =>
         // worksheets support Scala 3, but ammonite scripts do not
         val dialect = dialectFromBuildTarget.getOrElse(
-          scalaVersionSelector.fallbackDialect(allowScala3 = path.isWorksheet)
+          scalaVersionSelector.fallbackDialect(isAmmonite =
+            path.isAmmoniteScript
+          )
         )
         dialect
           .copy(allowToplevelTerms = true, toplevelSeparator = "")
-      case _ => scalaVersionSelector.fallbackDialect(allowScala3 = true)
+      case _ => scalaVersionSelector.fallbackDialect(isAmmonite = false)
     }
   }
 

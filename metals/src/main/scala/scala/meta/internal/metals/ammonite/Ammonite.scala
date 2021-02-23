@@ -149,7 +149,7 @@ final class Ammonite(
         AmmVersions(
           ammoniteVersion = BuildInfo.ammoniteVersion,
           scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(allowScala3 = false)
+            scalaVersionSelector.fallbackScalaVersion(isAmmonite = true)
         )
       )
     val res = AmmoniteFetcher(versions)

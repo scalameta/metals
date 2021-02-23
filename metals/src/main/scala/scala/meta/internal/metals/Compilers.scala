@@ -109,7 +109,7 @@ class Compilers(
       PresentationCompilerKey.Default,
       (_, value) => {
         val scalaVersion =
-          scalaVersionSelector.fallbackScalaVersion(allowScala3 = true)
+          scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
         val existingPc = Option(value).flatMap { pc =>
           if (pc.scalaVersion == scalaVersion) {
             Some(pc)
@@ -418,7 +418,7 @@ class Compilers(
       jworksheetsCache.put(
         path, {
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(allowScala3 = true)
+            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
           createStandaloneCompiler(
             scalaVersion,
             classpath,
