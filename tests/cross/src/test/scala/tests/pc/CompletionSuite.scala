@@ -426,7 +426,12 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "Inner: a.Outer.Inner$"
+      "3.0" -> "Inner: a.Outer.Inner$",
+      /* TODO seems that changes in 2.13.5 made this pop up and this
+       * might have been a bug in presentation compiler that we were using
+       * https://github.com/scalameta/metals/issues/2546
+       */
+      "2.13.5" -> "Inner a.Outer"
     )
   )
 
@@ -493,7 +498,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |package a
       |
       |object Main{
-      |  scala.Function@@
+      |  import scala.Function@@
       |}
       |""".stripMargin,
     // assert that we don't sort lexicographically: Function1, Function11, ..., Function2, ...
@@ -523,10 +528,34 @@ class CompletionSuite extends BaseCompletionSuite {
        |Function22 scala
        |PartialFunction scala
        |""".stripMargin,
+    // Scala 2.13.5 adds additional completions that actually fit, but are not useful for this test
+    topLines = Some(25),
     compat = Map(
       "3.0" ->
-        """|Function: Function$
-           |Function1: Function1$
+        """|Function0: scala.Function0
+           |Function1: trait and object Function1
+           |Function2: scala.Function2
+           |Function3: scala.Function3
+           |Function4: scala.Function4
+           |Function5: scala.Function5
+           |Function6: scala.Function6
+           |Function7: scala.Function7
+           |Function8: scala.Function8
+           |Function9: scala.Function9
+           |Function10: scala.Function10
+           |Function11: scala.Function11
+           |Function12: scala.Function12
+           |Function13: scala.Function13
+           |Function14: scala.Function14
+           |Function15: scala.Function15
+           |Function16: scala.Function16
+           |Function17: scala.Function17
+           |Function18: scala.Function18
+           |Function19: scala.Function19
+           |Function20: scala.Function20
+           |Function21: scala.Function21
+           |Function22: scala.Function22
+           |Function: Function$
            |""".stripMargin
     )
   )
@@ -608,7 +637,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3.0" -> """|DelayedLazyVal: scala.concurrent.DelayedLazyVal$
-                  |""".stripMargin
+                  |""".stripMargin,
+      "2.13.5" -> "DelayedLazyVal - scala.concurrent"
     )
   )
 
