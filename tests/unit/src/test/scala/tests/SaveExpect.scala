@@ -9,7 +9,8 @@ object SaveExpect {
       new ToplevelSuite,
       new DocumentSymbolScala2Suite,
       new DocumentSymbolScala3Suite,
-      new FoldingRangeSuite,
+      new FoldingRangeScala2Suite,
+      new FoldingRangeScala3Suite,
       new WorkspaceSymbolExpectSuite
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
