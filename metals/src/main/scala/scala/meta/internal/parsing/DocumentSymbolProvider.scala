@@ -64,7 +64,7 @@ class DocumentSymbolProvider(trees: Trees) {
     ): Unit = {
       owner.getChildren.add(
         new DocumentSymbol(
-          name,
+          if (name.isEmpty) " " else name,
           kind,
           range.toLSP,
           selection.toLSP,
