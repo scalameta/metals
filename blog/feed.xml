@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Tue, 02 Feb 2021 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 24 Feb 2021 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2021 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.10.0 - Tungsten]]></title>
+            <link>http://scalameta.org/metals/blog/2021/02/24/tungsten.html</link>
+            <guid>http://scalameta.org/metals/blog/2021/02/24/tungsten.html</guid>
+            <pubDate>Wed, 24 Feb 2021 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We're happy to announce the release of Metals v0.10.0, which is the first release in the &quot;Tungsten&quot; line. In <code>0.10.x</code> we will focus on polishing existing features, fixing bugs and improving the Scala 3 support at least to the level of Scala 2...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[A Metals Retrospective (Part 1)]]></title>
             <link>http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1.html</link>
