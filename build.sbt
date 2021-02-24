@@ -178,12 +178,12 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val sbtScala = "2.12.10"
-  // TODO https://github.com/scalameta/metals/issues/2392
-  val ammonite212Version = "2.12.12"
-  val ammonite213Version = "2.13.4"
+  val sbtScala = "2.12.12"
   val scala212 = "2.12.13"
   val scala213 = "2.13.5"
+  val ammonite212Version = scala212
+  // TODO https://github.com/scalameta/metals/issues/2392
+  val ammonite213Version = "2.13.4"
   val scalameta = "4.4.10"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
@@ -213,7 +213,7 @@ lazy val V = new {
   def deprecatedScala2Versions =
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1", "2.13.2")
   def nonDeprecatedScala2Versions =
-    Seq(scala213, scala212, "2.12.12", "2.12.11", sbtScala, "2.13.3", "2.13.4")
+    Seq(scala213, scala212, "2.12.12", "2.12.11", "2.12.10", "2.13.3", "2.13.4")
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
@@ -232,7 +232,7 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.2"
   val coursier = "2.0.11"
-  val ammonite = "2.3.8-4-88785969"
+  val ammonite = "2.3.8-36-1cce53f3"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
 }
@@ -444,7 +444,7 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.0"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.1"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -576,7 +576,7 @@ def publishBinaryMtags =
     .in(interfaces)
     .dependsOn(
       publishAllMtags(
-        List(
+        Set(
           V.scala211,
           V.sbtScala,
           V.scala212,
@@ -584,7 +584,7 @@ def publishBinaryMtags =
           V.scala213,
           V.ammonite213Version,
           V.scala3
-        )
+        ).toList
       )
     )
 
