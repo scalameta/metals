@@ -10,7 +10,6 @@ import scala.meta.Token
 import scala.meta.Tokens
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.io.AbsolutePath
 
 import difflib._
 import difflib.myers.Equalizer
@@ -339,8 +338,7 @@ object TokenEditDistance {
     } else {
       val result = for {
         revised <- trees
-          .getDialect(AbsolutePath(revisedInput.path))(revisedInput)
-          .tokenize
+          .tokenized(revisedInput)
           .toOption
         original <- {
           if (originalInput == revisedInput) Some(revised)

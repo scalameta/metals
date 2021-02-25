@@ -69,6 +69,9 @@ final class Trees(
     }
   }
 
+  def tokenized(input: inputs.Input.VirtualFile): Tokenized =
+    getDialect(AbsolutePath(input.path))(input).tokenize
+
   private def parse(
       path: AbsolutePath,
       dialect: Dialect
@@ -81,7 +84,7 @@ final class Trees(
     }
   }
 
-  def getDialect(path: AbsolutePath): Dialect = {
+  private def getDialect(path: AbsolutePath): Dialect = {
 
     def dialectFromBuildTarget = buildTargets
       .inverseSources(path)
