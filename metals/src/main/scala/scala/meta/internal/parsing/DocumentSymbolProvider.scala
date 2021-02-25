@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.trees.Origin
 import scala.meta.transversers.SimpleTraverser
 
 import org.eclipse.lsp4j.DocumentSymbol
@@ -30,7 +31,13 @@ class DocumentSymbolProvider(trees: Trees) {
   ): Either[util.List[DocumentSymbol], util.List[l.SymbolInformation]] = {
     val result = for {
       tree <- trees.get(path)
-    } yield new SymbolTraverser().symbols(tree).asScala
+    } yield {
+      implicit val dialect = tree.origin match {
+        case Origin.Parsed(_, dialect, _) => dialect
+        case Origin.None => dialects.Scala213
+      }
+      new SymbolTraverser().symbols(tree).asScala
+    }
     val symbols = result.getOrElse(Nil)
 
     if (supportsHierarchicalDocumentSymbols.get()) {
@@ -41,7 +48,8 @@ class DocumentSymbolProvider(trees: Trees) {
     }
   }
 
-  private class SymbolTraverser() extends SimpleTraverser {
+  private class SymbolTraverser(implicit dialect: Dialect)
+      extends SimpleTraverser {
     var owner: DocumentSymbol = new DocumentSymbol(
       "root",
       SymbolKind.Namespace,
