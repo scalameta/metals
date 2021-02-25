@@ -10,6 +10,7 @@ import scala.meta.Token
 import scala.meta.Tokens
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
 
 import difflib._
 import difflib.myers.Equalizer
@@ -323,6 +324,7 @@ object TokenEditDistance {
   def apply(
       originalInput: Input.VirtualFile,
       revisedInput: Input.VirtualFile,
+      trees: Trees,
       doNothingWhenUnchanged: Boolean = true
   ): TokenEditDistance = {
     val isScala =
@@ -336,7 +338,10 @@ object TokenEditDistance {
       noMatch
     } else {
       val result = for {
-        revised <- Trees.defaultTokenizerDialect(revisedInput).tokenize.toOption
+        revised <- trees
+          .getDialect(AbsolutePath(revisedInput.path))(revisedInput)
+          .tokenize
+          .toOption
         original <- {
           if (originalInput == revisedInput) Some(revised)
           else Trees.defaultTokenizerDialect(originalInput).tokenize.toOption

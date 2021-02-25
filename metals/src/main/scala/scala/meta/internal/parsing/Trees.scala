@@ -81,7 +81,7 @@ final class Trees(
     }
   }
 
-  private def getDialect(path: AbsolutePath): Dialect = {
+  def getDialect(path: AbsolutePath): Dialect = {
 
     def dialectFromBuildTarget = buildTargets
       .inverseSources(path)
@@ -114,6 +114,6 @@ object Trees {
   /* Tokenizing works perfectly fine with 212 dialect as long as we are only
    * interested in having stable results. This is not the case for parsing.
    */
-  val defaultTokenizerDialect = scala.meta.dialects.Scala213
+  val defaultTokenizerDialect: Dialect = scala.meta.dialects.Scala213
 
 }

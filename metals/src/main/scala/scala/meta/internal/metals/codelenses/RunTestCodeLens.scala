@@ -13,6 +13,7 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.parsing.TokenEditDistance
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -35,7 +36,8 @@ final class RunTestCodeLens(
     buffers: Buffers,
     buildTargets: BuildTargets,
     clientConfig: ClientConfiguration,
-    buildServerCanDebug: () => Boolean
+    buildServerCanDebug: () => Boolean,
+    trees: Trees
 ) extends CodeLens {
 
   override def isEnabled: Boolean =
@@ -49,7 +51,7 @@ final class RunTestCodeLens(
     if (path.isAmmoniteScript || path.isWorksheet) {
       Seq.empty
     } else {
-      val distance = buffers.tokenEditDistance(path, textDocument.text)
+      val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
 
       buildTargets
         .inverseSources(path)

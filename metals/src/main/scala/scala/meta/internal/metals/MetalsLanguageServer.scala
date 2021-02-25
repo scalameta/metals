@@ -381,7 +381,8 @@ class MetalsLanguageServer(
           languageClient,
           clientConfig.initialConfig.statistics,
           () => userConfig,
-          Option(workspace)
+          Option(workspace),
+          trees
         )
         buildClient = new ForwardingMetalsBuildClient(
           languageClient,
@@ -466,7 +467,8 @@ class MetalsLanguageServer(
           semanticdbs,
           warnings,
           () => compilers,
-          remote
+          remote,
+          trees
         )
         formattingProvider = new FormattingProvider(
           workspace,
@@ -489,7 +491,8 @@ class MetalsLanguageServer(
           semanticdbs,
           buffers,
           definitionProvider,
-          remote
+          remote,
+          trees
         )
         implementationProvider = new ImplementationProvider(
           semanticdbs,
@@ -497,7 +500,8 @@ class MetalsLanguageServer(
           definitionIndex,
           buildTargets,
           buffers,
-          definitionProvider
+          definitionProvider,
+          trees
         )
 
         supermethods = new Supermethods(
@@ -512,14 +516,16 @@ class MetalsLanguageServer(
             buffers,
             buildTargets,
             clientConfig,
-            () => bspSession.map(_.main.hasDebug).getOrElse(false)
+            () => bspSession.map(_.main.hasDebug).getOrElse(false),
+            trees
           )
 
         val goSuperLensProvider = new SuperMethodCodeLens(
           implementationProvider,
           buffers,
           () => userConfig,
-          clientConfig
+          clientConfig,
+          trees
         )
 
         stacktraceAnalyzer = new StacktraceAnalyzer(
@@ -596,7 +602,8 @@ class MetalsLanguageServer(
             Option(params),
             diagnostics,
             excludedPackageHandler.isExcludedPackage,
-            scalaVersionSelector
+            scalaVersionSelector,
+            trees
           )
         )
         debugProvider = new DebugProvider(
@@ -655,7 +662,7 @@ class MetalsLanguageServer(
           if (clientConfig.isDecorationProvider)
             new DecorationWorksheetPublisher()
           else
-            new WorkspaceEditWorksheetPublisher(buffers)
+            new WorkspaceEditWorksheetPublisher(buffers, trees)
         worksheetProvider = register(
           new WorksheetProvider(
             workspace,
@@ -1368,7 +1375,7 @@ class MetalsLanguageServer(
       val newParams: Option[ReferenceParams] =
         if (newBuffer.text == old.text) Some(params)
         else {
-          val edit = TokenEditDistance(old, newBuffer)
+          val edit = TokenEditDistance(old, newBuffer, trees)
           edit
             .toRevised(
               params.getPosition.getLine,

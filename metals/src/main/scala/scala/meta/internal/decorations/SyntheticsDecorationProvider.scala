@@ -109,7 +109,7 @@ final class SyntheticsDecorationProvider(
       val line = params.getPosition().getLine()
       val newHover = currentDocument(path) match {
         case Some(textDocument) =>
-          val edit = buffer.tokenEditDistance(path, textDocument.text)
+          val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
           val printer = new SemanticdbTreePrinter(
             isHover = true,
             toHoverString(textDocument),
@@ -317,7 +317,7 @@ final class SyntheticsDecorationProvider(
   ): Unit = {
     if (clientConfig.isInlineDecorationProvider()) {
 
-      lazy val edit = buffer.tokenEditDistance(path, textDocument.text)
+      lazy val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
 
       val decorationPrinter = new SemanticdbTreePrinter(
         isHover = false,
@@ -444,8 +444,16 @@ final class SyntheticsDecorationProvider(
       tree <- trees.get(path).toIterable
       textDocumentInput = Input.VirtualFile(textDocument.uri, textDocument.text)
       treeInput = Input.VirtualFile(textDocument.uri, tree.pos.input.text)
-      semanticDbToTreeEdit = TokenEditDistance(textDocumentInput, treeInput)
-      treeToBufferEdit = buffer.tokenEditDistance(path, tree.pos.input.text)
+      semanticDbToTreeEdit = TokenEditDistance(
+        textDocumentInput,
+        treeInput,
+        trees
+      )
+      treeToBufferEdit = buffer.tokenEditDistance(
+        path,
+        tree.pos.input.text,
+        trees
+      )
       occ <- textDocument.occurrences
       range <- occ.range.toIterable
       treeRange <- semanticDbToTreeEdit.toRevisedStrict(range).toIterable

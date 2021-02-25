@@ -16,6 +16,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.{Symbol => MSymbol}
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scala._
@@ -38,7 +39,8 @@ final class ImplementationProvider(
     index: GlobalSymbolIndex,
     buildTargets: BuildTargets,
     buffer: Buffers,
-    definitionProvider: DefinitionProvider
+    definitionProvider: DefinitionProvider,
+    trees: Trees
 ) {
   import ImplementationProvider._
 
@@ -282,7 +284,8 @@ final class ImplementationProvider(
       range <- implOccurrence.range
       distance = buffer.tokenEditDistance(
         source,
-        parentDoc.text
+        parentDoc.text,
+        trees
       )
       revised <- distance.toRevised(range.toLSP)
     } yield new Location(source.toNIO.toUri().toString(), revised)
@@ -331,7 +334,7 @@ final class ImplementationProvider(
       locations = locationsByFile(file)
       implPath = AbsolutePath(file)
       implDocument <- findSemanticdb(implPath).toIterable
-      distance = buffer.tokenEditDistance(implPath, implDocument.text)
+      distance = buffer.tokenEditDistance(implPath, implDocument.text, trees)
       implLocation <- locations
       implReal = implLocation.toRealNames(symbolClass, translateKey = true)
       implSymbol <- findImplementationSymbol(

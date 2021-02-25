@@ -11,6 +11,7 @@ import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -31,7 +32,8 @@ final class ReferenceProvider(
     semanticdbs: Semanticdbs,
     buffers: Buffers,
     definition: DefinitionProvider,
-    remote: RemoteLanguageServer
+    remote: RemoteLanguageServer,
+    trees: Trees
 ) {
   private var referencedPackages: BloomFilter[CharSequence] =
     BloomFilters.create(10000)
@@ -221,7 +223,8 @@ final class ReferenceProvider(
             .iterator
         semanticdbDistance = buffers.tokenEditDistance(
           scalaPath,
-          semanticdb.text
+          semanticdb.text,
+          trees
         )
         uri = scalaPath.toURI.toString
         reference <-
