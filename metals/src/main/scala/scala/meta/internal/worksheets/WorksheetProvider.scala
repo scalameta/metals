@@ -48,6 +48,7 @@ import scala.meta.pc.CancelToken
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.error.SimpleResolutionError
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
@@ -230,6 +231,12 @@ class WorksheetProvider(
     }
     val onError: PartialFunction[Throwable, Option[EvaluatedWorksheet]] = {
       case InterruptException() =>
+        None
+      case e: SimpleResolutionError =>
+        scribe.error(e.getMessage())
+        languageClient.showMessage(
+          Messages.errorMessageParams(e.getMessage().takeWhile(_ != '\n'))
+        )
         None
       case e: Throwable =>
         // NOTE(olafur): we catch all exceptions because of https://github.com/scalameta/metals/issues/1456
