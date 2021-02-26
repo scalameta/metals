@@ -20,7 +20,6 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal)
     val filePath = AbsolutePath(Paths.get(uri))
     val validCode = removeMagicImports(code, filePath)
 
-    println(validCode)
     val unit = addCompilationUnit(
       code = validCode,
       filename = uri.toString(),
