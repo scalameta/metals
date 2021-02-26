@@ -18,6 +18,11 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  */
 object Messages {
 
+  def errorMessageParams(msg: String) = new MessageParams(
+    MessageType.Error,
+    msg
+  )
+
   val noRoot = new MessageParams(
     MessageType.Error,
     """|No rootUri or rootPath detected.

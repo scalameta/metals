@@ -70,4 +70,25 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
       } yield ()
     }
   }
+
+  test("bad-dep") {
+    val path = "hi.worksheet.sc"
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${path}
+           |import $$dep.`com.lihaoyi::scalatags:0.999.0`
+           |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      _ = assertNoDiff(
+        client.workspaceErrorShowMessages,
+        "Error downloading com.lihaoyi:scalatags_2.12:0.999.0"
+      )
+    } yield ()
+  }
 }
