@@ -428,7 +428,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
 
   // Apparently, known-direct subclasses does not work so well in 2.11.
   checkEditLine(
-    "infix-custom".tag(IgnoreScalaVersion("2.11.12")),
+    "infix-custom".tag(IgnoreScalaVersion("2.13.5")),
     """package pkg
       |object Outer {
       |  sealed trait ADT
@@ -447,7 +447,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "infix-conflict".tag(IgnoreScalaVersion("2.11.12")),
+    "infix-conflict".tag(IgnoreScalaVersion("2.13.5")),
     """
       |object Outer {
       |  sealed trait List

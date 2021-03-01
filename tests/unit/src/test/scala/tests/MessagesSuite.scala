@@ -7,8 +7,8 @@ class MessagesSuite extends BaseSuite {
 
   test("deprecated-single") {
     assertDiffEqual(
-      Messages.DeprecatedScalaVersion.message(Set("2.11.12")),
-      "You are using legacy Scala version 2.11.12, which might not be supported in future versions of Metals." +
+      Messages.DeprecatedScalaVersion.message(Set("2.13.5")),
+      "You are using legacy Scala version 2.13.5, which might not be supported in future versions of Metals." +
         s" Please upgrade to Scala version ${V.scala212}."
     )
   }
