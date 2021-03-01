@@ -79,7 +79,7 @@ class ScalaVersionsSuite extends BaseSuite {
 
   test("not-future-212") {
     assert(
-      !ScalaVersions.isFutureVersion("2.12.10")
+      !ScalaVersions.isFutureVersion("2.12.13")
     )
   }
 

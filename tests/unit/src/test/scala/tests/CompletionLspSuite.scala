@@ -105,7 +105,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   // FIXME(gabro): the tests don't pass with 2.12.10, although the plugins seem to work fine when
   // tested manually
-  if (BuildInfo.scalaVersion != "2.12.10") {
+  if (BuildInfo.scalaVersion != "2.12.13") {
     checkPlugin(
       "kind-projector",
       """

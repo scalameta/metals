@@ -76,5 +76,5 @@ class BaseSuite extends munit.FunSuite with Assertions {
 }
 
 object BaseSuite {
-  val minScalaVersionForJDK9OrHigher: String = "2.12.10"
+  val minScalaVersionForJDK9OrHigher: String = "2.12.13"
 }
