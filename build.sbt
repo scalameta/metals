@@ -231,7 +231,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.3"
-  val coursier = "2.0.11"
+  val coursier = "2.0.12"
   val ammonite = "2.3.8-36-1cce53f3"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
@@ -431,9 +431,9 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.3.3",
-      "com.outr" %% "scribe-file" % "3.3.3",
-      "com.outr" %% "scribe-slf4j" % "3.3.3", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.4.0",
+      "com.outr" %% "scribe-file" % "3.4.0",
+      "com.outr" %% "scribe-slf4j" % "3.4.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.1",
       // for JSON formatted doctor
