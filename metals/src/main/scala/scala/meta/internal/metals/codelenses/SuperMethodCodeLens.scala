@@ -15,6 +15,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.LensGoSuperCache
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
@@ -24,7 +25,8 @@ final class SuperMethodCodeLens(
     implementationProvider: ImplementationProvider,
     buffers: Buffers,
     userConfig: () => UserConfiguration,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    trees: Trees
 ) extends CodeLens {
 
   override def isEnabled: Boolean = userConfig().superMethodLensesEnabled
@@ -39,7 +41,7 @@ final class SuperMethodCodeLens(
       path,
       textDocument
     )
-    val distance = buffers.tokenEditDistance(path, textDocument.text)
+    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
 
     for {
       occurrence <- textDocument.occurrences

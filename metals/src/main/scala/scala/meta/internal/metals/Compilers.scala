@@ -16,6 +16,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -60,7 +61,8 @@ class Compilers(
     initializeParams: Option[InitializeParams],
     diagnostics: Diagnostics,
     isExcludedPackage: String => Boolean,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
+    trees: Trees
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -130,7 +132,8 @@ class Compilers(
                   workspace,
                   buffers,
                   isExcludedPackage,
-                  userConfig
+                  userConfig,
+                  trees
                 )
               ).getOrElse(EmptySymbolSearch),
               "default"
@@ -407,6 +410,7 @@ class Compilers(
             sources.map(AbsolutePath(_)),
             buffers,
             isExcludedPackage,
+            trees,
             workspaceFallback = Some(search)
           )
           newCompiler(scalac, scalaTarget, classpath, worksheetSearch)
@@ -429,7 +433,8 @@ class Compilers(
               sources,
               classpath,
               isExcludedPackage,
-              userConfig
+              userConfig,
+              trees
             ),
             path.toString()
           )

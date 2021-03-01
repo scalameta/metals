@@ -69,6 +69,9 @@ final class Trees(
     }
   }
 
+  def tokenized(input: inputs.Input.VirtualFile): Tokenized =
+    getDialect(AbsolutePath(input.path))(input).tokenize
+
   private def parse(
       path: AbsolutePath,
       dialect: Dialect
@@ -114,6 +117,6 @@ object Trees {
   /* Tokenizing works perfectly fine with 212 dialect as long as we are only
    * interested in having stable results. This is not the case for parsing.
    */
-  val defaultTokenizerDialect = scala.meta.dialects.Scala213
+  val defaultTokenizerDialect: Dialect = scala.meta.dialects.Scala213
 
 }

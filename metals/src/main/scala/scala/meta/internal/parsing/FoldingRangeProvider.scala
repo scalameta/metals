@@ -32,7 +32,7 @@ final class FoldingRangeProvider(
     } yield {
       val revised = Input.VirtualFile(filePath.toString(), code)
       val fromTree = Input.VirtualFile(filePath.toString(), tree.pos.input.text)
-      val distance = TokenEditDistance(fromTree, revised)
+      val distance = TokenEditDistance(fromTree, revised, trees)
       val extractor = new FoldingRangeExtractor(distance, foldOnlyLines.get())
       extractor.extract(tree)
     }

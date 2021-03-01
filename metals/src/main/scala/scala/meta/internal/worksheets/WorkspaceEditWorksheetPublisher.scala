@@ -4,6 +4,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.HoverMarkup
 import scala.meta.internal.worksheets.MdocEnrichments.truncatify
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher._
@@ -20,7 +21,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 
-class WorkspaceEditWorksheetPublisher(buffers: Buffers)
+class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
     extends WorksheetPublisher {
 
   private var hoverMessages = Map.empty[AbsolutePath, HoverMap]
@@ -39,7 +40,8 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
       messages <- hoverMessages.get(path)
       distance = buffers.tokenEditDistance(
         path,
-        messages.textSnapshot
+        messages.textSnapshot,
+        trees
       )
       snapshotPosition <-
         distance

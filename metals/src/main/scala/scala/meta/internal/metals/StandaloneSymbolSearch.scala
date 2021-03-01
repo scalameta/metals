@@ -9,6 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -23,6 +24,7 @@ class StandaloneSymbolSearch(
     sources: Seq[AbsolutePath],
     buffers: Buffers,
     isExcludedPackage: String => Boolean,
+    trees: Trees,
     workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
@@ -45,7 +47,8 @@ class StandaloneSymbolSearch(
       buffers,
       mtags,
       workspace,
-      semanticdbsFallback = None
+      semanticdbsFallback = None,
+      trees
     )
 
   def documentation(symbol: String): ju.Optional[SymbolDocumentation] =
@@ -97,7 +100,8 @@ object StandaloneSymbolSearch {
       sources: Seq[Path],
       classpath: Seq[Path],
       isExcludedPackage: String => Boolean,
-      userConfig: () => UserConfiguration
+      userConfig: () => UserConfiguration,
+      trees: Trees
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -112,7 +116,8 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
-      isExcludedPackage
+      isExcludedPackage,
+      trees
     )
   }
   def apply(
@@ -120,7 +125,8 @@ object StandaloneSymbolSearch {
       workspace: AbsolutePath,
       buffers: Buffers,
       isExcludedPackage: String => Boolean,
-      userConfig: () => UserConfiguration
+      userConfig: () => UserConfiguration,
+      trees: Trees
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
@@ -130,7 +136,8 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
-      isExcludedPackage
+      isExcludedPackage,
+      trees
     )
   }
 

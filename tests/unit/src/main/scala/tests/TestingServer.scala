@@ -41,6 +41,7 @@ import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
@@ -137,6 +138,16 @@ final class TestingServer(
     isReliableFileWatcher = Properties.isLinux
   )
   server.connectToLanguageClient(client)
+
+  private val trees = new Trees(
+    server.buildTargets,
+    buffers,
+    new ScalaVersionSelector(
+      () => UserConfiguration.default,
+      server.buildTargets
+    )
+  )
+
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
   def statusBarHistory: String = {
     // collect both published items in the client and pending items from the server.
@@ -342,7 +353,7 @@ final class TestingServer(
       source <- workspaceSources()
       input = source.toInputFromBuffers(buffers)
       identifier = source.toTextDocumentIdentifier
-      token <- Trees.defaultTokenizerDialect(input).tokenize.get
+      token <- trees.tokenized(input).get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server.definitionResult(params).asJava.get()
@@ -1213,7 +1224,7 @@ final class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    Trees.defaultTokenizerDialect(input).tokenize.get.foreach { token =>
+    trees.tokenized(input).get.foreach { token =>
       val params = token.toPositionParams(identifier)
       val definition = server
         .definitionOrReferences(params, definitionOnly = true)
