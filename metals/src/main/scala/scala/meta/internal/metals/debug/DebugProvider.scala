@@ -250,7 +250,7 @@ class DebugProvider(
       params: DebugDiscoveryParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
     val runTypeO = RunType.fromString(params.runType)
-    val path = AbsolutePath.fromAbsoluteUri(new URI(params.path))
+    val path = params.path.toAbsolutePath
     val buildTargetO = buildTargets.inverseSources(path)
 
     lazy val mainClasses = (bti: BuildTargetIdentifier) =>

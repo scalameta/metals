@@ -1,5 +1,7 @@
 package tests
 
+import java.util.concurrent.TimeUnit
+
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
@@ -9,15 +11,18 @@ import scala.meta.internal.metals.debug.WorkspaceErrorsException
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
 class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
+  private val mainPath = "a/src/main/scala/a/Main.scala"
+  private val fooPath = "a/src/main/scala/a/Foo.scala"
+  private val barPath = "a/src/main/scala/a/Bar.scala"
 
-  test("run") {
+  test("run".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/a/src/main/scala/a/Main.scala
+           |/${mainPath}
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
@@ -27,10 +32,11 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          s"file://${workspace}/a/src/main/scala/a/Main.scala",
+          s"file:///${server.toPath(mainPath)}",
           "run"
         ).toJson
       )
@@ -42,14 +48,14 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     } yield assertNoDiff(output, "oranges are nice")
   }
 
-  test("run-multiple") {
+  test("run-multiple".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/a/src/main/scala/a/Main.scala
+           |/${mainPath}
            |package a
            |object Main extends App {
            |    print("what about grapes?")
@@ -63,10 +69,11 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |""".stripMargin
       )
       // TestingClient handles the choice here to pick a.Main
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          s"file://${workspace}/a/src/main/scala/a/Main.scala",
+          s"file:///${server.toPath(mainPath)}",
           "run"
         ).toJson
       )
@@ -78,14 +85,14 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     } yield assertNoDiff(output, "what about grapes?")
   }
 
-  test("no-main") {
+  test("no-main".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/a/src/main/scala/a/Main.scala
+           |/${mainPath}
            |package a
            |object Stuff {
            |  val stuff = "you guessed it, stuff"
@@ -93,11 +100,11 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen(mainPath)
       result <- server
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
-            s"file://${workspace}/a/src/main/scala/a/Main.scala",
+            s"file:///${server.toPath(mainPath)}",
             "run"
           ).toJson
         )
@@ -110,14 +117,14 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     )
   }
 
-  test("workspace-error") {
+  test("workspace-error".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/a/src/main/scala/a/Main.scala
+           |/${mainPath}
            |package a
            |object Stuff {
            |  val stuff = "you guessed it, stuff... but with no ending!
@@ -125,11 +132,11 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen(mainPath)
       result <- server
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
-            s"file://${workspace}/a/src/main/scala/a/Main.scala",
+            s"file:///${server.toPath(mainPath)}",
             "run"
           ).toJson
         )
@@ -142,7 +149,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     )
   }
 
-  test("testFile") {
+  test("testFile".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -151,18 +158,19 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
            |  }
            |}
-           |/a/src/main/scala/a/Foo.scala
+           |/${fooPath}
            |package a
            |class Foo extends org.scalatest.FunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
-      _ <- server.didSave("a/src/main/scala/a/Foo.scala")(identity)
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)(identity)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          s"file://${workspace}/a/src/main/scala/a/Foo.scala",
+          s"file:///${server.toPath(fooPath)}",
           "testFile"
         ).toJson
       )
@@ -174,7 +182,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     } yield assert(output.contains("All tests in a.Foo passed"))
   }
 
-  test("testTarget") {
+  test("testTarget".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -183,23 +191,24 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
            |  }
            |}
-           |/a/src/main/scala/a/Foo.scala
+           |/${fooPath}
            |package a
            |class Foo extends org.scalatest.FunSuite {
            |  test("foo") {}
            |}
-           |/a/src/main/scala/a/Bar.scala
+           |/${barPath}
            |package a
            |class Bar extends org.scalatest.FunSuite {
            |  test("bart") {}
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Bar.scala")
-      _ <- server.didSave("a/src/main/scala/a/Foo.scala")(identity)
+      _ <- server.didOpen(barPath)
+      _ <- server.didSave(barPath)(identity)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          s"file://${workspace}/a/src/main/scala/a/Bar.scala",
+          s"file:///${server.toPath(barPath)}",
           "testTarget"
         ).toJson
       )
@@ -211,14 +220,15 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     } yield assert(output.contains("All tests in a.Foo passed"))
   }
 
-  test("no-tests") {
+  test("no-tests".tag(FlakyWindows)) {
+    val notATestPath = "a/src/main/scala/a/NotATest.scala"
     for {
       _ <- server.initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/a/src/main/scala/a/NotATest.scala
+           |/${notATestPath}
            |package a
            |class NotATest {
            |    print("I'm not a test!")
@@ -226,11 +236,11 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/NotATest.scala")
+      _ <- server.didOpen(notATestPath)
       result <- server
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
-            s"file://${workspace}/a/src/main/scala/a/NotATest.scala",
+            s"file:///${server.toPath(notATestPath)}",
             "testTarget"
           ).toJson
         )

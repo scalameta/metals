@@ -473,6 +473,8 @@ final class TestingServer(
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
+  def waitFor(sec: Long): Future[Unit] = Future { Thread.sleep(sec) }
+
   def startDebugging(
       target: String,
       kind: String,
