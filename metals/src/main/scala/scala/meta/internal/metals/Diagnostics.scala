@@ -11,6 +11,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.parsing.TokenEditDistance
+import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
@@ -39,7 +40,8 @@ final class Diagnostics(
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
     config: () => UserConfiguration,
-    workspace: Option[AbsolutePath]
+    workspace: Option[AbsolutePath],
+    trees: Trees
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -177,6 +179,7 @@ final class Diagnostics(
     val edit = TokenEditDistance(
       snapshot,
       current,
+      trees,
       doNothingWhenUnchanged = false
     )
     val uri = path.toURI.toString

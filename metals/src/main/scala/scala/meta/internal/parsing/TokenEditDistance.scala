@@ -323,6 +323,7 @@ object TokenEditDistance {
   def apply(
       originalInput: Input.VirtualFile,
       revisedInput: Input.VirtualFile,
+      trees: Trees,
       doNothingWhenUnchanged: Boolean = true
   ): TokenEditDistance = {
     val isScala =
@@ -336,7 +337,9 @@ object TokenEditDistance {
       noMatch
     } else {
       val result = for {
-        revised <- Trees.defaultTokenizerDialect(revisedInput).tokenize.toOption
+        revised <- trees
+          .tokenized(revisedInput)
+          .toOption
         original <- {
           if (originalInput == revisedInput) Some(revised)
           else Trees.defaultTokenizerDialect(originalInput).tokenize.toOption

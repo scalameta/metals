@@ -139,12 +139,13 @@ final class RenameProvider(
         }
 
         val allChanges = for {
-          (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
+          (path, locs) <- allReferences.toList.distinct
+            .groupBy(_.getUri().toAbsolutePath)
         } yield {
           val textEdits = for (loc <- locs) yield {
             textEdit(isOccurrence, loc, newName)
           }
-          Seq(uri.toAbsolutePath -> textEdits.toList)
+          Seq(path -> textEdits.toList)
         }
         val fileChanges = allChanges.flatten.toMap
         val shouldRenameInBackground =

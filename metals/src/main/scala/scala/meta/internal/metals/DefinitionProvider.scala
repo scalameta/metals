@@ -14,6 +14,7 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.parsing.TokenEditDistance
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -48,7 +49,8 @@ final class DefinitionProvider(
     semanticdbs: Semanticdbs,
     warnings: Warnings,
     compilers: () => Compilers,
-    remote: RemoteLanguageServer
+    remote: RemoteLanguageServer,
+    trees: Trees
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -56,7 +58,8 @@ final class DefinitionProvider(
     buffers,
     mtags,
     workspace,
-    Some(semanticdbs)
+    Some(semanticdbs),
+    trees
   )
 
   def definition(
@@ -135,7 +138,7 @@ final class DefinitionProvider(
       snapshot: TextDocument
   ): ResolvedSymbolOccurrence = {
     // Convert dirty buffer position to snapshot position in "source"
-    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text)
+    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
       dirtyPosition.getCharacter
@@ -225,7 +228,8 @@ class DestinationProvider(
     buffers: Buffers,
     mtags: Mtags,
     workspace: AbsolutePath,
-    semanticdbsFallback: Option[Semanticdbs]
+    semanticdbsFallback: Option[Semanticdbs],
+    trees: Trees
 ) {
 
   private def bestTextDocument(
@@ -256,7 +260,7 @@ class DestinationProvider(
       destinationDoc = bestTextDocument(symbolDefinition)
       destinationPath = symbolDefinition.path.toFileOnDisk(workspace)
       destinationDistance =
-        buffers.tokenEditDistance(destinationPath, destinationDoc.text)
+        buffers.tokenEditDistance(destinationPath, destinationDoc.text, trees)
     } yield {
       DefinitionDestination(
         destinationDoc,
