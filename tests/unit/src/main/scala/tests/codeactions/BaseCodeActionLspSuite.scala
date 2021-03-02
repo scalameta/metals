@@ -3,6 +3,7 @@ package tests.codeactions
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.Location
 import munit.TestOptions
@@ -10,6 +11,8 @@ import tests.BaseLspSuite
 
 abstract class BaseCodeActionLspSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
+
+  protected val scalaVersion: String = V.scala212
 
   def checkNoAction(
       name: TestOptions,
@@ -29,7 +32,8 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       kind: List[String] = Nil,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil,
-      configuration: => Option[String] = None
+      configuration: => Option[String] = None,
+      scalaVersion: String = scalaVersion
   )(implicit loc: Location): Unit = {
     val fileName: String = "A.scala"
     val scalacOptionsJson =
@@ -40,7 +44,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       cleanWorkspace()
       for {
         _ <- server.initialize(s"""/metals.json
-                                  |{"a":{$scalacOptionsJson}}
+                                  |{"a":{$scalacOptionsJson, "scalaVersion" : "$scalaVersion"}}
                                   |$scalafixConf
                                   |/$path
                                   |$fileContent""".stripMargin)
