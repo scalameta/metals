@@ -196,7 +196,7 @@ lazy val V = new {
   val mdoc = "2.2.18"
   val scalafmt = "2.7.4"
   val munit = "0.7.22"
-  val scalafix = "0.9.25"
+  val scalafix = "0.9.26"
   val lsp4jV = "0.10.0"
   val sbtJdiTools = "1.1.1"
 
