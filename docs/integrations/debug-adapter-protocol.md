@@ -15,24 +15,24 @@ capabilities exposed by the client.
 ### Via code lenses
 
 The editor needs to handle two commands in its language client extension:
-[`metals-run-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L56)
+[`metals-run-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala)
 and
-[`metals-debug-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L78).
-Those commands should get executed automatically by the lsp client once the user
+[`metals-debug-session-start`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala).
+These commands should get executed automatically by the LSP client once the user
 activates a code lens. The difference between them is that the former ignores
 all breakpoints being set while the latter respects them. The procedure of
 starting the run/debug session is as follows:
 
-Then we can request the debug adapter uri from the metals server using the
-[`debug-adapter-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala#L108)
+Then we can request the debug adapter URI from the metals server using the
+[`debug-adapter-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala)
 command.
 
-### Via simple commands
+### Via explicit main or test commands
 
 Apart from using code lenses, users can start a debug session by executing the
-`debug-adapter-start` command with the following params:
+`debug-adapter-start` command with any of following params:
 
-- for main class
+- for an explicit main class
 
 ```json
 {
@@ -45,7 +45,7 @@ Apart from using code lenses, users can start a debug session by executing the
 }
 ```
 
-- for test class
+- for an explicit test class
 
 ```json
 {
@@ -55,7 +55,7 @@ Apart from using code lenses, users can start a debug session by executing the
 ```
 
 `buildTarget` is an optional parameter, which might be useful if there are
-identically named classes in different modules. A uri will be returned that can
+identically named classes in different modules. A URI will be returned that can
 be used by the DAP client.
 
 `envFile` is an optional parameter, which allows you to specify a path to a
@@ -63,7 +63,7 @@ be used by the DAP client.
 absolute or relative to your project workspace. The parser supports single line
 as well as multi-line quoted values (without value substitution). Any variables
 defined in the `env` object take precedence over those from the `.env` file.
-Here's an example of a supported .env file:
+Here's an example of a supported `.env` file:
 
 ```bash
 # single line values
@@ -88,10 +88,30 @@ a.b.key8=value 8   # will be ignored
 a-b-key9=value 9   # will be ignored
 ```
 
+- for Metals discovery
+
+This option works a bit different than the other two param shapes as you don't
+specify a test or main class, but rather a `runType` of either `"run"`,
+`"testFile"`, or `"testTarget"` and a file URI representing your current location.
+`"run"` will automatically find any main method in the build target that belongs
+to the URI that was sent in. If multiple are found, you will be given the choice
+of which to run. The `"testFile"` option will check for any test classes in your
+current file and run them. Similarly, `"testTarget"` will run all test classes
+found in the build target that the URI belongs to. The `"args"`, `"jvmOptions"`,
+`"env"`, and `"envFile"` are all valid keys that can be sent as well with the
+same format as above.
+
+```json
+{
+  "path": "file:///path/to/my/file.scala"
+  "runType": "testTarget"
+}
+```
+
 ### Wiring it all together
 
 No matter which method you use, you still need to connect the debug adapter
-extension specific to you editor using the aforementioned uri and let it drive
+extension specific to you editor using the aforementioned URI and let it drive
 the run/debug session. For reference, take a look at the
 [vscode implementation](https://github.com/scalameta/metals-vscode/blob/master/src/scalaDebugger.ts)
 and how it is

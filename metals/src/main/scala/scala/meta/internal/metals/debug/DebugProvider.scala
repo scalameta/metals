@@ -286,9 +286,8 @@ class DebugProvider(
           } { textDocument =>
             Future {
               for {
-                occurence <- textDocument.occurrences
-                if occurence.role.isDefinition
-                symbol = occurence.symbol
+                symbolInfo <- textDocument.symbols
+                symbol = symbolInfo.symbol
                 testClass <- testClasses(target).get(symbol)
               } yield testClass
             }
