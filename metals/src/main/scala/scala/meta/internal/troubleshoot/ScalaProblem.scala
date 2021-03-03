@@ -15,7 +15,7 @@ sealed abstract class ScalaProblem {
    * Comprehensive message to be presented to the user.
    */
   def message: String
-  protected val hint = "run 'Build import' to enable code navigation."
+  protected val hint = "run 'Import build' to enable code navigation."
 }
 
 case class UnsupportedScalaVersion(version: String) extends ScalaProblem {
