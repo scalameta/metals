@@ -11,9 +11,11 @@
 # Licensed under the Apache License, Version 2.0
 
 
-DEFAULT_MILL_VERSION=0.5.0
+DEFAULT_MILL_VERSION=0.9.5
 
 set -e
+
+MILL_REPO_URL="https://github.com/com-lihaoyi/mill"
 
 # Explicit commandline argument takes precedence over all other methods
 if [ "x$1" = "x--mill-version" ] ; then
@@ -24,7 +26,7 @@ if [ "x$1" = "x--mill-version" ] ; then
   else
     echo "You specified --mill-version without a version."
     echo "Please provide a version that matches one provided on"
-    echo "https://github.com/lihaoyi/mill/releases"
+    echo "${MILL_REPO_URL}/releases"
     false
   fi
 fi
@@ -61,7 +63,7 @@ if [ "x${MILL_VERSION}" = "x" ] ; then
   if [ "x${MILL_VERSION}" = "x" ] ; then
     # we don't know a current latest version
     echo "Retrieving latest mill version ..."
-    LANG=C curl -s -i -f -I https://github.com/lihaoyi/mill/releases/latest 2> /dev/null  | grep --ignore-case Location: | sed s'/^.*tag\///' | tr -d '\r\n' > "${MILL_DOWNLOAD_PATH}/.latest" 
+    LANG=C curl -s -i -f -I ${MILL_REPO_URL}/releases/latest 2> /dev/null  | grep --ignore-case Location: | sed s'/^.*tag\///' | tr -d '\r\n' > "${MILL_DOWNLOAD_PATH}/.latest" 
     MILL_VERSION="$(head -n 1 ${MILL_DOWNLOAD_PATH}/.latest 2> /dev/null)"
   fi
 
@@ -98,8 +100,8 @@ if [ ! -s "${MILL}" ] ; then
 
     DOWNLOAD_FILE=$(mktemp mill.XXXX)
     # TODO: handle command not found
-    echo "Downloading mill ${MILL_VERSION} from https://github.com/lihaoyi/mill/releases ..."
-    curl -L -o "${DOWNLOAD_FILE}" "https://github.com/lihaoyi/mill/releases/download/${MILL_VERSION%%-*}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
+    echo "Downloading mill ${MILL_VERSION} from ${MILL_REPO_URL}/releases ..."
+    curl -L -o "${DOWNLOAD_FILE}" "${MILL_REPO_URL}/releases/download/${MILL_VERSION%%-*}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
     chmod +x "${DOWNLOAD_FILE}"
     mkdir -p "${MILL_DOWNLOAD_PATH}"
     mv "${DOWNLOAD_FILE}" "${MILL}"
@@ -113,5 +115,6 @@ unset MILL_DOWNLOAD_PATH
 unset MILL_OLD_DOWNLOAD_PATH
 unset OLD_MILL
 unset MILL_VERSION
+unset MILL_REPO_URL
 
 exec $MILL "$@"
