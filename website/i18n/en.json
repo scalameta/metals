@@ -17,15 +17,9 @@
       "build-tools/mill": {
         "title": "Mill"
       },
-      "build-tools/new-build-tool": {
-        "title": "Integrating a new build tool"
-      },
       "build-tools/overview": {
         "title": "Build Tools Overview",
         "sidebar_label": "Overview"
-      },
-      "build-tools/proxy": {
-        "title": "Proxy and mirrors"
       },
       "build-tools/sbt": {
         "title": "sbt"
@@ -39,22 +33,11 @@
       "contributors/releasing": {
         "title": "Making a release"
       },
-      "contributors/remote-language-server": {
-        "title": "Remote Language Servers"
-      },
       "contributors/tests": {
         "title": "Tests overview"
       },
       "contributors/updating-website": {
         "title": "Contributing to the website"
-      },
-      "editors/debug-adapter-protocol": {
-        "title": "Debug Adapter Protocol",
-        "sidebar_label": "Debug Adapter Protocol"
-      },
-      "editors/decoration-protocol": {
-        "title": "Decoration Protocol v0.2.0",
-        "sidebar_label": "Decoration Protocol"
       },
       "editors/eclipse": {
         "title": "Eclipse"
@@ -62,8 +45,8 @@
       "editors/emacs": {
         "title": "Emacs"
       },
-      "editors/new-editor": {
-        "title": "Integrating a new editor"
+      "editors/online-ides": {
+        "title": "Online IDEs"
       },
       "editors/overview": {
         "title": "Text Editors",
@@ -71,9 +54,6 @@
       },
       "editors/sublime": {
         "title": "Sublime Text"
-      },
-      "editors/tree-view-protocol": {
-        "title": "Tree View Protocol"
       },
       "editors/vim": {
         "title": "Vim"
@@ -99,17 +79,6 @@
         "title": "Remote Language Servers"
       },
       "integrations/tree-view-protocol": {
-        "title": "Tree View Protocol"
-      },
-      "lsp-extensions/debug-adapter-protocol": {
-        "title": "Debug Adapter Protocol",
-        "sidebar_label": "Debug Adapter Protocol"
-      },
-      "lsp-extensions/decoration-protocol": {
-        "title": "Decoration Protocol v0.2.0",
-        "sidebar_label": "Decoration Protocol"
-      },
-      "lsp-extensions/tree-view-protocol": {
         "title": "Tree View Protocol"
       },
       "troubleshooting/faq": {

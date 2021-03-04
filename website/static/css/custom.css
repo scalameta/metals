@@ -2,6 +2,7 @@
   .dropdown {
     position: relative;
     display: inline-block;
+    color: #087E8B;
   }
   
   /* Dropdown Content (Hidden by Default) */
@@ -16,7 +17,7 @@
   
   /* Links inside the dropdown */
   .dropdown-content a {
-    color: black;
+    color: #087E8B;
     padding: 10px 10px;
     text-decoration: none;
     display: block;
