@@ -387,6 +387,15 @@ object ServerCommands {
     "Stop Ammonite build server"
   )
 
+  val RunRename = new Command(
+    "run-rename",
+    "Save file and then send rename request to the client",
+    """|Save file and then send rename request to the client.
+       |
+       |""".stripMargin,
+    "[location], where the location is a lsp location object."
+  )
+
   def all: List[Command] =
     List(
       AnalyzeStacktrace,
@@ -411,7 +420,8 @@ object ServerCommands {
       StartAmmoniteBuildServer,
       StartDebugAdapter,
       StopAmmoniteBuildServer,
-      SuperMethodHierarchy
+      SuperMethodHierarchy,
+      RunRename
     )
 }
 

@@ -639,7 +639,8 @@ class MetalsLanguageServer(
           buffers,
           buildTargets,
           scalafixProvider,
-          trees
+          trees,
+          semanticdbs
         )
         doctor = new Doctor(
           workspace,
@@ -1571,6 +1572,18 @@ class MetalsLanguageServer(
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
+              params.getArguments()
+            )
+          )
+        }.asJavaObject
+
+      case ServerCommands.RunRename() =>
+        Future {
+          // arguments are not checked but are of format:
+          // singletonList(location: Location, otherWindow: Boolean)
+          languageClient.metalsExecuteClientCommand(
+            new ExecuteCommandParams(
+              ClientCommands.SaveAndRename.id,
               params.getArguments()
             )
           )
