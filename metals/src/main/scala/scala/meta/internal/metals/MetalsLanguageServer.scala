@@ -618,7 +618,9 @@ class MetalsLanguageServer(
           statusBar,
           classFinder,
           definitionIndex,
-          stacktraceAnalyzer
+          stacktraceAnalyzer,
+          clientConfig.icons(),
+          semanticdbs
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -1622,6 +1624,8 @@ class MetalsLanguageServer(
           case Seq(attachRemoteParamsParser.Jsonized(params))
               if params.hostName != null =>
             debugProvider.resolveAttachRemoteParams(params)
+          case Seq(unresolvedParamsParser.Jsonized(params)) =>
+            debugProvider.debugDiscovery(params)
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
