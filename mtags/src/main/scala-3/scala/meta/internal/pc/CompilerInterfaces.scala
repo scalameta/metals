@@ -18,6 +18,7 @@ import dotty.tools.dotc.interfaces.Diagnostic
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.ScriptSourceFile
 import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.CompilationUnit
 import dotty.tools.io.VirtualFile
 import org.eclipse.{lsp4j => l}
 
@@ -36,6 +37,8 @@ object CompilerInterfaces {
     // we need to have a separate reporter otherwise errors are not cleared
     val parsingReporter = new StoreReporter(null)
     val freshContext = driver.currentCtx.fresh.setReporter(parsingReporter)
+    val compilationUnit = CompilationUnit(sourceFile)(using freshContext)
+    freshContext.setCompilationUnit(compilationUnit)
     val parser = new Parser(sourceFile)(using freshContext)
     parser.parse()
     val diags = parsingReporter.allErrors
