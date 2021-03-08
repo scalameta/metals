@@ -20,10 +20,12 @@ import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
@@ -33,15 +35,21 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.config.RunType
+import scala.meta.internal.metals.config.RunType._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.DebugSessionParams
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
@@ -57,7 +65,9 @@ class DebugProvider(
     statusBar: StatusBar,
     classFinder: ClassFinder,
     index: OnDemandSymbolIndex,
-    stacktraceAnalyzer: StacktraceAnalyzer
+    stacktraceAnalyzer: StacktraceAnalyzer,
+    icons: Icons,
+    semanticdbs: Semanticdbs
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -130,6 +140,179 @@ class DebugProvider(
     }
   }
 
+  /**
+   * Given a BuildTargetIdentifier either get the displayName of that build
+   * target or default to the full URI to display to the user.
+   */
+  private def displayName(buildTargetIdentifier: BuildTargetIdentifier) =
+    buildTargets
+      .info(buildTargetIdentifier)
+      .map(_.getDisplayName)
+      .getOrElse(buildTargetIdentifier.getUri)
+
+  private def requestMain(
+      mainClasses: List[ScalaMainClass]
+  )(implicit ec: ExecutionContext): Future[ScalaMainClass] = {
+    languageClient
+      .showMessageRequest(
+        Messages.MainClass.params(mainClasses)
+      )
+      .asScala
+      .map { choice =>
+        mainClasses.find { clazz =>
+          new MessageActionItem(clazz.getClassName()) == choice
+        }
+      }
+      .collect { case Some(main) => main }
+  }
+
+  private def createMainParams(
+      main: ScalaMainClass,
+      target: BuildTargetIdentifier,
+      args: Option[ju.List[String]],
+      jvmOptions: Option[ju.List[String]],
+      env: List[String],
+      envFile: Option[String]
+  )(implicit ec: ExecutionContext) = {
+    main.setArguments(args.getOrElse(ju.Collections.emptyList()))
+    main.setJvmOptions(
+      jvmOptions.getOrElse(ju.Collections.emptyList())
+    )
+
+    val envFromFile: Future[List[String]] =
+      envFile
+        .map { file =>
+          val path = AbsolutePath(file)(workspace)
+          DotEnvFileParser
+            .parse(path)
+            .map(_.map { case (key, value) => s"$key=$value" }.toList)
+        }
+        .getOrElse(Future.successful(List.empty))
+
+    envFromFile.map { envFromFile =>
+      main.setEnvironmentVariables((envFromFile ::: env).asJava)
+      new b.DebugSessionParams(
+        singletonList(target),
+        b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        main.toJson
+      )
+    }
+  }
+
+  private def createEnvList(env: ju.Map[String, String]) = {
+    env.asScala.map { case (key, value) =>
+      s"$key=$value"
+    }.toList
+  }
+
+  private def verifyMain(
+      buildTarget: BuildTargetIdentifier,
+      classes: List[ScalaMainClass],
+      params: DebugDiscoveryParams
+  )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
+    val env =
+      if (params.env != null) createEnvList(params.env) else Nil
+
+    classes match {
+      case Nil =>
+        Future.failed(
+          BuildTargetContainsNoMainException(displayName(buildTarget))
+        )
+      case main :: Nil =>
+        createMainParams(
+          main,
+          buildTarget,
+          Option(params.args),
+          Option(params.jvmOptions),
+          env,
+          Option(params.envFile)
+        )
+      case multiple =>
+        requestMain(multiple).flatMap { main =>
+          createMainParams(
+            main,
+            buildTarget,
+            Option(params.args),
+            Option(params.jvmOptions),
+            env,
+            Option(params.envFile)
+          )
+        }
+    }
+  }
+
+  /**
+   * Given fully unresolved params this figures out the runType that was passed
+   * in and then discovers either the main methods for the build target the
+   * path belongs to or finds the tests for the current file or build target
+   */
+  def debugDiscovery(
+      params: DebugDiscoveryParams
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val runTypeO = RunType.fromString(params.runType)
+    val path = params.path.toAbsolutePath
+    val buildTargetO = buildTargets.inverseSources(path)
+
+    lazy val mainClasses = (bti: BuildTargetIdentifier) =>
+      buildTargetClasses.classesOf(bti).mainClasses.values.toList
+
+    lazy val testClasses = (bti: BuildTargetIdentifier) =>
+      buildTargetClasses.classesOf(bti).testClasses
+
+    lazy val textDocumentO =
+      semanticdbs.textDocument(path).documentIncludingStale
+
+    val result: Future[DebugSessionParams] = (runTypeO, buildTargetO) match {
+      case _ if buildClient.buildHasErrors =>
+        Future.failed(WorkspaceErrorsException)
+      case (_, None) =>
+        Future.failed(BuildTargetNotFoundForPathException(path))
+      case (None, _) =>
+        Future.failed(RunType.UnknownRunTypeException(params.runType))
+      case (Some(Run), Some(target)) =>
+        verifyMain(target, mainClasses(target), params)
+      case (Some(TestFile), Some(target)) if testClasses(target).isEmpty =>
+        Future.failed(
+          NoTestsFoundException("file", path.toString())
+        )
+      case (Some(TestTarget), Some(target)) if testClasses(target).isEmpty =>
+        Future.failed(
+          NoTestsFoundException("build target", displayName(target))
+        )
+      case (Some(TestFile), Some(target)) =>
+        textDocumentO
+          .fold[Future[Seq[BuildTargetClasses.ClassName]]] {
+            Future.failed(new Exception("Semanticdb not found for path."))
+          } { textDocument =>
+            Future {
+              for {
+                symbolInfo <- textDocument.symbols
+                symbol = symbolInfo.symbol
+                testClass <- testClasses(target).get(symbol)
+              } yield testClass
+            }
+          }
+          .map { tests =>
+            new b.DebugSessionParams(
+              singletonList(target),
+              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+              tests.asJava.toJson
+            )
+          }
+      case (Some(TestTarget), Some(target)) =>
+        Future {
+          new b.DebugSessionParams(
+            singletonList(target),
+            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+            testClasses(target).values.toList.asJava.toJson
+          )
+        }
+    }
+
+    result.failed.foreach(reportErrors)
+    result
+  }
+
   def resolveMainClassParams(
       params: DebugUnresolvedMainClassParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
@@ -151,35 +334,16 @@ class DebugProvider(
             "main"
           )
         }
-        clazz.setArguments(Option(params.args).getOrElse(List().asJava))
-        clazz.setJvmOptions(
-          Option(params.jvmOptions).getOrElse(List().asJava)
+
+        val env = if (params.env != null) createEnvList(params.env) else Nil
+        createMainParams(
+          clazz,
+          target.getId(),
+          Option(params.args),
+          Option(params.jvmOptions),
+          env,
+          Option(params.envFile)
         )
-
-        val env: List[String] =
-          if (params.env != null)
-            params.env.asScala.map { case (key, value) =>
-              s"$key=$value"
-            }.toList
-          else
-            Nil
-
-        val envFromFile: Future[List[String]] =
-          if (params.envFile != null) {
-            val path = AbsolutePath(params.envFile)(workspace)
-            DotEnvFileParser
-              .parse(path)
-              .map(_.map { case (key, value) => s"$key=$value" }.toList)
-          } else Future.successful(List.empty)
-
-        envFromFile.map { envFromFile =>
-          clazz.setEnvironmentVariables((envFromFile ::: env).asJava)
-          new b.DebugSessionParams(
-            singletonList(target.getId()),
-            b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-            clazz.toJson
-          )
-        }
 
       //should not really happen due to
       //`findMainClassAndItsBuildTarget` succeeding with non-empty list
@@ -243,7 +407,7 @@ class DebugProvider(
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case _ if buildClient.buildHasErrors =>
-      statusBar.addMessage(Messages.DebugErrorsPresent)
+      statusBar.addMessage(Messages.DebugErrorsPresent(icons))
       languageClient.metalsExecuteClientCommand(
         new ExecuteCommandParams(
           ClientCommands.FocusDiagnostics.id,
@@ -264,7 +428,22 @@ class DebugProvider(
         Messages.DebugClassNotFound
           .invalidTarget(target)
       )
-
+    case e: BuildTargetNotFoundForPathException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
+      )
+    case e: BuildTargetContainsNoMainException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
+      )
+    case e: NoTestsFoundException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
+      )
+    case e: RunType.UnknownRunTypeException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
+      )
   }
 
   private def parseSessionName(
@@ -368,6 +547,8 @@ object DebugParametersJsonParsers {
     new JsonParser.Of[DebugUnresolvedTestClassParams]
   lazy val attachRemoteParamsParser =
     new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
+  lazy val unresolvedParamsParser =
+    new JsonParser.Of[DebugDiscoveryParams]
 }
 
 case object WorkspaceErrorsException

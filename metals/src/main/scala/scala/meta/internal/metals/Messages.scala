@@ -8,6 +8,7 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -144,6 +145,22 @@ object Messages {
           dontShowAgain
         ).asJava
       )
+      params
+    }
+  }
+
+  object MainClass {
+    val message = "Multiple main classes found. Which would you like to run?"
+    def params(
+        mainClasses: List[ScalaMainClass]
+    ): ShowMessageRequestParams = {
+      val messageActionItems =
+        mainClasses
+          .map(mc => new MessageActionItem(mc.getClassName()))
+      val params = new ShowMessageRequestParams()
+      params.setMessage(message)
+      params.setType(MessageType.Info)
+      params.setActions(messageActionItems.asJava)
       params
     }
   }
@@ -455,13 +472,15 @@ object Messages {
     }
   }
 
-  val DebugErrorsPresent: MetalsStatusParams = new MetalsStatusParams(
-    "$(error) Errors in workspace",
-    tooltip = "Cannot run or debug due to existing errors in the workspace. " +
-      "Please fix the errors and retry.",
-    command = ClientCommands.FocusDiagnostics.id,
-    show = true
-  )
+  def DebugErrorsPresent(icons: Icons): MetalsStatusParams =
+    new MetalsStatusParams(
+      s"${icons.error} Errors in workspace",
+      tooltip =
+        "Cannot run or debug due to existing errors in the workspace. " +
+          "Please fix the errors and retry.",
+      command = ClientCommands.FocusDiagnostics.id,
+      show = true
+    )
 
   object DebugClassNotFound {
 
@@ -485,6 +504,7 @@ object Messages {
         s"Class '$cls' not found."
       )
     }
+
   }
 
   object MissingScalafmtConf {

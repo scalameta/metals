@@ -265,6 +265,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
             .getOrElse(new MessageActionItem("fail"))
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           null
+        } else if (params.getMessage() == MainClass.message) {
+          params.getActions.asScala.find(_.getTitle == "a.Main").get
         } else {
           throw new IllegalArgumentException(params.toString)
         }

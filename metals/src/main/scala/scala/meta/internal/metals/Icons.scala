@@ -11,6 +11,7 @@ abstract class Icons {
   def findsuper: String
   def folder: String
   def github: String
+  def error: String
   final def all: List[String] =
     List(
       rocket,
@@ -20,7 +21,8 @@ abstract class Icons {
       check,
       findsuper,
       folder,
-      github
+      github,
+      error
     )
 }
 object Icons {
@@ -48,6 +50,7 @@ object Icons {
     override def findsuper: String = "⏫ "
     override def folder: String = "📁 "
     override def github: String = ""
+    override def error: String = "❌"
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
   }
@@ -60,6 +63,7 @@ object Icons {
     override def findsuper: String = ""
     override def folder: String = ""
     override def github: String = ""
+    override def error: String = ""
     override def rightArrow: String = "=>"
     override def ellipsis: String = "..."
   }
@@ -74,6 +78,7 @@ object Icons {
     override def findsuper: String = "$(arrow-up)"
     override def folder: String = "$(folder)"
     override def github: String = "$(github) "
+    override def error: String = "$(error)"
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
   }
@@ -87,6 +92,7 @@ object Icons {
     override def findsuper: String = span("up-arrow")
     override def folder: String = span("file-directory")
     override def github: String = span("github")
+    override def error: String = span("error")
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
   }

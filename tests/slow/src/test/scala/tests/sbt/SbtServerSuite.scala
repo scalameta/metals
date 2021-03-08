@@ -107,7 +107,7 @@ class SbtServerSuite
       )
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
       // A bit obnoxious, but this taks a long time to connect in CI
-      _ = Thread.sleep(TimeUnit.SECONDS.toMillis(20))
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(20))
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
            |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
