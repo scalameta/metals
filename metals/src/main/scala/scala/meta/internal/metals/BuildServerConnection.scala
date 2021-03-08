@@ -231,9 +231,10 @@ class BuildServerConnection private (
           synchronized {
             reconnect().flatMap(conn => action(conn.server).asScala)
           }
-        case _ =>
+        case t
+            if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
           val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
-          Future.failed(MetalsBspException(name))
+          Future.failed(MetalsBspException(name, t.getMessage))
       }
     CancelTokens.future(_ => actionFuture)
   }
