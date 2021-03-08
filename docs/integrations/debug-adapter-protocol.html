@@ -69,21 +69,21 @@ communicate with JVM to run and debug code.</p>
 capabilities exposed by the client.</p>
 <h3><a class="anchor" aria-hidden="true" id="via-code-lenses"></a><a href="#via-code-lenses" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via code lenses</h3>
 <p>The editor needs to handle two commands in its language client extension:
-<a href="https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L56"><code>metals-run-session-start</code></a>
+<a href="https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala"><code>metals-run-session-start</code></a>
 and
-<a href="https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala#L78"><code>metals-debug-session-start</code></a>.
-Those commands should get executed automatically by the lsp client once the user
+<a href="https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/ClientCommands.scala"><code>metals-debug-session-start</code></a>.
+These commands should get executed automatically by the LSP client once the user
 activates a code lens. The difference between them is that the former ignores
 all breakpoints being set while the latter respects them. The procedure of
 starting the run/debug session is as follows:</p>
-<p>Then we can request the debug adapter uri from the metals server using the
-<a href="https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala#L108"><code>debug-adapter-start</code></a>
+<p>Then we can request the debug adapter URI from the metals server using the
+<a href="https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala"><code>debug-adapter-start</code></a>
 command.</p>
-<h3><a class="anchor" aria-hidden="true" id="via-simple-commands"></a><a href="#via-simple-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via simple commands</h3>
+<h3><a class="anchor" aria-hidden="true" id="via-explicit-main-or-test-commands"></a><a href="#via-explicit-main-or-test-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via explicit main or test commands</h3>
 <p>Apart from using code lenses, users can start a debug session by executing the
-<code>debug-adapter-start</code> command with the following params:</p>
+<code>debug-adapter-start</code> command with any of following params:</p>
 <ul>
-<li>for main class</li>
+<li>for an explicit main class</li>
 </ul>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"mainClass"</span>: <span class="hljs-string">"com.foo.App"</span>,
@@ -95,7 +95,7 @@ command.</p>
 }
 </code></pre>
 <ul>
-<li>for test class</li>
+<li>for an explicit test class</li>
 </ul>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"testClass"</span>: <span class="hljs-string">"com.foo.FooSuite"</span>,
@@ -103,14 +103,14 @@ command.</p>
 }
 </code></pre>
 <p><code>buildTarget</code> is an optional parameter, which might be useful if there are
-identically named classes in different modules. A uri will be returned that can
+identically named classes in different modules. A URI will be returned that can
 be used by the DAP client.</p>
 <p><code>envFile</code> is an optional parameter, which allows you to specify a path to a
 <code>.env</code> file with additional environment variables. The path can be either
 absolute or relative to your project workspace. The parser supports single line
 as well as multi-line quoted values (without value substitution). Any variables
 defined in the <code>env</code> object take precedence over those from the <code>.env</code> file.
-Here's an example of a supported .env file:</p>
+Here's an example of a supported <code>.env</code> file:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-comment"># single line values</span>
 key1=value 1
 key2=<span class="hljs-string">'value 2'</span>   <span class="hljs-comment"># ignored inline comment</span>
@@ -132,9 +132,27 @@ key7:value 6
 a.b.key8=value 8   <span class="hljs-comment"># will be ignored</span>
 a-b-key9=value 9   <span class="hljs-comment"># will be ignored</span>
 </code></pre>
+<ul>
+<li>for Metals discovery</li>
+</ul>
+<p>This option works a bit different than the other two param shapes as you don't
+specify a test or main class, but rather a <code>runType</code> of either <code>&quot;run&quot;</code>,
+<code>&quot;testFile&quot;</code>, or <code>&quot;testTarget&quot;</code> and a file URI representing your current location.
+<code>&quot;run&quot;</code> will automatically find any main method in the build target that belongs
+to the URI that was sent in. If multiple are found, you will be given the choice
+of which to run. The <code>&quot;testFile&quot;</code> option will check for any test classes in your
+current file and run them. Similarly, <code>&quot;testTarget&quot;</code> will run all test classes
+found in the build target that the URI belongs to. The <code>&quot;args&quot;</code>, <code>&quot;jvmOptions&quot;</code>,
+<code>&quot;env&quot;</code>, and <code>&quot;envFile&quot;</code> are all valid keys that can be sent as well with the
+same format as above.</p>
+<pre><code class="hljs css language-json">{
+  <span class="hljs-attr">"path"</span>: <span class="hljs-string">"file:///path/to/my/file.scala"</span>
+  <span class="hljs-string">"runType"</span>: <span class="hljs-string">"testTarget"</span>
+}
+</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="wiring-it-all-together"></a><a href="#wiring-it-all-together" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Wiring it all together</h3>
 <p>No matter which method you use, you still need to connect the debug adapter
-extension specific to you editor using the aforementioned uri and let it drive
+extension specific to you editor using the aforementioned URI and let it drive
 the run/debug session. For reference, take a look at the
 <a href="https://github.com/scalameta/metals-vscode/blob/master/src/scalaDebugger.ts">vscode implementation</a>
 and how it is
@@ -149,7 +167,7 @@ touch ~/Library/Caches/org.scalameta.metals/dap-<span class="hljs-keyword">clien
 touch ~/.cache/metals/dap-<span class="hljs-keyword">server</span>.trace.json
 touch ~/.cache/metals/dap-<span class="hljs-keyword">client</span>.trace.json
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/integrations/decoration-protocol.html"><span class="arrow-prev">← </span><span>Decoration Protocol</span></a><a class="docs-next button" href="/metals/docs/troubleshooting/proxy.html"><span>Proxy and mirrors</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#how-to-add-support-for-debugging-in-my-editor">How to add support for debugging in my editor?</a><ul class="toc-headings"><li><a href="#via-code-lenses">Via code lenses</a></li><li><a href="#via-simple-commands">Via simple commands</a></li><li><a href="#wiring-it-all-together">Wiring it all together</a></li></ul></li><li><a href="#debugging-the-connection">Debugging the connection</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2021 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/integrations/decoration-protocol.html"><span class="arrow-prev">← </span><span>Decoration Protocol</span></a><a class="docs-next button" href="/metals/docs/troubleshooting/proxy.html"><span>Proxy and mirrors</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#how-to-add-support-for-debugging-in-my-editor">How to add support for debugging in my editor?</a><ul class="toc-headings"><li><a href="#via-code-lenses">Via code lenses</a></li><li><a href="#via-explicit-main-or-test-commands">Via explicit main or test commands</a></li><li><a href="#wiring-it-all-together">Wiring it all together</a></li></ul></li><li><a href="#debugging-the-connection">Debugging the connection</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2021 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
