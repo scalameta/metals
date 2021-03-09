@@ -525,6 +525,20 @@ object MetalsEnrichments
       new l.Position(pos.getLine, pos.getCharacter)
   }
 
+  implicit class XtensionPositionRange(range: s.Range) {
+    def inString(text: String): String = {
+      var i = 0
+      var max = 0
+      while (max < range.startLine) {
+        if (text.charAt(i) == '\n') max += 1
+        i += 1
+      }
+      val start = i + range.startCharacter
+      val end = i + range.endCharacter
+      text.substring(start, end)
+    }
+  }
+
   implicit class XtensionRangeBsp(range: b.Range) {
     def toMeta(input: m.Input): m.Position =
       m.Position.Range(

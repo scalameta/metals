@@ -28,7 +28,8 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty,
-      scalaVersion: Option[String] = None
+      scalaVersion: Option[String] = None,
+      expectedError: Boolean = false
   )(implicit loc: Location): Unit =
     check(
       name,
@@ -38,7 +39,8 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       nonOpened = nonOpened,
       breakingChange,
       fileRenames,
-      scalaVersion
+      scalaVersion,
+      expectedError
     )
 
   private def check(
@@ -49,7 +51,8 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty,
-      scalaVersion: Option[String] = None
+      scalaVersion: Option[String] = None,
+      expectedError: Boolean = false
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
@@ -104,6 +107,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
             server.didSave(file) { code => breakingChange(code) }
           }
         }
+        _ = if (!expectedError) assertNoDiagnostics()
         // change the code to make sure edit distance is being used
         _ <- Future.sequence {
           openedFiles.map { file =>

@@ -10,7 +10,7 @@ class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
     "scala3-outer",
     """|/a/src/main/scala/a/Main.scala
        |
-       |@main def main() = {
+       |@main def run() = {
        |  <<hello>>("Mark")
        |  <<hello>>("Anne")
        |}
