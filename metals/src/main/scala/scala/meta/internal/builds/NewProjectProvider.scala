@@ -99,7 +99,7 @@ class NewProjectProvider(
       template: String,
       projectName: String
   ): Future[Unit] = {
-    val projectPath = inputPath.resolve(projectName)
+    val projectPath = inputPath.resolve(projectName.toLowerCase())
     val parent = projectPath.parent
     projectPath.createDirectories()
     val command = List(
