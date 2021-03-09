@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Importee
+import scala.meta.Tree
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.Buffers
@@ -15,9 +17,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SelectTree
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -25,6 +30,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
@@ -47,7 +53,8 @@ final class RenameProvider(
     client: MetalsLanguageClient,
     buffers: Buffers,
     compilations: Compilations,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    trees: Trees
 )(implicit executionContext: ExecutionContext) {
 
   private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
@@ -61,12 +68,14 @@ final class RenameProvider(
       definitionProvider.definition(source, params, token).map { definition =>
         val symbolOccurrence =
           definitionProvider.symbolOccurrence(source, params.getPosition)
+
         for {
           (occurence, _) <- symbolOccurrence
           definitionLocation <- definition.locations.asScala.headOption
           definitionPath = definitionLocation.getUri().toAbsolutePath
           if canRenameSymbol(occurence.symbol, None) &&
-            isWorkspaceSymbol(occurence.symbol, definitionPath)
+            (isWorkspaceSymbol(occurence.symbol, definitionPath) ||
+              findRenamedImport(source, occurence.symbol).isDefined)
           range <- occurence.range
         } yield range.toLSP
       }
@@ -94,12 +103,24 @@ final class RenameProvider(
             suggestedName.substring(1, suggestedName.length() - 1)
           else suggestedName
 
+        def isNotRenamedSymbol(
+            textDocument: TextDocument,
+            occ: SymbolOccurrence
+        ): Boolean = {
+          def realName = occ.symbol.desc.name.value
+          def foundName = occ.range.map(rng =>
+            rng.inString(textDocument.text).stripPrefix("`").stripSuffix("`")
+          )
+          occ.symbol.isLocal || foundName.contains(realName)
+        }
+
         val allReferences = for {
           (occurence, semanticDb) <- symbolOccurrence.toIterable
           definitionLoc <- definition.locations.asScala.headOption.toIterable
           definitionPath = definitionLoc.getUri().toAbsolutePath
           if canRenameSymbol(occurence.symbol, Option(newName)) &&
-            isWorkspaceSymbol(occurence.symbol, definitionPath)
+            isWorkspaceSymbol(occurence.symbol, definitionPath) &&
+            isNotRenamedSymbol(semanticDb, occurence)
           parentSymbols =
             implementationProvider
               .topMethodParents(occurence.symbol, semanticDb)
@@ -138,8 +159,14 @@ final class RenameProvider(
           }
         }
 
+        // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
+        val fallbackOccurences =
+          if (allReferences.isEmpty)
+            renamedImportOccurrences(source, symbolOccurrence)
+          else allReferences
+
         val allChanges = for {
-          (path, locs) <- allReferences.toList.distinct
+          (path, locs) <- fallbackOccurences.toList.distinct
             .groupBy(_.getUri().toAbsolutePath)
         } yield {
           val textEdits = for (loc <- locs) yield {
@@ -176,6 +203,60 @@ final class RenameProvider(
     synchronized {
       ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
     }
+
+  /**
+   * In case of import renames, we can only rename the symbol in file.
+   * Global rename will not return any results, so this method will be used as
+   * a fallback.
+   * @param source path of the current document
+   * @param symbolOccurrence occurence of the symbol we are at together with semanticdb
+   * @return all locations that were renamed
+   */
+  private def renamedImportOccurrences(
+      source: AbsolutePath,
+      symbolOccurrence: Option[(SymbolOccurrence, TextDocument)]
+  ): Seq[Location] = {
+    lazy val uri = source.toURI.toString()
+
+    def withoutBacktick(str: String) = str.stripPrefix("`").stripSuffix("`")
+    def realLocationWithoutBackticks(realName: String, rng: Range): Location = {
+      val realRange = if (realName.head == '`' && realName.last == '`') {
+        rng.copy(
+          startCharacter = rng.getStart.getCharacter + 1,
+          endCharacter = rng.getEnd.getCharacter - 1
+        )
+      } else {
+        rng
+      }
+      new Location(uri, realRange)
+    }
+
+    def occurrences(
+        semanticDb: TextDocument,
+        occurence: SymbolOccurrence,
+        renameName: String
+    ) = for {
+      occ <- semanticDb.occurrences
+      rng <- occ.range
+      realName = rng.inString(semanticDb.text)
+      if occ.symbol == occurence.symbol &&
+        withoutBacktick(realName) == withoutBacktick(renameName)
+    } yield realLocationWithoutBackticks(realName, rng.toLSP)
+
+    val result = for {
+      (occurence, semanticDb) <- symbolOccurrence
+      rename <- findRenamedImport(source, occurence.symbol)
+      renamedOccurences = occurrences(
+        semanticDb,
+        occurence,
+        rename.rename.value
+      )
+    } yield renamedOccurences :+ realLocationWithoutBackticks(
+      rename.rename.syntax,
+      rename.rename.pos.toLSP
+    )
+    result.getOrElse(Nil)
+  }
 
   private def documentEdits(
       openedEdits: Map[AbsolutePath, List[TextEdit]]
@@ -296,6 +377,29 @@ final class RenameProvider(
       client.showMessage(forbiddenColonRename(name, newName))
     }
     (!desc.isMethod || (!colonNotAllowed && !isForbidden))
+  }
+
+  private def findRenamedImport(
+      source: AbsolutePath,
+      symbol: String
+  ): Option[Importee.Rename] = {
+    def findRename(tree: Tree): Option[Importee.Rename] = {
+      tree match {
+        case rename: Importee.Rename
+            if rename.name.value == symbol.desc.name.value =>
+          Some(rename)
+        case other =>
+          other.children.toIterable.flatMap { child =>
+            findRename(child)
+          }.headOption
+      }
+    }
+
+    for {
+      tree <- trees.get(source)
+      rename <- findRename(tree)
+    } yield rename
+
   }
 
   private def isWorkspaceSymbol(

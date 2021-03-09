@@ -19,6 +19,50 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
+    "renamed-import",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |import java.util.{List => `<<J-List>>`}
+       |
+       |object Main{
+       |  val toRename: `<<J-L@@ist>>`[Int] = ???
+       |  val toRename2: `<<J-List>>`[Int] = ???
+       |  val toRename3: java.util.List[Int] = ???
+       |}
+       |/a/src/main/scala/a/Main2.scala
+       |package a
+       |
+       |import java.util.{List => JList}
+       |
+       |object Main2{
+       |  val toRename: JList[Int] = ???
+       |}
+       |""".stripMargin,
+    newName = "Java-List"
+  )
+
+  renamed(
+    "renamed-import-local",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |import a.{Main2 => <<OtherMain>>}
+       |
+       |object Main{
+       |  val toRename = <<Oth@@erMain>>.toRename
+       |}
+       |/a/src/main/scala/a/Main2.scala
+       |package a
+       |
+       |object Main2{
+       |  val toRename = ""
+       |}
+       |""".stripMargin,
+    newName = "OtherM"
+  )
+
+  renamed(
     "case",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -429,7 +473,8 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "otherRename",
-    breakingChange = (str: String) => str.replaceAll("Int", "String")
+    breakingChange = (str: String) => str.replaceAll("Int", "String"),
+    expectedError = true
   )
 
   renamed(
