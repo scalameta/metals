@@ -76,7 +76,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
 
   check("custom-template")(
     pickedProject = None,
-    name = Some("my-custom-name"),
+    name = Some("My-Custom-Name"),
     customTemplate = Some("scala/scalatest-example.g8"),
     expectedContent = scalatestTemplate("my-custom-name")
   )
@@ -289,12 +289,18 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
               ServerCommands.NewScalaProject.id
             )
         output = directoryOutput(tmpDirectory)
-      } yield assertDiffEqual(
-        ignoreVersions(output),
-        ignoreVersions(expectedContent),
-        // note(@tgodzik) The template is pretty stable for last couple of years except for versions.
-        "This test is based on https://github.com/scala/scalatest-example.g8, it might have changed."
-      )
+      } yield {
+        if (name.nonEmpty) {
+          val newProjectDirectory = tmpDirectory.list.toList.map(_.filename)
+          assertDiffEqual(newProjectDirectory, name.toList.map(_.toLowerCase()))
+        }
+        assertDiffEqual(
+          ignoreVersions(output),
+          ignoreVersions(expectedContent),
+          // note(@tgodzik) The template is pretty stable for last couple of years except for versions.
+          "This test is based on https://github.com/scala/scalatest-example.g8, it might have changed."
+        )
+      }
 
       testFuture.onComplete { case _ =>
         RecursivelyDelete(tmpDirectory)
