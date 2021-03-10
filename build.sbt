@@ -519,6 +519,9 @@ lazy val input3 = project
   .in(file("tests/input3"))
   .settings(
     sharedSettings,
+    scalacOptions ++= List(
+      "-Xsemanticdb"
+    ),
     scalaVersion := V.scala3,
     skip.in(publish) := true
   )

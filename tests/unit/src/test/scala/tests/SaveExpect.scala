@@ -4,7 +4,8 @@ object SaveExpect {
   def main(args: Array[String]): Unit = {
     List[BaseExpectSuite](
       new DefinitionSuite,
-      new SemanticdbSuite,
+      new SemanticdbScala2Suite,
+      new SemanticdbScala3Suite,
       new MtagsSuite,
       new ToplevelSuite,
       new DocumentSymbolScala2Suite,

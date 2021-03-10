@@ -19,18 +19,18 @@ object SymbolOccurrenceOrdering {
           if (byLine != 0) {
             byLine
           } else {
-            val byCharacter = Integer.compare(
-              a.startCharacter,
-              b.startCharacter
+            val byEnd = Integer.compare(
+              a.endCharacter,
+              b.endCharacter
             )
-            if (byCharacter != 0) {
-              byCharacter
-            } else {
-              val byEnd = Integer.compare(
-                a.endCharacter,
-                b.endCharacter
-              )
+            if (byEnd != 0) {
               byEnd
+            } else {
+              val byCharacter = Integer.compare(
+                a.startCharacter,
+                b.startCharacter
+              )
+              byCharacter
             }
           }
         }

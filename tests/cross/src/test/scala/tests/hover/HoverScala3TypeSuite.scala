@@ -42,6 +42,35 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin.hover
   )
 
+  // We should produce a shorter type but:
+  // https://github.com/lampepfl/dotty/issues/11683
+  check(
+    "enums",
+    """|
+       |object SimpleEnum:
+       |  enum Color:
+       |   case <<Re@@d>>, Green, Blue
+       |
+       |""".stripMargin,
+    """|val Red: enums.SimpleEnum.Color.Red
+       |""".stripMargin.hover
+  )
+
+  check(
+    "enum-params",
+    """|
+       |object SimpleEnum:
+       |  enum Color:
+       |    case <<Gr@@een>> extends Color(2)
+       |    case Red extends Color(1)
+       |    case Blue extends Color(3)
+       |
+       |
+       |""".stripMargin,
+    """|val Green: Color
+       |""".stripMargin.hover
+  )
+
   // TODO: better printing for using
   // currently "def apply[T](a: T)(implicit x$2: Int): T"
   check(
