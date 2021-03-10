@@ -1075,20 +1075,16 @@ class MetalsLanguageServer(
   }
 
   private def didCompileTarget(report: CompileReport): Unit = {
-    // TODO need to handle java targets?
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
       // watching notifications. The SemanticDB indexer depends on file watching
       // notifications to pick up `*.semanticdb` file updates and there's no
       // reliable way to await until those notifications appear.
+      buildTargets.targetRoot(report.getTarget)
       for {
-        item <- buildTargets.scalacOptions(report.getTarget())
-        scalaInfo <- buildTargets.scalaInfo(report.getTarget)
-        semanticdb =
-          item
-            .targetroot(scalaInfo.getScalaVersion)
-            .resolve(Directories.semanticdb)
+        targetroot <- buildTargets.targetRoot(report.getTarget)
+        semanticdb = targetroot.resolve(Directories.semanticdb)
         generatedFile <- semanticdb.listRecursive
       } {
         val event =

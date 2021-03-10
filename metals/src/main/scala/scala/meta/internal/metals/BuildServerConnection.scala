@@ -142,13 +142,25 @@ class BuildServerConnection private (
   def buildTargetJavacOptions(
       params: JavacOptionsParams
   ): Future[JavacOptionsResult] = {
-    register(server => server.buildTargetJavacOptions(params)).asScala
+    val resultOnJavacOptionsUnsupported = new JavacOptionsResult(
+      List.empty[JavacOptionsItem].asJava
+    )
+    val onFail = Some(
+      (resultOnJavacOptionsUnsupported, "Java targets not supported by server")
+    )
+    register(server => server.buildTargetJavacOptions(params), onFail).asScala
   }
 
   def buildTargetScalacOptions(
       params: ScalacOptionsParams
   ): Future[ScalacOptionsResult] = {
-    register(server => server.buildTargetScalacOptions(params)).asScala
+    val resultOnScalaOptionsUnsupported = new ScalacOptionsResult(
+      List.empty[ScalacOptionsItem].asJava
+    )
+    val onFail = Some(
+      (resultOnScalaOptionsUnsupported, "Scala targets not supported by server")
+    )
+    register(server => server.buildTargetScalacOptions(params), onFail).asScala
   }
 
   def buildTargetSources(params: SourcesParams): Future[SourcesResult] = {
@@ -213,7 +225,8 @@ class BuildServerConnection private (
 
   }
   private def register[T: ClassTag](
-      action: MetalsBuildServer => CompletableFuture[T]
+      action: MetalsBuildServer => CompletableFuture[T],
+      onFail: => Option[(T, String)] = None
   ): CompletableFuture[T] = {
     val original = connection
     val actionFuture = original
@@ -232,8 +245,15 @@ class BuildServerConnection private (
             reconnect().flatMap(conn => action(conn.server).asScala)
           }
         case _ =>
-          val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
-          Future.failed(MetalsBspException(name))
+          onFail
+            .map { case (defaultResult, message) =>
+              scribe.info(message)
+              Future.successful(defaultResult)
+            }
+            .getOrElse({
+              val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
+              Future.failed(MetalsBspException(name))
+            })
       }
     CancelTokens.future(_ => actionFuture)
   }

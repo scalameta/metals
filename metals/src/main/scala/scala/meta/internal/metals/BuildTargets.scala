@@ -72,7 +72,9 @@ final class BuildTargets(
       )
       if (isSupportedScalaVersion) score <<= 2
 
-      // TODO need to handle javacOptions? What score should java only build target get?
+      // TODO(@arthurm1) What score should java only build target get?
+      // possibly <<=1 as it's JVM but not yet supported by Metals?
+
       val isJVM = scalacOptions(t).exists(_.isJVM)
       if (isJVM) score <<= 1
 
@@ -115,6 +117,15 @@ final class BuildTargets(
 
   def allBuildTargetIds: Seq[BuildTargetIdentifier] =
     allTargets.map(_.getId()).toSeq
+
+  def allTargetRoots: Iterator[AbsolutePath] = {
+    val scalaTargetRoots = for {
+      item <- scalacOptions
+      scalaInfo <- scalaInfo(item.getTarget)
+    } yield (item.targetroot(scalaInfo.getScalaVersion))
+    val javaTargetRoots = javacOptions.map(_.targetroot)
+    scalaTargetRoots.iterator ++ javaTargetRoots.iterator
+  }
 
   def allCommon: Iterator[CommonTarget] =
     allScala ++ allJava
@@ -281,6 +292,18 @@ final class BuildTargets(
       buildTarget: BuildTargetIdentifier
   ): Option[ScalaBuildTarget] =
     info(buildTarget).flatMap(_.asScalaBuildTarget)
+
+  def targetRoot(
+      buildTarget: BuildTargetIdentifier
+  ): Option[AbsolutePath] =
+    scalacTargetInfo
+      .get(buildTarget)
+      .flatMap(scalacOptions => {
+        scalaInfo(scalacOptions.getTarget).map(scalaBuildTarget =>
+          scalacOptions.targetroot(scalaBuildTarget.getScalaVersion)
+        )
+      })
+      .orElse(javacTargetInfo.get(buildTarget).map(_.targetroot))
 
   def scalacOptions(
       buildTarget: BuildTargetIdentifier

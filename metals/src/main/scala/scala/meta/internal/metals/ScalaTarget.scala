@@ -31,13 +31,15 @@ case class ScalaTarget(
     }
   }
 
-  def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
+  override def isSemanticdbEnabled: Boolean =
+    scalac.isSemanticdbEnabled(scalaVersion)
 
-  def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared(scalaVersion)
+  override def isSourcerootDeclared: Boolean =
+    scalac.isSourcerootDeclared(scalaVersion)
 
   override def id: BuildTargetIdentifier = info.getId()
 
-  def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
+  override def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
 
   override def targetBaseDirectory: String = info.getBaseDirectory()
 

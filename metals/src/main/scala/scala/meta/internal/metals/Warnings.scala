@@ -66,7 +66,9 @@ final class Warnings(
           statusBar.addMessage(icons.info + tryAgain)
         } else if (!path.isSbt && !path.isWorksheet) {
           val targetfile = info.classDirectory.toAbsolutePath
-            .resolve(SemanticdbClasspath.fromScala(path.toRelative(workspace)))
+            .resolve(
+              SemanticdbClasspath.fromScalaOrJava(path.toRelative(workspace))
+            )
           logger.error(
             s"$doesntWorkBecause the SemanticDB file '$targetfile' doesn't exist. " +
               s"There can be many reasons for this error. "

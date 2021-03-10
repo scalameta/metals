@@ -111,22 +111,15 @@ final class FileWatcher(
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceRoots.foreach(watch(_, isSource = true))
     buildTargets.sourceItems.foreach(watch(_, isSource = true))
-    // TODO - do java target have to be handled as well?
-    buildTargets.scalacOptions.foreach { item =>
-      for {
-        scalaInfo <- buildTargets.scalaInfo(item.getTarget)
-      } {
-        val targetroot = item.targetroot(scalaInfo.getScalaVersion)
-        if (!targetroot.isJar) {
-          // Watch META-INF/semanticdb directories for "find references" index.
-          watch(
-            targetroot.resolve(Directories.semanticdb),
-            isSource = false
-          )
-        }
+    buildTargets.allTargetRoots.foreach(targetroot =>
+      if (!targetroot.isJar) {
+        // Watch META-INF/semanticdb directories for "find references" index.
+        watch(
+          targetroot.resolve(Directories.semanticdb),
+          isSource = false
+        )
       }
-
-    }
+    )
     val repo = repository.get match {
       case null =>
         val r = newRepository

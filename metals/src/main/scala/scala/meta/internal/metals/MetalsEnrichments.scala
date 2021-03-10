@@ -573,6 +573,37 @@ object MetalsEnrichments
         .filter(p => Files.exists(p.toNIO))
     }
   }
+  implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
+    def targetroot: AbsolutePath = {
+      semanticdbFlag("targetroot")
+        .map(AbsolutePath(_))
+        .getOrElse(item.getClassDirectory.toAbsolutePath)
+    }
+
+    def isSemanticdbEnabled: Boolean = {
+      item.getOptions.asScala.exists { opt =>
+        opt.startsWith("-Xplugin:") && opt
+          .contains("semanticdb-scalac")
+      }
+    }
+
+    def isSourcerootDeclared: Boolean = {
+      item.getOptions.asScala.exists { option =>
+        option.startsWith("-P:semanticdb:sourceroot")
+      }
+    }
+
+    /**
+     * Returns the value of a -P:semanticdb:$option:$value compiler flag.
+     */
+    def semanticdbFlag(name: String): Option[String] = {
+      val flag = s"-P:semanticdb:$name:"
+      item.getOptions.asScala
+        .find(_.startsWith(flag))
+        .map(_.stripPrefix(flag))
+    }
+  }
+
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
     def targetroot(scalaVersion: String): AbsolutePath = {
       if (ScalaVersions.isScala3Version(scalaVersion)) {

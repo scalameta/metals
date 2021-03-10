@@ -12,8 +12,11 @@ trait CommonTarget {
 
   def id: BuildTargetIdentifier
 
-  // TODO - is this needed for javac
-  //def targetroot: AbsolutePath = javac.targetroot(scalaVersion)
+  def targetroot: AbsolutePath
+
+  def isSemanticdbEnabled: Boolean
+
+  def isSourcerootDeclared: Boolean
 
   def targetBaseDirectory: String
 

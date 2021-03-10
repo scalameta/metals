@@ -122,7 +122,6 @@ final class BuildTargetClasses(
   private def descriptorsForMainClasses(
       buildTarget: b.BuildTargetIdentifier
   ): List[String => Descriptor] = {
-    // TODO how to handle Java Target here. "List(Descriptor.Term)", "List(Descriptor.Type)", "List(Descriptor.Term, Descriptor.Type)"
     buildTargets.scalaTarget(buildTarget) match {
       case Some(scalaBuildTarget) =>
         if (ScalaVersions.isScala3Version(scalaBuildTarget.scalaVersion))

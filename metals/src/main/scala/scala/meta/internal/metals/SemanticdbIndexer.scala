@@ -39,7 +39,7 @@ class SemanticdbIndexer(
     for {
       item <- javacOptions.getItems.asScala
     } {
-      val targetroot = item.getClassDirectory.toAbsolutePath
+      val targetroot = item.targetroot
       onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
     }
   }
@@ -70,16 +70,11 @@ class SemanticdbIndexer(
    * and re-index all of its `*.semanticdb` children.
    */
   def onOverflow(): Unit = {
-    // TODO do java targets have to be handled as well?
-    for {
-      item <- buildTargets.scalacOptions
-      scalaInfo <- buildTargets.scalaInfo(item.getTarget)
-    } {
-      val targetroot = item.targetroot(scalaInfo.getScalaVersion)
+    buildTargets.allTargetRoots.foreach(targetroot =>
       if (!targetroot.isJar) {
         onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
       }
-    }
+    )
   }
 
   private def onChangeDirectory(dir: Path): Unit = {

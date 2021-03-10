@@ -22,9 +22,8 @@ final class FileSystemSemanticdbs(
 ) extends Semanticdbs {
 
   override def textDocument(file: AbsolutePath): TextDocumentLookup = {
-    // TODO need to handle java targets?
     if (
-      !file.toLanguage.isScala ||
+      (!file.toLanguage.isScala && !file.toLanguage.isJava) ||
       file.toNIO.getFileSystem != mainWorkspace.toNIO.getFileSystem
     ) {
       TextDocumentLookup.NotFound(file)
@@ -32,11 +31,10 @@ final class FileSystemSemanticdbs(
 
       val paths = for {
         buildTarget <- buildTargets.inverseSources(file)
-        scalaInfo <- buildTargets.scalaInfo(buildTarget)
         workspace <- buildTargets.workspaceDirectory(buildTarget)
-        scalacOptions <- buildTargets.scalacOptions(buildTarget)
+        targetroot <- buildTargets.targetRoot(buildTarget)
       } yield {
-        (workspace, scalacOptions.targetroot(scalaInfo.getScalaVersion))
+        (workspace, targetroot)
       }
 
       paths match {
@@ -70,7 +68,7 @@ final class FileSystemSemanticdbs(
         relativeSourceRoot = sourceRoot.toRelative(workspace)
         relativeFile = file.toRelative(sourceRoot.dealias)
         fullRelativePath = relativeSourceRoot.resolve(relativeFile)
-        alternativeRelativePath = SemanticdbClasspath.fromScala(
+        alternativeRelativePath = SemanticdbClasspath.fromScalaOrJava(
           fullRelativePath
         )
         alternativeSemanticdbPath = targetroot.resolve(

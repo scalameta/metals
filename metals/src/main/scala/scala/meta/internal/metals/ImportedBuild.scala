@@ -6,7 +6,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Language
 
 import ch.epfl.scala.bsp4j._
 
@@ -70,42 +69,18 @@ object ImportedBuild {
       scalacOptions <- conn.buildTargetScalacOptions(
         new ScalacOptionsParams(ids)
       )
+      javacOptions <- conn.buildTargetJavacOptions(
+        new JavacOptionsParams(ids)
+      )
       sources <- conn.buildTargetSources(new SourcesParams(ids))
       dependencySources <- conn.buildTargetDependencySources(
         new DependencySourcesParams(ids)
       )
     } yield {
-      // waiting on Bloop buildTarget/javacOptions support
-      // see https://github.com/scalacenter/bloop/pull/1397
-      // for now fake javacOptions
-      val scalaTargets = workspaceBuildTargets
-        .getTargets()
-        .asScala
-        .filter(
-          _.getLanguageIds()
-            .map(_.toUpperCase())
-            .contains(Language.SCALA.name.toUpperCase())
-        )
-      val scalaIds = scalaTargets.map(_.getId())
-      val scalacItems = scalacOptions.getItems().asScala
-      val scalacMinusJavacOptions =
-        scalacItems.filter(f => scalaIds.contains(f.getTarget()))
-      val javacMinusScalacOptions =
-        scalacItems.filterNot(f => scalaIds.contains(f.getTarget()))
-      val filteredScalacOptions = scalacMinusJavacOptions
-      val filteredJavacOptions = javacMinusScalacOptions.map(f =>
-        new JavacOptionsItem(
-          f.getTarget(),
-          f.getOptions(),
-          f.getClasspath(),
-          f.getClassDirectory()
-        )
-      )
-
       ImportedBuild(
         workspaceBuildTargets,
-        new ScalacOptionsResult(filteredScalacOptions.asJava),
-        new JavacOptionsResult(filteredJavacOptions.asJava),
+        scalacOptions,
+        javacOptions,
         sources,
         dependencySources
       )
