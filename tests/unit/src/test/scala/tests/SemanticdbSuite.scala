@@ -10,7 +10,13 @@ import scala.meta.internal.mtags.Semanticdbs
  * This test suite does not test any metals functionality, it is only to see what
  * semanticdb-scalac procudes.
  */
-class SemanticdbSuite extends DirectoryExpectSuite("semanticdb") {
+abstract class SemanticdbSuite(
+    inputProperties: => InputProperties,
+    directory: String
+) extends DirectoryExpectSuite(s"$directory") {
+
+  override lazy val input: InputProperties = inputProperties
+
   override def testCases(): List[ExpectTestCase] = {
     def isEnabled(f: InputFile): Boolean = {
       if (
@@ -35,3 +41,16 @@ class SemanticdbSuite extends DirectoryExpectSuite("semanticdb") {
     }
   }
 }
+
+class SemanticdbScala2Suite
+    extends SemanticdbSuite(InputProperties.scala2(), "semanticdb")
+
+/**
+ * There is a number of issues observed in Scala 3 that can be seen in the tests:
+ * - extension methods https://github.com/lampepfl/dotty/issues/11690
+ * - enums https://github.com/lampepfl/dotty/issues/11689
+ * - anonymous givens https://github.com/lampepfl/dotty/issues/11692
+ * - topelevel symbols https://github.com/lampepfl/dotty/issues/11693
+ */
+class SemanticdbScala3Suite
+    extends SemanticdbSuite(InputProperties.scala3(), "semanticdb-scala3")
