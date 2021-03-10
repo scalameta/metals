@@ -127,20 +127,17 @@ final class BuildTargets(
     scalaTargetRoots.iterator ++ javaTargetRoots.iterator
   }
 
+  // When a target is both Scala and Java then Scala takes precedence
   def allCommon: Iterator[CommonTarget] =
-    allScala ++ allJava
+    allTargets.flatMap(target =>
+      toScalaTarget(target).orElse(toJavaTarget(target))
+    )
 
   def allScala: Iterator[ScalaTarget] =
     for {
       target <- allTargets
       scalaTarget <- toScalaTarget(target)
     } yield scalaTarget
-
-  private def allJava: Iterator[JavaTarget] =
-    for {
-      target <- allTargets
-      javaTarget <- toJavaTarget(target)
-    } yield javaTarget
 
   def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
     for {
