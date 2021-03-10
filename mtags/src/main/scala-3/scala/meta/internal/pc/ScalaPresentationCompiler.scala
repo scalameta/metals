@@ -83,7 +83,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
-) extends PresentationCompiler with Completions {
+) extends PresentationCompiler
+    with Completions {
 
   def this() = this(Nil, Nil)
 
@@ -127,14 +128,18 @@ case class ScalaPresentationCompiler(
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
           val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
-          val completions = CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit)).completions()
+          val completions =
+            CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit))
+              .completions()
           val metalsCompletions = completionPosition(pos, path)(using ctx)
           completions ++ metalsCompletions
         case None => Nil
       }
       new CompletionList(
         /*isIncomplete = */ false,
-        items.zipWithIndex.map { case(item, idx) => completionItem(item, idx)(using ctx) }.asJava
+        items.zipWithIndex.map { case (item, idx) =>
+          completionItem(item, idx)(using ctx)
+        }.asJava
       )
     }
   }
@@ -218,7 +223,7 @@ case class ScalaPresentationCompiler(
 
   // TODO NOT IMPLEMENTED
   override def insertInferredType(
-    params: OffsetParams
+      params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     CompletableFuture.completedFuture(
       List.empty[TextEdit].asJava
@@ -266,8 +271,12 @@ case class ScalaPresentationCompiler(
                   val shortendType = driver.compilationUnits.get(uri) match {
                     case Some(unit) =>
                       val newctx = ctx.fresh.setCompilationUnit(unit)
-                      val path = Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
-                      val context = Interactive.contextOfPath(path)(using newctx)
+                      val path = Interactive.pathTo(
+                        newctx.compilationUnit.tpdTree,
+                        pos.span
+                      )(using newctx)
+                      val context =
+                        Interactive.contextOfPath(path)(using newctx)
                       val history = ShortenedNames(context)
                       shortType(tpw, history)(using newctx)
                     case None => tpw
@@ -313,12 +322,15 @@ case class ScalaPresentationCompiler(
 
       // @tgodzik tpd.TypeApply doesn't seem to be handled here
       val path =
-        Interactive.pathTo(trees, pos)(using ctx).dropWhile(!_.isInstanceOf[tpd.Apply])
+        Interactive
+          .pathTo(trees, pos)(using ctx)
+          .dropWhile(!_.isInstanceOf[tpd.Apply])
 
       val (paramN, callableN, alternatives) =
         Signatures.callInfo(path, pos.span)(using ctx)
 
-      val signatureInfos = alternatives.flatMap(Signatures.toSignature(_)(using ctx))
+      val signatureInfos =
+        alternatives.flatMap(Signatures.toSignature(_)(using ctx))
       new SignatureHelp(
         signatureInfos.map(signatureToSignatureInformation).asJava,
         callableN,
@@ -519,8 +531,8 @@ case class ScalaPresentationCompiler(
   override def isLoaded() = compilerAccess.isLoaded()
 
   private case class ShortName(
-    name: Name,
-    symbol: Symbol
+      name: Name,
+      symbol: Symbol
   )
   private object ShortName {
     def apply(sym: Symbol)(using ctx: Context): ShortName =
@@ -531,7 +543,7 @@ case class ScalaPresentationCompiler(
     val history = collection.mutable.Map.empty[Name, ShortName]
 
     def lookupSymbol(short: ShortName): Type = {
-        context.findRef(short.name)
+      context.findRef(short.name)
     }
 
     def tryShortenName(short: ShortName)(using Context): Boolean = {
@@ -564,15 +576,17 @@ case class ScalaPresentationCompiler(
    * Shorten the long (fully qualified) type to shorter representation, so printers
    * can obtain more readable form of type like `SrcPos` instead of `dotc.util.SrcPos`
    * (if the name can be resolved from the context).
-   * 
+   *
    * For example,
    * when the longType is like `TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class dotc)),module util),SrcPos)`,
    * if `dotc.util.SrcPos` found from the scope, then `TypeRef(NoPrefix, SrcPos)`
    * if not, and `dotc.util` found from the scope then `TypeRef(TermRef(NoPrefix, module util), SrcPos)`
-   * 
+   *
    * @see Scala 3/Internals/Type System https://dotty.epfl.ch/docs/internals/type-system.html
    */
-  private def shortType(longType: Type, history: ShortenedNames)(using ctx: Context): Type = {
+  private def shortType(longType: Type, history: ShortenedNames)(using
+      ctx: Context
+  ): Type = {
     val isVisited = collection.mutable.Set.empty[(Type, Option[ShortName])]
     val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
 
@@ -604,7 +618,11 @@ case class ScalaPresentationCompiler(
           else ThisType.raw(loop(tyref, None).asInstanceOf[TypeRef])
 
         case mt @ MethodTpe(pnames, ptypes, restpe) if mt.isImplicitMethod =>
-          ImplicitMethodType(pnames, ptypes.map(loop(_, None)), loop(restpe, None))
+          ImplicitMethodType(
+            pnames,
+            ptypes.map(loop(_, None)),
+            loop(restpe, None)
+          )
         case mt @ MethodTpe(pnames, ptypes, restpe) =>
           MethodType(pnames, ptypes.map(loop(_, None)), loop(restpe, None))
 
