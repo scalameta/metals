@@ -111,6 +111,7 @@ final class FileWatcher(
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceRoots.foreach(watch(_, isSource = true))
     buildTargets.sourceItems.foreach(watch(_, isSource = true))
+    // TODO - do java target have to be handled as well?
     buildTargets.scalacOptions.foreach { item =>
       for {
         scalaInfo <- buildTargets.scalaInfo(item.getTarget)

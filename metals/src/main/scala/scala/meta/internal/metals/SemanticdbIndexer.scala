@@ -13,6 +13,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.JavacOptionsResult
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import com.google.protobuf.InvalidProtocolBufferException
 
@@ -30,6 +31,15 @@ class SemanticdbIndexer(
       scalaInfo <- buildTargets.scalaInfo(item.getTarget)
     } {
       val targetroot = item.targetroot(scalaInfo.getScalaVersion)
+      onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
+    }
+  }
+
+  def onJavacOptions(javacOptions: JavacOptionsResult): Unit = {
+    for {
+      item <- javacOptions.getItems.asScala
+    } {
+      val targetroot = item.getClassDirectory.toAbsolutePath
       onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
     }
   }
@@ -60,6 +70,7 @@ class SemanticdbIndexer(
    * and re-index all of its `*.semanticdb` children.
    */
   def onOverflow(): Unit = {
+    // TODO do java targets have to be handled as well?
     for {
       item <- buildTargets.scalacOptions
       scalaInfo <- buildTargets.scalaInfo(item.getTarget)

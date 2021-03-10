@@ -40,8 +40,8 @@ final class GlobalClassTable(
     synchronized {
       for {
         buildTargetId <- buildTargets.inverseSources(source)
-        scalaTarget <- buildTargets.scalaTarget(buildTargetId)
-        classpath = new Classpath(scalaTarget.jarClasspath)
+        commonTarget <- buildTargets.commonTarget(buildTargetId)
+        classpath = new Classpath(commonTarget.jarClasspath)
       } yield {
         buildTargetsIndexes.getOrElseUpdate(
           buildTargetId,

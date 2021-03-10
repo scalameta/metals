@@ -566,12 +566,14 @@ object MetalsEnrichments
     def getQuery(key: String): Option[String] =
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
-  implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
-    def classpath: Iterator[AbsolutePath] = {
-      item.getClasspath.asScala.iterator
+  implicit class XtensionClasspath(classpath: util.List[String]) {
+    def toAbsoluteClasspath: Iterator[AbsolutePath] = {
+      classpath.asScala.iterator
         .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
         .filter(p => Files.exists(p.toNIO))
     }
+  }
+  implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
     def targetroot(scalaVersion: String): AbsolutePath = {
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         val options = item.getOptions.asScala

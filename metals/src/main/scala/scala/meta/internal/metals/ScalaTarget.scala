@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
 import java.{util => ju}
 
 import scala.meta.Dialect
@@ -19,7 +18,7 @@ case class ScalaTarget(
     scalac: ScalacOptionsItem,
     autoImports: Option[Seq[String]],
     isSbt: Boolean
-) {
+) extends CommonTarget {
 
   def dialect: Dialect = {
     scalaVersion match {
@@ -32,33 +31,19 @@ case class ScalaTarget(
 
   def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared(scalaVersion)
 
-  def id: BuildTargetIdentifier = info.getId()
+  override def id: BuildTargetIdentifier = info.getId()
 
   def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
 
-  def baseDirectory: String = {
-    val baseDir = info.getBaseDirectory()
-    if (baseDir != null) baseDir else ""
-  }
+  override def targetBaseDirectory: String = info.getBaseDirectory()
 
-  def fullClasspath: ju.List[Path] = {
-    scalac.getClasspath().map(_.toAbsolutePath.toNIO)
-  }
-
-  def jarClasspath: List[AbsolutePath] = {
-    scalac
-      .getClasspath()
-      .asScala
-      .toList
-      .filter(_.endsWith(".jar"))
-      .map(_.toAbsolutePath)
-  }
+  override def optionsClasspath: ju.List[String] = scalac.getClasspath()
 
   def scalaVersion: String = scalaInfo.getScalaVersion()
 
-  def classDirectory: String = scalac.getClassDirectory()
+  override def classDirectory: String = scalac.getClassDirectory()
 
-  def displayName: String = info.getDisplayName()
+  override def displayName: String = info.getDisplayName()
 
   def scalaBinaryVersion: String = scalaInfo.getScalaBinaryVersion()
 }

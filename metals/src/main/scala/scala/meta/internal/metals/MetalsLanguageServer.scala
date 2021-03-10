@@ -1091,6 +1091,7 @@ class MetalsLanguageServer(
   }
 
   private def didCompileTarget(report: CompileReport): Unit = {
+    // TODO need to handle java targets?
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
@@ -2196,6 +2197,7 @@ class MetalsLanguageServer(
       symbolSearch.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
+      buildTargets.addJavacOptions(i.javacOptions)
       for {
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
@@ -2227,10 +2229,16 @@ class MetalsLanguageServer(
       workspaceSymbols.indexClasspath()
     }
     timerProvider.timedThunk(
-      "indexed workspace SemanticDBs",
+      "indexed workspace Scala SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex
     ) {
       semanticDBIndexer.onScalacOptions(i.scalacOptions)
+    }
+    timerProvider.timedThunk(
+      "indexed workspace Java SemanticDBs",
+      clientConfig.initialConfig.statistics.isIndex
+    ) {
+      semanticDBIndexer.onJavacOptions(i.javacOptions)
     }
     timerProvider.timedThunk(
       "indexed workspace sources",
@@ -2251,7 +2259,7 @@ class MetalsLanguageServer(
         .foreach(focusedDocumentBuildTarget.set)
     }
 
-    val targets = buildTargets.all.map(_.id).toSeq
+    val targets = buildTargets.allBuildTargetIds
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach(_ => languageClient.refreshModel())
