@@ -5,10 +5,12 @@ import java.nio.file.Files
 import scala.collection.mutable.ArrayBuffer
 import scala.{meta => m}
 
+import scala.meta.dialects
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSources
 import scala.meta.internal.metals.WorkspaceSymbolInformation
@@ -67,9 +69,14 @@ object MetalsTestEnrichments {
       }
     }
     def indexLibraries(libraries: Seq[Library]): Unit = {
-      JdkSources(None).foreach { zip => wsp.index.addSourceJar(zip) }
+      JdkSources(None).foreach { zip =>
+        wsp.index.addSourceJar(zip, dialects.Scala213)
+      }
       libraries.foreach(
-        _.sources.entries.foreach(s => wsp.index.addSourceJar(s))
+        _.sources.entries.foreach { s =>
+          val dialect = ScalaVersions.dialectForDependencyJar(s.filename)
+          wsp.index.addSourceJar(s, dialect)
+        }
       )
       val bti = new BuildTargetIdentifier("workspace")
       val buildTarget = new BuildTarget(

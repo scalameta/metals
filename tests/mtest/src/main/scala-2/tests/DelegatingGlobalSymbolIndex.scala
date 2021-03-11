@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.Dialect
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -17,14 +18,15 @@ class DelegatingGlobalSymbolIndex(
   }
   def addSourceFile(
       file: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceDirectory: Option[AbsolutePath],
+      dialect: Dialect
   ): Unit = {
-    underlying.addSourceFile(file, sourceDirectory)
+    underlying.addSourceFile(file, sourceDirectory, dialect)
   }
-  def addSourceJar(jar: AbsolutePath): Unit = {
-    underlying.addSourceJar(jar)
+  def addSourceJar(jar: AbsolutePath, dialect: Dialect): Unit = {
+    underlying.addSourceJar(jar, dialect)
   }
-  def addSourceDirectory(dir: AbsolutePath): Unit = {
-    underlying.addSourceDirectory(dir)
+  def addSourceDirectory(dir: AbsolutePath, dialect: Dialect): Unit = {
+    underlying.addSourceDirectory(dir, dialect)
   }
 }

@@ -1,5 +1,7 @@
 package scala.meta.internal.mtags
 
+import scala.meta.Dialect
+import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Language
@@ -10,7 +12,10 @@ final class Mtags {
   def totalLinesOfCode: Long = javaLines + scalaLines
   def totalLinesOfScala: Long = scalaLines
   def totalLinesOfJava: Long = javaLines
-  def toplevels(input: Input.VirtualFile): List[String] = {
+  def toplevels(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213
+  ): List[String] = {
     val language = input.toLanguage
     if (language.isJava) {
       // NOTE(olafur): this is incorrect in the following cases:
@@ -22,7 +27,11 @@ final class Mtags {
       List(toplevelClass)
     } else if (language.isScala) {
       addLines(language, input.text)
-      new ScalaToplevelMtags(input, includeInnerClasses = false)
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = false,
+        dialect
+      )
         .index()
         .occurrences
         .iterator
@@ -33,6 +42,7 @@ final class Mtags {
       Nil
     }
   }
+
   def index(language: Language, input: Input.VirtualFile): TextDocument = {
     addLines(language, input.text)
     val result =
@@ -77,13 +87,20 @@ object Mtags {
       case Language.JAVA =>
         new JavaMtags(input).index()
       case Language.SCALA =>
-        new ScalaToplevelMtags(input, includeInnerClasses = true).index()
+        new ScalaToplevelMtags(
+          input,
+          includeInnerClasses = true,
+          dialects.Scala213
+        ).index()
       case _ =>
         TextDocument()
     }
   }
-  def toplevels(input: Input.VirtualFile): List[String] = {
-    new Mtags().toplevels(input)
+  def toplevels(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213
+  ): List[String] = {
+    new Mtags().toplevels(input, dialect)
   }
 
 }

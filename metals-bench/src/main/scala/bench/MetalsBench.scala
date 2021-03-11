@@ -4,6 +4,7 @@ import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
 import scala.tools.nsc.interactive.Global
 
+import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsLogger
@@ -144,7 +145,9 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def indexSources(): Unit = {
     val index = OnDemandSymbolIndex()
-    fullClasspath.entries.foreach(entry => index.addSourceJar(entry))
+    fullClasspath.entries.foreach(entry =>
+      index.addSourceJar(entry, dialects.Scala213)
+    )
   }
 
 }

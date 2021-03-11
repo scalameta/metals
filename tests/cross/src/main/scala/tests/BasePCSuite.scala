@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
 import scala.util.control.NonFatal
 
+import scala.meta.dialects
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
@@ -79,7 +80,7 @@ abstract class BasePCSuite extends BaseSuite {
     val myclasspath: Seq[Path] = extraLibraries ++ scalaLibrary
 
     if (requiresJdkSources)
-      JdkSources().foreach(jdk => index.addSourceJar(jdk))
+      JdkSources().foreach(jdk => index.addSourceJar(jdk, dialects.Scala213))
     if (requiresScalaLibrarySources)
       indexScalaLibrary(index, scalaVersion)
     val search = new TestingSymbolSearch(
@@ -147,7 +148,9 @@ abstract class BasePCSuite extends BaseSuite {
       )
       .fetch()
       .asScala
-    sources.foreach { jar => index.addSourceJar(AbsolutePath(jar)) }
+    sources.foreach { jar =>
+      index.addSourceJar(AbsolutePath(jar), dialects.Scala213)
+    }
   }
 
   override def afterAll(): Unit = {
@@ -201,7 +204,9 @@ abstract class BasePCSuite extends BaseSuite {
     }
     val file = tmp.resolve(filename)
     Files.write(file.toNIO, code2.getBytes(StandardCharsets.UTF_8))
-    try index.addSourceFile(file, Some(tmp))
+    val dialect =
+      if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
+    try index.addSourceFile(file, Some(tmp), dialect)
     catch {
       case NonFatal(e) =>
         println(s"warn: $e")

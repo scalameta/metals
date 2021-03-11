@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.dialects
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
@@ -13,7 +14,7 @@ class JdkSourcesSuite extends BaseSuite {
     val jdk = JdkSources.getOrThrow()
     val symbolIndex = OnDemandSymbolIndex()
 
-    symbolIndex.addSourceJar(jdk)
+    symbolIndex.addSourceJar(jdk, dialects.Scala213)
 
     val pathsDef = symbolIndex.definition(Symbol("java/nio/file/Paths#"))
     assert(pathsDef.isDefined, "Cannot find java/nio/file/Paths#")

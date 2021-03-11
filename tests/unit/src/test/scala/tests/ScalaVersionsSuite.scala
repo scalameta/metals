@@ -276,4 +276,22 @@ class ScalaVersionsSuite extends BaseSuite {
     )
   }
 
+  test("from-jar-name") {
+    val expected =
+      List(
+        ("smth-library_2.13-21.2.0-sources.jar", "2.13"),
+        (
+          "scala3-compiler_3.0.0-RC2-3.0.0-RC2-bin-20210310-4af1386-NIGHTLY-sources.jar",
+          "3.0.0-RC2"
+        ),
+        ("scala3-library_3.0.0-RC1-3.0.0-RC1.jar", "3.0.0-RC1"),
+        ("scala-library-2.13.1.jar", "2.13"),
+        ("cool4.4_2.13-3.0.jar", "2.13")
+      )
+    expected.foreach { case (jar, version) =>
+      val out = ScalaVersions.scalaBinaryVersionFromJarName(jar).get
+      assertEquals(out, version, jar)
+    }
+  }
+
 }

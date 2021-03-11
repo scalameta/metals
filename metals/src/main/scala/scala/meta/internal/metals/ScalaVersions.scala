@@ -97,4 +97,45 @@ object ScalaVersions {
       case _ => Scala213
     }
   }
+
+  private val scalaVersionRegex =
+    "(_?)(\\d)\\.(\\d{1,2})(\\.\\d(-(RC|M)\\d)?)?".r
+
+  /**
+   * Extract scala binary version from dependency jar name.
+   * The version that starts from `_` prefix takes more precedence.
+   * Example:
+   *   `scala-library-2.13.5` -> 2.13
+   *   `some-library_2.13-4.5.0` -> 2.13
+   *   `some-library_2.13-2.11` -> 2.13
+   *
+   * @return
+   */
+  def scalaBinaryVersionFromJarName(filename: String): Option[String] = {
+    val dropEnding = filename
+      .stripSuffix(".jar")
+
+    scalaVersionRegex
+      .findAllMatchIn(dropEnding)
+      .toList
+      .flatMap { m =>
+        val weight = if (Option(m.group(1)).isDefined) 0 else 1
+        val major = m.group(2)
+        val minor = m.group(3)
+        val ending = Option(m.group(4)).map(s => s"$s").getOrElse("")
+        val version = s"$major.$minor$ending"
+        if (isSupportedScalaBinaryVersion(version)) Some(version -> weight)
+        else None
+      }
+      .sortBy(_._2)
+      .headOption
+      .map(_._1)
+      .map(scalaBinaryVersionFromFullVersion)
+  }
+
+  def dialectForDependencyJar(filename: String): Dialect =
+    scalaBinaryVersionFromJarName(filename)
+      .map(dialectForScalaVersion)
+      .getOrElse(Scala213)
+
 }
