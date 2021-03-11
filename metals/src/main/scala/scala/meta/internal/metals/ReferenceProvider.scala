@@ -125,6 +125,21 @@ final class ReferenceProvider(
           info.symbol.owner,
           Descriptor.Type(info.displayName)
         )
+    // Returns true if `info` is a named parameter of the primary constructor
+    def isContructorParam(info: SymbolInformation): Boolean = {
+      info.isParameter &&
+      info.displayName == name &&
+      occ.symbol == (Symbol(info.symbol) match {
+        case GlobalSymbol(
+              // This means it's the primary constructor
+              GlobalSymbol(owner, Descriptor.Method("<init>", "()")),
+              Descriptor.Parameter(_)
+            ) =>
+          Symbols.Global(owner.value, Descriptor.Term(name))
+        case _ =>
+          ""
+      })
+    }
     // Returns true if `info` is a parameter of a synthetic `copy` or `apply` matching the occurrence field symbol.
     def isCopyOrApplyParam(info: SymbolInformation): Boolean =
       info.isParameter &&
@@ -174,7 +189,8 @@ final class ReferenceProvider(
       if {
         isVarSetter(info) ||
         isCompanionObject(info) ||
-        isCopyOrApplyParam(info)
+        isCopyOrApplyParam(info) ||
+        isContructorParam(info)
       }
     } yield info.symbol
     val isCandidate = candidates.toSet
