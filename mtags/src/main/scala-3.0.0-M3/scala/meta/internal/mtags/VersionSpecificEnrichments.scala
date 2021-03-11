@@ -9,7 +9,7 @@ import dotty.tools.dotc.util.NoSourcePosition
 
 trait VersionSpecificEnrichments {
 
-  extension(context: Context) {
+  extension (context: Context) {
     def findRef(name: Name): Type = {
       context.typer.findRef(
         name,

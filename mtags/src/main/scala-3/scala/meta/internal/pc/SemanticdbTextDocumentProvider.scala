@@ -18,9 +18,11 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.MtagsEnrichments._
 
-class SemanticdbTextDocumentProvider(driver: InteractiveDriver, workspace: Option[Path]) 
-  extends WorksheetSemanticdbProvider {
-  
+class SemanticdbTextDocumentProvider(
+    driver: InteractiveDriver,
+    workspace: Option[Path]
+) extends WorksheetSemanticdbProvider {
+
   def textDocument(
       uri: URI,
       sourceCode: String
@@ -43,7 +45,7 @@ class SemanticdbTextDocumentProvider(driver: InteractiveDriver, workspace: Optio
         relativeUri.toString()
       }
       .getOrElse(filePath.toString)
-      
+
     val document = TextDocument(
       schema = Schema.SEMANTICDB4,
       language = Language.SCALA,

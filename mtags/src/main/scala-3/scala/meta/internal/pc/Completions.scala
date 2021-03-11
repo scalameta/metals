@@ -1,6 +1,15 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.ast.tpd.{Ident, Apply, Tree, NamedArg, Template, Block, Literal, Select}
+import dotty.tools.dotc.ast.tpd.{
+  Ident,
+  Apply,
+  Tree,
+  NamedArg,
+  Template,
+  Block,
+  Literal,
+  Select
+}
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.core.Constants.Constant
@@ -12,8 +21,8 @@ import dotty.tools.dotc.core.Flags
 
 trait Completions {
   def completionPosition(
-    pos: SourcePosition,
-    path: List[Tree],
+      pos: SourcePosition,
+      path: List[Tree]
   )(using ctx: Context): List[Completion] = {
     path match {
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
@@ -27,32 +36,33 @@ trait Completions {
 }
 
 case class ArgCompletion(
-  ident: Option[Ident],
-  apply: Apply,
-  pos: SourcePosition,
+    ident: Option[Ident],
+    apply: Apply,
+    pos: SourcePosition
 )(using ctx: Context) {
   val method = apply.fun
   val methodSym = method.symbol
 
   // paramSymss contains both type params and value params
-  val vparamss = methodSym.paramSymss.filter(
-    params => params.forall(p => p.isTerm)
-  )
+  val vparamss =
+    methodSym.paramSymss.filter(params => params.forall(p => p.isTerm))
   val argss = collectArgss(apply)
 
   // get params and args we are interested in
   // e.g.
-  // in the following case, the interesting args and params are 
+  // in the following case, the interesting args and params are
   // - params: [apple, banana]
   // - args: [apple, b]
   // ```
   // def curry(x; Int)(apple: String, banana: String) = ???
   // curry(1)(apple = "test", b@@)
   // ```
-  val (baseParams, baseArgs) = vparamss.zip(argss).lastOption.getOrElse((Nil, Nil))
+  val (baseParams, baseArgs) =
+    vparamss.zip(argss).lastOption.getOrElse((Nil, Nil))
 
   val args = ident
-    .map(i => baseArgs.filterNot(_ == i)).getOrElse(baseArgs)
+    .map(i => baseArgs.filterNot(_ == i))
+    .getOrElse(baseArgs)
     .filterNot(isUselessLiteral)
 
   val isNamed: Set[Name] = args.iterator
@@ -61,23 +71,28 @@ case class ArgCompletion(
     .filterNot {
       case (arg, _) if arg.symbol.denot.is(Flags.Synthetic) => true
       case (Ident(name), _) => name.is(DefaultGetterName) // default args
-      case (Select(Ident(_), name), _) => name.is(DefaultGetterName) // default args for apply method
+      case (Select(Ident(_), name), _) =>
+        name.is(DefaultGetterName) // default args for apply method
       case _ => false
     }
     .map {
       case (NamedArg(name, _), _) => name
       case (_, param) => param.name
-    }.toSet
+    }
+    .toSet
 
   val allParams: List[Symbol] = {
     baseParams.filterNot(param =>
       isNamed(param.name) ||
-      param.denot.is(Flags.Synthetic) // filter out synthesized param, like evidence
+        param.denot.is(
+          Flags.Synthetic
+        ) // filter out synthesized param, like evidence
     )
   }
 
   val prefix = ident.map(_.name.toString).getOrElse("")
-  val params: List[Symbol] = allParams.filter(param => param.name.startsWith(prefix))
+  val params: List[Symbol] =
+    allParams.filter(param => param.name.startsWith(prefix))
 
   def contribute: List[Completion] = {
     val printer = SymbolPrinter()
