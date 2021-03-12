@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -106,6 +107,9 @@ class SemanticdbIndexer(
            * follow after it was finished.
            */
           case e: InvalidProtocolBufferException =>
+            scribe.debug(s"$file is not yet ready", e)
+          /* @note FileSystemException is thrown on Windows instead of InvalidProtocolBufferException */
+          case e: FileSystemException =>
             scribe.debug(s"$file is not yet ready", e)
           case NonFatal(e) =>
             scribe.warn(s"unexpected error processing the file $file", e)
