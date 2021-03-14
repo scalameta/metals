@@ -804,7 +804,9 @@ trigger an action inside the editor. This notification is a copy of the
 - execute client command is a notification, not a request
 - execute client command is initiated from the server, not the client
 
-See [Metals client command] for the list of supported client commands.
+See [Metals client
+commands](https://scalameta.org/metals/docs/integrations/new-editor.html#metals-client-commands)
+for the list of supported client commands.
 
 _Notification_:
 
