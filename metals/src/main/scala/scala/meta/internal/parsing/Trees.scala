@@ -1,6 +1,7 @@
 package scala.meta.internal.parsing
 
 import scala.collection.concurrent.TrieMap
+import scala.reflect.ClassTag
 
 import scala.meta._
 import scala.meta.internal.metals.Buffers
@@ -11,6 +12,7 @@ import scala.meta.parsers.Parsed
 
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.{lsp4j => l}
 
 /**
  * Manages parsing of Scala source files into Scalameta syntax trees.
@@ -35,6 +37,41 @@ final class Trees(
 
   def didClose(fileUri: AbsolutePath): Unit = {
     trees.remove(fileUri)
+  }
+
+  /**
+   * Find last tree matching T that encloses the position.
+   *
+   * @param source source to load the tree for
+   * @param lspPos cursor position
+   * @return found tree node of type T or None
+   */
+  def findLastEnclosingAt[T <: Tree: ClassTag](
+      source: AbsolutePath,
+      lspPos: l.Position
+  ): Option[T] = {
+
+    def enclosedChildren(children: List[Tree], pos: Position): Option[Tree] = {
+      children
+        .find { child =>
+          child.pos.start <= pos.start && pos.start <= child.pos.end
+        }
+    }
+    def loop(t: Tree, pos: Position): Option[T] = {
+      t match {
+        case t: T =>
+          enclosedChildren(t.children, pos)
+            .flatMap(loop(_, pos))
+            .orElse(Some(t))
+        case other =>
+          enclosedChildren(other.children, pos).flatMap(loop(_, pos))
+      }
+    }
+    get(source).flatMap { tree =>
+      val pos = lspPos.toMeta(tree.pos.input)
+      loop(tree, pos)
+    }
+
   }
 
   /**
