@@ -171,6 +171,9 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
 
   implicit class XtensionStringMtags(value: String) {
 
+    def stripBackticks: String = value.stripPrefix("`").stripSuffix("`")
+    def isBackticked: Boolean =
+      value.size > 1 && value.head == '`' && value.last == '`'
     def toAbsolutePath: AbsolutePath =
       AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:")))).dealias
     def lastIndexBetween(

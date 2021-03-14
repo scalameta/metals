@@ -23,11 +23,11 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     """|/a/src/main/scala/a/Main.scala
        |package a
        |
-       |import java.util.{List => `<<J-List>>`}
+       |import java.util.{List => <<`J-List`>>}
        |
        |object Main{
-       |  val toRename: `<<J-L@@ist>>`[Int] = ???
-       |  val toRename2: `<<J-List>>`[Int] = ???
+       |  val toRename: <<`J-L@@ist`>>[Int] = ???
+       |  val toRename2: <<`J-List`>>[Int] = ???
        |  val toRename3: java.util.List[Int] = ???
        |}
        |/a/src/main/scala/a/Main2.scala
@@ -288,7 +288,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |  "" <<::>> user
        |}
        |""".stripMargin,
-    newName = "method:"
+    newName = "+++:"
   )
 
   same(
@@ -563,6 +563,36 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
+    "backtick-new-name",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<toRename>> = 123
+       |}
+       |/a/src/main/scala/a/Main2.scala
+       |package a
+       |object Main2{
+       |  val toRename = Main.<<toR@@ename>>
+       |}
+       |""".stripMargin,
+    newName = "other-rename"
+  )
+
+  renamed(
+    "backtick-old-and-new-name",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<`to-Rename`>> = 123
+       |}
+       |object Main2{
+       |  val toRename = Main.<<`to-R@@ename`>>
+       |}
+       |""".stripMargin,
+    newName = "`other-rename`"
+  )
+
+  renamed(
     "backtick",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -574,6 +604,20 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "other"
+  )
+
+  renamed(
+    "double-backtick",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<greet@@ing>> = "Hello"
+       |  "" match {
+       |    case <<`greeting`>> =>
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "greeting-!"
   )
 
   renamed(

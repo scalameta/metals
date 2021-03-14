@@ -75,7 +75,7 @@ final class ReferenceProvider(
 
   def references(
       params: ReferenceParams,
-      canSkipExactMatchCheck: Boolean = true,
+      findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
@@ -94,7 +94,7 @@ final class ReferenceProvider(
               occurrence,
               alternatives,
               params.getContext.isIncludeDeclaration,
-              canSkipExactMatchCheck,
+              findRealRange,
               includeSynthetics
             )
             ReferencesResult(occurrence.symbol, locations)
@@ -177,7 +177,7 @@ final class ReferenceProvider(
       occ: SymbolOccurrence,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
-      canSkipExactMatchCheck: Boolean,
+      findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
@@ -188,7 +188,7 @@ final class ReferenceProvider(
         distance,
         params.getTextDocument.getUri,
         isIncludeDeclaration,
-        canSkipExactMatchCheck,
+        findRealRange,
         includeSynthetics
       )
     } else {
@@ -219,7 +219,7 @@ final class ReferenceProvider(
               semanticdbDistance,
               uri,
               isIncludeDeclaration,
-              canSkipExactMatchCheck,
+              findRealRange,
               includeSynthetics
             )
           } catch {
@@ -239,7 +239,7 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean,
-      canSkipExactMatchCheck: Boolean,
+      findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
@@ -260,17 +260,14 @@ final class ReferenceProvider(
       range <- reference.range.toList
     } {
 
-      /* We skip checking if the symbol name matches exactly
-       * in case of finding references, where false positives
-       * are ok and speed is more important. This was needed
-       * for some issues with macro annotations, so with renames we
-       * must be sure that a proper name is replaced.
+      /* Find real range is used when renaming occurrences,
+       * where we need to check if the symbol name matches exactly.
+       * This was needed for some issues with macro annotations
+       * and with renames we must be sure that a proper name is replaced.
+       * In case of finding references, where false positives
+       * are ok and speed is more important, we just use the default noAdjustRange.
        */
-      if (canSkipExactMatchCheck) {
-        add(range)
-      } else if (snapshot.text.nonEmpty) {
-        findRealRange(range, snapshot.text, reference.symbol).foreach(add)
-      }
+      findRealRange(range, snapshot.text, reference.symbol).foreach(add)
     }
 
     for {
@@ -288,29 +285,9 @@ final class ReferenceProvider(
     l1.getRange.getStart.getLine < l2.getRange.getStart.getLine
   }
 
-  private def findRealRange(
-      range: s.Range,
-      text: String,
-      symbol: String
-  ): Option[s.Range] = {
-    val name = range.inString(text)
-    val isBackticked = name.charAt(0) == '`'
-    val realName =
-      if (isBackticked) name.substring(1, name.length() - 1)
-      else name
-    if (symbol.isLocal || symbol.desc.name.toString == realName) {
-      val realRange = if (isBackticked) {
-        range
-          .withStartCharacter(range.startCharacter + 1)
-          .withEndCharacter(range.endCharacter - 1)
-      } else {
-        range
-      }
-      Some(realRange)
-    } else {
-      None
-    }
-  }
+  private val noAdjustRange: AdjustRange =
+    (range: s.Range, text: String, symbol: String) => Some(range)
+  type AdjustRange = (s.Range, String, String) => Option[s.Range]
 
   private def resizeReferencedPackages(): Unit = {
     // Increase the size of the set of referenced packages if the false positive ratio is too high.
