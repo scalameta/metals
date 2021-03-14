@@ -2,6 +2,8 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.pc.Identifier
+
 import munit.Location
 import munit.TestOptions
 
@@ -58,11 +60,12 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       cleanWorkspace()
       val allMarkersRegex = "(<<|>>|@@|##.*##)"
       val files = FileLayout.mapFromString(input)
+      val expectedName = Identifier.backtickWrap(newName)
       val expectedFiles = files.map { case (file, code) =>
         fileRenames.getOrElse(file, file) -> {
           val expected = if (!notRenamed) {
             code
-              .replaceAll("\\<\\<\\S*\\>\\>", newName)
+              .replaceAll("\\<\\<\\S*\\>\\>", expectedName)
               .replaceAll("(##|@@)", "")
           } else {
             code.replaceAll(allMarkersRegex, "")

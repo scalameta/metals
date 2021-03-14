@@ -18,11 +18,13 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -30,7 +32,6 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
@@ -111,19 +112,19 @@ final class RenameProvider(
             )
 
         val suggestedName = params.getNewName()
-        val newName =
-          if (suggestedName.charAt(0) == '`')
-            suggestedName.substring(1, suggestedName.length() - 1)
+        val withoutBackticks =
+          if (suggestedName.isBackticked)
+            suggestedName.stripBackticks
           else suggestedName
+        val newName = Identifier.backtickWrap(withoutBackticks)
 
         def isNotRenamedSymbol(
             textDocument: TextDocument,
             occ: SymbolOccurrence
         ): Boolean = {
           def realName = occ.symbol.desc.name.value
-          def foundName = occ.range.map(rng =>
-            rng.inString(textDocument.text).stripPrefix("`").stripSuffix("`")
-          )
+          def foundName =
+            occ.range.map(rng => rng.inString(textDocument.text).stripBackticks)
           occ.symbol.isLocal || foundName.contains(realName)
         }
 
@@ -147,7 +148,7 @@ final class RenameProvider(
               .references(
                 // we can't get definition by name for local symbols
                 toReferenceParams(txtParams, includeDeclaration = isLocal),
-                canSkipExactMatchCheck = false,
+                findRealRange = findRealRange(newName),
                 includeSynthetic
               )
               .locations
@@ -157,10 +158,11 @@ final class RenameProvider(
                 .filter(_.getUri().isScalaFilename)
             else parentSymbols
           }
-          companionRefs = companionReferences(occurence.symbol)
+          companionRefs = companionReferences(occurence.symbol, newName)
           implReferences = implementations(
             txtParams,
-            !occurence.symbol.desc.isType
+            !occurence.symbol.desc.isType,
+            newName
           )
           loc <-
             currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
@@ -232,18 +234,6 @@ final class RenameProvider(
     lazy val uri = source.toURI.toString()
 
     def withoutBacktick(str: String) = str.stripPrefix("`").stripSuffix("`")
-    def realLocationWithoutBackticks(realName: String, rng: Range): Location = {
-      val realRange = if (realName.head == '`' && realName.last == '`') {
-        rng.copy(
-          startCharacter = rng.getStart.getCharacter + 1,
-          endCharacter = rng.getEnd.getCharacter - 1
-        )
-      } else {
-        rng
-      }
-      new Location(uri, realRange)
-    }
-
     def occurrences(
         semanticDb: TextDocument,
         occurence: SymbolOccurrence,
@@ -254,7 +244,7 @@ final class RenameProvider(
       realName = rng.inString(semanticDb.text)
       if occ.symbol == occurence.symbol &&
         withoutBacktick(realName) == withoutBacktick(renameName)
-    } yield realLocationWithoutBackticks(realName, rng.toLSP)
+    } yield new Location(uri, rng.toLSP)
 
     val result = for {
       (occurence, semanticDb) <- symbolOccurrence
@@ -264,10 +254,7 @@ final class RenameProvider(
         occurence,
         rename.rename.value
       )
-    } yield renamedOccurences :+ realLocationWithoutBackticks(
-      rename.rename.syntax,
-      rename.rename.pos.toLSP
-    )
+    } yield renamedOccurences :+ new Location(uri, rename.rename.pos.toLSP)
     result.getOrElse(Nil)
   }
 
@@ -305,7 +292,10 @@ final class RenameProvider(
       }
   }
 
-  private def companionReferences(sym: String): Seq[Location] = {
+  private def companionReferences(
+      sym: String,
+      newName: String
+  ): Seq[Location] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
       loc <-
@@ -317,7 +307,7 @@ final class RenameProvider(
         referenceProvider
           .references(
             toReferenceParams(loc, includeDeclaration = false),
-            canSkipExactMatchCheck = false
+            findRealRange = findRealRange(newName)
           )
           .locations :+ loc
     } yield companionLocs
@@ -354,7 +344,8 @@ final class RenameProvider(
 
   private def implementations(
       textParams: TextDocumentPositionParams,
-      shouldCheckImplementation: Boolean
+      shouldCheckImplementation: Boolean,
+      newName: String
   ): Seq[Location] = {
     if (shouldCheckImplementation) {
       for {
@@ -364,7 +355,7 @@ final class RenameProvider(
           referenceProvider
             .references(
               locParams,
-              canSkipExactMatchCheck = false,
+              findRealRange = findRealRange(newName),
               includeSynthetic
             )
             .locations
@@ -460,6 +451,35 @@ final class RenameProvider(
       case SelectTree(_, id) =>
         id.exists(_.symbol.desc.name.toString == "apply")
       case _ => false
+    }
+  }
+
+  private def findRealRange(newName: String)(
+      range: s.Range,
+      text: String,
+      symbol: String
+  ): Option[s.Range] = {
+    val name = range.inString(text)
+    val isBackticked = name.isBackticked
+    val realName =
+      if (isBackticked)
+        name.stripBackticks
+      else name
+    if (symbol.isLocal || symbol.desc.name.toString == realName) {
+      /* We don't want to remove anything that is backticked, as we don't
+       * know whether it's actuall needed (could be a pattern match). Here
+       * we make sure that the backticks are not added twice.
+       */
+      val realRange = if (isBackticked && !newName.isBackticked) {
+        range
+          .withStartCharacter(range.startCharacter + 1)
+          .withEndCharacter(range.endCharacter - 1)
+      } else {
+        range
+      }
+      Some(realRange)
+    } else {
+      None
     }
   }
 
