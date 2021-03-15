@@ -9,7 +9,6 @@ import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.dialects
-import scala.meta.inputs.Position
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -48,19 +47,6 @@ class InsertInferredType(trees: Trees, compilers: Compilers)
       codeAction
     }
 
-    def findLastEnclosingAtPos(tree: Tree, pos: Position): Option[Term.Name] = {
-      tree.children.find { child =>
-        child.pos.start <= pos.start && pos.start <= child.pos.end
-      } match {
-        case None =>
-          tree match {
-            case name: Term.Name => Some(name)
-            case _ => None
-          }
-        case Some(value) => findLastEnclosingAtPos(value, pos)
-      }
-    }
-
     def inferTypeTitle(name: Term.Name): Option[String] = name.parent.flatMap {
       case pattern @ Pat.Var(_) =>
         pattern.parent
@@ -90,10 +76,9 @@ class InsertInferredType(trees: Trees, compilers: Compilers)
 
     val path = params.getTextDocument().getUri().toAbsolutePath
     val actions = for {
-      tree <- trees.get(path)
-      if isScala2(tree)
-      treePos = params.getRange().toMeta(tree.pos.input)
-      name <- findLastEnclosingAtPos(tree, treePos)
+      name <- trees
+        .findLastEnclosingAt[Term.Name](path, params.getRange().getStart())
+      if isScala2(name)
       title <- inferTypeTitle(name)
     } yield insertInferTypeAction(title)
 
