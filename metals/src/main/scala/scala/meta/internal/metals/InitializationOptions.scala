@@ -39,6 +39,8 @@ import org.eclipse.{lsp4j => l}
  * @param openNewWindowProvider if the client can open a new window after new project creation.
  * @param copyWorksheetOutputProvider if the client can execute server CopyWorksheet command and
  *                                    copy results to the local buffer.
+ * @param disableColorOutput in the situation where your DAP client may not handle color codes in
+ *                            the output, you can enable this to strip them.
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -61,7 +63,8 @@ final case class InitializationOptions(
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean],
     openNewWindowProvider: Option[Boolean],
-    copyWorksheetOutputProvider: Option[Boolean]
+    copyWorksheetOutputProvider: Option[Boolean],
+    disableColorOutput: Option[Boolean]
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -75,6 +78,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -143,7 +147,8 @@ object InitializationOptions {
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
       openNewWindowProvider = jsonObj.getBooleanOption("openNewWindowProvider"),
       copyWorksheetOutputProvider =
-        jsonObj.getBooleanOption("copyWorksheetOutputProvider")
+        jsonObj.getBooleanOption("copyWorksheetOutputProvider"),
+      disableColorOutput = jsonObj.getBooleanOption("disableColorOutput")
     )
   }
 

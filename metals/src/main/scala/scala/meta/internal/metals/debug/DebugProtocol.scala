@@ -162,8 +162,11 @@ object DebugProtocol {
   }
 
   object OutputNotification {
-    def unapply(notification: NotificationMessage): Boolean = {
-      notification.getMethod == "output"
+    def unapply(
+        notification: NotificationMessage
+    ): Option[OutputEventArguments] = {
+      if (notification.getMethod != "output") None
+      else parse[OutputEventArguments](notification.getParams).toOption
     }
   }
 
