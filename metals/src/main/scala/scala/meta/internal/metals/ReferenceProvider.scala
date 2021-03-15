@@ -85,7 +85,7 @@ final class ReferenceProvider(
           definition.positionOccurrence(source, params.getPosition, doc)
         maybeOccurrence match {
           case Some(occurrence) =>
-            val alternatives = referenceAlternatives(doc, occurrence)
+            val alternatives = referenceAlternatives(occurrence.symbol, doc)
             val locations = references(
               source,
               params,
@@ -113,94 +113,62 @@ final class ReferenceProvider(
 
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
-      doc: TextDocument,
-      occ: SymbolOccurrence
+      symbol: String,
+      referenceDoc: TextDocument
   ): Set[String] = {
-    val name = occ.symbol.desc.name.value
-    // Returns true if `info` is the companion object matching the occurrence class symbol.
-    def isCompanionObject(info: SymbolInformation): Boolean =
-      info.isObject &&
-        info.displayName == name &&
-        occ.symbol == Symbols.Global(
-          info.symbol.owner,
-          Descriptor.Type(info.displayName)
-        )
-    // Returns true if `info` is a named parameter of the primary constructor
-    def isContructorParam(info: SymbolInformation): Boolean = {
-      info.isParameter &&
-      info.displayName == name &&
-      occ.symbol == (Symbol(info.symbol) match {
-        case GlobalSymbol(
-              // This means it's the primary constructor
-              GlobalSymbol(owner, Descriptor.Method("<init>", "()")),
-              Descriptor.Parameter(_)
-            ) =>
-          Symbols.Global(owner.value, Descriptor.Term(name))
-        case _ =>
-          ""
-      })
+    val definitionDoc = if (referenceDoc.symbols.exists(_.symbol == symbol)) {
+      Some(referenceDoc)
+    } else {
+      for {
+        location <- definition.fromSymbol(symbol).asScala.headOption
+        source = location.getUri().toAbsolutePath
+        definitionDoc <- semanticdbs.textDocument(source).documentIncludingStale
+      } yield definitionDoc
     }
-    // Returns true if `info` is a parameter of a synthetic `copy` or `apply` matching the occurrence field symbol.
-    def isCopyOrApplyParam(info: SymbolInformation): Boolean =
-      info.isParameter &&
-        info.displayName == name &&
-        occ.symbol == (Symbol(info.symbol) match {
-          case GlobalSymbol(
-                GlobalSymbol(
-                  GlobalSymbol(owner, Descriptor.Term(obj)),
-                  Descriptor.Method("apply", _)
-                ),
-                _
-              ) =>
-            Symbols.Global(
-              Symbols.Global(owner.value, Descriptor.Type(obj)),
-              Descriptor.Term(name)
-            )
-          case GlobalSymbol(
-                GlobalSymbol(
-                  GlobalSymbol(owner, Descriptor.Type(obj)),
-                  Descriptor.Method("copy", _)
-                ),
-                _
-              ) =>
-            Symbols.Global(
-              Symbols.Global(owner.value, Descriptor.Type(obj)),
-              Descriptor.Term(name)
-            )
-          case _ =>
-            ""
-        })
-    // Returns true if `info` is companion var setter method for occ.symbol var getter.
-    def isVarSetter(info: SymbolInformation): Boolean =
-      info.displayName.endsWith("_=") &&
-        info.displayName.startsWith(name) &&
-        occ.symbol == (Symbol(info.symbol) match {
-          case GlobalSymbol(owner, Descriptor.Method(setter, disambiguator)) =>
-            Symbols.Global(
-              owner.value,
-              Descriptor.Method(setter.stripSuffix("_="), disambiguator)
-            )
-          case _ =>
-            ""
-        })
-    val candidates = for {
-      info <- doc.symbols.iterator
-      if info.symbol != name
-      if {
-        isVarSetter(info) ||
-        isCompanionObject(info) ||
-        isCopyOrApplyParam(info) ||
-        isContructorParam(info)
-      }
-    } yield info.symbol
-    val isCandidate = candidates.toSet
-    val nonSyntheticSymbols = for {
-      doc <- doc.occurrences
-      if isCandidate(doc.symbol)
-      if doc.role.isDefinition
-    } yield doc.symbol
-    isCandidate -- nonSyntheticSymbols
+
+    definitionDoc match {
+      case Some(definitionDoc) =>
+        val name = symbol.desc.name.value
+        val alternatives = new SymbolAlternatives(symbol, name)
+
+        val candidates = for {
+          info <- definitionDoc.symbols
+          if info.symbol != name
+          if {
+            alternatives.isVarSetter(info) ||
+            alternatives.isCompanionObject(info) ||
+            alternatives.isCopyOrApplyParam(info) ||
+            alternatives.isContructorParam(info)
+          }
+        } yield info.symbol
+
+        val isCandidate = candidates.toSet
+
+        val nonSyntheticSymbols = for {
+          occ <- definitionDoc.occurrences
+          if isCandidate(occ.symbol) || occ.symbol == symbol
+          if occ.role.isDefinition
+        } yield occ.symbol
+
+        def isSyntheticSymbol = !nonSyntheticSymbols.contains(symbol)
+
+        def additionalAlternativesForSynthetic = for {
+          info <- definitionDoc.symbols
+          if info.symbol != name
+          if {
+            alternatives.isCompanionClass(info) ||
+            alternatives.isFieldParam(info)
+          }
+        } yield info.symbol
+
+        if (isSyntheticSymbol)
+          isCandidate -- nonSyntheticSymbols ++ additionalAlternativesForSynthetic
+        else
+          isCandidate -- nonSyntheticSymbols
+      case None => Set.empty
+    }
   }
+
   private def references(
       source: AbsolutePath,
       params: ReferenceParams,
@@ -352,4 +320,103 @@ final class ReferenceProvider(
     }
   }
 
+}
+
+class SymbolAlternatives(symbol: String, name: String) {
+
+  // Returns true if `info` is the companion object matching the occurrence class symbol.
+  def isCompanionObject(info: SymbolInformation): Boolean =
+    info.isObject &&
+      info.displayName == name &&
+      symbol == Symbols.Global(
+        info.symbol.owner,
+        Descriptor.Type(info.displayName)
+      )
+
+  // Returns true if `info` is the companion class matching the occurrence object symbol.
+  def isCompanionClass(info: SymbolInformation): Boolean = {
+    info.isClass &&
+    info.displayName == name &&
+    symbol == Symbols.Global(
+      info.symbol.owner,
+      Descriptor.Term(info.displayName)
+    )
+  }
+
+  // Returns true if `info` is a named parameter of the primary constructor
+  def isContructorParam(info: SymbolInformation): Boolean = {
+    info.isParameter &&
+    info.displayName == name &&
+    symbol == (Symbol(info.symbol) match {
+      case GlobalSymbol(
+            // This means it's the primary constructor
+            GlobalSymbol(owner, Descriptor.Method("<init>", "()")),
+            Descriptor.Parameter(_)
+          ) =>
+        Symbols.Global(owner.value, Descriptor.Term(name))
+      case _ =>
+        ""
+    })
+  }
+
+  // Returns true if `info` is a field that corresponds to named parameter of the primary constructor
+  def isFieldParam(info: SymbolInformation): Boolean = {
+    (info.isVal || info.isVar) &&
+    info.displayName == name &&
+    symbol == (Symbol(info.symbol) match {
+      case GlobalSymbol(owner, Descriptor.Term(name)) =>
+        Symbols.Global(
+          // This means it's the primary constructor
+          Symbols.Global(owner.value, Descriptor.Method("<init>", "()")),
+          Descriptor.Parameter(name)
+        )
+      case _ =>
+        ""
+    })
+  }
+
+  // Returns true if `info` is a parameter of a synthetic `copy` or `apply` matching the occurrence field symbol.
+  def isCopyOrApplyParam(info: SymbolInformation): Boolean =
+    info.isParameter &&
+      info.displayName == name &&
+      symbol == (Symbol(info.symbol) match {
+        case GlobalSymbol(
+              GlobalSymbol(
+                GlobalSymbol(owner, Descriptor.Term(obj)),
+                Descriptor.Method("apply", _)
+              ),
+              _
+            ) =>
+          Symbols.Global(
+            Symbols.Global(owner.value, Descriptor.Type(obj)),
+            Descriptor.Term(name)
+          )
+        case GlobalSymbol(
+              GlobalSymbol(
+                GlobalSymbol(owner, Descriptor.Type(obj)),
+                Descriptor.Method("copy", _)
+              ),
+              _
+            ) =>
+          Symbols.Global(
+            Symbols.Global(owner.value, Descriptor.Type(obj)),
+            Descriptor.Term(name)
+          )
+        case _ =>
+          ""
+      })
+
+  // Returns true if `info` is companion var setter method for occ.symbol var getter.
+  def isVarSetter(info: SymbolInformation): Boolean =
+    info.displayName.endsWith("_=") &&
+      info.displayName.startsWith(name) &&
+      symbol == (Symbol(info.symbol) match {
+        case GlobalSymbol(owner, Descriptor.Method(setter, disambiguator)) =>
+          Symbols.Global(
+            owner.value,
+            Descriptor.Method(setter.stripSuffix("_="), disambiguator)
+          )
+        case _ =>
+          ""
+      })
 }
