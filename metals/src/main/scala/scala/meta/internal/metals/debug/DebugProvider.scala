@@ -26,7 +26,6 @@ import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
@@ -68,9 +67,8 @@ class DebugProvider(
     classFinder: ClassFinder,
     index: OnDemandSymbolIndex,
     stacktraceAnalyzer: StacktraceAnalyzer,
-    icons: Icons,
-    semanticdbs: Semanticdbs,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    semanticdbs: Semanticdbs
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -132,7 +130,8 @@ class DebugProvider(
             awaitClient,
             connectToServer,
             classFinder,
-            stacktraceAnalyzer
+            stacktraceAnalyzer,
+            clientConfig.disableColorOutput()
           )
       }
       val server = new DebugServer(sessionName, uri, proxyFactory)
@@ -409,7 +408,9 @@ class DebugProvider(
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case _ if buildClient.buildHasErrors =>
-      languageClient.metalsStatus(Messages.DebugErrorsPresent(icons))
+      languageClient.metalsStatus(
+        Messages.DebugErrorsPresent(clientConfig.icons())
+      )
       languageClient.metalsExecuteClientCommand(
         new ExecuteCommandParams(
           ClientCommands.FocusDiagnostics.id,
@@ -449,7 +450,7 @@ class DebugProvider(
     case e @ SemanticDbNotFoundException =>
       languageClient.metalsStatus(
         MetalsStatusParams(
-          text = s"${icons.alert}Build misconfiguration",
+          text = s"${clientConfig.icons.alert}Build misconfiguration",
           tooltip = e.getMessage(),
           command = ClientCommands.RunDoctor.id
         )

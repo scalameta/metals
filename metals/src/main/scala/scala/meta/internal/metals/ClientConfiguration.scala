@@ -147,6 +147,9 @@ class ClientConfiguration(
 
   def isCopyWorksheetOutputProvider(): Boolean =
     initializationOptions.copyWorksheetOutputProvider.getOrElse(false)
+
+  def disableColorOutput(): Boolean =
+    initializationOptions.disableColorOutput.getOrElse(false)
 }
 
 object ClientConfiguration {

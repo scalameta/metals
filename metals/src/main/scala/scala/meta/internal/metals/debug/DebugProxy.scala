@@ -29,7 +29,8 @@ private[debug] final class DebugProxy(
     client: RemoteEndpoint,
     server: ServerAdapter,
     classFinder: ClassFinder,
-    stackTraceAnalyzer: StacktraceAnalyzer
+    stackTraceAnalyzer: StacktraceAnalyzer,
+    stripColor: Boolean
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -89,11 +90,9 @@ private[debug] final class DebugProxy(
   }
 
   private val handleServerMessage: Message => Unit = {
-    case null =>
-      () // ignore
-    case _ if cancelled.get() =>
-      () // ignore
-    case OutputNotification() if outputTerminated =>
+    case null => () // ignore
+    case _ if cancelled.get() => () // ignore
+    case OutputNotification(_) if outputTerminated => ()
     // ignore. When restarting, the output keeps getting printed for a short while after the
     // output window gets refreshed resulting in stale messages being printed on top, before
     // any actual logs from the restarted process
@@ -125,8 +124,15 @@ private[debug] final class DebugProxy(
           client.consume(message)
         }
 
-    case message =>
+    case message @ OutputNotification(output) if stripColor =>
+      val raw = output.getOutput()
+      // As long as the color codes are valid this should correctly strip
+      // anything that is ESC (U+001B) plus [
+      val msgWithoutColorCodes = raw.replaceAll("\u001B\\[[;\\d]*m", "");
+      output.setOutput(msgWithoutColorCodes)
+      message.setParams(output)
       client.consume(message)
+    case message => client.consume(message)
   }
 
   def cancel(): Unit = {
@@ -155,7 +161,8 @@ private[debug] object DebugProxy {
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket],
       classFinder: ClassFinder,
-      stacktraceAnalyzer: StacktraceAnalyzer
+      stacktraceAnalyzer: StacktraceAnalyzer,
+      stripColor: Boolean
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -173,7 +180,8 @@ private[debug] object DebugProxy {
       client,
       server,
       classFinder,
-      stacktraceAnalyzer
+      stacktraceAnalyzer,
+      stripColor
     )
   }
 

@@ -116,6 +116,7 @@ The currently available settings for `InitializationOptions` are listed below.
       "debuggingProvider": boolean,
       "decorationProvider": boolean,
       "didFocusProvider": boolean,
+      "disableColorOutput" boolean,
       "doctorProvider": "json" | "html",
       "executeClientCommandProvider": boolean,
       "globSyntax": "vscode" | "uri"
@@ -250,6 +251,14 @@ Default value: `false`
 
 Boolean value to signify that the client supports the
 [`metals/didFocusTextDocument`](#metalsdidfocustextdocument) extension.
+
+Default value: `false`
+
+##### `disableColorOutput`
+
+Useful for certain DAP clients that are unable to handle color codes for output.
+This will remove the color codes coming from whatever DAP server is currently
+being used.
 
 Default value: `false`
 
