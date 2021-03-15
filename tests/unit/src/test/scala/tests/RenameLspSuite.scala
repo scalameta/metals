@@ -47,10 +47,10 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     """|/a/src/main/scala/a/Main.scala
        |package a
        |
-       |import a.{Main2 => <<OtherMain>>}
+       |import a.{Main2 => <<Ot@@herMain>>}
        |
        |object Main{
-       |  val toRename = <<Oth@@erMain>>.toRename
+       |  val toRename = <<OtherMain>>.toRename
        |}
        |/a/src/main/scala/a/Main2.scala
        |package a

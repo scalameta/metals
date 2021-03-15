@@ -320,7 +320,7 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.2",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %% "geny" % genyVersion.value)
@@ -339,9 +339,9 @@ val mtagsSettings = List(
       crossSetting(
         scalaVersion.value,
         if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.1"),
+        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.2"),
         if3 = List(
-          ("com.lihaoyi" %% "pprint" % "0.6.1")
+          ("com.lihaoyi" %% "pprint" % "0.6.2")
             .withDottyCompat(scalaVersion.value)
         )
       )
@@ -399,7 +399,7 @@ lazy val metals = project
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.6",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.4.Final",
+      "io.undertow" % "undertow-core" % "2.2.5.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "7.7.0",
@@ -431,13 +431,13 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.4.0",
-      "com.outr" %% "scribe-file" % "3.4.0",
-      "com.outr" %% "scribe-slf4j" % "3.4.0", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.5.0",
+      "com.outr" %% "scribe-file" % "3.5.0",
+      "com.outr" %% "scribe-slf4j" % "3.5.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.6.1",
+      "com.lihaoyi" %% "pprint" % "0.6.2",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.2.3",
+      "com.lihaoyi" %% "ujson" % "1.3.0",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.6.5",
       // for producing SemanticDB from Scala source files

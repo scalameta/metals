@@ -67,15 +67,21 @@ final class RenameProvider(
     compilations.compilationFinished(source).flatMap { _ =>
       definitionProvider.definition(source, params, token).map { definition =>
         val symbolOccurrence =
-          definitionProvider.symbolOccurrence(source, params.getPosition)
-
+          definitionProvider
+            .symbolOccurrence(source, params.getPosition)
+            .orElse(
+              findRenamedImportOccurrenceAtPosition(
+                source,
+                params.getPosition()
+              )
+            )
         for {
           (occurence, _) <- symbolOccurrence
           definitionLocation <- definition.locations.asScala.headOption
           definitionPath = definitionLocation.getUri().toAbsolutePath
           if canRenameSymbol(occurence.symbol, None) &&
             (isWorkspaceSymbol(occurence.symbol, definitionPath) ||
-              findRenamedImport(source, occurence.symbol).isDefined)
+              findRenamedImportForSymbol(source, occurence.symbol).isDefined)
           range <- occurence.range
         } yield range.toLSP
       }
@@ -95,7 +101,14 @@ final class RenameProvider(
         )
 
         val symbolOccurrence =
-          definitionProvider.symbolOccurrence(source, textParams.getPosition)
+          definitionProvider
+            .symbolOccurrence(source, textParams.getPosition)
+            .orElse(
+              findRenamedImportOccurrenceAtPosition(
+                source,
+                params.getPosition()
+              )
+            )
 
         val suggestedName = params.getNewName()
         val newName =
@@ -245,7 +258,7 @@ final class RenameProvider(
 
     val result = for {
       (occurence, semanticDb) <- symbolOccurrence
-      rename <- findRenamedImport(source, occurence.symbol)
+      rename <- findRenamedImportForSymbol(source, occurence.symbol)
       renamedOccurences = occurrences(
         semanticDb,
         occurence,
@@ -379,14 +392,38 @@ final class RenameProvider(
     (!desc.isMethod || (!colonNotAllowed && !isForbidden))
   }
 
-  private def findRenamedImport(
+  private def findRenamedImportOccurrenceAtPosition(
+      source: AbsolutePath,
+      pos: Position
+  ): Option[(SymbolOccurrence, TextDocument)] = {
+    val renameOpt = trees.findLastEnclosingAt[Importee.Rename](source, pos)
+
+    for {
+      rename <- renameOpt
+      (occ, doc) <- definitionProvider.symbolOccurrence(
+        source,
+        rename.name.pos.toLSP.getStart()
+      )
+
+    } yield (occ.copy(range = Some(rename.rename.pos.toSemanticdb)), doc)
+  }
+
+  private def findRenamedImportForSymbol(
       source: AbsolutePath,
       symbol: String
   ): Option[Importee.Rename] = {
+    lazy val displayName = symbol.desc.name.value
+    // make sure it's not just a rename with the same base name
+    def isCorrectSymbolOcccurrence(rename: Importee.Rename) = {
+      definitionProvider
+        .symbolOccurrence(source, rename.name.pos.toLSP.getStart())
+        .exists { case (occ, _) => occ.symbol == symbol }
+    }
     def findRename(tree: Tree): Option[Importee.Rename] = {
       tree match {
         case rename: Importee.Rename
-            if rename.name.value == symbol.desc.name.value =>
+            if rename.name.value == displayName &&
+              isCorrectSymbolOcccurrence(rename) =>
           Some(rename)
         case other =>
           other.children.toIterable.flatMap { child =>
