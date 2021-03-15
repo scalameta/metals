@@ -19,6 +19,7 @@ import scala.util.Try
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
@@ -33,6 +34,7 @@ import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsStatusParams
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.config.RunType
@@ -67,7 +69,8 @@ class DebugProvider(
     index: OnDemandSymbolIndex,
     stacktraceAnalyzer: StacktraceAnalyzer,
     icons: Icons,
-    semanticdbs: Semanticdbs
+    semanticdbs: Semanticdbs,
+    clientConfig: ClientConfiguration
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -259,9 +262,6 @@ class DebugProvider(
     lazy val testClasses = (bti: BuildTargetIdentifier) =>
       buildTargetClasses.classesOf(bti).testClasses
 
-    lazy val textDocumentO =
-      semanticdbs.textDocument(path).documentIncludingStale
-
     val result: Future[DebugSessionParams] = (runTypeO, buildTargetO) match {
       case _ if buildClient.buildHasErrors =>
         Future.failed(WorkspaceErrorsException)
@@ -280,9 +280,11 @@ class DebugProvider(
           NoTestsFoundException("build target", displayName(target))
         )
       case (Some(TestFile), Some(target)) =>
-        textDocumentO
+        semanticdbs
+          .textDocument(path)
+          .documentIncludingStale
           .fold[Future[Seq[BuildTargetClasses.ClassName]]] {
-            Future.failed(new Exception("Semanticdb not found for path."))
+            Future.failed(SemanticDbNotFoundException)
           } { textDocument =>
             Future {
               for {
@@ -407,7 +409,7 @@ class DebugProvider(
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case _ if buildClient.buildHasErrors =>
-      statusBar.addMessage(Messages.DebugErrorsPresent(icons))
+      languageClient.metalsStatus(Messages.DebugErrorsPresent(icons))
       languageClient.metalsExecuteClientCommand(
         new ExecuteCommandParams(
           ClientCommands.FocusDiagnostics.id,
@@ -443,6 +445,14 @@ class DebugProvider(
     case e: RunType.UnknownRunTypeException =>
       languageClient.showMessage(
         Messages.errorMessageParams(e.getMessage())
+      )
+    case e @ SemanticDbNotFoundException =>
+      languageClient.metalsStatus(
+        MetalsStatusParams(
+          text = s"${icons.alert}Build misconfiguration",
+          tooltip = e.getMessage(),
+          command = ClientCommands.RunDoctor.id
+        )
       )
   }
 
@@ -554,4 +564,8 @@ object DebugParametersJsonParsers {
 case object WorkspaceErrorsException
     extends Exception(
       s"Cannot run class, since the workspace has errors."
+    )
+case object SemanticDbNotFoundException
+    extends Exception(
+      "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
     )

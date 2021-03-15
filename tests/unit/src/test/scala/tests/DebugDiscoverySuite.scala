@@ -6,6 +6,7 @@ import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
 import scala.meta.internal.metals.debug.NoTestsFoundException
+import scala.meta.internal.metals.debug.SemanticDbNotFoundException
 import scala.meta.internal.metals.debug.WorkspaceErrorsException
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
@@ -248,6 +249,42 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     } yield assertNoDiff(
       result.toString(),
       NoTestsFoundException("build target", "a").toString()
+    )
+  }
+
+  test("no-semanticdb") {
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |class Foo extends org.scalatest.FunSuite {
+           |  test("foo") {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)(identity)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      _ = cleanCompileCache("a")
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugDiscoveryParams(
+            server.toPath(fooPath).toURI.toString,
+            "testFile"
+          ).toJson
+        )
+        .recover { case SemanticDbNotFoundException =>
+          SemanticDbNotFoundException
+        }
+    } yield assertNoDiff(
+      result.toString,
+      SemanticDbNotFoundException.toString()
     )
   }
 }
