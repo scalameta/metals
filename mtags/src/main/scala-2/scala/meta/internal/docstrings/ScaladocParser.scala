@@ -342,7 +342,9 @@ object ScaladocParser {
           javadoclessComment,
           { mtch =>
             java.util.regex.Matcher
-              .quoteReplacement(safeTagMarker + mtch.matched + safeTagMarker)
+              .quoteReplacement(
+                "" + safeTagMarker + mtch.matched + safeTagMarker
+              )
           }
         )
       markedTagComment.linesIterator.toList.map(cleanLine)
@@ -686,7 +688,7 @@ object ScaladocParser {
       else if (checkSkipInitWhitespace("----"))
         hrule()
       else if (checkList)
-        listBlock
+        listBlock()
       else if (checkTableRow)
         table()
       else {
@@ -734,7 +736,7 @@ object ScaladocParser {
        */
       def listLine(indent: Int, style: String): Option[Block] =
         if (countWhitespace > indent && checkList)
-          Some(listBlock)
+          Some(listBlock())
         else if (countWhitespace != indent || !checkSkipInitWhitespace(style))
           None
         else {
@@ -1181,7 +1183,7 @@ object ScaladocParser {
               ",,"
             ) || check(
               "[["
-            ) || isInlineEnd || checkParaEnded || char == endOfLine
+            ) || isInlineEnd || checkParaEnded() || char == endOfLine
           }
           Text(textTransform(str))
         }
@@ -1190,7 +1192,7 @@ object ScaladocParser {
       val inlines: List[Inline] = {
         val iss = mutable.ListBuffer.empty[Inline]
         iss += inline0()
-        while (!isInlineEnd && !checkParaEnded) {
+        while (!isInlineEnd && !checkParaEnded()) {
           val skipEndOfLine = if (char == endOfLine) {
             nextChar()
             true

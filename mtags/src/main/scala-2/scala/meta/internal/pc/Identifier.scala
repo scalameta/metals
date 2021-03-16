@@ -62,7 +62,7 @@ object Identifier {
   def backtickWrap(s: String): String = {
     if (s.isEmpty) "``"
     else if (s(0) == '`' && s.last == '`') s
-    else if (needsBacktick(s)) '`' + s + '`'
+    else if (needsBacktick(s)) "" + ('`') + s + '`'
     else s
   }
 

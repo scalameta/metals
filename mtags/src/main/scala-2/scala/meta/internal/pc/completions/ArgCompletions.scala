@@ -140,7 +140,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       params.flatMap { param =>
         val allMemebers = matchingTypesInScope(param.tpe)
         allMemebers.map { memberName =>
-          val editText = param.name + " = " + memberName
+          val editText = "" + param.name + " = " + memberName
           val edit = new l.TextEdit(editRange, editText)
           new TextEditMember(
             filterText = param.name.toString(),

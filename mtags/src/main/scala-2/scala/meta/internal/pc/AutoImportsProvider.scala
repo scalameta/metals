@@ -46,7 +46,7 @@ final class AutoImportsProvider(
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
-    symbols.result.collect {
+    symbols.result().collect {
       case sym if isExactMatch(sym, name) =>
         val pkg = sym.owner.fullName
         val edits = importPosition match {
