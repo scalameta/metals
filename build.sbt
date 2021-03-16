@@ -253,12 +253,12 @@ val sharedSettings = List(
   ),
   scalacOptions ++= crossSetting(
     scalaVersion.value,
-    if3 = List("-language:implicitConversions"),
+    if3 = List("-language:implicitConversions", "-Xtarget:8"),
     if211 = List("-Xexperimental", "-Ywarn-unused-import")
   ),
   scalacOptions --= crossSetting(
     scalaVersion.value,
-    if3 = "-Yrangepos" :: scala212CompilerOptions,
+    if3 = "-Yrangepos" :: "-target:jvm-1.8" :: scala212CompilerOptions,
     if211 = scala212CompilerOptions
   )
 )

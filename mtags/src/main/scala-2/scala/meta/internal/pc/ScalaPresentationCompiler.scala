@@ -121,14 +121,14 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
       params.token
-    ) { pc => new CompletionProvider(pc.compiler, params).completions() }
+    ) { pc => new CompletionProvider(pc.compiler(), params).completions() }
 
   override def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new CompletionProvider(pc.compiler, params).implementAll()
+      new CompletionProvider(pc.compiler(), params).implementAll()
     }
   }
 
@@ -137,7 +137,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new InferredTypeProvider(pc.compiler, params).inferredTypeEdits().asJava
+      new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
     }
   }
 
@@ -149,7 +149,7 @@ case class ScalaPresentationCompiler(
       List.empty[AutoImportsResult].asJava,
       params.token
     ) { pc =>
-      new AutoImportsProvider(pc.compiler, name, params).autoImports().asJava
+      new AutoImportsProvider(pc.compiler(), name, params).autoImports().asJava
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because
@@ -162,7 +162,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[CompletionItem] =
     CompletableFuture.completedFuture {
       compilerAccess.withSharedCompiler(item) { pc =>
-        new CompletionItemResolver(pc.compiler).resolve(item, symbol)
+        new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
       }
     }
 
@@ -172,7 +172,7 @@ case class ScalaPresentationCompiler(
     compilerAccess.withNonInterruptableCompiler(
       new SignatureHelp(),
       params.token
-    ) { pc => new SignatureHelpProvider(pc.compiler).signatureHelp(params) }
+    ) { pc => new SignatureHelpProvider(pc.compiler()).signatureHelp(params) }
 
   override def hover(
       params: OffsetParams
@@ -181,14 +181,16 @@ case class ScalaPresentationCompiler(
       Optional.empty[Hover](),
       params.token
     ) { pc =>
-      Optional.ofNullable(new HoverProvider(pc.compiler, params).hover().orNull)
+      Optional.ofNullable(
+        new HoverProvider(pc.compiler(), params).hover().orNull
+      )
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
-    ) { pc => new PcDefinitionProvider(pc.compiler, params).definition() }
+    ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
   }
 
   override def semanticdbTextDocument(
@@ -199,7 +201,7 @@ case class ScalaPresentationCompiler(
       Array.emptyByteArray,
       EmptyCancelToken
     ) { pc =>
-      new SemanticdbTextDocumentProvider(pc.compiler)
+      new SemanticdbTextDocumentProvider(pc.compiler())
         .textDocument(uri, code)
         .toByteArray
     }

@@ -71,6 +71,21 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin.hover
   )
 
+  // https://github.com/scalameta/metals/issues/1991
+  check(
+    "extension-methods",
+    """|
+       |object Foo:
+       |    extension (s: String):
+       |        def double = s + s
+       |        def double2 = s + s        
+       |    end extension
+       |    "".<<doub@@le2>>
+       |end Foo
+       |""".stripMargin,
+    ""
+  )
+
   // TODO: better printing for using
   // currently "def apply[T](a: T)(implicit x$2: Int): T"
   check(
