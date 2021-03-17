@@ -84,7 +84,7 @@ final class DocumentHighlightProvider(
     Symbol(info.symbol) match {
       case GlobalSymbol(
             GlobalSymbol(owner, descriptor),
-            Descriptor.Method(setter, _)
+            Descriptor.Method(setter, "()")
           ) =>
         generateAlternativeSymbols(
           setter.stripSuffix(setterSuffix),
