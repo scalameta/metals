@@ -63,6 +63,12 @@ inThisBuild(
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := List(
       Developer(
+        "adpi2",
+        "Adrien Piquerez",
+        "adrien.piquerez@epfl.ch",
+        url("https://github.com/adpi2")
+      ),
+      Developer(
         "laughedelic",
         "Alexey Alekhin",
         "laughedelic@gmail.com",
