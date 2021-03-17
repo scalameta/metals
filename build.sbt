@@ -121,6 +121,12 @@ inThisBuild(
         "Tomasz Godzik",
         "tgodzik@virtuslab.com",
         url("https://github.com/tgodzik")
+      ),
+      Developer(
+        "dos65",
+        "Vadim Chelyshov",
+        "vchelyshov@virtuslab.com",
+        url("https://github.com/dos65")
       )
     ),
     testFrameworks := List(),
