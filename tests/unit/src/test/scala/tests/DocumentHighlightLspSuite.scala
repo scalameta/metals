@@ -1,6 +1,7 @@
 package tests
 
 import munit.Location
+import munit.TestOptions
 
 class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
 
@@ -88,7 +89,19 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
       |}""".stripMargin
   )
 
-  def check(name: String, testCase: String)(implicit loc: Location): Unit = {
+  check(
+    "overloaded",
+    """
+      |object Main {
+      |  def hello() = ""
+      |  def <<hel@@lo>>(a : Int) = ""
+      |  def hello(a : Int, b : String) = ""
+      |}""".stripMargin
+  )
+
+  def check(name: TestOptions, testCase: String)(implicit
+      loc: Location
+  ): Unit = {
     val edit = testCase.replaceAll("(<<|>>)", "")
     val expected = testCase.replaceAll("@@", "")
     val base = testCase.replaceAll("(<<|>>|@@)", "")
