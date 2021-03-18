@@ -34,6 +34,7 @@ The current maintainers (people who can merge pull requests) are:
 - Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 - Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
 - Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
+- Vadim Chelyshov- [`@dos65`](https://github.com/dos65)
 
 ## Acknowledgement
 
