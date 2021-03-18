@@ -40,7 +40,7 @@ abstract class CompletionBench {
   }
 
   def downloadLibraries(): Unit = {
-    libraries = Library.jdk :: Library.all
+    libraries = Library.jdk :: Library.allScala2
     val akka = Corpus.akka()
     val replicator =
       "akka-2.5.19/akka-cluster/src/main/scala/akka/cluster/ClusterDaemon.scala"

@@ -27,11 +27,16 @@ final class Mtags {
       List(toplevelClass)
     } else if (language.isScala) {
       addLines(language, input.text)
-      new ScalaToplevelMtags(
-        input,
-        includeInnerClasses = false,
-        dialect
-      )
+      val mtags =
+        if (dialect.allowSignificantIndentation)
+          new Scala3ToplevelMtags(input, includeInnerClasses = false, dialect)
+        else
+          new ScalaToplevelMtags(
+            input,
+            includeInnerClasses = false,
+            dialect
+          )
+      mtags
         .index()
         .occurrences
         .iterator
@@ -82,16 +87,20 @@ object Mtags {
       .toList
   }
 
-  def allToplevels(input: Input.VirtualFile): TextDocument = {
+  def allToplevels(
+      input: Input.VirtualFile,
+      dialect: Dialect = dialects.Scala213
+  ): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>
         new JavaMtags(input).index()
       case Language.SCALA =>
-        new ScalaToplevelMtags(
-          input,
-          includeInnerClasses = true,
-          dialects.Scala213
-        ).index()
+        val mtags =
+          if (dialect.allowSignificantIndentation)
+            new Scala3ToplevelMtags(input, true, dialect)
+          else
+            new ScalaToplevelMtags(input, true, dialect)
+        mtags.index()
       case _ =>
         TextDocument()
     }

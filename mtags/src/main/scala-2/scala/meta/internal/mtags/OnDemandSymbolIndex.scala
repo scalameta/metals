@@ -50,8 +50,6 @@ final class OnDemandSymbolIndex(
   def close(): Unit = sourceJars.close()
   private val onErrorOption = onError.andThen(_ => None)
 
-  private val sourceDirectories: TrieMap[AbsolutePath, Dialect] = TrieMap.empty
-
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
     try findSymbolDefinition(symbol, symbol)
     catch onErrorOption
@@ -121,9 +119,6 @@ final class OnDemandSymbolIndex(
 
       sourceToplevels.foreach { toplevel =>
         addToplevelSymbol(path, source, toplevel)
-      }
-      sourceDirectory.foreach { dir =>
-        sourceDirectories += dir -> dialect
       }
     }
 
@@ -210,16 +205,7 @@ final class OnDemandSymbolIndex(
         case Some(file) =>
           addMtagsSourceFile(file)
         case _ =>
-          val scala3Toplevel =
-            if (toplevel.value.endsWith("$package.")) {
-              val path = toplevel.value.stripSuffix("$package.") + ".scala"
-              loadFromSourceDirectories(path).orElse(
-                loadFromSourceJars(List(path))
-              )
-            } else None
-
-          scala3Toplevel
-            .orElse(loadFromSourceJars(trivialPaths(toplevel)))
+          loadFromSourceJars(trivialPaths(toplevel))
             .orElse(loadFromSourceJars(modulePaths(toplevel)))
             .foreach(addMtagsSourceFile)
       }
@@ -238,15 +224,6 @@ final class OnDemandSymbolIndex(
         )
       }
     }
-  }
-
-  private def loadFromSourceDirectories(path: String): Option[AbsolutePath] = {
-    val result = for {
-      srcDir <- sourceDirectories.keys
-      file = srcDir.resolve(path)
-      if file.exists
-    } yield file
-    result.headOption
   }
 
   // Returns the first path that resolves to a file.

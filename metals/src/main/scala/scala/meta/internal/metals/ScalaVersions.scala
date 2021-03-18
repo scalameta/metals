@@ -108,10 +108,8 @@ object ScalaVersions {
    *   `scala-library-2.13.5` -> 2.13
    *   `some-library_2.13-4.5.0` -> 2.13
    *   `some-library_2.13-2.11` -> 2.13
-   *
-   * @return
    */
-  def scalaBinaryVersionFromJarName(filename: String): Option[String] = {
+  def scalaBinaryVersionFromJarName(filename: String): String = {
     val dropEnding = filename
       .stripSuffix(".jar")
 
@@ -119,23 +117,22 @@ object ScalaVersions {
       .findAllMatchIn(dropEnding)
       .toList
       .flatMap { m =>
-        val weight = if (Option(m.group(1)).isDefined) 0 else 1
+        val hasUnderscorePrefix = Option(m.group(1)).isDefined
         val major = m.group(2)
         val minor = m.group(3)
         val ending = Option(m.group(4)).map(s => s"$s").getOrElse("")
         val version = s"$major.$minor$ending"
-        if (isSupportedScalaBinaryVersion(version)) Some(version -> weight)
+        if (isSupportedScalaBinaryVersion(version))
+          Some(version -> hasUnderscorePrefix)
         else None
       }
-      .sortBy(_._2)
+      .sortBy(_._2)(Ordering.Boolean.reverse)
       .headOption
-      .map(_._1)
-      .map(scalaBinaryVersionFromFullVersion)
+      .map { case (version, _) => scalaBinaryVersionFromFullVersion(version) }
+      .getOrElse(BuildInfo.scala213)
   }
 
   def dialectForDependencyJar(filename: String): Dialect =
-    scalaBinaryVersionFromJarName(filename)
-      .map(dialectForScalaVersion)
-      .getOrElse(Scala213)
+    dialectForScalaVersion(scalaBinaryVersionFromJarName(filename))
 
 }

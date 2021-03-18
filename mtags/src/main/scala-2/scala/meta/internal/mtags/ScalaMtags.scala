@@ -19,6 +19,7 @@ import scala.meta.Type
 import scala.meta.dialects.Scala213
 import scala.meta.dialects.Scala3
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
@@ -52,12 +53,25 @@ class ScalaMtags(val input: Input.VirtualFile)
     }
   }
 
-  private lazy val (toplevelSourceOwner, toplevelOverloads) = {
-    val filename = Paths.get(input.path).filename
-    val srcName = filename.stripSuffix(".scala")
-    val name = s"$srcName$$package."
-    (name, new OverloadDisambiguator())
+  private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
+  private def topleveSourceData: (String, OverloadDisambiguator) = {
+    _toplevelSourceRef match {
+      case Some(v) => v
+      case None =>
+        val filename = Paths.get(input.path).filename
+        val srcName = filename.stripSuffix(".scala")
+        val name = s"$srcName$$package"
+        val value = (s"$name.", new OverloadDisambiguator())
+        _toplevelSourceRef = Some(value)
+        withOwner(currentOwner) {
+          val pos = Position.Range(input, 0, 0)
+          term(name, pos, Kind.OBJECT, 0)
+        }
+        value
+    }
   }
+  private def toplevelSourceOwner: String = topleveSourceData._1
+  private def toplevelOverloads: OverloadDisambiguator = topleveSourceData._2
 
   def currentTree: Tree = myCurrentTree
   private var myCurrentTree: Tree = Source(Nil)
@@ -237,7 +251,7 @@ class ScalaMtags(val input: Input.VirtualFile)
             enterPatterns(t.pats, Kind.METHOD, Property.VAR.value); stop()
           }
         case t: Defn.Def =>
-          if (currentOwner.endsWith("/")) {
+          if (isPackageOwner) {
             withOwner(fileOwner) {
               val disambiguator = toplevelOverloads.disambiguator(t.name.value)
               method(t.name, disambiguator, Kind.METHOD, 0)
@@ -249,8 +263,8 @@ class ScalaMtags(val input: Input.VirtualFile)
           // t.params are ignored - don't know which symbol/owner they should have
           // need to wait for https://github.com/lampepfl/dotty/issues/11690
           val (owner, overloads) =
-            if (currentOwner.endsWith("/"))
-              (fileOwner, toplevelOverloads)
+            if (isPackageOwner)
+              topleveSourceData
             else
               (currentOwner, new OverloadDisambiguator())
 
@@ -332,9 +346,11 @@ class ScalaMtags(val input: Input.VirtualFile)
     withOwner(fileOwner)(f)
 
   private def fileOwner: String =
-    if (currentOwner.endsWith("/"))
+    if (isPackageOwner)
       s"$currentOwner$toplevelSourceOwner"
     else currentOwner
+
+  private def isPackageOwner: Boolean = currentOwner.endsWith("/")
 
   private def givenTpeName(t: Type): Option[String] = {
     t match {

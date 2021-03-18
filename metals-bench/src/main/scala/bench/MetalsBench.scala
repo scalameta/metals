@@ -63,7 +63,7 @@ class MetalsBench {
   }
 
   val megaSources: Classpath = Classpath(
-    Library.all
+    Library.allScala2
       .flatMap(_.sources.entries)
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )

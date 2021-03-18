@@ -289,7 +289,7 @@ class ScalaVersionsSuite extends BaseSuite {
         ("cool4.4_2.13-3.0.jar", "2.13")
       )
     expected.foreach { case (jar, version) =>
-      val out = ScalaVersions.scalaBinaryVersionFromJarName(jar).get
+      val out = ScalaVersions.scalaBinaryVersionFromJarName(jar)
       assertEquals(out, version, jar)
     }
   }

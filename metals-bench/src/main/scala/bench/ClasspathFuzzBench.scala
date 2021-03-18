@@ -31,7 +31,7 @@ class ClasspathFuzzBench {
   def setup(): Unit = {
     tmp = AbsolutePath(Files.createTempDirectory("metals"))
     symbols = TestingWorkspaceSymbolProvider(tmp)
-    symbols.indexLibraries(Library.all)
+    symbols.indexLibraries(Library.allScala2)
     symbols.indexClasspath()
   }
 

@@ -22,7 +22,7 @@ class ClasspathIndexingBench {
 
   @Setup
   def setup(): Unit = {
-    classpath = Library.all.flatMap(_.classpath.entries.map(_.toNIO))
+    classpath = Library.allScala2.flatMap(_.classpath.entries.map(_.toNIO))
   }
 
   @TearDown
