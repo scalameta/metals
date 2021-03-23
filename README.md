@@ -23,6 +23,7 @@ https://scalameta.org/metals/docs/contributors/getting-started.html
 
 The current maintainers (people who can merge pull requests) are:
 
+- Adrien Piquerez - [`@adpi2`](https://github.com/adpi2)
 - Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
 - Chris Kipp - [`@ckipp01`](https://github.com/ckipp01)
 - Gabriele Petronella - [`@gabro`](https://github.com/gabro)
