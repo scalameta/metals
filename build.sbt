@@ -194,8 +194,7 @@ lazy val V = new {
   val scala212 = "2.12.13"
   val scala213 = "2.13.5"
   val ammonite212Version = scala212
-  // TODO https://github.com/scalameta/metals/issues/2392
-  val ammonite213Version = "2.13.4"
+  val ammonite213Version = scala213
   val scalameta = "4.4.10"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
@@ -244,7 +243,7 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.3"
   val coursier = "2.0.13"
-  val ammonite = "2.3.8-36-1cce53f3"
+  val ammonite = "2.3.8-58-aa8b2ab1"
   val mill = "0.9.3"
   val organizeImportRule = "0.5.0"
 }
