@@ -91,4 +91,27 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
       )
     } yield ()
   }
+  // Ensure that on Java +9 that all modules are correctly loaded with the Mdoc
+  // classloader including things like the java.sql module.
+  // https://github.com/scalameta/metals/issues/2187
+  test("classloader") {
+    val path = "hi.worksheet.sc"
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${path}
+           |new java.sql.Date(100L)
+           |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01"
+      )
+    } yield ()
+  }
 }
