@@ -8,7 +8,8 @@ package scala.meta.internal.worksheets
  * allowing the Metals server to call mdoc instances from different Scala
  * versions.
  */
-class MdocClassLoader(parent: ClassLoader) extends ClassLoader(null) {
+class MdocClassLoader(parent: ClassLoader)
+    extends ClassLoader(ClassLoader.getSystemClassLoader.getParent) {
   override def findClass(name: String): Class[_] = {
     val isShared =
       name.startsWith("mdoc.interfaces") || name.startsWith("coursierapi")
