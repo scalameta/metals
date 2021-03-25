@@ -199,6 +199,7 @@ lazy val V = new {
   val scalafix = "0.9.26"
   val lsp4jV = "0.10.0"
   val sbtJdiTools = "1.1.1"
+  val genyVersion = "0.6.7"
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -235,11 +236,6 @@ lazy val V = new {
   val ammonite = "2.3.8-36-1cce53f3"
   val mill = "0.9.3"
   val organizeImportRule = "0.4.4"
-}
-
-val genyVersion = Def.setting {
-  if (scalaVersion.value.startsWith("2.11")) "0.1.6"
-  else "0.4.2"
 }
 
 val sharedSettings = List(
@@ -315,7 +311,7 @@ val mtagsSettings = List(
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
       "org.jsoup" % "jsoup" % "1.13.1", // for extracting HTML from javadocs
-      "com.lihaoyi" %% "geny" % genyVersion.value,
+      "com.lihaoyi" %% "geny" % V.genyVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
@@ -323,7 +319,7 @@ val mtagsSettings = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.2",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .withDottyCompat(scalaVersion.value),
-      ("com.lihaoyi" %% "geny" % genyVersion.value)
+      ("com.lihaoyi" %% "geny" % V.genyVersion)
         .withDottyCompat(scalaVersion.value),
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
