@@ -945,4 +945,31 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin
   )
+
+  checkEdit(
+    "overriden-twice",
+    """
+      |trait A {
+      |  def close: Unit
+      |}
+      |trait B extends A{
+      |  override def close : Unit = {}
+      |}
+      |class C extends B{
+      |  clos@@
+      |}
+    """.stripMargin,
+    """|trait A {
+       |  def close: Unit
+       |}
+       |trait B extends A{
+       |  override def close : Unit = {}
+       |}
+       |class C extends B{
+       |  override def close: Unit = ${0:???}
+       |}
+       |""".stripMargin,
+    filter = (str) => str.contains("def")
+  )
+
 }
