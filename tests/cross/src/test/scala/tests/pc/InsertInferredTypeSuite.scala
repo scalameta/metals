@@ -6,6 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 
+import coursierapi.Dependency
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 import tests.BaseCodeActionSuite
@@ -15,6 +16,17 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
 
   override def excludedScalaVersions: Set[String] =
     BuildInfoVersions.scala3Versions.toSet
+
+  override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
+    val binaryVersion = createBinaryVersion(scalaVersion)
+    if (isScala3Version(scalaVersion)) { Seq.empty }
+    else {
+      Seq(Dependency.of("org.typelevel", s"cats-core_$binaryVersion", "2.4.2"))
+      Seq(
+        Dependency.of("org.typelevel", s"cats-effect_$binaryVersion", "2.4.0")
+      )
+    }
+  }
 
   checkEdit(
     "val",
@@ -255,6 +267,55 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |}
        |""".stripMargin
   )
+
+  checkEdit(
+    "higher-kinded-types",
+    """|package io
+       |
+       |import cats.Parallel
+       |import cats.effect.ConcurrentEffect
+       |import cats.effect.ContextShift
+       |import cats.effect.IOApp
+       |import cats.effect.Resource
+       |import cats.effect.Timer
+       |
+       |object Main2 extends IOApp {
+       |
+       |  trait Logger[T[_]]
+       |
+       |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
+       |
+       |  def <<serve>>[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel]() =
+       |    for {
+       |      logger <- mkLogger[F]
+       |    } yield ()
+       |
+       |}
+       |""".stripMargin,
+    """|package io
+       |
+       |import cats.Parallel
+       |import cats.effect.ConcurrentEffect
+       |import cats.effect.ContextShift
+       |import cats.effect.IOApp
+       |import cats.effect.Resource
+       |import cats.effect.Timer
+       |
+       |object Main2 extends IOApp {
+       |
+       |  trait Logger[T[_]]
+       |
+       |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
+       |
+       |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel](): Resource[F,Unit] =
+       |    for {
+       |      logger <- mkLogger[F]
+       |    } yield ()
+       |
+       |}
+       |""".stripMargin
+  )
+
   checkEdit(
     "path",
     """|import java.nio.file.Paths
