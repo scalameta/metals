@@ -325,8 +325,15 @@ class MetalsGlobal(
             quantified.map(sym => sym.setInfo(loop(sym.info, None))),
             loop(underlying, None)
           )
-        case PolyType(tparams, resultType) =>
-          PolyType(tparams, resultType.map(t => loop(t, None)))
+        case PolyType(typeParams, resultType) =>
+          resultType.map(t => loop(t, None)) match {
+            // [x] => F[x] is not printable in the code, we need to use just `F`
+            case TypeRef(_, sym, args)
+                if typeParams == args.map(_.typeSymbol) =>
+              new PrettyType(sym.name.toString())
+            case otherType =>
+              PolyType(typeParams, otherType)
+          }
         case NullaryMethodType(resultType) =>
           loop(resultType, None)
         case TypeBounds(lo, hi) =>
