@@ -84,7 +84,8 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
 ) extends PresentationCompiler
-    with Completions {
+    with Completions
+    with Signatures {
 
   def this() = this(Nil, Nil)
 
@@ -132,14 +133,25 @@ case class ScalaPresentationCompiler(
             CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit))
               .completions()
           val metalsCompletions = completionPosition(pos, path)(using ctx)
-          completions ++ metalsCompletions
+
+          val newctx = ctx.fresh.setCompilationUnit(unit)
+          val tpdPath = Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
+          val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
+          val history = ShortenedNames(locatedCtx)
+
+          (completions ++ metalsCompletions).zipWithIndex.map {
+            case (item, idx) =>
+              implicit val ctx = newctx
+              val sym = item.symbols.head
+              val description = infoString(sym, sym.info, history)
+              completionItem(item, description, idx)
+          }
         case None => Nil
       }
+
       new CompletionList(
         /*isIncomplete = */ false,
-        items.zipWithIndex.map { case (item, idx) =>
-          completionItem(item, idx)(using ctx)
-        }.asJava
+        items.asJava
       )
     }
   }
@@ -162,7 +174,6 @@ case class ScalaPresentationCompiler(
         "",
         definitions.flatMap(d => location(d.namePos(using ctx))).asJava
       )
-
     }
   }
 
@@ -418,6 +429,7 @@ case class ScalaPresentationCompiler(
 
   private def completionItem(
       completion: Completion,
+      description: String,
       idx: Int
   )(using ctx: Context): CompletionItem = {
     def completionItemKind(
@@ -436,13 +448,26 @@ case class ScalaPresentationCompiler(
       else
         CompletionItemKind.Field
     }
-    val colonNotNeeded = completion.symbols.headOption.exists(_.is(Method))
-    val colon = if (colonNotNeeded) "" else ": "
-    val label = s"${completion.label}$colon${completion.description}"
+    lazy val kind: Option[CompletionItemKind] = 
+      completion.symbols.headOption.map(completionItemKind)
+
+    val ident = completion.label
+    val label = kind match {
+      case Some(k) => k match {
+        case CompletionItemKind.Method => 
+          s"${ident}${description}"
+        case CompletionItemKind.Variable | CompletionItemKind.Field =>
+          s"${ident}:${description}"
+        case _ => ident
+      }
+      case None => ident
+    }
+
     val item = new CompletionItem(label)
 
     item.setSortText(f"${idx}%05d")
 
+    item.setDetail(description)
     item.setFilterText(completion.label)
     // TODO we should use edit text
     item.setInsertText(completion.label)
@@ -459,8 +484,7 @@ case class ScalaPresentationCompiler(
       item.setTags(List(CompletionItemTag.Deprecated).asJava)
     }
 
-    completion.symbols.headOption
-      .foreach(s => item.setKind(completionItemKind(s)))
+    kind.foreach(item.setKind)
     item
   }
 
@@ -529,7 +553,6 @@ case class ScalaPresentationCompiler(
   }
 
   override def isLoaded() = compilerAccess.isLoaded()
-
   private case class ShortName(
       name: Name,
       symbol: Symbol
