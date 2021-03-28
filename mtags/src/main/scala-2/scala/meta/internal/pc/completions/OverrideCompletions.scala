@@ -206,7 +206,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
       )
 
       val overrideKeyword: String =
-        if (!sym.isAbstract || shouldAddOverrideKwd) "override "
+        if ((!sym.isAbstract || shouldAddOverrideKwd) && !sym.isOverride)
+          "override "
         // Don't insert `override` keyword if the supermethod is abstract and the
         // user did not explicitly type starting with o . See:
         // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
