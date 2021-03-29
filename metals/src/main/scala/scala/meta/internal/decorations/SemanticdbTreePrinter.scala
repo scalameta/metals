@@ -58,10 +58,20 @@ class SemanticdbTreePrinter(
           .reduceLeft((x, y) => s"$x $y")
         s"$mapped ${printType(tp)}"
       // this should not need to be printed but just in case we revert to semanticdb printer
-      case s.UniversalType(scope, tpe) =>
+      case s.UniversalType(_, tpe) =>
         if (isHover)
           Print.tpe(Format.Detailed, t, symtab)
-        else s"[${printScope(scope)}] => ${printType(tpe)}"
+        /* We don't want to print the full [x] => F[x]
+           because that cannot show up in the actual code
+         */
+        else {
+          tpe match {
+            case t: s.TypeRef =>
+              printSymbol(t.symbol)
+            case tpe =>
+              printType(tpe)
+          }
+        }
       case s.ExistentialType(tpe, _) =>
         if (isHover)
           Print.tpe(Format.Detailed, t, symtab)
