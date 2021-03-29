@@ -21,7 +21,6 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
     val binaryVersion = createBinaryVersion(scalaVersion)
     if (isScala3Version(scalaVersion)) { Seq.empty }
     else {
-      Seq(Dependency.of("org.typelevel", s"cats-core_$binaryVersion", "2.4.2"))
       Seq(
         Dependency.of("org.typelevel", s"cats-effect_$binaryVersion", "2.4.0")
       )
