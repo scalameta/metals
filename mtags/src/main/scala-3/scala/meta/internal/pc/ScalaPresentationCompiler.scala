@@ -51,6 +51,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.printing.PlainPrinter
+import dotty.tools.dotc.printing.Texts._
 import dotty.tools.dotc.reporting.StoreReporter
 import dotty.tools.dotc.transform.SymUtils._
 import dotty.tools.dotc.util.SourcePosition
@@ -137,8 +138,8 @@ case class ScalaPresentationCompiler(
       }
       new CompletionList(
         /*isIncomplete = */ false,
-        items.zipWithIndex.map { case (item, idx) =>
-          completionItem(item, idx)(using ctx)
+        items.zipWithIndex.flatMap { case (item, idx) =>
+          completionItems(item, idx)(using ctx)
         }.asJava
       )
     }
@@ -416,10 +417,10 @@ case class ScalaPresentationCompiler(
     }
   }
 
-  private def completionItem(
+  private def completionItems(
       completion: Completion,
       idx: Int
-  )(using ctx: Context): CompletionItem = {
+  )(using ctx: Context): List[CompletionItem] = {
     def completionItemKind(
         sym: Symbol
     )(using ctx: Context): CompletionItemKind = {
@@ -436,32 +437,41 @@ case class ScalaPresentationCompiler(
       else
         CompletionItemKind.Field
     }
-    val colonNotNeeded = completion.symbols.headOption.exists(_.is(Method))
-    val colon = if (colonNotNeeded) "" else ": "
-    val label = s"${completion.label}$colon${completion.description}"
-    val item = new CompletionItem(label)
+    val printer = SymbolPrinter()(using ctx)
+    completion.symbols.map{
+      sym =>
+        // For overloaded signatures we get multiple symbols, so we need
+        // to recalculate the description
+        // related issue https://github.com/lampepfl/dotty/issues/11941
+        val description = if(completion.symbols.size > 1)
+          if (sym.isType) printer.fullNameString(sym)
+          else {
+            printer.typeString(sym.denot.info.widenTermRefExpr)
+          }
+        else
+          completion.description.stripSuffix("$")
+        
+        val colonNotNeeded = sym.is(Method)
+        val colon = if (colonNotNeeded) "" else ": "
+        val label = s"${completion.label}$colon${description}"
+        val item = new CompletionItem(label)
 
-    item.setSortText(f"${idx}%05d")
+        item.setSortText(f"${idx}%05d")
 
-    item.setFilterText(completion.label)
-    // TODO we should use edit text
-    item.setInsertText(completion.label)
-    val documentation = for {
-      sym <- completion.symbols
-      doc <- ParsedComment.docOf(sym)
-    } yield doc
+        item.setFilterText(completion.label)
+        // TODO we should use edit text
+        item.setInsertText(completion.label)
+        val documentation = ParsedComment.docOf(sym)
+        if (documentation.nonEmpty) {
+          item.setDocumentation(hoverContent(None, None, documentation.toList))
+        }
+        if (sym.isDeprecated) {
+          item.setTags(List(CompletionItemTag.Deprecated).asJava)
+        }
+        item.setKind(completionItemKind(sym))
+        item
 
-    if (documentation.nonEmpty) {
-      item.setDocumentation(hoverContent(None, None, documentation))
     }
-
-    if (completion.symbols.forall(_.isDeprecated)) {
-      item.setTags(List(CompletionItemTag.Deprecated).asJava)
-    }
-
-    completion.symbols.headOption
-      .foreach(s => item.setKind(completionItemKind(s)))
-    item
   }
 
   private def hoverContent(

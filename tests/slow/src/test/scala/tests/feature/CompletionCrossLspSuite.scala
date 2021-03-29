@@ -38,7 +38,8 @@ class CompletionCrossLspSuite
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "\"\".substrin@@",
-        """|substring(x$0: Int, x$1: Int): String
+        """|substring(x$0: Int): String
+           |substring(x$0: Int, x$1: Int): String
            |""".stripMargin
       )
       _ <- assertCompletion(
