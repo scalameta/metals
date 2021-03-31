@@ -3,6 +3,7 @@ package scala.meta.pc;
 import org.eclipse.lsp4j.Location;
 import java.util.List;
 import java.util.Optional;
+import java.net.URI;
 
 /**
  * The interface for the presentation compiler to extract symbol documentation and perform fuzzy symbol search.
@@ -17,13 +18,13 @@ public interface SymbolSearch {
     /**
      * Returns the definition of this symbol, if any.
      */
-    List<Location> definition(String symbol);
+    List<Location> definition(String symbol, URI sourceUri);
 
     /**
      * Returns the all symbols in the file where the given symbol is defined
      * in declaration order, if any.
      */
-    List<String> definitionSourceToplevels(String symbol);
+    List<String> definitionSourceToplevels(String symbol, URI sourceUri);
 
     /**
      * Runs fuzzy symbol search for the given query.

@@ -68,7 +68,7 @@ class StacktraceAnalyzer(
 
   def fileLocationFromLine(line: String): Option[l.Location] = {
     def findLocationForSymbol(s: String): Option[Location] =
-      definitionProvider.fromSymbol(s).asScala.headOption
+      definitionProvider.fromSymbol(s, None).asScala.headOption
 
     for {
       symbol <- symbolFromLine(line)

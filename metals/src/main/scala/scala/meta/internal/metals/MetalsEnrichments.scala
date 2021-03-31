@@ -37,6 +37,7 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 
 import ch.epfl.scala.{bsp4j => b}
 import io.undertow.server.HttpServerExchange
@@ -275,15 +276,41 @@ object MetalsEnrichments
         workspace.resolve(Directories.readonly).toNIO
       )
 
+    def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
+      val relative = path.toRelative(prefix)
+      if (relative.toNIO.getName(0).filename != "..") Some(relative)
+      else None
+    }
+
+    def jarPath: Option[AbsolutePath] = {
+      val filesystem = path.toNIO.getFileSystem()
+      if (filesystem.provider().getScheme().equals("jar")) {
+        Some(
+          AbsolutePath(
+            Paths.get(filesystem.toString)
+          )
+        )
+      } else {
+        None
+      }
+    }
+
     /**
      * Writes zip file contents to disk under $workspace/.metals/readonly.
+     *
+     * In case if path is jar then target directory is $workspace/.metals/readonly/dependencies/$jarName
      */
     def toFileOnDisk(workspace: AbsolutePath): AbsolutePath = {
       if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
         path
       } else {
-        val readonly = workspace.resolve(Directories.readonly)
-        val out = readonly.resolveZipPath(path.toNIO).toNIO
+        val target =
+          path.jarPath match {
+            case Some(jar) =>
+              workspace.resolve(Directories.dependencies).resolve(jar.filename)
+            case None => workspace.resolve(Directories.readonly)
+          }
+        val out = target.resolveZipPath(path.toNIO).toNIO
         Files.createDirectories(out.getParent)
         if (!Properties.isWin && Files.isRegularFile(out)) {
           out.toFile.setWritable(true)
@@ -738,4 +765,9 @@ object MetalsEnrichments
       trailingTokens.find(predicate)
   }
 
+  object PathMatcher {
+    def unapplySeq(path: Path): Option[Seq[String]] = {
+      Some(path.iterator.asScala.toList.map(_.filename))
+    }
+  }
 }

@@ -85,7 +85,8 @@ final class ReferenceProvider(
           definition.positionOccurrence(source, params.getPosition, doc)
         maybeOccurrence match {
           case Some(occurrence) =>
-            val alternatives = referenceAlternatives(occurrence.symbol, doc)
+            val alternatives =
+              referenceAlternatives(occurrence.symbol, source, doc)
             val locations = references(
               source,
               params,
@@ -114,13 +115,17 @@ final class ReferenceProvider(
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
       symbol: String,
+      fromSource: AbsolutePath,
       referenceDoc: TextDocument
   ): Set[String] = {
     val definitionDoc = if (referenceDoc.symbols.exists(_.symbol == symbol)) {
       Some(referenceDoc)
     } else {
       for {
-        location <- definition.fromSymbol(symbol).asScala.headOption
+        location <- definition
+          .fromSymbol(symbol, Some(fromSource))
+          .asScala
+          .headOption
         source = location.getUri().toAbsolutePath
         definitionDoc <- semanticdbs.textDocument(source).documentIncludingStale
       } yield definitionDoc

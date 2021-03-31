@@ -1,5 +1,6 @@
 package bench
 
+import java.net.URI
 import java.util.Optional
 import java.{util => ju}
 
@@ -21,9 +22,13 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
   override def documentation(symbol: String): Optional[SymbolDocumentation] =
     Optional.empty()
 
-  def definition(symbol: String): ju.List[Location] = ju.Collections.emptyList()
+  def definition(symbol: String, source: URI): ju.List[Location] =
+    ju.Collections.emptyList()
 
-  override def definitionSourceToplevels(symbol: String): ju.List[String] =
+  override def definitionSourceToplevels(
+      symbol: String,
+      source: URI
+  ): ju.List[String] =
     ju.Collections.emptyList()
 
   override def search(

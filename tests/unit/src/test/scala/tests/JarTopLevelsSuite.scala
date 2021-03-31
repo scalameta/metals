@@ -3,8 +3,6 @@ package tests
 import java.nio.file.Files
 import java.nio.file.Path
 
-import scala.collection.concurrent.TrieMap
-
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JarTopLevels
@@ -32,13 +30,12 @@ class JarTopLevelsSuite extends BaseTablesSuite {
   test("cachedSymbols") {
     val fs = PlatformFileIO.newJarFileSystem(jar1, create = false)
     val filePath = AbsolutePath(fs.getPath("/foo.scala"))
-    val map = TrieMap[String, AbsolutePath]("foo" -> filePath)
-    jarSymbols.putTopLevels(jar1, map)
+    val toplevels = List("foo" -> filePath)
+    jarSymbols.putTopLevels(jar1, toplevels)
     val resultOption = jarSymbols.getTopLevels(jar1)
     assert(resultOption.isDefined)
     val result = resultOption.get
-    assert(map("foo") == result("foo"))
-    assert(result.get("bar").isEmpty)
+    assert(toplevels == result)
     val noOption = jarSymbols.getTopLevels(jar2)
     assert(noOption.isEmpty)
   }
@@ -47,8 +44,8 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     Seq(jar1, jar2).foreach { jar =>
       val fs = PlatformFileIO.newJarFileSystem(jar, create = false)
       val filePath = AbsolutePath(fs.getPath("/foo.scala"))
-      val map = TrieMap[String, AbsolutePath]("foo" -> filePath)
-      jarSymbols.putTopLevels(jar, map)
+      val toplevels = List("foo" -> filePath)
+      jarSymbols.putTopLevels(jar, toplevels)
     }
     jarSymbols.deleteNotUsedTopLevels(Array(jar1, jar1))
     assert(jarSymbols.getTopLevels(jar1).isDefined)
@@ -56,7 +53,7 @@ class JarTopLevelsSuite extends BaseTablesSuite {
   }
 
   test("noSymbols") {
-    jarSymbols.putTopLevels(jar1, TrieMap[String, AbsolutePath]())
+    jarSymbols.putTopLevels(jar1, List.empty)
     val result = jarSymbols.getTopLevels(jar1)
     assert(result.isDefined)
     assert(result.get.isEmpty)

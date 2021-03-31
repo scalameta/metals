@@ -630,8 +630,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  // TODO: https://github.com/scalameta/metals/issues/1196
-  assertBreakpoints("ambiguous".ignore)(
+  assertBreakpoints("clashing-symbols")(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |object Main {

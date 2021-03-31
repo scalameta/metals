@@ -96,4 +96,7 @@ final class ClasspathLoader() {
   def load(path: String): Option[AbsolutePath] = {
     loader.resolve(path)
   }
+
+  def loadAll(path: String): List[AbsolutePath] =
+    loader.resolveAll(path)
 }

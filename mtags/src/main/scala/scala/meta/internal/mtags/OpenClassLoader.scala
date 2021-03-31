@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.net.URLClassLoader
 import java.nio.file.Paths
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import scala.meta.io.AbsolutePath
@@ -19,6 +20,7 @@ final class OpenClassLoader extends URLClassLoader(Array.empty) {
       false
     }
   }
+
   def resolve(uri: String): Option[AbsolutePath] = {
     val enumeration = super.findResources(uri)
     if (enumeration.hasMoreElements) {
@@ -27,6 +29,10 @@ final class OpenClassLoader extends URLClassLoader(Array.empty) {
     } else {
       None
     }
+  }
+  def resolveAll(uri: String): List[AbsolutePath] = {
+    val enumeration = super.findResources(uri)
+    enumeration.asScala.toList.map(url => AbsolutePath(Paths.get(url.toURI)))
   }
   def resolve(relpath: RelativePath): Option[AbsolutePath] = {
     val uri = relpath.toURI(isDirectory = false).toString

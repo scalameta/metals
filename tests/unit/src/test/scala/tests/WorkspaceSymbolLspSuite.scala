@@ -143,7 +143,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.workspaceSymbol("scala.None")
-      _ <- server.didOpen(".metals/readonly/scala/Option.scala")
+      _ <- server.didOpen("scala/Option.scala")
       references <- server.references("a/src/main/scala/a/A.scala", " None")
       _ = assertNoDiff(
         references,
@@ -153,39 +153,44 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |""".stripMargin
       )
       optionReferences <- server.references(
-        ".metals/readonly/scala/Option.scala",
+        "scala/Option.scala",
         " None"
       )
+      optionSourcePath = server
+        .toPath("scala/Option.scala")
+        .toRelative(workspace)
+        .toString
+        .replace("\\", "/")
       _ = assertNoDiff(
         optionReferences,
-        """|.metals/readonly/scala/Option.scala:29:50: info: reference
-           |  def apply[A](x: A): Option[A] = if (x == null) None else Some(x)
-           |                                                 ^^^^
-           |.metals/readonly/scala/Option.scala:34:30: info: reference
-           |  def empty[A] : Option[A] = None
-           |                             ^^^^
-           |.metals/readonly/scala/Option.scala:230:18: info: reference
-           |    if (isEmpty) None else Some(f(this.get))
-           |                 ^^^^
-           |.metals/readonly/scala/Option.scala:271:18: info: reference
-           |    if (isEmpty) None else f(this.get)
-           |                 ^^^^
-           |.metals/readonly/scala/Option.scala:274:18: info: reference
-           |    if (isEmpty) None else ev(this.get)
-           |                 ^^^^
-           |.metals/readonly/scala/Option.scala:289:43: info: reference
-           |    if (isEmpty || p(this.get)) this else None
-           |                                          ^^^^
-           |.metals/readonly/scala/Option.scala:304:44: info: reference
-           |    if (isEmpty || !p(this.get)) this else None
-           |                                           ^^^^
-           |.metals/readonly/scala/Option.scala:432:42: info: reference
-           |    if (!isEmpty) pf.lift(this.get) else None
-           |                                         ^^^^
-           |.metals/readonly/scala/Option.scala:527:13: info: reference
-           |case object None extends Option[Nothing] {
-           |            ^^^^
-           |""".stripMargin
+        s"""|$optionSourcePath:29:50: info: reference
+            |  def apply[A](x: A): Option[A] = if (x == null) None else Some(x)
+            |                                                 ^^^^
+            |$optionSourcePath:34:30: info: reference
+            |  def empty[A] : Option[A] = None
+            |                             ^^^^
+            |$optionSourcePath:230:18: info: reference
+            |    if (isEmpty) None else Some(f(this.get))
+            |                 ^^^^
+            |$optionSourcePath:271:18: info: reference
+            |    if (isEmpty) None else f(this.get)
+            |                 ^^^^
+            |$optionSourcePath:274:18: info: reference
+            |    if (isEmpty) None else ev(this.get)
+            |                 ^^^^
+            |$optionSourcePath:289:43: info: reference
+            |    if (isEmpty || p(this.get)) this else None
+            |                                          ^^^^
+            |$optionSourcePath:304:44: info: reference
+            |    if (isEmpty || !p(this.get)) this else None
+            |                                           ^^^^
+            |$optionSourcePath:432:42: info: reference
+            |    if (!isEmpty) pf.lift(this.get) else None
+            |                                         ^^^^
+            |$optionSourcePath:527:13: info: reference
+            |case object None extends Option[Nothing] {
+            |            ^^^^
+            |""".stripMargin
       )
     } yield ()
   }

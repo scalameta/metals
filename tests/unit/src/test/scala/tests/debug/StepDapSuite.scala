@@ -5,6 +5,7 @@ import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 
 import munit.Location
+import munit.TestOptions
 import tests.BaseDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
@@ -94,7 +95,7 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
     instrument = steps =>
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .at(".metals/readonly/scala/Predef.scala", line = 404)(Continue)
+        .atDependency("scala/Predef.scala", line = 404)(Continue)
   )
 
   assertSteps("step-into-java-lib")(
@@ -111,12 +112,12 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
     main = "a.Main",
     instrument = steps => {
       val (javaLibFile, javaLibLine) =
-        if (isJava8) (".metals/readonly/java/io/PrintStream.java", 805)
-        else (".metals/readonly/java.base/java/io/PrintStream.java", 881)
+        if (isJava8) ("java/io/PrintStream.java", 805)
+        else ("java.base/java/io/PrintStream.java", 881)
 
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .at(javaLibFile, javaLibLine)(Continue)
+        .atDependency(javaLibFile, javaLibLine)(Continue)
     }
   )
 
@@ -145,7 +146,7 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
         .at("a/src/main/scala/a/Main.scala", line = 13)(Continue)
   )
 
-  def assertSteps(name: String)(
+  def assertSteps(name: TestOptions)(
       sources: String,
       main: String,
       instrument: StepNavigator => StepNavigator
@@ -174,4 +175,5 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
       } yield ()
     }
   }
+
 }

@@ -50,7 +50,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         tree.symbol.alternatives.foreach { alternative =>
           val sym = semanticdbSymbol(alternative)
           if (sym.isGlobal) {
-            res.addAll(search.definition(sym))
+            res.addAll(search.definition(sym, params.uri()))
           }
         }
         DefinitionResultImpl(

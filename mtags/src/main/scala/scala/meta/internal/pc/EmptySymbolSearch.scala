@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.net.URI
 import java.util.Optional
 import java.{util => ju}
 
@@ -18,11 +19,14 @@ object EmptySymbolSearch extends SymbolSearch {
     SymbolSearch.Result.COMPLETE
   }
 
-  def definition(symbol: String): ju.List[Location] = {
+  def definition(symbol: String, source: URI): ju.List[Location] = {
     ju.Collections.emptyList()
   }
 
-  override def definitionSourceToplevels(symbol: String): ju.List[String] = {
+  def definitionSourceToplevels(
+      symbol: String,
+      sourceUri: URI
+  ): ju.List[String] = {
     ju.Collections.emptyList()
   }
 

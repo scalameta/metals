@@ -158,7 +158,7 @@ final class RenameProvider(
                 .filter(_.getUri().isScalaFilename)
             else parentSymbols
           }
-          companionRefs = companionReferences(occurence.symbol, newName)
+          companionRefs = companionReferences(occurence.symbol, source, newName)
           implReferences = implementations(
             txtParams,
             !occurence.symbol.desc.isType,
@@ -294,13 +294,14 @@ final class RenameProvider(
 
   private def companionReferences(
       sym: String,
+      source: AbsolutePath,
       newName: String
   ): Seq[Location] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
       loc <-
         definitionProvider
-          .fromSymbol(companionSymbol)
+          .fromSymbol(companionSymbol, Some(source))
           .asScala
       if loc.getUri().isScalaFilename
       companionLocs <-

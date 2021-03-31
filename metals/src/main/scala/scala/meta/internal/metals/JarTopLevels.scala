@@ -7,8 +7,6 @@ import java.sql.PreparedStatement
 import java.sql.Statement
 import java.util.zip.ZipError
 
-import scala.collection.concurrent.TrieMap
-
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
 import scala.meta.internal.mtags.MD5
@@ -29,10 +27,10 @@ final class JarTopLevels(conn: () => Connection) {
    */
   def getTopLevels(
       path: AbsolutePath
-  ): Option[TrieMap[String, AbsolutePath]] =
+  ): Option[List[(String, AbsolutePath)]] =
     try {
       val fs = PlatformFileIO.newJarFileSystem(path, create = false)
-      val toplevels = TrieMap[String, AbsolutePath]()
+      val toplevels = List.newBuilder[(String, AbsolutePath)]
       conn()
         .query(
           """select ts.symbol, ts.path
@@ -41,12 +39,14 @@ final class JarTopLevels(conn: () => Connection) {
             |on ij.id=ts.jar
             |where ij.md5=?""".stripMargin
         ) { _.setString(1, getMD5Digest(path)) } { rs =>
-          if (rs.getString(1) != null && rs.getString(2) != null)
-            toplevels(rs.getString(1)) =
-              AbsolutePath(fs.getPath(rs.getString(2)))
+          if (rs.getString(1) != null && rs.getString(2) != null) {
+            val symbol = rs.getString(1)
+            val path = AbsolutePath(fs.getPath(rs.getString(2)))
+            toplevels += (symbol -> path)
+          }
         }
         .headOption
-        .map(_ => toplevels)
+        .map(_ => toplevels.result)
     } catch {
       case _: ZipError =>
         None
@@ -61,7 +61,7 @@ final class JarTopLevels(conn: () => Connection) {
    */
   def putTopLevels(
       path: AbsolutePath,
-      toplevels: TrieMap[String, AbsolutePath]
+      toplevels: List[(String, AbsolutePath)]
   ): Int = {
     // Add jar to H2
     var jarStmt: PreparedStatement = null

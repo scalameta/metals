@@ -6,6 +6,8 @@ object Directories {
     RelativePath(".metals").resolve("metals.h2.db")
   def readonly: RelativePath =
     RelativePath(".metals").resolve("readonly")
+  def dependencies: RelativePath =
+    readonly.resolve(dependenciesName)
   def log: RelativePath =
     RelativePath(".metals").resolve("metals.log")
   def semanticdb: RelativePath =
@@ -18,4 +20,5 @@ object Directories {
     RelativePath(".metals").resolve(stacktraceFilename)
 
   val stacktraceFilename = "stacktrace.scala"
+  val dependenciesName = "dependencies"
 }
