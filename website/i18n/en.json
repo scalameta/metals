@@ -55,6 +55,10 @@
       "editors/sublime": {
         "title": "Sublime Text"
       },
+      "editors/user-configuration": {
+        "title": "Metals User Configuration",
+        "sidebar_label": "User Configuration"
+      },
       "editors/vim": {
         "title": "Vim"
       },

@@ -14,50 +14,25 @@ class UserConfigurationModifier extends StringModifier {
       code: Input,
       reporter: Reporter
   ): String = {
-    info match {
-      case "lsp-config-default" =>
-        UserConfiguration.options
-          .map { option =>
-            s"""
-               |### ${option.title}
-               |
-               |${option.description}
-               |
-               |**Default**: ${option.default}
-               |
-               |**Example**:
-               |```json
-               |{
-               |  "metals": {
-               |    "${option.key}": ${option.example}
-               |  }
-               |}
-               |```
-               |""".stripMargin
-          }
-          .mkString("\n")
-      case "lsp-config-coc" =>
-        UserConfiguration.options
-          .map { option =>
-            s"""
-               |### ${option.title}
-               |
-               |${option.description}
-               |
-               |**Default**: ${option.default}
-               |
-               |**Example**:
-               |```json
-               |{
-               |  "metals.${option.camelCaseKey}": ${option.example}
-               |}
-               |```
-               |""".stripMargin
-          }
-          .mkString("\n")
-      case els =>
-        reporter.error(s"unknown user-config '$els'")
-        ""
-    }
+    UserConfiguration.options
+      .map { option =>
+        s"""
+           |### ${option.title}
+           |
+           |${option.description}
+           |
+           |**Default**: ${option.default}
+           |
+           |**Example**:
+           |```json
+           |{
+           |  "metals": {
+           |    "${option.camelCaseKey}": ${option.example}
+           |  }
+           |}
+           |```
+           |""".stripMargin
+      }
+      .mkString("\n")
   }
 }
