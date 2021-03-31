@@ -22,6 +22,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -50,7 +51,8 @@ final class DefinitionProvider(
     warnings: Warnings,
     compilers: () => Compilers,
     remote: RemoteLanguageServer,
-    trees: Trees
+    trees: Trees,
+    buildTargets: BuildTargets
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -59,7 +61,8 @@ final class DefinitionProvider(
     mtags,
     workspace,
     Some(semanticdbs),
-    trees
+    trees,
+    buildTargets
   )
 
   def definition(
@@ -93,21 +96,38 @@ final class DefinitionProvider(
     }
   }
 
-  def fromSymbol(sym: String): ju.List[Location] =
-    destinationProvider.fromSymbol(sym).flatMap(_.toResult) match {
+  def fromSymbol(
+      sym: String,
+      source: Option[AbsolutePath]
+  ): ju.List[Location] = {
+    destinationProvider.fromSymbol(sym, source).flatMap(_.toResult) match {
       case None => ju.Collections.emptyList()
       case Some(destination) => destination.locations
     }
+  }
+
+  def fromSymbol(
+      sym: String,
+      targets: List[BuildTargetIdentifier]
+  ): ju.List[Location] = {
+    destinationProvider
+      .fromSymbol(sym, targets.toSet)
+      .flatMap(_.toResult) match {
+      case None => ju.Collections.emptyList()
+      case Some(destination) => destination.locations
+    }
+  }
 
   /**
    * Returns VirtualFile that contains the definition of
    * the given symbol (of semanticdb).
    */
   def definitionPathInputFromSymbol(
-      sym: String
+      sym: String,
+      source: Option[AbsolutePath]
   ): Option[Input.VirtualFile] =
-    index
-      .definition(Symbol(sym))
+    destinationProvider
+      .definition(sym, source)
       .map(symDef => symDef.path.toInputFromBuffers(buffers))
 
   def symbolOccurrence(
@@ -179,7 +199,9 @@ final class DefinitionProvider(
         ).toResult
       } else {
         // symbol is global so it is defined in an external destination buffer.
-        destinationProvider.fromSymbol(occ.symbol).flatMap(_.toResult)
+        destinationProvider
+          .fromSymbol(occ.symbol, Some(source))
+          .flatMap(_.toResult)
       }
     }
 
@@ -230,7 +252,8 @@ class DestinationProvider(
     mtags: Mtags,
     workspace: AbsolutePath,
     semanticdbsFallback: Option[Semanticdbs],
-    trees: Trees
+    trees: Trees,
+    buildTargets: BuildTargets
 ) {
 
   private def bestTextDocument(
@@ -254,22 +277,85 @@ class DestinationProvider(
     }
   }
 
-  def fromSymbol(symbol: String): Option[DefinitionDestination] = {
-    for {
-      symbolDefinition <- index.definition(Symbol(symbol))
-      if symbolDefinition.path.exists
-      destinationDoc = bestTextDocument(symbolDefinition)
-      destinationPath = symbolDefinition.path.toFileOnDisk(workspace)
-      destinationDistance =
+  def definition(
+      symbol: String,
+      source: Option[AbsolutePath]
+  ): Option[SymbolDefinition] = {
+    val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
+    definition(symbol, targets)
+  }
+
+  def definition(
+      symbol: String,
+      allowedBuildTargets: Set[BuildTargetIdentifier]
+  ): Option[SymbolDefinition] = {
+    val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
+    if (allowedBuildTargets.isEmpty)
+      definitions.headOption
+    else {
+      val matched = definitions.find { defn =>
+        sourceBuildTargets(defn.path).exists(id =>
+          allowedBuildTargets.contains(id)
+        )
+      }
+      // Fallback to any definition - it's needed for worksheets
+      // They might have dynamic `import $dep` and these sources jars
+      // aren't registered in buildTargets
+      matched.orElse(definitions.headOption)
+    }
+  }
+
+  private def sourceBuildTargets(
+      source: AbsolutePath
+  ): List[BuildTargetIdentifier] = {
+    def trivialSource: Option[List[BuildTargetIdentifier]] =
+      Option(buildTargets.sourceBuildTargets(source).toList).filter(_.nonEmpty)
+
+    def dependencySource: Option[List[BuildTargetIdentifier]] = {
+      source.jarPath
+        .map(path => buildTargets.inverseDependencySource(path).toList)
+        .filter(_.nonEmpty)
+    }
+
+    trivialSource
+      .orElse(dependencySource)
+      .orElse(buildTargets.sbtBuildScalaTarget(source).map(List(_)))
+      .getOrElse(List.empty)
+  }
+
+  def fromSymbol(
+      symbol: String,
+      allowedBuildTargets: Set[BuildTargetIdentifier]
+  ): Option[DefinitionDestination] = {
+    definition(symbol, allowedBuildTargets).map { defn =>
+      val destinationDoc = bestTextDocument(defn)
+      val destinationPath = defn.path.toFileOnDisk(workspace)
+      val destinationDistance =
         buffers.tokenEditDistance(destinationPath, destinationDoc.text, trees)
-    } yield {
       DefinitionDestination(
         destinationDoc,
         destinationDistance,
-        symbolDefinition.definitionSymbol.value,
+        defn.definitionSymbol.value,
         Some(destinationPath),
         destinationPath.toURI.toString
       )
+    }
+  }
+
+  def fromSymbol(
+      symbol: String,
+      source: Option[AbsolutePath]
+  ): Option[DefinitionDestination] = {
+    val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
+    fromSymbol(symbol, targets)
+  }
+
+  private def sourceToAllowedBuildTargets(
+      source: AbsolutePath
+  ): Set[BuildTargetIdentifier] = {
+    buildTargets.inverseSources(source) match {
+      case None => Set.empty
+      case Some(id) => buildTargets.buildTargetTransitiveDependencies(id).toSet
     }
   }
 }

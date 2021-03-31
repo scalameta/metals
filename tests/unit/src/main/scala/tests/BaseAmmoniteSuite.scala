@@ -1,10 +1,5 @@
 package tests
 
-import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.nio.file.Paths
-
-import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Messages
@@ -12,12 +7,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.MessageActionItem
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j.TextDocumentPositionParams
 
 abstract class BaseAmmoniteSuite(scalaVersion: String)
-    extends BaseLspSuite("ammonite") {
+    extends BaseLspSuite(s"ammonite-$scalaVersion")
+    with ScriptsAssertions {
 
   override def munitIgnore: Boolean =
     !isValidScalaVersionForEnv(scalaVersion)
@@ -69,21 +62,21 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.as@@Json.noSpaces",
-        ".metals/readonly/io/circe/syntax/package.scala"
+        "io/circe/syntax/package.scala"
       )
 
       // via Ammonite-generated Semantic DB
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.asJson.no@@Spaces",
-        ".metals/readonly/io/circe/Json.scala"
+        "io/circe/Json.scala"
       )
 
       // via presentation compiler, using the Ammonite build target classpath
       _ <- assertDefinitionAtLocation(
-        ".metals/readonly/io/circe/Json.scala",
+        "io/circe/Json.scala",
         "final def noSpaces: String = Printer.no@@Spaces.print(this)",
-        ".metals/readonly/io/circe/Printer.scala"
+        "io/circe/Printer.scala"
       )
 
       // via Ammonite-generated Semantic DB and indexing of Ammonite-generated source of $file dependencies
@@ -420,21 +413,21 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.as@@Json.noSpaces",
-        ".metals/readonly/io/circe/syntax/package.scala"
+        "io/circe/syntax/package.scala"
       )
 
       // via Ammonite-generated Semantic DB
       _ <- assertDefinitionAtLocation(
         "main.sc",
         "foo.asJson.no@@Spaces",
-        ".metals/readonly/io/circe/Json.scala"
+        "io/circe/Json.scala"
       )
 
       // via presentation compiler, using the Ammonite build target classpath
       _ <- assertDefinitionAtLocation(
-        ".metals/readonly/io/circe/Json.scala",
+        "io/circe/Json.scala",
         "final def noSpaces: String = Printer.no@@Spaces.print(this)",
-        ".metals/readonly/io/circe/Printer.scala"
+        "io/circe/Printer.scala"
       )
 
       // via Ammonite-generated Semantic DB and indexing of Ammonite-generated source of $file dependencies
@@ -510,87 +503,4 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
-  private def assertDefinitionAtLocation(
-      file: String,
-      definitionAt: String,
-      expectedLocation: String,
-      expectedLine: java.lang.Integer = null
-  ): Future[Unit] = {
-
-    val pos = {
-      val content =
-        new String(server.toPath(file).readAllBytes, StandardCharsets.UTF_8)
-      val value = definitionAt.replaceAllLiterally("@@", "")
-      val idx = content.onlyIndexOf(value).getOrElse {
-        throw new Exception(
-          s"Found multiple occurrences of '$value' in '$content'"
-        )
-      }
-      val pipeCount = definitionAt.split("@@", -1).length - 1
-      assert(pipeCount <= 1, s"Found several '|' characters in '$definitionAt'")
-      val pipeIdx = Some(definitionAt.indexOf("@@"))
-        .filter(_ >= 0)
-        .getOrElse(0)
-      content.indexToLspPosition(idx + pipeIdx)
-    }
-
-    server.server
-      .definition(
-        new TextDocumentPositionParams(
-          new TextDocumentIdentifier(server.toPath(file).toNIO.toUri.toString),
-          pos
-        )
-      )
-      .asScala
-      .map { locations =>
-        val locations0 = locations.asScala
-        assert(
-          locations0.length == 1,
-          s"Expected a single location ($expectedLocation, ${Option(expectedLine)}), got ${locations0.length} ($locations0)"
-        )
-        val locationUri = new URI(locations0.head.getUri)
-        assert(
-          locationUri.getScheme == "file",
-          s"Expected file location, got URI $locationUri"
-        )
-        val locationPath = workspace.toNIO.relativize(Paths.get(locationUri))
-        val alternativeExpectedLocation =
-          if (isWindows) Some(expectedLocation.replace('/', '\\'))
-          else None
-        assert(
-          locationPath.toString == expectedLocation || alternativeExpectedLocation
-            .exists(_ == locationPath.toString),
-          s"Expected location $expectedLocation${alternativeExpectedLocation
-            .fold("")(loc => s"(or $loc)")}, got $locationPath"
-        )
-        for (expectedLine0 <- Option(expectedLine)) {
-          val line = locations0.head.getRange.getStart.getLine
-          assert(
-            line == expectedLine0,
-            s"Expected line $expectedLine0, got $line"
-          )
-        }
-        ()
-      }
-  }
-
-  private def assertHoverAtPos(
-      path: String,
-      line: Int,
-      char: Int
-  ): Future[String] =
-    server.server
-      .hover(
-        new TextDocumentPositionParams(
-          new TextDocumentIdentifier(
-            server.toPath("main.sc").toNIO.toUri.toASCIIString
-          ),
-          new Position(line, char)
-        )
-      )
-      .asScala
-      .map { res =>
-        val code = server.textContents(path)
-        TestHovers.renderAsString(code, Option(res), includeRange = true)
-      }
 }

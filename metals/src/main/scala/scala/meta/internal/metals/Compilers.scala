@@ -133,7 +133,8 @@ class Compilers(
                   buffers,
                   isExcludedPackage,
                   userConfig,
-                  trees
+                  trees,
+                  buildTargets
                 )
               ).getOrElse(EmptySymbolSearch),
               "default"
@@ -411,6 +412,7 @@ class Compilers(
             buffers,
             isExcludedPackage,
             trees,
+            buildTargets,
             workspaceFallback = Some(search)
           )
           newCompiler(scalac, scalaTarget, classpath, worksheetSearch)
@@ -434,7 +436,8 @@ class Compilers(
               classpath,
               isExcludedPackage,
               userConfig,
-              trees
+              trees,
+              buildTargets
             ),
             path.toString()
           )

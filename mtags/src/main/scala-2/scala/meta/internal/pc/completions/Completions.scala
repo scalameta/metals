@@ -1,5 +1,6 @@
 package scala.meta.internal.pc.completions
 
+import java.net.URI
 import java.util.logging.Level
 
 import scala.collection.immutable.Nil
@@ -385,6 +386,7 @@ trait Completions { this: MetalsGlobal =>
 
   def completionPosition(
       pos: Position,
+      source: URI,
       text: String,
       editRange: l.Range,
       completions: CompletionResult,
@@ -395,6 +397,7 @@ trait Completions { this: MetalsGlobal =>
     // enforce discipline in the code.
     try completionPositionUnsafe(
       pos,
+      source,
       text,
       editRange,
       completions,
@@ -408,6 +411,7 @@ trait Completions { this: MetalsGlobal =>
   }
   def completionPositionUnsafe(
       pos: Position,
+      source: URI,
       text: String,
       editRange: l.Range,
       completions: CompletionResult,
@@ -507,6 +511,7 @@ trait Completions { this: MetalsGlobal =>
       case _ =>
         inferCompletionPosition(
           pos,
+          source,
           text,
           latestEnclosingArg,
           completions,
@@ -517,6 +522,7 @@ trait Completions { this: MetalsGlobal =>
 
   private def inferCompletionPosition(
       pos: Position,
+      source: URI,
       text: String,
       enclosing: List[Tree],
       completions: CompletionResult,
@@ -538,6 +544,7 @@ trait Completions { this: MetalsGlobal =>
                     result.prefix,
                     editRange,
                     pos,
+                    source,
                     text
                   )
               }
@@ -559,7 +566,14 @@ trait Completions { this: MetalsGlobal =>
               NoneCompletion
             }
           case _ =>
-            inferCompletionPosition(pos, text, tail, completions, editRange)
+            inferCompletionPosition(
+              pos,
+              source,
+              text,
+              tail,
+              completions,
+              editRange
+            )
         }
       case AppliedTypeTree(_, args) :: _ =>
         if (args.exists(_.pos.includes(pos))) {
@@ -570,7 +584,7 @@ trait Completions { this: MetalsGlobal =>
       case New(_) :: _ =>
         NewCompletion
       case head :: tail if !head.pos.includes(pos) =>
-        inferCompletionPosition(pos, text, tail, completions, editRange)
+        inferCompletionPosition(pos, source, text, tail, completions, editRange)
       case _ =>
         NoneCompletion
     }

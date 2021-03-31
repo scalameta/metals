@@ -453,7 +453,7 @@ class SbtBloopLspSuite
       _ <- assertDefinitionAtLocation(
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
-        ".metals/readonly/sbt/Keys.scala",
+        "sbt/Keys.scala",
         expectedLine = 190
       )
     } yield ()
@@ -473,7 +473,7 @@ class SbtBloopLspSuite
       _ <- assertDefinitionAtLocation(
         "project/plugins.sbt",
         "addSbt@@Plugin(\"ch.epfl.scala\" % \"sbt-scalafix\" % \"0.9.19\")",
-        ".metals/readonly/sbt/Defaults.scala"
+        "sbt/Defaults.scala"
       )
     } yield ()
   }

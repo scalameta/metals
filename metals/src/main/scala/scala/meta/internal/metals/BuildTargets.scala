@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import java.lang.{Iterable => JIterable}
 import java.net.URLClassLoader
-import java.nio.file.Paths
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.{util => ju}
@@ -50,7 +49,7 @@ final class BuildTargets(
   private val buildTargetSources =
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
-    TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
+    TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
   private val isSourceRoot =
     ConcurrentHashSet.empty[AbsolutePath]
   // if workspace contains symlinks, original source items are kept here and source items dealiased
@@ -291,10 +290,13 @@ final class BuildTargets(
    * When encountering an unknown `readonly/` file we do the following steps to
    * infer what build target it belongs to:
    *
-   * - extract toplevel symbol definitions from the source code.
-   * - find a jar file from any classfile that defines one of the toplevel
-   *   symbols.
-   * - find the build target which has that jar file in it's classpath.
+   * - if file is in `.metals/readonly/dependencies/${source-jar-name}`
+   *    - find the build targets that have a sourceDependency with that name
+   * - if it isn't
+   *    - extract toplevel symbol definitions from the source code.
+   *    - find a jar file from any classfile that defines one of the toplevel
+   *      symbols.
+   *    - find the build target which has that jar file in it's classpath.
    *
    * Otherwise if it's a jar file we find a build target it belongs to.
    *
@@ -303,19 +305,32 @@ final class BuildTargets(
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    if (source.isDependencySource(workspace)) {
-      Try(unsafeInferBuildTarget(source)).getOrElse(None)
-    } else {
-      // else it can be a source file inside a jar
-      val fromJar = jarPath(source)
-        .flatMap { jar =>
-          all.find { scalaTarget =>
-            scalaTarget.jarClasspath.contains(jar)
-          }
+    val readonly = workspace.resolve(Directories.readonly)
+    source.toRelativeInside(readonly) match {
+      case Some(rel) =>
+        val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
+        names match {
+          case Directories.dependenciesName :: jarName :: _ =>
+            // match build target by source jar name
+            inverseDependencySources
+              .collectFirst {
+                case (path, ids) if path.filename == jarName && ids.nonEmpty =>
+                  ids.head
+              }
+          case _ =>
+            Try(unsafeInferBuildTarget(source)).getOrElse(None)
         }
-        .map(_.id)
-      fromJar.foreach(addSourceItem(source, _))
-      fromJar
+      case None =>
+        // else it can be a source file inside a jar
+        val fromJar = jarPath(source)
+          .flatMap { jar =>
+            all.find { scalaTarget =>
+              scalaTarget.jarClasspath.contains(jar)
+            }
+          }
+          .map(_.id)
+        fromJar.foreach(addSourceItem(source, _))
+        fromJar
     }
   }
 
@@ -324,15 +339,10 @@ final class BuildTargets(
   }
 
   private def jarPath(source: AbsolutePath): Option[AbsolutePath] = {
-    val filesystem = source.toNIO.getFileSystem()
-    if (filesystem.provider().getScheme().equals("jar")) {
-      Some(
-        AbsolutePath(
-          Paths.get(filesystem.toString.replace("-sources.jar", ".jar"))
-        )
+    source.jarPath.map { sourceJarPath =>
+      sourceJarPath.parent.resolve(
+        source.filename.replace("-sources.jar", ".jar")
       )
-    } else {
-      None
     }
   }
 
@@ -341,7 +351,7 @@ final class BuildTargets(
    * It selects build target by directory of its connection
    *   because `*.sbt` and `*.scala` aren't included in `sourceFiles` set
    */
-  private def sbtBuildScalaTarget(
+  def sbtBuildScalaTarget(
       file: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
     val targetMetaBuildDir =
@@ -461,13 +471,14 @@ final class BuildTargets(
       sourcesJar: AbsolutePath,
       target: BuildTargetIdentifier
   ): Unit = {
-    inverseDependencySources(sourcesJar) = target
+    val acc = inverseDependencySources.getOrElse(sourcesJar, Set.empty)
+    inverseDependencySources(sourcesJar) = acc + target
   }
 
   def inverseDependencySource(
       sourceJar: AbsolutePath
-  ): Option[BuildTargetIdentifier] = {
-    inverseDependencySources.get(sourceJar)
+  ): collection.Set[BuildTargetIdentifier] = {
+    inverseDependencySources.get(sourceJar).getOrElse(Set.empty)
   }
 
   def addSourceRoot(root: AbsolutePath): Unit = {

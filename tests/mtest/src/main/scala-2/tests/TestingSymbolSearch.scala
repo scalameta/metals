@@ -1,5 +1,6 @@
 package tests
 
+import java.net.URI
 import java.nio.file.Files
 import java.util.Optional
 import java.{util => ju}
@@ -33,7 +34,7 @@ class TestingSymbolSearch(
     docs.documentation(symbol)
   }
 
-  override def definition(symbol: String): ju.List[Location] = {
+  override def definition(symbol: String, source: URI): ju.List[Location] = {
     index.definition(Symbol(symbol)) match {
       case None =>
         ju.Collections.emptyList()
@@ -51,7 +52,10 @@ class TestingSymbolSearch(
     }
   }
 
-  override def definitionSourceToplevels(symbol: String): ju.List[String] = {
+  override def definitionSourceToplevels(
+      symbol: String,
+      source: URI
+  ): ju.List[String] = {
     index.definition(Symbol(symbol)) match {
       case None =>
         ju.Collections.emptyList()

@@ -29,8 +29,8 @@ final class SourcePathProvider(
     val symbolBase = if (base.contains("/")) base else "_empty_/" + base
     val symbols = for {
       symbol <- Set(symbolBase + ".", symbolBase + "#").toIterator
-      definition <- definitionProvider.fromSymbol(symbol).asScala
-    } yield definition.getUri.toAbsolutePath
+      location <- definitionProvider.fromSymbol(symbol, targets).asScala
+    } yield location.getUri.toAbsolutePath
 
     if (symbols.isEmpty) {
       scribe.debug(s"no definition for symbol: $symbolBase")

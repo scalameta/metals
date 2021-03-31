@@ -13,6 +13,10 @@ import scala.meta.io.AbsolutePath
 class DelegatingGlobalSymbolIndex(
     var underlying: GlobalSymbolIndex = OnDemandSymbolIndex()
 ) extends GlobalSymbolIndex {
+
+  def definitions(symbol: mtags.Symbol): List[SymbolDefinition] =
+    underlying.definitions(symbol: mtags.Symbol)
+
   def definition(symbol: mtags.Symbol): Option[SymbolDefinition] = {
     underlying.definition(symbol)
   }
@@ -20,13 +24,19 @@ class DelegatingGlobalSymbolIndex(
       file: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       dialect: Dialect
-  ): Unit = {
+  ): List[String] = {
     underlying.addSourceFile(file, sourceDirectory, dialect)
   }
-  def addSourceJar(jar: AbsolutePath, dialect: Dialect): Unit = {
+  def addSourceJar(
+      jar: AbsolutePath,
+      dialect: Dialect
+  ): List[(String, AbsolutePath)] = {
     underlying.addSourceJar(jar, dialect)
   }
-  def addSourceDirectory(dir: AbsolutePath, dialect: Dialect): Unit = {
+  def addSourceDirectory(
+      dir: AbsolutePath,
+      dialect: Dialect
+  ): List[(String, AbsolutePath)] = {
     underlying.addSourceDirectory(dir, dialect)
   }
 }

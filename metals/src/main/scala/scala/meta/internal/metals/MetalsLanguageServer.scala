@@ -469,7 +469,8 @@ class MetalsLanguageServer(
           warnings,
           () => compilers,
           remote,
-          trees
+          trees,
+          buildTargets
         )
         formattingProvider = new FormattingProvider(
           workspace,
@@ -1609,7 +1610,10 @@ class MetalsLanguageServer(
             args <- Option(params.getArguments())
             argObject <- args.asScala.headOption
             symbol <- Argument.getAsString(argObject)
-            location <- definitionProvider.fromSymbol(symbol).asScala.headOption
+            location <- definitionProvider
+              .fromSymbol(symbol, focusedDocument)
+              .asScala
+              .headOption
           } {
             languageClient.metalsExecuteClientCommand(
               new ExecuteCommandParams(
@@ -2313,7 +2317,8 @@ class MetalsLanguageServer(
     // remove cached symbols from Jars
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
-    JdkSources(userConfig.javaHome) match {
+    val jdkSources = JdkSources(userConfig.javaHome)
+    jdkSources match {
       case Some(zip) =>
         usedJars += zip
         addSourceJarSymbols(zip)
@@ -2327,12 +2332,15 @@ class MetalsLanguageServer(
       item <- dependencySources.getItems.asScala
       scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
+      path = sourceUri.toAbsolutePath
+      _ = buildTargets.addDependencySource(path, item.getTarget)
+      _ = jdkSources.foreach(source =>
+        buildTargets.addDependencySource(source, item.getTarget)
+      )
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)
-      val path = sourceUri.toAbsolutePath
       try {
-        buildTargets.addDependencySource(path, item.getTarget)
         if (path.isJar) {
           usedJars += path
           addSourceJarSymbols(path)
@@ -2367,28 +2375,14 @@ class MetalsLanguageServer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
-    definitionIndex.addSourceJarTopLevels(
-      path,
-      () => {
+    tables.jarSymbols.getTopLevels(path) match {
+      case Some(toplevels) =>
+        definitionIndex.addIndexedSourceJar(path, toplevels)
+      case None =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-        tables.jarSymbols.getTopLevels(path) match {
-          case Some(toplevels) => toplevels
-          case None =>
-            // Nothing in cache, read top level symbols and store them in cache
-            val tempIndex = OnDemandSymbolIndex(onError = {
-              case e: InvalidJarException =>
-                scribe.warn(s"invalid jar: ${e.path}")
-              case NonFatal(e) =>
-                scribe.debug(s"jar error: $path", e)
-            })
-            tempIndex.addSourceJar(path, dialect)
-            if (tempIndex.toplevels.nonEmpty) {
-              tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
-            }
-            tempIndex.toplevels
-        }
-      }
-    )
+        val toplevels = definitionIndex.addSourceJar(path, dialect)
+        tables.jarSymbols.putTopLevels(path, toplevels)
+    }
   }
 
   private def onWorksheetChanged(
@@ -2577,6 +2571,8 @@ class MetalsLanguageServer(
       onError = {
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)
+        case e: InvalidJarException =>
+          scribe.warn(s"invalid jar: ${e.path}")
         case NonFatal(e) =>
           scribe.error("unexpected error during source scanning", e)
       },

@@ -326,4 +326,67 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
+  test("clashing-references") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {}
+           |}
+           |/a/src/main/scala/example/MainA.scala
+           |package example
+           |
+           |class Main {
+           |  val foo = new Foo
+           |}
+           |/a/src/main/scala/example/FooA.scala
+           |package example
+           |
+           |class Foo
+           |/b/src/main/scala/example/MainB.scala
+           |package example
+           |
+           |class Main {
+           |  val foo = new Foo
+           |}
+           |/b/src/main/scala/example/FooB.scala
+           |package example
+           |
+           |class Foo
+           |""".stripMargin
+      )
+      _ = server.didOpen("a/src/main/scala/example/MainA.scala")
+      _ = server.didOpen("a/src/main/scala/example/FooA.scala")
+      _ = server.didOpen("b/src/main/scala/example/MainB.scala")
+      _ = server.didOpen("b/src/main/scala/example/FooB.scala")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/example/FooA.scala
+           |package example
+           |
+           |class Foo/*L2*/
+           |/a/src/main/scala/example/MainA.scala
+           |package example
+           |
+           |class Main/*L2*/ {
+           |  val foo/*L3*/ = new Foo/*FooA.scala:2*/
+           |}
+           |/b/src/main/scala/example/FooB.scala
+           |package example
+           |
+           |class Foo/*L2*/
+           |
+           |/b/src/main/scala/example/MainB.scala
+           |package example
+           |
+           |class Main/*L2*/ {
+           |  val foo/*L3*/ = new Foo/*FooB.scala:2*/
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }

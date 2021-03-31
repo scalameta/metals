@@ -285,7 +285,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
         50 -> (new Position(
           60,
           6
-        ), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
+        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.12-0.12.0-sources.jar/io/circe/Decoder.scala")
       )
 
       (context, assertions) = parseWithUri(code, path)

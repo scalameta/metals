@@ -15,6 +15,7 @@ import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
@@ -39,10 +40,13 @@ class Supermethods(
   def jumpToSelectedSuperMethod(
       commandParams: ExecuteCommandParams
   ): Future[Unit] = {
-    def execute(methodSymbols: List[String]): Future[Unit] = {
+    def execute(
+        methodSymbols: List[String],
+        path: AbsolutePath
+    ): Future[Unit] = {
       askUserToSelectSuperMethod(methodSymbols)
         .map(
-          _.flatMap(findDefinitionLocation)
+          _.flatMap(findDefinitionLocation(_, path))
             .map(makeCommandParams)
             .foreach(client.metalsExecuteClientCommand)
         )
@@ -50,9 +54,11 @@ class Supermethods(
 
     (for {
       params <- parseJsonParams(commandParams)
+      filePath <- params.document.toAbsolutePathSafe
       methodsHierarchy <- getSuperMethodHierarchySymbols(params)
       if methodsHierarchy.nonEmpty
-    } yield execute(methodsHierarchy)).getOrElse(Future.successful(()))
+    } yield execute(methodsHierarchy, filePath))
+      .getOrElse(Future.successful(()))
   }
 
   def getGoToSuperMethodLocation(
@@ -82,7 +88,7 @@ class Supermethods(
           Some(symbolInformation.symbol)
         }
       }
-      jumpToLocation <- findDefinitionLocation(gotoSymbol)
+      jumpToLocation <- findDefinitionLocation(gotoSymbol, filePath)
     } yield jumpToLocation
   }
 
@@ -149,8 +155,11 @@ class Supermethods(
     )
   }
 
-  private def findDefinitionLocation(symbol: String): Option[Location] = {
-    definitionProvider.fromSymbol(symbol).asScala.headOption
+  private def findDefinitionLocation(
+      symbol: String,
+      source: AbsolutePath
+  ): Option[Location] = {
+    definitionProvider.fromSymbol(symbol, Some(source)).asScala.headOption
   }
 
   private def makeCommandParams(location: Location): ExecuteCommandParams = {

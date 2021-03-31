@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Path
 import java.{util => ju}
 
@@ -8,7 +9,6 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolDocumentation
@@ -25,6 +25,7 @@ class StandaloneSymbolSearch(
     buffers: Buffers,
     isExcludedPackage: String => Boolean,
     trees: Trees,
+    buildTargets: BuildTargets,
     workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
@@ -50,7 +51,8 @@ class StandaloneSymbolSearch(
       mtags,
       workspace,
       semanticdbsFallback = None,
-      trees
+      trees,
+      buildTargets
     )
 
   def documentation(symbol: String): ju.Optional[SymbolDocumentation] =
@@ -60,18 +62,20 @@ class StandaloneSymbolSearch(
       .orElse(workspaceFallback.flatMap(_.documentation(symbol).asScala))
       .asJava
 
-  override def definition(x: String): ju.List[Location] = {
+  override def definition(x: String, source: URI): ju.List[Location] = {
+    val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     destinationProvider
-      .fromSymbol(x)
+      .fromSymbol(x, sourcePath)
       .flatMap(_.toResult)
       .map(_.locations)
-      .orElse(workspaceFallback.map(_.definition(x)))
+      .orElse(workspaceFallback.map(_.definition(x, source)))
       .getOrElse(ju.Collections.emptyList())
   }
 
-  def definitionSourceToplevels(sym: String): ju.List[String] =
-    index
-      .definition(Symbol(sym))
+  def definitionSourceToplevels(sym: String, source: URI): ju.List[String] = {
+    val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
+    destinationProvider
+      .definition(sym, sourcePath)
       .map { symDef =>
         val input = symDef.path.toInput
         dependencySourceCache.getOrElseUpdate(
@@ -79,8 +83,9 @@ class StandaloneSymbolSearch(
           mtags.toplevels(input).asJava
         )
       }
-      .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym)))
+      .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym, source)))
       .getOrElse(ju.Collections.emptyList())
+  }
 
   def search(
       query: String,
@@ -103,7 +108,8 @@ object StandaloneSymbolSearch {
       classpath: Seq[Path],
       isExcludedPackage: String => Boolean,
       userConfig: () => UserConfiguration,
-      trees: Trees
+      trees: Trees,
+      buildTargets: BuildTargets
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -119,7 +125,8 @@ object StandaloneSymbolSearch {
       sourcesWithExtras,
       buffers,
       isExcludedPackage,
-      trees
+      trees,
+      buildTargets
     )
   }
   def apply(
@@ -128,7 +135,8 @@ object StandaloneSymbolSearch {
       buffers: Buffers,
       isExcludedPackage: String => Boolean,
       userConfig: () => UserConfiguration,
-      trees: Trees
+      trees: Trees,
+      buildTargets: BuildTargets
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
@@ -139,7 +147,8 @@ object StandaloneSymbolSearch {
       sourcesWithExtras,
       buffers,
       isExcludedPackage,
-      trees
+      trees,
+      buildTargets
     )
   }
 

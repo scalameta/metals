@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.net.URI
 import java.{util => ju}
 
 import scala.collection.mutable
@@ -54,7 +55,7 @@ class CompletionProvider(
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
 
-    val (i, completion, editRange, query) = safeCompletionsAt(pos)
+    val (i, completion, editRange, query) = safeCompletionsAt(pos, params.uri())
 
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
@@ -360,7 +361,8 @@ class CompletionProvider(
   }
 
   private def safeCompletionsAt(
-      pos: Position
+      pos: Position,
+      source: URI
   ): (InterestingMembers, CompletionPosition, l.Range, String) = {
     lazy val editRange = pos
       .withStart(inferIdentStart(pos, params.text()))
@@ -370,6 +372,7 @@ class CompletionProvider(
     def expected(e: Throwable) = {
       completionPosition(
         pos,
+        source,
         params.text(),
         editRange,
         CompletionResult.NoResults,
@@ -440,6 +443,7 @@ class CompletionProvider(
       val latestParentTrees = getLastVisitedParentTrees(pos)
       val completion = completionPosition(
         pos,
+        source,
         params.text(),
         editRange,
         completions,

@@ -4,6 +4,7 @@ import java.{util => ju}
 import org.eclipse.lsp4j.Location
 import java.util.Optional
 import java.nio.file.Files
+import java.net.URI
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -30,11 +31,14 @@ class TestingSymbolSearch(
     Optional.empty()
   }
 
-  override def definition(symbol: String): ju.List[Location] = {
+  override def definition(symbol: String, source: URI): ju.List[Location] = {
     new ju.LinkedList[Location]
   }
 
-  override def definitionSourceToplevels(symbol: String): ju.List[String] =
+  override def definitionSourceToplevels(
+      symbol: String,
+      source: URI
+  ): ju.List[String] =
     new ju.LinkedList[String]
 
   override def search(

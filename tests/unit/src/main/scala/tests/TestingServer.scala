@@ -1456,10 +1456,11 @@ final class TestingServer(
 object TestingServer {
   def toPath(workspace: AbsolutePath, filename: String): AbsolutePath = {
     val path = RelativePath(filename)
-    List(
-      workspace,
-      workspace.resolve(Directories.readonly)
-    ).map(_.resolve(path))
+    val base = List(workspace, workspace.resolve(Directories.readonly))
+    val dependencies = workspace.resolve(Directories.dependencies).list.toList
+    val all = base ++ dependencies
+    all
+      .map(_.resolve(path))
       .find(p => Files.exists(p.toNIO))
       .getOrElse {
         throw new IllegalArgumentException(s"no such file: $filename")

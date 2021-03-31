@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.util.Optional
 import java.{util => ju}
 
@@ -36,17 +37,22 @@ class MetalsSymbolSearch(
   override def documentation(symbol: String): Optional[SymbolDocumentation] =
     docs.documentation(symbol)
 
-  def definition(symbol: String): ju.List[Location] = {
-    defn.fromSymbol(symbol)
+  def definition(symbol: String, source: URI): ju.List[Location] = {
+    val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
+    defn.fromSymbol(symbol, sourcePath)
   }
 
   /**
    * Returns a list of semanticdb symbols in a source file that contains the
    * definition of the given symbol.
    */
-  override def definitionSourceToplevels(symbol: String): ju.List[String] = {
+  override def definitionSourceToplevels(
+      symbol: String,
+      source: URI
+  ): ju.List[String] = {
+    val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     defn
-      .definitionPathInputFromSymbol(symbol)
+      .definitionPathInputFromSymbol(symbol, sourcePath)
       .map(input => {
         val path = AbsolutePath(input.path)
         if (path.isWorkspaceSource(wsp.workspace)) {
