@@ -426,7 +426,7 @@ lazy val metals = project
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "23",
+      "dev.dirs" % "directories" % "24",
       // ==================
       // Scala dependencies
       // ==================
