@@ -7,7 +7,8 @@
       "editors/sublime",
       "editors/emacs",
       "editors/eclipse",
-      "editors/online-ides"
+      "editors/online-ides",
+      "editors/user-configuration"
     ],
     "Build Tools": [
       "build-tools/overview",

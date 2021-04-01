@@ -81,7 +81,7 @@ object UserConfiguration {
         "gradle-script",
         """empty string `""`.""",
         """"/usr/local/bin/gradle"""",
-        "gradle script",
+        "Gradle script",
         """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
           |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
           |like using environment variables.
@@ -91,7 +91,7 @@ object UserConfiguration {
         "maven-script",
         """empty string `""`.""",
         """"/usr/local/bin/mvn"""",
-        "maven script",
+        "Maven script",
         """Optional absolute path to a `maven` executable to use for generating bloop config.
           |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
           |""".stripMargin
@@ -100,7 +100,7 @@ object UserConfiguration {
         "mill-script",
         """empty string `""`.""",
         """"/usr/local/bin/mill"""",
-        "mill script",
+        "Mill script",
         """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
           |By default, Metals uses mill wrapper script with 0.5.0 mill version. Update this setting if your `mill` script requires more customizations
           |like using environment variables.

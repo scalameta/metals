@@ -75,8 +75,14 @@ class WorksheetModifier extends StringModifier {
         |import $$ivy.`com.lihaoyi::scalatags:0.7.0`
         |```
         |
-        |:: is the same as %% in sbt, which will append the current Scala binary version
+        |`::` is the same as `%%` in sbt, which will append the current Scala binary version
         |to the artifact name.
+        |
+        |You can also import `scalac` options in a special `$$scalac` import like below:
+        |
+        |```scala
+        |import $$scalac.`-Ywarn-unused`
+        |```
         |""".stripMargin
   }
 
