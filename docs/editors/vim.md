@@ -412,7 +412,6 @@ install [coc-json](https://github.com/neoclide/coc-json).
 ```
 
 ```scala mdoc:new-project:vim
-
 ```
 
 ## Enable on type formatting for multiline string formatting
