@@ -239,11 +239,11 @@ lazy val V = new {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  def guava = "com.google.guava" % "guava" % "30.1-jre"
+  def guava = "com.google.guava" % "guava" % "30.1.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.3"
-  val coursier = "2.0.13"
+  val coursier = "2.0.16"
   val ammonite = "2.3.8-58-aa8b2ab1"
   val mill = "0.9.3"
   val organizeImportRule = "0.5.0"
@@ -402,19 +402,19 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.9.10",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.14",
+      "org.openjdk.jol" % "jol-core" % "0.15",
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.6",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.5.Final",
+      "io.undertow" % "undertow-core" % "2.2.7.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.7.0",
+      "org.flywaydb" % "flyway-core" % "7.7.1",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
-      "net.java.dev.jna" % "jna" % "5.7.0",
-      "net.java.dev.jna" % "jna-platform" % "5.7.0",
+      "net.java.dev.jna" % "jna" % "5.8.0",
+      "net.java.dev.jna" % "jna-platform" % "5.8.0",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.3.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -426,7 +426,7 @@ lazy val metals = project
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "23",
+      "dev.dirs" % "directories" % "24",
       // ==================
       // Scala dependencies
       // ==================
@@ -444,14 +444,14 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.2",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.3.0",
+      "com.lihaoyi" %% "ujson" % "1.3.9",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.6.5",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.1"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -497,7 +497,7 @@ lazy val `sbt-metals` = project
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
-    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.0.0")
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.1.0")
   )
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScalafixPlugin)
