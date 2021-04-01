@@ -402,7 +402,7 @@ lazy val metals = project
       V.guava,
       "com.geirsson" %% "metaconfig-core" % "0.9.10",
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.14",
+      "org.openjdk.jol" % "jol-core" % "0.15",
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.6",
       // for http client
