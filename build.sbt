@@ -409,7 +409,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.5.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.7.0",
+      "org.flywaydb" % "flyway-core" % "7.7.1",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
