@@ -497,7 +497,7 @@ lazy val `sbt-metals` = project
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
-    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.0.0")
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.1.0")
   )
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScalafixPlugin)
