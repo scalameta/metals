@@ -120,7 +120,21 @@ object Embedded {
     val jars = downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
 
     val parent = new MdocClassLoader(this.getClass.getClassLoader)
-    val urls = jars.iterator.map(_.toUri().toURL()).toArray
+
+    // Full mdoc classpath seems to be causing some issue with akka
+    // We want to keep a minimal set of jars needed here
+    val runtimeClasspath = jars.filter { path =>
+      val pathString = path.toString
+      pathString.contains("scala-lang") ||
+      pathString.contains("fansi") ||
+      pathString.contains("pprint") ||
+      pathString.contains("sourcecode") ||
+      pathString.contains("mdoc") ||
+      pathString.contains("scalameta") ||
+      pathString.contains("metaconfig") ||
+      pathString.contains("diffutils")
+    }
+    val urls = runtimeClasspath.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
   }
 
