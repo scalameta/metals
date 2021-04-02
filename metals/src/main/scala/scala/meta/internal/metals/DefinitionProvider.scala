@@ -164,6 +164,7 @@ final class DefinitionProvider(
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
       positionOccurrence(source, dirtyPosition.getPosition, snapshot)
+
     // Find symbol definition location.
     val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)

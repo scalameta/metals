@@ -56,6 +56,7 @@ object InverseLegacyToken {
      */
     PACKAGE -> "PACKAGE",
     IMPORT -> "IMPORT",
+    EXPORT -> "EXPORT",
     CLASS -> "CLASS",
     CASECLASS -> "CASECLASS",
     OBJECT -> "OBJECT",
@@ -69,6 +70,7 @@ object InverseLegacyToken {
     VAL -> "VAL",
     VAR -> "VAR",
     ENUM -> "ENUM",
+    GIVEN -> "GIVEN",
     /**
      * control structures
      */

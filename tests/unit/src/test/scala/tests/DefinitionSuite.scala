@@ -3,10 +3,11 @@ package tests
 import scala.meta._
 import scala.meta.internal.inputs._
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 
@@ -23,29 +24,40 @@ import scala.meta.internal.{semanticdb => s}
  * To keep the tests readable, we only include the filename of the definition position and leave it
  * to separate test suites to assert that the range positions are accurate.
  */
-class DefinitionSuite extends DirectoryExpectSuite("definition") {
+
+abstract class DefinitionSuiteBase(
+    inputProps: InputProperties,
+    directory: String,
+    dialect: Dialect,
+    badFileNames: List[String] = List.empty
+) extends DirectoryExpectSuite(directory) {
+
+  override lazy val input: InputProperties = inputProps
+
   override def testCases(): List[ExpectTestCase] = {
     val index = OnDemandSymbolIndex()
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
-      index.addSourceFile(source.file, Some(source.sourceDirectory))
+      index.addSourceFile(source.file, Some(source.sourceDirectory), dialect)
     }
     // Step 2. Index dependency sources
-    index.addSourceJar(JdkSources().get)
-    input.dependencySources.entries.foreach { jar => index.addSourceJar(jar) }
+    index.addSourceJar(JdkSources().get, dialect)
+    input.dependencySources.entries.foreach { jar =>
+      index.addSourceJar(
+        jar,
+        ScalaVersions.dialectForDependencyJar(jar.filename)
+      )
+    }
 
     def hasKnownIssues(file: InputFile): Boolean = {
-      val badlist = List(
-        "ForComprehensions.scala" // local symbols in large for comprehensions cause problems
-      )
-      badlist.exists { filename => file.file.toNIO.endsWith(filename) }
+      badFileNames.exists { filename => file.file.toNIO.endsWith(filename) }
     }
     input.scalaFiles.map { file =>
       ExpectTestCase(
         file,
         { () =>
           val input = file.input
-          val tokens = Trees.defaultTokenizerDialect(input).tokenize.get
+          val tokens = dialect(input).tokenize.get
           val sb = new StringBuilder
           tokens.foreach(token => {
             sb.append(token.syntax)
@@ -135,13 +147,42 @@ class DefinitionSuite extends DirectoryExpectSuite("definition") {
     }
   }
 
-  def shouldHaveDefinition(symbol: String): Boolean = {
-    !symbol.isPackage &&
-    !symbol.startsWith("scala/Any#") &&
-    !symbol.startsWith("scala/Nothing#") &&
-    !symbol.startsWith("scala/Null#") &&
-    !symbol.startsWith("scala/Singleton#") &&
-    !symbol.startsWith("scala/AnyRef#") &&
-    !symbol.startsWith("java/lang/Object#")
-  }
+  private val symbolsWithoutDefition: List[String] =
+    //format: off
+    List(
+      "scala/Any#",
+      "scala/Nothing#",
+      "scala/Null#",
+      "scala/Singleton#",
+      "scala/AnyRef#",
+      "java/lang/Object#",
+      "scala/`|`#",
+      "scala/`&`#"
+    )
+    //format: on
+
+  def shouldHaveDefinition(symbol: String): Boolean =
+    !symbol.isPackage && !symbolsWithoutDefition.exists(v =>
+      symbol.startsWith(v)
+    )
 }
+
+class DefinitionScala2Suite
+    extends DefinitionSuiteBase(
+      inputProps = InputProperties.scala2(),
+      directory = "definition",
+      dialect = dialects.Scala213,
+      badFileNames = List(
+        "ForComprehensions.scala" // local symbols in large for comprehensions cause problems
+      )
+    )
+
+class DefinitionScala3Suite
+    extends DefinitionSuiteBase(
+      inputProps = InputProperties.scala3(),
+      directory = "definition-scala3",
+      dialect = dialects.Scala3,
+      badFileNames = List(
+        "Extension.scala"
+      )
+    )

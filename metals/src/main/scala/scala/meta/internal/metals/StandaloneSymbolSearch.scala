@@ -37,7 +37,9 @@ class StandaloneSymbolSearch(
     )
 
   private val index = OnDemandSymbolIndex()
-  sources.foreach(index.addSourceJar)
+  sources.foreach(s =>
+    index.addSourceJar(s, ScalaVersions.dialectForDependencyJar(s.filename))
+  )
 
   private val docs = new Docstrings(index)
   private val mtags = new Mtags()

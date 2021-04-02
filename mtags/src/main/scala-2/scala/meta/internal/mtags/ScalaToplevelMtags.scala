@@ -1,6 +1,6 @@
 package scala.meta.internal.mtags
 
-import scala.meta.dialects
+import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.inputs._
@@ -36,9 +36,10 @@ final class Identifier(val name: String, val pos: Position) {
  */
 class ScalaToplevelMtags(
     val input: Input.VirtualFile,
-    includeInnerClasses: Boolean
+    includeInnerClasses: Boolean,
+    dialect: Dialect
 ) extends MtagsIndexer {
-  private val scanner = new LegacyScanner(input, dialects.Scala213)
+  private val scanner = new LegacyScanner(input, dialect)
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF
   def isNewline: Boolean =
@@ -62,7 +63,7 @@ class ScalaToplevelMtags(
     scanner.curr.token match {
       case PACKAGE =>
         emitPackage()
-      case CLASS | TRAIT | OBJECT =>
+      case CLASS | TRAIT | OBJECT | ENUM =>
         emitMember(isPackageObject = false)
 
       // Ignore everything enclosed within parentheses, braces and brackets.
@@ -126,6 +127,8 @@ class ScalaToplevelMtags(
         tpe(name.name, name.pos, Kind.CLASS, 0)
       case TRAIT =>
         tpe(name.name, name.pos, Kind.TRAIT, 0)
+      case ENUM =>
+        tpe(name.name, name.pos, Kind.CLASS, 0)
       case OBJECT =>
         if (isPackageObject) {
           withOwner(symbol(Descriptor.Package(name.name))) {

@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import scala.meta.Dialect
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
@@ -49,7 +50,8 @@ trait GlobalSymbolIndex {
    */
   def addSourceFile(
       file: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceDirectory: Option[AbsolutePath],
+      dialect: Dialect
   ): Unit
 
   /**
@@ -80,12 +82,12 @@ trait GlobalSymbolIndex {
    *                   such as tokenization failure due to an unclosed
    *                   literal.
    */
-  def addSourceJar(jar: AbsolutePath): Unit
+  def addSourceJar(jar: AbsolutePath, dialect: Dialect): Unit
 
   /**
    * The same as `addSourceJar` except for directories
    */
-  def addSourceDirectory(dir: AbsolutePath): Unit
+  def addSourceDirectory(dir: AbsolutePath, dialect: Dialect): Unit
 
 }
 
