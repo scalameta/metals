@@ -56,7 +56,7 @@ trait AdjustLspData {
 
   def adjustCompletionListInPlace(list: CompletionList): Unit = {
     for (item <- list.getItems.asScala) {
-      for (textEdit <- Option(item.getTextEdit))
+      for (textEdit <- item.getLeftTextEdit())
         textEdit.setRange(adjustRange(textEdit.getRange))
       for (l <- Option(item.getAdditionalTextEdits); textEdit <- l.asScala)
         textEdit.setRange(adjustRange(textEdit.getRange))
