@@ -134,7 +134,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val items = getItems(original)
       val obtained = items
         .map { item =>
-          Option(item.getTextEdit)
+          item
+            .getLeftTextEdit()
             .map(_.getNewText)
             .orElse(Option(item.getInsertText()))
             .getOrElse(item.getLabel)

@@ -155,6 +155,17 @@ trait CommonMtagsEnrichments {
         case data =>
           decodeJson(data, classOf[CompletionItemData])
       }
+
+    def setTextEdit(edit: l.TextEdit): Unit = {
+      item.setTextEdit(JEither.forLeft(edit))
+    }
+
+    def getLeftTextEdit(): Option[l.TextEdit] = {
+      for {
+        either <- Option(item.getTextEdit)
+        textEdit <- Option(either.getLeft())
+      } yield textEdit
+    }
   }
 
   implicit class XtensionLspPosition(pos: l.Position) {
