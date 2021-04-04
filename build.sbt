@@ -139,8 +139,8 @@ inThisBuild(
     resolvers += Resolver.sonatypeRepo("public"),
     dependencyOverrides += V.guava,
     // faster publishLocal:
-    publishArtifact.in(packageDoc) := sys.env.contains("CI"),
-    publishArtifact.in(packageSrc) := sys.env.contains("CI"),
+    packageDoc / publishArtifact := sys.env.contains("CI"),
+    packageSrc / publishArtifact := sys.env.contains("CI"),
     // forking options
     javaOptions += {
       import scala.collection.JavaConverters._
@@ -155,7 +155,7 @@ inThisBuild(
   )
 )
 
-onLoad.in(Global) ~= { old =>
+Global / onLoad ~= { old =>
   if (!scala.util.Properties.isWin) {
     import java.nio.file._
     val prePush = Paths.get(".git", "hooks", "pre-push")
@@ -172,7 +172,7 @@ onLoad.in(Global) ~= { old =>
   }
   old
 }
-cancelable.in(Global) := true
+Global / cancelable := true
 crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
@@ -270,7 +270,7 @@ val sharedSettings = List(
   )
 )
 
-skip.in(publish) := true
+publish / skip := true
 
 lazy val interfaces = project
   .in(file("mtags-interfaces"))
@@ -282,7 +282,7 @@ lazy val interfaces = project
       V.lsp4j
     ),
     crossVersion := CrossVersion.disabled,
-    javacOptions in (Compile / doc) ++= List(
+    Compile / doc / javacOptions ++= List(
       "-tag",
       "implNote:a:Implementation Note:"
     )
@@ -309,12 +309,12 @@ val mtagsSettings = List(
   crossScalaVersions := V.supportedScalaVersions,
   crossTarget := target.value / s"scala-${scalaVersion.value}",
   crossVersion := CrossVersion.full,
-  unmanagedSourceDirectories.in(Compile) ++= multiScalaDirectories(
-    baseDirectory.in(ThisBuild).value / "mtags",
+  Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
+    (ThisBuild / baseDirectory).value / "mtags",
     scalaVersion.value
   ),
   // @note needed to deal with issues with dottyDoc
-  sources in (Compile, doc) := Seq.empty,
+  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -362,18 +362,14 @@ val mtagsSettings = List(
 lazy val mtags3 = project
   .in(file(".mtags"))
   .settings(
-    unmanagedSourceDirectories.in(Compile) := Seq(),
+    Compile / unmanagedSourceDirectories := Seq(),
     sharedSettings,
     mtagsSettings,
-    unmanagedSourceDirectories.in(Compile) += baseDirectory
-      .in(ThisBuild)
-      .value / "mtags" / "src" / "main" / "scala",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
     moduleName := "mtags3",
     scalaVersion := V.scala3,
-    target := baseDirectory
-      .in(ThisBuild)
-      .value / "mtags" / "target" / "target3",
-    skip.in(publish) := true
+    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
+    publish / skip := true
   )
   .dependsOn(interfaces)
   .disablePlugins(ScalafixPlugin)
@@ -391,8 +387,8 @@ lazy val mtags = project
 lazy val metals = project
   .settings(
     sharedSettings,
-    fork.in(Compile, run) := true,
-    mainClass.in(Compile) := Some("scala.meta.metals.Main"),
+    Compile / run / fork := true,
+    Compile / mainClass := Some("scala.meta.metals.Main"),
     // As a general rule of thumb, we try to keep Scala dependencies to a minimum.
     libraryDependencies ++= List(
       // =================
@@ -506,7 +502,7 @@ lazy val input = project
   .in(file("tests/input"))
   .settings(
     sharedSettings,
-    skip.in(publish) := true,
+    publish / skip := true,
     libraryDependencies ++= List(
       // these projects have macro annotations
       "org.scalameta" %% "scalameta" % V.scalameta,
@@ -527,16 +523,16 @@ lazy val input3 = project
       "-Xsemanticdb"
     ),
     scalaVersion := V.scala3,
-    skip.in(publish) := true
+    publish / skip := true
   )
   .disablePlugins(ScalafixPlugin)
 
 lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
-  skip.in(publish) := true,
+  publish / skip := true,
   fork := true,
   testFrameworks := List(MUnitFramework),
-  testOptions.in(Test) ++= {
+  Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
       List(Tests.Argument(MUnitFramework, "+l", "--verbose"))
@@ -548,21 +544,21 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
 
 def crossPublishLocal(scalaV: String) =
   Def.task[Unit] {
-    val versionValue = version.in(ThisBuild).value
+    val versionValue = (ThisBuild / version).value
     // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
     val newState = Project
       .extract(state.value)
       .appendWithSession(
         List(
-          scalaVersion.in(mtags) := scalaV,
-          version.in(ThisBuild) := versionValue,
-          useSuperShell.in(ThisBuild) := false
+          mtags / scalaVersion := scalaV,
+          ThisBuild / version := versionValue,
+          ThisBuild / useSuperShell := false
         ),
         state.value
       )
     val (s, _) = Project
       .extract(newState)
-      .runTask(publishLocal.in(mtags), newState)
+      .runTask(mtags / publishLocal, newState)
   }
 
 def publishAllMtags(
@@ -579,8 +575,7 @@ def publishAllMtags(
 }
 
 def publishBinaryMtags =
-  publishLocal
-    .in(interfaces)
+  (interfaces / publishLocal)
     .dependsOn(
       publishAllMtags(
         Set(
@@ -617,8 +612,8 @@ lazy val mtest = project
       "scalaVersion" -> scalaVersion.value
     ),
     crossScalaVersions := V.nonDeprecatedScalaVersions,
-    unmanagedSourceDirectories.in(Compile) ++= multiScalaDirectories(
-      baseDirectory.in(ThisBuild).value / "tests" / "mtest",
+    Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
+      (ThisBuild / baseDirectory).value / "tests" / "mtest",
       scalaVersion.value
     )
   )
@@ -661,20 +656,19 @@ lazy val unit = project
       "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive ()
     ),
     buildInfoPackage := "tests",
-    resourceGenerators
-      .in(Compile) += InputProperties.resourceGenerator(input, input3),
-    compile.in(Compile) :=
-      compile
-        .in(Compile)
+    Compile / resourceGenerators += InputProperties
+      .resourceGenerator(input, input3),
+    Compile / compile :=
+      (Compile / compile)
         .dependsOn(
-          compile.in(input, Test),
-          compile.in(input3, Test)
+          input / Test / compile,
+          input3 / Test / compile
         )
         .value,
     buildInfoKeys := Seq[BuildInfoKey](
-      "sourceroot" -> baseDirectory.in(ThisBuild).value,
-      "targetDirectory" -> target.in(Test).value,
-      "testResourceDirectory" -> resourceDirectory.in(Test).value,
+      "sourceroot" -> (ThisBuild / baseDirectory).value,
+      "targetDirectory" -> (Test / target).value,
+      "testResourceDirectory" -> (Test / resourceDirectory).value,
       "scalaVersion" -> scalaVersion.value
     )
   )
@@ -686,14 +680,11 @@ lazy val slow = project
   .settings(
     testSettings,
     sharedSettings,
-    testOnly
-      .in(Test) := testOnly
-      .in(Test)
-      .dependsOn(publishLocal.in(`sbt-metals`), publishBinaryMtags)
+    Test / testOnly := (Test / testOnly)
+      .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
       .evaluated,
-    test.in(Test) := test
-      .in(Test)
-      .dependsOn(publishLocal.in(`sbt-metals`), publishBinaryMtags)
+    Test / test := (Test / test)
+      .dependsOn(`sbt-metals` / publishLocal, publishBinaryMtags)
       .value
   )
   .dependsOn(unit)
@@ -703,8 +694,8 @@ lazy val bench = project
   .enablePlugins(BuildInfoPlugin)
   .settings(
     sharedSettings,
-    fork.in(run) := true,
-    skip.in(publish) := true,
+    run / fork := true,
+    publish / skip := true,
     moduleName := "metals-bench",
     libraryDependencies ++= List(
       // for measuring memory usage
@@ -720,9 +711,9 @@ lazy val docs = project
   .in(file("metals-docs"))
   .settings(
     sharedSettings,
-    skip.in(publish) := true,
+    publish / skip := true,
     moduleName := "metals-docs",
-    mdoc := run.in(Compile).evaluated,
+    mdoc := (Compile / run).evaluated,
     munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
       "org.jsoup" % "jsoup" % "1.13.1"
