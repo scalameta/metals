@@ -1,7 +1,5 @@
 package scala.meta.internal.mtags
 
-import java.nio.file.Paths
-
 import scala.meta.Ctor
 import scala.meta.Decl
 import scala.meta.Defn
@@ -58,8 +56,7 @@ class ScalaMtags(val input: Input.VirtualFile)
     _toplevelSourceRef match {
       case Some(v) => v
       case None =>
-        val filename = Paths.get(input.path).filename
-        val srcName = filename.stripSuffix(".scala")
+        val srcName = input.filename.stripSuffix(".scala")
         val name = s"$srcName$$package"
         val value = (s"$name.", new OverloadDisambiguator())
         _toplevelSourceRef = Some(value)

@@ -1,7 +1,5 @@
 package scala.meta.internal.mtags
 
-import java.nio.file.Paths
-
 import scala.annotation.tailrec
 
 import scala.meta.Dialect
@@ -98,7 +96,7 @@ class Scala3ToplevelMtags(
         case DEF | VAL | VAR | GIVEN | TYPE if needEmitFileOwner(currRegion) =>
           sourceTopLevelAdded = true
           val pos = newPosition
-          val srcName = Paths.get(input.path).filename.stripSuffix(".scala")
+          val srcName = input.filename.stripSuffix(".scala")
           val name = s"$srcName$$package"
           withOwner(currRegion.owner) {
             term(name, pos, Kind.OBJECT, 0)
