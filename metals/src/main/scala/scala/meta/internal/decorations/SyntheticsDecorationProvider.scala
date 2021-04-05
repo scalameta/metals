@@ -420,8 +420,8 @@ final class SyntheticsDecorationProvider(
             if (df.decltpe.isEmpty) {
               val destination =
                 lastParamPos
-                  .orElse(lastTypeParamPos)
                   .orElse(lastParen)
+                  .orElse(lastTypeParamPos)
                   .getOrElse(namePos)
               methodPositions += namePos -> destination
               List(namePos)

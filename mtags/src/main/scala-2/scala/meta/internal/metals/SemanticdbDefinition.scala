@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.util.control.NonFatal
 
+import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -42,7 +43,7 @@ object SemanticdbDefinition {
   ): Unit = {
     input.toLanguage match {
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true) {
+        val mtags = new ScalaToplevelMtags(input, true, dialects.Scala213) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,

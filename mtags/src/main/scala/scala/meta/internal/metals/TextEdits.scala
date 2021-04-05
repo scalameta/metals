@@ -33,7 +33,7 @@ object TextEdits {
     }
   }
   def applyEdits(text: String, item: CompletionItem): String = {
-    val edits = Option(item.getTextEdit).toList ++
+    val edits = item.getLeftTextEdit().toList ++
       Option(item.getAdditionalTextEdits).toList.flatMap(_.asScala)
     applyEdits(text, edits)
   }

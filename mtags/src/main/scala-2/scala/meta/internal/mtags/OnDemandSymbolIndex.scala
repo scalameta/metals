@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.Properties
 import scala.util.control.NonFatal
 
+import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.io._
@@ -54,12 +55,12 @@ final class OnDemandSymbolIndex(
     catch onErrorOption
   }
 
-  override def addSourceDirectory(dir: AbsolutePath): Unit =
+  override def addSourceDirectory(dir: AbsolutePath, dialect: Dialect): Unit =
     tryRun {
       if (sourceJars.addEntry(dir)) {
         dir.listRecursive.foreach {
           case source if source.isScala =>
-            try addSourceFile(source, Some(dir))
+            try addSourceFile(source, Some(dir), dialect)
             catch {
               case NonFatal(e) => onError.lift(IndexError(source, e))
             }
@@ -70,14 +71,14 @@ final class OnDemandSymbolIndex(
 
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
-  override def addSourceJar(jar: AbsolutePath): Unit =
+  override def addSourceJar(jar: AbsolutePath, dialect: Dialect): Unit =
     tryRun {
       try {
         if (sourceJars.addEntry(jar)) {
           FileIO.withJarFileSystem(jar, create = false) { root =>
             root.listRecursive.foreach {
               case source if source.isScala =>
-                try addSourceFile(source, None)
+                try addSourceFile(source, None, dialect)
                 catch {
                   case NonFatal(e) => onError.lift(IndexError(source, e))
                 }
@@ -106,14 +107,16 @@ final class OnDemandSymbolIndex(
   // All other symbols can be inferred on the fly.
   override def addSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceDirectory: Option[AbsolutePath],
+      dialect: Dialect
   ): Unit =
     tryRun {
       indexedSources += 1
       val path = source.toIdeallyRelativeURI(sourceDirectory)
       val text = FileIO.slurp(source, StandardCharsets.UTF_8)
       val input = Input.VirtualFile(path, text)
-      val sourceToplevels = mtags.toplevels(input)
+      val sourceToplevels = mtags.toplevels(input, dialect)
+
       sourceToplevels.foreach { toplevel =>
         addToplevelSymbol(path, source, toplevel)
       }
@@ -194,6 +197,7 @@ final class OnDemandSymbolIndex(
       querySymbol: Symbol,
       symbol: Symbol
   ): Option[SymbolDefinition] = {
+
     if (!definitions.contains(symbol.value)) {
       // Fallback 1: enter the toplevel symbol definition
       val toplevel = symbol.toplevel
@@ -284,5 +288,10 @@ object OnDemandSymbolIndex {
       onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
       toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
   ): OnDemandSymbolIndex =
-    new OnDemandSymbolIndex(toplevels, definitions, onError, toIndexSource)
+    new OnDemandSymbolIndex(
+      toplevels,
+      definitions,
+      onError,
+      toIndexSource
+    )
 }

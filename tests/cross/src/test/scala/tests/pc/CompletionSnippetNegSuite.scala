@@ -46,8 +46,11 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
        |println
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "println",
-      "0." -> ""
+      "3.0.0-RC1" -> "println",
+      "3.0" ->
+        """|println
+           |println
+           |""".stripMargin
     )
   )
 

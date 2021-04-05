@@ -2298,6 +2298,7 @@ class MetalsLanguageServer(
     val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
+      scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       if !isVisited.contains(sourceUri)
     } {
@@ -2309,7 +2310,9 @@ class MetalsLanguageServer(
           usedJars += path
           addSourceJarSymbols(path)
         } else if (path.isDirectory) {
-          definitionIndex.addSourceDirectory(path)
+          val dialect =
+            ScalaVersions.dialectForScalaVersion(scalaTarget.scalaVersion)
+          definitionIndex.addSourceDirectory(path, dialect)
         } else {
           scribe.warn(s"unexpected dependency: $path")
         }
@@ -2340,6 +2343,7 @@ class MetalsLanguageServer(
     definitionIndex.addSourceJarTopLevels(
       path,
       () => {
+        val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         tables.jarSymbols.getTopLevels(path) match {
           case Some(toplevels) => toplevels
           case None =>
@@ -2350,7 +2354,7 @@ class MetalsLanguageServer(
               case NonFatal(e) =>
                 scribe.debug(s"jar error: $path", e)
             })
-            tempIndex.addSourceJar(path)
+            tempIndex.addSourceJar(path, dialect)
             if (tempIndex.toplevels.nonEmpty) {
               tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
             }

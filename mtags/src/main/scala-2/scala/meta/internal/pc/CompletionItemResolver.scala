@@ -26,9 +26,14 @@ class CompletionItemResolver(
             if (
               item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind
             ) {
-              item.getTextEdit.setNewText(
-                replaceJavaParameters(info, item.getTextEdit.getNewText)
-              )
+              item.getTextEdit().asScala match {
+                case Left(textEdit) =>
+                  val newText =
+                    replaceJavaParameters(info, textEdit.getNewText())
+                  textEdit.setNewText(newText)
+                // Right[InsertReplaceEdit] is currently not used in Metals
+                case _ =>
+              }
               item.setLabel(replaceJavaParameters(info, item.getLabel))
             }
           } else {

@@ -575,4 +575,85 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     } yield ()
   }
+
+  test("inferred-type-hkt") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies": [
+           |        "org.typelevel::cats-effect:2.4.0"
+           |    ]
+           |  }
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |
+           |import cats.Parallel
+           |import cats.effect.ConcurrentEffect
+           |import cats.effect.ContextShift
+           |import cats.effect.IOApp
+           |import cats.effect.IO
+           |import cats.effect.ExitCode
+           |import cats.effect.Resource
+           |import cats.effect.Timer
+           |
+           |object Main2 extends IOApp {
+           |
+           |  trait Logger[T[_]]
+           |
+           |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
+           |
+           |  // The actual tested method:
+           |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel]() =
+           |    for {
+           |      logger <- mkLogger[F]
+           |    } yield ()
+           |
+           |  def run(args: List[String]): IO[ExitCode] = ???
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": false,
+          |  "show-implicit-conversions": false,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|import cats.Parallel
+           |import cats.effect.ConcurrentEffect
+           |import cats.effect.ContextShift
+           |import cats.effect.IOApp
+           |import cats.effect.IO
+           |import cats.effect.ExitCode
+           |import cats.effect.Resource
+           |import cats.effect.Timer
+           |
+           |object Main2 extends IOApp {
+           |
+           |  trait Logger[T[_]]
+           |
+           |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
+           |
+           |  // The actual tested method:
+           |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel](): Resource[F, Unit] =
+           |    for {
+           |      logger: Logger[F] <- mkLogger[F]
+           |    } yield ()
+           |
+           |  def run(args: List[String]): IO[ExitCode] = ???
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

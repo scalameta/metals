@@ -10,7 +10,7 @@ import tests.Library
 
 class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   var tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
-  override def libraries: List[Library] = Library.all
+  override def libraries: List[Library] = Library.allScala2
   def workspace: AbsolutePath = tmp
   override def afterAll(): Unit = {
     RecursivelyDelete(tmp)

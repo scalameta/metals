@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -11,6 +12,7 @@ import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
+import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
@@ -155,6 +157,17 @@ trait CommonMtagsEnrichments {
         case data =>
           decodeJson(data, classOf[CompletionItemData])
       }
+
+    def setTextEdit(edit: l.TextEdit): Unit = {
+      item.setTextEdit(JEither.forLeft(edit))
+    }
+
+    def getLeftTextEdit(): Option[l.TextEdit] = {
+      for {
+        either <- Option(item.getTextEdit)
+        textEdit <- Option(either.getLeft())
+      } yield textEdit
+    }
   }
 
   implicit class XtensionLspPosition(pos: l.Position) {
@@ -255,6 +268,17 @@ trait CommonMtagsEnrichments {
         }
       }
       root(file)
+    }
+  }
+
+  implicit class XtensionInputVirtual(input: Input.VirtualFile) {
+    def filename: String = {
+      Try {
+        val uri = URI.create(input.path)
+        Paths.get(uri).filename
+      }.getOrElse {
+        Paths.get(input.path).filename
+      }
     }
   }
 

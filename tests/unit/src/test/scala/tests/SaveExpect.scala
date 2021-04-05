@@ -3,7 +3,8 @@ package tests
 object SaveExpect {
   def main(args: Array[String]): Unit = {
     List[BaseExpectSuite](
-      new DefinitionSuite,
+      new DefinitionScala2Suite,
+      new DefinitionScala3Suite,
       new SemanticdbScala2Suite,
       new SemanticdbScala3Suite,
       new MtagsSuite,

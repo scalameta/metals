@@ -441,9 +441,9 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |""".stripMargin,
           Map(
             V.scala3 ->
-              """|a/src/main/scala/a/Main.worksheet.sc:2:5: error: ';' expected, but identifier found
-                 |val x: Int = ""
-                 |    ^
+              """|a/src/main/scala/a/Main.worksheet.sc:1:8: error: expression expected but val found
+                 |def y = 
+                 |       ^
                  |a/src/main/scala/a/Main.worksheet.sc:2:14: error: Found:    ("" : String)
                  |Required: Int
                  |val x: Int = ""
