@@ -151,10 +151,15 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <span class="hljs-comment">;;   to avoid odd behavior with snippets and indentation</span>
 (<span class="hljs-name">use-package</span> yasnippet)
 
-<span class="hljs-comment">;; Add company-lsp backend for metals.</span>
-<span class="hljs-comment">;;   (depending on your lsp-mode version it may be outdated see:</span>
-<span class="hljs-comment">;;    https://github.com/emacs-lsp/lsp-mode/pull/1983)</span>
-(<span class="hljs-name">use-package</span> company-lsp)
+<span class="hljs-comment">;; Use company-capf as a completion provider.</span>
+<span class="hljs-comment">;;</span>
+<span class="hljs-comment">;; To Company-lsp users:</span>
+<span class="hljs-comment">;;   Company-lsp is no longer maintained and has been removed from MELPA.</span>
+<span class="hljs-comment">;;   Please migrate to company-capf.</span>
+(<span class="hljs-name">use-package</span> company
+  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">scala-mode</span> . company-mode)
+  <span class="hljs-symbol">:config</span>
+  (<span class="hljs-name">setq</span> lsp-completion-provider <span class="hljs-symbol">:capf</span>))
 
 <span class="hljs-comment">;; Use the Debug Adapter Protocol for running tests and debugging</span>
 (<span class="hljs-name">use-package</span> posframe
@@ -187,8 +192,8 @@ not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.10.1+4-340504db-SNAPSHOT</td>
-          <td>07 Apr 2021 06:37</td>
+          <td>0.10.1+6-6d236192-SNAPSHOT</td>
+          <td>07 Apr 2021 19:23</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
