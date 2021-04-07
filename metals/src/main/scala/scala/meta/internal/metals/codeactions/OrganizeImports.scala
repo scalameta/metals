@@ -9,6 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -29,7 +30,12 @@ final class OrganizeImports(
   ): Future[Seq[l.CodeAction]] = {
     val uri = params.getTextDocument.getUri
     val file = uri.toAbsolutePath
-    if (isSourceOrganizeImportCalled(params) && isScalaOrSbt(file)) {
+
+    if (
+      isScalaOrSbt(file) && (isSourceOrganizeImportCalled(
+        params
+      ) || hasUnusedImport(params))
+    ) {
 
       val scalaTarget = for {
         buildId <- buildTargets.inverseSources(file)
@@ -71,6 +77,17 @@ final class OrganizeImports(
 
   }
 
+  private def hasUnusedImport(
+      params: CodeActionParams
+  ): Boolean = {
+    params
+      .getContext()
+      .getDiagnostics()
+      .asScala
+      .collect { case ScalacDiagnostic.UnusedImport(name) => name }
+      .nonEmpty
+  }
+
   private def isSourceOrganizeImportCalled(
       params: CodeActionParams
   ): Boolean =
@@ -88,5 +105,4 @@ object OrganizeImports {
 
   type ScalaBinaryVersion = String
   type ScalaVersion = String
-
 }
