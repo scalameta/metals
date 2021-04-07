@@ -8,7 +8,7 @@ import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.NameKinds.EvidenceParamName
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.PCMtagsEnrichments._
 
 import dotty.tools.dotc.core.Flags._
 

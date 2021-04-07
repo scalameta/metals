@@ -66,7 +66,7 @@ import dotty.tools.io.VirtualFile
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.mtags.BuildInfo
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.PCMtagsEnrichments._
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.pc.VirtualFileParams
@@ -214,14 +214,20 @@ case class ScalaPresentationCompiler(
 
   // TODO NOT IMPLEMENTED
   def autoImports(
-      file: String,
+      name: String,
       params: scala.meta.pc.OffsetParams
   ): CompletableFuture[
     ju.List[scala.meta.pc.AutoImportsResult]
   ] = {
-    CompletableFuture.completedFuture(
-      List.empty[scala.meta.pc.AutoImportsResult].asJava
-    )
+    compilerAccess.withNonInterruptableCompiler(
+      List.empty[scala.meta.pc.AutoImportsResult].asJava,
+      params.token
+    ) { access =>
+      val driver = access.compiler()
+      new AutoImportsProvider(search, driver, name, params, config)
+        .autoImports()
+        .asJava
+    }
   }
 
   // TODO NOT IMPLEMENTED
@@ -312,7 +318,7 @@ case class ScalaPresentationCompiler(
       classpath: ju.List[Path],
       options: ju.List[String]
   ): PresentationCompiler = {
-    new ScalaPresentationCompiler(
+    copy(
       classpath = classpath.asScala.toSeq,
       options = options.asScala.toList
     )

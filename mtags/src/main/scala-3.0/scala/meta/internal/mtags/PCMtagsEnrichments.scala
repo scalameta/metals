@@ -3,7 +3,7 @@ package scala.meta.internal.mtags
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j => l}
 
-object MtagsEnrichments
+object PCMtagsEnrichments
     extends CommonMtagsEnrichments
     with VersionSpecificEnrichments {
 

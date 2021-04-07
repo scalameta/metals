@@ -5,9 +5,6 @@ import tests.BuildInfoVersions
 
 class AutoImportsSuite extends BaseAutoImportsSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
-
   check(
     "basic",
     """|object A {

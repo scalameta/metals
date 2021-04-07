@@ -1,19 +1,6 @@
 package scala.meta.internal.mtags
 
-import scala.meta.Ctor
-import scala.meta.Decl
-import scala.meta.Defn
-import scala.meta.Member
-import scala.meta.Mod
-import scala.meta.Name
-import scala.meta.Parsed
-import scala.meta.Pat
-import scala.meta.Pkg
-import scala.meta.Source
-import scala.meta.Template
-import scala.meta.Term
-import scala.meta.Tree
-import scala.meta.Type
+import scala.meta._
 import scala.meta.dialects.Scala213
 import scala.meta.dialects.Scala3
 import scala.meta.inputs.Input
@@ -23,6 +10,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
+import scala.meta.internal.trees._
 import scala.meta.transversers.SimpleTraverser
 
 object ScalaMtags {
