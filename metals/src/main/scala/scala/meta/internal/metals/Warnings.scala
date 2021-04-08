@@ -34,6 +34,7 @@ final class Warnings(
     val isReported: Option[Unit] = for {
       buildTarget <- buildTargets.inverseSources(path)
       info <- buildTargets.scalaTarget(buildTarget)
+      scalacOptions <- buildTargets.scalacOptions(buildTarget)
     } yield {
       if (!info.isSemanticdbEnabled) {
         if (isSupportedScalaVersion(info.scalaVersion)) {
@@ -65,7 +66,9 @@ final class Warnings(
           )
           statusBar.addMessage(icons.info + tryAgain)
         } else if (!path.isSbt && !path.isWorksheet) {
-          val targetfile = info.classDirectory.toAbsolutePath
+
+          val targetRoot = scalacOptions.targetroot(info.scalaVersion)
+          val targetfile = targetRoot
             .resolve(SemanticdbClasspath.fromScala(path.toRelative(workspace)))
           logger.error(
             s"$doesntWorkBecause the SemanticDB file '$targetfile' doesn't exist. " +
