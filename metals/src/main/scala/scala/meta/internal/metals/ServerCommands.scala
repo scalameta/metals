@@ -304,6 +304,17 @@ object ServerCommands {
     "[uri], the uri of the worksheet that you'd like to copy the contents of."
   )
 
+  val ExtractMemberDefinition = new Command(
+    "extract-member-definition",
+    "Extract member definition",
+    """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
+       |command is later ran to extract the code and create a new file with it
+       |""".stripMargin,
+    """|[uri, line, character], uri of the document that the command needs to be invoked on
+       |together with line number and character/column where the definition is.
+       |""".stripMargin
+  )
+
   val InsertInferredType = new Command(
     "insert-inferred-type",
     "Insert inferred type of a value",
@@ -396,6 +407,7 @@ object ServerCommands {
       CascadeCompile,
       CleanCompile,
       CopyWorksheetOutput,
+      ExtractMemberDefinition,
       GenerateBspConfig,
       GotoPosition,
       GotoSuperMethod,

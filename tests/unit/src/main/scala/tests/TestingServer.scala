@@ -827,7 +827,7 @@ final class TestingServer(
     val input = m.Input.String(text)
     val path = root.resolve(filename)
     path.touch()
-    val pos = m.Position.Range(input, startOffset, endOffset - "<<>>".length())
+    val pos = m.Position.Range(input, startOffset, endOffset - "<<".length())
     for {
       _ <- didChange(filename)(_ => text)
     } yield {

@@ -41,7 +41,9 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
+import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
@@ -101,7 +103,25 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
 
   private def applyWorkspaceEdit(edit: WorkspaceEdit): Unit = {
-    edit.getChanges().forEach(applyEdits)
+    val changes = Option(edit.getChanges())
+    val documentChanges = Option(edit.getDocumentChanges())
+    changes.foreach(_.forEach(applyEdits))
+    documentChanges.foreach(_.forEach(dc => applyDocumentChange(dc.asScala)))
+  }
+
+  private def applyDocumentChange(
+      documentChange: Either[TextDocumentEdit, ResourceOperation]
+  ): Unit = {
+    documentChange match {
+      case Left(textDocumentEdit: TextDocumentEdit) =>
+        val document = textDocumentEdit.getTextDocument
+        val edits = textDocumentEdit.getEdits
+        val uri = document.getUri
+
+        applyEdits(uri, edits)
+      case Right(resourceOperation: ResourceOperation) =>
+        ResourceOperations.applyResourceOperation(resourceOperation)
+    }
   }
 
   private def applyEdits(

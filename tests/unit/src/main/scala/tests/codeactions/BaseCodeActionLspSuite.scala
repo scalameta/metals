@@ -33,13 +33,19 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil,
       configuration: => Option[String] = None,
-      scalaVersion: String = scalaVersion
+      scalaVersion: String = scalaVersion,
+      renamePath: Option[String] = None,
+      extraOperations: => Unit = (),
+      fileName: String = "A.scala"
   )(implicit loc: Location): Unit = {
-    val fileName: String = "A.scala"
     val scalacOptionsJson =
       s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"]"""
     val path = s"a/src/main/scala/a/$fileName"
+    val newPath = renamePath.getOrElse(path)
     val fileContent = input.replace("<<", "").replace(">>", "")
+    val actualExpectedCode =
+      if (renamePath.nonEmpty) fileContent else expectedCode
+
     test(name) {
       cleanWorkspace()
       for {
@@ -58,11 +64,12 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
         codeActions <-
           server.assertCodeAction(path, input, expectedActions, kind)
         _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
-        _ <- server.didSave(path) { _ =>
-          server.toPath(path).readText
+        _ <- server.didSave(newPath) { _ =>
+          server.toPath(newPath).readText
         }
-        _ = assertNoDiff(server.bufferContents(path), expectedCode)
+        _ = assertNoDiff(server.bufferContents(newPath), actualExpectedCode)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
+        _ = extraOperations
       } yield ()
     }
   }

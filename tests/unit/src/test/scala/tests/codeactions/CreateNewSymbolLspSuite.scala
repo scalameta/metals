@@ -3,6 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 import munit.Location
@@ -67,6 +68,10 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |${ImportMissingSymbol.title("Location", docToolName)}
         |${CreateNewSymbol.title("Missing")}
         |${CreateNewSymbol.title("Location")}
+        |${ExtractRenameMember.renameFileAsClassTitle(
+      fileName = "A.scala",
+      memberName = "School"
+    )}
         |""".stripMargin,
     selectedActionIndex = 4,
     pickedKind = "class",
@@ -79,8 +84,6 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           |""".stripMargin,
     expectNoDiagnostics = false
   )
-
-  private def indent = "  "
 
   def checkNewSymbol(
       name: TestOptions,
@@ -131,5 +134,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
       } yield ()
     }
   }
+
+  private def indent = "  "
 
 }
