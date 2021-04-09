@@ -497,7 +497,7 @@ class DebugProvider(
     val socket = new Socket()
 
     val address = new InetSocketAddress(uri.getHost, uri.getPort)
-    val timeout = TimeUnit.SECONDS.toMillis(10).toInt
+    val timeout = TimeUnit.SECONDS.toMillis(20).toInt
     socket.connect(address, timeout)
 
     socket

@@ -535,7 +535,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
-      List(Tests.Argument(MUnitFramework, "+l", "--verbose"))
+      List(Tests.Argument(MUnitFramework, "+l", "--verbose", "-F"))
     } else {
       Nil
     }
