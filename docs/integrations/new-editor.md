@@ -71,7 +71,7 @@ during the
 process. While Metals will still work being fully configured by server
 properties, we strongly recommend that instead you rely on the
 `InitializationOptions` which are thoroughly covered below in the
-(`initialize`)[#initialize] section.
+[`initialize`](#initialize] section.
 
 ## Language Server Protocol
 
