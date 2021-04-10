@@ -132,7 +132,7 @@ functionality.
     <td>Worksheets</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">Comments</td>
+    <td align="center">✅</td>
     <td align="center">Comments</td>
     <td align="center">Comments</td>
   </tr>
