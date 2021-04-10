@@ -180,7 +180,7 @@ functionality.
     <td>Metals Extensions</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">Status bar, Input box</td>
+    <td align="center">Status bar, Input box, Decoration protocol</td>
     <td align="center">Status bar</td>
     <td align="center">Status bar, Slow task</td>
   </tr>
@@ -196,7 +196,7 @@ functionality.
      <td>Implicit decorations</td>
      <td align="center">✅</td>
      <td align="center">Shown in hover</td>
-     <td align="center">Shown in hover</td>
+     <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">Shown in hover</td>
   </tr>
@@ -412,7 +412,7 @@ on the current line.
 
 ## Additional file types
 
-Not all features are supported in all possible scenarios, espacially when it
+Not all features are supported in all possible scenarios, especially when it
 comes to non-standard Scala files like Ammonite scripts, worksheets or sbt
 scripts.
 
