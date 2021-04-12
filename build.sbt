@@ -643,7 +643,7 @@ lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
-    Test / testOptions := Seq(Tests.Filter(name => isInTestShard(name))),
+    Test / testOptions ++= Seq(Tests.Filter(name => isInTestShard(name))),
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
