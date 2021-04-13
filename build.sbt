@@ -26,8 +26,6 @@ def crossSetting[A](
     case _ => Nil
   }
 
-val MUnitFramework = new TestFramework("munit.Framework")
-
 // -Xlint is unusable because of
 // https://github.com/scala/bug/issues/10448
 val scala212CompilerOptions = List(
@@ -198,7 +196,7 @@ lazy val V = new {
   val scalameta = "4.4.11"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.8"
+  val bloop = "1.4.8-19-4d9f966b"
   val scala3 = "3.0.0-RC2"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -329,12 +327,12 @@ val mtagsSettings = List(
     if3 = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.2",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
-        .withDottyCompat(scalaVersion.value),
+        .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
-        .withDottyCompat(scalaVersion.value),
+        .cross(CrossVersion.for3Use2_13),
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
-        .withDottyCompat(scalaVersion.value)
+        .cross(CrossVersion.for3Use2_13)
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.7.1"),
@@ -349,7 +347,7 @@ val mtagsSettings = List(
         ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.2"),
         if3 = List(
           ("com.lihaoyi" %% "pprint" % "0.6.2")
-            .withDottyCompat(scalaVersion.value)
+            .cross(CrossVersion.for3Use2_13)
         )
       )
   },
@@ -531,11 +529,10 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
   publish / skip := true,
   fork := true,
-  testFrameworks := List(MUnitFramework),
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
-      List(Tests.Argument(MUnitFramework, "+l", "--verbose"))
+      List(Tests.Argument(TestFrameworks.MUnit, "+l", "--verbose", "-F"))
     } else {
       Nil
     }
@@ -643,7 +640,7 @@ lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
-    Test / testOptions := Seq(Tests.Filter(name => isInTestShard(name))),
+    Test / testOptions ++= Seq(Tests.Filter(name => isInTestShard(name))),
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
