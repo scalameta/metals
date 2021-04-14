@@ -180,7 +180,7 @@ functionality.
     <td>Metals Extensions</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">Status bar, Input box, Decoration protocol</td>
+    <td align="center">Status bar, Input box, Decoration protocol, Did focus</td>
     <td align="center">Status bar</td>
     <td align="center">Status bar, Slow task</td>
   </tr>
