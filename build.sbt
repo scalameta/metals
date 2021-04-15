@@ -208,7 +208,7 @@ lazy val V = new {
   val scalafix = "0.9.27"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
-  val genyVersion = "0.6.7"
+  val genyVersion = "0.6.8"
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -325,7 +325,7 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.2",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.3",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
         .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
@@ -394,7 +394,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.10",
+      "com.geirsson" %% "metaconfig-core" % "0.9.11",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.15",
       // for file watching

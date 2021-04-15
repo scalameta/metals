@@ -24,6 +24,11 @@ object Welcome {
     ),
     UsefulTask(
       "",
+      "unit/testOnly tests.DefinitionSuite -- -F",
+      "use `-F` flag to show the full stack trace in case it is missing"
+    ),
+    UsefulTask(
+      "",
       "slow/test -- tests.sbt.*",
       "run all slow tests inside tests.sbt package, they will publish needed mtags locally."
     ),
