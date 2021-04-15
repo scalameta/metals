@@ -128,7 +128,8 @@ case class ScalaPresentationCompiler(
       val pos = sourcePosition(driver, params, uri)
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
-          val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+          val path =
+            Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
           val completions =
             CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit))
               .completions()
@@ -175,7 +176,8 @@ case class ScalaPresentationCompiler(
     compilerAccess.shutdownCurrentCompiler()
   }
 
-  def diagnosticsForDebuggingPurposes(): ju.List[String] = List[String]().asJava
+  def diagnosticsForDebuggingPurposes(): ju.List[String] =
+    List[String]().asJava
 
   def semanticdbTextDocument(
       filename: URI,
@@ -256,7 +258,8 @@ case class ScalaPresentationCompiler(
             ju.Optional.empty()
           case symbols =>
             val printer = SymbolPrinter()(using ctx)
-            val docComments = symbols.flatMap(ParsedComment.docOf(_)(using ctx))
+            val docComments =
+              symbols.flatMap(ParsedComment.docOf(_)(using ctx))
             val keywordName = symbols.headOption.map { symbol =>
               printer.fullDefinition(
                 symbol,
@@ -269,19 +272,21 @@ case class ScalaPresentationCompiler(
                 case _: ImportType =>
                   printer.typeString(symbol.paramRef(using ctx))
                 case _ =>
-                  val shortendType = driver.compilationUnits.get(uri) match {
-                    case Some(unit) =>
-                      val newctx = ctx.fresh.setCompilationUnit(unit)
-                      val path = Interactive.pathTo(
-                        newctx.compilationUnit.tpdTree,
-                        pos.span
-                      )(using newctx)
-                      val context =
-                        Interactive.contextOfPath(path)(using newctx)
-                      val history = ShortenedNames(context)
-                      shortType(tpw, history)(using newctx)
-                    case None => tpw
-                  }
+                  val shortendType =
+                    driver.compilationUnits.get(uri) match {
+                      case Some(unit) =>
+                        val newctx =
+                          ctx.fresh.setCompilationUnit(unit)
+                        val path = Interactive.pathTo(
+                          newctx.compilationUnit.tpdTree,
+                          pos.span
+                        )(using newctx)
+                        val context =
+                          Interactive.contextOfPath(path)(using newctx)
+                        val history = ShortenedNames(context)
+                        shortType(tpw, history)(using newctx)
+                      case None => tpw
+                    }
                   printer.typeString(shortendType)
               }
             }
@@ -438,38 +443,40 @@ case class ScalaPresentationCompiler(
         CompletionItemKind.Field
     }
     val printer = SymbolPrinter()(using ctx)
-    completion.symbols.map{
-      sym =>
-        // For overloaded signatures we get multiple symbols, so we need
-        // to recalculate the description
-        // related issue https://github.com/lampepfl/dotty/issues/11941
-        val description = if(completion.symbols.size > 1)
+    completion.symbols.map { sym =>
+      // For overloaded signatures we get multiple symbols, so we need
+      // to recalculate the description
+      // related issue https://github.com/lampepfl/dotty/issues/11941
+      val description =
+        if (completion.symbols.size > 1)
           if (sym.isType) printer.fullNameString(sym)
           else {
             printer.typeString(sym.denot.info.widenTermRefExpr)
           }
         else
           completion.description.stripSuffix("$")
-        
-        val colonNotNeeded = sym.is(Method)
-        val colon = if (colonNotNeeded) "" else ": "
-        val label = s"${completion.label}$colon${description}"
-        val item = new CompletionItem(label)
 
-        item.setSortText(f"${idx}%05d")
+      val colonNotNeeded = sym.is(Method)
+      val colon = if (colonNotNeeded) "" else ": "
+      val label = s"${completion.label}$colon${description}"
+      val item = new CompletionItem(label)
 
-        item.setFilterText(completion.label)
-        // TODO we should use edit text
-        item.setInsertText(completion.label)
-        val documentation = ParsedComment.docOf(sym)
-        if (documentation.nonEmpty) {
-          item.setDocumentation(hoverContent(None, None, documentation.toList))
-        }
-        if (sym.isDeprecated) {
-          item.setTags(List(CompletionItemTag.Deprecated).asJava)
-        }
-        item.setKind(completionItemKind(sym))
-        item
+      item.setSortText(f"${idx}%05d")
+
+      item.setFilterText(completion.label)
+      // TODO we should use edit text
+      item.setInsertText(completion.label)
+      val documentation = ParsedComment.docOf(sym)
+      if (documentation.nonEmpty) {
+        item.setDocumentation(
+          hoverContent(None, None, documentation.toList)
+        )
+      }
+      if (sym.isDeprecated) {
+        item.setTags(List(CompletionItemTag.Deprecated).asJava)
+      }
+      item.setKind(completionItemKind(sym))
+      item
 
     }
   }
@@ -493,8 +500,7 @@ case class ScalaPresentationCompiler(
   }
 
   private def markupContent(content: String): MarkupContent = {
-    if (content.isEmpty)
-      null
+    if (content.isEmpty) null
     else {
       val markup = new MarkupContent
       markup.setKind("markdown")
@@ -506,7 +512,8 @@ case class ScalaPresentationCompiler(
   def signatureToSignatureInformation(
       signature: Signatures.Signature
   ): SignatureInformation = {
-    val paramInfoss = signature.paramss.map(_.map(paramToParameterInformation))
+    val paramInfoss =
+      signature.paramss.map(_.map(paramToParameterInformation))
     val paramLists = signature.paramss
       .map { paramList =>
         val labels = paramList.map(_.show)
@@ -610,14 +617,16 @@ case class ScalaPresentationCompiler(
           // designator is not necessarily an instance of `Symbol` and it's an instance of `Name`
           // this can be seen, for example, when we are shortening the signature of 3rd party APIs.
           val sym =
-            if (designator.isInstanceOf[Symbol]) designator.asInstanceOf[Symbol]
+            if (designator.isInstanceOf[Symbol])
+              designator.asInstanceOf[Symbol]
             else tpe.typeSymbol
           val short = ShortName(sym)
           TypeRef(loop(prefix, Some(short)), sym)
 
         case TermRef(prefix, designator) =>
           val sym =
-            if (designator.isInstanceOf[Symbol]) designator.asInstanceOf[Symbol]
+            if (designator.isInstanceOf[Symbol])
+              designator.asInstanceOf[Symbol]
             else tpe.termSymbol
           val short = ShortName(sym)
           if (history.tryShortenName(name)) NoPrefix
