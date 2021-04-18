@@ -92,10 +92,15 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 ;;   to avoid odd behavior with snippets and indentation
 (use-package yasnippet)
 
-;; Add company-lsp backend for metals.
-;;   (depending on your lsp-mode version it may be outdated see:
-;;    https://github.com/emacs-lsp/lsp-mode/pull/1983)
-(use-package company-lsp)
+;; Use company-capf as a completion provider.
+;;
+;; To Company-lsp users:
+;;   Company-lsp is no longer maintained and has been removed from MELPA.
+;;   Please migrate to company-capf.
+(use-package company
+  :hook (scala-mode . company-mode)
+  :config
+  (setq lsp-completion-provider :capf))
 
 ;; Use the Debug Adapter Protocol for running tests and debugging
 (use-package posframe

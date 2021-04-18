@@ -15,6 +15,7 @@ import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
@@ -493,14 +494,39 @@ class DebugProvider(
         parameters
     }
   }
+
   private def connect(uri: URI): Socket = {
     val socket = new Socket()
-
-    val address = new InetSocketAddress(uri.getHost, uri.getPort)
+    /* Using "0.0.0.0" seems to be sometimes causing issues
+     * and it does not seem to be a standard across systems
+     * This made tests extremely flaky.
+     */
+    val host = uri.getHost match {
+      case "0.0.0.0" => "127.0.0.1"
+      case other => other
+    }
+    val address = new InetSocketAddress(host, uri.getPort)
     val timeout = TimeUnit.SECONDS.toMillis(10).toInt
-    socket.connect(address, timeout)
-
-    socket
+    try {
+      socket.connect(address, timeout)
+      socket
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(
+          s"Could not connect to java process via ${address.getHostName()}:${address.getPort()}"
+        )
+        if (uri.getHost() != host) {
+          val alternateAddress =
+            new InetSocketAddress(uri.getHost(), uri.getPort)
+          scribe.warn(
+            s"Retrying with ${alternateAddress.getHostName()}:${alternateAddress.getPort()}"
+          )
+          socket.connect(alternateAddress, timeout)
+          socket
+        } else {
+          throw e
+        }
+    }
   }
 
   private def withRebuildRetry[A](

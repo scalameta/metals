@@ -126,4 +126,28 @@ class OrganizeImportsLspSuite
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption
   )
+
+  check(
+    "on-unused",
+    """|package a
+       |
+       |<<import java.time.Instant>>
+       |
+       |object A {
+       |  val a = "no one wants unused imports"
+       |}
+       |""".stripMargin,
+    s"${OrganizeImports.title}",
+    """|package a
+       |
+       |
+       |
+       |object A {
+       |  val a = "no one wants unused imports"
+       |}
+       |""".stripMargin,
+    kind = List(kind),
+    scalafixConf = scalafixConf(),
+    scalacOptions = scalacOption
+  )
 }

@@ -129,14 +129,18 @@ case class ScalaPresentationCompiler(
       val pos = sourcePosition(driver, params, uri)
       val items = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
-          val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+          val path =
+            Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
           val completions =
             CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit))
               .completions()
           val metalsCompletions = completionPosition(pos, path)(using ctx)
 
           val newctx = ctx.fresh.setCompilationUnit(unit)
-          val tpdPath = Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
+          val tpdPath =
+            Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+              newctx
+            )
           val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
           val history = ShortenedNames(locatedCtx)
 
@@ -182,7 +186,8 @@ case class ScalaPresentationCompiler(
     compilerAccess.shutdownCurrentCompiler()
   }
 
-  def diagnosticsForDebuggingPurposes(): ju.List[String] = List[String]().asJava
+  def diagnosticsForDebuggingPurposes(): ju.List[String] =
+    List[String]().asJava
 
   def semanticdbTextDocument(
       filename: URI,
@@ -263,7 +268,8 @@ case class ScalaPresentationCompiler(
             ju.Optional.empty()
           case symbols =>
             val printer = SymbolPrinter()(using ctx)
-            val docComments = symbols.flatMap(ParsedComment.docOf(_)(using ctx))
+            val docComments =
+              symbols.flatMap(ParsedComment.docOf(_)(using ctx))
             val keywordName = symbols.headOption.map { symbol =>
               printer.fullDefinition(
                 symbol,
@@ -276,19 +282,21 @@ case class ScalaPresentationCompiler(
                 case _: ImportType =>
                   printer.typeString(symbol.paramRef(using ctx))
                 case _ =>
-                  val shortendType = driver.compilationUnits.get(uri) match {
-                    case Some(unit) =>
-                      val newctx = ctx.fresh.setCompilationUnit(unit)
-                      val path = Interactive.pathTo(
-                        newctx.compilationUnit.tpdTree,
-                        pos.span
-                      )(using newctx)
-                      val context =
-                        Interactive.contextOfPath(path)(using newctx)
-                      val history = ShortenedNames(context)
-                      shortType(tpw, history)(using newctx)
-                    case None => tpw
-                  }
+                  val shortendType =
+                    driver.compilationUnits.get(uri) match {
+                      case Some(unit) =>
+                        val newctx =
+                          ctx.fresh.setCompilationUnit(unit)
+                        val path = Interactive.pathTo(
+                          newctx.compilationUnit.tpdTree,
+                          pos.span
+                        )(using newctx)
+                        val context =
+                          Interactive.contextOfPath(path)(using newctx)
+                        val history = ShortenedNames(context)
+                        shortType(tpw, history)(using newctx)
+                      case None => tpw
+                    }
                   printer.typeString(shortendType)
               }
             }
@@ -446,25 +454,23 @@ case class ScalaPresentationCompiler(
         CompletionItemKind.Field
     }
 
+    val printer = SymbolPrinter()(using ctx)
     completion.symbols.map { sym =>
       // For overloaded signatures we get multiple symbols, so we need
       // to recalculate the description
       // related issue https://github.com/lampepfl/dotty/issues/11941
-      lazy val kind: Option[CompletionItemKind] = 
-        completion.symbols.headOption.map(completionItemKind)
+      lazy val kind: CompletionItemKind =
+        completionItemKind(sym)
 
       val description = infoString(sym, sym.info.widenTermRefExpr, history)
 
       val ident = completion.label
       val label = kind match {
-        case Some(k) => k match {
-          case CompletionItemKind.Method => 
-            s"${ident}${description}"
-          case CompletionItemKind.Variable | CompletionItemKind.Field =>
-            s"${ident}:${description}"
-          case _ => ident
-        }
-        case None => ident
+        case CompletionItemKind.Method =>
+          s"${ident}${description}"
+        case CompletionItemKind.Variable | CompletionItemKind.Field =>
+          s"${ident}:${description}"
+        case _ => ident
       }
 
       val item = new CompletionItem(label)
@@ -507,8 +513,7 @@ case class ScalaPresentationCompiler(
   }
 
   private def markupContent(content: String): MarkupContent = {
-    if (content.isEmpty)
-      null
+    if (content.isEmpty) null
     else {
       val markup = new MarkupContent
       markup.setKind("markdown")
@@ -520,7 +525,8 @@ case class ScalaPresentationCompiler(
   def signatureToSignatureInformation(
       signature: Signatures.Signature
   ): SignatureInformation = {
-    val paramInfoss = signature.paramss.map(_.map(paramToParameterInformation))
+    val paramInfoss =
+      signature.paramss.map(_.map(paramToParameterInformation))
     val paramLists = signature.paramss
       .map { paramList =>
         val labels = paramList.map(_.show)

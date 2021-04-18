@@ -2,7 +2,7 @@ import scala.collection.mutable
 import scala.sys.process._
 import Tests._
 
-def localSnapshotVersion = "0.10.1-SNAPSHOT"
+def localSnapshotVersion = "0.10.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -25,8 +25,6 @@ def crossSetting[A](
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
-
-val MUnitFramework = new TestFramework("munit.Framework")
 
 // -Xlint is unusable because of
 // https://github.com/scala/bug/issues/10448
@@ -195,10 +193,10 @@ lazy val V = new {
   val scala213 = "2.13.5"
   val ammonite212Version = scala212
   val ammonite213Version = scala213
-  val scalameta = "4.4.11"
+  val scalameta = "4.4.13"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.8"
+  val bloop = "1.4.8-19-4d9f966b"
   val scala3 = "3.0.0-RC2"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -210,7 +208,7 @@ lazy val V = new {
   val scalafix = "0.9.27"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
-  val genyVersion = "0.6.7"
+  val genyVersion = "0.6.8"
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -327,14 +325,14 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.2",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.3",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1")
-        .withDottyCompat(scalaVersion.value),
+        .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
-        .withDottyCompat(scalaVersion.value),
+        .cross(CrossVersion.for3Use2_13),
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
-        .withDottyCompat(scalaVersion.value)
+        .cross(CrossVersion.for3Use2_13)
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.7.1"),
@@ -345,11 +343,11 @@ val mtagsSettings = List(
     else
       crossSetting(
         scalaVersion.value,
-        if211 = List("com.lihaoyi" %% "pprint" % "0.6.3"),
+        if211 = List("com.lihaoyi" %% "pprint" % "0.6.4"),
         ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.2"),
         if3 = List(
           ("com.lihaoyi" %% "pprint" % "0.6.2")
-            .withDottyCompat(scalaVersion.value)
+            .cross(CrossVersion.for3Use2_13)
         )
       )
   },
@@ -396,7 +394,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.10",
+      "com.geirsson" %% "metaconfig-core" % "0.9.11",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.15",
       // for file watching
@@ -405,7 +403,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.7.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.7.1",
+      "org.flywaydb" % "flyway-core" % "7.7.3",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -422,7 +420,7 @@ lazy val metals = project
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "24",
+      "dev.dirs" % "directories" % "26",
       // ==================
       // Scala dependencies
       // ==================
@@ -440,9 +438,9 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.2",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.3.9",
+      "com.lihaoyi" %% "ujson" % "1.3.11",
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.6.6",
+      "com.lihaoyi" %% "requests" % "0.6.7",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
@@ -493,7 +491,7 @@ lazy val `sbt-metals` = project
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
-    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.1.0")
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.1.1")
   )
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScalafixPlugin)
@@ -531,11 +529,11 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
   publish / skip := true,
   fork := true,
-  testFrameworks := List(MUnitFramework),
+  testFrameworks := List(TestFrameworks.MUnit),
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
-      List(Tests.Argument(MUnitFramework, "+l", "--verbose"))
+      List(Tests.Argument(TestFrameworks.MUnit, "+l", "--verbose", "-F"))
     } else {
       Nil
     }
@@ -643,7 +641,7 @@ lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
-    Test / testOptions := Seq(Tests.Filter(name => isInTestShard(name))),
+    Test / testOptions ++= Seq(Tests.Filter(name => isInTestShard(name))),
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
