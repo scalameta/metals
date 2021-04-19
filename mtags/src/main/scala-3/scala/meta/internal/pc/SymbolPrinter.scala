@@ -75,8 +75,6 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
     lazy val implicitParams: List[Symbol] =
       paramss.flatMap(params => params.filter(p => p.is(Flags.Implicit)))
 
-    // should be able to filter by `p.name.is(EvidenceParamName)` or `p.name.startsWith(EvidenceParamName.separator)`
-    // but it sometimes doesn't work (not sure why), therefore workaround by string comparison
     lazy val implicitEvidenceParams: Set[Symbol] =
       implicitParams
         .filter(p => p.name.toString.startsWith(EvidenceParamName.separator))
