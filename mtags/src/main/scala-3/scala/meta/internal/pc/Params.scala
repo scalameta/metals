@@ -12,16 +12,17 @@ case class Params(
 
 object Params {
   enum Kind {
-    case TypeParameterKind, NormalKind, ImplicitKind
+    case TypeParameter, Normal, Implicit, Using
   }
 
   def paramsKind(syms: List[Symbol])(using Context): Params.Kind = {
     syms match {
       case head :: _ =>
-        if (head.isType) Kind.TypeParameterKind
-        else if (head.is(Implicit)) Kind.ImplicitKind
-        else Kind.NormalKind
-      case Nil => Kind.NormalKind
+        if (head.isType) Kind.TypeParameter
+        else if (head.is(Given)) Kind.Using
+        else if (head.is(Implicit)) Kind.Implicit
+        else Kind.Normal
+      case Nil => Kind.Normal
     }
   }
 }

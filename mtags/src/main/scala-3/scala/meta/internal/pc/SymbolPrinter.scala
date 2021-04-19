@@ -118,16 +118,22 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
       .zip(paramss)
       .map { case (params, syms) =>
         Params.paramsKind(syms) match {
-          case Params.Kind.TypeParameterKind =>
+          case Params.Kind.TypeParameter =>
             params.mkString("[", ", ", "]")
-          case Params.Kind.NormalKind =>
+          case Params.Kind.Normal =>
             params.mkString("(", ", ", ")")
-          case Params.Kind.ImplicitKind =>
+          case Params.Kind.Using =>
+            params.mkString(
+              "(using ",
+              ", ",
+              ")"
+            )
+          case Params.Kind.Implicit =>
             params.mkString(
               "(implicit ",
               ", ",
               ")"
-            ) // TODO: distinguish implicit and using
+            )
         }
       }
       .mkString("", "", s": ${returnType}")
@@ -156,6 +162,11 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
         case many => many.mkString(": ", ": ", "")
       }
       s"$keywordName$paramTypeString$bounds"
+    } else if (param.is(Flags.Given) && param.name.toString.contains('$')) {
+      // For Anonymous Context Parameters
+      // print only type string
+      // e.g. "using Ord[T]" instead of "using x$0: Ord[T]"
+      paramTypeString
     } else {
       val paramTypeString = typeString(
         shortType(param.info, shortenedNames)

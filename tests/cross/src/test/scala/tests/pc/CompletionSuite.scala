@@ -1116,4 +1116,30 @@ class CompletionSuite extends BaseCompletionSuite {
     )
   )
 
+  check(
+    "using".tag(IgnoreScala2),
+    s"""|class Foo {
+        |  def max[T](x: T, y: T)(using ord: Ordered[T]): T =
+        |    if ord.compare(x, y) < 0 then y else x
+        |}
+        |object Main {
+        |  new Foo().max@@
+        |}
+        |""".stripMargin,
+    """|max[T](x: T, y: T)(using ord: Ordered[T]): T
+       |""".stripMargin
+  )
+
+  check(
+    "annon-context".tag(IgnoreScala2),
+    s"""|class Foo {
+        |  def max[T](x: T, y: T)(using Ordered[T]): T = ???
+        |}
+        |object Main {
+        |  new Foo().max@@
+        |}
+        |""".stripMargin,
+    """|max[T](x: T, y: T)(using Ordered[T]): T
+       |""".stripMargin
+  )
 }

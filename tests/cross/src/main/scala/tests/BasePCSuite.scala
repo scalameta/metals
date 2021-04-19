@@ -241,6 +241,9 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
 
+  object IgnoreScala2
+      extends IgnoreScalaVersion(BuildInfoVersions.scala2Versions.toSet)
+
   object IgnoreScala3
       extends IgnoreScalaVersion(BuildInfoVersions.scala3Versions.toSet)
 
