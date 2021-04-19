@@ -85,8 +85,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
 ) extends PresentationCompiler
-    with Completions
-    with Signatures {
+    with Completions {
 
   def this() = this(Nil, Nil)
 
@@ -282,22 +281,20 @@ case class ScalaPresentationCompiler(
                 case _: ImportType =>
                   printer.typeString(symbol.paramRef(using ctx))
                 case _ =>
-                  val shortendType =
-                    driver.compilationUnits.get(uri) match {
-                      case Some(unit) =>
-                        val newctx =
-                          ctx.fresh.setCompilationUnit(unit)
-                        val path = Interactive.pathTo(
-                          newctx.compilationUnit.tpdTree,
-                          pos.span
-                        )(using newctx)
-                        val context =
-                          Interactive.contextOfPath(path)(using newctx)
-                        val history = ShortenedNames(context)
-                        shortType(tpw, history)(using newctx)
-                      case None => tpw
-                    }
-                  printer.typeString(shortendType)
+                  driver.compilationUnits.get(uri) match {
+                    case Some(unit) =>
+                      val newctx =
+                        ctx.fresh.setCompilationUnit(unit)
+                      val tpdPath = Interactive.pathTo(
+                        newctx.compilationUnit.tpdTree,
+                        pos.span
+                      )(using newctx)
+                      val context =
+                        Interactive.contextOfPath(tpdPath)(using newctx)
+                      val history = new ShortenedNames(context)
+                      printer.infoString(symbol, history, tpw)(using context)
+                    case None => printer.typeString(tpw)
+                  }
               }
             }
             val content = hoverContent(
@@ -437,6 +434,26 @@ case class ScalaPresentationCompiler(
       history: ShortenedNames,
       idx: Int
   )(using Context): List[CompletionItem] = {
+    val printer = SymbolPrinter()(using ctx)
+
+    /**
+     * Calculate the string for "detail" field in CompletionItem.
+     *
+     * for class or module, it's package name that it belongs to (e.g. "scala.collection" for "scala.collection.Seq")
+     * otherwise, it's shortened type/method signature
+     * e.g. "[A: Ordering](x: List[Int]): A", " java.lang.String"
+     *
+     * @param sym The symbol for completion item.
+     */
+    def detailString(sym: Symbol): String = {
+      if (sym.isClass || sym.is(Module)) {
+        val printer = SymbolPrinter()
+        s" ${printer.fullNameString(sym.owner)}"
+      } else {
+        printer.infoString(sym, history, sym.info.widenTermRefExpr)(using ctx)
+      }
+    }
+
     def completionItemKind(
         sym: Symbol
     )(using ctx: Context): CompletionItemKind = {
@@ -454,22 +471,20 @@ case class ScalaPresentationCompiler(
         CompletionItemKind.Field
     }
 
-    val printer = SymbolPrinter()(using ctx)
     completion.symbols.map { sym =>
       // For overloaded signatures we get multiple symbols, so we need
       // to recalculate the description
       // related issue https://github.com/lampepfl/dotty/issues/11941
-      lazy val kind: CompletionItemKind =
-        completionItemKind(sym)
+      lazy val kind: CompletionItemKind = completionItemKind(sym)
 
-      val description = infoString(sym, sym.info.widenTermRefExpr, history)
+      val description = detailString(sym)
 
       val ident = completion.label
       val label = kind match {
         case CompletionItemKind.Method =>
           s"${ident}${description}"
         case CompletionItemKind.Variable | CompletionItemKind.Field =>
-          s"${ident}:${description}"
+          s"${ident}: ${description}"
         case _ => ident
       }
 
