@@ -13,7 +13,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
   private val defaultWidth = 1000
 
   override def nameString(name: Name): String = {
-    name.stripModuleClassSuffix.toString()
+    super.nameString(name.stripModuleClassSuffix)
   }
 
   def typeString(tpw: Type): String = {

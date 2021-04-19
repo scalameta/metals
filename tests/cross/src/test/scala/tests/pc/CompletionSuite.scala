@@ -608,10 +608,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3.0.0-RC1" ->
-        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, <FromJavaObject>]
+        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, Object]
            |""".stripMargin,
       "3.0" ->
-        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, <FromJavaObject>]
+        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, Object]
            |readAttributes[A <: java.nio.file.attribute.BasicFileAttributes](x$0: java.nio.file.Path, x$1: Class[A], x$2: java.nio.file.LinkOption*): A
            |""".stripMargin
     )
