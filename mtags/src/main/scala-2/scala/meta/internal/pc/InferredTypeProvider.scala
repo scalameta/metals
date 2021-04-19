@@ -40,9 +40,12 @@ final class InferredTypeProvider(
     val typedTree = typedTreeAt(pos)
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
+    val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
     val history = new ShortenedNames(
       lookupSymbol = name =>
-        context.lookupSymbol(name, sym => !sym.isStale) :: Nil
+        context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
+      config = renameConfig,
+      renames = re
     )
 
     def additionalImports = importPosition match {
