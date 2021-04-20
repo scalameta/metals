@@ -197,14 +197,14 @@ lazy val V = new {
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
   val bloop = "1.4.8-19-4d9f966b"
-  val scala3 = "3.0.0-RC2"
+  val scala3 = "3.0.0-RC3"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.19"
+  val mdoc = "2.2.20"
   val scalafmt = "2.7.4"
-  val munit = "0.7.23"
+  val munit = "0.7.25"
   val scalafix = "0.9.27"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
@@ -227,7 +227,7 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(scala3, "3.0.0-RC1")
+  def nonDeprecatedScala3Versions = Seq(scala3, "3.0.0-RC2", "3.0.0-RC1")
   def deprecatedScala3Versions = Seq("3.0.0-M3", "3.0.0-M2", "3.0.0-M1")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
@@ -594,7 +594,11 @@ lazy val mtest = project
     testSettings,
     sharedSettings,
     libraryDependencies ++= List(
-      "org.scalameta" %% "munit" % V.munit,
+      if (scalaVersion.value == "3.0.0-RC1") {
+        "org.scalameta" %% "munit" % "0.7.23"
+      } else {
+        "org.scalameta" %% "munit" % V.munit
+      },
       "io.get-coursier" % "interface" % V.coursierInterfaces
     ),
     buildInfoPackage := "tests",

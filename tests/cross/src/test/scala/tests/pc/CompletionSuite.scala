@@ -85,8 +85,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|identity(a: Int): Int
        |""".stripMargin,
     compat = Map(
-      "3.0.0-RC2" -> "identity(a: Int): Int",
-      "3.0" -> "identity(a: A): A"
+      "3.0.0-RC1" -> "identity(a: A): A",
+      "3.0" -> "identity(a: Int): Int"
     )
   )
 
@@ -101,8 +101,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1",
-      "3.0.0-RC2" -> "getOrElse[V1 >: String](key: Int, default: => V1): V1",
-      "3.0" -> "getOrElse[V1 >: V](key: K, default: => V1): V1"
+      "3.0.0-RC1" -> "getOrElse[V1 >: V](key: K, default: => V1): V1",
+      "3.0" -> "getOrElse[V1 >: String](key: Int, default: => V1): V1"
     )
   )
 
