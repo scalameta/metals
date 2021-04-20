@@ -134,14 +134,24 @@ case class ScalaPresentationCompiler(
             CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit))
               .completions()
           val metalsCompletions = completionPosition(pos, path)(using ctx)
-          completions ++ metalsCompletions
+
+          val newctx = ctx.fresh.setCompilationUnit(unit)
+          val tpdPath =
+            Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+              newctx
+            )
+          val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
+          val history = ShortenedNames(locatedCtx)
+
+          (completions ++ metalsCompletions).zipWithIndex.flatMap {
+            case (item, idx) =>
+              completionItems(item, history, idx)(using newctx)
+          }
         case None => Nil
       }
+
       new CompletionList(
-        /*isIncomplete = */ false,
-        items.zipWithIndex.flatMap { case (item, idx) =>
-          completionItems(item, idx)(using ctx)
-        }.asJava
+        items.asJava
       )
     }
   }
@@ -164,7 +174,6 @@ case class ScalaPresentationCompiler(
         "",
         definitions.flatMap(d => location(d.namePos(using ctx))).asJava
       )
-
     }
   }
 
@@ -272,22 +281,20 @@ case class ScalaPresentationCompiler(
                 case _: ImportType =>
                   printer.typeString(symbol.paramRef(using ctx))
                 case _ =>
-                  val shortendType =
-                    driver.compilationUnits.get(uri) match {
-                      case Some(unit) =>
-                        val newctx =
-                          ctx.fresh.setCompilationUnit(unit)
-                        val path = Interactive.pathTo(
-                          newctx.compilationUnit.tpdTree,
-                          pos.span
-                        )(using newctx)
-                        val context =
-                          Interactive.contextOfPath(path)(using newctx)
-                        val history = ShortenedNames(context)
-                        shortType(tpw, history)(using newctx)
-                      case None => tpw
-                    }
-                  printer.typeString(shortendType)
+                  driver.compilationUnits.get(uri) match {
+                    case Some(unit) =>
+                      val newctx =
+                        ctx.fresh.setCompilationUnit(unit)
+                      val tpdPath = Interactive.pathTo(
+                        newctx.compilationUnit.tpdTree,
+                        pos.span
+                      )(using newctx)
+                      val context =
+                        Interactive.contextOfPath(tpdPath)(using newctx)
+                      val history = new ShortenedNames(context)
+                      printer.infoString(symbol, history, tpw)(using context)
+                    case None => printer.typeString(tpw)
+                  }
               }
             }
             val content = hoverContent(
@@ -424,8 +431,29 @@ case class ScalaPresentationCompiler(
 
   private def completionItems(
       completion: Completion,
+      history: ShortenedNames,
       idx: Int
-  )(using ctx: Context): List[CompletionItem] = {
+  )(using Context): List[CompletionItem] = {
+    val printer = SymbolPrinter()(using ctx)
+
+    /**
+     * Calculate the string for "detail" field in CompletionItem.
+     *
+     * for class or module, it's package name that it belongs to (e.g. "scala.collection" for "scala.collection.Seq")
+     * otherwise, it's shortened type/method signature
+     * e.g. "[A: Ordering](x: List[Int]): A", " java.lang.String"
+     *
+     * @param sym The symbol for completion item.
+     */
+    def detailString(sym: Symbol): String = {
+      if (sym.isClass || sym.is(Module)) {
+        val printer = SymbolPrinter()
+        s" ${printer.fullNameString(sym.owner)}"
+      } else {
+        printer.infoString(sym, history, sym.info.widenTermRefExpr)(using ctx)
+      }
+    }
+
     def completionItemKind(
         sym: Symbol
     )(using ctx: Context): CompletionItemKind = {
@@ -442,42 +470,42 @@ case class ScalaPresentationCompiler(
       else
         CompletionItemKind.Field
     }
-    val printer = SymbolPrinter()(using ctx)
+
     completion.symbols.map { sym =>
       // For overloaded signatures we get multiple symbols, so we need
       // to recalculate the description
       // related issue https://github.com/lampepfl/dotty/issues/11941
-      val description =
-        if (completion.symbols.size > 1)
-          if (sym.isType) printer.fullNameString(sym)
-          else {
-            printer.typeString(sym.denot.info.widenTermRefExpr)
-          }
-        else
-          completion.description.stripSuffix("$")
+      lazy val kind: CompletionItemKind = completionItemKind(sym)
 
-      val colonNotNeeded = sym.is(Method)
-      val colon = if (colonNotNeeded) "" else ": "
-      val label = s"${completion.label}$colon${description}"
+      val description = detailString(sym)
+
+      val ident = completion.label
+      val label = kind match {
+        case CompletionItemKind.Method =>
+          s"${ident}${description}"
+        case CompletionItemKind.Variable | CompletionItemKind.Field =>
+          s"${ident}: ${description}"
+        case _ => ident
+      }
+
       val item = new CompletionItem(label)
 
       item.setSortText(f"${idx}%05d")
 
+      item.setDetail(description)
       item.setFilterText(completion.label)
       // TODO we should use edit text
       item.setInsertText(completion.label)
       val documentation = ParsedComment.docOf(sym)
+
       if (documentation.nonEmpty) {
-        item.setDocumentation(
-          hoverContent(None, None, documentation.toList)
-        )
+        item.setDocumentation(hoverContent(None, None, documentation.toList))
       }
       if (sym.isDeprecated) {
         item.setTags(List(CompletionItemTag.Deprecated).asJava)
       }
       item.setKind(completionItemKind(sym))
       item
-
     }
   }
 
@@ -546,134 +574,4 @@ case class ScalaPresentationCompiler(
   }
 
   override def isLoaded() = compilerAccess.isLoaded()
-
-  private case class ShortName(
-      name: Name,
-      symbol: Symbol
-  )
-  private object ShortName {
-    def apply(sym: Symbol)(using ctx: Context): ShortName =
-      ShortName(sym.name, sym)
-  }
-
-  private class ShortenedNames(context: Context) {
-    val history = collection.mutable.Map.empty[Name, ShortName]
-
-    def lookupSymbol(short: ShortName): Type = {
-      context.findRef(short.name)
-    }
-
-    def tryShortenName(short: ShortName)(using Context): Boolean = {
-      history.get(short.name) match {
-        case Some(ShortName(_, other)) => true
-        case None =>
-          val foundTpe = lookupSymbol(short)
-          val syms = List(foundTpe.termSymbol, foundTpe.typeSymbol)
-          val isOk = syms.filter(_ != NoSymbol) match {
-            case Nil => false
-            case founds => founds.exists(_ == short.symbol)
-          }
-          if (isOk) {
-            history(short.name) = short
-            true
-          } else {
-            false
-          }
-      }
-    }
-
-    def tryShortenName(name: Option[ShortName])(using Context): Boolean =
-      name match {
-        case Some(short) => tryShortenName(short)
-        case None => false
-      }
-  }
-
-  /**
-   * Shorten the long (fully qualified) type to shorter representation, so printers
-   * can obtain more readable form of type like `SrcPos` instead of `dotc.util.SrcPos`
-   * (if the name can be resolved from the context).
-   *
-   * For example,
-   * when the longType is like `TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class dotc)),module util),SrcPos)`,
-   * if `dotc.util.SrcPos` found from the scope, then `TypeRef(NoPrefix, SrcPos)`
-   * if not, and `dotc.util` found from the scope then `TypeRef(TermRef(NoPrefix, module util), SrcPos)`
-   *
-   * @see Scala 3/Internals/Type System https://dotty.epfl.ch/docs/internals/type-system.html
-   */
-  private def shortType(longType: Type, history: ShortenedNames)(using
-      ctx: Context
-  ): Type = {
-    val isVisited = collection.mutable.Set.empty[(Type, Option[ShortName])]
-    val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
-
-    def loop(tpe: Type, name: Option[ShortName]): Type = {
-      val key = tpe -> name
-      // NOTE: Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
-      if (isVisited(key)) return cached.getOrDefault(key, tpe)
-      isVisited += key
-      val result = tpe match {
-        case TypeRef(prefix, designator) =>
-          // designator is not necessarily an instance of `Symbol` and it's an instance of `Name`
-          // this can be seen, for example, when we are shortening the signature of 3rd party APIs.
-          val sym =
-            if (designator.isInstanceOf[Symbol])
-              designator.asInstanceOf[Symbol]
-            else tpe.typeSymbol
-          val short = ShortName(sym)
-          TypeRef(loop(prefix, Some(short)), sym)
-
-        case TermRef(prefix, designator) =>
-          val sym =
-            if (designator.isInstanceOf[Symbol])
-              designator.asInstanceOf[Symbol]
-            else tpe.termSymbol
-          val short = ShortName(sym)
-          if (history.tryShortenName(name)) NoPrefix
-          else TermRef(loop(prefix, None), sym)
-
-        case ThisType(tyref) =>
-          if (history.tryShortenName(name)) NoPrefix
-          else ThisType.raw(loop(tyref, None).asInstanceOf[TypeRef])
-
-        case mt @ MethodTpe(pnames, ptypes, restpe) if mt.isImplicitMethod =>
-          ImplicitMethodType(
-            pnames,
-            ptypes.map(loop(_, None)),
-            loop(restpe, None)
-          )
-        case mt @ MethodTpe(pnames, ptypes, restpe) =>
-          MethodType(pnames, ptypes.map(loop(_, None)), loop(restpe, None))
-
-        case pl @ PolyType(_, restpe) =>
-          PolyType(
-            pl.paramNames,
-            pl.paramInfos.map(bound =>
-              TypeBounds(loop(bound.lo, None), loop(bound.hi, None))
-            ),
-            loop(restpe, None)
-          )
-        case ConstantType(value) => value.tpe
-        case SuperType(thistpe, supertpe) =>
-          SuperType(loop(thistpe, None), loop(supertpe, None))
-        case AppliedType(tycon, args) =>
-          AppliedType(loop(tycon, None), args.map(a => loop(a, None)))
-        case TypeBounds(lo, hi) =>
-          TypeBounds(loop(lo, None), loop(hi, None))
-        case ExprType(res) =>
-          ExprType(loop(res, None))
-        case AnnotatedType(parent, annot) =>
-          AnnotatedType(loop(parent, None), annot)
-        case AndType(tp1, tp2) =>
-          AndType(loop(tp1, None), loop(tp2, None))
-        case or @ OrType(tp1, tp2) =>
-          OrType(loop(tp1, None), loop(tp2, None), or.isSoft)
-        case t => t
-      }
-
-      cached.putIfAbsent(key, result)
-      result
-    }
-    loop(longType, None)
-  }
 }

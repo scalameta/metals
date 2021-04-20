@@ -27,7 +27,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.util
            |JList - javax.swing
            |""".stripMargin,
-      "3.0" -> "List=> collection.immutable.List.type"
+      "3.0" -> "List: collection.immutable.List.type"
     ),
     topLines = Some(5)
   )
@@ -40,10 +40,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """
       |empty[A]: List[A]
-      |""".stripMargin,
-    compat = Map(
-      "3.0" -> "empty[A] => List[A]"
-    )
+      |""".stripMargin
   )
 
   check(
@@ -56,6 +53,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  // TODO: scala3, compute type parameters based on the qualifier.
   check(
     "tparam",
     """
@@ -68,11 +66,11 @@ class CompletionSuite extends BaseCompletionSuite {
     """|identity[B >: Int](a: B): B
        |""".stripMargin,
     compat = Map(
-      "3.0.0-RC1" -> "identity[B >: A](a: B): B",
-      "3.0" -> "identity[B >: Int](a: B): B"
+      "3.0" -> "identity[B >: A](a: B): B"
     )
   )
 
+  // TODO: scala3, compute type parameters based on the qualifier.
   check(
     "tparam1",
     """
@@ -85,11 +83,11 @@ class CompletionSuite extends BaseCompletionSuite {
     """|identity(a: Int): Int
        |""".stripMargin,
     compat = Map(
-      "3.0.0-RC1" -> "identity(a: A): A",
-      "3.0" -> "identity(a: Int): Int"
+      "3.0" -> "identity(a: A): A"
     )
   )
 
+  // TODO: scala3, compute type parameters based on the qualifier.
   check(
     "tparam2",
     """
@@ -101,8 +99,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1",
-      "3.0.0-RC1" -> "getOrElse[V1 >: V](key: K, default: => V1): V1",
-      "3.0" -> "getOrElse[V1 >: String](key: Int, default: => V1): V1"
+      "3.0" -> "getOrElse[V1 >: V](key: K, default: => V1): V1"
     )
   )
 
@@ -247,7 +244,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|XtensionMethod(a: Int): A.XtensionMethod
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "XtensionMethod(a: Int): implicit-class.A.XtensionMethod"
+      "3.0" -> "XtensionMethod(a: Int): XtensionMethod"
     )
   )
 
@@ -300,7 +297,7 @@ class CompletionSuite extends BaseCompletionSuite {
         """|TrieMap scala.collection.concurrent
            |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin,
-      "3.0" -> "TrieMap: scala.collection.concurrent.TrieMap"
+      "3.0" -> "TrieMap scala.collection.concurrent"
     )
   )
 
@@ -310,10 +307,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |import scala.collection.conc@@
       |""".stripMargin,
     """|concurrent scala.collection
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> "concurrent: scala.collection.concurrent"
-    )
+       |""".stripMargin
   )
 
   check(
@@ -425,7 +419,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "Inner: a.Outer.Inner",
+      "3.0" -> "Inner a.Outer",
       /* TODO seems that changes in 2.13.5 made this pop up and this
        * might have been a bug in presentation compiler that we were using
        * https://github.com/scalameta/metals/issues/2546
@@ -452,7 +446,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |Files - a.Outer
       |""".stripMargin,
     compat = Map(
-      "3.0" -> "Files: java.nio.file.Files"
+      "3.0" -> "Files java.nio.file"
     )
   )
 
@@ -470,7 +464,7 @@ class CompletionSuite extends BaseCompletionSuite {
     includeCommitCharacter = true,
     compat = Map(
       "2.11" -> "empty[A, B]: Map[A,B] (commit: '')",
-      "3.0" -> "empty[K, V] => Map[K, V] (commit: '')"
+      "3.0" -> "empty[K, V]: Map[K, V] (commit: '')" // space between K V
     )
   )
 
@@ -528,31 +522,31 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(25),
     compat = Map(
       "3.0" ->
-        """|Function0: scala.Function0
-           |Function1: scala.Function1
-           |Function1: Function1
-           |Function2: scala.Function2
-           |Function3: scala.Function3
-           |Function4: scala.Function4
-           |Function5: scala.Function5
-           |Function6: scala.Function6
-           |Function7: scala.Function7
-           |Function8: scala.Function8
-           |Function9: scala.Function9
-           |Function10: scala.Function10
-           |Function11: scala.Function11
-           |Function12: scala.Function12
-           |Function13: scala.Function13
-           |Function14: scala.Function14
-           |Function15: scala.Function15
-           |Function16: scala.Function16
-           |Function17: scala.Function17
-           |Function18: scala.Function18
-           |Function19: scala.Function19
-           |Function20: scala.Function20
-           |Function21: scala.Function21
-           |Function22: scala.Function22
-           |Function: Function
+        """|Function0 scala
+           |Function1 scala
+           |Function1 scala
+           |Function2 scala
+           |Function3 scala
+           |Function4 scala
+           |Function5 scala
+           |Function6 scala
+           |Function7 scala
+           |Function8 scala
+           |Function9 scala
+           |Function10 scala
+           |Function11 scala
+           |Function12 scala
+           |Function13 scala
+           |Function14 scala
+           |Function15 scala
+           |Function16 scala
+           |Function17 scala
+           |Function18 scala
+           |Function19 scala
+           |Function20 scala
+           |Function21 scala
+           |Function22 scala
+           |Function scala
            |""".stripMargin
     )
   )
@@ -567,7 +561,10 @@ class CompletionSuite extends BaseCompletionSuite {
     """|toCharArray(): Array[Char]
        |""".stripMargin,
     compat = Map(
-      "2.11" -> "" // SAM was introduced in Scala 2.12
+      "2.11" -> "", // SAM was introduced in Scala 2.12
+      "3.0" ->
+        """|toCharArray: Array[Char]
+           |""".stripMargin
     )
   )
 
@@ -581,8 +578,22 @@ class CompletionSuite extends BaseCompletionSuite {
     """|concat[T: ClassTag](xss: Array[T]*): Array[T]
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "concat[T](xss: Array[T]*)(implicit evidence$11: scala.reflect.ClassTag[T]): Array[T]"
+      "3.0" -> "concat[T: scala.reflect.ClassTag](xss: Array[T]*): Array[T]"
     )
+  )
+
+  check(
+    "implicit-evidence-many",
+    """
+      |object A {
+      |  object B {
+      |    def test[T: Ordering: Numeric](x: T): T = ???
+      |  }
+      |  B.tes@@
+      |}
+    """.stripMargin,
+    """|test[T: Ordering: Numeric](x: T): T
+       |""".stripMargin
   )
 
   check(
@@ -597,11 +608,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3.0.0-RC1" ->
-        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*):
-           |  java.util.Map[String, Object]
+        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, Object]
            |""".stripMargin,
       "3.0" ->
-        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, <FromJavaObject>]
+        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, Object]
            |readAttributes[A <: java.nio.file.attribute.BasicFileAttributes](x$0: java.nio.file.Path, x$1: Class[A], x$2: java.nio.file.LinkOption*): A
            |""".stripMargin
     )
@@ -638,7 +648,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|DelayedLazyVal scala.concurrent
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "DelayedLazyVal: scala.concurrent.DelayedLazyVal",
+      "3.0" -> "DelayedLazyVal scala.concurrent",
       "2.13.5" -> "DelayedLazyVal - scala.concurrent"
     )
   )
@@ -674,7 +684,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "incrementThisType(): (A.this : singleton.A)"
+      "3.0" -> "incrementThisType: (A.this : singleton.A)"
     )
   )
 
@@ -739,7 +749,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "selectDynamic(field: String): dynamic.Foo"
+      "3.0" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -753,7 +763,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "selectDynamic(field: String): dynamic2.Foo"
+      "3.0" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -768,7 +778,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "selectDynamic(field: String): dynamic3.Foo"
+      "3.0" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -782,7 +792,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "selectDynamic(field: String): dynamic4.Foo"
+      "3.0" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -797,7 +807,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|selectDynamic(field: String): Foo
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "selectDynamic(field: String): dynamic5.Foo"
+      "3.0" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -847,10 +857,7 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> "Some: Some"
-    )
+       |""".stripMargin
   )
 
   check(
@@ -861,10 +868,7 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> "Some: Some"
-    )
+       |""".stripMargin
   )
 
   check(
@@ -880,8 +884,8 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(2),
     compat = Map(
       "3.0" ->
-        """|NoManifest=> reflect.NoManifest.type
-           |NoClassDefFoundError: NoClassDefFoundError
+        """|NoManifest: reflect.NoManifest.type
+           |NoClassDefFoundError java.lang
            |""".stripMargin
     )
   )
@@ -905,9 +909,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3.0" ->
-        """|Seq=> collection.immutable.Seq.type
+        """|Seq: collection.immutable.Seq.type
            |SeqCharSequence(sequenceOfChars: scala.collection.IndexedSeq[Char]): SeqCharSequence
-           |Set=> scala.collection.immutable.Set.type
+           |Set: scala.collection.immutable.Set.type
            |""".stripMargin
     )
   )
@@ -931,9 +935,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3.0" ->
-        """|SafeVarargs: java.lang.SafeVarargs
-           |SafeVarargs: SafeVarargs
-           |ScalaReflectionException: scala.ScalaReflectionException
+        """|SafeVarargs java.lang
+           |SafeVarargs java.lang
+           |ScalaReflectionException scala
            |""".stripMargin
     )
   )
@@ -961,12 +965,12 @@ class CompletionSuite extends BaseCompletionSuite {
       "3.0.0-RC1" ->
         """|NotString: Int
            |Number: scala.util.matching.Regex
-           |Nil=> collection.immutable.Nil.type
+           |Nil: collection.immutable.Nil.type
            |""".stripMargin,
       "3.0" ->
         """|NotString: Int
-           |Nil=> collection.immutable.Nil.type
-           |NoManifest=> reflect.NoManifest.type
+           |Nil: collection.immutable.Nil.type
+           |NoManifest: reflect.NoManifest.type
            |""".stripMargin
     )
   )
@@ -986,9 +990,9 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3.0" ->
-        """|NegativeArraySizeException: java.lang.NegativeArraySizeException
-           |NegativeArraySizeException: NegativeArraySizeException
-           |Nil=> collection.immutable.Nil.type
+        """|NegativeArraySizeException java.lang
+           |NegativeArraySizeException java.lang
+           |Nil: collection.immutable.Nil.type
            |""".stripMargin
     )
   )
@@ -1008,9 +1012,9 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3.0" ->
-        """|NegativeArraySizeException: java.lang.NegativeArraySizeException
-           |NegativeArraySizeException: NegativeArraySizeException
-           |Nil=> collection.immutable.Nil.type
+        """|NegativeArraySizeException java.lang
+           |NegativeArraySizeException java.lang
+           |Nil: collection.immutable.Nil.type
            |""".stripMargin
     )
   )
@@ -1072,15 +1076,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |printnnn: String
        |print(x: Any): Unit
        |""".stripMargin,
-    topLines = Some(4),
-    compat = Map(
-      "3.0" ->
-        """|printxxx: String
-           |printmmm=> String
-           |printnnn=> String
-           |print(x: Any): Unit
-           |""".stripMargin
-    )
+    topLines = Some(4)
   )
 
   check(
@@ -1114,8 +1110,36 @@ class CompletionSuite extends BaseCompletionSuite {
        |isInstanceOf[T0]: Boolean
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "intNumber=> Int"
+      "3.0" ->
+        """|intNumber: Int
+           |""".stripMargin
     )
   )
 
+  check(
+    "using".tag(IgnoreScala2),
+    s"""|class Foo {
+        |  def max[T](x: T, y: T)(using ord: Ordered[T]): T =
+        |    if ord.compare(x, y) < 0 then y else x
+        |}
+        |object Main {
+        |  new Foo().max@@
+        |}
+        |""".stripMargin,
+    """|max[T](x: T, y: T)(using ord: Ordered[T]): T
+       |""".stripMargin
+  )
+
+  check(
+    "annon-context".tag(IgnoreScala2),
+    s"""|class Foo {
+        |  def max[T](x: T, y: T)(using Ordered[T]): T = ???
+        |}
+        |object Main {
+        |  new Foo().max@@
+        |}
+        |""".stripMargin,
+    """|max[T](x: T, y: T)(using Ordered[T]): T
+       |""".stripMargin
+  )
 }

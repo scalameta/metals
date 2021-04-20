@@ -51,10 +51,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|def empty[T]: Option[T]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "def empty[T] => Option[T]".hover
-    )
+       |""".stripMargin.hover
   )
 
   check(
@@ -66,10 +63,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """
       |Option[T]
       |def empty[T: Ordering]: Option[T]
-      |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "def empty[T](implicit evidence$1: Ordering[T]): Option[T]".hover
-    )
+      |""".stripMargin.hover
   )
 
   check(
