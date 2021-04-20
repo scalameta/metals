@@ -962,15 +962,15 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Option(3),
     compat = Map(
-      "3.0.0-RC2" ->
-        """|NotString: Int
-           |Nil: collection.immutable.Nil.type
-           |NoManifest: reflect.NoManifest.type
-           |""".stripMargin,
-      "3.0" ->
+      "3.0.0-RC1" ->
         """|NotString: Int
            |Number: scala.util.matching.Regex
            |Nil: collection.immutable.Nil.type
+           |""".stripMargin,
+      "3.0" ->
+        """|NotString: Int
+           |Nil: collection.immutable.Nil.type
+           |NoManifest: reflect.NoManifest.type
            |""".stripMargin
     )
   )

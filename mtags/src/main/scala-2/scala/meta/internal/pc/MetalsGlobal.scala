@@ -287,22 +287,36 @@ class MetalsGlobal(
             }
           }
         case ThisType(sym) =>
-          if (history.tryShortenName(name)) NoPrefix
+          val owners = sym.ownerChain
+          // to make sure we always use renamed package
+          // what is saved in renames is actually companion module of a package
+          val renamedOwnerIndex =
+            owners.indexWhere(s => history.renames.contains(s.companionModule))
+          if (renamedOwnerIndex < 0 && history.tryShortenName(name)) NoPrefix
           else {
-            val owners = sym.ownerChain
-            val prefix = owners.indexWhere { owner =>
-              owner.owner != definitions.ScalaPackageClass &&
-              history.tryShortenName(
-                Some(ShortName(owner.name, owner))
-              )
-            }
+            val prefix =
+              if (renamedOwnerIndex < 0)
+                owners.indexWhere { owner =>
+                  owner.owner != definitions.ScalaPackageClass &&
+                  history.tryShortenName(
+                    Some(ShortName(owner.name, owner))
+                  )
+                }
+              else renamedOwnerIndex
             if (prefix < 0) {
               new PrettyType(history.fullname(sym))
             } else {
               val names = owners
                 .take(prefix + 1)
                 .reverse
-                .map(s => m.Term.Name(s.nameSyntax))
+                .map(s =>
+                  m.Term.Name(
+                    history.renames
+                      .get(s.companionModule)
+                      .map(_.toString())
+                      .getOrElse(s.nameSyntax)
+                  )
+                )
               val ref = names.tail.foldLeft(names.head: m.Term.Ref) {
                 case (qual, name) => m.Term.Select(qual, name)
               }

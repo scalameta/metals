@@ -350,6 +350,64 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "renamed",
+    """|import java.time.{Instant => I}
+       |
+       |trait Main {
+       |  val every: I = ???
+       |  val <<second>> = every
+       |}
+       |
+       |""".stripMargin,
+    """|import java.time.{Instant => I}
+       |
+       |trait Main {
+       |  val every: I = ???
+       |  val second: I = every
+       |}
+       |
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "renamed-package",
+    """|import java.{ time => t }
+       |
+       |trait Main {
+       |  val every: t.Instant = ???
+       |  val <<second>> = every
+       |}
+       |
+       |""".stripMargin,
+    """|import java.{ time => t }
+       |
+       |trait Main {
+       |  val every: t.Instant = ???
+       |  val second: t.Instant = every
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "renamed-package-long",
+    """|import scala.{ concurrent => c }
+       |
+       |trait Main {
+       |  val every: c.duration.Duration = ???
+       |  val <<second>> = every
+       |}
+       |
+       |""".stripMargin,
+    """|import scala.{ concurrent => c }
+       |
+       |trait Main {
+       |  val every: c.duration.Duration = ???
+       |  val second: c.duration.Duration = every
+       |}
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
