@@ -22,8 +22,7 @@
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",
-      "contributors/releasing",
-      "contributors/tests"
+      "contributors/releasing"
     ],
     "Integrating with Metals": [
       "integrations/remote-language-server",

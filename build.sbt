@@ -46,7 +46,6 @@ inThisBuild(
       else localSnapshotVersion // only for local publishing
     },
     // note bucket created by @tgodzik
-    munitBucketName := Some("scala-metals-test-reports"),
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(
@@ -722,4 +721,4 @@ lazy val docs = project
     )
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin, MUnitReportPlugin)
+  .enablePlugins(DocusaurusPlugin)
