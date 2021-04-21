@@ -715,7 +715,6 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
       "org.jsoup" % "jsoup" % "1.13.1"
     )
