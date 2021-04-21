@@ -183,4 +183,40 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin
   )
+
+  check(
+    "dots-in-name",
+    """|package a
+       |
+       |object Main {
+       |  object Outer {
+       |    object x {
+       |      trait Nested {
+       |        def foo: String
+       |      }
+       |    }
+       |  }
+       |  new <<Outer.x.Nested>> {}
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |object Main {
+       |  object Outer {
+       |    object x {
+       |      trait Nested {
+       |        def foo: String
+       |      }
+       |    }
+       |  }
+       |  new Outer.x.Nested {
+       |
+       |    override def foo: String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin
+  )
 }
