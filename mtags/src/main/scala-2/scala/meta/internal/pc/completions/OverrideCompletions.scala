@@ -324,36 +324,20 @@ trait OverrideCompletions { this: MetalsGlobal =>
     // make sure the compilation unit is loaded
     typedTreeAt(pos)
 
-    lastVisitedParentTrees match {
-
+    val template = lastVisitedParentTrees.collectFirst {
       // class Foo extends Bar {}
-      // ~~~~~~~~~~~~~~~~~~~~~~~~
-      case (c: ClassDef) :: _ =>
-        val t = c.impl
-        implementAllFor(t)
-
+      case clz: ClassDef => clz.impl
       // object Foo extends Bar {}
-      // ~~~~~~~~~~~~~~~~~~~~~~~~
-      case (m: ModuleDef) :: _ =>
-        val t = m.impl
-        implementAllFor(t)
-
+      case module: ModuleDef => module.impl
       // new Foo {}
-      //     ~~~~~~
-      case (_: Ident) ::
-          (t: Template) :: _ =>
-        implementAllFor(t)
-
-      // new Foo[T] {}
-      //     ~~~~~~~~~
-      case (_: Ident) ::
-          (_: AppliedTypeTree) ::
-          (t: Template) :: _ =>
-        implementAllFor(t)
-
-      case _ =>
-        Nil
+      case t: Template => t
     }
+
+    template match {
+      case Some(t) => implementAllFor(t)
+      case None => Nil
+    }
+
   }
 
   /**
