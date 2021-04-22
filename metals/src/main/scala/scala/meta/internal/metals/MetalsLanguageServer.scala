@@ -988,52 +988,78 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("metals/didFocusTextDocument")
-  def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
-    val path = uri.toAbsolutePath
-    focusedDocument = Some(path)
-    buildTargets
-      .inverseSources(path)
-      .foreach(focusedDocumentBuildTarget.set)
+  def didFocus(
+      params: AnyRef
+  ): CompletableFuture[DidFocusResult.Value] = {
 
-    // unpublish diagnostic for dependencies
-    interactiveSemanticdbs.didFocus(path)
-    // Don't trigger compilation on didFocus events under cascade compilation
-    // because save events already trigger compile in inverse dependencies.
-    if (path.isDependencySource(workspace)) {
-      CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
-    } else if (openedFiles.isRecentlyActive(path)) {
-      CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
-    } else {
-      syntheticsDecorator.publishSynthetics(path)
-      worksheetProvider.onDidFocus(path)
-      buildTargets.inverseSources(path) match {
-        case Some(target) =>
-          val isAffectedByCurrentCompilation =
-            path.isWorksheet ||
-              buildTargets.isInverseDependency(
-                target,
-                compilations.currentlyCompiling.toList
-              )
-          def isAffectedByLastCompilation: Boolean =
-            !compilations.wasPreviouslyCompiled(target) &&
-              buildTargets.isInverseDependency(
-                target,
-                compilations.previouslyCompiled.toList
-              )
-          val needsCompile =
-            isAffectedByCurrentCompilation || isAffectedByLastCompilation
-          if (needsCompile) {
-            compilations
-              .compileFile(path)
-              .map(_ => DidFocusResult.Compiled)
-              .asJava
-          } else {
-            CompletableFuture.completedFuture(DidFocusResult.AlreadyCompiled)
-          }
-        case None =>
-          CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
-      }
+    val uriOpt: Option[String] = params match {
+      case string: String =>
+        Option(string)
+      case (h: String) :: Nil =>
+        Option(h)
+      case _ =>
+        scribe.warn(
+          s"Unexpected notification params received for didFocusTextDocument: $params"
+        )
+        None
     }
+
+    uriOpt match {
+      case Some(uri) => {
+        val path = uri.toAbsolutePath
+        focusedDocument = Some(path)
+        buildTargets
+          .inverseSources(path)
+          .foreach(focusedDocumentBuildTarget.set)
+
+        // unpublish diagnostic for dependencies
+        interactiveSemanticdbs.didFocus(path)
+        // Don't trigger compilation on didFocus events under cascade compilation
+        // because save events already trigger compile in inverse dependencies.
+        if (path.isDependencySource(workspace)) {
+          CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+        } else if (openedFiles.isRecentlyActive(path)) {
+          CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
+        } else {
+          syntheticsDecorator.publishSynthetics(path)
+          worksheetProvider.onDidFocus(path)
+          buildTargets.inverseSources(path) match {
+            case Some(target) =>
+              val isAffectedByCurrentCompilation =
+                path.isWorksheet ||
+                  buildTargets.isInverseDependency(
+                    target,
+                    compilations.currentlyCompiling.toList
+                  )
+
+              def isAffectedByLastCompilation: Boolean =
+                !compilations.wasPreviouslyCompiled(target) &&
+                  buildTargets.isInverseDependency(
+                    target,
+                    compilations.previouslyCompiled.toList
+                  )
+
+              val needsCompile =
+                isAffectedByCurrentCompilation || isAffectedByLastCompilation
+              if (needsCompile) {
+                compilations
+                  .compileFile(path)
+                  .map(_ => DidFocusResult.Compiled)
+                  .asJava
+              } else {
+                CompletableFuture.completedFuture(
+                  DidFocusResult.AlreadyCompiled
+                )
+              }
+            case None =>
+              CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+          }
+        }
+      }
+      case None =>
+        CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+    }
+
   }
 
   @JsonNotification("metals/windowStateDidChange")
