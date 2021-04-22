@@ -17,6 +17,9 @@ class CreateNewSymbol() extends CodeAction {
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
+    lazy val parentUri =
+      params.getTextDocument.getUri.toAbsolutePath.parent.toURI
+
     def createNewSymbol(
         diagnostic: l.Diagnostic,
         name: String
@@ -25,7 +28,9 @@ class CreateNewSymbol() extends CodeAction {
       codeAction.setTitle(CreateNewSymbol.title(name))
       codeAction.setKind(l.CodeActionKind.QuickFix)
       codeAction.setDiagnostics(List(diagnostic).asJava)
-      codeAction.setCommand(ServerCommands.NewScalaFile.toLSP(List(null, name)))
+      codeAction.setCommand(
+        ServerCommands.NewScalaFile.toLSP(List(parentUri, name))
+      )
       codeAction
     }
 
