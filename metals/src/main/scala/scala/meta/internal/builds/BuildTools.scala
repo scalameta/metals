@@ -24,10 +24,20 @@ import scala.meta.io.AbsolutePath
 final class BuildTools(
     workspace: AbsolutePath,
     bspGlobalDirectories: List[AbsolutePath],
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
+    explicitChoiceMade: Boolean
 ) {
-  def isAutoConnectable: Boolean =
-    isBloop || isBsp
+  // NOTE: We do a couple extra check here before we say a workspace with a
+  // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
+  // to use another build server besides Bloop or it's a BSP server for a build
+  // tool we don't support. If this isn't done, it causes unexpected warnings
+  // since if a `.bsp/<something>.json` exists before a `.bloop` one does in a
+  // workspace with a build tool we support, we will attempt to autoconnect to
+  // Bloop since Metals thinks it's in state that's auto-connectable before the
+  // user is even prompted.
+  def isAutoConnectable: Boolean = {
+    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade)
+  }
   def isBloop: Boolean = {
     hasJsonFile(workspace.resolve(".bloop"))
   }
@@ -117,6 +127,7 @@ object BuildTools {
     new BuildTools(
       workspace,
       Nil,
-      () => UserConfiguration()
+      () => UserConfiguration(),
+      explicitChoiceMade = false
     )
 }
