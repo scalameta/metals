@@ -734,11 +734,13 @@ trait Completions { this: MetalsGlobal =>
       imp.tree.selectors.foreach { sel =>
         if (sel.rename != null) {
           val member = pre.member(sel.name)
-          result(member) = sel.rename
+          if (member != NoSymbol)
+            result(member) = sel.rename
           member.companion match {
             case NoSymbol =>
             case companion =>
-              result(companion) = sel.rename
+              if (companion != NoSymbol)
+                result(companion) = sel.rename
           }
         }
       }
