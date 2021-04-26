@@ -136,15 +136,11 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
         getExpected(
           """|HashTrieMap - scala.collection.immutable.HashMap
              |ParTrieMap - scala.collection.parallel.mutable
-             |ParTrieMapCombiner - scala.collection.parallel.mutable
-             |ParTrieMapSplitter - scala.collection.parallel.mutable
              |TrieMap - scala.collection.concurrent
-             |TrieMapSerializationEnd - scala.collection.concurrent
              |""".stripMargin,
           Map(
             "2.13" ->
               """|TrieMap - scala.collection.concurrent
-                 |TrieMapSerializationEnd - scala.collection.concurrent
                  |""".stripMargin
           ),
           scalaVersion

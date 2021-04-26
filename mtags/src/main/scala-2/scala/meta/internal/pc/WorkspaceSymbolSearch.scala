@@ -19,7 +19,6 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
       var added = 0
       for {
         sym <- loadSymbolFromClassfile(top)
-        if context.lookupSymbol(sym.name, _ => true).symbol != sym
       } {
         if (visitMember(sym)) {
           added += 1
@@ -53,7 +52,7 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
     def isAccessible(sym: Symbol): Boolean = {
       sym != NoSymbol && {
         sym.info // needed to fill complete symbol
-        sym.isPublic
+        sym.exists && sym.isPublic
       }
     }
     try {

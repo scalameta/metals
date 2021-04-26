@@ -131,7 +131,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "2.13" ->
         """|ArrayDeque[$0]
            |ArrayDeque
-           |ArrayDequeOps
+           |ArrayDequeOps[$0]
            |""".stripMargin
     )
   )

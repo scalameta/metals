@@ -269,7 +269,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilder - scala.sys.process
        |CertPathBuilder - java.security.cert
        |CertPathBuilderSpi - java.security.cert
-       |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
        |PooledConnectionBuilder - javax.sql
@@ -288,14 +287,10 @@ class CompletionSuite extends BaseCompletionSuite {
     """|TrieMap scala.collection.concurrent
        |ParTrieMap - scala.collection.parallel.mutable
        |HashTrieMap - scala.collection.immutable.HashMap
-       |ParTrieMapCombiner - scala.collection.parallel.mutable
-       |ParTrieMapSplitter - scala.collection.parallel.mutable
-       |TrieMapSerializationEnd - scala.collection.concurrent
        |""".stripMargin,
     compat = Map(
       "2.13" ->
         """|TrieMap scala.collection.concurrent
-           |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin,
       "3.0" -> "TrieMap scala.collection.concurrent"
     )
