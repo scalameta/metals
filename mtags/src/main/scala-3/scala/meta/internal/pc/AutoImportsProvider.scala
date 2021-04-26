@@ -14,7 +14,7 @@ import dotty.tools.dotc.core.Decorators._
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 
-import scala.meta.internal.mtags.PCMtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 import scala.meta.internal.pc.AutoImports._
 
@@ -57,9 +57,7 @@ final class AutoImportsProvider(
       sym.name.show == query
     }
 
-    val visitor = new CompilerSearchVisitor(name, visit)(
-      using driver.currentCtx
-    )
+    val visitor = new CompilerSearchVisitor(name, visit)
     search.search(name, "", visitor)
     val results = symbols.result.filter(isExactMatch(_, name))
 

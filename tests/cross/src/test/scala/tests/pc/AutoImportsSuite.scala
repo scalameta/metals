@@ -1,7 +1,6 @@
 package tests.pc
 
 import tests.BaseAutoImportsSuite
-import tests.BuildInfoVersions
 
 class AutoImportsSuite extends BaseAutoImportsSuite {
 

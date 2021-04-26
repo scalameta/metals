@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionSnippetSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   checkSnippet(
     "member",

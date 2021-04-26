@@ -149,6 +149,8 @@ case class ScalaPresentationCompiler(
       List.empty[AutoImportsResult].asJava,
       params.token
     ) { pc =>
+
+
       new AutoImportsProvider(pc.compiler(), name, params).autoImports().asJava
     }
 

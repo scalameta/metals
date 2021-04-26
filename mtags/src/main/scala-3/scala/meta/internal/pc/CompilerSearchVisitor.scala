@@ -2,7 +2,10 @@ package scala.meta.internal.pc
 
 import scala.meta.pc._
 import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.SymDenotations._
 
 class CompilerSearchVisitor(
     query: String,
@@ -10,23 +13,33 @@ class CompilerSearchVisitor(
 )(using ctx: Context)
     extends SymbolSearchVisitor {
 
-  def isAccessible(sym: Symbol): Boolean = {
+  private def isAccessible(sym: Symbol): Boolean = {
     sym != NoSymbol && sym.isPublic
   }
 
-  def toSymbol(
-      owner: String,
-      parts: List[String],
-      prev: Option[Symbol]
-  ): Option[Symbol] = {
-    parts match {
-      case x :: xs =>
-        val clzName = s"$owner.$x"
-        val sym = requiredClass(clzName)
-        if (isAccessible(sym)) toSymbol(clzName, xs, Some(sym))
-        else None
-      case Nil => prev
+  private def toSymbols(
+      pkg: String,
+      parts: List[String]
+  ): List[Symbol] = {
+    def loop(owners: List[Symbol], parts: List[String]): List[Symbol] = {
+      parts match {
+        case head :: tl =>
+          val next = owners.flatMap { sym =>
+            val term = sym.info.member(termName(head))
+            val tpe = sym.info.member(typeName(head))
+
+            List(term, tpe)
+              .filter(denot => denot.exists)
+              .map(_.symbol)
+              .filter(isAccessible)
+          }
+          loop(next, tl)
+        case Nil => owners
+      }
     }
+
+    val pkgSym = requiredPackage(pkg)
+    loop(List(pkgSym), parts)
   }
 
   def visitClassfile(pkgPath: String, filename: String): Int = {
@@ -35,12 +48,10 @@ class CompilerSearchVisitor(
     val innerPath = filename
       .stripSuffix(".class")
       .stripSuffix("$")
-      .split("$")
+      .split("\\$")
 
-    toSymbol(pkg, innerPath.toList, None)
-      .filter(visitSymbol)
-      .map(_ => 1)
-      .getOrElse(0)
+    val added = toSymbols(pkg, innerPath.toList).filter(visitSymbol)
+    added.size
   }
 
   def visitWorkspaceSymbol(

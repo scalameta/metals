@@ -17,10 +17,12 @@ import scala.util.control.NonFatal
 import scala.{meta => m}
 
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -450,5 +452,80 @@ trait CommonMtagsEnrichments {
         override def next(): A = q.poll()
       }
 
+  }
+
+  implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
+    def toLSP: l.SymbolKind =
+      kind match {
+        case k.LOCAL => l.SymbolKind.Variable
+        case k.FIELD => l.SymbolKind.Field
+        case k.METHOD => l.SymbolKind.Method
+        case k.CONSTRUCTOR => l.SymbolKind.Constructor
+        case k.MACRO => l.SymbolKind.Method
+        case k.TYPE => l.SymbolKind.Class
+        case k.PARAMETER => l.SymbolKind.Variable
+        case k.SELF_PARAMETER => l.SymbolKind.Variable
+        case k.TYPE_PARAMETER => l.SymbolKind.TypeParameter
+        case k.OBJECT => l.SymbolKind.Object
+        case k.PACKAGE => l.SymbolKind.Module
+        case k.PACKAGE_OBJECT => l.SymbolKind.Module
+        case k.CLASS => l.SymbolKind.Class
+        case k.TRAIT => l.SymbolKind.Interface
+        case k.INTERFACE => l.SymbolKind.Interface
+        case _ => l.SymbolKind.Class
+      }
+  }
+
+  implicit class XtensionInputOffset(input: Input) {
+    def toLanguage: Language =
+      input match {
+        case Input.VirtualFile(path, _) =>
+          filenameToLanguage(path)
+        case _ =>
+          Language.UNKNOWN_LANGUAGE
+      }
+
+    /**
+     * Returns offset position with end == start == offset
+     */
+    def toOffsetPosition(offset: Int): Position =
+      Position.Range(input, offset, offset)
+
+    /**
+     * Returns an offset for this input
+     */
+    def toOffset(line: Int, column: Int): Int =
+      input.lineToOffset(line) + column
+
+    /**
+     * Returns an offset position for this input
+     */
+    def toPosition(startLine: Int, startColumn: Int): Position.Range =
+      toPosition(startLine, startColumn, startLine, startColumn)
+
+    def toPosition(occ: s.SymbolOccurrence): Position.Range = {
+      val range = occ.range.getOrElse(s.Range())
+      toPosition(
+        range.startLine,
+        range.startCharacter,
+        range.endLine,
+        range.endCharacter
+      )
+    }
+
+    /**
+     * Returns a range position for this input
+     */
+    def toPosition(
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int
+    ): Position.Range =
+      Position.Range(
+        input,
+        toOffset(startLine, startColumn),
+        toOffset(endLine, endColumn)
+      )
   }
 }

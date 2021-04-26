@@ -72,11 +72,7 @@ object SemanticdbSymbols {
     }
     try loop(sym).filterNot(_ == NoSymbol)
     catch {
-      case NonFatal(e) =>
-        // logger.severe(
-        //   s"invalid SemanticDB symbol: $symbol\n${e.getMessage}"
-        // )
-        Nil
+      case NonFatal(e) => Nil
     }
   }
 }

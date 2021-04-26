@@ -5,7 +5,7 @@ import org.eclipse.{lsp4j => l}
 object ScalacDiagnostic {
 
   object SymbolNotFound {
-    private val regex = """(n|N)ot found: (value|type) (\w+)""".r
+    private val regex = """(n|N)ot found: (value|type)?\s?(\w+)""".r
     def unapply(d: l.Diagnostic): Option[String] =
       d.getMessage() match {
         case regex(_, _, name) => Some(name)

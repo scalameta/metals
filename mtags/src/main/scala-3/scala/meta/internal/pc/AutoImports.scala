@@ -6,10 +6,12 @@ import dotty.tools.dotc.core.Denotations._
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.ast.tpd._
 
 import scala.jdk.CollectionConverters._
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
 
@@ -35,6 +37,12 @@ object AutoImports {
      * `Map -> (mutable.Map, import scala.collection.mutable)`
      */
     case SpecifiedOwner(sym: Symbol)
+
+    /**
+     * Write a full name of symbol insead of importing it
+     * `Map -> (scala.collection.mutable.Map, None)`
+     */
+    case FullName(sym: Symbol)
 
   }
 
@@ -69,9 +77,9 @@ object AutoImports {
   class AutoImportsGen(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
-      namesInScope: Map[Name, Symbol],
+      namesInScope: Map[SimpleName, Symbol],
       renameConfig: Map[SimpleName, String]
-  )(using Context) {
+  )(using ctx: Context) {
 
     def forSymbol(symbol: Symbol): Option[(String, List[l.TextEdit])] = {
       inferAutoImport(symbol).map { ai =>
@@ -84,13 +92,21 @@ object AutoImports {
             List(specifyOwnerEdit(sym, sym.owner.showName), importEdit)
           case AutoImport.Renamed(sym, rename) =>
             List(specifyOwnerEdit(sym, rename), importEdit)
+          case AutoImport.FullName(sym) =>
+            List(fullNameEdit(sym))
         }
         (ownerName, edits)
       }
     }
 
+    private def nameEditRange(name: String): l.Range =
+      new l.Range(
+        new l.Position(pos.startLine, pos.startColumn - name.length),
+        new l.Position(pos.endLine, pos.endColumn)
+      )
+
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
-      namesInScope.get(symbol.name) match {
+      namesInScope.get(symbol.name.toSimpleName) match {
         case None => Some(AutoImport.Simple(symbol))
         case Some(otherSym) =>
           val owner = symbol.owner
@@ -99,7 +115,7 @@ object AutoImports {
             case Some(rename) =>
               Some(AutoImport.renamedOrSpecified(symbol, rename))
             case _ if symbol != otherSym =>
-              Some(AutoImport.SpecifiedOwner(symbol))
+              Some(AutoImport.FullName(symbol))
             case _ => None
           }
       }
@@ -107,12 +123,12 @@ object AutoImports {
 
     private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit = {
       val name = symbol.showName
-      val namePos =
-        new l.Range(
-          new l.Position(pos.startLine, pos.startColumn - name.length),
-          new l.Position(pos.endLine, pos.endColumn)
-        )
-      new l.TextEdit(namePos, s"$owner.$name")
+      new l.TextEdit(nameEditRange(name), s"$owner.$name")
+    }
+
+    private def fullNameEdit(symbol: Symbol): l.TextEdit = {
+      val name = symbol.showName
+      new l.TextEdit(nameEditRange(name), symbol.fullNameBackticked)
     }
 
     private def importEdits(
@@ -123,16 +139,18 @@ object AutoImports {
       val topPadding =
         if (importPosition.padTop) "\n"
         else ""
+
       val formatted = values
-        .map { imp =>
-          val selector = imp match {
-            case AutoImport.Simple(sym) => sym.showFullName
-            case AutoImport.SpecifiedOwner(sym) => sym.owner.showFullName
-            case AutoImport.Renamed(sym, rename) =>
-              s"${sym.owner.owner.showFullName}.{${sym.owner.showName} => $rename}"
-          }
-          s"${indent}import $selector"
-        }
+        .flatMap({
+          case AutoImport.Simple(sym) => Some(importName(sym))
+          case AutoImport.SpecifiedOwner(sym) => Some(importName(sym.owner))
+          case AutoImport.Renamed(sym, rename) =>
+            Some(
+              s"${importName(sym.owner.owner)}.{${sym.owner.nameBackticked} => $rename}"
+            )
+          case AutoImport.FullName(_) => None
+        })
+        .map(selector => s"${indent}import $selector")
         .mkString(topPadding, "\n", "\n")
 
       val pos =
@@ -141,6 +159,18 @@ object AutoImports {
           new l.Position(importPosition.offset, 0)
         )
       new l.TextEdit(pos, formatted)
+    }
+
+    private def importName(sym: Symbol): String = {
+      @tailrec
+      def toplevelClahes(sym: Symbol): Boolean = {
+        if (sym.owner == NoSymbol || sym.owner.isRoot)
+          namesInScope.get(sym.name.toSimpleName).isDefined
+        else
+          toplevelClahes(sym.owner)
+      }
+      if (toplevelClahes(sym)) s"_root_.${sym.fullNameBackticked}"
+      else sym.fullNameBackticked
     }
   }
 
@@ -205,10 +235,8 @@ object AutoImports {
         val (offset, padTop) = lastImportStatement match {
           case Some(stm) => (stm.endPos.line + 1, false)
           case None =>
-            (
-              0,
-              true
-            ) // TODO tmpl.self.pos returns correct pos - need to adjust tests
+            // TODO tmpl.self.pos returns correct pos - need to adjust tests
+            (0, true)
         }
         new AutoImportPosition(offset, text, padTop)
       }

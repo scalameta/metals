@@ -16,16 +16,55 @@ import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.SrcPos
 import dotty.tools.dotc.util.{NameTransformer, NoSourcePosition, SourcePosition}
 
+import scala.meta.pc._
+
 class CompletionProvider(
     pos: SourcePosition,
-    ctx: Context
+    ctx: Context,
+    search: SymbolSearch,
+    buildTargetIdentifier: String
 ) {
   implicit val context: Context = ctx
 
-  def completions(): List[Completion] = {
+  def completions(): List[CompletionValue] = {
     val (offset, completions) = Completion.completions(pos)
     val query = String(pos.source.content.slice(offset, pos.endPos.point))
-    completions.filterInteresting.sorted(completionOrdering(pos, query))
+
+    completions
+      .map(CompletionValue.Compiler(_))
+      .filterInteresting(query)
+      .sorted(completionOrdering(pos, query))
+  }
+
+  def log(s: String): Unit = {
+    java.nio.file.Files.write(
+      java.nio.file.Paths.get("/home/dos65/.metals_log_x"),
+      (s + "\n").getBytes,
+      java.nio.file.StandardOpenOption.CREATE,
+      java.nio.file.StandardOpenOption.WRITE,
+      java.nio.file.StandardOpenOption.APPEND,
+    )
+  }
+
+  private def enrichWithSymbolSearch(
+      query: String,
+      visit: CompletionValue => Boolean
+  ): Unit = {
+    def description(sym: Symbol): String = {
+      if (sym.isType) sym.showFullName
+      else sym.info.widenTermRefExpr.show
+    }
+    if (!query.isEmpty) {
+      log(s"WS SEARCH: ${query}")
+      val visitor = new CompilerSearchVisitor(
+        query,
+        sym => {
+          val completion = Completion(sym.name.show, description(sym), List(sym))
+          visit(CompletionValue.Workspace(completion))
+        }
+      )
+      search.search(query, buildTargetIdentifier, visitor)
+    }
   }
 
   extension (c: Completion) {
@@ -38,20 +77,21 @@ class CompletionProvider(
       s.sourcePos.exists && s1.sourcePos.exists && s.sourcePos.point > s1.sourcePos.point
   }
 
-  extension (l: List[Completion]) {
-    def filterInteresting: List[Completion] = {
+  extension (l: List[CompletionValue]) {
+    def filterInteresting(query: String): List[CompletionValue] = {
       val isSeen = mutable.Set.empty[String]
-      val buf = List.newBuilder[Completion]
-      def isInteresting(head: Completion): Boolean = {
-        val id = head.sym.show
+      val buf = List.newBuilder[CompletionValue]
+      def visit(head: CompletionValue): Boolean = {
+        val sym = head.value.sym
+        val id = sym.showFullName
         def isNotLocalForwardReference: Boolean =
-          !head.sym.isLocalToBlock ||
-            !head.sym.srcPos.isAfter(pos) ||
-            head.sym.is(Param)
+          !sym.isLocalToBlock ||
+            !sym.srcPos.isAfter(pos) ||
+            sym.is(Param)
 
         if (
           !isSeen(id) &&
-          !isUninterestingSymbol(head.sym) &&
+          !isUninterestingSymbol(sym) &&
           isNotLocalForwardReference
         ) {
           isSeen += id
@@ -61,7 +101,10 @@ class CompletionProvider(
           false
         }
       }
-      l.filter(isInteresting)
+
+      l.foreach(visit)
+      enrichWithSymbolSearch(query, visit)
+      buf.result
     }
   }
 
@@ -86,10 +129,11 @@ class CompletionProvider(
   ).flatMap(_.alternatives.map(_.symbol)).toSet
 
   private def computeRelevancePenalty(
-      sym: Symbol
+      completion: CompletionValue
   ): Int = {
     import MemberOrdering._
     var relevance = 0
+    val sym = completion.value.sym
     // local symbols are more relevant
     if (!sym.isLocalToBlock) relevance |= IsNotLocalByBlock
     // symbols defined in this file are more relevant
@@ -111,6 +155,11 @@ class CompletionProvider(
     if (sym.is(Synthetic)) relevance |= IsSynthetic
     if (sym.isDeprecated) relevance |= IsDeprecated
     if (isEvilMethod(sym.name)) relevance |= IsEvilMethod
+    completion match {
+      case CompletionValue.Workspace(_) =>
+        relevance |= (IsWorkspaceSymbol + sym.name.show.length)
+      case _ =>
+    }
     relevance
   }
 
@@ -125,7 +174,7 @@ class CompletionProvider(
   private def completionOrdering(
       position: SourcePosition,
       query: String
-  ): Ordering[Completion] = new Ordering[Completion] {
+  ): Ordering[CompletionValue] = new Ordering[CompletionValue] {
     val queryLower = query.toLowerCase()
     val fuzzyCache = mutable.Map.empty[Symbol, Int]
     def compareLocalSymbols(s1: Symbol, s2: Symbol): Int = {
@@ -146,15 +195,15 @@ class CompletionProvider(
         }
       )
     }
-    override def compare(o1: Completion, o2: Completion): Int = {
-      val s1 = o1.sym
-      val s2 = o2.sym
+    override def compare(o1: CompletionValue, o2: CompletionValue): Int = {
+      val s1 = o1.value.sym
+      val s2 = o2.value.sym
       val byLocalSymbol = compareLocalSymbols(s1, s2)
       if (byLocalSymbol != 0) byLocalSymbol
       else {
         val byRelevance = Integer.compare(
-          computeRelevancePenalty(s1),
-          computeRelevancePenalty(s2)
+          computeRelevancePenalty(o1),
+          computeRelevancePenalty(o2)
         )
         if (byRelevance != 0) byRelevance
         else {
