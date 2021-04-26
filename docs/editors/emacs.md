@@ -77,11 +77,10 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
   (setq lsp-prefer-flymake nil))
 
 ;; Add metals backend for lsp-mode
-(use-package lsp-metals
-  :config (setq lsp-metals-treeview-show-when-views-received t))
+(use-package lsp-metals)
 
 ;; Enable nice rendering of documentation on hover
-;;   Warning: on some systems this package can reduce your emacs responsiveness significally. 
+;;   Warning: on some systems this package can reduce your emacs responsiveness significally.
 ;;   (See: https://emacs-lsp.github.io/lsp-mode/page/performance/)
 ;;   In that case you have to not only disable this but also remove from the packages since
 ;;   lsp-mode can activate it automatically.
@@ -116,15 +115,10 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 > You may need to disable other packages like `ensime` or sbt server to prevent
 > conflicts with Metals.
 
-If you start Emacs now then it will fail since the `metals-emacs` binary does
-not exist yet.
-
-```scala mdoc:bootstrap:metals-emacs emacs
-
-```
-
-The `-Dmetals.client=emacs` flag is important since it configures Metals for
-usage with Emacs.
+Next you have to install metals server. Emacs can do it for you when `lsp-mode`
+is enabled in a scala buffer or via `lsp-install-server` command. Also you can
+do it manually executing `coursier install metals` and configuring `$PATH`
+variable properly.
 
 ```scala mdoc:editor:emacs
 
@@ -239,11 +233,19 @@ To configure Eglot with Metals:
 
 (use-package eglot
   :pin melpa-stable
-  :config
-  (add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
   ;; (optional) Automatically start metals for Scala files.
   :hook (scala-mode . eglot-ensure))
 ```
+
+If you start Emacs now then it will fail since the `metals-emacs` binary does
+not exist yet.
+
+```scala mdoc:bootstrap:metals-emacs emacs
+
+```
+
+The `-Dmetals.client=emacs` flag is important since it configures Metals for
+usage with Emacs.
 
 ```scala mdoc:generic
 
