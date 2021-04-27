@@ -1,12 +1,13 @@
 package tests
 
+import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.Mtags
 
 import munit.TestOptions
 
-class Scala3ToplevelSuite extends BaseSuite {
+class ScalaToplevelSuite extends BaseSuite {
 
   check(
     "basic-indented",
@@ -230,23 +231,45 @@ class Scala3ToplevelSuite extends BaseSuite {
     )
   )
 
+  check(
+    "nested-include-inner",
+    """|package a
+       |
+       |object A {
+       |    object B1 {
+       |        case class C1(a: Int)
+       |    }
+       |
+       |    object B2 {
+       |      case class C2(a: Int)
+       |    }
+       |  }
+       |""".stripMargin,
+    List(
+      "a/", "a/A.", "a/A.B1.", "a/A.B1.C1#", "a/A.B2.", "a/A.B2.C2#"
+    ),
+    all = true,
+    dialect = dialects.Scala213
+  )
+
   def check(
       options: TestOptions,
       code: String,
       expected: List[String],
-      all: Boolean = false
+      all: Boolean = false,
+      dialect: Dialect = dialects.Scala3
   ): Unit = {
     test(options) {
       val input = Input.VirtualFile("Test.scala", code)
       val obtained =
         if (all) {
           Mtags
-            .allToplevels(input, dialects.Scala3)
+            .allToplevels(input, dialect)
             .occurrences
             .map(_.symbol)
             .toList
         } else {
-          Mtags.toplevels(input, dialect = dialects.Scala3)
+          Mtags.toplevels(input, dialect)
         }
       assertNoDiff(
         obtained.sorted.mkString("\n"),

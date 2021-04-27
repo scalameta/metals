@@ -28,14 +28,7 @@ final class Mtags {
     } else if (language.isScala) {
       addLines(language, input.text)
       val mtags =
-        if (dialect.allowSignificantIndentation)
-          new Scala3ToplevelMtags(input, includeInnerClasses = false, dialect)
-        else
-          new ScalaToplevelMtags(
-            input,
-            includeInnerClasses = false,
-            dialect
-          )
+        new ScalaToplevelMtags(input, includeInnerClasses = false, dialect)
       mtags
         .index()
         .occurrences
@@ -95,11 +88,7 @@ object Mtags {
       case Language.JAVA =>
         new JavaMtags(input).index()
       case Language.SCALA =>
-        val mtags =
-          if (dialect.allowSignificantIndentation)
-            new Scala3ToplevelMtags(input, true, dialect)
-          else
-            new ScalaToplevelMtags(input, true, dialect)
+        val mtags = new ScalaToplevelMtags(input, true, dialect)
         mtags.index()
       case _ =>
         TextDocument()
