@@ -22,14 +22,8 @@ class WorkspaceSymbolExpectSuite
             }
           )
           val obtained = Semanticdbs.printTextDocument(mtags)
-          val isException = Set(
-            "example/nested/LocalClass#LocalClass#"
-          )
           val unknownSymbols = mtags.occurrences.collect {
-            case occ
-                if symtab.info(occ.symbol).isEmpty && !isException(
-                  occ.symbol
-                ) =>
+            case occ if symtab.info(occ.symbol).isEmpty =>
               val pos = input.toPosition(occ)
               pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
           }

@@ -7,7 +7,7 @@ import tests.BaseWorkspaceSymbolSuite
 
 class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
-  check("Actor", "1025 results")
+  check("Actor", "1009 results")
   check("Actor(", "")
   check(
     "FSMFB",
@@ -85,12 +85,12 @@ class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.persistence.fsm.PersistentFSMSpec Object
        |akka.persistence.fsm.PersistentFSMSpec.SimpleTransitionFSM Class
        |akka.persistence.fsm.PersistentFSMSpec.SimpleTransitionFSM Object
+       |akka.persistence.fsm.PersistentFSMSpec.SnapshotFSM Class
+       |akka.persistence.fsm.PersistentFSMSpec.SnapshotFSM Object
+       |akka.persistence.fsm.PersistentFSMSpec.SnapshotFSMEvent Interface
+       |akka.persistence.fsm.PersistentFSMSpec.SnapshotFSMState Interface
+       |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM Class
        |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM Object
-       |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM.State#SnapshotFSM Class
-       |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM.State#SnapshotFSM Object
-       |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM.State#SnapshotFSMEvent Interface
-       |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM.State#SnapshotFSMState Interface
-       |akka.persistence.fsm.PersistentFSMSpec.TimeoutFSM.State#TimeoutFSM Class
        |akka.persistence.fsm.PersistentFSMSpec.WebStoreCustomerFSM Class
        |akka.persistence.fsm.PersistentFSMSpec.WebStoreCustomerFSM Object
        |akka.persistence.fsm.japi.pf.FSMStateFunctionBuilder Class
@@ -116,10 +116,9 @@ class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |akka.testkit.TestFSMRef Class
        |akka.testkit.TestFSMRef Object
        |akka.testkit.TestFSMRefSpec Class
-       |akka.testkit.TestFSMRefSpec#TestFSMActor Class
        |docs.actor.FSMDocSpec Class
        |docs.actor.FSMDocSpec Object
-       |docs.actor.FSMDocSpec#DemoCode.Dummy#Tick.MyFSM Class
+       |docs.actor.FSMDocSpec#DemoCode.MyFSM Class
        |docs.akka.typed.FSMDocSpec Class
        |docs.akka.typed.FSMDocSpec Object
        |jdocs.actor.fsm.FSMDocTest Class

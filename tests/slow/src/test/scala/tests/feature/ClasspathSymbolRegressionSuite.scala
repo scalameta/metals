@@ -97,9 +97,9 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |javax.annotation.processing.Filer Interface
        |org.apache.hadoop.mapred.IFile Class
        |org.apache.parquet.Files Class
-       |scala.meta.inputs.Input.Stream.SerializationProxy#File Class
-       |scala.meta.inputs.Input.Stream.SerializationProxy#File Object
-       |scala.meta.inputs.Input.Stream.SerializationProxy#File.SerializationProxy#VirtualFile Class
+       |scala.meta.inputs.Input.File Class
+       |scala.meta.inputs.Input.File Object
+       |scala.meta.inputs.Input.VirtualFile Class
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
        |sourcecode.File Class
@@ -149,8 +149,8 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.math.Ordering.ExtraImplicits Interface
        |scala.math.Ordering.Implicits Object
        |scala.meta.internal.fastparse.core.Implicits Object
-       |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits1 Interface
-       |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
+       |scala.tools.nsc.interpreter.Power#Implicits1 Interface
+       |scala.tools.nsc.interpreter.Power#Implicits2 Interface
        |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Interface
