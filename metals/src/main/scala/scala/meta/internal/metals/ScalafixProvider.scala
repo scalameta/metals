@@ -48,12 +48,8 @@ case class ScalafixProvider(
         val tmp = AbsolutePath(Files.createTempFile("metals", ".scala"))
         tmp.writeText("object Main{}\n")
         for (target <- targets)
-          scalafixEvaluate(
-            tmp,
-            target.scalaVersion,
-            target.scalaBinaryVersion,
-            target.fullClasspath
-          )
+          scalafixEvaluate(tmp, target)
+
         tmp.delete()
       } catch {
         case e: Throwable =>
@@ -79,13 +75,7 @@ case class ScalafixProvider(
       Future.successful(Nil)
     } else {
       compilations.compilationFinished(file).flatMap { _ =>
-        val scalaBinaryVersion = scalaTarget.scalaBinaryVersion
-        val scalafixEvaluation = scalafixEvaluate(
-          file,
-          scalaTarget.scalaVersion,
-          scalaBinaryVersion,
-          scalaTarget.fullClasspath
-        )
+        val scalafixEvaluation = scalafixEvaluate(file, scalaTarget)
 
         scalafixEvaluation match {
           case Failure(exception) =>
@@ -132,18 +122,44 @@ case class ScalafixProvider(
   }
 
   private def scalafixConf: Option[Path] = {
-    val scalafixConfPath = userConfig().scalafixConfigPath
-      .getOrElse(workspace.resolve(".scalafix.conf"))
-    if (scalafixConfPath.isFile) Some(scalafixConfPath.toNIO)
-    else None
+    val defaultLocation = workspace.resolve(".scalafix.conf")
+    userConfig().scalafixConfigPath match {
+      case Some(path) if !path.isFile && defaultLocation.isFile =>
+        languageClient.showMessage(
+          MessageType.Warning,
+          s"No configuration at $path, using default at $defaultLocation."
+        )
+        Some(defaultLocation.toNIO)
+      case Some(path) if !path.isFile =>
+        languageClient.showMessage(
+          MessageType.Warning,
+          s"No configuration at $path, using Scalafix defaults."
+        )
+        None
+      case Some(path) => Some(path.toNIO)
+      case None if defaultLocation.isFile =>
+        Some(defaultLocation.toNIO)
+      case _ => None
+    }
   }
 
   private def scalafixEvaluate(
       file: AbsolutePath,
-      scalaVersion: String,
-      scalaBinaryVersion: String,
-      fullClasspath: java.util.List[Path]
+      scalaTarget: ScalaTarget
   ): Try[ScalafixEvaluation] = {
+    val scalaBinaryVersion = scalaTarget.scalaBinaryVersion
+
+    val targetRoot =
+      buildTargets.scalacOptions(scalaTarget.info.getId()).map {
+        scalacOptions =>
+          scalacOptions.targetroot(scalaTarget.scalaVersion).toNIO
+      }
+    val scalaVersion = scalaTarget.scalaVersion
+    // It seems that Scalafix ignores the targetroot parameter and searches the classpath
+    // Prepend targetroot to make sure that it's picked up first always
+    val classpath =
+      (targetRoot.toList ++ scalaTarget.fullClasspath.asScala).asJava
+
     for {
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
@@ -158,7 +174,7 @@ case class ScalafixProvider(
       api
         .newArguments()
         .withScalaVersion(scalaVersion)
-        .withClasspath(fullClasspath)
+        .withClasspath(classpath)
         .withToolClasspath(urlClassLoaderWithExternalRule)
         .withConfig(scalafixConf.asJava)
         .withRules(List(organizeImportRuleName).asJava)
