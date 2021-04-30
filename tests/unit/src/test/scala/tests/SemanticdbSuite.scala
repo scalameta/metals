@@ -45,12 +45,12 @@ abstract class SemanticdbSuite(
 class SemanticdbScala2Suite
     extends SemanticdbSuite(InputProperties.scala2(), "semanticdb")
 
-/**
- * There is a number of issues observed in Scala 3 that can be seen in the tests:
- * - extension methods https://github.com/lampepfl/dotty/issues/11690
- * - enums https://github.com/lampepfl/dotty/issues/11689
- * - anonymous givens https://github.com/lampepfl/dotty/issues/11692
- * - topelevel symbols https://github.com/lampepfl/dotty/issues/11693
- */
+    /**
+     * There is a number of issues observed in Scala 3 that can be seen in the tests:
+     * - extension methods https://github.com/lampepfl/dotty/issues/11690
+     * - enums https://github.com/lampepfl/dotty/issues/11689
+     * - anonymous givens https://github.com/lampepfl/dotty/issues/11692
+     * - topelevel symbols https://github.com/lampepfl/dotty/issues/11693
+     */
 class SemanticdbScala3Suite
     extends SemanticdbSuite(InputProperties.scala3(), "semanticdb-scala3")

@@ -23,16 +23,16 @@ trait OverrideCompletions { this: MetalsGlobal =>
       val detail: String
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
-  /**
-   * An `override def` completion to implement methods from the supertype.
-   *
-   * @param name the name of the method being completed including the `_CURSOR_` suffix.
-   * @param t the enclosing template for the class/object/trait we are implementing.
-   * @param pos the position of the completion request, points to `_CURSOR_`.
-   * @param text the text of the original source code without `_CURSOR_`.
-   * @param start the position start of the completion.
-   * @param isCandidate the determination of whether the symbol will be a possible completion item.
-   */
+      /**
+       * An `override def` completion to implement methods from the supertype.
+       *
+       * @param name the name of the method being completed including the `_CURSOR_` suffix.
+       * @param t the enclosing template for the class/object/trait we are implementing.
+       * @param pos the position of the completion request, points to `_CURSOR_`.
+       * @param text the text of the original source code without `_CURSOR_`.
+       * @param start the position start of the completion.
+       * @param isCandidate the determination of whether the symbol will be a possible completion item.
+       */
   case class OverrideCompletion(
       name: Name,
       t: Template,

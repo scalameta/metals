@@ -87,15 +87,16 @@ final case class Superscript(text: Inline) extends Inline
 final case class Subscript(text: Inline) extends Inline
 final case class Link(target: String, title: Inline) extends Inline
 final case class Monospace(text: Inline) extends Inline
-final case class Text(text: String) extends Inline
+final case class Text(text: String)
+    extends Inline
 
-/**
- * abstract class EntityLink(val title: Inline) extends Inline { def link: LinkTo }
- * object EntityLink {
- *  def apply(title: Inline, linkTo: LinkTo) = new EntityLink(title) { def link: LinkTo = linkTo }
- *  def unapply(el: EntityLink): Option[(Inline, LinkTo)] = Some((el.title, el.link))
- * }
- */
+    /**
+     * abstract class EntityLink(val title: Inline) extends Inline { def link: LinkTo }
+     * object EntityLink {
+     *  def apply(title: Inline, linkTo: LinkTo) = new EntityLink(title) { def link: LinkTo = linkTo }
+     *  def unapply(el: EntityLink): Option[(Inline, LinkTo)] = Some((el.title, el.link))
+     * }
+     */
 final case class HtmlTag(data: String) extends Inline {
   private val (isEnd, tagName) = data match {
     case HtmlTag.Pattern(s1, s2) =>

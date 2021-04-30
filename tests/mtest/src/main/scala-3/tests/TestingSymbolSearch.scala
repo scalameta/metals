@@ -1,6 +1,6 @@
 package tests
 
-import java.{util => ju}
+import java.util as ju
 import org.eclipse.lsp4j.Location
 import java.util.Optional
 import java.nio.file.Files
@@ -25,15 +25,13 @@ class TestingSymbolSearch(
     docs: Docstrings = Docstrings.empty,
     workspace: TestingWorkspaceSearch = TestingWorkspaceSearch.empty,
     index: GlobalSymbolIndex = null
-) extends SymbolSearch {
+) extends SymbolSearch:
 
-  override def documentation(symbol: String): Optional[SymbolDocumentation] = {
+  override def documentation(symbol: String): Optional[SymbolDocumentation] =
     Optional.empty()
-  }
 
-  override def definition(symbol: String, source: URI): ju.List[Location] = {
+  override def definition(symbol: String, source: URI): ju.List[Location] =
     new ju.LinkedList[Location]
-  }
 
   override def definitionSourceToplevels(
       symbol: String,
@@ -46,4 +44,3 @@ class TestingSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = SymbolSearch.Result.COMPLETE
-}

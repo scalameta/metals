@@ -19,27 +19,24 @@ import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.NameKinds.DefaultGetterName
 import dotty.tools.dotc.core.Flags
 
-trait Completions {
+trait Completions:
   def completionPosition(
       pos: SourcePosition,
       path: List[Tree]
-  )(using ctx: Context): List[Completion] = {
-    path match {
+  )(using ctx: Context): List[Completion] =
+    path match
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
         ArgCompletion(Some(ident), app, pos).contribute
       case (app: Apply) :: _ => // fun(@@)
         ArgCompletion(None, app, pos).contribute
       case _ =>
         Nil
-    }
-  }
-}
 
 case class ArgCompletion(
     ident: Option[Ident],
     apply: Apply,
     pos: SourcePosition
-)(using ctx: Context) {
+)(using ctx: Context):
   val method = apply.fun
   val methodSym = method.symbol
 
@@ -81,42 +78,35 @@ case class ArgCompletion(
     }
     .toSet
 
-  val allParams: List[Symbol] = {
+  val allParams: List[Symbol] =
     baseParams.filterNot(param =>
       isNamed(param.name) ||
         param.denot.is(
           Flags.Synthetic
         ) // filter out synthesized param, like evidence
     )
-  }
 
   val prefix = ident.map(_.name.toString).getOrElse("")
   val params: List[Symbol] =
     allParams.filter(param => param.name.startsWith(prefix))
 
-  def contribute: List[Completion] = {
+  def contribute: List[Completion] =
     val printer = SymbolPrinter()
-    params.map(p => {
+    params.map { p =>
       Completion(
         s"${p.name.toString} = ",
         printer.typeString(p.info),
         List(p)
       )
-    })
-  }
+    }
 
-  private def isUselessLiteral(arg: Tree): Boolean = {
-    arg match {
+  private def isUselessLiteral(arg: Tree): Boolean =
+    arg match
       case Literal(Constant(())) => true // unitLiteral
       case Literal(Constant(null)) => true // nullLiteral
       case _ => false
-    }
-  }
 
-  private def collectArgss(a: Apply): List[List[Tree]] = {
-    a.fun match {
+  private def collectArgss(a: Apply): List[List[Tree]] =
+    a.fun match
       case app: Apply => collectArgss(app) :+ a.args
       case _ => List(a.args)
-    }
-  }
-}

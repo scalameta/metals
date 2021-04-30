@@ -10,11 +10,11 @@ import java.io.OutputStreamWriter
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.net.URI
-import java.{util => ju}
+import java.util as ju
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.io.Codec
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.language.implicitConversions
 import org.eclipse.lsp4j.Diagnostic
@@ -38,22 +38,22 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.DiagnosticSeverity
 
 import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.core.Flags
-import dotty.tools.dotc.core.SymDenotations._
-import dotty.tools.dotc.core.NameOps._
-import dotty.tools.dotc.core.NameKinds._
-import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.SymDenotations.*
+import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.NameKinds.*
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.printing.PlainPrinter
-import dotty.tools.dotc.printing.Texts._
+import dotty.tools.dotc.printing.Texts.*
 import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.transform.SymUtils._
+import dotty.tools.dotc.transform.SymUtils.*
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.Spans
@@ -66,7 +66,7 @@ import dotty.tools.io.VirtualFile
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.mtags.BuildInfo
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.pc.VirtualFileParams
@@ -85,15 +85,15 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
 ) extends PresentationCompiler
-    with Completions {
+    with Completions:
 
   def this() = this(Nil, Nil)
 
-  import InteractiveDriver._
+  import InteractiveDriver.*
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
-  val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] = {
+  val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] =
     Scala3CompilerAccess(
       config,
       sh,
@@ -101,9 +101,8 @@ case class ScalaPresentationCompiler(
     )(
       using ec
     )
-  }
 
-  def newDriver: InteractiveDriver = {
+  def newDriver: InteractiveDriver =
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
     val settings =
@@ -112,9 +111,8 @@ case class ScalaPresentationCompiler(
           File.pathSeparator
         ) :: Nil
     new InteractiveDriver(settings)
-  }
 
-  def complete(params: OffsetParams): CompletableFuture[CompletionList] = {
+  def complete(params: OffsetParams): CompletableFuture[CompletionList] =
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
       params.token
@@ -126,7 +124,7 @@ case class ScalaPresentationCompiler(
 
       val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
-      val items = driver.compilationUnits.get(uri) match {
+      val items = driver.compilationUnits.get(uri) match
         case Some(unit) =>
           val path =
             Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
@@ -148,15 +146,13 @@ case class ScalaPresentationCompiler(
               completionItems(item, history, idx)(using newctx)
           }
         case None => Nil
-      }
 
       new CompletionList(
         items.asJava
       )
     }
-  }
 
-  def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
+  def definition(params: OffsetParams): CompletableFuture[DefinitionResult] =
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
@@ -175,15 +171,12 @@ case class ScalaPresentationCompiler(
         definitions.flatMap(d => location(d.namePos(using ctx))).asJava
       )
     }
-  }
 
-  def shutdown(): Unit = {
+  def shutdown(): Unit =
     compilerAccess.shutdown()
-  }
 
-  def restart(): Unit = {
+  def restart(): Unit =
     compilerAccess.shutdownCurrentCompiler()
-  }
 
   def diagnosticsForDebuggingPurposes(): ju.List[String] =
     List[String]().asJava
@@ -191,7 +184,7 @@ case class ScalaPresentationCompiler(
   def semanticdbTextDocument(
       filename: URI,
       code: String
-  ): CompletableFuture[Array[Byte]] = {
+  ): CompletableFuture[Array[Byte]] =
     compilerAccess.withNonInterruptableCompiler(
       Array.empty[Byte],
       EmptyCancelToken
@@ -200,17 +193,15 @@ case class ScalaPresentationCompiler(
       val provider = SemanticdbTextDocumentProvider(driver, workspace)
       provider.textDocument(filename, code)
     }
-  }
 
   // TODO NOT IMPLEMENTED
   def completionItemResolve(
       item: CompletionItem,
       symbol: String
-  ): CompletableFuture[CompletionItem] = {
+  ): CompletableFuture[CompletionItem] =
     CompletableFuture.completedFuture(
       null
     )
-  }
 
   // TODO NOT IMPLEMENTED
   def autoImports(
@@ -218,29 +209,26 @@ case class ScalaPresentationCompiler(
       params: scala.meta.pc.OffsetParams
   ): CompletableFuture[
     ju.List[scala.meta.pc.AutoImportsResult]
-  ] = {
+  ] =
     CompletableFuture.completedFuture(
       List.empty[scala.meta.pc.AutoImportsResult].asJava
     )
-  }
 
   // TODO NOT IMPLEMENTED
   def implementAbstractMembers(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] = {
+  ): CompletableFuture[ju.List[TextEdit]] =
     CompletableFuture.completedFuture(
       List.empty[TextEdit].asJava
     )
-  }
 
   // TODO NOT IMPLEMENTED
   override def insertInferredType(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] = {
+  ): CompletableFuture[ju.List[TextEdit]] =
     CompletableFuture.completedFuture(
       List.empty[TextEdit].asJava
     )
-  }
 
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
     compilerAccess.withNonInterruptableCompiler(
@@ -259,10 +247,10 @@ case class ScalaPresentationCompiler(
       val tp = Interactive.enclosingType(trees, pos)(using ctx)
       val tpw = tp.widenTermRefExpr(using ctx)
 
-      if (tp.isError(using ctx) || tpw == NoType || tpw.isError(using ctx))
+      if tp.isError(using ctx) || tpw == NoType || tpw.isError(using ctx) then
         ju.Optional.empty()
-      else {
-        Interactive.enclosingSourceSymbols(path, pos)(using ctx) match {
+      else
+        Interactive.enclosingSourceSymbols(path, pos)(using ctx) match
           case Nil =>
             ju.Optional.empty()
           case symbols =>
@@ -276,12 +264,12 @@ case class ScalaPresentationCompiler(
               )
             }
             val typeString = symbols.headOption.map { symbol =>
-              tpw match {
+              tpw match
                 // https://github.com/lampepfl/dotty/issues/8891
                 case _: ImportType =>
                   printer.typeString(symbol.paramRef(using ctx))
                 case _ =>
-                  driver.compilationUnits.get(uri) match {
+                  driver.compilationUnits.get(uri) match
                     case Some(unit) =>
                       val newctx =
                         ctx.fresh.setCompilationUnit(unit)
@@ -294,8 +282,6 @@ case class ScalaPresentationCompiler(
                       val history = new ShortenedNames(context)
                       printer.infoString(symbol, history, tpw)(using context)
                     case None => printer.typeString(tpw)
-                  }
-              }
             }
             val content = hoverContent(
               keywordName,
@@ -303,20 +289,17 @@ case class ScalaPresentationCompiler(
               docComments
             )(using ctx)
             ju.Optional.of(new Hover(content))
-        }
-      }
     }
 
   def newInstance(
       buildTargetIdentifier: String,
       classpath: ju.List[Path],
       options: ju.List[String]
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     new ScalaPresentationCompiler(
       classpath = classpath.asScala.toSeq,
       options = options.asScala.toList
     )
-  }
 
   def signatureHelp(params: OffsetParams): CompletableFuture[SignatureHelp] =
     compilerAccess.withNonInterruptableCompiler(
@@ -353,7 +336,7 @@ case class ScalaPresentationCompiler(
 
   override def didChange(
       params: VirtualFileParams
-  ): CompletableFuture[ju.List[Diagnostic]] = {
+  ): CompletableFuture[ju.List[Diagnostic]] =
     compilerAccess.withNonInterruptableCompiler(
       Nil.asJava,
       params.token
@@ -362,59 +345,51 @@ case class ScalaPresentationCompiler(
       val uri = params.uri
       CompilerInterfaces.parseErrors(driver, uri, params.text)
     }
-  }
 
-  override def didClose(uri: URI): Unit = {
+  override def didClose(uri: URI): Unit =
     compilerAccess.withNonInterruptableCompiler(
       (),
       EmptyCancelToken
-    ) { access => access.compiler().close(uri) }
-  }
+    )(access => access.compiler().close(uri))
 
   override def withExecutorService(
       executorService: ExecutorService
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     copy(ec = ExecutionContext.fromExecutorService(executorService))
-  }
 
   override def withConfiguration(
       config: PresentationCompilerConfig
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     copy(config = config)
-  }
 
   override def withScheduledExecutorService(
       sh: ScheduledExecutorService
   ): PresentationCompiler =
     copy(sh = Some(sh))
 
-  def withSearch(search: SymbolSearch): PresentationCompiler = {
+  def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
-  }
 
-  def withWorkspace(workspace: Path): PresentationCompiler = {
+  def withWorkspace(workspace: Path): PresentationCompiler =
     copy(workspace = Some(workspace))
-  }
 
-  private def location(p: SourcePosition): Option[Location] = {
-    for {
+  private def location(p: SourcePosition): Option[Location] =
+    for
       uri <- toUriOption(p.source)
       r <- range(p)
-    } yield new Location(uri.toString, r)
-  }
+    yield new Location(uri.toString, r)
 
   private def sourcePosition(
       driver: InteractiveDriver,
       params: OffsetParams,
       uri: URI
-  ): SourcePosition = {
+  ): SourcePosition =
     val source = driver.openedFiles(uri)
     val p = Spans.Span(params.offset)
     new SourcePosition(source, p)
-  }
 
-  private def range(p: SourcePosition): Option[Range] = {
-    if (p.exists) {
+  private def range(p: SourcePosition): Option[Range] =
+    if p.exists then
       Some(
         new Range(
           new Position(
@@ -424,16 +399,13 @@ case class ScalaPresentationCompiler(
           new Position(p.endLine, p.endColumn)
         )
       )
-    } else {
-      None
-    }
-  }
+    else None
 
   private def completionItems(
       completion: Completion,
       history: ShortenedNames,
       idx: Int
-  )(using Context): List[CompletionItem] = {
+  )(using Context): List[CompletionItem] =
     val printer = SymbolPrinter()(using ctx)
 
     /**
@@ -445,31 +417,23 @@ case class ScalaPresentationCompiler(
      *
      * @param sym The symbol for completion item.
      */
-    def detailString(sym: Symbol): String = {
-      if (sym.isClass || sym.is(Module)) {
+    def detailString(sym: Symbol): String =
+      if sym.isClass || sym.is(Module) then
         val printer = SymbolPrinter()
         s" ${printer.fullNameString(sym.owner)}"
-      } else {
+      else
         printer.infoString(sym, history, sym.info.widenTermRefExpr)(using ctx)
-      }
-    }
 
     def completionItemKind(
         sym: Symbol
-    )(using ctx: Context): CompletionItemKind = {
-      if (sym.is(Package) || sym.is(Module))
+    )(using ctx: Context): CompletionItemKind =
+      if sym.is(Package) || sym.is(Module) then
         CompletionItemKind.Module // No CompletionItemKind.Package (https://github.com/Microsoft/language-server-protocol/issues/155)
-      else if (sym.isConstructor)
-        CompletionItemKind.Constructor
-      else if (sym.isClass)
-        CompletionItemKind.Class
-      else if (sym.is(Mutable))
-        CompletionItemKind.Variable
-      else if (sym.is(Method))
-        CompletionItemKind.Method
-      else
-        CompletionItemKind.Field
-    }
+      else if sym.isConstructor then CompletionItemKind.Constructor
+      else if sym.isClass then CompletionItemKind.Class
+      else if sym.is(Mutable) then CompletionItemKind.Variable
+      else if sym.is(Method) then CompletionItemKind.Method
+      else CompletionItemKind.Field
 
     completion.symbols.map { sym =>
       // For overloaded signatures we get multiple symbols, so we need
@@ -480,17 +444,16 @@ case class ScalaPresentationCompiler(
       val description = detailString(sym)
 
       val ident = completion.label
-      val label = kind match {
+      val label = kind match
         case CompletionItemKind.Method =>
-          s"${ident}${description}"
+          s"$ident$description"
         case CompletionItemKind.Variable | CompletionItemKind.Field =>
-          s"${ident}: ${description}"
+          s"$ident: $description"
         case _ => ident
-      }
 
       val item = new CompletionItem(label)
 
-      item.setSortText(f"${idx}%05d")
+      item.setSortText(f"$idx%05d")
 
       item.setDetail(description)
       item.setFilterText(completion.label)
@@ -498,22 +461,19 @@ case class ScalaPresentationCompiler(
       item.setInsertText(completion.label)
       val documentation = ParsedComment.docOf(sym)
 
-      if (documentation.nonEmpty) {
+      if documentation.nonEmpty then
         item.setDocumentation(hoverContent(None, None, documentation.toList))
-      }
-      if (sym.isDeprecated) {
+      if sym.isDeprecated then
         item.setTags(List(CompletionItemTag.Deprecated).asJava)
-      }
       item.setKind(completionItemKind(sym))
       item
     }
-  }
 
   private def hoverContent(
       keywordName: Option[String],
       typeInfo: Option[String],
       comments: List[ParsedComment]
-  )(using ctx: Context): MarkupContent = {
+  )(using ctx: Context): MarkupContent =
     val buf = new StringBuilder
     typeInfo.foreach { info =>
       val keyName = keywordName.getOrElse("")
@@ -522,35 +482,32 @@ case class ScalaPresentationCompiler(
                     |```
                     |""".stripMargin)
     }
-    comments.foreach { comment => buf.append(comment.renderAsMarkdown) }
+    comments.foreach(comment => buf.append(comment.renderAsMarkdown))
 
     markupContent(buf.toString)
-  }
 
-  private def markupContent(content: String): MarkupContent = {
-    if (content.isEmpty) null
-    else {
+  private def markupContent(content: String): MarkupContent =
+    if content.isEmpty then null
+    else
       val markup = new MarkupContent
       markup.setKind("markdown")
       markup.setValue(content.trim)
       markup
-    }
-  }
 
   def signatureToSignatureInformation(
       signature: Signatures.Signature
-  ): SignatureInformation = {
+  ): SignatureInformation =
     val paramInfoss =
       signature.paramss.map(_.map(paramToParameterInformation))
     val paramLists = signature.paramss
       .map { paramList =>
         val labels = paramList.map(_.show)
-        val prefix = if (paramList.exists(_.isImplicit)) "implicit " else ""
+        val prefix = if paramList.exists(_.isImplicit) then "implicit " else ""
         labels.mkString(prefix, ", ", "")
       }
       .mkString("(", ")(", ")")
     val tparamsLabel =
-      if (signature.tparams.isEmpty) ""
+      if signature.tparams.isEmpty then ""
       else signature.tparams.mkString("[", ", ", "]")
     val returnTypeLabel = signature.returnType.map(t => s": $t").getOrElse("")
     val label = s"${signature.name}$tparamsLabel$paramLists$returnTypeLabel"
@@ -559,19 +516,16 @@ case class ScalaPresentationCompiler(
     sig.setParameters(paramInfoss.flatten.asJava)
     documentation.foreach(sig.setDocumentation(_))
     sig
-  }
 
   /**
    * Convert `param` to `ParameterInformation`
    */
   private def paramToParameterInformation(
       param: Signatures.Param
-  ): ParameterInformation = {
+  ): ParameterInformation =
     val documentation = param.doc.map(markupContent)
     val info = new ParameterInformation(param.show)
     documentation.foreach(info.setDocumentation(_))
     info
-  }
 
   override def isLoaded() = compilerAccess.isLoaded()
-}

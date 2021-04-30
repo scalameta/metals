@@ -1,58 +1,49 @@
 package scala.meta.internal.pc
 
-import java.{util => ju}
+import java.util as ju
 
 import collection.mutable.ListBuffer
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.NameKinds.EvidenceParamName
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 
-import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Flags.*
 
-class ShortenedNames(context: Context) {
+class ShortenedNames(context: Context):
   val history = collection.mutable.Map.empty[Name, ShortName]
 
-  def lookupSymbol(short: ShortName): Type = {
+  def lookupSymbol(short: ShortName): Type =
     context.findRef(short.name)
-  }
 
-  def tryShortenName(short: ShortName)(using Context): Boolean = {
-    history.get(short.name) match {
+  def tryShortenName(short: ShortName)(using Context): Boolean =
+    history.get(short.name) match
       case Some(ShortName(_, other)) => true
       case None =>
         val foundTpe = lookupSymbol(short)
         val syms = List(foundTpe.termSymbol, foundTpe.typeSymbol)
-        val isOk = syms.filter(_ != NoSymbol) match {
+        val isOk = syms.filter(_ != NoSymbol) match
           case Nil => false
           case founds => founds.exists(_ == short.symbol)
-        }
-        if (isOk) {
+        if isOk then
           history(short.name) = short
           true
-        } else {
-          false
-        }
-    }
-  }
+        else false
 
   def tryShortenName(name: Option[ShortName])(using Context): Boolean =
-    name match {
+    name match
       case Some(short) => tryShortenName(short)
       case None => false
-    }
-}
 
 case class ShortName(
     name: Name,
     symbol: Symbol
 )
-object ShortName {
+object ShortName:
   def apply(sym: Symbol)(using ctx: Context): ShortName =
     ShortName(sym.name, sym)
-}
 
 /**
  * Shorten the long (fully qualified) type to shorter representation, so printers
@@ -68,21 +59,21 @@ object ShortName {
  */
 def shortType(longType: Type, history: ShortenedNames)(using
     ctx: Context
-): Type = {
+): Type =
   val isVisited = collection.mutable.Set.empty[(Type, Option[ShortName])]
   val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
 
-  def loop(tpe: Type, name: Option[ShortName]): Type = {
+  def loop(tpe: Type, name: Option[ShortName]): Type =
     val key = tpe -> name
     // NOTE: Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
-    if (isVisited(key)) return cached.getOrDefault(key, tpe)
+    if isVisited(key) then return cached.getOrDefault(key, tpe)
     isVisited += key
-    val result = tpe match {
+    val result = tpe match
       case TypeRef(prefix, designator) =>
         // designator is not necessarily an instance of `Symbol` and it's an instance of `Name`
         // this can be seen, for example, when we are shortening the signature of 3rd party APIs.
         val sym =
-          if (designator.isInstanceOf[Symbol])
+          if designator.isInstanceOf[Symbol] then
             designator.asInstanceOf[Symbol]
           else tpe.typeSymbol
         val short = ShortName(sym)
@@ -90,15 +81,15 @@ def shortType(longType: Type, history: ShortenedNames)(using
 
       case TermRef(prefix, designator) =>
         val sym =
-          if (designator.isInstanceOf[Symbol])
+          if designator.isInstanceOf[Symbol] then
             designator.asInstanceOf[Symbol]
           else tpe.termSymbol
         val short = ShortName(sym)
-        if (history.tryShortenName(name)) NoPrefix
+        if history.tryShortenName(name) then NoPrefix
         else TermRef(loop(prefix, None), sym)
 
       case ThisType(tyref) =>
-        if (history.tryShortenName(name)) NoPrefix
+        if history.tryShortenName(name) then NoPrefix
         else ThisType.raw(loop(tyref, None).asInstanceOf[TypeRef])
 
       case mt @ MethodTpe(pnames, ptypes, restpe) if mt.isImplicitMethod =>
@@ -134,10 +125,7 @@ def shortType(longType: Type, history: ShortenedNames)(using
       case or @ OrType(tp1, tp2) =>
         OrType(loop(tp1, None), loop(tp2, None), or.isSoft)
       case t => t
-    }
 
     cached.putIfAbsent(key, result)
     result
-  }
   loop(longType, None)
-}

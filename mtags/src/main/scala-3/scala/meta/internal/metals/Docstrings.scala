@@ -4,7 +4,7 @@ import java.util.Optional
 import java.util.logging.Level
 import java.util.logging.Logger
 import scala.collection.concurrent.TrieMap
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Language
@@ -21,7 +21,7 @@ import scala.meta.io.AbsolutePath
  *
  * Handles both javadoc and scaladoc. TODO Not implemented for Scala 3
  */
-class Docstrings(index: GlobalSymbolIndex) {
+class Docstrings(index: GlobalSymbolIndex):
   val cache = new TrieMap[String, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
@@ -36,8 +36,5 @@ class Docstrings(index: GlobalSymbolIndex) {
 
   private def indexSymbolDefinition(defn: SymbolDefinition): Unit = {}
 
-}
-
-object Docstrings {
+object Docstrings:
   def empty: Docstrings = new Docstrings(null)
-}
