@@ -342,7 +342,7 @@ val mtagsSettings = List(
     else
       crossSetting(
         scalaVersion.value,
-        if211 = List("com.lihaoyi" %% "pprint" % "0.6.4"),
+        if211 = List("com.lihaoyi" %% "pprint" % "0.6.5"),
         ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.2"),
         if3 = List(
           ("com.lihaoyi" %% "pprint" % "0.6.2")
