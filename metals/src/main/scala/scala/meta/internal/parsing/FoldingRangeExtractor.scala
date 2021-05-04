@@ -164,16 +164,11 @@ final class FoldingRangeExtractor(
           } yield pos
 
         case c: Case =>
-          val isLastCase = c.parent.exists(_.children.lastOption.contains(c))
           val startingPoint = c.cond.getOrElse(c.pat)
-          val bodyEnd = c.body.pos.end
-
+          val bodyEnd = c.body.pos.end + 1
           for {
             token <- startingPoint.findFirstTrailing(_.is[Token.RightArrow])
-            end =
-              if (isLastCase) bodyEnd + 1
-              else bodyEnd // last case does not span until the closing bracket
-            pos <- range(tree.pos.input, token.pos.end, end)
+            pos <- range(tree.pos.input, token.pos.end, bodyEnd)
           } yield pos
 
         case term: Term.Try => // range for the `catch` clause

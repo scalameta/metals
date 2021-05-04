@@ -8,6 +8,7 @@ class A{
         println()
         println()
         println()
+        println()
       case 3 =>
         println()
       case _ => println()
@@ -23,6 +24,7 @@ class A{
       case 0 =>
       case 1 => println()
       case 2 =>
+        println()
         println()
         println()
         println()
