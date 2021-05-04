@@ -8,6 +8,7 @@ class A>>region>>{
         println()
         println()
         println()
+        println()
 <<region<<      case 3 =>
         println()
       case _ => println()
@@ -23,6 +24,7 @@ class A>>region>>{
       case 0 =>
       case 1 => println()
       case 2 =>>>region>>
+        println()
         println()
         println()
         println()
