@@ -25,7 +25,7 @@ class CompletionProvider(
     search: SymbolSearch,
     buildTargetIdentifier: String,
     completionPos: CompletionPos,
-    namesInScope: Map[SimpleName, Symbol],
+    namesInScope: Map[String, Symbol],
     path: List[Tree]
 ) {
   implicit val context: Context = ctx

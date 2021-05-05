@@ -80,6 +80,7 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
+import java.util.concurrent.Future
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -173,7 +174,8 @@ case class ScalaPresentationCompiler(
                 idx,
                 autoImportsGen,
                 completionPos,
-                path
+                path,
+                namesInScope
               )(using newctx)
           }
           val isIncomplete = searchResult match {
@@ -477,7 +479,8 @@ case class ScalaPresentationCompiler(
       idx: Int,
       autoImports: AutoImportsGen,
       completionPos: CompletionPos,
-      path: List[Tree]
+      path: List[Tree],
+      namesInScope: Map[String, Symbol]
   )(using Context): List[CompletionItem] = {
     val printer = SymbolPrinter()(using ctx)
 
@@ -529,23 +532,37 @@ case class ScalaPresentationCompiler(
       val description = detailString(sym)
 
       def mkItem(
-          label: String,
+          ident: String,
           value: String,
+          isFromWorkspace: Boolean = false,
           additionalEdits: List[TextEdit] = Nil
       ): CompletionItem = {
+
+        val label = 
+          kind match {
+            case CompletionItemKind.Method =>
+              s"${ident}${description}"
+            case CompletionItemKind.Variable | CompletionItemKind.Field =>
+              s"${ident}: ${description}"
+            case CompletionItemKind.Module | CompletionItemKind.Class =>
+              if (isFromWorkspace)
+                s"${ident} -${description}"
+              else
+                s"${ident}${description}"
+            case _ =>
+              ident
+          }
         val item = new CompletionItem(label)
 
         item.setSortText(f"${idx}%05d")
         item.setDetail(description)
         item.setFilterText(rawCompletion.label)
 
-        if (value != completionPos.query) {
-          val edit = new TextEdit(
-            editRange,
-            value
-          )
-          item.setTextEdit(edit)
-        }
+        val textEdit = new TextEdit(
+          editRange,
+          value
+        )
+        item.setTextEdit(textEdit)
 
         item.setAdditionalTextEdits(additionalEdits.asJava)
 
@@ -562,33 +579,35 @@ case class ScalaPresentationCompiler(
         item
       }
 
+      def mkWorkspaceItem(
+        ident: String,
+        value: String,
+        additionalEdits: List[TextEdit] = Nil
+      ): CompletionItem =
+        mkItem(ident, value, isFromWorkspace = true, additionalEdits)
+
+
       val ident = rawCompletion.label
       completion match {
         case CompletionValue.Workspace(comp) =>
           path match {
             case (_: Ident) :: (_: Import) :: _ =>
-              mkItem(
-                s"${ident} -${description}",
+              mkWorkspaceItem(
+                ident,
                 sym.fullNameBackticked,
-                Nil
               )
-            case x =>
+            case _ =>
               autoImports.forSymbol(sym) match {
-                case Some((_, edits)) =>
-                  mkItem(s"${ident} -${description}", ident, edits)
+                case Some(edits) =>
+                  mkWorkspaceItem(ident, ident, edits)
                 case None =>
-                  mkItem(s"${ident}${description}", ident)
+                  if (namesInScope.get(sym.showName).exists(_ == sym))
+                    mkItem(ident, ident)
+                  else
+                    mkWorkspaceItem(ident, sym.fullNameBackticked)
               }
           }
-        case _ =>
-          kind match {
-            case CompletionItemKind.Method =>
-              mkItem(s"${ident}${description}", ident)
-            case CompletionItemKind.Variable | CompletionItemKind.Field =>
-              mkItem(s"${ident}: ${description}", ident)
-            case _ =>
-              mkItem(ident, ident)
-          }
+        case _ => mkItem(ident, ident)
       }
     }
   }

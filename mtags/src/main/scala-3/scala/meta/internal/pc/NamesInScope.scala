@@ -10,7 +10,7 @@ import dotty.tools.dotc.ast.tpd._
 
 object NamesInScope {
 
-  def lookup(tree: Tree)(using ctx: Context): Map[SimpleName, Symbol] = {
+  def lookup(tree: Tree)(using ctx: Context): Map[String, Symbol] = {
 
     def accessibleSymbols(site: Type, tpe: Type): List[Symbol] = {
       tpe.decls.toList.filter(sym =>
@@ -50,6 +50,6 @@ object NamesInScope {
         }
       }
 
-    (fromTree ++ fromImports).map { sym => (sym.name.toSimpleName, sym) }.toMap
+    (fromTree ++ fromImports).map { sym => (sym.showName, sym) }.toMap
   }
 }

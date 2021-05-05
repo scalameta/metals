@@ -39,12 +39,6 @@ object AutoImports {
      */
     case SpecifiedOwner(sym: Symbol)
 
-    /**
-     * Write a full name of symbol insead of importing it
-     * `Map -> (scala.collection.mutable.Map, None)`
-     */
-    case FullName(sym: Symbol)
-
   }
 
   object AutoImport {
@@ -70,7 +64,7 @@ object AutoImports {
       pos: SourcePosition,
       text: String,
       tree: Tree,
-      namesInScope: Map[SimpleName, Symbol],
+      namesInScope: Map[String, Symbol],
       config: PresentationCompilerConfig
   )(using ctx: Context): AutoImportsGen = {
 
@@ -88,25 +82,21 @@ object AutoImports {
   class AutoImportsGen(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
-      namesInScope: Map[SimpleName, Symbol],
+      namesInScope: Map[String, Symbol],
       renameConfig: Map[SimpleName, String]
   )(using ctx: Context) {
 
-    def forSymbol(symbol: Symbol): Option[(String, List[l.TextEdit])] = {
+    def forSymbol(symbol: Symbol): Option[List[l.TextEdit]] = {
       inferAutoImport(symbol).map { ai =>
         val importEdit = importEdits(List(ai), importPosition)
-        val ownerName = symbol.owner.fullName.show
-        val edits = ai match {
+        ai match {
           case _: AutoImport.Simple =>
             List(importEdit)
           case AutoImport.SpecifiedOwner(sym) =>
             List(specifyOwnerEdit(sym, sym.owner.showName), importEdit)
           case AutoImport.Renamed(sym, rename) =>
             List(specifyOwnerEdit(sym, rename), importEdit)
-          case AutoImport.FullName(sym) =>
-            List(fullNameEdit(sym))
         }
-        (ownerName, edits)
       }
     }
 
@@ -117,7 +107,7 @@ object AutoImports {
       )
 
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
-      namesInScope.get(symbol.name.toSimpleName) match {
+      namesInScope.get(symbol.showName) match {
         case None => Some(AutoImport.Simple(symbol))
         case Some(otherSym) =>
           val owner = symbol.owner
@@ -125,8 +115,6 @@ object AutoImports {
           renameConfig.get(simpleName) match {
             case Some(rename) =>
               Some(AutoImport.renamedOrSpecified(symbol, rename))
-            case _ if symbol != otherSym =>
-              Some(AutoImport.FullName(symbol))
             case _ => None
           }
       }
@@ -135,11 +123,6 @@ object AutoImports {
     private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit = {
       val name = symbol.showName
       new l.TextEdit(nameEditRange(name), s"$owner.$name")
-    }
-
-    private def fullNameEdit(symbol: Symbol): l.TextEdit = {
-      val name = symbol.showName
-      new l.TextEdit(nameEditRange(name), symbol.fullNameBackticked)
     }
 
     private def importEdits(
@@ -152,14 +135,11 @@ object AutoImports {
         else ""
 
       val formatted = values
-        .flatMap({
-          case AutoImport.Simple(sym) => Some(importName(sym))
-          case AutoImport.SpecifiedOwner(sym) => Some(importName(sym.owner))
+        .map({
+          case AutoImport.Simple(sym) => importName(sym)
+          case AutoImport.SpecifiedOwner(sym) => importName(sym.owner)
           case AutoImport.Renamed(sym, rename) =>
-            Some(
-              s"${importName(sym.owner.owner)}.{${sym.owner.nameBackticked} => $rename}"
-            )
-          case AutoImport.FullName(_) => None
+            s"${importName(sym.owner.owner)}.{${sym.owner.nameBackticked} => $rename}"
         })
         .map(selector => s"${indent}import $selector")
         .mkString(topPadding, "\n", "\n")
@@ -176,7 +156,7 @@ object AutoImports {
       @tailrec
       def toplevelClahes(sym: Symbol): Boolean = {
         if (sym.owner == NoSymbol || sym.owner.isRoot)
-          namesInScope.get(sym.name.toSimpleName).isDefined
+          namesInScope.get(sym.showName).isDefined
         else
           toplevelClahes(sym.owner)
       }

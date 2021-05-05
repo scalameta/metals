@@ -67,9 +67,9 @@ final class AutoImportsProvider(
 
       for {
         sym <- results
-        (name, edits) <- generator.forSymbol(sym)
+        edits <- generator.forSymbol(sym)
       } yield AutoImportsResultImpl(
-        name,
+        sym.owner.showFullName,
         edits.asJava
       )
 

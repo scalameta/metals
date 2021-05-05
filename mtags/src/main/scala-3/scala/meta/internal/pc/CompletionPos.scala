@@ -2,11 +2,11 @@ package scala.meta.internal.pc
 
 import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.util.SourcePosition
 
 import org.eclipse.{lsp4j => l}
 
 import scala.meta.internal.tokenizers.Chars
+import dotty.tools.dotc.util.SourcePosition
 
 enum CompletionKind {
   case Empty, Scope, Members
@@ -19,6 +19,7 @@ case class CompletionPos(
   query: String,
   cursorPos: SourcePosition
 ) {
+
 
   def toEditRange: l.Range = {
     def toPos(offset: Int) : l.Position = 
