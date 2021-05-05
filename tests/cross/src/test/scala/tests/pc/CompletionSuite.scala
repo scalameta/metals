@@ -1164,7 +1164,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   checkItems(
-    "scope-completions-empty-query".only,
+    "scope-completions-empty-query",
     s"""|class Foo {
         |  @@
         |}

@@ -16,6 +16,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import org.eclipse.{lsp4j => l}
 
 import scala.annotation.tailrec
+import java.nio.file.Files
 
 object AutoImports {
 

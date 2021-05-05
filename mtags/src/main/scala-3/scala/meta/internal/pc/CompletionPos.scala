@@ -4,7 +4,7 @@ import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.util.SourcePosition
 
-import org.eclipse.lsp4j as l
+import org.eclipse.{lsp4j => l}
 
 import scala.meta.internal.tokenizers.Chars
 

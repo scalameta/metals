@@ -30,15 +30,15 @@ class CompletionProvider(
 ) {
   implicit val context: Context = ctx
 
-  def completions(): List[CompletionValue] = {
+  def completions(): (List[CompletionValue], SymbolSearch.Result)  = {
     val (_, compilerCompletions) = Completion.completions(pos)
 
-    val completions = compilerCompletions.map(CompletionValue.Compiler(_)).filterInteresting()
+    val (completions, result) = compilerCompletions.map(CompletionValue.Compiler(_)).filterInteresting()
     val args = Completions.namedArgCompletions(pos, path)
      
-    (completions ++ args)
-      .sorted(completionOrdering)
-
+    val values = 
+      (completions ++ args).sorted(completionOrdering)
+    (values, result)
   }
 
   private def description(sym: Symbol): String = {
@@ -48,7 +48,7 @@ class CompletionProvider(
   
   private def enrichWithSymbolSearch(
       visit: CompletionValue => Boolean
-  ): Unit = {
+  ): Option[SymbolSearch.Result] = {
     val query = completionPos.query
     completionPos.kind match {
       case CompletionKind.Empty =>
@@ -58,10 +58,11 @@ class CompletionProvider(
           else if (sym.isPackageObject) Some(sym)
           else None
         )
-        filtered.map {sym => 
+        filtered.map { sym => 
           val completion = Completion(sym.showName, description(sym), List(sym))
-          // visit(CompletionValue.Scope(completion))
+          visit(CompletionValue.Scope(completion))
         }
+        Some(SymbolSearch.Result.INCOMPLETE)
       case CompletionKind.Scope =>
         val visitor = new CompilerSearchVisitor(
           query,
@@ -70,9 +71,8 @@ class CompletionProvider(
             visit(CompletionValue.Workspace(completion))
           }
         )
-        search.search(query, buildTargetIdentifier, visitor)
-          
-      case _ => 
+        Some(search.search(query, buildTargetIdentifier, visitor))
+      case _ => None
     }
   }
 
@@ -87,7 +87,7 @@ class CompletionProvider(
   }
 
   extension (l: List[CompletionValue]) {
-    def filterInteresting(): List[CompletionValue] = {
+    def filterInteresting(): (List[CompletionValue], SymbolSearch.Result) = {
       val isSeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
       def visit(head: CompletionValue): Boolean = {
@@ -112,8 +112,8 @@ class CompletionProvider(
       }
 
       l.foreach(visit)
-      enrichWithSymbolSearch(visit)
-      buf.result
+      val searchResult = enrichWithSymbolSearch(visit).getOrElse(SymbolSearch.Result.COMPLETE)
+      (buf.result, searchResult)
     }
   }
 

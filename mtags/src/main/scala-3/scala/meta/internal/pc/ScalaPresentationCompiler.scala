@@ -79,6 +79,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.SymbolSearch
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -130,14 +131,14 @@ case class ScalaPresentationCompiler(
 
       val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
-      val items = driver.compilationUnits.get(uri) match {
+      val (items, isIncomplete) = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
           val path =
             Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
           
           val completionPos = CompletionPos.infer(pos, params.text, path)(using ctx)
           val namesInScope = NamesInScope.lookup(unit.tpdTree)(using ctx)
-          val completions =
+          val (completions, searchResult) =
             CompletionProvider(
               pos,
               ctx.fresh.setCompilationUnit(unit),
@@ -164,7 +165,7 @@ case class ScalaPresentationCompiler(
             config
           )(using ctx)
 
-          completions.zipWithIndex.flatMap {
+          val items = completions.zipWithIndex.flatMap {
             case (item, idx) =>
               completionItems(
                 item,
@@ -175,10 +176,16 @@ case class ScalaPresentationCompiler(
                 path
               )(using newctx)
           }
-        case None => Nil
+          val isIncomplete = searchResult match {
+            case SymbolSearch.Result.COMPLETE => false
+            case SymbolSearch.Result.INCOMPLETE => true
+          }
+          (items, isIncomplete)
+        case None => (Nil, false)
       }
 
       new CompletionList(
+        isIncomplete,
         items.asJava
       )
     }
@@ -557,7 +564,7 @@ case class ScalaPresentationCompiler(
 
       val ident = rawCompletion.label
       completion match {
-        case CompletionValue.Workspace(_) =>
+        case CompletionValue.Workspace(comp) =>
           path match {
             case (_: Ident) :: (_: Import) :: _ =>
               mkItem(
