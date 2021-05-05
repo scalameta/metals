@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.collection.mutable
 import scala.meta.internal.pc.IdentifierComparator
 
+import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags._
@@ -22,48 +23,56 @@ class CompletionProvider(
     pos: SourcePosition,
     ctx: Context,
     search: SymbolSearch,
-    buildTargetIdentifier: String
+    buildTargetIdentifier: String,
+    completionPos: CompletionPos,
+    namesInScope: Map[SimpleName, Symbol],
+    path: List[Tree]
 ) {
   implicit val context: Context = ctx
 
   def completions(): List[CompletionValue] = {
-    val (offset, completions) = Completion.completions(pos)
-    val query = String(pos.source.content.slice(offset, pos.endPos.point))
+    val (_, compilerCompletions) = Completion.completions(pos)
 
-    completions
-      .map(CompletionValue.Compiler(_))
-      .filterInteresting(query)
-      .sorted(completionOrdering(pos, query))
+    val completions = compilerCompletions.map(CompletionValue.Compiler(_)).filterInteresting()
+    val args = Completions.namedArgCompletions(pos, path)
+     
+    (completions ++ args)
+      .sorted(completionOrdering)
+
   }
 
-  def log(s: String): Unit = {
-    java.nio.file.Files.write(
-      java.nio.file.Paths.get("/home/dos65/.metals_log_x"),
-      (s + "\n").getBytes,
-      java.nio.file.StandardOpenOption.CREATE,
-      java.nio.file.StandardOpenOption.WRITE,
-      java.nio.file.StandardOpenOption.APPEND,
-    )
+  private def description(sym: Symbol): String = {
+    if (sym.isType) sym.showFullName
+    else sym.info.widenTermRefExpr.show
   }
-
+  
   private def enrichWithSymbolSearch(
-      query: String,
       visit: CompletionValue => Boolean
   ): Unit = {
-    def description(sym: Symbol): String = {
-      if (sym.isType) sym.showFullName
-      else sym.info.widenTermRefExpr.show
-    }
-    if (!query.isEmpty) {
-      log(s"WS SEARCH: ${query}")
-      val visitor = new CompilerSearchVisitor(
-        query,
-        sym => {
-          val completion = Completion(sym.name.show, description(sym), List(sym))
-          visit(CompletionValue.Workspace(completion))
+    val query = completionPos.query
+    completionPos.kind match {
+      case CompletionKind.Empty =>
+        val filtered = namesInScope.values.flatMap(sym =>
+          if (sym.isRealMethod) Some(sym).filter(!_.isConstructor) 
+          else if (sym.isType) Option(sym.companionModule).filter(_ != NoSymbol)
+          else if (sym.isPackageObject) Some(sym)
+          else None
+        )
+        filtered.map {sym => 
+          val completion = Completion(sym.showName, description(sym), List(sym))
+          // visit(CompletionValue.Scope(completion))
         }
-      )
-      search.search(query, buildTargetIdentifier, visitor)
+      case CompletionKind.Scope =>
+        val visitor = new CompilerSearchVisitor(
+          query,
+          sym => {
+            val completion = Completion(sym.showName, description(sym), List(sym))
+            visit(CompletionValue.Workspace(completion))
+          }
+        )
+        search.search(query, buildTargetIdentifier, visitor)
+          
+      case _ => 
     }
   }
 
@@ -78,7 +87,7 @@ class CompletionProvider(
   }
 
   extension (l: List[CompletionValue]) {
-    def filterInteresting(query: String): List[CompletionValue] = {
+    def filterInteresting(): List[CompletionValue] = {
       val isSeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
       def visit(head: CompletionValue): Boolean = {
@@ -103,7 +112,7 @@ class CompletionProvider(
       }
 
       l.foreach(visit)
-      enrichWithSymbolSearch(query, visit)
+      enrichWithSymbolSearch(visit)
       buf.result
     }
   }
@@ -171,14 +180,13 @@ class CompletionProvider(
     nme.finalize_
   )
 
-  private def completionOrdering(
-      position: SourcePosition,
-      query: String
-  ): Ordering[CompletionValue] = new Ordering[CompletionValue] {
-    val queryLower = query.toLowerCase()
+  private def completionOrdering: Ordering[CompletionValue] = new Ordering[CompletionValue] {
+    val queryLower = completionPos.query.toLowerCase()
     val fuzzyCache = mutable.Map.empty[Symbol, Int]
-    def compareLocalSymbols(s1: Symbol, s2: Symbol): Int = {
-      if (s1.isLocal && s2.isLocal) {
+    def compareLocalSymbols(o1: CompletionValue, o2: CompletionValue): Int = {
+      val s1 = o1.value.sym
+      val s2 = o2.value.sym
+      if (s1.isLocal && s2.isLocal && !o1.isInstanceOf[CompletionValue.NamedArg] && !o2.isInstanceOf[CompletionValue.NamedArg]) {
         if (s1.srcPos.isAfter(s2.srcPos)) -1
         else 1
       } else {
@@ -196,40 +204,44 @@ class CompletionProvider(
       )
     }
     override def compare(o1: CompletionValue, o2: CompletionValue): Int = {
-      val s1 = o1.value.sym
-      val s2 = o2.value.sym
-      val byLocalSymbol = compareLocalSymbols(s1, s2)
-      if (byLocalSymbol != 0) byLocalSymbol
+      val byCompletion = o1.priority - o2.priority
+      if (byCompletion != 0) byCompletion
       else {
-        val byRelevance = Integer.compare(
-          computeRelevancePenalty(o1),
-          computeRelevancePenalty(o2)
-        )
-        if (byRelevance != 0) byRelevance
+        val s1 = o1.value.sym
+        val s2 = o2.value.sym
+        val byLocalSymbol = compareLocalSymbols(o1, o2)
+        if (byLocalSymbol != 0) byLocalSymbol
         else {
-          val byFuzzy = Integer.compare(
-            fuzzyScore(s1),
-            fuzzyScore(s2)
+          val byRelevance = Integer.compare(
+            computeRelevancePenalty(o1),
+            computeRelevancePenalty(o2)
           )
-          if (byFuzzy != 0) byFuzzy
+          if (byRelevance != 0) byRelevance
           else {
-            val byIdentifier = IdentifierComparator.compare(
-              s1.name.toString,
-              s2.name.toString
+            val byFuzzy = Integer.compare(
+              fuzzyScore(s1),
+              fuzzyScore(s2)
             )
-            if (byIdentifier != 0) byIdentifier
+            if (byFuzzy != 0) byFuzzy
             else {
-              val byOwner =
-                s1.owner.fullName.toString.compareTo(s2.owner.fullName.toString)
-              if (byOwner != 0) byOwner
+              val byIdentifier = IdentifierComparator.compare(
+                s1.name.toString,
+                s2.name.toString
+              )
+              if (byIdentifier != 0) byIdentifier
               else {
-                val byParamCount = Integer.compare(
-                  s1.typeParams.size,
-                  s2.typeParams.size
-                )
-                if (byParamCount != 0) byParamCount
+                val byOwner =
+                  s1.owner.fullName.toString.compareTo(s2.owner.fullName.toString)
+                if (byOwner != 0) byOwner
                 else {
-                  s1.show.compareTo(s2.show)
+                  val byParamCount = Integer.compare(
+                    s1.typeParams.size,
+                    s2.typeParams.size
+                  )
+                  if (byParamCount != 0) byParamCount
+                  else {
+                    s1.show.compareTo(s2.show)
+                  }
                 }
               }
             }

@@ -1132,7 +1132,6 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3.0" ->
         """|intNumber: Int
-           |int - scala.compiletime.ops
            |""".stripMargin
     )
   )
@@ -1163,4 +1162,14 @@ class CompletionSuite extends BaseCompletionSuite {
     """|max[T](x: T, y: T)(using Ordered[T]): T
        |""".stripMargin
   )
+
+  checkItems(
+    "scope-completions-empty-query".only,
+    s"""|class Foo {
+        |  @@
+        |}
+        |""".stripMargin,
+    _.nonEmpty
+  )
+
 }

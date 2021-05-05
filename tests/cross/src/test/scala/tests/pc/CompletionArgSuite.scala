@@ -275,8 +275,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(3),
     compat = Map(
       "3.0" ->
-        """|argument: Int
-           |argument = : Int
+        """|argument = : Int
+           |argument: Int
            |""".stripMargin
     )
   )
@@ -302,6 +302,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     compat = Map(
       "3.0" ->
         """|argument = : Int
+           |Calendar - java.util
            |""".stripMargin
     )
   )

@@ -360,7 +360,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "backtick",
+    "backtick".tag(IgnoreScala3),
     """package `type`
       |abstract class Foo {
       |  def backtick: Foo

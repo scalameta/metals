@@ -89,8 +89,7 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
-) extends PresentationCompiler
-    with Completions {
+) extends PresentationCompiler {
 
   def this() = this("", Nil, Nil)
 
@@ -135,15 +134,20 @@ case class ScalaPresentationCompiler(
         case Some(unit) =>
           val path =
             Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+          
+          val completionPos = CompletionPos.infer(pos, params.text, path)(using ctx)
+          val namesInScope = NamesInScope.lookup(unit.tpdTree)(using ctx)
           val completions =
             CompletionProvider(
               pos,
               ctx.fresh.setCompilationUnit(unit),
               search,
-              buildTargetIdentifier
+              buildTargetIdentifier,
+              completionPos,
+              namesInScope,
+              path
             )
-              .completions()
-          val metalsCompletions = namedArgCompletions(pos, path)(using ctx)
+            .completions()
 
           val newctx = ctx.fresh.setCompilationUnit(unit)
           val tpdPath =
@@ -156,19 +160,19 @@ case class ScalaPresentationCompiler(
             pos,
             params.text,
             unit.tpdTree,
+            namesInScope,
             config
           )(using ctx)
 
-          (completions ++ metalsCompletions).zipWithIndex.flatMap {
+          completions.zipWithIndex.flatMap {
             case (item, idx) =>
               completionItems(
                 item,
                 history,
                 idx,
                 autoImportsGen,
-                unit.tpdTree,
-                pos,
-                params.text
+                completionPos,
+                path
               )(using newctx)
           }
         case None => Nil
@@ -465,9 +469,8 @@ case class ScalaPresentationCompiler(
       history: ShortenedNames,
       idx: Int,
       autoImports: AutoImportsGen,
-      tree: Tree,
-      pos: SourcePosition,
-      text: String
+      completionPos: CompletionPos,
+      path: List[Tree]
   )(using Context): List[CompletionItem] = {
     val printer = SymbolPrinter()(using ctx)
 
@@ -508,7 +511,7 @@ case class ScalaPresentationCompiler(
 
     val rawCompletion = completion.value
 
-    val path = Interactive.pathTo(tree, pos.span)
+    val editRange = completionPos.toEditRange 
 
     rawCompletion.symbols.map { sym =>
       // For overloaded signatures we get multiple symbols, so we need
@@ -529,21 +532,9 @@ case class ScalaPresentationCompiler(
         item.setDetail(description)
         item.setFilterText(rawCompletion.label)
 
-        val start = inferIdentStart(pos, text, path)
-        val end = inferIdentEnd(pos, text)
-
-        val oldText = text.substring(start, end)
-        if (value != oldText) {
-          val editPos =
-            new Range(
-              new Position(
-                pos.source.offsetToLine(start),
-                pos.source.column(start)
-              ),
-              new Position(pos.source.offsetToLine(end), pos.source.column(end))
-            )
+        if (value != completionPos.query) {
           val edit = new TextEdit(
-            editPos,
+            editRange,
             value
           )
           item.setTextEdit(edit)
@@ -565,80 +556,34 @@ case class ScalaPresentationCompiler(
       }
 
       val ident = rawCompletion.label
-      kind match {
-        case CompletionItemKind.Method =>
-          mkItem(s"${ident}${description}", ident)
-        case CompletionItemKind.Variable | CompletionItemKind.Field =>
-          mkItem(s"${ident}: ${description}", ident)
-        case _ =>
-          completion match {
-            case CompletionValue.Workspace(_) =>
-              val path = Interactive.pathTo(tree, pos.span)
-              path match {
-                case (_: Ident) :: (_: Import) :: _ =>
-                  mkItem(
-                    s"${ident} -${description}",
-                    sym.fullNameBackticked,
-                    Nil
-                  )
-                case x =>
-                  autoImports.forSymbol(sym) match {
-                    case Some((_, edits)) =>
-                      mkItem(s"${ident} -${description}", ident, edits)
-                    case None =>
-                      mkItem(s"${ident}${description}", ident)
-                  }
+      completion match {
+        case CompletionValue.Workspace(_) =>
+          path match {
+            case (_: Ident) :: (_: Import) :: _ =>
+              mkItem(
+                s"${ident} -${description}",
+                sym.fullNameBackticked,
+                Nil
+              )
+            case x =>
+              autoImports.forSymbol(sym) match {
+                case Some((_, edits)) =>
+                  mkItem(s"${ident} -${description}", ident, edits)
+                case None =>
+                  mkItem(s"${ident}${description}", ident)
               }
+          }
+        case _ =>
+          kind match {
+            case CompletionItemKind.Method =>
+              mkItem(s"${ident}${description}", ident)
+            case CompletionItemKind.Variable | CompletionItemKind.Field =>
+              mkItem(s"${ident}: ${description}", ident)
             case _ =>
               mkItem(ident, ident)
           }
       }
     }
-  }
-
-  /**
-   * Returns the start offset of the identifier starting as the given offset position.
-   */
-  private def inferIdentStart(
-      pos: SourcePosition,
-      text: String,
-      path: List[Tree]
-  )(using Context): Int = {
-    def fallback: Int = {
-      var i = pos.point - 1
-      while (i >= 0 && Chars.isIdentifierPart(text.charAt(i))) {
-        i -= 1
-      }
-      i + 1
-    }
-    def loop(enclosing: List[Tree]): Int =
-      enclosing match {
-        case Nil => fallback
-        case head :: tl =>
-          if (!head.sourcePos.contains(pos)) loop(tl)
-          else {
-            head match {
-              case i: Ident => i.sourcePos.point
-              case Select(qual, _) if !qual.sourcePos.contains(pos) =>
-                head.sourcePos.point
-              case _ => fallback
-            }
-          }
-      }
-    loop(path)
-  }
-
-  /**
-   * Returns the end offset of the identifier starting as the given offset position.
-   */
-  private def inferIdentEnd(pos: SourcePosition, text: String)(using
-      Context
-  ): Int = {
-    var i = pos.point
-    while (i < text.length && Chars.isIdentifierPart(text.charAt(i))) {
-      i += 1
-    }
-    i
   }
 
   private def hoverContent(

@@ -121,3 +121,5 @@ case class ArgCompletion(
     }
   }
 }
+
+object Completions extends Completions

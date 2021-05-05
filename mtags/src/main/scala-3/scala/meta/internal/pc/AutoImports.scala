@@ -61,9 +61,19 @@ object AutoImports {
       tree: Tree,
       config: PresentationCompilerConfig
   )(using ctx: Context): AutoImportsGen = {
+    val namesInScope = NamesInScope.lookup(tree)
+    generator(pos, text, tree, namesInScope, config)
+  }
+
+  def generator(
+      pos: SourcePosition,
+      text: String,
+      tree: Tree,
+      namesInScope: Map[SimpleName, Symbol],
+      config: PresentationCompilerConfig
+  )(using ctx: Context): AutoImportsGen = {
 
     val importPos = autoImportPosition(pos, text, tree)
-    val namesInScope = NamesInScope.lookup(tree)
     val renameConfig: Map[SimpleName, String] =
       config.symbolPrefixes.asScala.map { (from, to) =>
         val fullName = from.stripSuffix("/").replace("/", ".")
