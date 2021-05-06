@@ -54,16 +54,6 @@ object AutoImports {
       pos: SourcePosition,
       text: String,
       tree: Tree,
-      config: PresentationCompilerConfig
-  )(using ctx: Context): AutoImportsGen = {
-    val namesInScope = NamesInScope.lookup(tree)
-    generator(pos, text, tree, namesInScope, config)
-  }
-
-  def generator(
-      pos: SourcePosition,
-      text: String,
-      tree: Tree,
       namesInScope: Map[String, Symbol],
       config: PresentationCompilerConfig
   )(using ctx: Context): AutoImportsGen = {
@@ -109,7 +99,7 @@ object AutoImports {
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
       namesInScope.get(symbol.showName) match {
         case None => Some(AutoImport.Simple(symbol))
-        case Some(otherSym) =>
+        case Some(otherSym) if otherSym != symbol =>
           val owner = symbol.owner
           val simpleName = owner.name.toSimpleName
           renameConfig.get(simpleName) match {
@@ -117,6 +107,7 @@ object AutoImports {
               Some(AutoImport.renamedOrSpecified(symbol, rename))
             case _ => None
           }
+        case _ => None
       }
     }
 

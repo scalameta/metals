@@ -19,7 +19,7 @@ class CompletionCrossLspSuite
     }
   }
 
-  test("basic-3".only) {
+  test("basic-3") {
     basicTest(V.scala3)
   }
 

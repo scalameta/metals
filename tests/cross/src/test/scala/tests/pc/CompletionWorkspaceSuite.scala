@@ -101,6 +101,58 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "import-conflict3",
+    """|package `import-conflict3`
+       |import java.util.concurrent.Future
+       |case class Foo(
+       |  name: Future@@
+       |)
+       |""".stripMargin,
+    """|package `import-conflict3`
+       |import java.util.concurrent.Future
+       |case class Foo(
+       |  name: scala.concurrent.Future
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "import-conflict4",
+    """|package `import-conflict4`
+       |import java.util.concurrent._
+       |case class Foo(
+       |  name: Future@@
+       |)
+       |""".stripMargin,
+    """|package `import-conflict4`
+       |import java.util.concurrent._
+       |case class Foo(
+       |  name: scala.concurrent.Future
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "import-no-conflict",
+    """|package `import-no-conflict`
+       |import java.util.concurrent.{Future => _, _}
+       |case class Foo(
+       |  name: Future@@
+       |)
+       |""".stripMargin,
+    """|package `import-no-conflict`
+       |import java.util.concurrent.{Future => _, _}
+       |import scala.concurrent.Future
+       |case class Foo(
+       |  name: Future
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
     "extends",
     """package pkg
       |object Main extends CompletableFutur@@

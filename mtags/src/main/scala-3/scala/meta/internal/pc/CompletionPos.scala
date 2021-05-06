@@ -3,9 +3,9 @@ package scala.meta.internal.pc
 import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
 
-import org.eclipse.{lsp4j => l}
-
 import scala.meta.internal.tokenizers.Chars
+
+import org.eclipse.{lsp4j => l}
 import dotty.tools.dotc.util.SourcePosition
 
 enum CompletionKind {
@@ -13,16 +13,15 @@ enum CompletionKind {
 }
 
 case class CompletionPos(
-  kind: CompletionKind,
-  start: Int,
-  end: Int,
-  query: String,
-  cursorPos: SourcePosition
+    kind: CompletionKind,
+    start: Int,
+    end: Int,
+    query: String,
+    cursorPos: SourcePosition
 ) {
 
-
   def toEditRange: l.Range = {
-    def toPos(offset: Int) : l.Position = 
+    def toPos(offset: Int): l.Position =
       new l.Position(
         cursorPos.source.offsetToLine(offset),
         cursorPos.source.column(offset)
@@ -35,9 +34,9 @@ case class CompletionPos(
 object CompletionPos {
 
   def infer(
-    cursorPos: SourcePosition,
-    text: String,
-    treePath: List[Tree]
+      cursorPos: SourcePosition,
+      text: String,
+      treePath: List[Tree]
   )(using Context): CompletionPos = {
     val start = inferIdentStart(cursorPos, text, treePath)
     val end = inferIdentEnd(cursorPos, text)
@@ -48,7 +47,6 @@ object CompletionPos {
       else if (prevIsDot) CompletionKind.Members
       else CompletionKind.Scope
 
-    
     CompletionPos(
       kind,
       start,
@@ -56,7 +54,7 @@ object CompletionPos {
       query,
       cursorPos
     )
-  } 
+  }
 
   /**
    * Returns the start offset of the identifier starting as the given offset position.
@@ -81,8 +79,7 @@ object CompletionPos {
           else {
             head match {
               case i: Ident => i.sourcePos.point
-              case Select(qual, _) if !qual.sourcePos.contains(pos) =>
-                head.sourcePos.point
+              case Select(qual, _) => qual.endPos.point + 1
               case _ => fallback
             }
           }
