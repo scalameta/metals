@@ -63,7 +63,7 @@ final class AutoImportsProvider(
 
     if (results.nonEmpty) {
       val pos = SourcePosition(unit.source, Spans.Span(params.offset))
-      val namesInScope = NamesInScope.lookup(tree)
+      val namesInScope = NamesInScope.build(tree)
       val generator =
         AutoImports.generator(pos, params.text, tree, namesInScope, config)
 

@@ -15,17 +15,17 @@ import dotty.tools.dotc.core.Flags._
 class ShortenedNames(context: Context) {
   val history = collection.mutable.Map.empty[Name, ShortName]
 
-  def lookupSymbols(short: ShortName)(using Context): List[Symbol] = {
-    val tpe = context.findRef(short.name)
-    List(tpe.termSymbol, tpe.typeSymbol).filter(_ != NoSymbol)
+  def lookupSymbol(short: ShortName): Type = {
+    context.findRef(short.name)
   }
 
   def tryShortenName(short: ShortName)(using Context): Boolean = {
     history.get(short.name) match {
       case Some(ShortName(_, other)) => true
       case None =>
-        val syms = lookupSymbols(short)
-        val isOk = syms match {
+        val foundTpe = lookupSymbol(short)
+        val syms = List(foundTpe.termSymbol, foundTpe.typeSymbol)
+        val isOk = syms.filter(_ != NoSymbol) match {
           case Nil => false
           case founds => founds.exists(_ == short.symbol)
         }

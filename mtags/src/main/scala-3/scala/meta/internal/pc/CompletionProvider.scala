@@ -25,7 +25,7 @@ class CompletionProvider(
     search: SymbolSearch,
     buildTargetIdentifier: String,
     completionPos: CompletionPos,
-    namesInScope: Map[String, Symbol],
+    namesInScope: NamesInScope,
     path: List[Tree]
 ) {
   implicit val context: Context = ctx
@@ -53,7 +53,7 @@ class CompletionProvider(
     val query = completionPos.query
     completionPos.kind match {
       case CompletionKind.Empty =>
-        val filtered = namesInScope.values.flatMap(sym =>
+        val filtered = namesInScope.scopeSymbols.flatMap(sym =>
           if (sym.isRealMethod) Some(sym).filter(!_.isConstructor)
           else if (sym.isType) Option(sym.companionModule).filter(_ != NoSymbol)
           else if (sym.isPackageObject) Some(sym)

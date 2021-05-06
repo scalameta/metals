@@ -54,7 +54,7 @@ object AutoImports {
       pos: SourcePosition,
       text: String,
       tree: Tree,
-      namesInScope: Map[String, Symbol],
+      namesInScope: NamesInScope,
       config: PresentationCompilerConfig
   )(using ctx: Context): AutoImportsGen = {
 
@@ -72,7 +72,7 @@ object AutoImports {
   class AutoImportsGen(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
-      namesInScope: Map[String, Symbol],
+      namesInScope: NamesInScope,
       renameConfig: Map[SimpleName, String]
   )(using ctx: Context) {
 
@@ -97,9 +97,9 @@ object AutoImports {
       )
 
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
-      namesInScope.get(symbol.showName) match {
-        case None => Some(AutoImport.Simple(symbol))
-        case Some(otherSym) if otherSym != symbol =>
+      namesInScope.lookupSym(symbol) match {
+        case NamesInScope.Result.Missing => Some(AutoImport.Simple(symbol))
+        case NamesInScope.Result.Conflict =>
           val owner = symbol.owner
           val simpleName = owner.name.toSimpleName
           renameConfig.get(simpleName) match {
@@ -107,7 +107,7 @@ object AutoImports {
               Some(AutoImport.renamedOrSpecified(symbol, rename))
             case _ => None
           }
-        case _ => None
+        case NamesInScope.Result.InScope => None
       }
     }
 
@@ -147,7 +147,7 @@ object AutoImports {
       @tailrec
       def toplevelClahes(sym: Symbol): Boolean = {
         if (sym.owner == NoSymbol || sym.owner.isRoot)
-          namesInScope.get(sym.showName).isDefined
+          namesInScope.lookupSym(sym).exists
         else
           toplevelClahes(sym.owner)
       }

@@ -6,6 +6,9 @@ package scala.meta.internal.mtags
 // Original author: Li Haoyi
 trait KeywordWrapper {
 
+  private val blockCommentStart = "/*"
+  private val lineCommentStart = "//"
+
   def keywords: Set[String]
 
   final def needsBacktick(s: String): Boolean = {
@@ -33,7 +36,9 @@ trait KeywordWrapper {
     val valid =
       validChunks &&
         firstLetterValid &&
-        !keywords.contains(s)
+        !keywords.contains(s) &&
+        !s.contains(blockCommentStart) &&
+        !s.contains(lineCommentStart)
 
     !valid
   }
@@ -55,7 +60,7 @@ object KeywordWrapper {
     "private", "protected", "return", "sealed", "super", "this", "throw",
     "trait", "try", "true", "type", "val", "var", "while", "with", "yield", "_",
     "macro", ":", ";", "=>", "=", "<-", "<:", "<%", ">:", "#", "@", "\u21d2",
-    "\u2190", "/*", "//"
+    "\u2190"
   )
 
   val Scala3Keywords: Set[String] = Set(
@@ -66,7 +71,7 @@ object KeywordWrapper {
     "trait", "true", "try", "type", "val", "var", "while", "with", "yield", ":",
     "=", "<-", "=>", "<:", ":>", "#", "@", "=>>", "?=>", "as", "derives", "end",
     "extension", "infix", "inline", "opaque", "open", "transparent", "using",
-    "|", "*", "+", "-", "/*", "//"
+    "|", "*", "+", "-"
   )
 
   class Scala2 extends KeywordWrapper {

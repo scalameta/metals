@@ -153,6 +153,24 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "imported-names-check1",
+    """|package `imported-names-check`
+       |import scala.concurrent.Future
+       |object A {
+       |  Await@@
+       |}
+       |""".stripMargin,
+    """|package `imported-names-check`
+       |import scala.concurrent.Future
+       |import scala.concurrent.Await
+       |object A {
+       |  Await
+       |}
+       |""".stripMargin,
+    filter = _ == "Await - scala.concurrent"
+  )
+
+  checkEdit(
     "extends",
     """package pkg
       |object Main extends CompletableFutur@@

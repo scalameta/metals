@@ -8,17 +8,40 @@ import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.ast.tpd._
-import dotty.tools.dotc.interactive.Completion.Completer
-import dotty.tools.dotc.interactive.Completion.Mode
-import scala.util.control.NonFatal
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
 import scala.annotation.tailrec
+
+case class NamesInScope(
+    values: Map[String, Symbol]
+) {
+
+  def lookupSym(sym: Symbol)(using Context): NamesInScope.Result = {
+    values.get(sym.showName) match {
+      case Some(existing) if sameSymbol(existing, sym) =>
+        NamesInScope.Result.InScope
+      case Some(_) => NamesInScope.Result.Conflict
+      case None => NamesInScope.Result.Missing
+    }
+  }
+
+  def scopeSymbols: List[Symbol] = values.values.toList
+
+  private def sameSymbol(s1: Symbol, s2: Symbol)(using Context): Boolean = {
+    s1 == s2 || s1.showFullName == s2.showFullName
+  }
+
+}
 
 object NamesInScope {
 
-  def lookup(tree: Tree)(using ctx: Context): Map[String, Symbol] = {
+  enum Result {
+    case InScope, Conflict, Missing
+    def exists: Boolean = this match {
+      case InScope | Conflict => true
+      case Missing => false
+    }
+  }
+
+  def build(tree: Tree)(using ctx: Context): NamesInScope = {
 
     def accessibleSymbols(site: Type, tpe: Type): List[Symbol] = {
       tpe.decls.toList.filter(sym =>
@@ -38,6 +61,10 @@ object NamesInScope {
       initial ++ fromPackageObjects
     }
 
+    def fromImport(site: Type, name: Name): List[Symbol] = {
+      site.member(name).alternatives.map(_.symbol)
+    }
+
     val fromTree =
       tree.typeOpt match {
         case site: NamedType if site.symbol.is(Package) =>
@@ -50,17 +77,27 @@ object NamesInScope {
       ctx.outersIterator.toList.flatMap { ctx =>
         Option(ctx.importInfo) match {
           case Some(imp) =>
-            allAccessibleSymbols(
-              imp.site,
-              sym => !imp.excluded.contains(sym.name.toTermName)
-            )
+            val fromWildCard =
+              if (imp.isWildcardImport) {
+                allAccessibleSymbols(
+                  imp.site,
+                  sym => !imp.excluded.contains(sym.name.toTermName)
+                )
+              } else Nil
+            val explicit =
+              imp.forwardMapping.toList
+                .map(_._2)
+                .filter(name => !imp.excluded.contains(name))
+                .flatMap(fromImport(imp.site, _))
+            fromWildCard ++ explicit
           case None =>
             List.empty
         }
       }
 
     val all = fromTree ++ fromImports ++ inspectImports(tree)
-    all.map { sym => (sym.showName, sym) }.toMap
+    val values = all.map { sym => (sym.showName, sym) }.toMap
+    NamesInScope(values)
   }
 
   /**

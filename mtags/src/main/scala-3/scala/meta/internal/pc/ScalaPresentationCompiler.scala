@@ -80,10 +80,6 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
-import java.util.concurrent.Future
-import java.nio.file.Files
-import java.io.StringWriter
-import java.io.PrintWriter
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -135,70 +131,57 @@ case class ScalaPresentationCompiler(
 
       val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
-      val brrr = driver.currentCtx.run.units.headOption
       val (items, isIncomplete) = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
-          try {
-            val path =
-              Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+          val path =
+            Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
 
-            val newctx = ctx.fresh.setCompilationUnit(unit)
-            val tpdPath =
-              Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
-                newctx
-              )
-            val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
-            val namesInScope =
-              NamesInScope.lookup(unit.tpdTree)(using locatedCtx)
-            val completionPos =
-              CompletionPos.infer(pos, params.text, path)(using newctx)
-            val (completions, searchResult) =
-              CompletionProvider(
-                pos,
-                ctx.fresh.setCompilationUnit(unit),
-                search,
-                buildTargetIdentifier,
-                completionPos,
-                namesInScope,
-                path
-              )
-                .completions()
-            val history = ShortenedNames(locatedCtx)
-            val autoImportsGen = AutoImports.generator(
+          val newctx = ctx.fresh.setCompilationUnit(unit)
+          val tpdPath =
+            Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+              newctx
+            )
+          val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
+          val namesInScope =
+            NamesInScope.build(unit.tpdTree)(using locatedCtx)
+          val completionPos =
+            CompletionPos.infer(pos, params.text, path)(using newctx)
+          val (completions, searchResult) =
+            CompletionProvider(
               pos,
-              params.text,
-              unit.tpdTree,
+              ctx.fresh.setCompilationUnit(unit),
+              search,
+              buildTargetIdentifier,
+              completionPos,
               namesInScope,
-              config
-            )(using ctx)
+              path
+            )
+              .completions()
+          val history = ShortenedNames(locatedCtx)
+          val autoImportsGen = AutoImports.generator(
+            pos,
+            params.text,
+            unit.tpdTree,
+            namesInScope,
+            config
+          )(using ctx)
 
-            val items = completions.zipWithIndex.flatMap { case (item, idx) =>
-              completionItems(
-                item,
-                history,
-                idx,
-                autoImportsGen,
-                completionPos,
-                path,
-                namesInScope
-              )(using newctx)
-            }
-            val isIncomplete = searchResult match {
-              case SymbolSearch.Result.COMPLETE => false
-              case SymbolSearch.Result.INCOMPLETE => true
-            }
-            (items, isIncomplete)
-          } catch {
-            case e: Throwable =>
-              val sw = new StringWriter()
-              val pw = new PrintWriter(sw)
-              e.printStackTrace(pw)
-              Files.write(
-                Paths.get("/home/dos65/metals222"),
-                sw.toString.getBytes
-              )
-              throw e
+          val items = completions.zipWithIndex.flatMap { case (item, idx) =>
+            completionItems(
+              item,
+              history,
+              idx,
+              autoImportsGen,
+              completionPos,
+              path,
+              namesInScope
+            )(using newctx)
           }
+          val isIncomplete = searchResult match {
+            case SymbolSearch.Result.COMPLETE => false
+            case SymbolSearch.Result.INCOMPLETE => true
+          }
+          (items, isIncomplete)
         case None => (Nil, false)
       }
 
@@ -265,7 +248,6 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  // TODO NOT IMPLEMENTED
   def autoImports(
       name: String,
       params: scala.meta.pc.OffsetParams
@@ -496,7 +478,7 @@ case class ScalaPresentationCompiler(
       autoImports: AutoImportsGen,
       completionPos: CompletionPos,
       path: List[Tree],
-      namesInScope: Map[String, Symbol]
+      namesInScope: NamesInScope
   )(using Context): List[CompletionItem] = {
     val printer = SymbolPrinter()(using ctx)
 
@@ -511,7 +493,7 @@ case class ScalaPresentationCompiler(
      */
     def detailString(sym: Symbol): String = {
       if (sym.isClass || sym.is(Module)) {
-        //val printer = SymbolPrinter()
+        val printer = SymbolPrinter()
         s" ${printer.fullNameString(sym.owner)}"
       } else {
         printer.infoString(sym, history, sym.info.widenTermRefExpr)(using ctx)
@@ -616,10 +598,11 @@ case class ScalaPresentationCompiler(
                 case Some(edits) =>
                   mkWorkspaceItem(ident, ident, edits)
                 case None =>
-                  if (namesInScope.get(sym.showName).exists(_ == sym))
-                    mkItem(ident, ident)
-                  else
-                    mkWorkspaceItem(ident, sym.fullNameBackticked)
+                  val r = namesInScope.lookupSym(sym)
+                  r match {
+                    case NamesInScope.Result.InScope => mkItem(ident, ident)
+                    case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
+                  }
               }
           }
         case _ => mkItem(ident, ident)
