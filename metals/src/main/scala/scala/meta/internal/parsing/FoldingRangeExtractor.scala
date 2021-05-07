@@ -30,10 +30,12 @@ final class FoldingRangeExtractor(
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
+    val tokens = tree.tokens
     if (span(tree.pos) > spanThreshold) {
       val newEnclosing = tree match {
         case Foldable(pos) if span(enclosing) - span(pos) > spanThreshold =>
-          distance.toRevised(pos.toLSP) match {
+          val adjusted = adjustEnd(pos, tokens)
+          distance.toRevised(adjusted.toLSP) match {
             case Some(revisedPos) =>
               val range = createRange(revisedPos)
               ranges.add(Region, range)
@@ -104,6 +106,22 @@ final class FoldingRangeExtractor(
     foldingRange.setStartCharacter(range.getStart.getCharacter)
     foldingRange.setEndCharacter(range.getEnd.getCharacter)
     foldingRange
+  }
+
+  /**
+   * Due to logic thats forcibly shifts position in `Foldable`
+   * `end` might point at `\r>>range.end<<\n`
+   * that causes problems on Windows (at least in tests)
+   */
+  private def adjustEnd(pos: Position, tokens: Tokens): Position = {
+    pos match {
+      case Position.None => pos
+      case Position.Range(input, start, end) =>
+        val adjusted =
+          if (input.chars(end - 1) == '\r') end + 1
+          else end
+        Position.Range(input, start, adjusted)
+    }
   }
 
   private def extractCommentRanges(
