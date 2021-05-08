@@ -5,9 +5,11 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
+import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
 import scala.meta.internal.metals.debug.NoTestsFoundException
 import scala.meta.internal.metals.debug.SemanticDbNotFoundException
 import scala.meta.internal.metals.debug.WorkspaceErrorsException
+import scala.meta.io.AbsolutePath
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -147,6 +149,41 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     } yield assertNoDiff(
       result.toString,
       WorkspaceErrorsException.toString()
+    )
+  }
+
+  test("invalid-env") {
+    val fakePath = workspace + "fake-path"
+
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Stuff extends App {
+           |  val veryHardCode = "wowza"
+           |  System.exit(0)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.didSave(mainPath)(identity)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugDiscoveryParams(
+            path = server.toPath(mainPath).toURI.toString,
+            runType = "run",
+            envFile = fakePath
+          ).toJson
+        )
+        .recover { case e: InvalidEnvFileException => e }
+    } yield assertNoDiff(
+      result.toString,
+      InvalidEnvFileException(AbsolutePath(fakePath)).toString()
     )
   }
 
