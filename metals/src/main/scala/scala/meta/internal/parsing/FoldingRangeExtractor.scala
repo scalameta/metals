@@ -30,12 +30,10 @@ final class FoldingRangeExtractor(
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
-    val tokens = tree.tokens
     if (span(tree.pos) > spanThreshold) {
       val newEnclosing = tree match {
         case Foldable(pos) if span(enclosing) - span(pos) > spanThreshold =>
-          val adjusted = adjustEnd(pos, tokens)
-          distance.toRevised(adjusted.toLSP) match {
+          distance.toRevised(pos.toLSP) match {
             case Some(revisedPos) =>
               val range = createRange(revisedPos)
               ranges.add(Region, range)
@@ -108,22 +106,6 @@ final class FoldingRangeExtractor(
     foldingRange
   }
 
-  /**
-   * Due to logic thats forcibly shifts position in `Foldable`
-   * `end` might point at `\r>>range.end<<\n`
-   * that causes problems on Windows (at least in tests)
-   */
-  private def adjustEnd(pos: Position, tokens: Tokens): Position = {
-    pos match {
-      case Position.None => pos
-      case Position.Range(input, start, end) =>
-        val adjusted =
-          if (input.chars(end - 1) == '\r') end + 1
-          else end
-        Position.Range(input, start, adjusted)
-    }
-  }
-
   private def extractCommentRanges(
       tokens: Iterator[Token],
       ranges: FoldingRanges
@@ -183,7 +165,15 @@ final class FoldingRangeExtractor(
 
         case c: Case =>
           val startingPoint = c.cond.getOrElse(c.pat)
-          val bodyEnd = c.body.pos.end + 1
+          val bodyEnd = {
+            c.body.pos match {
+              case Position.None => c.body.pos.end
+              case Position.Range(input, _, end) =>
+                val char = input.chars(end)
+                if (char == '\r') end + 2
+                else end + 1
+            }
+          }
           for {
             token <- startingPoint.findFirstTrailing(_.is[Token.RightArrow])
             pos <- range(tree.pos.input, token.pos.end, bodyEnd)
