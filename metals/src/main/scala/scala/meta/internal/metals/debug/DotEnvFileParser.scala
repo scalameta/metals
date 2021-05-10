@@ -40,12 +40,7 @@ object DotEnvFileParser {
     if (path.exists && path.isFile && path.toFile.canRead)
       Future(parse(FileIO.slurp(path, Charset.defaultCharset)))
     else
-      Future.failed(
-        new IllegalArgumentException(
-          s"Unable to open the specified .env file $path. " +
-            "Please make sure the file exists and is readable."
-        )
-      )
+      Future.failed(InvalidEnvFileException(path))
 
   def parse(content: String): Map[String, String] = {
     LineRegex
@@ -71,4 +66,10 @@ object DotEnvFileParser {
 
   private def unescape(s: String): String =
     s.replaceAll("""\\([^$])""", "$1")
+
+  case class InvalidEnvFileException(path: AbsolutePath)
+      extends Exception(
+        s"Unable to open the specified .env file ${path.toString()}. " +
+          "Please make sure the file exists and is readable."
+      )
 }

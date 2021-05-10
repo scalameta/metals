@@ -456,6 +456,8 @@ class DebugProvider(
           command = ClientCommands.RunDoctor.id
         )
       )
+    case e @ DotEnvFileParser.InvalidEnvFileException(_) =>
+      languageClient.showMessage(Messages.errorMessageParams(e.getMessage()))
   }
 
   private def parseSessionName(
