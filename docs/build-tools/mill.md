@@ -5,7 +5,7 @@ title: Mill
 
 Mill is a build tool developed by Li Haoyi in order to create something simpler
 and more intuitive than most of the other build tools today.  There is extensive
-documentation on the [Mill website](http://www.lihaoyi.com/mill/).
+documentation on the [Mill website](https://com-lihaoyi.github.io/mill/).
 
 ```scala mdoc:automatic-installation:Mill
 ```
