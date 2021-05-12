@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j => l}
@@ -24,18 +25,20 @@ object MtagsEnrichments
     def fullNameBackticked: String = {
       @tailrec
       def loop(acc: List[String], sym: Symbol): List[String] = {
-        if (sym == NoSymbol || sym.isRoot) acc
+        if (sym == NoSymbol || sym.isRoot || sym.isEmptyPackage) acc
         else if (sym.isPackageObject) loop(acc, sym.owner)
         else {
-          val v = KeywordWrapper.Scala3.backtickWrap(sym.showName)
+          val v = KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
           loop(v :: acc, sym.owner)
         }
       }
       loop(Nil, sym).mkString(".")
     }
 
+    def decodedName: String = sym.name.stripModuleClassSuffix.show
+
     def nameBackticked: String =
-      KeywordWrapper.Scala3.backtickWrap(sym.showName)
+      KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
   }
 
 }

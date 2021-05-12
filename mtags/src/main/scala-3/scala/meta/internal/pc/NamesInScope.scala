@@ -8,6 +8,9 @@ import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.ast.tpd._
+
+import scala.meta.internal.mtags.MtagsEnrichments._
+
 import scala.annotation.tailrec
 
 case class NamesInScope(
@@ -15,7 +18,7 @@ case class NamesInScope(
 ) {
 
   def lookupSym(sym: Symbol)(using Context): NamesInScope.Result = {
-    values.get(sym.showName) match {
+    values.get(sym.decodedName) match {
       case Some(existing) if sameSymbol(existing, sym) =>
         NamesInScope.Result.InScope
       case Some(_) => NamesInScope.Result.Conflict
@@ -26,7 +29,7 @@ case class NamesInScope(
   def scopeSymbols: List[Symbol] = values.values.toList
 
   private def sameSymbol(s1: Symbol, s2: Symbol)(using Context): Boolean = {
-    s1 == s2 || s1.showFullName == s2.showFullName
+    s1 == s2 || s1.fullNameBackticked == s2.fullNameBackticked
   }
 
 }
@@ -106,7 +109,7 @@ object NamesInScope {
       }
 
     val all = fromTree ++ fromImports ++ inspectImports(tree)
-    val values = all.map { sym => (sym.showName, sym) }.toMap
+    val values = all.map { sym => (sym.decodedName, sym) }.toMap
     NamesInScope(values)
   }
 
@@ -139,7 +142,7 @@ object NamesInScope {
                   case _ => Nil
                 }
               }
-              .map(_.showName)
+              .map(_.decodedName)
               .toSet
 
             val syms = selectors.flatMap { selector =>
@@ -151,7 +154,7 @@ object NamesInScope {
 
             val filtered = syms.filter(sym => {
               sym != NoSymbol && sym.isPublic && !excluded
-                .contains(sym.showName)
+                .contains(sym.decodedName)
             })
             filtered
           }

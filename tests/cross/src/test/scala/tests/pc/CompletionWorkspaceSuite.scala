@@ -579,4 +579,35 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent"
   )
+
+  checkEdit(
+    "parent-object-scala2".tag(IgnoreScala3),
+    """|object Main {
+       |  Implicits@@
+       |}
+       |""".stripMargin,
+    """|import scala.concurrent.ExecutionContext
+       |object Main {
+       |  ExecutionContext.Implicits
+       |}
+       |""".stripMargin,
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
+  )
+
+  // this test was intended to check that import is rendered correctly - without `$` symbol
+  // but it spotted the difference in scala2/scala3 `AutoImports` implementation
+  // this one might be removed / joined with `parent-object-scala2` in future
+  checkEdit(
+    "parent-object-scala3".tag(IgnoreScala2),
+    """|object Main {
+       |  Implicits@@
+       |}
+       |""".stripMargin,
+    """|import scala.concurrent.ExecutionContext.Implicits
+       |object Main {
+       |  Implicits
+       |}
+       |""".stripMargin,
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
+  )
 }
