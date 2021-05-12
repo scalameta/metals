@@ -596,16 +596,17 @@ case class ScalaPresentationCompiler(
             case _ =>
               autoImports.forSymbol(sym) match {
                 case Some(edits) =>
-                  mkWorkspaceItem(ident, ident, edits)
+                  mkWorkspaceItem(ident, ident.backticked, edits)
                 case None =>
                   val r = namesInScope.lookupSym(sym)
                   r match {
-                    case NamesInScope.Result.InScope => mkItem(ident, ident)
+                    case NamesInScope.Result.InScope =>
+                      mkItem(ident, ident.backticked)
                     case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
                   }
               }
           }
-        case _ => mkItem(ident, ident)
+        case _ => mkItem(ident, ident.backticked)
       }
     }
   }

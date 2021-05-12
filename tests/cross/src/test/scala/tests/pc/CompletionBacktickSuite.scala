@@ -19,6 +19,21 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
     )
   )
 
+  checkEdit(
+    "keyword-edit",
+    s"""|object Main {
+        |  val `type` = 42
+        |  Main.typ@@
+        |}
+        |""".stripMargin,
+    """|object Main {
+       |  val `type` = 42
+       |  Main.`type`
+       |}
+       |""".stripMargin,
+    filterText = "type"
+  )
+
   check(
     "space",
     s"""|object Main {

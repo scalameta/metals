@@ -41,4 +41,9 @@ object MtagsEnrichments
       KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
   }
 
+  extension (s: String) {
+    def backticked: String =
+      KeywordWrapper.Scala3.backtickWrap(s)
+  }
+
 }
