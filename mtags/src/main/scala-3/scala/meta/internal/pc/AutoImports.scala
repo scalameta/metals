@@ -16,7 +16,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import org.eclipse.{lsp4j => l}
 
 import scala.annotation.tailrec
-import java.nio.file.Files
+import dotty.tools.dotc.util.Spans
 
 object AutoImports {
 
@@ -135,12 +135,8 @@ object AutoImports {
         .map(selector => s"${indent}import $selector")
         .mkString(topPadding, "\n", "\n")
 
-      val pos =
-        new l.Range(
-          new l.Position(importPosition.offset, 0),
-          new l.Position(importPosition.offset, 0)
-        )
-      new l.TextEdit(pos, formatted)
+      val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLSP
+      new l.TextEdit(editPos, formatted)
     }
 
     private def importName(sym: Symbol): String = {
@@ -194,7 +190,7 @@ object AutoImports {
       lastPackageDef(None, tree).map { pkg =>
         val lastImportStatement =
           pkg.stats.takeWhile(_.isInstanceOf[Import]).lastOption
-        val (offset, padTop) = lastImportStatement match {
+        val (lineNumber, padTop) = lastImportStatement match {
           case Some(stm) => (stm.endPos.line + 1, false)
           case None =>
             val pos = pkg.pid.endPos
@@ -206,6 +202,7 @@ object AutoImports {
                 pos.line + 1
             (line, true)
         }
+        val offset = pos.source.lineToOffset(lineNumber)
         new AutoImportPosition(offset, text, padTop)
       }
     }
@@ -214,12 +211,13 @@ object AutoImports {
       ammoniteObjectBody(tree).map { tmpl =>
         val lastImportStatement =
           tmpl.body.takeWhile(_.isInstanceOf[Import]).lastOption
-        val (offset, padTop) = lastImportStatement match {
+        val (lineNumber, padTop) = lastImportStatement match {
           case Some(stm) => (stm.endPos.line + 1, false)
           case None =>
             // TODO tmpl.self.pos returns correct pos - need to adjust tests
             (0, true)
         }
+        val offset = pos.source.lineToOffset(lineNumber)
         new AutoImportPosition(offset, text, padTop)
       }
     }

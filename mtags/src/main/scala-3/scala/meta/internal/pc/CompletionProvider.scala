@@ -28,6 +28,7 @@ class CompletionProvider(
     namesInScope: NamesInScope,
     path: List[Tree]
 ) {
+
   implicit val context: Context = ctx
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) = {
