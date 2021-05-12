@@ -6,13 +6,14 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
-
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextEdit
+
+import scala.meta.dialects
 
 class MultilineStringFormattingProvider(
     buffers: Buffers,
@@ -225,7 +226,15 @@ class MultilineStringFormattingProvider(
           )
         ) indent(startToken, endToken, endIndex)
         else None
-      case _ => None
+      case _ => {
+          pprint.log(startPosition)
+          pprint.log(endPosition)
+          pprint.log(index)
+          pprint.log(text)
+          pprint.log(token)
+          pprint.log(newlineAdded)
+          None
+      }
     }
   }
 
@@ -302,7 +311,8 @@ class MultilineStringFormattingProvider(
   private def withToken(
       textId: TextDocumentIdentifier,
       sourceText: String,
-      range: Range
+      range: Range,
+      trees: Trees,
   )(
       fn: (
           StartPosition,
@@ -315,7 +325,7 @@ class MultilineStringFormattingProvider(
       val virtualFile = Input.VirtualFile(source.toString(), sourceText)
       val startPos = range.getStart.toMeta(virtualFile)
       val endPos = range.getEnd.toMeta(virtualFile)
-      val tokens = Trees.defaultTokenizerDialect(sourceText).tokenize.toOption
+      val tokens = trees.tokenized(virtualFile).toOption
       fn(startPos, endPos, tokens)
     } else Nil
   }
@@ -413,7 +423,8 @@ class MultilineStringFormattingProvider(
   }
 
   def format(
-      params: DocumentOnTypeFormattingParams
+      params: DocumentOnTypeFormattingParams,
+      trees: Trees
   ): List[TextEdit] = {
     val uri = params.getTextDocument().getUri().toAbsolutePath
     val enableStripMargin = userConfig().enableStripMarginOnTypeFormatting
@@ -425,9 +436,10 @@ class MultilineStringFormattingProvider(
       .get(uri)
       .map { sourceText =>
         val splitLines = sourceText.split('\n')
-        withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
+        withToken(doc, sourceText, range, trees) { (startPos, endPos, tokens) =>
           tokens match {
             case Some(tokens) =>
+              pprint.log("some token found")
               indentTokensOnTypeFormatting(
                 startPos,
                 endPos,
@@ -456,7 +468,8 @@ class MultilineStringFormattingProvider(
   }
 
   def format(
-      params: DocumentRangeFormattingParams
+      params: DocumentRangeFormattingParams,
+      trees: Trees
   ): List[TextEdit] = {
     val uri = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
@@ -464,8 +477,9 @@ class MultilineStringFormattingProvider(
     buffers
       .get(uri)
       .map { sourceText =>
+        pprint.log(sourceText)
         val splitLines = sourceText.split('\n')
-        withToken(doc, sourceText, range) { (startPos, endPos, tokens) =>
+        withToken(doc, sourceText, range, trees) { (startPos, endPos, tokens) =>
           tokens match {
             case Some(tokens) =>
               indentOnRangeFormatting(
@@ -477,7 +491,11 @@ class MultilineStringFormattingProvider(
                 range,
                 sourceText
               )
-            case None => Nil
+            case None => {
+              pprint.log(sourceText)
+              pprint.log(doc)
+              Nil
+            }
           }
         }
       }

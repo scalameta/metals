@@ -1366,7 +1366,7 @@ class MetalsLanguageServer(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      multilineStringFormattingProvider.format(params).asJava
+      multilineStringFormattingProvider.format(params, trees).asJava
     }
 
   @JsonRequest("textDocument/rangeFormatting")
@@ -1374,7 +1374,9 @@ class MetalsLanguageServer(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      multilineStringFormattingProvider.format(params).asJava
+      pprint.log("test")
+      pprint.log(params)
+      multilineStringFormattingProvider.format(params, trees).asJava
     }
 
   @JsonRequest("textDocument/prepareRename")
