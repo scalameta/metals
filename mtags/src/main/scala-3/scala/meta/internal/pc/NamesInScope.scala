@@ -41,6 +41,16 @@ object NamesInScope {
     }
   }
 
+  /**
+   * The implementation hints are taken from dotty:
+   *  https://github.com/lampepfl/dotty/blob/3ff472f42a911390e0ac31b7095079d7bd9c839c/compiler/src/dotty/tools/dotc/interactive/Completion.scala#L169
+   *
+   * Scope symbols might be obtained from current tree and by inspecting `ctx.importInfo`
+   * The important difference with original implementation is that we had to process `Import`
+   * stats from exising Tree(`inspectImports`).
+   * In some cases when source is incomplete `ctx.importInfo` doesn't reflect
+   * all exising imports (only virtual one like: `scala._`, `scala.Predef._`, `java.lang._`).
+   */
   def build(tree: Tree)(using ctx: Context): NamesInScope = {
 
     def accessibleSymbols(site: Type, tpe: Type): List[Symbol] = {
@@ -100,10 +110,6 @@ object NamesInScope {
     NamesInScope(values)
   }
 
-  /**
-   * @dos65 In theory all import names should be inspected using `ctx.importInfo`.
-   * However, in case if source can't be compiled `ctx.importInfo` contains only default imports from Predef.
-   */
   private def inspectImports(tree: Tree)(using Context): List[Symbol] = {
     @tailrec
     def lastPackageDef(
