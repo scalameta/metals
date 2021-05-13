@@ -128,6 +128,7 @@ class ExtractRenameMember(
             t match {
               case o: Defn.Object => o.name.value :: completePreName(o)
               case po: Pkg.Object => po.name.value :: completePreName(po)
+              case tmpl: Template => completePreName(tmpl)
               case _: Source => Nil
               case _ => Nil
             }
