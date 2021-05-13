@@ -356,6 +356,12 @@ object MetalsEnrichments
       }
     }
 
+    def move(newPath: AbsolutePath, sco: Option[StandardCopyOption]): Path = {
+      if (sco.nonEmpty)
+        Files.move(path.toNIO, newPath.toNIO, sco.get)
+      else Files.move(path.toNIO, newPath.toNIO)
+    }
+
     def createDirectories(): AbsolutePath =
       AbsolutePath(Files.createDirectories(path.dealias.toNIO))
 

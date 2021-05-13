@@ -100,6 +100,11 @@ object Messages {
     "Could not insert inferred type, please check the logs for more details or report an issue."
   )
 
+  val ExtractMemberDefinitionFailed = new MessageParams(
+    MessageType.Error,
+    "Could not extract the given definition, please check the logs for more details or report an issue."
+  )
+
   val ReloadProjectFailed = new MessageParams(
     MessageType.Error,
     "Reloading your project failed, no functionality will work. See the log for more details"

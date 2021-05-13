@@ -17,11 +17,15 @@ final class CodeActionProvider(
     scalafixProvider: ScalafixProvider,
     trees: Trees
 )(implicit ec: ExecutionContext) {
+
+  private val extractMemberAction = new ExtractRenameMember(buffers, trees)
+
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol(),
     new StringActions(buffers, trees),
+    extractMemberAction,
     new OrganizeImports(scalafixProvider, buildTargets),
     new InsertInferredType(trees, compilers)
   )
@@ -46,4 +50,14 @@ final class CodeActionProvider(
     Future.sequence(actions).map(_.flatten)
   }
 
+  def executeCommands(
+      codeActionCommandData: CodeActionCommandData,
+      token: CancelToken
+  ): Future[CodeActionCommandResult] = {
+    codeActionCommandData match {
+      case data: ExtractMemberDefinitionData =>
+        extractMemberAction.executeCommand(data)
+      case data => Future.failed(new IllegalArgumentException(data.toString))
+    }
+  }
 }
