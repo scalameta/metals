@@ -36,7 +36,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3.0" ->
         """|message = : => Any
            |Main arg1
-           |???: Nothing
+           |ArrayCharSequence(arrayOfChars: Array[Char]): ArrayCharSequence
            |""".stripMargin
     )
   )
@@ -56,7 +56,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3.0" ->
         """|message = : => Any
            |Main arg2
-           |???: Nothing
+           |ArrayCharSequence(arrayOfChars: Array[Char]): ArrayCharSequence
            |""".stripMargin
     )
   )
@@ -177,7 +177,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
       "3.0" ->
         """|suffix = : String
            |Main arg8
-           |???: Nothing
+           |ArrayCharSequence(arrayOfChars: Array[Char]): ArrayCharSequence
            |""".stripMargin
     )
   )

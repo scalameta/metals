@@ -132,6 +132,7 @@ class CompletionProvider(
     defn.Object_notify,
     defn.Object_notifyAll,
     defn.Object_notify,
+    defn.Predef_undefined,
     defn.ObjectClass.info.member(nme.wait_).symbol,
     // NOTE(olafur) IntelliJ does not complete the root package and without this filter
     // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`

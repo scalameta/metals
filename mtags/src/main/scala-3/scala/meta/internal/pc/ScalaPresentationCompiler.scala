@@ -475,7 +475,7 @@ case class ScalaPresentationCompiler(
       completion: CompletionValue,
       history: ShortenedNames,
       idx: Int,
-      autoImports: AutoImportsGen,
+      autoImports: AutoImportsGenerator,
       completionPos: CompletionPos,
       path: List[Tree],
       namesInScope: NamesInScope

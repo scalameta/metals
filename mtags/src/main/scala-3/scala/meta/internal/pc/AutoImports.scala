@@ -56,7 +56,7 @@ object AutoImports {
       tree: Tree,
       namesInScope: NamesInScope,
       config: PresentationCompilerConfig
-  )(using ctx: Context): AutoImportsGen = {
+  )(using ctx: Context): AutoImportsGenerator = {
 
     val importPos = autoImportPosition(pos, text, tree)
     val renameConfig: Map[SimpleName, String] =
@@ -66,10 +66,10 @@ object AutoImports {
         (pkg.name.toSimpleName, to.stripSuffix(".").stripSuffix("#"))
       }.toMap
 
-    new AutoImportsGen(pos, importPos, namesInScope, renameConfig)
+    new AutoImportsGenerator(pos, importPos, namesInScope, renameConfig)
   }
 
-  class AutoImportsGen(
+  class AutoImportsGenerator(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
       namesInScope: NamesInScope,
@@ -141,13 +141,13 @@ object AutoImports {
 
     private def importName(sym: Symbol): String = {
       @tailrec
-      def toplevelClahes(sym: Symbol): Boolean = {
+      def toplevelClashes(sym: Symbol): Boolean = {
         if (sym.owner == NoSymbol || sym.owner.isRoot)
           namesInScope.lookupSym(sym).exists
         else
-          toplevelClahes(sym.owner)
+          toplevelClashes(sym.owner)
       }
-      if (toplevelClahes(sym)) s"_root_.${sym.fullNameBackticked}"
+      if (toplevelClashes(sym)) s"_root_.${sym.fullNameBackticked}"
       else sym.fullNameBackticked
     }
   }
@@ -213,16 +213,16 @@ object AutoImports {
           tmpl.body.takeWhile(_.isInstanceOf[Import]).lastOption
         val (lineNumber, padTop) = lastImportStatement match {
           case Some(stm) => (stm.endPos.line + 1, false)
-          case None =>
-            // TODO tmpl.self.pos returns correct pos - need to adjust tests
-            (0, true)
+          case None => (tmpl.self.srcPos.line, false)
         }
         val offset = pos.source.lineToOffset(lineNumber)
         new AutoImportPosition(offset, text, padTop)
       }
     }
 
-    (if (pos.source.path.endsWith(".sc.scala")) forAmmoniteScript else None)
+    val path = pos.source.path
+    val ammonite = if (path.endsWith(".sc.scala")) forAmmoniteScript else None
+    ammonite
       .orElse(forScalaSource)
       .getOrElse(AutoImportPosition(0, 0, padTop = false))
   }

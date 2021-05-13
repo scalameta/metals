@@ -2,11 +2,17 @@ package scala.meta.internal.pc
 
 import dotty.tools.dotc.interactive.Completion
 
+/**
+ * That is a termporal emulation of `scala.tools.nsc.interactive.CompilerControl.Member`
+ * It's used in completions ordering.
+ * Curently it's done only by `source of completion` and far from begin ideal.
+ * Should be improved in future.
+ */
 enum CompletionValue {
-  case Workspace(v: Completion)
-  case Compiler(v: Completion)
   case NamedArg(v: Completion)
   case Scope(v: Completion)
+  case Workspace(v: Completion)
+  case Compiler(v: Completion)
 
   def value: Completion = this match {
     case Workspace(v) => v
