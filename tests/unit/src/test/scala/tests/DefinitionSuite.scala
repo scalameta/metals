@@ -35,7 +35,7 @@ abstract class DefinitionSuiteBase(
   override lazy val input: InputProperties = inputProps
 
   override def testCases(): List[ExpectTestCase] = {
-    val index = OnDemandSymbolIndex()
+    val index = OnDemandSymbolIndex.empty()
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
       index.addSourceFile(source.file, Some(source.sourceDirectory), dialect)

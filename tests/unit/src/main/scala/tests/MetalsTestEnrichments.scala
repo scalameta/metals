@@ -51,7 +51,7 @@ object MetalsTestEnrichments {
     }
   }
   implicit class XtensionTestBuildTargets(wsp: WorkspaceSymbolProvider) {
-    def indexWorkspace(): Unit = {
+    def indexWorkspace(dialect: m.Dialect): Unit = {
       val files = new WorkspaceSources(wsp.workspace)
       for {
         source <- files.all
@@ -59,7 +59,7 @@ object MetalsTestEnrichments {
       } {
         val input = source.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input) {
+        SemanticdbDefinition.foreach(input, dialect) {
           case defn @ SemanticdbDefinition(info, _, _) =>
             if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
               symbols += defn.toCached

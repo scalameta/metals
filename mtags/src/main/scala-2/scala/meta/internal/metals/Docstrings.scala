@@ -106,5 +106,5 @@ class Docstrings(index: GlobalSymbolIndex) {
 }
 
 object Docstrings {
-  def empty: Docstrings = new Docstrings(OnDemandSymbolIndex())
+  def empty: Docstrings = new Docstrings(OnDemandSymbolIndex.empty())
 }

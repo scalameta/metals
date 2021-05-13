@@ -12,7 +12,7 @@ object TestingWorkspaceSymbolProvider {
   def apply(
       workspace: AbsolutePath,
       statistics: StatisticsConfig = StatisticsConfig.default,
-      index: OnDemandSymbolIndex = OnDemandSymbolIndex(),
+      index: OnDemandSymbolIndex = OnDemandSymbolIndex.empty(),
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(

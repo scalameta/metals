@@ -37,7 +37,7 @@ class StandaloneSymbolSearch(
       isExcludedPackage
     )
 
-  private val index = OnDemandSymbolIndex()
+  private val index = OnDemandSymbolIndex.empty()
   sources.foreach(s =>
     index.addSourceJar(s, ScalaVersions.dialectForDependencyJar(s.filename))
   )

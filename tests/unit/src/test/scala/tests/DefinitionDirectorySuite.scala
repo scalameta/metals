@@ -6,7 +6,7 @@ import scala.meta.internal.mtags.Symbol
 
 class DefinitionDirectorySuite extends BaseSuite {
   test("basic") {
-    val index = OnDemandSymbolIndex()
+    val index = OnDemandSymbolIndex.empty()
     def assertDefinition(sym: String): Unit = {
       val definition = index.definition(Symbol(sym))
       if (definition.isEmpty) throw new NoSuchElementException(sym)

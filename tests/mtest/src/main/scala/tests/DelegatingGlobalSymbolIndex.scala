@@ -11,7 +11,7 @@ import scala.meta.io.AbsolutePath
  * Symbol index that delegates all methods to an underlying implementation
  */
 class DelegatingGlobalSymbolIndex(
-    var underlying: GlobalSymbolIndex = OnDemandSymbolIndex()
+    var underlying: GlobalSymbolIndex = OnDemandSymbolIndex.empty()
 ) extends GlobalSymbolIndex {
 
   def definitions(symbol: mtags.Symbol): List[SymbolDefinition] =

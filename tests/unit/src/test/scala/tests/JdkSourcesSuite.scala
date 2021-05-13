@@ -12,7 +12,7 @@ class JdkSourcesSuite extends BaseSuite {
 
   test("index-src.zip") {
     val jdk = JdkSources.getOrThrow()
-    val symbolIndex = OnDemandSymbolIndex()
+    val symbolIndex = OnDemandSymbolIndex.empty()
 
     symbolIndex.addSourceJar(jdk, dialects.Scala213)
 

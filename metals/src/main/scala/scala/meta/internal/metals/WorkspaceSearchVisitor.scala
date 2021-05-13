@@ -126,7 +126,7 @@ class WorkspaceSearchVisitor(
     } {
       isVisited += defn.path
       val input = defn.path.toInput
-      SemanticdbDefinition.foreach(input) { semanticDefn =>
+      SemanticdbDefinition.foreach(input, defn.dialect) { semanticDefn =>
         if (query.matches(semanticDefn.info)) {
           val uri = defn.path.toFileOnDisk(workspace).toURI.toString
           fromClasspath.add(semanticDefn.toLSP(uri))

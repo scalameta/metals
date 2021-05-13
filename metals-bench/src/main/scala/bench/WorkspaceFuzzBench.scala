@@ -2,6 +2,7 @@ package bench
 
 import java.util.concurrent.TimeUnit
 
+import scala.meta.dialects
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 
 import org.eclipse.lsp4j.SymbolInformation
@@ -23,7 +24,7 @@ class WorkspaceFuzzBench {
   @Setup
   def setup(): Unit = {
     symbols = TestingWorkspaceSymbolProvider(Corpus.akka())
-    symbols.indexWorkspace()
+    symbols.indexWorkspace(dialects.Scala213)
   }
 
   @Param(

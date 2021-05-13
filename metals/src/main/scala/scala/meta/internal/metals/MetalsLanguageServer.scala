@@ -2168,10 +2168,22 @@ class MetalsLanguageServer(
     try {
       val sourceToIndex0 = sourceToIndex(source, targetOpt)
       if (sourceToIndex0.exists) {
+        val dialect = {
+          val scalaVersion =
+            targetOpt
+              .flatMap(buildTargets.scalaInfo)
+              .map(_.getScalaVersion())
+              .getOrElse(
+                scalaVersionSelector.fallbackScalaVersion(
+                  source.isAmmoniteScript
+                )
+              )
+          ScalaVersions.dialectForScalaVersion(scalaVersion)
+        }
         val reluri = source.toIdeallyRelativeURI(sourceItem)
         val input = sourceToIndex0.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input) {
+        SemanticdbDefinition.foreach(input, dialect) {
           case SemanticdbDefinition(info, occ, owner) =>
             if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
               occ.range.foreach { range =>
@@ -2187,7 +2199,12 @@ class MetalsLanguageServer(
               !info.symbol.isPackage &&
               (owner.isPackage || source.isAmmoniteScript)
             ) {
-              definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
+              definitionIndex.addToplevelSymbol(
+                reluri,
+                source,
+                info.symbol,
+                dialect
+              )
             }
         }
         workspaceSymbols.didChange(source, symbols)
@@ -2416,7 +2433,8 @@ class MetalsLanguageServer(
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
     tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
-        definitionIndex.addIndexedSourceJar(path, toplevels)
+        val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
+        definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
       case None =>
         val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
         val toplevels = definitionIndex.addSourceJar(path, dialect)
@@ -2606,7 +2624,7 @@ class MetalsLanguageServer(
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
-    OnDemandSymbolIndex(
+    OnDemandSymbolIndex.empty(
       onError = {
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)

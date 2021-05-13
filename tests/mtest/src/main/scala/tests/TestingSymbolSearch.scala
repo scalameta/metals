@@ -28,7 +28,7 @@ class TestingSymbolSearch(
     classpath: ClasspathSearch = ClasspathSearch.empty,
     docs: Docstrings = Docstrings.empty,
     workspace: TestingWorkspaceSearch = TestingWorkspaceSearch.empty,
-    index: GlobalSymbolIndex = OnDemandSymbolIndex()
+    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()
 ) extends SymbolSearch {
   override def documentation(symbol: String): Optional[SymbolDocumentation] = {
     docs.documentation(symbol)
