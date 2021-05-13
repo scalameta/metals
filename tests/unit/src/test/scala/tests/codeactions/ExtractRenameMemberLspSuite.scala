@@ -54,6 +54,23 @@ class ExtractRenameMemberLspSuite
   )
 
   checkActionProduced(
+    "with-sealed-trait-in-object-no-codeAction",
+    """|package a
+       |
+       |case class A()
+       |
+       |object MyObject {
+       | sealed trait MySealedTrait
+       |}
+       |
+       |trait MyTrait
+       |case class <<B>>() extends MyTrait with MyObject.MySealedTrait
+       |
+       |""".stripMargin,
+    codeActionExpected = false
+  )
+
+  checkActionProduced(
     "extends-sealed-class-no-codeAction",
     """|package a
        |

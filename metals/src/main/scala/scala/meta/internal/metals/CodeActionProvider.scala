@@ -53,7 +53,7 @@ final class CodeActionProvider(
   def executeCommands(
       codeActionCommandData: CodeActionCommandData,
       token: CancelToken
-  )(implicit ec: ExecutionContext): Future[CodeActionCommandResult] = {
+  ): Future[CodeActionCommandResult] = {
     codeActionCommandData match {
       case data: ExtractMemberDefinitionData =>
         extractMemberAction.executeCommand(data)

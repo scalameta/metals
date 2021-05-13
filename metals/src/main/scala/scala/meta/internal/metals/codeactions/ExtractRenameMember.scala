@@ -120,9 +120,28 @@ class ExtractRenameMember(
     case _ => false
   }
 
-  private def sealedNames(tree: Tree): List[String] = tree.collect {
-    case node: Defn.Trait if isSealed(node) => node.name.value
-    case node: Defn.Class if isSealed(node) => node.name.value
+  private def sealedNames(tree: Tree): List[String] = {
+    def completeName(node: Member): String = {
+      def completePreName(node: Tree): List[String] = {
+        node.parent match {
+          case Some(t) =>
+            t match {
+              case o: Defn.Object => o.name.value :: completePreName(o)
+              case po: Pkg.Object => po.name.value :: completePreName(po)
+              case _: Source => Nil
+              case _ => completePreName(t)
+            }
+          case None => Nil
+        }
+      }
+
+      (node.name.value :: completePreName(node)).reverse.mkString(".")
+    }
+
+    tree.collect {
+      case node: Defn.Trait if isSealed(node) => completeName(node)
+      case node: Defn.Class if isSealed(node) => completeName(node)
+    }
   }
 
   private def notSealed(
@@ -135,12 +154,19 @@ class ExtractRenameMember(
     !memberExtendsSealed && !isSealed(member)
   }
 
+  private def names(t: Term): List[Term.Name] = {
+    t match {
+      case s: Term.Select => names(s.qual) :+ s.name
+      case n: Term.Name => n :: Nil
+    }
+  }
+
   private def newFileContent(
       tree: Tree,
       range: l.Range,
       member: Member,
       companion: Option[Member]
-  ): String = {
+  ): (String, Int) = {
     // List of sequential packages or imports before the member definition
     val packages: ListBuffer[Pkg] = ListBuffer()
     val imports: ListBuffer[Import] = ListBuffer()
@@ -161,22 +187,18 @@ class ExtractRenameMember(
 
     traverser(tree)
 
-    def names(t: Term): List[Term.Name] = {
-      t match {
-        case s: Term.Select => names(s.qual) :+ s.name
-        case n: Term.Name => n :: Nil
+    def mergeNames(ns: List[Term.Name]): Option[Term.Ref] = {
+      def merge(n1: Term.Ref, n2: Term.Name): Term.Select = n1 match {
+        case s: Term.Select => Term.Select(qual = s, name = n2)
+        case n: Term.Name => Term.Select(qual = n, name = n2)
       }
-    }
 
-    def merge(n1: Term.Ref, n2: Term.Name): Term.Select = n1 match {
-      case s: Term.Select => Term.Select(qual = s, name = n2)
-      case n: Term.Name => Term.Select(qual = n, name = n2)
-    }
-
-    def mergeNames(ns: List[Term.Name]): Option[Term.Ref] = ns match {
-      case Nil => None
-      case head :: Nil => Some(head)
-      case head :: second :: xs => Some(xs.foldLeft(merge(head, second))(merge))
+      ns match {
+        case Nil => None
+        case head :: Nil => Some(head)
+        case head :: second :: xs =>
+          Some(xs.foldLeft(merge(head, second))(merge))
+      }
     }
 
     val termNames = packages
@@ -191,9 +213,17 @@ class ExtractRenameMember(
       member.toString ::
       companion.map(_.toString).getOrElse("") :: Nil
 
-    structure
-      .filter(_.nonEmpty)
-      .mkString("\n\n")
+    val preDefinitionLines = pkg.toList.length + imports.length
+    val defnLine =
+      if (preDefinitionLines == 0) 0
+      else preDefinitionLines + 2 // empty line + defn line
+
+    (
+      structure
+        .filter(_.nonEmpty)
+        .mkString("\n\n"),
+      defnLine
+    )
   }
 
   private def parents(member: Member): List[String] = {
@@ -202,6 +232,10 @@ class ExtractRenameMember(
       t.inits.flatMap {
         _.tpe match {
           case Type.Name(value) => Some(value)
+          case t: Type.Select =>
+            Some(
+              (names(t.qual) :+ t.name).mkString(".")
+            )
           case _ => None
         }
       }
@@ -289,7 +323,7 @@ class ExtractRenameMember(
       definitions = membersDefinitions(tree)
       memberDefn <- definitions.find(_.name.pos.toLSP.overlapsWith(range))
       companion = definitions.find(isCompanion(memberDefn))
-      fileContent = newFileContent(
+      (fileContent, defnLine) = newFileContent(
         tree,
         range,
         memberDefn,
@@ -307,6 +341,9 @@ class ExtractRenameMember(
         companion
       )
       val newFileMemberRange = new l.Range()
+      val pos = new l.Position(defnLine, 0)
+      newFileMemberRange.setStart(pos)
+      newFileMemberRange.setEnd(pos)
       val workspaceEdit = new WorkspaceEdit(Map(uri -> edits.asJava).asJava)
       CodeActionCommandResult(
         new ApplyWorkspaceEditParams(workspaceEdit),
