@@ -287,7 +287,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
           Map(
             V.scala3 ->
               """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
-                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:13)
+                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:12)
                  |	at repl.MdocSession$.app(Main.worksheet.sc:3)
                  |
                  |throw new RuntimeException("boom")
@@ -415,7 +415,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |""".stripMargin,
           Map(
             V.scala3 ->
-              """|a/src/main/scala/a/Main.worksheet.sc:1:14: error: Found:    ("" : String)
+              """|a/src/main/scala/a/Main.worksheet.sc:1:14: error:
+                 |Found:    ("" : String)
                  |Required: Int
                  |val x: Int = ""
                  |             ^^
@@ -444,7 +445,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
               """|a/src/main/scala/a/Main.worksheet.sc:1:8: error: expression expected but val found
                  |def y = 
                  |       ^
-                 |a/src/main/scala/a/Main.worksheet.sc:2:14: error: Found:    ("" : String)
+                 |a/src/main/scala/a/Main.worksheet.sc:2:14: error:
+                 |Found:    ("" : String)
                  |Required: Int
                  |val x: Int = ""
                  |             ^^
@@ -569,7 +571,8 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |^
                  |""".stripMargin,
             V.scala3 ->
-              """|a/src/main/scala/Main.worksheet.sc:5:1: error: Found:    App.this.Structural
+              """|a/src/main/scala/Main.worksheet.sc:5:1: error:
+                 |Found:    App.this.Structural
                  |Required: Selectable
                  |new Foo().asInstanceOf[Structural].foo()
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

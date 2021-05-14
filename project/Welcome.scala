@@ -54,7 +54,7 @@ object Welcome {
     ),
     UsefulTask(
       "",
-      "++3.0.0-M2 mtags/publishLocal",
+      "++3.0.0 mtags/publishLocal",
       "publish changes for a single Scala version, especially useful if working on a feature inside mtags module." +
         " `publishLocal` will still need to be run before at least once."
     )

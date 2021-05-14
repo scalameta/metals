@@ -194,16 +194,10 @@ object Embedded {
       scalaVersion: String,
       scalaBinaryVersion: String
   ): Dependency = {
-    // Mdoc support for 0.27.0-RC1 was dropped with "2.2.11" and for 3.0.0-M1 with "2.12.13"
-    val mdocVersion =
-      if (scalaVersion == "0.27.0-RC1") "2.2.10"
-      else if (scalaVersion == "3.0.0-M1") "2.2.12"
-      else BuildInfo.mdocVersion
-
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
-      mdocVersion
+      BuildInfo.mdocVersion
     )
   }
 

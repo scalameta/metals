@@ -117,7 +117,7 @@ abstract class BasePCSuite extends BaseSuite {
   protected def requiresScalaLibrarySources: Boolean = false
 
   protected def isScala3Version(scalaVersion: String): Boolean = {
-    scalaVersion.startsWith("0.") || scalaVersion.startsWith("3.")
+    scalaVersion.startsWith("3.")
   }
 
   protected def createBinaryVersion(scalaVersion: String): String = {
