@@ -83,6 +83,8 @@ object ScalaVersions {
   def scalaBinaryVersionFromFullVersion(scalaVersion: String): String = {
     if (isScala3Milestone(scalaVersion))
       scalaVersion
+    else if (scalaVersion.startsWith("3"))
+      "3"
     else
       scalaVersion.split('.').take(2).mkString(".")
   }
@@ -93,7 +95,7 @@ object ScalaVersions {
       case "2.11" => Scala211
       case "2.12" => Scala212
       case "2.13" => Scala213
-      case version if version.startsWith("3.") => Scala3
+      case version if version.startsWith("3") => Scala3
       case _ => Scala213
     }
   }

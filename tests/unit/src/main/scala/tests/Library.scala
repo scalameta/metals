@@ -4,6 +4,7 @@ import scala.collection.JavaConverters._
 
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
@@ -28,15 +29,17 @@ object Library {
     fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")
 
   def scala3: Library = {
+    val binaryVersion =
+      ScalaVersions.scalaBinaryVersionFromFullVersion(BuildInfoVersions.scala3)
     val dependencies = List(
       Dependency.of(
         "org.scala-lang",
-        s"scala3-compiler_${BuildInfoVersions.scala3}",
+        s"scala3-compiler_$binaryVersion",
         BuildInfoVersions.scala3
       ),
       Dependency.of(
         "org.scala-lang",
-        s"scala3-library_${BuildInfoVersions.scala3}",
+        s"scala3-library_$binaryVersion",
         BuildInfoVersions.scala3
       )
     )

@@ -52,10 +52,7 @@ object MetalsPlugin extends AutoPlugin {
         val sdbOptions = semanticdbOptions.value
         (old.toVector ++ sdbOptions ++
           (if (ScalaInstance.isDotty(versionOfScala)) {
-             if (versionOfScala == "3.0.0-M1" || versionOfScala == "3.0.0-M2")
-               Some("-Ysemanticdb")
-             else
-               Some("-Xsemanticdb")
+             Some("-Xsemanticdb")
            } else None)).distinct
       }
     },
@@ -80,7 +77,7 @@ object MetalsPlugin extends AutoPlugin {
         old
       else
         (Seq(
-          s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
+          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}",
           s"-P:semanticdb:targetroot:$targetRoot",
           "-Yrangepos",
           // Needed for "find references" on implicits and `apply` methods.
