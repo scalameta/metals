@@ -27,7 +27,13 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.util
            |JList - javax.swing
            |""".stripMargin,
-      "3.0" -> "List: collection.immutable.List.type"
+      "3.0" ->
+        """|List: collection.immutable.List.type
+           |List - java.awt
+           |List - java.util
+           |List - scala.collection.immutable
+           |JList - javax.swing
+           |""".stripMargin
     ),
     topLines = Some(5)
   )
@@ -260,7 +266,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "fuzzy1".tag(IgnoreScala3),
+    "fuzzy1",
     """
       |object A {
       |  new PBuil@@
@@ -297,7 +303,10 @@ class CompletionSuite extends BaseCompletionSuite {
         """|TrieMap scala.collection.concurrent
            |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin,
-      "3.0" -> "TrieMap scala.collection.concurrent"
+      "3.0" ->
+        """|TrieMap scala.collection.concurrent
+           |TrieMapSerializationEnd scala.collection.concurrent
+           |""".stripMargin
     )
   )
 
@@ -340,7 +349,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import1".tag(IgnoreScala3),
+    "import1",
     """
       |import Paths@@
       |""".stripMargin,
@@ -349,7 +358,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import2".tag(IgnoreScala3),
+    "import2",
     """
       |import Catch@@
       |""".stripMargin,
@@ -358,7 +367,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import3".tag(IgnoreScala3),
+    "import3",
     """
       |import Path@@
       |""".stripMargin,
@@ -377,7 +386,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "accessible".tag(IgnoreScala3),
+    "accessible",
     """
       |package a
       |import MetaData@@
@@ -391,7 +400,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "source".tag(IgnoreScala3),
+    "source",
     """
       |package a
       |object Main {
@@ -444,10 +453,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """Files java.nio.file
       |Files - a.Outer
-      |""".stripMargin,
-    compat = Map(
-      "3.0" -> "Files java.nio.file"
-    )
+      |""".stripMargin
   )
 
   check(
@@ -812,7 +818,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "type",
     s"""|object Main {
         |  val foo: ListBuffe@@
         |}
@@ -822,7 +828,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "type1",
     s"""|object Main {
         |  val foo: Map[Int, ListBuffe@@]
         |}
@@ -857,7 +863,14 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3.0" ->
+        """|Some scala
+           |SomeToExpr[T: quoted.Type: quoted.ToExpr]: scala.quoted.ToExpr.SomeToExpr[T]
+           |SomeFromExpr[T](using quoted.Type[T], quoted.FromExpr[T]): scala.quoted.FromExpr.SomeFromExpr[T]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -868,7 +881,14 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3.0" ->
+        """|Some scala
+           |SomeToExpr[T: quoted.Type: quoted.ToExpr]: scala.quoted.ToExpr.SomeToExpr[T]
+           |SomeFromExpr[T](using quoted.Type[T], quoted.FromExpr[T]): scala.quoted.FromExpr.SomeFromExpr[T]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -1142,4 +1162,14 @@ class CompletionSuite extends BaseCompletionSuite {
     """|max[T](x: T, y: T)(using Ordered[T]): T
        |""".stripMargin
   )
+
+  checkItems(
+    "scope-completions-empty-query",
+    s"""|class Foo {
+        |  @@
+        |}
+        |""".stripMargin,
+    _.nonEmpty
+  )
+
 }

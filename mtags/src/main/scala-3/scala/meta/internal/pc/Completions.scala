@@ -20,10 +20,10 @@ import dotty.tools.dotc.core.NameKinds.DefaultGetterName
 import dotty.tools.dotc.core.Flags
 
 trait Completions {
-  def completionPosition(
+  def namedArgCompletions(
       pos: SourcePosition,
       path: List[Tree]
-  )(using ctx: Context): List[Completion] = {
+  )(using ctx: Context): List[CompletionValue] = {
     path match {
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
         ArgCompletion(Some(ident), app, pos).contribute
@@ -94,14 +94,15 @@ case class ArgCompletion(
   val params: List[Symbol] =
     allParams.filter(param => param.name.startsWith(prefix))
 
-  def contribute: List[Completion] = {
+  def contribute: List[CompletionValue] = {
     val printer = SymbolPrinter()
     params.map(p => {
-      Completion(
+      val completion = Completion(
         s"${p.name.toString} = ",
         printer.typeString(p.info),
         List(p)
       )
+      CompletionValue.NamedArg(completion)
     })
   }
 
@@ -120,3 +121,5 @@ case class ArgCompletion(
     }
   }
 }
+
+object Completions extends Completions

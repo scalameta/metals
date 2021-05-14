@@ -55,7 +55,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def checkItems(
-      name: String,
+      name: TestOptions,
       original: String,
       fn: Seq[CompletionItem] => Unit
   )(implicit loc: Location): Unit = {

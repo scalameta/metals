@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.FoldingRange
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
@@ -62,21 +63,26 @@ import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.ScriptSourceFile
 import dotty.tools.io.VirtualFile
+import dotty.tools.dotc.ast.tpd._
 
+import scala.meta.internal.pc.AutoImports._
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.CompilerAccess
+import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.SymbolSearch
 
 case class ScalaPresentationCompiler(
+    buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
@@ -84,10 +90,9 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
-) extends PresentationCompiler
-    with Completions {
+) extends PresentationCompiler {
 
-  def this() = this(Nil, Nil)
+  def this() = this("", Nil, Nil)
 
   import InteractiveDriver._
 
@@ -126,14 +131,10 @@ case class ScalaPresentationCompiler(
 
       val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
-      val items = driver.compilationUnits.get(uri) match {
+      val (items, isIncomplete) = driver.compilationUnits.get(uri) match {
         case Some(unit) =>
           val path =
             Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
-          val completions =
-            CompletionProvider(pos, ctx.fresh.setCompilationUnit(unit))
-              .completions()
-          val metalsCompletions = completionPosition(pos, path)(using ctx)
 
           val newctx = ctx.fresh.setCompilationUnit(unit)
           val tpdPath =
@@ -141,16 +142,51 @@ case class ScalaPresentationCompiler(
               newctx
             )
           val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
+          val namesInScope =
+            NamesInScope.build(unit.tpdTree)(using locatedCtx)
+          val completionPos =
+            CompletionPos.infer(pos, params.text, path)(using newctx)
+          val (completions, searchResult) =
+            CompletionProvider(
+              pos,
+              ctx.fresh.setCompilationUnit(unit),
+              search,
+              buildTargetIdentifier,
+              completionPos,
+              namesInScope,
+              path
+            )
+              .completions()
           val history = ShortenedNames(locatedCtx)
+          val autoImportsGen = AutoImports.generator(
+            pos,
+            params.text,
+            unit.tpdTree,
+            namesInScope,
+            config
+          )(using ctx)
 
-          (completions ++ metalsCompletions).zipWithIndex.flatMap {
-            case (item, idx) =>
-              completionItems(item, history, idx)(using newctx)
+          val items = completions.zipWithIndex.flatMap { case (item, idx) =>
+            completionItems(
+              item,
+              history,
+              idx,
+              autoImportsGen,
+              completionPos,
+              path,
+              namesInScope
+            )(using newctx)
           }
-        case None => Nil
+          val isIncomplete = searchResult match {
+            case SymbolSearch.Result.COMPLETE => false
+            case SymbolSearch.Result.INCOMPLETE => true
+          }
+          (items, isIncomplete)
+        case None => (Nil, false)
       }
 
       new CompletionList(
+        isIncomplete,
         items.asJava
       )
     }
@@ -212,16 +248,21 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  // TODO NOT IMPLEMENTED
   def autoImports(
-      file: String,
+      name: String,
       params: scala.meta.pc.OffsetParams
   ): CompletableFuture[
     ju.List[scala.meta.pc.AutoImportsResult]
   ] = {
-    CompletableFuture.completedFuture(
-      List.empty[scala.meta.pc.AutoImportsResult].asJava
-    )
+    compilerAccess.withNonInterruptableCompiler(
+      List.empty[scala.meta.pc.AutoImportsResult].asJava,
+      params.token
+    ) { access =>
+      val driver = access.compiler()
+      new AutoImportsProvider(search, driver, name, params, config)
+        .autoImports()
+        .asJava
+    }
   }
 
   // TODO NOT IMPLEMENTED
@@ -312,7 +353,8 @@ case class ScalaPresentationCompiler(
       classpath: ju.List[Path],
       options: ju.List[String]
   ): PresentationCompiler = {
-    new ScalaPresentationCompiler(
+    copy(
+      buildTargetIdentifier = buildTargetIdentifier,
       classpath = classpath.asScala.toSeq,
       options = options.asScala.toList
     )
@@ -430,9 +472,13 @@ case class ScalaPresentationCompiler(
   }
 
   private def completionItems(
-      completion: Completion,
+      completion: CompletionValue,
       history: ShortenedNames,
-      idx: Int
+      idx: Int,
+      autoImports: AutoImportsGenerator,
+      completionPos: CompletionPos,
+      path: List[Tree],
+      namesInScope: NamesInScope
   )(using Context): List[CompletionItem] = {
     val printer = SymbolPrinter()(using ctx)
 
@@ -471,7 +517,11 @@ case class ScalaPresentationCompiler(
         CompletionItemKind.Field
     }
 
-    completion.symbols.map { sym =>
+    val rawCompletion = completion.value
+
+    val editRange = completionPos.toEditRange
+
+    rawCompletion.symbols.map { sym =>
       // For overloaded signatures we get multiple symbols, so we need
       // to recalculate the description
       // related issue https://github.com/lampepfl/dotty/issues/11941
@@ -479,33 +529,85 @@ case class ScalaPresentationCompiler(
 
       val description = detailString(sym)
 
-      val ident = completion.label
-      val label = kind match {
-        case CompletionItemKind.Method =>
-          s"${ident}${description}"
-        case CompletionItemKind.Variable | CompletionItemKind.Field =>
-          s"${ident}: ${description}"
-        case _ => ident
+      def mkItem(
+          ident: String,
+          value: String,
+          isFromWorkspace: Boolean = false,
+          additionalEdits: List[TextEdit] = Nil
+      ): CompletionItem = {
+
+        val label =
+          kind match {
+            case CompletionItemKind.Method =>
+              s"${ident}${description}"
+            case CompletionItemKind.Variable | CompletionItemKind.Field =>
+              s"${ident}: ${description}"
+            case CompletionItemKind.Module | CompletionItemKind.Class =>
+              if (isFromWorkspace)
+                s"${ident} -${description}"
+              else
+                s"${ident}${description}"
+            case _ =>
+              ident
+          }
+        val item = new CompletionItem(label)
+
+        item.setSortText(f"${idx}%05d")
+        item.setDetail(description)
+        item.setFilterText(rawCompletion.label)
+
+        val textEdit = new TextEdit(
+          editRange,
+          value
+        )
+        item.setTextEdit(textEdit)
+
+        item.setAdditionalTextEdits(additionalEdits.asJava)
+
+        val documentation = ParsedComment.docOf(sym)
+        if (documentation.nonEmpty) {
+          item.setDocumentation(hoverContent(None, None, documentation.toList))
+        }
+
+        if (sym.isDeprecated) {
+          item.setTags(List(CompletionItemTag.Deprecated).asJava)
+        }
+
+        item.setKind(completionItemKind(sym))
+        item
       }
 
-      val item = new CompletionItem(label)
+      def mkWorkspaceItem(
+          ident: String,
+          value: String,
+          additionalEdits: List[TextEdit] = Nil
+      ): CompletionItem =
+        mkItem(ident, value, isFromWorkspace = true, additionalEdits)
 
-      item.setSortText(f"${idx}%05d")
-
-      item.setDetail(description)
-      item.setFilterText(completion.label)
-      // TODO we should use edit text
-      item.setInsertText(completion.label)
-      val documentation = ParsedComment.docOf(sym)
-
-      if (documentation.nonEmpty) {
-        item.setDocumentation(hoverContent(None, None, documentation.toList))
+      val ident = rawCompletion.label
+      completion match {
+        case CompletionValue.Workspace(comp) =>
+          path match {
+            case (_: Ident) :: (_: Import) :: _ =>
+              mkWorkspaceItem(
+                ident,
+                sym.fullNameBackticked
+              )
+            case _ =>
+              autoImports.forSymbol(sym) match {
+                case Some(edits) =>
+                  mkWorkspaceItem(ident, ident.backticked, edits)
+                case None =>
+                  val r = namesInScope.lookupSym(sym)
+                  r match {
+                    case NamesInScope.Result.InScope =>
+                      mkItem(ident, ident.backticked)
+                    case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
+                  }
+              }
+          }
+        case _ => mkItem(ident, ident.backticked)
       }
-      if (sym.isDeprecated) {
-        item.setTags(List(CompletionItemTag.Deprecated).asJava)
-      }
-      item.setKind(completionItemKind(sym))
-      item
     }
   }
 

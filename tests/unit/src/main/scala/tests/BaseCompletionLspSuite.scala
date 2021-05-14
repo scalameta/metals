@@ -90,9 +90,18 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "\"\".substrin@@",
-        """|substring(beginIndex: Int): String
-           |substring(beginIndex: Int, endIndex: Int): String
-           |""".stripMargin
+        getExpected(
+          """|substring(beginIndex: Int): String
+             |substring(beginIndex: Int, endIndex: Int): String
+             |""".stripMargin,
+          Map(
+            "3.0" ->
+              """|substring(x$0: Int): String
+                 |substring(x$0: Int, x$1: Int): String
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
       _ <- assertCompletion(
         "Stream@@",
@@ -126,6 +135,21 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |StreamResult - javax.xml.transform.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
                  |Streamable - scala.reflect.io
+                 |""".stripMargin,
+            "3.0" ->
+              """|BaseStream - java.util.stream
+                 |InputStream - java.io
+                 |IntStream - java.util.stream
+                 |LogStream - java.rmi.server
+                 |LongStream - java.util.stream
+                 |PrintStream - java.io
+                 |Stream - java.util.stream
+                 |Stream - scala.collection.immutable
+                 |Stream: collection.immutable.Stream.type
+                 |StreamFilter - javax.xml.stream
+                 |StreamResult - javax.xml.transform.stream
+                 |StreamShape - scala.collection.convert.StreamExtensions
+                 |StreamSource - javax.xml.transform.stream
                  |""".stripMargin
           ),
           scalaVersion
@@ -143,6 +167,10 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
              |""".stripMargin,
           Map(
             "2.13" ->
+              """|TrieMap - scala.collection.concurrent
+                 |TrieMapSerializationEnd - scala.collection.concurrent
+                 |""".stripMargin,
+            "3.0" ->
               """|TrieMap - scala.collection.concurrent
                  |TrieMapSerializationEnd - scala.collection.concurrent
                  |""".stripMargin

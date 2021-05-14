@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseAutoImportsSuite
-import tests.BuildInfoVersions
 
 class AutoImportsSuite extends BaseAutoImportsSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   check(
     "basic",
@@ -99,7 +95,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkEdit(
-    "interpolator-edit",
+    "interpolator-edit-scala2".tag(IgnoreScala3),
     """|package a
        |
        |object A {
@@ -115,6 +111,24 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |""".stripMargin,
     selection = 1
+  )
+
+  checkEdit(
+    "interpolator-edit-scala3".tag(IgnoreScala2),
+    """|package a
+       |
+       |object A {
+       |  val l = s"${<<Seq>>(2)}"
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable
+       |
+       |object A {
+       |  val l = s"${mutable.Seq(2)}"
+       |}
+       |""".stripMargin
   )
 
   checkEdit(
@@ -204,7 +218,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkAmmoniteEdit(
-    "first-auto-import-amm-script",
+    "first-auto-import-amm-script".tag(IgnoreScala3),
     ammoniteWrapper(
       """val p: <<Path>> = ???
         |""".stripMargin
@@ -221,7 +235,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkAmmoniteEdit(
-    "second-auto-import-amm-script",
+    "second-auto-import-amm-script".tag(IgnoreScala3),
     ammoniteWrapper(
       """import java.nio.file.Files
         |val p: <<Path>> = ???

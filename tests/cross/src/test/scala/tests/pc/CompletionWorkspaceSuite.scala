@@ -1,12 +1,8 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionWorkspaceSuite extends BaseCompletionSuite {
-
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
 
   checkEdit(
     "files",
@@ -102,6 +98,76 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Files - java.nio.file"
+  )
+
+  checkEdit(
+    "import-conflict3",
+    """|package `import-conflict3`
+       |import java.util.concurrent.Future
+       |case class Foo(
+       |  name: Future@@
+       |)
+       |""".stripMargin,
+    """|package `import-conflict3`
+       |import java.util.concurrent.Future
+       |case class Foo(
+       |  name: scala.concurrent.Future
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "import-conflict4",
+    """|package `import-conflict4`
+       |import java.util.concurrent._
+       |case class Foo(
+       |  name: Future@@
+       |)
+       |""".stripMargin,
+    """|package `import-conflict4`
+       |import java.util.concurrent._
+       |case class Foo(
+       |  name: scala.concurrent.Future
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "import-no-conflict",
+    """|package `import-no-conflict`
+       |import java.util.concurrent.{Future => _, _}
+       |case class Foo(
+       |  name: Future@@
+       |)
+       |""".stripMargin,
+    """|package `import-no-conflict`
+       |import java.util.concurrent.{Future => _, _}
+       |import scala.concurrent.Future
+       |case class Foo(
+       |  name: Future
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "imported-names-check1",
+    """|package `imported-names-check`
+       |import scala.concurrent.Future
+       |object A {
+       |  Await@@
+       |}
+       |""".stripMargin,
+    """|package `imported-names-check`
+       |import scala.concurrent.Future
+       |import scala.concurrent.Await
+       |object A {
+       |  Await
+       |}
+       |""".stripMargin,
+    filter = _ == "Await - scala.concurrent"
   )
 
   checkEdit(
@@ -364,7 +430,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "backtick",
+    "backtick".tag(IgnoreScala3),
     """package `type`
       |abstract class Foo {
       |  def backtick: Foo
@@ -512,5 +578,36 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     filter = _ == "Future - scala.concurrent"
+  )
+
+  checkEdit(
+    "parent-object-scala2".tag(IgnoreScala3),
+    """|object Main {
+       |  Implicits@@
+       |}
+       |""".stripMargin,
+    """|import scala.concurrent.ExecutionContext
+       |object Main {
+       |  ExecutionContext.Implicits
+       |}
+       |""".stripMargin,
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
+  )
+
+  // this test was intended to check that import is rendered correctly - without `$` symbol
+  // but it spotted the difference in scala2/scala3 `AutoImports` implementation
+  // this one might be removed / joined with `parent-object-scala2` in future
+  checkEdit(
+    "parent-object-scala3".tag(IgnoreScala2),
+    """|object Main {
+       |  Implicits@@
+       |}
+       |""".stripMargin,
+    """|import scala.concurrent.ExecutionContext.Implicits
+       |object Main {
+       |  Implicits
+       |}
+       |""".stripMargin,
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
   )
 }

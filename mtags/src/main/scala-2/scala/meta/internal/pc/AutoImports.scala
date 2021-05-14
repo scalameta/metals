@@ -6,23 +6,6 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 
 trait AutoImports { this: MetalsGlobal =>
 
-  /**
-   * A position to insert new imports
-   *
-   * @param offset the offset where to place the import.
-   * @param indent the indentation at which to place the import.
-   * @param padTop whether the import needs to be padded on top
-   *               in the case that it is the first one after the package def
-   */
-  case class AutoImportPosition(
-      offset: Int,
-      indent: Int,
-      padTop: Boolean
-  ) {
-    def this(offset: Int, text: String, padTop: Boolean) =
-      this(offset, inferIndent(offset, text), padTop)
-  }
-
   def doLocateImportContext(
       pos: Position,
       autoImport: Option[AutoImportPosition] = None

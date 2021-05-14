@@ -20,40 +20,7 @@ class CompletionCrossLspSuite
   }
 
   test("basic-3") {
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        s"""/metals.json
-           |{
-           |  "a": { "scalaVersion": "${V.scala3}" }
-           |}
-           |/a/src/main/scala/a/A.scala
-           |package a
-           |object A {
-           |  // @@
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = assertNoDiagnostics()
-      _ <- assertCompletion(
-        "\"\".substrin@@",
-        """|substring(x$0: Int): String
-           |substring(x$0: Int, x$1: Int): String
-           |""".stripMargin
-      )
-      _ <- assertCompletion(
-        """
-          |locally {
-          |  val myLocalVariable = Array("")
-          |  myLocalVariable@@
-          |  val source = ""
-          |}
-          |""".stripMargin,
-        """|myLocalVariable: Array[String]
-           |""".stripMargin
-      )
-    } yield ()
+    basicTest(V.scala3)
   }
 
   test("serializable-2.13") {

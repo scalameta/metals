@@ -3,6 +3,7 @@ package scala.meta.internal.pc.completions
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 
+import scala.meta.internal.pc.AutoImportPosition
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
