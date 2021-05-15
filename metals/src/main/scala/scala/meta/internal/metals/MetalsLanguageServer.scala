@@ -2630,6 +2630,8 @@ class MetalsLanguageServer(
           scribe.error(e.toString)
         case e: InvalidJarException =>
           scribe.warn(s"invalid jar: ${e.path}")
+        case _: NoSuchFileException =>
+        // only comes for badly configured jar with `/Users` path added.
         case NonFatal(e) =>
           scribe.error("unexpected error during source scanning", e)
       },
