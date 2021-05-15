@@ -1,4 +1,4 @@
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.0")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.2")
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.27")
 addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.7")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.2.20")
