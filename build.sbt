@@ -439,7 +439,7 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.2",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.3.12",
+      "com.lihaoyi" %% "ujson" % "1.3.13",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.6.8",
       // for producing SemanticDB from Scala source files
