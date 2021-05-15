@@ -15,6 +15,10 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j => l}
+import dotty.tools.dotc.interactive.Interactive
+import scala.meta.pc.OffsetParams
+
+import java.net.URI
 
 object MtagsEnrichments
     extends CommonMtagsEnrichments
@@ -28,6 +32,23 @@ object MtagsEnrichments
       val source = driver.openedFiles(uri)
       val p = Spans.Span(offset)
       new SourcePosition(source, p)
+
+    def localContext(params: OffsetParams): Context = {
+      val unit = driver.currentCtx.run.units.head
+      val tree = unit.tpdTree
+      val pos = driver.sourcePosition(params)
+      val path =
+        Interactive.pathTo(driver.openedTrees(params.uri), pos)(using
+          driver.currentCtx
+        )
+
+      val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
+      val tpdPath =
+        Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+          newctx
+        )
+      Interactive.contextOfPath(tpdPath)(using newctx)
+    }
 
   extension (pos: SourcePosition)
     def toLSP: l.Range = {

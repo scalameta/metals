@@ -38,7 +38,10 @@ class ShortenedNames(context: Context) {
               history(short.name) = short
               true
             } else false
-          case founds => founds.exists(_ == short.symbol)
+          case founds =>
+            founds.exists(s =>
+              s == short.symbol || s.typeRef.dealias.typeSymbol == short.symbol
+            )
         }
         if (isOk) {
           history(short.name) = short

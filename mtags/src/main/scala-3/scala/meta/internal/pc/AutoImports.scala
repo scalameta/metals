@@ -166,7 +166,7 @@ object AutoImports {
     private def importName(sym: Symbol): String = {
       @tailrec
       def toplevelClashes(sym: Symbol): Boolean = {
-        if (sym.owner == NoSymbol || sym.owner.isRoot)
+        if (sym == NoSymbol || sym.owner == NoSymbol || sym.owner.isRoot)
           namesInScope.lookupSym(sym).exists
         else
           toplevelClashes(sym.owner)
