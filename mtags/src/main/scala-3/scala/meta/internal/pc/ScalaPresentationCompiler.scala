@@ -586,7 +586,7 @@ case class ScalaPresentationCompiler(
 
       val ident = rawCompletion.label
       completion match {
-        case CompletionValue.Workspace(comp) =>
+        case CompletionValue.Workspace(_) =>
           path match {
             case (_: Ident) :: (_: Import) :: _ =>
               mkWorkspaceItem(
@@ -606,6 +606,7 @@ case class ScalaPresentationCompiler(
                   }
               }
           }
+        case CompletionValue.NamedArg(_) => mkItem(ident, ident)
         case _ => mkItem(ident, ident.backticked)
       }
     }

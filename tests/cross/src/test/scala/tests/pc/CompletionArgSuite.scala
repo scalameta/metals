@@ -41,6 +41,18 @@ class CompletionArgSuite extends BaseCompletionSuite {
     )
   )
 
+  checkEdit(
+    "arg-edit",
+    s"""|object Main {
+        |  assert(assertion = true, me@@)
+        |}
+        |""".stripMargin,
+    """|object Main {
+       |  assert(assertion = true, message = )
+       |}
+       |""".stripMargin
+  )
+
   check(
     "arg2",
     s"""|object Main {
