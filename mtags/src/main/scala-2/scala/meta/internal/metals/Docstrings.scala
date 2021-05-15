@@ -7,6 +7,7 @@ import java.util.logging.Logger
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
+import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -54,10 +55,10 @@ class Docstrings(index: GlobalSymbolIndex) {
    *
    * @param path the absolute path for the source file to update.
    */
-  def expireSymbolDefinition(path: AbsolutePath): Unit = {
+  def expireSymbolDefinition(path: AbsolutePath, dialect: Dialect): Unit = {
     path.toLanguage match {
       case Language.SCALA =>
-        new Deindexer(path.toInput).indexRoot()
+        new Deindexer(path.toInput, dialect).indexRoot()
       case _ =>
     }
   }
@@ -86,14 +87,15 @@ class Docstrings(index: GlobalSymbolIndex) {
           .foreach(defn.path.toInput)(cacheSymbol)
       case Language.SCALA =>
         ScaladocIndexer
-          .foreach(defn.path.toInput)(cacheSymbol)
+          .foreach(defn.path.toInput, defn.dialect)(cacheSymbol)
       case _ =>
     }
   }
 
   private class Deindexer(
-      input: Input.VirtualFile
-  ) extends ScalaMtags(input) {
+      input: Input.VirtualFile,
+      dialect: Dialect
+  ) extends ScalaMtags(input, dialect) {
     override def visitOccurrence(
         occ: SymbolOccurrence,
         sinfo: SymbolInformation,

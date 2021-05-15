@@ -184,7 +184,7 @@ class SymbolIndexBucket(
         val language = file.toLanguage
         val toIndexSource0 = toIndexSource(file).getOrElse(file)
         val input = toIndexSource0.toInput
-        val document = mtags.index(language, input)
+        val document = mtags.index(language, input, dialect)
         s.TextDocuments(List(document))
       case _ =>
         s.TextDocuments(Nil)

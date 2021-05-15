@@ -2211,7 +2211,7 @@ class MetalsLanguageServer(
 
         // Since the `symbols` here are toplevel symbols,
         // we cannot use `symbols` for expiring the cache for all symbols in the source.
-        symbolDocs.expireSymbolDefinition(sourceToIndex0)
+        symbolDocs.expireSymbolDefinition(sourceToIndex0, dialect)
       }
     } catch {
       case NonFatal(e) =>

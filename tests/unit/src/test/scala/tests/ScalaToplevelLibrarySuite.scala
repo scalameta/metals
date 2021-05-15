@@ -34,7 +34,7 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
     test(entry.toNIO.getFileName.toString) {
       forAllFilesInJar(entry) { file =>
         val input = file.toInput
-        val scalaMtags = Mtags.toplevels(Mtags.index(input))
+        val scalaMtags = Mtags.toplevels(Mtags.index(input, dialects.Scala213))
         val scalaToplevelMtags = Mtags.toplevels(input)
 
         val obtained = scalaToplevelMtags.mkString("\n")
@@ -61,7 +61,7 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
       forAllFilesInJar(entry) { file =>
         if (!scala3ExclusionList.contains(file.toString)) {
           val input = file.toInput
-          val scalaMtags = Mtags.toplevels(Mtags.index(input))
+          val scalaMtags = Mtags.toplevels(Mtags.index(input, dialects.Scala3))
           val scalaToplevelMtags = Mtags.toplevels(input, dialects.Scala3)
           val obtained = scalaToplevelMtags.mkString("\n")
           val expected = scalaMtags.mkString("\n")
