@@ -263,7 +263,11 @@ class DestinationProvider(
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
     lazy val parsed =
-      mtags.index(symbolDefinition.path.toLanguage, defnRevisedInput)
+      mtags.index(
+        symbolDefinition.path.toLanguage,
+        defnRevisedInput,
+        symbolDefinition.dialect
+      )
 
     if (symbolDefinition.path.isAmmoniteScript || parsed.occurrences.isEmpty) {
       // Fall back to SemanticDB on disk, if any

@@ -41,13 +41,17 @@ final class Mtags {
     }
   }
 
-  def index(language: Language, input: Input.VirtualFile): TextDocument = {
+  def index(
+      language: Language,
+      input: Input.VirtualFile,
+      dialect: Dialect
+  ): TextDocument = {
     addLines(language, input.text)
     val result =
       if (language.isJava) {
         JavaMtags.index(input).index()
       } else if (language.isScala) {
-        ScalaMtags.index(input).index()
+        ScalaMtags.index(input, dialect).index()
       } else {
         TextDocument()
       }
@@ -66,8 +70,8 @@ final class Mtags {
   }
 }
 object Mtags {
-  def index(input: Input.VirtualFile): TextDocument = {
-    new Mtags().index(input.toLanguage, input)
+  def index(input: Input.VirtualFile, dialect: Dialect): TextDocument = {
+    new Mtags().index(input.toLanguage, input, dialect)
   }
 
   def toplevels(document: TextDocument): List[String] = {

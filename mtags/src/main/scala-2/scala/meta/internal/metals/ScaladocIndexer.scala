@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.collection.mutable
 
 import scala.meta._
+import scala.meta.dialects.Scala213
 import scala.meta.internal.docstrings._
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.ScalaMtags
@@ -18,8 +19,9 @@ import scala.meta.pc.SymbolDocumentation
  */
 class ScaladocIndexer(
     input: Input.VirtualFile,
-    fn: SymbolDocumentation => Unit
-) extends ScalaMtags(input) {
+    fn: SymbolDocumentation => Unit,
+    dialect: Dialect
+) extends ScalaMtags(input, dialect) {
   val defines: mutable.Map[String, String] = mutable.Map.empty[String, String]
   override def visitOccurrence(
       occ: SymbolOccurrence,
@@ -132,9 +134,10 @@ object ScaladocIndexer {
    * @param fn callback function for calculated SymbolDocumentation
    */
   def foreach(
-      input: Input.VirtualFile
+      input: Input.VirtualFile,
+      dialect: Dialect
   )(fn: SymbolDocumentation => Unit): Unit = {
-    new ScaladocIndexer(input, fn).indexRoot()
+    new ScaladocIndexer(input, fn, dialect).indexRoot()
   }
 
   /**

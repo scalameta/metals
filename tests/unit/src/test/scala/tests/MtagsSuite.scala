@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.dialects
 import scala.meta.internal.inputs._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -30,7 +31,7 @@ class MtagsSuite extends DirectoryExpectSuite("mtags") {
         file,
         { () =>
           val input = file.input
-          val mtags = Mtags.index(input)
+          val mtags = Mtags.index(input, dialects.Scala213)
           val obtained = Semanticdbs.printTextDocument(mtags)
           val unknownSymbols = mtags.occurrences.collect {
             case occ if symtab.info(occ.symbol).isEmpty =>
