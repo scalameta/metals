@@ -148,13 +148,21 @@ class CompletionProvider(
     import MemberOrdering._
     var relevance = 0
     val sym = completion.value.sym
+
+    def hasGetter = try {
+      // isField returns true for some classes
+      sym.isField || sym.getter != NoSymbol
+    } catch {
+      case _ => false
+    }
+
     // local symbols are more relevant
     if (!sym.isLocalToBlock) relevance |= IsNotLocalByBlock
     // symbols defined in this file are more relevant
     if (pos.source != sym.source || sym.is(Package))
       relevance |= IsNotDefinedInFile
     // fields are more relevant than non fields
-    if (sym.isField) relevance |= IsNotGetter
+    if (!hasGetter) relevance |= IsNotGetter
     // symbols whose owner is a base class are less relevant
     if (sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass)
       relevance |= IsInheritedBaseMethod

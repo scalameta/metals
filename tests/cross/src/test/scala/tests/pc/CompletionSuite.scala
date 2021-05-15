@@ -527,8 +527,9 @@ class CompletionSuite extends BaseCompletionSuite {
     // Scala 2.13.5 adds additional completions that actually fit, but are not useful for this test
     topLines = Some(25),
     compat = Map(
-      "3.0" ->
-        """|Function0 scala
+      "3" ->
+        """|Function scala
+           |Function0 scala
            |Function1 scala
            |Function1 scala
            |Function2 scala
@@ -552,7 +553,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |Function20 scala
            |Function21 scala
            |Function22 scala
-           |Function scala
            |""".stripMargin
     )
   )
@@ -904,8 +904,8 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(2),
     compat = Map(
       "3.0" ->
-        """|NoManifest: reflect.NoManifest.type
-           |NoClassDefFoundError java.lang
+        """|NoClassDefFoundError java.lang
+           |NoManifest: reflect.NoManifest.type
            |""".stripMargin
     )
   )
@@ -929,9 +929,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |Set scala.collection.immutable
            |""".stripMargin,
       "3.0" ->
-        """|Seq: collection.immutable.Seq.type
-           |SeqCharSequence(sequenceOfChars: scala.collection.IndexedSeq[Char]): SeqCharSequence
-           |Set: scala.collection.immutable.Set.type
+        """|SafeVarargs java.lang
+           |SecurityException java.lang
+           |SecurityManager java.lang
            |""".stripMargin
     )
   )
@@ -954,10 +954,15 @@ class CompletionSuite extends BaseCompletionSuite {
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
-      "3.0" ->
+      "3.0.0-RC1" ->
         """|SafeVarargs java.lang
            |SafeVarargs java.lang
            |ScalaReflectionException scala
+           |""".stripMargin,
+      "3.0" ->
+        """|String java.lang
+           |StringIndexOutOfBoundsException java.lang
+           |SafeVarargs java.lang
            |""".stripMargin
     )
   )
@@ -985,12 +990,12 @@ class CompletionSuite extends BaseCompletionSuite {
       "3.0.0-RC1" ->
         """|NotString: Int
            |Number: scala.util.matching.Regex
-           |Nil: collection.immutable.Nil.type
+           |NegativeArraySizeException java.lang
            |""".stripMargin,
       "3.0" ->
         """|NotString: Int
+           |NegativeArraySizeException java.lang
            |Nil: collection.immutable.Nil.type
-           |NoManifest: reflect.NoManifest.type
            |""".stripMargin
     )
   )
@@ -1010,9 +1015,9 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3.0" ->
-        """|NegativeArraySizeException java.lang
-           |NegativeArraySizeException java.lang
-           |Nil: collection.immutable.Nil.type
+        """|Nil: collection.immutable.Nil.type
+           |NoManifest: reflect.NoManifest.type
+           |None scala
            |""".stripMargin
     )
   )
@@ -1032,9 +1037,9 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Option(3),
     compat = Map(
       "3.0" ->
-        """|NegativeArraySizeException java.lang
-           |NegativeArraySizeException java.lang
-           |Nil: collection.immutable.Nil.type
+        """|Nil: collection.immutable.Nil.type
+           |NoManifest: reflect.NoManifest.type
+           |None scala
            |""".stripMargin
     )
   )
@@ -1134,6 +1139,24 @@ class CompletionSuite extends BaseCompletionSuite {
         """|intNumber: Int
            |""".stripMargin
     )
+  )
+
+  check(
+    "fields-first",
+    s"""|class Foo {
+        |  def yeti1: Int = 0
+        |  def yeti2: Int = 42
+        |  val yeti3 = ""
+        |}
+        |object Main {
+        |  new Foo().ye@@
+        |}
+        |""".stripMargin,
+    """|yeti3: String
+       |yeti1: Int
+       |yeti2: Int
+       |""".stripMargin,
+    topLines = Some(3)
   )
 
   check(
