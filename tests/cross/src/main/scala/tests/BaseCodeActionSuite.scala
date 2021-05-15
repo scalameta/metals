@@ -35,7 +35,7 @@ abstract class BaseCodeActionSuite extends BasePCSuite {
       case NonFatal(e) =>
         println(s"warn: $e")
     }
-    workspace.inputs(filename) = code2
+    workspace.inputs(filename) = (code2, dialect)
     (code2, target, offset)
   }
 

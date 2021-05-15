@@ -102,5 +102,6 @@ trait GlobalSymbolIndex {
 case class SymbolDefinition(
     querySymbol: Symbol,
     definitionSymbol: Symbol,
-    path: AbsolutePath
+    path: AbsolutePath,
+    dialect: Dialect
 )

@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import scala.util.control.NonFatal
 
-import scala.meta.dialects
+import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -38,12 +38,12 @@ case class SemanticdbDefinition(
 }
 
 object SemanticdbDefinition {
-  def foreach(input: Input.VirtualFile)(
+  def foreach(input: Input.VirtualFile, dialect: Dialect)(
       fn: SemanticdbDefinition => Unit
   ): Unit = {
     input.toLanguage match {
       case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true, dialects.Scala213) {
+        val mtags = new ScalaToplevelMtags(input, true, dialect) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,
