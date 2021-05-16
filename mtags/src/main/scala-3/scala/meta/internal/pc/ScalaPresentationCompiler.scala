@@ -159,7 +159,7 @@ case class ScalaPresentationCompiler(
               .completions()
           val history = ShortenedNames(locatedCtx)
           val autoImportsGen = AutoImports.generator(
-            pos,
+            completionPos.sourcePos,
             params.text,
             unit.tpdTree,
             namesInScope,
@@ -529,9 +529,9 @@ case class ScalaPresentationCompiler(
 
       val description = detailString(sym)
 
-      def mkItem(
+      def mkItem0(
           ident: String,
-          value: String,
+          nameEdit: TextEdit,
           isFromWorkspace: Boolean = false,
           additionalEdits: List[TextEdit] = Nil
       ): CompletionItem = {
@@ -556,11 +556,7 @@ case class ScalaPresentationCompiler(
         item.setDetail(description)
         item.setFilterText(rawCompletion.label)
 
-        val textEdit = new TextEdit(
-          editRange,
-          value
-        )
-        item.setTextEdit(textEdit)
+        item.setTextEdit(nameEdit)
 
         item.setAdditionalTextEdits(additionalEdits.asJava)
 
@@ -575,6 +571,19 @@ case class ScalaPresentationCompiler(
 
         item.setKind(completionItemKind(sym))
         item
+      }
+
+      def mkItem(
+          ident: String,
+          value: String,
+          isFromWorkspace: Boolean = false,
+          additionalEdits: List[TextEdit] = Nil
+      ): CompletionItem = {
+        val nameEdit = new TextEdit(
+          editRange,
+          value
+        )
+        mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
       }
 
       def mkWorkspaceItem(
@@ -594,9 +603,24 @@ case class ScalaPresentationCompiler(
                 sym.fullNameBackticked
               )
             case _ =>
-              autoImports.forSymbol(sym) match {
+              autoImports.editsForSymbol(sym) match {
                 case Some(edits) =>
-                  mkWorkspaceItem(ident, ident.backticked, edits)
+                  edits match {
+                    case AutoImportEdits(Some(nameEdit), other) =>
+                      mkItem0(
+                        ident,
+                        nameEdit,
+                        isFromWorkspace = true,
+                        other.toList
+                      )
+                    case _ =>
+                      mkItem(
+                        ident,
+                        ident.backticked,
+                        isFromWorkspace = true,
+                        edits.edits
+                      )
+                  }
                 case None =>
                   val r = namesInScope.lookupSym(sym)
                   r match {

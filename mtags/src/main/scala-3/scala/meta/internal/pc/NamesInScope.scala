@@ -26,6 +26,9 @@ case class NamesInScope(
     }
   }
 
+  def symbolByName(name: String): Option[Symbol] =
+    values.get(name)
+
   def scopeSymbols: List[Symbol] = values.values.toList
 
   private def sameSymbol(s1: Symbol, s2: Symbol)(using Context): Boolean = {
@@ -108,12 +111,15 @@ object NamesInScope {
         }
       }
 
-    val all = fromTree ++ fromImports ++ inspectImports(tree)
-    val values = all.map { sym => (sym.decodedName, sym) }.toMap
-    NamesInScope(values)
+    val all = (fromTree ++ fromImports).map { sym =>
+      (sym.decodedName, sym)
+    } ++ inspectImports(tree)
+    NamesInScope(all.toMap)
   }
 
-  private def inspectImports(tree: Tree)(using Context): List[Symbol] = {
+  private def inspectImports(
+      tree: Tree
+  )(using Context): List[(String, Symbol)] = {
     @tailrec
     def lastPackageDef(
         prev: Option[PackageDef],
@@ -146,13 +152,20 @@ object NamesInScope {
               .toSet
 
             val syms = selectors.flatMap { selector =>
-              if (selector.isWildcard) select.info.allMembers.map(_.symbol)
+              if (selector.isWildcard)
+                select.info.allMembers
+                  .map(_.symbol)
+                  .map(s => (s.decodedName, s))
               else
-                val sym = select.info.member(selector.rename).symbol
-                List(sym)
+                val sym = select.info.member(selector.name).symbol
+                val name = selector.renamed match {
+                  case Ident(name: TermName) => name.decoded
+                  case _ => selector.imported.name.decoded
+                }
+                List((name -> sym))
             }
 
-            val filtered = syms.filter(sym => {
+            val filtered = syms.filter((_, sym) => {
               sym != NoSymbol && sym.isPublic && !excluded
                 .contains(sym.decodedName)
             })

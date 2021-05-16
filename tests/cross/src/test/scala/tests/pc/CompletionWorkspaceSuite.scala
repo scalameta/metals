@@ -610,4 +610,47 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = _ == "Implicits - scala.concurrent.ExecutionContext"
   )
+
+  checkEdit(
+    "specify-owner",
+    """|object Main {
+       |  Map@@
+       |}
+       |""".stripMargin,
+    """|import scala.collection.mutable
+       |object Main {
+       |  mutable.Map
+       |}
+       |""".stripMargin,
+    filter = _ == "Map - scala.collection.mutable"
+  )
+
+  checkEdit(
+    "ju-import",
+    """|object Main {
+       |  Map@@
+       |}
+       |""".stripMargin,
+    """|import java.{util => ju}
+       |object Main {
+       |  ju.Map
+       |}
+       |""".stripMargin,
+    filter = _ == "Map - java.util"
+  )
+
+  checkEdit(
+    "ju-import-dup",
+    """|import java.{util => ju}
+       |object Main {
+       |  Map@@
+       |}
+       |""".stripMargin,
+    """|import java.{util => ju}
+       |object Main {
+       |  ju.Map
+       |}
+       |""".stripMargin,
+    filter = _ == "Map - java.util"
+  )
 }
