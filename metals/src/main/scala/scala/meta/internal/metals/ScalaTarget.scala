@@ -24,7 +24,17 @@ case class ScalaTarget(
   def dialect: Dialect = {
     scalaVersion match {
       case _ if info.getDataKind() == "sbt" => Sbt
-      case other => ScalaVersions.dialectForScalaVersion(other)
+      case other =>
+        val dialect =
+          ScalaVersions.dialectForScalaVersion(other, includeSource3 = false)
+        def containsSource3 = scalac.getOptions().contains("-Xsource:3")
+        dialect match {
+          case Scala213 if containsSource3 =>
+            Scala213Source3
+          case Scala212 if containsSource3 =>
+            Scala212Source3
+          case other => other
+        }
     }
   }
 
