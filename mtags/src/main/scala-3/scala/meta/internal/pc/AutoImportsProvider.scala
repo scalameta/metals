@@ -22,6 +22,7 @@ import scala.jdk.CollectionConverters._
 
 import org.eclipse.{lsp4j => l}
 import java.{util => ju}
+import dotty.tools.dotc.interactive.Interactive
 
 final class AutoImportsProvider(
     search: SymbolSearch,
@@ -40,6 +41,8 @@ final class AutoImportsProvider(
     )
     val unit = driver.currentCtx.run.units.head
     val tree = unit.tpdTree
+
+    val pos = driver.sourcePosition(params)
 
     given Context = driver.currentCtx
 
@@ -62,10 +65,17 @@ final class AutoImportsProvider(
     val results = symbols.result.filter(isExactMatch(_, name))
 
     if (results.nonEmpty) {
-      val pos = SourcePosition(unit.source, Spans.Span(params.offset))
+      val path = Interactive.pathTo(driver.openedTrees(uri), pos)
+      val correctedPos = CompletionPos.infer(pos, params.text, path).sourcePos
       val namesInScope = NamesInScope.build(tree)
       val generator =
-        AutoImports.generator(pos, params.text, tree, namesInScope, config)
+        AutoImports.generator(
+          correctedPos,
+          params.text,
+          tree,
+          namesInScope,
+          config
+        )
 
       for {
         sym <- results

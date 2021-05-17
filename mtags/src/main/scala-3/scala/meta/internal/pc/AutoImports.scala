@@ -17,6 +17,7 @@ import org.eclipse.{lsp4j => l}
 
 import scala.annotation.tailrec
 import dotty.tools.dotc.util.Spans
+import scala.meta.internal.pc.AutoImports.AutoImportEdits
 
 object AutoImports {
 
@@ -69,6 +70,24 @@ object AutoImports {
     new AutoImportsGenerator(pos, importPos, namesInScope, renameConfig)
   }
 
+  case class AutoImportEdits(
+      nameEdit: Option[l.TextEdit],
+      importEdit: Option[l.TextEdit]
+  ) {
+
+    def edits: List[l.TextEdit] = List(nameEdit, importEdit).flatten
+  }
+
+  object AutoImportEdits {
+
+    def apply(name: l.TextEdit, imp: l.TextEdit): AutoImportEdits =
+      AutoImportEdits(Some(name), Some(imp))
+    def importOnly(edit: l.TextEdit): AutoImportEdits =
+      AutoImportEdits(None, Some(edit))
+    def nameOnly(edit: l.TextEdit): AutoImportEdits =
+      AutoImportEdits(Some(edit), None)
+  }
+
   class AutoImportsGenerator(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
@@ -76,25 +95,31 @@ object AutoImports {
       renameConfig: Map[SimpleName, String]
   )(using ctx: Context) {
 
-    def forSymbol(symbol: Symbol): Option[List[l.TextEdit]] = {
+    def forSymbol(symbol: Symbol): Option[List[l.TextEdit]] =
+      editsForSymbol(symbol).map(_.edits)
+
+    def editsForSymbol(symbol: Symbol): Option[AutoImportEdits] = {
       inferAutoImport(symbol).map { ai =>
-        val importEdit = importEdits(List(ai), importPosition)
+        def mkImportEdit = importEdit(List(ai), importPosition)
         ai match {
           case _: AutoImport.Simple =>
-            List(importEdit)
+            AutoImportEdits.importOnly(mkImportEdit)
+          case AutoImport.SpecifiedOwner(sym)
+              if namesInScope.lookupSym(sym.owner).exists =>
+            AutoImportEdits.nameOnly(specifyOwnerEdit(sym, sym.owner.showName))
           case AutoImport.SpecifiedOwner(sym) =>
-            List(specifyOwnerEdit(sym, sym.owner.showName), importEdit)
+            AutoImportEdits(
+              specifyOwnerEdit(sym, sym.owner.showName),
+              mkImportEdit
+            )
+          case AutoImport.Renamed(sym, rename)
+              if namesInScope.symbolByName(rename).isDefined =>
+            AutoImportEdits.nameOnly(specifyOwnerEdit(sym, rename))
           case AutoImport.Renamed(sym, rename) =>
-            List(specifyOwnerEdit(sym, rename), importEdit)
+            AutoImportEdits(specifyOwnerEdit(sym, rename), mkImportEdit)
         }
       }
     }
-
-    private def nameEditRange(name: String): l.Range =
-      new l.Range(
-        new l.Position(pos.startLine, pos.startColumn - name.length),
-        new l.Position(pos.endLine, pos.endColumn)
-      )
 
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
       namesInScope.lookupSym(symbol) match {
@@ -112,11 +137,11 @@ object AutoImports {
     }
 
     private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit = {
-      val name = symbol.showName
-      new l.TextEdit(nameEditRange(name), s"$owner.$name")
+      val line = pos.startLine
+      new l.TextEdit(pos.toLSP, s"$owner.${symbol.nameBackticked}")
     }
 
-    private def importEdits(
+    private def importEdit(
         values: List[AutoImport],
         importPosition: AutoImportPosition
     )(using Context): l.TextEdit = {

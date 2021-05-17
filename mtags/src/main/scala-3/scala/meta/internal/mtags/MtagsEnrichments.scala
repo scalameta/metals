@@ -8,10 +8,25 @@ import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j => l}
 
 import scala.annotation.tailrec
+import dotty.tools.dotc.Driver
+import dotty.tools.dotc.util.Spans
+import dotty.tools.dotc.interactive.InteractiveDriver
+import scala.meta.pc.OffsetParams
+
+import java.net.URI
 
 object MtagsEnrichments
     extends CommonMtagsEnrichments
     with VersionSpecificEnrichments {
+
+  extension (driver: InteractiveDriver)
+    def sourcePosition(params: OffsetParams): SourcePosition =
+      sourcePosition(params.uri, params.offset)
+
+    def sourcePosition(uri: URI, offset: Int): SourcePosition =
+      val source = driver.openedFiles(uri)
+      val p = Spans.Span(offset)
+      new SourcePosition(source, p)
 
   extension (pos: SourcePosition)
     def toLSP: l.Range = {
@@ -35,10 +50,14 @@ object MtagsEnrichments
       loop(Nil, sym).mkString(".")
     }
 
-    def decodedName: String = sym.name.stripModuleClassSuffix.show
+    def decodedName: String = sym.name.decoded
 
     def nameBackticked: String =
       KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
+  }
+
+  extension (name: Name)(using Context) {
+    def decoded: String = name.stripModuleClassSuffix.show
   }
 
   extension (s: String) {
