@@ -29,16 +29,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|message = : => Any
        |Main arg1
-       |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3),
-    compat = Map(
-      "3.0" ->
-        """|message = : => Any
-           |Main arg1
-           |ArrayCharSequence(arrayOfChars: Array[Char]): ArrayCharSequence
-           |""".stripMargin
-    )
+    topLines = Option(2)
   )
 
   checkEdit(
@@ -61,16 +53,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|message = : => Any
        |Main arg2
-       |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3),
-    compat = Map(
-      "3.0" ->
-        """|message = : => Any
-           |Main arg2
-           |ArrayCharSequence(arrayOfChars: Array[Char]): ArrayCharSequence
-           |""".stripMargin
-    )
+    topLines = Option(2)
   )
 
   def user: String =
@@ -182,16 +166,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|suffix = : String
        |Main arg8
-       |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3),
-    compat = Map(
-      "3.0" ->
-        """|suffix = : String
-           |Main arg8
-           |ArrayCharSequence(arrayOfChars: Array[Char]): ArrayCharSequence
-           |""".stripMargin
-    )
+    topLines = Option(2)
   )
 
   // In scala3, we get NoSymbol for `until`, so we get no completions here.
