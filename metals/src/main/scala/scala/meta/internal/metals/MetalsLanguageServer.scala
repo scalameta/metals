@@ -2178,7 +2178,10 @@ class MetalsLanguageServer(
                   source.isAmmoniteScript
                 )
               )
-          ScalaVersions.dialectForScalaVersion(scalaVersion)
+          ScalaVersions.dialectForScalaVersion(
+            scalaVersion,
+            includeSource3 = true
+          )
         }
         val reluri = source.toIdeallyRelativeURI(sourceItem)
         val input = sourceToIndex0.toInput
@@ -2402,7 +2405,10 @@ class MetalsLanguageServer(
           addSourceJarSymbols(path)
         } else if (path.isDirectory) {
           val dialect =
-            ScalaVersions.dialectForScalaVersion(scalaTarget.scalaVersion)
+            ScalaVersions.dialectForScalaVersion(
+              scalaTarget.scalaVersion,
+              includeSource3 = true
+            )
           definitionIndex.addSourceDirectory(path, dialect)
         } else {
           scribe.warn(s"unexpected dependency: $path")

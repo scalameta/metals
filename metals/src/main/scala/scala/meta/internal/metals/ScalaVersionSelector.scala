@@ -44,6 +44,9 @@ class ScalaVersionSelector(
   }
 
   def fallbackDialect(isAmmonite: Boolean): Dialect = {
-    ScalaVersions.dialectForScalaVersion(fallbackScalaVersion(isAmmonite))
+    ScalaVersions.dialectForScalaVersion(
+      fallbackScalaVersion(isAmmonite),
+      includeSource3 = true
+    )
   }
 }

@@ -89,11 +89,24 @@ object ScalaVersions {
       scalaVersion.split('.').take(2).mkString(".")
   }
 
-  def dialectForScalaVersion(scalaVersion: String): Dialect = {
+  /**
+   * Select scalameta dialect for a Scala version
+   *
+   * @param scalaVersion
+   * @param includeSource3 if to use dialect with Source3, which will parse Scala 2 code
+   * that compiles with the -Xsource:3 flag. In some cases where we don't use diagnostics
+   * it makes sense to always use Source3 dialects.
+   */
+  def dialectForScalaVersion(
+      scalaVersion: String,
+      includeSource3: Boolean
+  ): Dialect = {
     val scalaBinaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
     scalaBinaryVersion match {
       case "2.11" => Scala211
+      case "2.12" if includeSource3 => Scala212Source3
       case "2.12" => Scala212
+      case "2.13" if includeSource3 => Scala213Source3
       case "2.13" => Scala213
       case version if version.startsWith("3") => Scala3
       case _ => Scala213
@@ -135,6 +148,9 @@ object ScalaVersions {
   }
 
   def dialectForDependencyJar(filename: String): Dialect =
-    dialectForScalaVersion(scalaBinaryVersionFromJarName(filename))
+    dialectForScalaVersion(
+      scalaBinaryVersionFromJarName(filename),
+      includeSource3 = true
+    )
 
 }

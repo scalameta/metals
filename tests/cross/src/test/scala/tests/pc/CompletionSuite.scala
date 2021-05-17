@@ -433,7 +433,8 @@ class CompletionSuite extends BaseCompletionSuite {
        * might have been a bug in presentation compiler that we were using
        * https://github.com/scalameta/metals/issues/2546
        */
-      "2.13.5" -> "Inner a.Outer"
+      "2.13.5" -> "Inner a.Outer",
+      "2.13.6" -> "Inner a.Outer"
     )
   )
 
@@ -655,7 +656,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3.0" -> "DelayedLazyVal scala.concurrent",
-      "2.13.5" -> "DelayedLazyVal - scala.concurrent"
+      "2.13.5" -> "DelayedLazyVal - scala.concurrent",
+      "2.13.6" -> "DelayedLazyVal - scala.concurrent"
     )
   )
 
