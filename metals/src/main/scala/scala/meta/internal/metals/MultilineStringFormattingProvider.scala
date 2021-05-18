@@ -492,8 +492,6 @@ class MultilineStringFormattingProvider(
                 sourceText
               )
             case None => {
-              pprint.log(sourceText)
-              pprint.log(doc)
               Nil
             }
           }
