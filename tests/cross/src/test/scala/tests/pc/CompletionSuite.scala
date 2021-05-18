@@ -429,7 +429,8 @@ class CompletionSuite extends BaseCompletionSuite {
     "",
     compat = Map(
       "3.0" -> "Inner a.Outer",
-      /* TODO seems that changes in 2.13.5 made this pop up and this
+      /* TODO 
+       * Seems that changes in 2.13.5 made this pop up and this
        * might have been a bug in presentation compiler that we were using
        * https://github.com/scalameta/metals/issues/2546
        */
