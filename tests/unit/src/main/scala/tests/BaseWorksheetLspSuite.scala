@@ -442,9 +442,9 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |""".stripMargin,
           Map(
             V.scala3 ->
-              """|a/src/main/scala/a/Main.worksheet.sc:1:8: error: expression expected but val found
-                 |def y = 
-                 |       ^
+              """|a/src/main/scala/a/Main.worksheet.sc:2:1: error: illegal start of simple expression
+                 |val x: Int = ""
+                 |^^^
                  |a/src/main/scala/a/Main.worksheet.sc:2:14: error:
                  |Found:    ("" : String)
                  |Required: Int
