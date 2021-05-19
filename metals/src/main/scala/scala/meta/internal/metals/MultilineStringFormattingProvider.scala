@@ -6,14 +6,13 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
+
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextEdit
-
-import scala.meta.dialects
 
 class MultilineStringFormattingProvider(
     buffers: Buffers,
@@ -226,15 +225,8 @@ class MultilineStringFormattingProvider(
           )
         ) indent(startToken, endToken, endIndex)
         else None
-      case _ => {
-          pprint.log(startPosition)
-          pprint.log(endPosition)
-          pprint.log(index)
-          pprint.log(text)
-          pprint.log(token)
-          pprint.log(newlineAdded)
-          None
-      }
+      case _ => None
+
     }
   }
 
@@ -264,7 +256,84 @@ class MultilineStringFormattingProvider(
         }
       }
       .headOption
-      .getOrElse(Nil)
+      .getOrElse(
+        indentScala3(
+          start,
+          end,
+          tokens,
+          newlineAdded,
+          splitLines,
+          range,
+          text
+        ).getOrElse(Nil)
+      )
+  }
+
+  private def indentScala3(
+      start: StartPosition,
+      end: EndPosition,
+      tokens: Tokens,
+      newlineAdded: Boolean,
+      splitLines: Array[String],
+      range: Range,
+      text: String
+  ): Option[List[TextEdit]] = {
+
+    val rangeStart = start.toLSP.getStart
+    rangeStart.setCharacter(0)
+
+    val range = new Range(rangeStart, end.toLSP.getEnd)
+
+    val startLine = start.toLSP.getStart.getLine
+    val endLine = end.toLSP.getEnd.getLine
+
+    val splitLinesWithIndex = splitLines.zipWithIndex.filter { case (_, i) =>
+      i >= startLine && i <= endLine
+    }
+    val lines = splitLinesWithIndex.map(_._1)
+    val linesWithIndex = lines.zipWithIndex
+
+    val regex =
+      raw"(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$".r
+    val indentRegex = raw"\S".r
+    val baseIndent = start.toLSP.getStart.getCharacter
+    val blank = " "
+
+    val codeLinesIdxs = (for {
+      (lineText, lineIdx) <- linesWithIndex if lineText.nonEmpty
+    } yield lineIdx).toList
+
+    val tabSize = 3
+
+    val newLinesOpt = for {
+      secondLineIdx <- codeLinesIdxs.drop(1).headOption
+      indentMatch <- indentRegex.findFirstMatchIn(lines(secondLineIdx))
+      indentLength = indentMatch.start
+      headLine <- lines.headOption
+      firstLine = regex.findFirstIn(headLine)
+      block = if (firstLine.nonEmpty) 1 else 0
+      blockIndent = block * tabSize
+    } yield for {
+      line <- lines.drop(secondLineIdx)
+    } yield {
+      val diff = baseIndent + blockIndent - indentLength
+      if (diff != 0)
+        if (diff < 0)
+          line.slice(-diff, line.length)
+        else
+          blank.repeat(diff) ++ line
+      else line
+    }
+
+    val newLines = for {
+      newLines <- newLinesOpt
+      headIdx <- codeLinesIdxs.headOption
+      head = lines(headIdx)
+    } yield head +: newLines
+
+    newLines.map(lines =>
+      new TextEdit(range, lines.mkString(util.Properties.lineSeparator)) :: Nil
+    )
   }
 
   private def indentTokensOnTypeFormatting(
@@ -312,7 +381,7 @@ class MultilineStringFormattingProvider(
       textId: TextDocumentIdentifier,
       sourceText: String,
       range: Range,
-      trees: Trees,
+      trees: Trees
   )(
       fn: (
           StartPosition,
@@ -439,7 +508,6 @@ class MultilineStringFormattingProvider(
         withToken(doc, sourceText, range, trees) { (startPos, endPos, tokens) =>
           tokens match {
             case Some(tokens) =>
-              pprint.log("some token found")
               indentTokensOnTypeFormatting(
                 startPos,
                 endPos,
@@ -477,7 +545,6 @@ class MultilineStringFormattingProvider(
     buffers
       .get(uri)
       .map { sourceText =>
-        pprint.log(sourceText)
         val splitLines = sourceText.split('\n')
         withToken(doc, sourceText, range, trees) { (startPos, endPos, tokens) =>
           tokens match {

@@ -1374,8 +1374,6 @@ class MetalsLanguageServer(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      pprint.log("test")
-      pprint.log(params)
       multilineStringFormattingProvider.format(params, trees).asJava
     }
 
