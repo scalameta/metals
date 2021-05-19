@@ -253,7 +253,6 @@ class ScalaToplevelMtags(
         withOwner(owner) {
           tpe(name.name, name.pos, Kind.CLASS, 0)
         }
-        term(name.name, name.pos, Kind.OBJECT, 0)
       case OBJECT =>
         if (isPackageObject) {
           currentOwner = symbol(Scala.Descriptor.Package(name.name))

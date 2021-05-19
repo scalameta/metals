@@ -49,6 +49,21 @@ trait MtagsIndexer {
     currentOwner = old
     result
   }
+  def ownerCompanion: String = {
+    import DefinitionAlternatives._
+    Symbol(currentOwner) match {
+      case GlobalSymbol(owner, Descriptor.Term(name)) =>
+        Symbols.Global(
+          owner.value,
+          Descriptor.Type(name)
+        )
+      case GlobalSymbol(owner, Descriptor.Type(name)) =>
+        Symbols.Global(
+          owner.value,
+          Descriptor.Term(name)
+        )
+    }
+  }
   def term(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
     addSignature(Descriptor.Term(name), pos, kind, properties)
   def term(name: Term.Name, kind: Kind, properties: Int): Unit =

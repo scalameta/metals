@@ -188,17 +188,16 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
         case t: Defn.Enum =>
-          withOwner(currentOwner) {
-            tpe(t.name, Kind.CLASS, 0)
-            enterTypeParameters(t.tparams)
-            enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
-          }
-          term(t.name.value, t.name.pos, Kind.OBJECT, 0)
+          tpe(t.name, Kind.CLASS, 0)
+          enterTypeParameters(t.tparams)
+          enterTermParameters(t.ctor.paramss, isPrimaryCtor = true)
           continue()
         case t: Defn.RepeatedEnumCase =>
-          t.cases.foreach(c => withOwner(currentOwner)(term(c, Kind.OBJECT, 0)))
+          t.cases.foreach(c =>
+            withOwner(ownerCompanion)(term(c, Kind.OBJECT, 0))
+          )
         case t: Defn.EnumCase =>
-          term(t.name, Kind.OBJECT, 0)
+          withOwner(ownerCompanion)(term(t.name, Kind.OBJECT, 0))
         case t: Defn.Trait =>
           tpe(t.name, Kind.TRAIT, 0); continue()
           enterTypeParameters(t.tparams)

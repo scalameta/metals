@@ -26,8 +26,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/A.",
       "_empty_/B#",
       "_empty_/C#",
-      "_empty_/D#",
-      "_empty_/D."
+      "_empty_/D#"
     )
   )
 
@@ -49,8 +48,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/A.",
       "_empty_/B#",
       "_empty_/C#",
-      "_empty_/D#",
-      "_empty_/D."
+      "_empty_/D#"
     )
   )
 
@@ -226,8 +224,7 @@ class ScalaToplevelSuite extends BaseSuite {
       "_empty_/A.",
       "_empty_/B#",
       "_empty_/C#",
-      "_empty_/D#",
-      "_empty_/D."
+      "_empty_/D#"
     )
   )
 
@@ -258,7 +255,7 @@ class ScalaToplevelSuite extends BaseSuite {
       expected: List[String],
       all: Boolean = false,
       dialect: Dialect = dialects.Scala3
-  ): Unit = {
+  )(implicit location: munit.Location): Unit = {
     test(options) {
       val input = Input.VirtualFile("Test.scala", code)
       val obtained =
