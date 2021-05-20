@@ -75,17 +75,14 @@ final class Trees(
   }
 
   /**
-   * Parse file at the given path and return a list of errors if there are any and
-   * the file belongs to a Scala 2 target.
-   *
+   * Parse file at the given path and return a list of errors if there are any.
    * @param path file to parse
    * @return list of errors if the file failed to parse
    */
   def didChange(path: AbsolutePath): List[Diagnostic] = {
     val dialect = getDialect(path)
     parse(path, dialect) match {
-      // only publish parser diagnostics for Scala 2, which does not support significant indentation
-      case Some(parsed) if !dialect.allowSignificantIndentation =>
+      case Some(parsed) =>
         parsed match {
           case Parsed.Error(pos, message, _) =>
             List(
@@ -100,9 +97,7 @@ final class Trees(
             trees(path) = tree
             List()
         }
-      // don't publish diagnostics
-      case _ =>
-        List()
+      case _ => List()
     }
   }
 

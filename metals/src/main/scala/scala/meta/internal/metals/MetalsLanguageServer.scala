@@ -268,10 +268,7 @@ class MetalsLanguageServer(
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Seq[Unit]] = {
     Future.traverse(paths.distinct) { path =>
       if (path.isScalaFilename) {
-        // diagnostics from the compiler are still needed for Scala 3
-        compilers.didChange(path).map { diags =>
-          diagnostics.onSyntaxError(path, diags ++ trees.didChange(path))
-        }
+        Future(diagnostics.onSyntaxError(path, trees.didChange(path)))
       } else {
         Future.successful(())
       }

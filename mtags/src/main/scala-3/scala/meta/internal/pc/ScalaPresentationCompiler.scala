@@ -395,16 +395,8 @@ case class ScalaPresentationCompiler(
 
   override def didChange(
       params: VirtualFileParams
-  ): CompletableFuture[ju.List[Diagnostic]] = {
-    compilerAccess.withNonInterruptableCompiler(
-      Nil.asJava,
-      params.token
-    ) { access =>
-      val driver = access.compiler()
-      val uri = params.uri
-      CompilerInterfaces.parseErrors(driver, uri, params.text)
-    }
-  }
+  ): CompletableFuture[ju.List[Diagnostic]] =
+    CompletableFuture.completedFuture(Nil.asJava)
 
   override def didClose(uri: URI): Unit = {
     compilerAccess.withNonInterruptableCompiler(
