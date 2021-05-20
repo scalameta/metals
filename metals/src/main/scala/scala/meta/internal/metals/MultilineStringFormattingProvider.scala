@@ -287,34 +287,111 @@ class MultilineStringFormattingProvider(
     val startLine = start.toLSP.getStart.getLine
     val endLine = end.toLSP.getEnd.getLine
 
-    val splitLinesWithIndex = splitLines.zipWithIndex.filter { case (_, i) =>
+    val splitLinesWithIndex = splitLines.zipWithIndex
+    val inRangeLines = splitLinesWithIndex.filter { case (_, i) =>
       i >= startLine && i <= endLine
     }
-    val lines = splitLinesWithIndex.map(_._1)
-    val linesWithIndex = lines.zipWithIndex
+    val pastedLines = inRangeLines.map(_._1)
+    val pastedLinesWithIndex = pastedLines.zipWithIndex
 
     val regex =
       raw"(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$".r
     val indentRegex = raw"\S".r
     val baseIndent = start.toLSP.getStart.getCharacter
-    val blank = " "
+
+    val defaultSpacing = (" ", 2)
+
+    def extractCharsFromLine(line: String): Option[List[String]] = for {
+      sMatch <- indentRegex.findFirstMatchIn(line)
+      spacing = line.substring(0, sMatch.start)
+      chars = spacing.split("")
+    } yield chars.toList
+
+    val charsFirstLine = pastedLines.headOption.flatMap(extractCharsFromLine)
+
+    def lineMatchesRegex(line: String) = regex.findFirstIn(line).nonEmpty
+
+    lazy val searchChars = {
+      // if we arrive here, we already checked inRangeLines
+      val nonInRangeLines =
+        splitLinesWithIndex.filter(!inRangeLines.contains(_))
+      // find the first line that requires the next to be indented
+      val linePreIndent = nonInRangeLines.find(t => lineMatchesRegex(t._1))
+      linePreIndent.flatMap { case (_, idx) =>
+        if (
+          idx != startLine - 1
+        ) // If the line is not the one before the pasted ones
+          extractCharsFromLine(splitLines(idx + 1))
+        else
+          nonInRangeLines
+            .drop(idx + 1) // else search in lines after the pasted ones
+            .find(t => lineMatchesRegex(t._1))
+            .flatMap { case (_, idx) =>
+              if (idx != splitLines.length - 1)
+                extractCharsFromLine(splitLines(idx + 1))
+              else None
+            }
+      }
+    }
+
+    val charsOpt = charsFirstLine
+      .orElse(searchChars)
+
+    val blankOpt = for {
+      chars <- charsOpt
+      firstSpaceChar <- chars.headOption
+    } yield {
+      firstSpaceChar match {
+        case "\t" => ("\t", 1)
+
+        case " " =>
+          val size =
+            if (chars.length % 2 == 0) 2
+            else if (chars.length > 1) 3
+            else 1
+          (" ", size)
+
+        case _ => defaultSpacing
+      }
+    }
+
+    val (blank, tabSize) = blankOpt.getOrElse(defaultSpacing)
 
     val codeLinesIdxs = (for {
-      (lineText, lineIdx) <- linesWithIndex if lineText.nonEmpty
+      (lineText, lineIdx) <- pastedLinesWithIndex if lineText.nonEmpty
     } yield lineIdx).toList
 
-    val tabSize = 3
+    def convertSpaces(line: String, spaceLength: Int): String = {
+      if (spaceLength != 0) {
+        val indent = line.substring(0, spaceLength)
+        val indentChars = indent.split("")
+        val indentChar = indentChars.head
+        blank match {
+          case "\t" if indentChar == blank => line
+          case " " if indentChar == blank => line
+          case "\t" if indentChar == " " =>
+            val tabNum = math.ceil(indentChar.length / 2).toInt
+            blank.repeat(tabNum) ++ line.slice(spaceLength, line.length)
+          case " " if indentChar == "\t" =>
+            blank.repeat(tabSize) ++ line.slice(spaceLength, line.length)
+          case _ => line
+        }
+      } else line
+    }
 
     val newLinesOpt = for {
       secondLineIdx <- codeLinesIdxs.drop(1).headOption
-      indentMatch <- indentRegex.findFirstMatchIn(lines(secondLineIdx))
+      indentMatchPre <- indentRegex.findFirstMatchIn(pastedLines(secondLineIdx))
+      indentLengthPre = indentMatchPre.start
+      convertedLines = pastedLines.map(convertSpaces(_, indentLengthPre))
+      indentMatch <- indentRegex.findFirstMatchIn(convertedLines(secondLineIdx))
       indentLength = indentMatch.start
-      headLine <- lines.headOption
-      firstLine = regex.findFirstIn(headLine)
-      block = if (firstLine.nonEmpty) 1 else 0
+      headLine <- convertedLines.headOption
+      firstLineMatchesNewIndent = regex.findFirstIn(headLine)
+      block = if (firstLineMatchesNewIndent.nonEmpty) 1 else 0
       blockIndent = block * tabSize
     } yield for {
-      line <- lines.drop(secondLineIdx)
+      line <- convertedLines.drop(secondLineIdx)
     } yield {
       val diff = baseIndent + blockIndent - indentLength
       if (diff != 0)
@@ -328,7 +405,7 @@ class MultilineStringFormattingProvider(
     val newLines = for {
       newLines <- newLinesOpt
       headIdx <- codeLinesIdxs.headOption
-      head = lines(headIdx)
+      head = pastedLines(headIdx)
     } yield head +: newLines
 
     newLines.map(lines =>
