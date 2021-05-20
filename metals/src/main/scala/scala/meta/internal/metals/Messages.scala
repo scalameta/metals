@@ -487,6 +487,13 @@ object Messages {
       show = true
     )
 
+  def DebugInvalidBuildTargetConf(): MessageParams = {
+    new MessageParams(
+      MessageType.Error,
+      s"Debugger configuration is missing 'buildTarget' param."
+    )
+  }
+
   object DebugClassNotFound {
 
     def invalidTargetClass(cls: String, target: String): MessageParams = {
