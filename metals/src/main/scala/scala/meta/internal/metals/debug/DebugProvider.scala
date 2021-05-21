@@ -393,8 +393,8 @@ class DebugProvider(
 
   def resolveAttachRemoteParams(
       params: DebugUnresolvedAttachRemoteParams
-  ): Future[b.DebugSessionParams] =
-    buildTargets.findByDisplayName(params.buildTarget) match {
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val result = buildTargets.findByDisplayName(params.buildTarget) match {
       case Some(target) =>
         Future.successful(
           new b.DebugSessionParams(
@@ -404,8 +404,11 @@ class DebugProvider(
           )
         )
       case None =>
-        Future.failed(new ju.NoSuchElementException(params.buildTarget))
+        Future.failed(BuildTargetUndefinedException())
     }
+    result.failed.foreach(reportErrors)
+    result
+  }
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
     case _ if buildClient.buildHasErrors =>
@@ -437,6 +440,10 @@ class DebugProvider(
         Messages.errorMessageParams(e.getMessage())
       )
     case e: BuildTargetContainsNoMainException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
+      )
+    case e: BuildTargetUndefinedException =>
       languageClient.showMessage(
         Messages.errorMessageParams(e.getMessage())
       )
