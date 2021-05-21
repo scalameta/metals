@@ -282,6 +282,9 @@ object MetalsEnrichments
       else None
     }
 
+    def isInside(prefix: AbsolutePath): Boolean =
+      toRelativeInside(prefix).isDefined
+
     def jarPath: Option[AbsolutePath] = {
       val filesystem = path.toNIO.getFileSystem()
       if (filesystem.provider().getScheme().equals("jar")) {
