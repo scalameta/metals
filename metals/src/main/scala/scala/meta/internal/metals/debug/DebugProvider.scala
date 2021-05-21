@@ -404,7 +404,7 @@ class DebugProvider(
           )
         )
       case None =>
-        Future.failed(new ju.NoSuchElementException(params.buildTarget))
+        Future.failed(BuildTargetUndefinedException())
     }
     result.failed.foreach(reportErrors)
     result
@@ -443,9 +443,9 @@ class DebugProvider(
       languageClient.showMessage(
         Messages.errorMessageParams(e.getMessage())
       )
-    case _: ju.NoSuchElementException =>
+    case e: BuildTargetUndefinedException =>
       languageClient.showMessage(
-        Messages.DebugInvalidBuildTargetConf()
+        Messages.errorMessageParams(e.getMessage())
       )
     case e: NoTestsFoundException =>
       languageClient.showMessage(

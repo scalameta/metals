@@ -143,6 +143,9 @@ class BuildTargetClassesFinder(
 case class BuildTargetNotFoundException(buildTargetName: String)
     extends Exception(s"Build target not found: $buildTargetName")
 
+case class BuildTargetUndefinedException()
+    extends Exception("Debugger configuration is missing 'buildTarget' param.")
+
 case class ClassNotFoundInBuildTargetException(
     className: String,
     buildTarget: b.BuildTarget
