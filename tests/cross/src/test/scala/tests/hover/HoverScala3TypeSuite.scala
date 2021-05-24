@@ -52,7 +52,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |   case <<Re@@d>>, Green, Blue
        |
        |""".stripMargin,
-    """|val Red: enums.SimpleEnum.Color.Red
+    """|case Red: enums.SimpleEnum.Color.Red
        |""".stripMargin.hover
   )
 
@@ -67,7 +67,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |
        |""".stripMargin,
-    """|val Green: Color
+    """|case Green: Color
        |""".stripMargin.hover
   )
 

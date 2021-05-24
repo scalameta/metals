@@ -23,16 +23,34 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
   }
 
   def fullDefinition(sym: Symbol, tpe: Type): String = {
-    val isImplicit = sym.is(Flags.Implicit)
-    val name = nameString(sym)
-    val implicitKeyword = if (isImplicit) "implicit " else ""
+    def name = nameString(sym)
     keyString(sym) match {
       case "" =>
+        val isImplicit = sym.is(Flags.Implicit)
+        val implicitKeyword = if (isImplicit) "implicit " else ""
         s"$implicitKeyword$name: "
       case key if sym.is(Flags.Method) =>
         s"$key $name"
+      // package
+      case key if sym.is(Flags.Package) =>
+        val owners = for {
+          sym <- sym.ownersIterator
+          if !(sym.isRoot || sym.isEmptyPackage)
+          name = super.nameString(sym.name)
+        } yield name
+        "package " + owners.toList.reverse.mkString(".")
+      // enum
+      case _ if sym.companionClass.is(Flags.Enum) =>
+        s"enum $name: "
+      // enum case
+      case _ if sym.is(Flags.EnumVal) =>
+        s"case $name: "
+      // default
       case key =>
-        s"$key $name: "
+        // no need to add final on object, since they are all final
+        val finalKeyword =
+          if (sym.is(Flags.Final) && !sym.is(Flags.Module)) "final " else ""
+        s"$finalKeyword$key $name: "
     }
   }
 
@@ -51,6 +69,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
     sym match {
       case m if m.is(Flags.Method) =>
         defaultMethodSignature(sym, history, info)
+      case p if p.is(Flags.Package) => ""
       case _ =>
         val short = shortType(info, history)
         s"${typeString(short)}"

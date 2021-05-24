@@ -26,7 +26,17 @@ class ShortenedNames(context: Context) {
         val foundTpe = lookupSymbol(short)
         val syms = List(foundTpe.termSymbol, foundTpe.typeSymbol)
         val isOk = syms.filter(_ != NoSymbol) match {
-          case Nil => false
+          case Nil =>
+            if (
+              short.symbol.isStatic || // Java static
+              short.symbol.owner.ownersIterator.forall { s =>
+                // ensure the symbol can be referenced in a static manner, without any instance
+                s.is(Package) || s.is(Module)
+              }
+            ) {
+              history(short.name) = short
+              true
+            } else false
           case founds => founds.exists(_ == short.symbol)
         }
         if (isOk) {
