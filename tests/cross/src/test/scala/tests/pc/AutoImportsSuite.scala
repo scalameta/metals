@@ -41,6 +41,27 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkEdit(
+    "basic-edit-comment",
+    """|/**
+       | * @param code
+       | * @return
+       |*/
+       |object A {
+       |  <<Future>>.successful(2)
+       |}
+       |""".stripMargin,
+    """|import scala.concurrent.Future
+       |/**
+       | * @param code
+       | * @return
+       |*/
+       |object A {
+       |  Future.successful(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "symbol-no-prefix",
     """|package a
        |
