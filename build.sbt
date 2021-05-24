@@ -351,15 +351,7 @@ val mtagsSettings = List(
     // NOTE(olafur) pprint is indispensable for me while developing, I can't
     // use println anymore for debugging because pprint.log is 100 times better.
     else
-      crossSetting(
-        scalaVersion.value,
-        if211 = List("com.lihaoyi" %% "pprint" % "0.6.5"),
-        ifLaterThan211 = List("com.lihaoyi" %% "pprint" % "0.6.2"),
-        if3 = List(
-          ("com.lihaoyi" %% "pprint" % "0.6.2")
-            .cross(CrossVersion.for3Use2_13)
-        )
-      )
+      List("com.lihaoyi" %% "pprint" % "0.6.6")
   },
   buildInfoPackage := "scala.meta.internal.mtags",
   buildInfoKeys := Seq[BuildInfoKey](
