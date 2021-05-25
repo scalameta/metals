@@ -162,7 +162,9 @@ class ProblemResolver(
             isUnsupportedBloopVersion()
           )
         )
-      case _ if !scalaTarget.isSourcerootDeclared =>
+      case _
+          if !scalaTarget.isSourcerootDeclared && !ScalaVersions
+            .isScala3Version(scalaTarget.scalaVersion) =>
         Some(MissingSourceRoot(workspace.sourcerootOption))
       case version
           if ScalaVersions.isDeprecatedScalaVersion(
