@@ -205,8 +205,8 @@ class MetalsLanguageServer(
   private val timerProvider: TimerProvider = new TimerProvider(time)
   private val trees = new Trees(buildTargets, buffers, scalaVersionSelector)
   private val documentSymbolProvider = new DocumentSymbolProvider(trees)
-  private val multilineStringFormattingProvider =
-    new MultilineStringFormattingProvider(buffers, trees, () => userConfig)
+  private val onTypeRangeFormattingProvider =
+    new OnTypeRangeFormattingProvider(buffers, trees, () => userConfig)
   private val classFinder = new ClassFinder(trees)
   private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
   // These can't be instantiated until we know the workspace root directory.
@@ -1366,7 +1366,7 @@ class MetalsLanguageServer(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      multilineStringFormattingProvider.format(params, trees).asJava
+      onTypeRangeFormattingProvider.format(params, trees).asJava
     }
 
   @JsonRequest("textDocument/rangeFormatting")
@@ -1374,7 +1374,7 @@ class MetalsLanguageServer(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      multilineStringFormattingProvider.format(params, trees).asJava
+      onTypeRangeFormattingProvider.format(params, trees).asJava
     }
 
   @JsonRequest("textDocument/prepareRename")
