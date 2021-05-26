@@ -103,9 +103,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def f[A >: Any](args: A*): String = macro
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "def f[A >: Any](args: A*): String".hover,
-      "0." -> ("def f: String".stripMargin.hover +
-        "\nImplementation of scala.StringContext.f used in Dotty")
+      "3.0" -> "def f[A >: Any](args: A*): String".hover
     )
   )
 
@@ -212,7 +210,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "class Foo: new-anon.Foo".hover
+      "3.0" -> "class Foo: Foo".hover
     )
   )
 
@@ -337,7 +335,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "object FileVisitResult: FileVisitResult".hover
+      "3.0" -> "enum FileVisitResult: FileVisitResult".hover
     )
   )
 
@@ -360,7 +358,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin,
     automaticPackage = false,
     compat = Map(
-      "3.0" -> "object Foo: app.Outer.Foo".hover
+      "3.0" -> "object Foo: Foo".hover
     )
   )
 
@@ -372,10 +370,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|```scala
        |package java.nio
        |```
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> "object nio: java.nio".hover
-    )
+       |""".stripMargin
   )
 
   check(
@@ -386,10 +381,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|```scala
        |package java
        |```
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> "object java: java".hover
-    )
+       |""".stripMargin
   )
 
   check(
@@ -400,10 +392,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|```scala
        |package java.nio.file
        |```
-       |""".stripMargin,
-    compat = Map(
-      "3.0" -> "object file: java.nio.file".hover
-    )
+       |""".stripMargin
   )
 
   check(
@@ -467,8 +456,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """final val CONTINUE: FileVisitResult""".hover,
     compat = Map(
-      "3.0" -> "val CONTINUE: java.nio.file.FileVisitResult".hover,
-      "0." -> "val CONTINUE: (CONTINUE : java.nio.file.FileVisitResult)".hover
+      "3.0" -> "case CONTINUE: FileVisitResult".hover
     )
   )
 }

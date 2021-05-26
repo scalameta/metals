@@ -585,7 +585,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|concat[T: ClassTag](xss: Array[T]*): Array[T]
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "concat[T: scala.reflect.ClassTag](xss: Array[T]*): Array[T]"
+      "3.0" -> "concat[T: ClassTag](xss: Array[T]*): Array[T]"
     )
   )
 
@@ -615,11 +615,11 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3.0.0-RC1" ->
-        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, Object]
+        """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
            |""".stripMargin,
       "3.0" ->
-        """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*): java.util.Map[String, Object]
-           |readAttributes[A <: java.nio.file.attribute.BasicFileAttributes](x$0: java.nio.file.Path, x$1: Class[A], x$2: java.nio.file.LinkOption*): A
+        """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
+           |readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
            |""".stripMargin
     )
   )
@@ -869,8 +869,8 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3.0" ->
         """|Some scala
-           |SomeToExpr[T: quoted.Type: quoted.ToExpr]: scala.quoted.ToExpr.SomeToExpr[T]
-           |SomeFromExpr[T](using quoted.Type[T], quoted.FromExpr[T]): scala.quoted.FromExpr.SomeFromExpr[T]
+           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
+           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
   )
@@ -887,8 +887,8 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3.0" ->
         """|Some scala
-           |SomeToExpr[T: quoted.Type: quoted.ToExpr]: scala.quoted.ToExpr.SomeToExpr[T]
-           |SomeFromExpr[T](using quoted.Type[T], quoted.FromExpr[T]): scala.quoted.FromExpr.SomeFromExpr[T]
+           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
+           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
   )
@@ -991,7 +991,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3.0.0-RC1" ->
         """|NotString: Int
-           |Number: scala.util.matching.Regex
+           |Number: Regex
            |NegativeArraySizeException java.lang
            |""".stripMargin,
       "3.0" ->
