@@ -235,8 +235,9 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
+  def scala3RCVersions = Seq("3.0.0-RC3", "3.0.0-RC2", "3.0.0-RC1")
   def nonDeprecatedScala3Versions =
-    Seq(scala3, "3.0.0-RC3", "3.0.0-RC2", "3.0.0-RC1")
+    scala3 +: scala3RCVersions
   def deprecatedScala3Versions = Seq()
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
@@ -350,8 +351,10 @@ val mtagsSettings = List(
     if (isCI) Nil
     // NOTE(olafur) pprint is indispensable for me while developing, I can't
     // use println anymore for debugging because pprint.log is 100 times better.
-    else
-      List("com.lihaoyi" %% "pprint" % "0.6.6")
+    else {
+      if (V.scala3RCVersions.contains(scalaVersion.value)) Nil
+      else List("com.lihaoyi" %% "pprint" % "0.6.6")
+    }
   },
   buildInfoPackage := "scala.meta.internal.mtags",
   buildInfoKeys := Seq[BuildInfoKey](
