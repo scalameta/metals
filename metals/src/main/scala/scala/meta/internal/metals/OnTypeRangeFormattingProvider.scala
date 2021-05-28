@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.onTypeRangeFormatters.IndentOnPaste
 import scala.meta.internal.metals.onTypeRangeFormatters.MultilineString
 import scala.meta.internal.metals.onTypeRangeFormatters.OnTypeRangeFormatter
 import scala.meta.internal.parsing.Trees
@@ -24,7 +25,8 @@ class OnTypeRangeFormattingProvider(
   type EndPosition = meta.Position
   // The order of which this is important to know which will first return the Edits
   val formatters: List[OnTypeRangeFormatter] = List(
-    MultilineString()
+    MultilineString(),
+    IndentOnPaste()
   )
 
   def format(

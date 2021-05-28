@@ -1,8 +1,9 @@
-package tests
+package tests.rangeFormatting
 
 import munit.Location
+import tests.BaseLspSuite
 
-class RangeFormattingWhenSelectingSuite
+class MultilineStringRangeFormattingWhenSelectingSuite
     extends BaseLspSuite("rangeFormatting") {
   check(
     "start-misindent-line",

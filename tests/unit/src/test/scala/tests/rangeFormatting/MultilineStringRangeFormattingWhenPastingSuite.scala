@@ -1,9 +1,11 @@
-package tests
+package tests.rangeFormatting
 
 import munit.Location
 import munit.TestOptions
+import tests.BaseLspSuite
 
-class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
+class MultilineStringRangeFormattingWhenPastingSuite
+    extends BaseLspSuite("rangeFormatting") {
   private val indent = "  "
 
   check(
@@ -353,7 +355,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
           testCode, // bez @@
           expected,
           unmangle(paste),
-          workspace
+          workspace,
+          None
         )
       } yield ()
     }

@@ -717,10 +717,17 @@ final class TestingServer(
       query: String,
       expected: String,
       paste: String,
-      root: AbsolutePath
+      root: AbsolutePath,
+      formattingOptions: Option[FormattingOptions]
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      (_, params) <- rangeFormattingParams(filename, query, paste, root)
+      (_, params) <- rangeFormattingParams(
+        filename,
+        query,
+        paste,
+        root,
+        formattingOptions
+      )
       multiline <- server.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -924,7 +931,8 @@ final class TestingServer(
       filename: String,
       original: String,
       paste: String,
-      root: AbsolutePath
+      root: AbsolutePath,
+      formattingOptions: Option[FormattingOptions]
   ): Future[(String, DocumentRangeFormattingParams)] = {
     positionFromString(filename, original, root, replaceWith = paste) {
       case (text, textId, start) =>
@@ -935,6 +943,7 @@ final class TestingServer(
         val params = new DocumentRangeFormattingParams()
         params.setRange(range)
         params.setTextDocument(textId)
+        formattingOptions.foreach(params.setOptions)
         (text, params)
     }
   }
