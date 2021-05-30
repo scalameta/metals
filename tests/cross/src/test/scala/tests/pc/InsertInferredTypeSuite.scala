@@ -370,7 +370,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "renamed".tag(IgnoreScala3),
+    "renamed",
     """|import java.time.{Instant => I}
        |
        |trait Main {
@@ -390,7 +390,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "renamed-package".tag(IgnoreScala3),
+    "renamed-package",
     """|import java.{ time => t }
        |
        |trait Main {
@@ -409,7 +409,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "renamed-package-long".tag(IgnoreScala3),
+    "renamed-package-long",
     """|import scala.{ concurrent => c }
        |
        |trait Main {
@@ -430,13 +430,14 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   def checkEdit(
       name: TestOptions,
       original: String,
-      expected: String
+      expected: String,
+      compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
       val edits = getAutoImplement(original)
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
   def getAutoImplement(

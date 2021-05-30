@@ -11,14 +11,11 @@ import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j => l}
-import dotty.tools.dotc.interactive.Interactive
-import scala.meta.pc.OffsetParams
-
-import java.net.URI
 
 object MtagsEnrichments
     extends CommonMtagsEnrichments
@@ -34,6 +31,10 @@ object MtagsEnrichments
       new SourcePosition(source, p)
 
     def localContext(params: OffsetParams): Context = {
+      if (driver.currentCtx.run.units.isEmpty)
+        throw new RuntimeException(
+          "No source files were passed to the Scala 3 presentation compiler"
+        )
       val unit = driver.currentCtx.run.units.head
       val tree = unit.tpdTree
       val pos = driver.sourcePosition(params)

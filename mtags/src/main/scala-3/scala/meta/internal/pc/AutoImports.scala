@@ -64,8 +64,7 @@ object AutoImports {
         val fullName = from.stripSuffix("/").replace("/", ".")
         val pkg = requiredPackage(fullName)
         (pkg.name.toSimpleName, to.stripSuffix(".").stripSuffix("#"))
-      }.toMap
-
+      }.toMap ++ namesInScope.renames
     new AutoImportsGenerator(pos, importPos, namesInScope, renameConfig)
   }
 

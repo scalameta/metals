@@ -5,16 +5,33 @@ import java.{util => ju}
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Hashable.Binders
+import dotty.tools.dotc.core.NameKinds
 import dotty.tools.dotc.core.NameKinds.EvidenceParamName
+import dotty.tools.dotc.core.Names
+import dotty.tools.dotc.core.Names.Designator
 import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.Names.SimpleName
+import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
+import org.eclipse.lsp4j.TextEdit
 
-class ShortenedNames(context: Context) {
-  val history = collection.mutable.Map.empty[Name, ShortName]
+class ShortenedNames(
+    context: Context,
+    val renames: Map[SimpleName, String] = Map.empty
+) {
+  private val history = collection.mutable.Map.empty[Name, ShortName]
+
+  def imports(autoImportsGen: AutoImportsGenerator): List[TextEdit] = {
+    history.values.flatMap { name =>
+      autoImportsGen.forSymbol(name.symbol).toList.flatten
+    }.toList
+  }
 
   def lookupSymbol(short: ShortName): Type = {
     context.findRef(short.name)
@@ -68,6 +85,12 @@ object ShortName {
     ShortName(sym.name, sym)
 }
 
+case class PrettyType(name: String) extends Type {
+  def hash: Int = 0
+  def computeHash(bind: Binders) = hash
+  override def toString = name
+}
+
 /**
  * Shorten the long (fully qualified) type to shorter representation, so printers
  * can obtain more readable form of type like `SrcPos` instead of `dotc.util.SrcPos`
@@ -99,8 +122,29 @@ def shortType(longType: Type, history: ShortenedNames)(using
           if (designator.isInstanceOf[Symbol])
             designator.asInstanceOf[Symbol]
           else tpe.typeSymbol
-        val short = ShortName(sym)
-        TypeRef(loop(prefix, Some(short)), sym)
+        history.renames.get(sym.name.toSimpleName) match {
+          case Some(rename) =>
+            PrettyType(rename)
+          case _ =>
+            val renamedOwnerIndex =
+              sym.ownersIterator.indexWhere(s =>
+                history.renames.contains(s.name.toSimpleName)
+              )
+            if (renamedOwnerIndex < 0) {
+              val short = ShortName(sym)
+              TypeRef(loop(prefix, Some(short)), sym)
+            } else {
+              val renamedOnwers =
+                sym.ownersIterator.take(renamedOwnerIndex + 1).toList.reverse
+
+              PrettyType(
+                history.renames(
+                  renamedOnwers.head.name.toSimpleName
+                ) + "." + renamedOnwers.tail.map(_.name).mkString(".")
+              )
+
+            }
+        }
 
       case TermRef(prefix, designator) =>
         val sym =
@@ -111,7 +155,7 @@ def shortType(longType: Type, history: ShortenedNames)(using
         if (history.tryShortenName(name)) NoPrefix
         else TermRef(loop(prefix, None), sym)
 
-      case ThisType(tyref) =>
+      case t @ ThisType(tyref) =>
         if (history.tryShortenName(name)) NoPrefix
         else ThisType.raw(loop(tyref, None).asInstanceOf[TypeRef])
 

@@ -1,25 +1,27 @@
 package scala.meta.internal.pc
 
+import java.net.URI
+import java.nio.file.Paths
+
+import scala.meta as m
+
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.tokens.{Token => T}
 
-import org.eclipse.lsp4j.TextEdit
-import java.nio.file.Paths
+import dotty.tools.dotc.ast.Trees._
+import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.Symbols.NoSymbol
+import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.interactive.Interactive
-import java.net.URI
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-import dotty.tools.dotc.ast.Trees._
-import dotty.tools.dotc.core.Types._
-import scala.meta.internal.mtags.MtagsEnrichments._
-import dotty.tools.dotc.core.Symbols.NoSymbol
-import scala.meta as m
-import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
-import dotty.tools.dotc.ast.untpd
+import org.eclipse.lsp4j.TextEdit
 
 /**
  * Tries to calculate edits needed to insert the inferred type annotation
@@ -64,14 +66,21 @@ final class InferredTypeProvider(
       namesInScope,
       config
     )
-    val history = new ShortenedNames(locatedCtx)
+    val shortenedNames = new ShortenedNames(locatedCtx, namesInScope.renames)
 
+    def imports: List[TextEdit] =
+      shortenedNames.imports(autoImportsGen)
+
+    def printType(tpe: Type): String = {
+      val short = shortType(tpe, shortenedNames)
+      symbolPrinter.typeString(short)
+    }
     /*
      * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
      * Suprisingly, val ((a, c), b) = ((1, 3), 2) will be covered by Bind
      * https://github.com/lampepfl/dotty/issues/12627
      */
-    def findTuplePart(
+    def editForTupleUnapply(
         applied: AppliedType,
         metaPattern: m.Pat,
         valdefOffset: Int
@@ -85,18 +94,13 @@ final class InferredTypeProvider(
           }
           if (tupleIndex >= 0) {
             val tuplePartTpe = applied.args(tupleIndex)
-            val imports =
-              autoImportsGen
-                .forSymbol(tuplePartTpe.typeSymbol)
-                .getOrElse(Nil)
-            val short = shortType(tuplePartTpe, history)
             val typeEndPos = tpl.args(tupleIndex).pos.end
             val namePos = typeEndPos + valdefOffset - 4
             val lspPos = driver.sourcePosition(params.uri, namePos).toLSP
             val typeNameEdit =
               new TextEdit(
                 lspPos,
-                ": " + symbolPrinter.typeString(short)
+                ": " + printType(tuplePartTpe)
               )
             typeNameEdit :: imports
           } else Nil
@@ -120,10 +124,9 @@ final class InferredTypeProvider(
             if (isParam) vl.endPos
             else
               tpt.endPos
-          val short = shortType(tpt.tpe, history)
           new TextEdit(
             nameEnd.toLSP,
-            ": " + symbolPrinter.typeString(short) + {
+            ": " + printType(tpt.tpe) + {
               if (withParens) ")" else ""
             }
           )
@@ -150,8 +153,6 @@ final class InferredTypeProvider(
 
         }
         def simpleType = {
-          val imports =
-            autoImportsGen.forSymbol(tpt.tpe.typeSymbol).getOrElse(Nil)
           typeNameEdit ::: imports
         }
 
@@ -162,7 +163,7 @@ final class InferredTypeProvider(
 
           dialects.Scala3("val " + pattern + "???").parse[Source] match {
             case Parsed.Success(Source(List(valDef: m.Defn.Val))) =>
-              findTuplePart(
+              editForTupleUnapply(
                 applied,
                 valDef.pats.head,
                 vl.startPos.start
@@ -182,14 +183,11 @@ final class InferredTypeProvider(
        * `def a[T](param : Int): Int = param`
        */
       case Some(DefDef(name, _, tpt, rhs)) =>
-        val short = shortType(tpt.tpe, history)
         val typeNameEdit =
           new TextEdit(
             tpt.endPos.toLSP,
-            ": " + symbolPrinter.typeString(short)
+            ": " + printType(tpt.tpe)
           )
-        val imports =
-          autoImportsGen.forSymbol(tpt.tpe.typeSymbol).getOrElse(Nil)
         typeNameEdit :: imports
 
       /* `case t =>`
@@ -197,20 +195,14 @@ final class InferredTypeProvider(
        * `case t: Int =>`
        */
       case Some(bind @ Bind(name, body)) =>
-        val short = shortType(body.tpe, history)
-
         def baseEdit(withParens: Boolean) = {
-          val short = shortType(body.tpe, history)
-
           new TextEdit(
             bind.endPos.toLSP,
-            ": " + symbolPrinter.typeString(short) + {
+            ": " + printType(body.tpe) + {
               if (withParens) ")" else ""
             }
           )
         }
-        val imports =
-          autoImportsGen.forSymbol(body.tpe.typeSymbol).getOrElse(Nil)
         val typeNameEdit = path match {
           /* In case it's an infix pattern match
            * we need to add () for example in:
@@ -242,14 +234,10 @@ final class InferredTypeProvider(
        * `for(t: Int <- 0 to 10)`
        */
       case Some(i @ Ident(name)) =>
-        val short = shortType(i.tpe, history)
         val typeNameEdit = new TextEdit(
           i.endPos.toLSP,
-          ": " + symbolPrinter.typeString(short.widen)
+          ": " + printType(i.tpe.widen)
         )
-
-        val imports =
-          autoImportsGen.forSymbol(i.tpe.typeSymbol).getOrElse(Nil)
         typeNameEdit :: imports
 
       case _ =>

@@ -2,8 +2,8 @@ package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
-import scala.meta.internal.metals.codeactions.OrganizeImports
 import scala.meta.internal.metals.codeactions.InsertInferredType
+import scala.meta.internal.metals.codeactions.OrganizeImports
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
 import munit.Location
