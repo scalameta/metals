@@ -114,7 +114,7 @@ object ScalaVersions {
   }
 
   private val scalaVersionRegex =
-    "(_?)(\\d)\\.(\\d{1,2})(\\.\\d(-(RC|M)\\d)?)?".r
+    "(_)?(\\d)(\\.\\d{1,2})?(\\.\\d(-(RC|M)\\d)?)?".r
 
   /**
    * Extract scala binary version from dependency jar name.
@@ -134,9 +134,10 @@ object ScalaVersions {
       .flatMap { m =>
         val hasUnderscorePrefix = Option(m.group(1)).isDefined
         val major = m.group(2)
-        val minor = m.group(3)
-        val ending = Option(m.group(4)).map(s => s"$s").getOrElse("")
-        val version = s"$major.$minor$ending"
+        val minor = Option(m.group(3)).getOrElse("")
+        val ending = Option(m.group(4)).getOrElse("")
+        val version = s"$major$minor$ending"
+
         if (isSupportedScalaBinaryVersion(version))
           Some(version -> hasUnderscorePrefix)
         else None
