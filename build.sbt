@@ -189,9 +189,9 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val sbtScala = "2.12.12"
-  val scala212 = "2.12.13"
+  val scala212 = "2.12.14"
   val scala213 = "2.13.6"
-  val ammonite212Version = scala212
+  val ammonite212Version = "2.12.13"
   val ammonite213Version = "2.13.5"
   val scalameta = "4.4.20"
   val semanticdb = scalameta
@@ -226,7 +226,7 @@ lazy val V = new {
     Seq(
       scala213,
       scala212,
-      "2.12.14",
+      "2.12.13",
       "2.12.12",
       "2.12.11",
       "2.12.10",
