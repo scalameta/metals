@@ -50,8 +50,8 @@ server**.
 ## Worksheets
 
 Make sure to check out the `worksheet` section on your editor page. For example,
-you can find information on worksheets in [VS Code
-here](../editors/vscode.md#worksheets).
+you can find information on worksheets in
+[VS Code here](../editors/vscode.md#worksheets).
 
 ### How do I run a worksheet?
 
@@ -117,3 +117,19 @@ imports. There are some conversations going on about how to achieve this in the
 future, but for now you'll need to save your file before using this feature.
 
 For context: [#2120](https://github.com/scalameta/metals/issues/2120)
+
+## Can't connect to sbt BSP on Apple M1
+
+It might help to add an additional sbt setting to `$HOME/.sbt/1.0/global.sbt`
+
+```
+serverConnectionType := ConnectionType.Tcp,
+```
+
+then reload Metals. More on global settings
+[here](https://www.scala-sbt.org/1.x/docs/Global-Settings.html).
+
+For context:
+
+- [#2798](https://github.com/scalameta/metals/issues/2798)
+- [#6162](https://github.com/sbt/sbt/issues/6162)
