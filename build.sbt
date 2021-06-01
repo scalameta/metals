@@ -413,7 +413,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "7.9.0",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
-      "com.zaxxer" % "nuprocess" % "2.0.1",
+      "com.zaxxer" % "nuprocess" % "2.0.2",
       "net.java.dev.jna" % "jna" % "5.8.0",
       "net.java.dev.jna" % "jna-platform" % "5.8.0",
       // for BSP
