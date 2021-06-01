@@ -196,7 +196,7 @@ lazy val V = new {
   val scalameta = "4.4.20"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.8-19-4d9f966b"
+  val bloop = "1.4.8-43-c2d941d9"
   val scala3 = "3.0.0"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -205,7 +205,7 @@ lazy val V = new {
   val mdoc = "2.2.21"
   val scalafmt = "2.7.5"
   val munit = "0.7.26"
-  val scalafix = "0.9.27"
+  val scalafix = "0.9.29"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
   val genyVersion = "0.6.10"
@@ -254,8 +254,8 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.4"
   val coursier = "2.0.16"
-  val ammonite = "2.3.8-124-2da846d2"
-  val mill = "0.9.7"
+  val ammonite = "2.3.8-58-aa8b2ab1"
+  val mill = "0.9.8"
   val organizeImportRule = "0.5.0"
 }
 
@@ -401,7 +401,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.11",
+      "com.geirsson" %% "metaconfig-core" % "0.9.14",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.15",
       // for file watching
@@ -413,7 +413,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "7.9.0",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
-      "com.zaxxer" % "nuprocess" % "2.0.1",
+      "com.zaxxer" % "nuprocess" % "2.0.2",
       "net.java.dev.jna" % "jna" % "5.8.0",
       "net.java.dev.jna" % "jna-platform" % "5.8.0",
       // for BSP
@@ -439,13 +439,13 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.5.4",
-      "com.outr" %% "scribe-file" % "3.5.4",
-      "com.outr" %% "scribe-slf4j" % "3.5.4", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.5.5",
+      "com.outr" %% "scribe-file" % "3.5.5",
+      "com.outr" %% "scribe-slf4j" % "3.5.5", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.2",
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.3.13",
+      "com.lihaoyi" %% "ujson" % "1.3.15",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.6.9",
       // for producing SemanticDB from Scala source files
