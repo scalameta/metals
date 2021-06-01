@@ -12,7 +12,7 @@ jobs:
           fetch-depth: 0
       - uses: olafurpg/setup-scala@v10
       - uses: olafurpg/setup-gpg@v3
-      - uses: coursier/cache-action@v5
+      - uses: coursier/cache-action@v6.1
       - name: Publish
         run: |
           sbt ci-release
