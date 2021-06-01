@@ -196,7 +196,7 @@ lazy val V = new {
   val scalameta = "4.4.20"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.8-43-c2d941d9"
+  val bloop = "1.4.8-19-4d9f966b"
   val scala3 = "3.0.0"
   val bloopNightly = bloop
   val sbtBloop = bloop
@@ -413,7 +413,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "7.9.1",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
-      "com.zaxxer" % "nuprocess" % "2.0.2",
+      "com.zaxxer" % "nuprocess" % "2.0.1",
       "net.java.dev.jna" % "jna" % "5.8.0",
       "net.java.dev.jna" % "jna-platform" % "5.8.0",
       // for BSP
