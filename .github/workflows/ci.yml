@@ -36,7 +36,7 @@ jobs:
             CACHE_PATH: ~\AppData\Local\Coursier\Cache\v1
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v10
+      - uses: olafurpg/setup-scala@v11
         with:
           java-version: "adopt@1.${{ matrix.java }}"
       - uses: coursier/cache-action@v5
@@ -108,7 +108,7 @@ jobs:
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v10
+      - uses: olafurpg/setup-scala@v11
         with:
           java-version: "adopt@1.11"
       - uses: coursier/cache-action@v5
