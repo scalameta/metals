@@ -215,7 +215,10 @@ lazy val V = new {
   def supportedScalaBinaryVersions =
     supportedScalaVersions.iterator
       .map(CrossVersion.partialVersion)
-      .collect { case Some((a, b)) => s"$a.$b" }
+      .collect {
+        case Some((3, _)) => "3"
+        case Some((a, b)) => s"$a.$b"
+      }
       .toList
       .distinct
 
