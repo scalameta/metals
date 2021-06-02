@@ -192,7 +192,7 @@ lazy val V = new {
   val scala212 = "2.12.14"
   val scala213 = "2.13.6"
   val ammonite212Version = "2.12.13"
-  val ammonite213Version = "2.13.5"
+  val ammonite213Version = scala213
   val scalameta = "4.4.20"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
@@ -254,7 +254,7 @@ lazy val V = new {
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.4"
   val coursier = "2.0.16"
-  val ammonite = "2.3.8-58-aa8b2ab1"
+  val ammonite = "2.3.8-124-2da846d2"
   val mill = "0.9.8"
   val organizeImportRule = "0.5.0"
 }
