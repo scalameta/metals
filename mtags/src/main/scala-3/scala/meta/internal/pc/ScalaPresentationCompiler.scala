@@ -293,34 +293,33 @@ case class ScalaPresentationCompiler(
       val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
       driver.run(uri, sourceFile)
 
-      val ctx = driver.currentCtx
+      given ctx: Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
-      val path = Interactive.pathTo(trees, pos)(using ctx)
-      val tp = Interactive.enclosingType(trees, pos)(using ctx)
-      val tpw = tp.widenTermRefExpr(using ctx)
+      val path = Interactive.pathTo(trees, pos)
+      val tp = Interactive.enclosingType(trees, pos)
+      val tpw = tp.widenTermRefExpr
 
-      if (tp.isError(using ctx) || tpw == NoType || tpw.isError(using ctx))
+      if (tp.isError || tpw == NoType || tpw.isError)
         ju.Optional.empty()
       else {
-        Interactive.enclosingSourceSymbols(path, pos)(using ctx) match {
+        Interactive.enclosingSourceSymbols(path, pos) match {
           case Nil =>
             ju.Optional.empty()
           case symbols =>
-            val printer = SymbolPrinter()(using ctx)
+            val printer = SymbolPrinter()
             val docComments =
-              symbols.flatMap(ParsedComment.docOf(_)(using ctx))
-            val keywordName = symbols.headOption.map { symbol =>
-              printer.fullDefinition(
-                symbol,
-                tpw
-              )
-            }
-            val typeString = symbols.headOption.map { symbol =>
+              symbols.flatMap(ParsedComment.docOf(_))
+            val hoverString = symbols.headOption.map { symbol =>
               tpw match {
                 // https://github.com/lampepfl/dotty/issues/8891
-                case _: ImportType =>
-                  printer.typeString(symbol.paramRef(using ctx))
+                case tpw: ImportType =>
+                  val history = new ShortenedNames(ctx)
+                  printer.hoverDetails(
+                    symbol,
+                    history,
+                    symbol.paramRef
+                  )
                 case _ =>
                   driver.compilationUnits.get(uri) match {
                     case Some(unit) =>
@@ -333,16 +332,14 @@ case class ScalaPresentationCompiler(
                       val context =
                         Interactive.contextOfPath(tpdPath)(using newctx)
                       val history = new ShortenedNames(context)
-                      printer.infoString(symbol, history, tpw)(using context)
-                    case None => printer.typeString(tpw)
+                      printer.hoverDetails(symbol, history, tpw)(using context)
+                    case None =>
+                      val history = new ShortenedNames(ctx)
+                      printer.hoverDetails(symbol, history, tpw)
                   }
               }
             }
-            val content = hoverContent(
-              keywordName,
-              typeString,
-              docComments
-            )(using ctx)
+            val content = hoverContent(hoverString, docComments)
             ju.Optional.of(new Hover(content))
         }
       }
@@ -488,7 +485,12 @@ case class ScalaPresentationCompiler(
         val printer = SymbolPrinter()
         s" ${printer.fullNameString(sym.owner)}"
       } else {
-        printer.infoString(sym, history, sym.info.widenTermRefExpr)(using ctx)
+        printer.hoverDetails(
+          sym,
+          history,
+          sym.info.widenTermRefExpr,
+          addFullDef = false
+        )(using ctx)
       }
     }
 
@@ -554,7 +556,7 @@ case class ScalaPresentationCompiler(
 
         val documentation = ParsedComment.docOf(sym)
         if (documentation.nonEmpty) {
-          item.setDocumentation(hoverContent(None, None, documentation.toList))
+          item.setDocumentation(hoverContent(None, documentation.toList))
         }
 
         if (sym.isDeprecated) {
@@ -629,15 +631,13 @@ case class ScalaPresentationCompiler(
   }
 
   private def hoverContent(
-      keywordName: Option[String],
       typeInfo: Option[String],
       comments: List[ParsedComment]
   )(using ctx: Context): MarkupContent = {
     val buf = new StringBuilder
     typeInfo.foreach { info =>
-      val keyName = keywordName.getOrElse("")
       buf.append(s"""```scala
-                    |$keyName$info
+                    |$info
                     |```
                     |""".stripMargin)
     }

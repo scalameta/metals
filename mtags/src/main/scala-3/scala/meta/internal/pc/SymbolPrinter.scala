@@ -61,18 +61,24 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
    * - otherwise: its shortened type
    *   - e.g. ` java.lang.String` ` Symbols.Symbol`
    */
-  def infoString(
+  def hoverDetails(
       sym: Symbol,
       history: ShortenedNames,
-      info: Type
+      info: Type,
+      addFullDef: Boolean = true
   )(using Context): String = {
+    val fullDef = if (addFullDef) fullDefinition(sym, info) else ""
+    // info is dealiased, while sym is not
+    val typeSymbol = info.typeSymbol
     sym match {
+      case p if p.is(Flags.Package) => fullDef
+      case p if typeSymbol.is(Flags.Module) =>
+        fullDef.trim + " " + typeSymbol.owner.fullName.stripModuleClassSuffix.toString
       case m if m.is(Flags.Method) =>
-        defaultMethodSignature(sym, history, info)
-      case p if p.is(Flags.Package) => ""
+        fullDef + defaultMethodSignature(m, history, info)
       case _ =>
         val short = shortType(info, history)
-        s"${typeString(short)}"
+        fullDef + s"${typeString(short)}"
     }
   }
 

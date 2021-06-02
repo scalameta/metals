@@ -56,7 +56,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def apply(name: String): Person
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "case class Person: Person".hover
+      "3.0" -> "case class Person: case-apply".hover
     )
   )
 
@@ -147,7 +147,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       // https://github.com/lampepfl/dotty/issues/8835
-      "3.0" -> "object num: Xtension#num".hover
+      "3.0" -> "object num: interpolator-unapply.a$.Xtension".hover
     )
   )
 
@@ -335,7 +335,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "enum FileVisitResult: FileVisitResult".hover
+      "3.0" -> "enum FileVisitResult: java.nio.file".hover
     )
   )
 
@@ -358,7 +358,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin,
     automaticPackage = false,
     compat = Map(
-      "3.0" -> "object Foo: Foo".hover
+      "3.0" -> "object Foo: app.Outer".hover
     )
   )
 
@@ -403,7 +403,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|class java.nio.file.Files
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "object Files: java.nio.file.Files".hover
+      "3.0" -> "object Files: java.nio.file".hover
     )
   )
 
@@ -415,7 +415,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|class java.nio.file.Paths
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "object Paths: java.nio.file.Paths".hover
+      "3.0" -> "object Paths: java.nio.file".hover
     )
   )
 

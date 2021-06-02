@@ -145,7 +145,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |PrintStream - java.io
                  |Stream - java.util.stream
                  |Stream - scala.collection.immutable
-                 |Stream: collection.immutable.Stream.type
+                 |Stream scala.collection.immutable
                  |StreamFilter - javax.xml.stream
                  |StreamResult - javax.xml.transform.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
