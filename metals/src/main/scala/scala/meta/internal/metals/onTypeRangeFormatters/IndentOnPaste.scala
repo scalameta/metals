@@ -47,21 +47,15 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
 
     def increaseIndentation(line: String) =
       increaseIndentPattern.findFirstIn(line).nonEmpty
-//    def decreaseIndentation(line: String) =
-//      decreaseIndentPattern.findFirstIn(line).nonEmpty
+
+    def stringRepeat(s: String, n: Int): String =
+      ("%0" + n + "d").format(0).replace("0", s)
 
     val (blank, tabSize) =
       if (insertSpaces) (" ", originalTabSize) else ("\t", 1)
 
     // These are the lines from the first pasted line, going above
     val invertedAboveRangeLines = splitLinesWithIndex.take(startLine).reverse
-
-//    def countDecreaseIndent(lines: List[String]): Int = {
-//      val count = lines.groupBy(decreaseIndentation)
-//        .mapValues(_.length)
-//        .getOrElse(true, 0)
-//      math.max(count, 0)
-//    }
 
     val firstPastedLineIndent = (for {
       (line, idx) <- invertedAboveRangeLines.find(t => {
@@ -94,9 +88,9 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
           case " " if indentChar == blank => line
           case "\t" if indentChar == " " =>
             val tabNum = math.ceil(indentChar.length / 2).toInt
-            blank.repeat(tabNum) ++ line.slice(spaceLength, line.length)
+            stringRepeat(blank, tabNum) ++ line.slice(spaceLength, line.length)
           case " " if indentChar == "\t" =>
-            blank.repeat(tabSize) ++ line.slice(spaceLength, line.length)
+            stringRepeat(blank, tabSize) ++ line.slice(spaceLength, line.length)
           case _ => line
         }
       } else line
@@ -124,24 +118,32 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       if (diff != 0)
         if (diff < 0) {
           if (lineIndentation < -diff) {
-            blank.repeat(firstPastedLineIndent + blockIndent) ++ line.slice(
-              lineIndentation,
-              line.length
-            )
+            stringRepeat(blank, firstPastedLineIndent + blockIndent) ++ line
+              .slice(
+                lineIndentation,
+                line.length
+              )
           } else {
             line.slice(-diff, line.length)
           }
 
-        } else
-          blank.repeat(diff) ++ line
+        } else {
+          stringRepeat(blank, diff) ++ line
+        }
       else line
+    }
+
+    def indentHead(): Option[String] = {
+      for {
+        headIdx <- codeLinesIdxs.headOption
+        head = blank * firstPastedLineIndent ++ pastedLines(headIdx).trim()
+      } yield head
     }
 
     val newLines = for {
       newLines <- newLinesOpt
-      headIdx <- codeLinesIdxs.headOption
-      head = blank * firstPastedLineIndent ++ pastedLines(headIdx).trim()
-    } yield head +: newLines
+      head <- indentHead()
+    } yield (head +: newLines).toList
 
     newLines.map(lines =>
       new TextEdit(range, lines.mkString(util.Properties.lineSeparator)) :: Nil
