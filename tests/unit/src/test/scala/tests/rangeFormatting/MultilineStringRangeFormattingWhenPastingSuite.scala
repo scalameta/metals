@@ -2,11 +2,17 @@ package tests.rangeFormatting
 
 import munit.Location
 import munit.TestOptions
+import org.eclipse.lsp4j.FormattingOptions
 import tests.BaseLspSuite
 
 class MultilineStringRangeFormattingWhenPastingSuite
     extends BaseLspSuite("rangeFormatting") {
-  private val indent = "  "
+  val formattingOptions: FormattingOptions = new FormattingOptions(
+    /** tabSize: */
+    2,
+    /** insertSpaces */
+    true
+  )
 
   check(
     "lines",
@@ -216,8 +222,8 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |object Main {
        |  val str = '''
        |  |first line
-       |second line
-       | different indent
+       |  second line
+       |   different indent
        |  '''
        |}""".stripMargin
   )
@@ -321,10 +327,9 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |object Main {
        |  val str = s'''
        |               |ok'''.stripMargin
-       |$indent
        |  val other = '''
-       |              |  some text
-       |              |'''.stripMargin
+       |  |  some text
+       |  |'''.stripMargin
        |}""".stripMargin
   )
 
@@ -356,7 +361,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
           expected,
           unmangle(paste),
           workspace,
-          None
+          Some(formattingOptions)
         )
       } yield ()
     }

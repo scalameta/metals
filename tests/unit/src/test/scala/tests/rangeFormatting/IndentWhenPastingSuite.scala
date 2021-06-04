@@ -38,7 +38,29 @@ class IndentWhenPastingSuite
        |    case Red   extends Color(0xFF0000)
        |    case Green extends Color(0x00FF00)
        |    case Blue  extends Color(0x0000FF)
-       |${blank * 2}
+       |end Main""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "correct-indentation",
+    s"""
+       |object Main:
+       |  @@
+       |end Main""".stripMargin,
+    s"""
+       |enum Color(val rgb: Int):
+       |  case Red   extends Color(0xFF0000)
+       |  case Green extends Color(0x00FF00)
+       |  case Blue  extends Color(0x0000FF)
+       |""".stripMargin,
+    s"""
+       |object Main:
+       |  enum Color(val rgb: Int):
+       |    case Red   extends Color(0xFF0000)
+       |    case Green extends Color(0x00FF00)
+       |    case Blue  extends Color(0x0000FF)
        |end Main""".stripMargin,
     scalaVersion,
     formattingOptions

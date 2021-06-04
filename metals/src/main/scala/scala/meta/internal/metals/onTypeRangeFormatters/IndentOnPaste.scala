@@ -39,38 +39,44 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
 
     val increaseIndentPattern =
       raw"""(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$|(^.*\{[^}"']*$$)""".r
-    val decreaseIndentPattern =
-      raw"""((^\s*end\b\s*)\b(if|while|for|match|try|\w+)$$|(^(.*\*/)?\s*}.*)$$)""".r
+    raw"""((^\s*end\b\s*)\b(if|while|for|match|try|\w+)$$|(^(.*\*/)?\s*}.*)$$)""".r
     val indentRegex = raw"\S".r
 
-    def indentationEndIndex(line: String): Option[Int] =
+    def indentationEndCharIndex(line: String): Option[Int] =
       indentRegex.findFirstMatchIn(line).map(_.start)
 
     def increaseIndentation(line: String) =
       increaseIndentPattern.findFirstIn(line).nonEmpty
-    def decreaseIndentation(line: String) =
-      decreaseIndentPattern.findFirstIn(line).nonEmpty
+//    def decreaseIndentation(line: String) =
+//      decreaseIndentPattern.findFirstIn(line).nonEmpty
 
     val (blank, tabSize) =
       if (insertSpaces) (" ", originalTabSize) else ("\t", 1)
 
     // These are the lines from the first pasted line, going above
     val invertedAboveRangeLines = splitLinesWithIndex.take(startLine).reverse
-    val decreaseIndentLineIdx = invertedAboveRangeLines
-      .find(t => decreaseIndentation(t._1))
-      .map(_._2)
-      .getOrElse(-1)
+
+//    def countDecreaseIndent(lines: List[String]): Int = {
+//      val count = lines.groupBy(decreaseIndentation)
+//        .mapValues(_.length)
+//        .getOrElse(true, 0)
+//      math.max(count, 0)
+//    }
 
     val firstPastedLineIndent = (for {
-      (line, idx) <- invertedAboveRangeLines.find(t =>
-        increaseIndentation(t._1)
-      )
-      indentIdx <- indentationEndIndex(line)
+      (line, idx) <- invertedAboveRangeLines.find(t => {
+        val trimmed = t._1.trim()
+        trimmed.nonEmpty && !trimmed.startsWith("|")
+      }) // Find first line non empty (aka code)
+
+      indentIdx <- indentationEndCharIndex(line) // get indentation spaces
+      nextIncrease = increaseIndentation(
+        line
+      ) // check if needs to increase indentation
     } yield {
-      if (decreaseIndentLineIdx > idx && decreaseIndentLineIdx != -1)
-        indentIdx
-      else
+      if (nextIncrease)
         indentIdx + tabSize
+      else indentIdx
     }).getOrElse(0)
 
     val codeLinesIdxs = (for {
@@ -98,13 +104,13 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
 
     val newLinesOpt = for {
       secondLineIdx <- codeLinesIdxs.drop(1).headOption
-      indentLengthPreConversion <- indentationEndIndex(
+      indentLengthPreConversion <- indentationEndCharIndex(
         pastedLines(secondLineIdx)
       )
       convertedLines = pastedLines.map(
         convertSpaces(_, indentLengthPreConversion)
       )
-      indentLength <- indentationEndIndex(convertedLines(secondLineIdx))
+      indentLength <- indentationEndCharIndex(convertedLines(secondLineIdx))
       headIdx <- codeLinesIdxs.headOption
       headLine = convertedLines(headIdx)
       indentTailLines = increaseIndentation(headLine)
@@ -112,12 +118,21 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       blockIndent = block * tabSize
     } yield for {
       line <- convertedLines.drop(headIdx + 1)
+      lineIndentation <- indentationEndCharIndex(line)
     } yield {
       val diff = firstPastedLineIndent + blockIndent - indentLength
       if (diff != 0)
-        if (diff < 0)
-          line.slice(-diff, line.length)
-        else
+        if (diff < 0) {
+          if (lineIndentation < -diff) {
+            blank.repeat(firstPastedLineIndent + blockIndent) ++ line.slice(
+              lineIndentation,
+              line.length
+            )
+          } else {
+            line.slice(-diff, line.length)
+          }
+
+        } else
           blank.repeat(diff) ++ line
       else line
     }

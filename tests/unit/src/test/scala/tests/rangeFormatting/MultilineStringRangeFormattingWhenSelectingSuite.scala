@@ -99,8 +99,10 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |}""".stripMargin
   )
 
-  // This test shows that currently we don't handle
-  // if current selection contains more than one and only one multi-line string
+  val blank = ""
+
+  // This test shows that currently if current selection contains more than one and only one multi-line string
+  // we use the IndentOnPaste onRangeFormatter
   check(
     "two-string",
     s"""
@@ -116,12 +118,11 @@ class MultilineStringRangeFormattingWhenSelectingSuite
     s"""
        |object Main {
        |  val firstString = '''
-       |                        |first line
-       |                            |second line'''.stripMargin
-       |
+       |  |first line
+       |      |second line'''.stripMargin
        |  val str2 = '''
-       |               |first line
-       |               |second line'''.stripMargin
+       |  |first line
+       |  |second line'''.stripMargin
        |}""".stripMargin
   )
 

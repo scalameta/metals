@@ -956,8 +956,10 @@ final class TestingServer(
     rangeFromString(filename, original, root) {
       case (text, textId, rangeSelection) =>
         val params = new DocumentRangeFormattingParams()
+        val formattingOptions = new FormattingOptions(2, true)
         params.setRange(rangeSelection)
         params.setTextDocument(textId)
+        params.setOptions(formattingOptions)
         (text, params)
     }
   }
