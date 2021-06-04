@@ -36,7 +36,7 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.esotericsoftware.kryo.util.IntMap#Entry Class
        |com.esotericsoftware.kryo.util.ObjectMap#Entry Class
        |com.twitter.util.tunable.TunableMap.Entry Class
-       |io.netty.util.collection.IntObjectMap#Entry Interface
+       |io.netty.util.collection.IntObjectMap#PrimitiveEntry Interface
        |java.util.Map#Entry Interface
        |java.util.TreeMap#AscendingSubMap#AscendingEntrySetView Class
        |java.util.TreeMap#DescendingSubMap#DescendingEntrySetView Class
