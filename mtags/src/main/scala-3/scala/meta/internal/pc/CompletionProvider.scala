@@ -89,13 +89,34 @@ class CompletionProvider(
       s.sourcePos.exists && s1.sourcePos.exists && s.sourcePos.point > s1.sourcePos.point
   }
 
+  extension (sym: Symbol) {
+    def detailString: String = {
+      if (sym.is(Method)) {
+        val sig = sym.signature
+        val sigString =
+          if (sig.paramsSig.isEmpty) "()"
+          else
+            sig.paramsSig
+              .map(p => p.toString)
+              .mkString("(", ",", ")")
+        sym.showFullName + sigString
+      } else {
+        sym.showFullName
+      }
+    }
+  }
   extension (l: List[CompletionValue]) {
     def filterInteresting(): (List[CompletionValue], SymbolSearch.Result) = {
       val isSeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
       def visit(head: CompletionValue): Boolean = {
         val sym = head.value.sym
-        val id = sym.showFullName
+        val id = head match {
+          case _: CompletionValue.NamedArg =>
+            sym.detailString + "="
+          case _ =>
+            sym.detailString
+        }
         def isNotLocalForwardReference: Boolean =
           !sym.isLocalToBlock ||
             !sym.srcPos.isAfter(pos) ||
@@ -150,8 +171,10 @@ class CompletionProvider(
     val sym = completion.value.sym
 
     def hasGetter = try {
+      def isModuleOrClass = sym.is(Module) || sym.isClass
       // isField returns true for some classes
-      sym.isField || sym.getter != NoSymbol
+      def isJavaClass = sym.is(JavaDefined) && isModuleOrClass
+      (sym.isField && !isJavaClass && !isModuleOrClass) || sym.getter != NoSymbol
     } catch {
       case _ => false
     }
@@ -259,7 +282,7 @@ class CompletionProvider(
                     )
                     if (byParamCount != 0) byParamCount
                     else {
-                      s1.show.compareTo(s2.show)
+                      s1.detailString.compareTo(s2.detailString)
                     }
                   }
                 }

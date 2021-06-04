@@ -198,6 +198,7 @@ lazy val V = new {
   val bsp = "2.0.0-M13"
   val bloop = "1.4.8-19-4d9f966b"
   val scala3 = "3.0.0"
+  val nextScala3RC = "3.0.1-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -242,7 +243,7 @@ lazy val V = new {
   // Scala 3
   def scala3RCVersions = Seq("3.0.0-RC3", "3.0.0-RC2", "3.0.0-RC1")
   def nonDeprecatedScala3Versions =
-    scala3 +: scala3RCVersions
+    scala3 +: scala3RCVersions :+ nextScala3RC
   def deprecatedScala3Versions = Seq()
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 

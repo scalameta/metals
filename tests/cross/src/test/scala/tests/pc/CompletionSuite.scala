@@ -28,7 +28,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |JList - javax.swing
            |""".stripMargin,
       "3.0" ->
-        """|List: collection.immutable.List.type
+        """|List scala.collection.immutable
            |List - java.awt
            |List - java.util
            |List - scala.collection.immutable
@@ -127,8 +127,10 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    // @tgodzik different results might be returned on each run for Scala 3
-    "dot".tag(IgnoreScala3),
+    // before 3.0.1 completions with the same name were included in one completion in a random order
+    "dot".tag(
+      IgnoreScalaVersion(Set("3.0.0-RC1", "3.0.0-RC2", "3.0.0-RC3", "3.0.0"))
+    ),
     """
       |object A {
       |  List.@@
@@ -234,6 +236,50 @@ class CompletionSuite extends BaseCompletionSuite {
            |isInstanceOf[T0]: Boolean
            |synchronized[T0](x$1: T0): T0
            |toString(): String
+           |""".stripMargin,
+      "3.0" ->
+        """|->[B](y: B): (A, B)
+           |apply[A](elems: A*): CC[A]
+           |concat[A](xss: Iterable[A]*): CC[A]
+           |empty[A]: List[A]
+           |ensuring(cond: Boolean): A
+           |ensuring(cond: Boolean, msg: => Any): A
+           |ensuring(cond: A => Boolean): A
+           |ensuring(cond: A => Boolean, msg: => Any): A
+           |fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
+           |fill[A](n: Int)(elem: => A): CC[A]
+           |formatted(fmtstr: String): String
+           |from[B](coll: IterableOnce[B]): List[B]
+           |fromSpecific(from: From)(it: IterableOnce[A]): C
+           |fromSpecific(it: IterableOnce[A]): C
+           |iterate[A](start: A, len: Int)(f: A => A): CC[A]
+           |newBuilder[A]: Builder[A, List[A]]
+           |nn[T](x: T | Null): x.type & T
+           |range[A: Integral](start: A, end: A, step: A): CC[A]
+           |range[A: Integral](start: A, end: A): CC[A]
+           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): CC[CC[CC[A]] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
+           |tabulate[A](n: Int)(f: Int => A): CC[A]
+           |toFactory(from: From): Factory[A, C]
+           |unapplySeq[A](x: CC[A] @uncheckedVariance): UnapplySeqWrapper[A]
+           |unfold[A, S](init: S)(f: S => Option[(A, S)]): CC[A]
+           |→[B](y: B): (A, B)
+           |iterableFactory[A]: Factory[A, CC[A]]
+           |asInstanceOf[X0]: X0
+           |equals(x$0: Any): Boolean
+           |getClass[X0 >: (Any.this : Any)]: Class[? <: X0]
+           |hashCode: Int
+           |isInstanceOf[X0]: Boolean
+           |synchronized[X0](x$0: X0): X0
+           |toString: String
+           |wait: Unit
+           |wait(x$0: Long): Unit
+           |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin
     )
   )
@@ -320,7 +366,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "import",
     """
       |import JavaCon@@
       |""".stripMargin,
@@ -344,7 +390,18 @@ class CompletionSuite extends BaseCompletionSuite {
       "2.11" -> """|JavaConverters - scala.collection
                    |JavaConversions - scala.collection
                    |JavaConversions - scala.concurrent
-                   |""".stripMargin
+                   |""".stripMargin,
+      "3" -> """|AsJavaConverters - scala.collection.convert
+                |JavaConverters - scala.collection
+                |JavaConversions - scala.concurrent
+                |AsJavaConsumer - scala.jdk.FunctionWrappers
+                |FromJavaConsumer - scala.jdk.FunctionWrappers
+                |AsJavaBiConsumer - scala.jdk.FunctionWrappers
+                |AsJavaIntConsumer - scala.jdk.FunctionWrappers
+                |AsJavaLongConsumer - scala.jdk.FunctionWrappers
+                |FromJavaBiConsumer - scala.jdk.FunctionWrappers
+                |FromJavaIntConsumer - scala.jdk.FunctionWrappers
+                |""".stripMargin
     )
   )
 
@@ -528,10 +585,36 @@ class CompletionSuite extends BaseCompletionSuite {
     // Scala 2.13.5 adds additional completions that actually fit, but are not useful for this test
     topLines = Some(25),
     compat = Map(
-      "3" ->
+      "3.0.0" ->
         """|Function scala
            |Function0 scala
            |Function1 scala
+           |Function1 scala
+           |Function2 scala
+           |Function3 scala
+           |Function4 scala
+           |Function5 scala
+           |Function6 scala
+           |Function7 scala
+           |Function8 scala
+           |Function9 scala
+           |Function10 scala
+           |Function11 scala
+           |Function12 scala
+           |Function13 scala
+           |Function14 scala
+           |Function15 scala
+           |Function16 scala
+           |Function17 scala
+           |Function18 scala
+           |Function19 scala
+           |Function20 scala
+           |Function21 scala
+           |Function22 scala
+           |""".stripMargin,
+      "3" ->
+        """|Function scala
+           |Function0 scala
            |Function1 scala
            |Function2 scala
            |Function3 scala
@@ -616,6 +699,10 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3.0.0-RC1" ->
         """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
+           |""".stripMargin,
+      "3.0.1" ->
+        """|readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
+           |readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
            |""".stripMargin,
       "3.0" ->
         """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
@@ -870,7 +957,9 @@ class CompletionSuite extends BaseCompletionSuite {
       "3.0" ->
         """|Some scala
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
+           |SomeToExpr - scala.quoted.ToExpr
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
+           |SomeFromExpr - scala.quoted.FromExpr
            |""".stripMargin
     )
   )
@@ -888,7 +977,9 @@ class CompletionSuite extends BaseCompletionSuite {
       "3.0" ->
         """|Some scala
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
+           |SomeToExpr - scala.quoted.ToExpr
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
+           |SomeFromExpr - scala.quoted.FromExpr
            |""".stripMargin
     )
   )
@@ -906,8 +997,8 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(2),
     compat = Map(
       "3.0" ->
-        """|NoClassDefFoundError java.lang
-           |NoManifest: reflect.NoManifest.type
+        """|NoManifest scala.reflect
+           |NoClassDefFoundError java.lang
            |""".stripMargin
     )
   )
@@ -930,10 +1021,15 @@ class CompletionSuite extends BaseCompletionSuite {
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
+      "3.0.0-RC1" ->
+        """|Seq scala.collection.immutable
+           |Set scala.collection.immutable
+           |StringBuilder scala.collection.mutable
+           |""".stripMargin,
       "3.0" ->
-        """|SafeVarargs java.lang
-           |SecurityException java.lang
-           |SecurityManager java.lang
+        """|Seq scala.collection.immutable
+           |Set scala.collection.immutable
+           |Stream scala.collection.immutable
            |""".stripMargin
     )
   )
@@ -956,15 +1052,15 @@ class CompletionSuite extends BaseCompletionSuite {
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
-      "3.0.0-RC1" ->
+      "3.0.1" ->
+        """|Seq scala.collection.immutable
+           |Set scala.collection.immutable
+           |Stream scala.collection.immutable
+           |""".stripMargin,
+      "3.0" ->
         """|SafeVarargs java.lang
            |SafeVarargs java.lang
            |ScalaReflectionException scala
-           |""".stripMargin,
-      "3.0" ->
-        """|String java.lang
-           |StringIndexOutOfBoundsException java.lang
-           |SafeVarargs java.lang
            |""".stripMargin
     )
   )
@@ -992,12 +1088,12 @@ class CompletionSuite extends BaseCompletionSuite {
       "3.0.0-RC1" ->
         """|NotString: Int
            |Number: Regex
-           |NegativeArraySizeException java.lang
+           |Nil scala.collection.immutable
            |""".stripMargin,
       "3.0" ->
         """|NotString: Int
-           |NegativeArraySizeException java.lang
-           |Nil: collection.immutable.Nil.type
+           |Nil scala.collection.immutable
+           |NoManifest scala.reflect
            |""".stripMargin
     )
   )
@@ -1016,10 +1112,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Option(3),
     compat = Map(
-      "3.0" ->
-        """|Nil: collection.immutable.Nil.type
-           |NoManifest: reflect.NoManifest.type
-           |None scala
+      "3.0.0" ->
+        """|Nil scala.collection.immutable
+           |NoManifest scala.reflect
+           |NegativeArraySizeException java.lang
            |""".stripMargin
     )
   )
@@ -1038,10 +1134,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Option(3),
     compat = Map(
-      "3.0" ->
-        """|Nil: collection.immutable.Nil.type
-           |NoManifest: reflect.NoManifest.type
-           |None scala
+      "3.0.0" ->
+        """|Nil scala.collection.immutable
+           |NoManifest scala.reflect
+           |NegativeArraySizeException java.lang
            |""".stripMargin
     )
   )
@@ -1068,6 +1164,10 @@ class CompletionSuite extends BaseCompletionSuite {
     filterText = "substring",
     compat = Map(
       "3.0.0-RC1" -> "substring(x$0: Int, x$1: Int): String",
+      "3.0.1" ->
+        """|substring(x$0: Int): String
+           |substring(x$0: Int, x$1: Int): String
+           |""".stripMargin,
       "3.0" ->
         """|substring(x$0: Int, x$1: Int): String
            |substring(x$0: Int): String
