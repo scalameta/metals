@@ -147,7 +147,9 @@ case class ScalafixProvider(
       file: AbsolutePath,
       scalaTarget: ScalaTarget
   ): Try[ScalafixEvaluation] = {
-    val scalaBinaryVersion = scalaTarget.scalaBinaryVersion
+    val defaultScalaVersion = scalaTarget.scalaBinaryVersion
+    val scalaBinaryVersion =
+      if (defaultScalaVersion.startsWith("3")) "2.13" else defaultScalaVersion
 
     val targetRoot =
       buildTargets.scalacOptions(scalaTarget.info.getId()).map {

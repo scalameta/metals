@@ -39,7 +39,9 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       fileName: String = "A.scala"
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
-      s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"]"""
+      if (scalacOptions.nonEmpty)
+        s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"],"""
+      else ""
     val path = s"a/src/main/scala/a/$fileName"
     val newPath = renamePath.getOrElse(path)
     val fileContent = input.replace("<<", "").replace(">>", "")
@@ -50,7 +52,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       cleanWorkspace()
       for {
         _ <- server.initialize(s"""/metals.json
-                                  |{"a":{$scalacOptionsJson, "scalaVersion" : "$scalaVersion"}}
+                                  |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
                                   |$scalafixConf
                                   |/$path
                                   |$fileContent""".stripMargin)
