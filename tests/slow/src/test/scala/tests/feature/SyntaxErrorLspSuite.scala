@@ -3,6 +3,7 @@ package tests.feature
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.semver.SemVer
 
 import munit.Location
 import tests.BaseLspSuite
@@ -332,6 +333,36 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       )
       _ <- server.didOpen("a/src/main/scala/A.scala")
       _ = assertEmpty(client.workspaceDiagnostics)
+    } yield ()
+  }
+
+  test("scala3-inline-position") {
+    cleanWorkspace()
+    // works from 3.0.1-RC1
+    val latestScala3 =
+      V.nonDeprecatedScalaVersions
+        .map(SemVer.Version.fromString)
+        .filter(_.major == 3)
+        .sortWith(_ > _)
+        .head
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": { "scalaVersion": "$latestScala3" }}
+           |/a/src/main/scala/A.scala
+           |inline def mark[T] = compiletime.summonInline[T]
+           |val x = mark[1 =:= 2]
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/A.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/A.scala:2:16: error: Cannot prove that (1 : Int) =:= (2 : Int).
+           |val x = mark[1 =:= 2]
+           |               ^^^
+           |""".stripMargin
+      )
     } yield ()
   }
 

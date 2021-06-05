@@ -40,6 +40,13 @@ object SemVer {
         .exists { case (a, b) => a > b }
     }
 
+    override def toString: String =
+      List(
+        Some(s"$major.$minor.$patch"),
+        releaseCandidate.map(s => s"-RC$s"),
+        milestone.map(s => s"-M$s")
+      ).flatten.mkString("")
+
   }
 
   object Version {
