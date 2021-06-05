@@ -1,28 +1,29 @@
 package scala.meta.internal.pc
 
-import java.net.URI
-import java.nio.file.Paths
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
+import java.net.URI
+import java.nio.file.Paths
 import java.{util => ju}
+
 import scala.collection.JavaConverters._
 import scala.io.Codec
-import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.parsing.Parsers.Parser
-import dotty.tools.dotc.parsing.ScriptParsers.ScriptParser
-import dotty.tools.dotc.reporting.Message
-import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.reporting.Diagnostic.Error
-import dotty.tools.dotc.interfaces.Diagnostic
-import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.util.ScriptSourceFile
-import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.CompilationUnit
-import dotty.tools.io.VirtualFile
-import org.eclipse.{lsp4j => l}
 
 import scala.meta.internal.mtags.MtagsEnrichments._
+
+import dotty.tools.dotc.CompilationUnit
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.interfaces.Diagnostic
+import dotty.tools.dotc.parsing.Parsers.Parser
+import dotty.tools.dotc.parsing.ScriptParsers.ScriptParser
+import dotty.tools.dotc.reporting.Diagnostic.Error
+import dotty.tools.dotc.reporting.Message
+import dotty.tools.dotc.reporting.StoreReporter
+import dotty.tools.dotc.util.ScriptSourceFile
+import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.io.VirtualFile
+import org.eclipse.{lsp4j => l}
 
 // note(@tgodzik) the plan is to be able to move the methods here back to Dotty compiler
 // so that we can provide easier compatibility with multiple Scala 3 versions

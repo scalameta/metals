@@ -2,15 +2,16 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
-import collection.mutable.ListBuffer
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Types._
-import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Names.Name
-import dotty.tools.dotc.core.NameKinds.EvidenceParamName
+import scala.collection.mutable.ListBuffer
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 
+import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.NameKinds.EvidenceParamName
+import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.Types._
 
 class ShortenedNames(context: Context) {
   val history = collection.mutable.Map.empty[Name, ShortName]

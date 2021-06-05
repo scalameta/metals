@@ -1,17 +1,17 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Denotations._
-import dotty.tools.dotc.core.Types._
-import dotty.tools.dotc.core.StdNames._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.ast.tpd._
+import scala.annotation.tailrec
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 
-import scala.annotation.tailrec
+import dotty.tools.dotc.ast.tpd._
+import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.Denotations._
+import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.StdNames._
+import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.Types._
 
 case class NamesInScope(
     values: Map[String, Symbol]

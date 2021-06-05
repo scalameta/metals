@@ -1,8 +1,8 @@
 package scala.meta.internal.pc
 
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Symbols.Symbol
 
 case class Params(
     labels: Seq[String],

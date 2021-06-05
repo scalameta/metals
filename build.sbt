@@ -274,7 +274,7 @@ val sharedSettings = List(
   ),
   scalacOptions ++= crossSetting(
     scalaVersion.value,
-    if3 = List("-language:implicitConversions", "-Xtarget:8"),
+    if3 = List("-language:implicitConversions", "-Xtarget:8", "-Xsemanticdb"),
     if211 = List("-Xexperimental", "-Ywarn-unused-import")
   ),
   scalacOptions --= crossSetting(

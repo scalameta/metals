@@ -1,22 +1,22 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.semanticdb.ExtractSemanticDB
-import dotty.tools.dotc.semanticdb.Schema
-import dotty.tools.dotc.semanticdb.Language
-import dotty.tools.dotc.semanticdb.TextDocument
-import dotty.tools.dotc.semanticdb.internal.SemanticdbOutputStream
-import dotty.tools.dotc.util.SourceFile
-
+import java.io.ByteArrayOutputStream
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.io.ByteArrayOutputStream
 
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.io.AbsolutePath
+
+import dotty.tools.dotc.core.Contexts.Context
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.semanticdb.ExtractSemanticDB
+import dotty.tools.dotc.semanticdb.Language
+import dotty.tools.dotc.semanticdb.Schema
+import dotty.tools.dotc.semanticdb.TextDocument
+import dotty.tools.dotc.semanticdb.internal.SemanticdbOutputStream
+import dotty.tools.dotc.util.SourceFile
 
 class SemanticdbTextDocumentProvider(
     driver: InteractiveDriver,

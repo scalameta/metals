@@ -1,23 +1,22 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.util.SourcePosition
+import scala.annotation.tailrec
+import scala.jdk.CollectionConverters._
+
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.AutoImports.AutoImportEdits
+import scala.meta.pc.PresentationCompilerConfig
+
+import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Denotations._
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.interactive.Interactive
-import dotty.tools.dotc.ast.tpd._
-
-import scala.jdk.CollectionConverters._
-import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.internal.mtags.MtagsEnrichments._
-
-import org.eclipse.{lsp4j => l}
-
-import scala.annotation.tailrec
+import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-import scala.meta.internal.pc.AutoImports.AutoImportEdits
+import org.eclipse.{lsp4j => l}
 
 object AutoImports {
 

@@ -1,11 +1,12 @@
 package scala.meta.internal.pc
 
 import scala.meta.pc._
+
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.SymDenotations._
+import dotty.tools.dotc.core.Symbols._
 
 class CompilerSearchVisitor(
     query: String,
