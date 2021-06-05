@@ -2,6 +2,7 @@ package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
+import scala.meta.internal.metals.codeactions.OrganizeImports
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
 import munit.Location
@@ -21,6 +22,34 @@ class CrossCodeActionLspSuite
        |  val al<<>>pha = 123
        |}
        |""".stripMargin
+  )
+
+  check(
+    "organize-imports",
+    """
+      |package a
+      |import scala.concurrent.{ExecutionContext, Future}
+      |import scala.util.Try<<>>
+      |
+      |object A {
+      |  val executionContext: ExecutionContext = ???
+      |  val k = Future.successful(1)
+      |  val tr = Try{ new Exception("name") }
+      |}
+      |""".stripMargin,
+    s"${OrganizeImports.title}",
+    """|package a
+       |import scala.concurrent.ExecutionContext
+       |import scala.concurrent.Future
+       |import scala.util.Try
+       |
+       |object A {
+       |  val executionContext: ExecutionContext = ???
+       |  val k = Future.successful(1)
+       |  val tr = Try{ new Exception("name") }
+       |}
+       |""".stripMargin,
+    kind = List(OrganizeImports.kind)
   )
 
   checkExtractedMember(

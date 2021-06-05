@@ -8,7 +8,6 @@ import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.io.AbsolutePath
@@ -42,15 +41,8 @@ final class OrganizeImports(
         target <- buildTargets.scalaTarget(buildId)
       } yield target
       scalaTarget match {
-        case Some(target)
-            if !ScalaVersions.isScala3Version(target.scalaVersion) =>
+        case Some(target) =>
           organizeImportsEdits(file, target)
-        case Some(target)
-            if ScalaVersions.isScala3Version(target.scalaVersion) =>
-          scribe.info(
-            s"Organize import doesn't work on ${target.scalaVersion} files"
-          )
-          Future.successful(Seq())
         case _ => Future.successful(Seq())
       }
     } else Future.successful(Seq())
