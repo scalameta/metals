@@ -171,6 +171,7 @@ Global / onLoad ~= { old =>
   old
 }
 Global / cancelable := true
+Global / excludeLintKeys += scalafixConfig
 crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
@@ -274,7 +275,13 @@ val sharedSettings = List(
   ),
   scalacOptions ++= crossSetting(
     scalaVersion.value,
-    if3 = List("-language:implicitConversions", "-Xtarget:8", "-Xsemanticdb"),
+    if3 = List(
+      "-language:implicitConversions",
+      "-Xtarget:8",
+      "-Xsemanticdb",
+      // used only to supress validation error from scalafix-sbt
+      "-Ywarn-unused-import"
+    ),
     if211 = List("-Xexperimental", "-Ywarn-unused-import")
   ),
   scalacOptions --= crossSetting(
@@ -378,10 +385,12 @@ lazy val mtags3 = project
     moduleName := "mtags3",
     scalaVersion := V.scala3,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
-    publish / skip := true
+    publish / skip := true,
+    scalafixConfig := Some(
+      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
+    )
   )
   .dependsOn(interfaces)
-  .disablePlugins(ScalafixPlugin)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
