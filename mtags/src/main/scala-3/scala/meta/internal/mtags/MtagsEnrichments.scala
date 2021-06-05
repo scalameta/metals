@@ -1,19 +1,20 @@
 package scala.meta.internal.mtags
 
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.NameOps._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j => l}
+import java.net.URI
 
 import scala.annotation.tailrec
-import dotty.tools.dotc.Driver
-import dotty.tools.dotc.util.Spans
-import dotty.tools.dotc.interactive.InteractiveDriver
+
 import scala.meta.pc.OffsetParams
 
-import java.net.URI
+import dotty.tools.dotc.Driver
+import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.NameOps._
+import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.util.Spans
+import org.eclipse.{lsp4j => l}
 
 object MtagsEnrichments
     extends CommonMtagsEnrichments

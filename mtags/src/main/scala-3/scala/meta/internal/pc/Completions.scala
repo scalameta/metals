@@ -1,23 +1,21 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.ast.tpd.{
-  Ident,
-  Apply,
-  Tree,
-  NamedArg,
-  Template,
-  Block,
-  Literal,
-  Select
-}
-import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.ast.tpd.Apply
+import dotty.tools.dotc.ast.tpd.Block
+import dotty.tools.dotc.ast.tpd.Ident
+import dotty.tools.dotc.ast.tpd.Literal
+import dotty.tools.dotc.ast.tpd.NamedArg
+import dotty.tools.dotc.ast.tpd.Select
+import dotty.tools.dotc.ast.tpd.Template
+import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.core.Constants.Constant
-import dotty.tools.dotc.interactive.Completion
-import dotty.tools.dotc.core.Symbols.Symbol
-import dotty.tools.dotc.core.Names.Name
-import dotty.tools.dotc.core.NameKinds.DefaultGetterName
+import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.NameKinds.DefaultGetterName
+import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.interactive.Completion
+import dotty.tools.dotc.util.SourcePosition
 
 trait Completions {
   def namedArgCompletions(

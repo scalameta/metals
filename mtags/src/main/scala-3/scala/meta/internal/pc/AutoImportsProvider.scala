@@ -1,28 +1,27 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Paths
-import scala.meta.pc._
+import java.{util => ju}
+
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
+
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.AutoImports._
+import scala.meta.pc._
+
 import dotty.tools.dotc.ast.tpd._
-import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.Decorators._
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Decorators._
+import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-
-import scala.meta.internal.mtags.MtagsEnrichments._
-
-import scala.meta.internal.pc.AutoImports._
-
-import scala.jdk.CollectionConverters._
-
 import org.eclipse.{lsp4j => l}
-import java.{util => ju}
-import dotty.tools.dotc.interactive.Interactive
 
 final class AutoImportsProvider(
     search: SymbolSearch,

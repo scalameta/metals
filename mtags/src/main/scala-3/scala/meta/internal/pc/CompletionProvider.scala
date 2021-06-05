@@ -1,23 +1,25 @@
 package scala.meta.internal.pc
 
 import scala.collection.mutable
+
 import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.pc._
 
 import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.StdNames._
+import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.transform.SymUtils._
+import dotty.tools.dotc.util.NameTransformer
+import dotty.tools.dotc.util.NoSourcePosition
+import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.SrcPos
-import dotty.tools.dotc.util.{NameTransformer, NoSourcePosition, SourcePosition}
-
-import scala.meta.pc._
 
 class CompletionProvider(
     pos: SourcePosition,

@@ -1,14 +1,15 @@
 package scala.meta.internal.pc
 
-import collection.mutable.ListBuffer
-import dotty.tools.dotc.core.NameKinds.EvidenceParamName
-import dotty.tools.dotc.printing.RefinedPrinter
+import scala.collection.mutable.ListBuffer
+
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.NameOps._
-import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.NameKinds.EvidenceParamName
+import dotty.tools.dotc.core.NameOps._
+import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.printing.RefinedPrinter
 
 class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
 

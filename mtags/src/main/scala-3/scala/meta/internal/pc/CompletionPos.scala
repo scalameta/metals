@@ -1,13 +1,12 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.ast.tpd._
-import dotty.tools.dotc.core.Contexts._
-
 import scala.meta.internal.tokenizers.Chars
 
-import org.eclipse.{lsp4j => l}
+import dotty.tools.dotc.ast.tpd._
+import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
+import org.eclipse.{lsp4j => l}
 
 enum CompletionKind {
   case Empty, Scope, Members

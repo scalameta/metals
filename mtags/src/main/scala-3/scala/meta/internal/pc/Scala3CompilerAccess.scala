@@ -1,20 +1,23 @@
 package scala.meta.internal.pc
 
-import scala.meta.internal.pc.CompilerAccess
-import scala.meta.internal.pc.CompilerWrapper
-import scala.meta.internal.pc.ReporterAccess
-import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.reporting.StoreReporter
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.Level
 import java.util.logging.Logger
+
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
+
+import scala.meta.internal.pc.CompilerAccess
+import scala.meta.internal.pc.CompilerWrapper
+import scala.meta.internal.pc.ReporterAccess
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
-import java.util.concurrent.CompletableFuture
-import scala.concurrent.ExecutionContextExecutor
+
+import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.reporting.StoreReporter
 
 class Scala3CompilerAccess(
     config: PresentationCompilerConfig,

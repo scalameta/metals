@@ -1,12 +1,12 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Definitions
-
 import scala.util.control.NonFatal
+
+import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.Definitions
+import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.Symbols._
 
 object SemanticdbSymbols {
 
