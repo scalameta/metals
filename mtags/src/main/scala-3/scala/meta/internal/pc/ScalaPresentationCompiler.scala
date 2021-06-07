@@ -76,6 +76,7 @@ import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.TextEdit
@@ -282,6 +283,14 @@ case class ScalaPresentationCompiler(
         .inferredTypeEdits()
         .asJava
     }
+  }
+
+  override def selectionRange(
+      params: ju.List[OffsetParams]
+  ): CompletableFuture[ju.List[SelectionRange]] = {
+    CompletableFuture.completedFuture(
+      List.empty[SelectionRange].asJava
+    )
   }
 
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =

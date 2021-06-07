@@ -50,7 +50,7 @@ abstract class FoldingRangeSuite(
     val scalaSource = file.input.text
 
     val actualRanges = findFoldingRangesFor(scalaSource)
-    val edits = FoldingRangesTextEdits.apply(actualRanges)
+    val edits = RangesTextEdits.fromFoldingRanges(actualRanges)
     TextEdits.applyEdits(scalaSource, edits)
   }
 

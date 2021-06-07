@@ -33,6 +33,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 
@@ -204,6 +205,19 @@ case class ScalaPresentationCompiler(
       new SemanticdbTextDocumentProvider(pc.compiler())
         .textDocument(uri, code)
         .toByteArray
+    }
+  }
+
+  override def selectionRange(
+      params: ju.List[OffsetParams]
+  ): CompletableFuture[ju.List[SelectionRange]] = {
+    CompletableFuture.completedFuture {
+      compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
+        pc =>
+          new SelectionRangeProvider(pc.compiler(), params)
+            .selectionRange()
+            .asJava
+      }
     }
   }
 
