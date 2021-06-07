@@ -26,6 +26,22 @@ class IndentWhenPastingSuite
        |object Main:
        |  @@
        |end Main""".stripMargin,
+    s"""val a: String = "a"
+       |""".stripMargin,
+    s"""
+       |object Main:
+       |  val a: String = "a"
+       |end Main""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "single-code-line",
+    s"""
+       |object Main:
+       |  @@
+       |end Main""".stripMargin,
     s"""
        |val a: String = "a"
        |""".stripMargin,
@@ -142,6 +158,32 @@ class IndentWhenPastingSuite
   )
 
   check(
+    "line-continuation",
+    s"""
+       |object Main:
+       |  object SubMain:
+       |    enum @@
+       |  end SubMain
+       |end Main""".stripMargin,
+    s"""                       Color(val rgb: Int):
+       |                          case Red   extends Color(0xFF0000)
+       |                          case Green extends Color(0x00FF00)
+       |                          case Blue  extends Color(0x0000FF)
+       |""".stripMargin,
+    s"""
+       |object Main:
+       |  object SubMain:
+       |    enum                        Color(val rgb: Int):
+       |      case Red   extends Color(0xFF0000)
+       |      case Green extends Color(0x00FF00)
+       |      case Blue  extends Color(0x0000FF)
+       |  end SubMain
+       |end Main""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
     "multistring-no-code-deletion",
     s"""
        |object Main:
@@ -201,6 +243,30 @@ class IndentWhenPastingSuite
        |    val b: String = "b"
        |    val c: String = "c"
        |  end SubMain
+       |end Main""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "paste-after-correctly-indented-line",
+    s"""
+       |object Main:
+       |  val a: String = "a"
+       |@@
+       |end Main""".stripMargin,
+    s"""enum Color(val rgb: Int):
+       |  case Red   extends Color(0xFF0000)
+       |  case Green extends Color(0x00FF00)
+       |  case Blue  extends Color(0x0000FF)
+       |""".stripMargin,
+    s"""
+       |object Main:
+       |  val a: String = "a"
+       |  enum Color(val rgb: Int):
+       |    case Red   extends Color(0xFF0000)
+       |    case Green extends Color(0x00FF00)
+       |    case Blue  extends Color(0x0000FF)
        |end Main""".stripMargin,
     scalaVersion,
     formattingOptions

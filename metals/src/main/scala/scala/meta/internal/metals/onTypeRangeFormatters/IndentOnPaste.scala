@@ -18,35 +18,29 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       formattingOptions: FormattingOptions,
       tokens: Option[Tokens]
   ): Option[List[TextEdit]] = {
-
     val insertSpaces = formattingOptions.isInsertSpaces
     val originalTabSize = formattingOptions.getTabSize
-
-    val start = startPos
-    val end = endPos
-    val rangeStart = start.toLSP.getStart
+    val rangeStart = startPos.toLSP.getStart
     rangeStart.setCharacter(0)
-
-    val range = new Range(rangeStart, end.toLSP.getEnd)
-
-    val startLine = start.toLSP.getStart.getLine
-    val endLine = end.toLSP.getEnd.getLine
+    val pastedRange = new Range(rangeStart, endPos.toLSP.getEnd)
+    val startLine = startPos.toLSP.getStart.getLine
+    val endLine = endPos.toLSP.getEnd.getLine
 
     val splitLinesWithIndex = splitLines.zipWithIndex
     val inRangeLines = splitLinesWithIndex.slice(startLine, endLine + 1)
     val pastedLines = inRangeLines.map(_._1)
     val pastedLinesWithIndex = pastedLines.zipWithIndex
 
-    val increaseIndentPattern =
+    val increaseIndentPatternRegex =
       raw"""(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$|(^.*\{[^}"']*$$)""".r
     raw"""((^\s*end\b\s*)\b(if|while|for|match|try|\w+)$$|(^(.*\*/)?\s*}.*)$$)""".r
     val indentRegex = raw"\S".r
 
-    def indentationEndCharIndex(line: String): Option[Int] =
+    def codeStartPosition(line: String): Option[Int] =
       indentRegex.findFirstMatchIn(line).map(_.start)
 
     def increaseIndentation(line: String) =
-      increaseIndentPattern.findFirstIn(line).nonEmpty
+      increaseIndentPatternRegex.findFirstIn(line).nonEmpty
 
     def stringRepeat(s: String, n: Int): String =
       ("%0" + n + "d").format(0).replace("0", s)
@@ -55,56 +49,66 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       if (insertSpaces) (" ", originalTabSize) else ("\t", 1)
 
     // These are the lines from the first pasted line, going above
-    val invertedAboveRangeLines = splitLinesWithIndex.take(startLine).reverse
+    val prePastedLines = splitLinesWithIndex.take(startLine).reverse
 
-    val firstPastedLineIndent = (for {
-      (line, idx) <- invertedAboveRangeLines.find(t => {
+    val currentIndentationLevel = (for {
+      (line, _) <- prePastedLines.find(t => {
         val trimmed = t._1.trim()
         trimmed.nonEmpty && !trimmed.startsWith("|")
-      }) // Find first line non empty (aka code)
+      }) // Find first line non empty (aka code) that is not a piped multi-string
 
-      indentIdx <- indentationEndCharIndex(line) // get indentation spaces
+      indentation <- codeStartPosition(line) // get indentation spaces
       nextIncrease = increaseIndentation(
         line
-      ) // check if needs to increase indentation
+      ) // check if the next line needs to increase indentation
     } yield {
       if (nextIncrease)
-        indentIdx + tabSize
-      else indentIdx
+        indentation + tabSize
+      else indentation
     }).getOrElse(0)
 
     val codeLinesIdxs = (for {
-      (lineText, lineIdx) <- pastedLinesWithIndex if lineText.trim().nonEmpty
-    } yield lineIdx).toList
+      (text, idx) <- pastedLinesWithIndex if text.trim().nonEmpty
+    } yield idx).toList
 
-    def convertSpaces(line: String, spaceLength: Int): String = {
-      if (spaceLength != 0) {
-        val substrLength = math.min(line.length, spaceLength)
-        val indent = line.substring(0, substrLength)
-        val indentChars = indent.split("")
-        val indentChar = indentChars.head
+    // converts spaces into tabs and vice-versa, normalizing the lengths of indentations
+    def normalizeSpacesAndTabs(line: String, codeStartPos: Int): String = {
+      if (codeStartPos != 0) {
+        val substrLength = math.min(line.length, codeStartPos)
+        val indentation = line.substring(0, substrLength)
+        val indentChars = indentation.split("")
+        val pastedBlank = indentChars.head
         blank match {
-          case "\t" if indentChar == blank => line
-          case " " if indentChar == blank => line
-          case "\t" if indentChar == " " =>
-            val tabNum = math.ceil(indentChar.length / 2).toInt
-            stringRepeat(blank, tabNum) ++ line.slice(spaceLength, line.length)
-          case " " if indentChar == "\t" =>
-            stringRepeat(blank, tabSize) ++ line.slice(spaceLength, line.length)
+          case "\t" if pastedBlank == blank => line
+          case " " if pastedBlank == blank => line
+          case "\t" if pastedBlank == " " =>
+            val tabNum = math.ceil(pastedBlank.length / 2).toInt
+            stringRepeat(blank, tabNum) ++ line.slice(codeStartPos, line.length)
+          case " " if pastedBlank == "\t" =>
+            stringRepeat(blank, tabSize) ++ line.slice(
+              codeStartPos,
+              line.length
+            )
           case _ => line
         }
       } else line
     }
 
+    /**
+     * Computing correct line indentation from second pasted line going on
+     * assuming that from the second line they have correct relative indentation to themselves.
+     * The first line instead can be pasted in different spots,
+     * so its indentation gets computed separately
+     */
     val newLinesOpt = for {
       secondLineIdx <- codeLinesIdxs.drop(1).headOption
-      indentLengthPreConversion <- indentationEndCharIndex(
+      preNormalizeCodeStartPosition <- codeStartPosition(
         pastedLines(secondLineIdx)
       )
       convertedLines = pastedLines.map(
-        convertSpaces(_, indentLengthPreConversion)
+        normalizeSpacesAndTabs(_, preNormalizeCodeStartPosition)
       )
-      indentLength <- indentationEndCharIndex(convertedLines(secondLineIdx))
+      pastedIndentation <- codeStartPosition(convertedLines(secondLineIdx))
       headIdx <- codeLinesIdxs.headOption
       headLine = convertedLines(headIdx)
       indentTailLines = increaseIndentation(headLine)
@@ -112,41 +116,53 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       blockIndent = block * tabSize
     } yield for {
       line <- convertedLines.drop(headIdx + 1)
-      lineIndentation <- indentationEndCharIndex(line)
+      pastedLineIndentation <- codeStartPosition(line)
     } yield {
-      val diff = firstPastedLineIndent + blockIndent - indentLength
+      val diff = currentIndentationLevel + blockIndent - pastedIndentation
       if (diff != 0)
         if (diff < 0) {
-          if (lineIndentation < -diff) {
-            stringRepeat(blank, firstPastedLineIndent + blockIndent) ++ line
-              .slice(
-                lineIndentation,
-                line.length
-              )
-          } else {
-            line.slice(-diff, line.length)
-          }
-
-        } else {
-          stringRepeat(blank, diff) ++ line
-        }
+          if (pastedLineIndentation < -diff) {
+            stringRepeat(blank, currentIndentationLevel + blockIndent) ++ line
+              .slice(pastedLineIndentation, line.length)
+          } else line.slice(-diff, line.length)
+        } else stringRepeat(blank, diff) ++ line
       else line
     }
 
-    def indentHead(): Option[String] = {
-      for {
-        headIdx <- codeLinesIdxs.headOption
-        head = blank * firstPastedLineIndent ++ pastedLines(headIdx).trim()
-      } yield head
-    }
+    lazy val indentedHead: Option[String] = for {
+      headIdx <- codeLinesIdxs.headOption
+      head = blank * currentIndentationLevel ++ pastedLines(headIdx).trim()
+    } yield head
 
     val newLines = for {
       newLines <- newLinesOpt
-      head <- indentHead()
+      head <- indentedHead
     } yield (head +: newLines).toList
 
-    newLines.map(lines =>
-      new TextEdit(range, lines.mkString(util.Properties.lineSeparator)) :: Nil
-    )
+    /**
+     * The previous code, starting from the second line of code going on
+     * doesn't compute single lines of code, so this little snippet is to handle
+     * the case when the user pastes only one line of code.
+     */
+    lazy val singleCodeLinePasted = (for {
+      headIdx <- codeLinesIdxs.headOption
+      line = pastedLines(headIdx)
+      codeStartChar <- codeStartPosition(line)
+    } yield {
+      val firstPastedChar = startPos.toLSP.getStart.getCharacter
+      firstPastedChar <= codeStartChar || codeLinesIdxs.length == 1 && pastedLines.length > 1
+    }).getOrElse(false)
+
+    lazy val singleLineOption =
+      if (singleCodeLinePasted) indentedHead.map(List(_)) else None
+
+    newLines
+      .orElse(singleLineOption)
+      .map(lines =>
+        new TextEdit(
+          pastedRange,
+          lines.mkString(util.Properties.lineSeparator)
+        ) :: Nil
+      )
   }
 }
