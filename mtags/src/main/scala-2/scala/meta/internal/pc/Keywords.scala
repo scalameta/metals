@@ -2,7 +2,7 @@ package scala.meta.internal.pc
 
 import scala.tools.nsc.reporters.StoreReporter
 
-import scala.meta.XtensionTokenizeInputLike
+import scala.meta._
 import scala.meta.tokens.Token
 
 import org.eclipse.{lsp4j => l}
@@ -16,18 +16,8 @@ trait Keywords { this: MetalsGlobal =>
       completion: CompletionPosition,
       text: String
   ): List[Member] = {
-    val start = pos.start
-    val end = pos.end
-    val tokens = text.tokenize.toOption
-    val notInComment = tokens
-      .flatMap(t =>
-        t.find {
-          case t: Token.Comment if t.pos.start < start && t.pos.end >= end =>
-            true
-          case _ => false
-        }
-      )
-      .isEmpty
+
+    lazy val notInComment = checkIfNotInComment(pos, text)
 
     getIdentifierName(latestEnclosing, pos) match {
       case None =>
@@ -67,6 +57,21 @@ trait Keywords { this: MetalsGlobal =>
         }
       case _ => List.empty
     }
+  }
+
+  private def checkIfNotInComment(pos: Position, text: String): Boolean = {
+    val start = pos.start
+    val end = pos.end
+    val tokens = text.tokenize.toOption
+    tokens
+      .flatMap(t =>
+        t.find {
+          case t: Token.Comment if t.pos.start < start && t.pos.end >= end =>
+            true
+          case _ => false
+        }
+      )
+      .isEmpty
   }
 
   private def getIdentifierName(
