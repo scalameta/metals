@@ -86,10 +86,14 @@ class WorkspaceSearchVisitor(
   ): Option[SymbolDefinition] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
-    index.definition(tpe).orElse {
+
+    val forTpe = index.definitions(tpe)
+    val defs = if (forTpe.isEmpty) {
       val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
-      index.definition(term)
-    }
+      index.definitions(term)
+    } else forTpe
+
+    defs.sortBy(_.path.toURI.toString).headOption
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
   override def visitWorkspaceSymbol(
