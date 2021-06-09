@@ -255,7 +255,8 @@ class CompletionProvider(
       pos: Position,
       completion: CompletionPosition,
       editRange: l.Range,
-      latestParentTrees: List[Tree]
+      latestParentTrees: List[Tree],
+      text: String
   ): InterestingMembers = {
     lazy val isAmmoniteScript = pos.source.file.name.isAmmoniteGeneratedFile
     val isSeen = mutable.Set.empty[String]
@@ -312,7 +313,7 @@ class CompletionProvider(
     }
     completions.foreach(visit)
     completion.contribute.foreach(visit)
-    buf ++= keywords(pos, editRange, latestParentTrees, completion)
+    buf ++= keywords(pos, editRange, latestParentTrees, completion, text)
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
@@ -457,7 +458,8 @@ class CompletionProvider(
         pos,
         completion,
         editRange,
-        latestParentTrees
+        latestParentTrees,
+        params.text()
       )
       params.checkCanceled()
       (items, completion, editRange, query)

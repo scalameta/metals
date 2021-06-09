@@ -28,6 +28,42 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "comment",
+    """
+      |package foo
+      |
+      |trait A {
+      |  final def superVisorStrategy = 1
+      |}
+      |
+      |object B extends A {
+      |  // tr@@
+      |}
+      |""".stripMargin,
+    """|""".stripMargin,
+    includeCommitCharacter = true
+  )
+
+  check(
+    "scala-doc",
+    """
+      |package foo
+      |
+      |trait A {
+      |  final def superVisorStrategy = 1
+      |}
+      |
+      |object B extends A {
+      |  /** tr@@
+      |  *
+      |  **/
+      |}
+      |""".stripMargin,
+    """|""".stripMargin,
+    includeCommitCharacter = true
+  )
+
+  check(
     "super-def",
     """
       |package foo
