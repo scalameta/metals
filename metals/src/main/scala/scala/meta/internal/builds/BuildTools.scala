@@ -25,7 +25,7 @@ final class BuildTools(
     workspace: AbsolutePath,
     bspGlobalDirectories: List[AbsolutePath],
     userConfig: () => UserConfiguration,
-    explicitChoiceMade: Boolean
+    explicitChoiceMade: () => Boolean
 ) {
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicity chosen
@@ -36,7 +36,7 @@ final class BuildTools(
   // Bloop since Metals thinks it's in state that's auto-connectable before the
   // user is even prompted.
   def isAutoConnectable: Boolean = {
-    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade)
+    isBloop || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade())
   }
   def isBloop: Boolean = {
     hasJsonFile(workspace.resolve(".bloop"))
@@ -128,6 +128,6 @@ object BuildTools {
       workspace,
       Nil,
       () => UserConfiguration(),
-      explicitChoiceMade = false
+      explicitChoiceMade = () => false
     )
 }

@@ -346,7 +346,7 @@ class MetalsLanguageServer(
           workspace,
           bspGlobalDirectories,
           () => userConfig,
-          tables.buildServers.selectedServer().nonEmpty
+          () => tables.buildServers.selectedServer().nonEmpty
         )
         fileSystemSemanticdbs = new FileSystemSemanticdbs(
           buildTargets,
