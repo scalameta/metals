@@ -11,6 +11,7 @@ import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
@@ -28,6 +29,27 @@ object MtagsEnrichments
       val source = driver.openedFiles(uri)
       val p = Spans.Span(offset)
       new SourcePosition(source, p)
+
+    def localContext(params: OffsetParams): Context = {
+      if (driver.currentCtx.run.units.isEmpty)
+        throw new RuntimeException(
+          "No source files were passed to the Scala 3 presentation compiler"
+        )
+      val unit = driver.currentCtx.run.units.head
+      val tree = unit.tpdTree
+      val pos = driver.sourcePosition(params)
+      val path =
+        Interactive.pathTo(driver.openedTrees(params.uri), pos)(using
+          driver.currentCtx
+        )
+
+      val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
+      val tpdPath =
+        Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
+          newctx
+        )
+      Interactive.contextOfPath(tpdPath)(using newctx)
+    }
 
   extension (pos: SourcePosition)
     def toLSP: l.Range = {

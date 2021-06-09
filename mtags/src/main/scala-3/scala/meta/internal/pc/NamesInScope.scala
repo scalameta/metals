@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 
@@ -10,11 +11,13 @@ import dotty.tools.dotc.core.Denotations._
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.StdNames._
+import dotty.tools.dotc.core.SymDenotations._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
 
 case class NamesInScope(
-    values: Map[String, Symbol]
+    values: Map[String, Symbol],
+    renames: Map[SimpleName, String]
 ) {
 
   def lookupSym(sym: Symbol)(using Context): NamesInScope.Result = {
@@ -89,32 +92,39 @@ object NamesInScope {
           List.empty
       }
 
-    val fromImports =
-      ctx.outersIterator.toList.flatMap { ctx =>
-        Option(ctx.importInfo) match {
-          case Some(imp) =>
-            val fromWildCard =
-              if (imp.isWildcardImport) {
-                allAccessibleSymbols(
-                  imp.site,
-                  sym => !imp.excluded.contains(sym.name.toTermName)
-                )
-              } else Nil
-            val explicit =
-              imp.forwardMapping.toList
-                .map(_._2)
-                .filter(name => !imp.excluded.contains(name))
-                .flatMap(fromImport(imp.site, _))
-            fromWildCard ++ explicit
-          case None =>
-            List.empty
-        }
+    val fromImports = ListBuffer.empty[Symbol]
+    val renames = ListBuffer.empty[(SimpleName, String)]
+    ctx.outersIterator.toList.foreach { ctx =>
+      Option(ctx.importInfo) match {
+        case Some(imp) =>
+          imp.selectors.foreach { sel =>
+            sel.renamed match {
+              case Ident(name) if name.toString != "_" =>
+                renames += ((sel.imported.name.toSimpleName, name.toString))
+              case _ =>
+            }
+          }
+          val fromWildCard =
+            if (imp.isWildcardImport) {
+              allAccessibleSymbols(
+                imp.site,
+                sym => !imp.excluded.contains(sym.name.toTermName)
+              )
+            } else Nil
+          fromImports.addAll(fromWildCard)
+          val explicit =
+            imp.forwardMapping.toList
+              .map(_._2)
+              .filter(name => !imp.excluded.contains(name))
+              .flatMap(fromImport(imp.site, _))
+          fromImports.addAll(explicit)
+        case _ =>
       }
-
+    }
     val all = (fromTree ++ fromImports).map { sym =>
       (sym.decodedName, sym)
     } ++ inspectImports(tree)
-    NamesInScope(all.toMap)
+    NamesInScope(all.toMap, renames.toMap)
   }
 
   private def inspectImports(

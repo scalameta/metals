@@ -2,6 +2,7 @@ package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
+import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.OrganizeImports
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
@@ -9,7 +10,7 @@ import munit.Location
 import munit.TestOptions
 import tests.codeactions.BaseCodeActionLspSuite
 
-class CrossCodeActionLspSuite
+class Scala3CodeActionLspSuite
     extends BaseCodeActionLspSuite("cross-code-actions") {
 
   override protected val scalaVersion: String = BuildInfo.scala3
@@ -19,7 +20,7 @@ class CrossCodeActionLspSuite
     """|package a
        |
        |object A {
-       |  val al<<>>pha = 123
+       |  val al<<>>pha: Int = 123
        |}
        |""".stripMargin
   )
@@ -79,6 +80,41 @@ class CrossCodeActionLspSuite
           |   case Blue  extends Color(0x0000FF)
           |""".stripMargin
     )
+  )
+
+  check(
+    "val-pattern",
+    """|package a
+       |
+       |object A:
+       |  val (fir<<>>st, second) = (List(1), List(""))
+       |""".stripMargin,
+    s"""|${InsertInferredType.insertTypeToPattern}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A:
+       |  val (first: List[Int], second) = (List(1), List(""))
+       |""".stripMargin
+  )
+
+  check(
+    "auto-import",
+    """|package a
+       |
+       |object A:
+       |  var al<<>>pha = List(123).toBuffer
+       |
+       |""".stripMargin,
+    s"""|${InsertInferredType.insertType}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.Buffer
+       |
+       |object A:
+       |  var alpha: Buffer[Int] = List(123).toBuffer
+       |""".stripMargin
   )
 
   def checkExtractedMember(

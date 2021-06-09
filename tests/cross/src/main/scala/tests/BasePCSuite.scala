@@ -121,7 +121,10 @@ abstract class BasePCSuite extends BaseSuite {
   }
 
   protected def createBinaryVersion(scalaVersion: String): String = {
-    scalaVersion.split('.').take(2).mkString(".")
+    if (isScala3Version(scalaVersion))
+      "3"
+    else
+      scalaVersion.split('.').take(2).mkString(".")
   }
 
   private def indexScalaLibrary(

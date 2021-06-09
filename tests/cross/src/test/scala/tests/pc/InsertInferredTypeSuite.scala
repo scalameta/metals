@@ -7,6 +7,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 
 import coursierapi.Dependency
+import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 import tests.BaseCodeActionSuite
@@ -14,18 +15,16 @@ import tests.BuildInfoVersions
 
 class InsertInferredTypeSuite extends BaseCodeActionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
-
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val binaryVersion = createBinaryVersion(scalaVersion)
-    if (isScala3Version(scalaVersion)) { Seq.empty }
-    else {
-      Seq(
-        Dependency.of("org.typelevel", s"cats-effect_$binaryVersion", "2.4.0")
-      )
-    }
+    Seq(
+      Dependency.of("org.typelevel", s"cats-effect_$binaryVersion", "3.1.1")
+    )
   }
+
+  // To avoid dealing with different cats-effect versions
+  override protected def excludedScalaVersions: Set[String] =
+    BuildInfoVersions.scala3RCVersions.toSet
 
   checkEdit(
     "val",
@@ -38,12 +37,41 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "toplevel".tag(IgnoreScala2),
+    """|def <<alpha>> = List("")
+       |""".stripMargin,
+    """|def alpha: List[String] = List("")
+       |""".stripMargin
+  )
+
+  checkEdit(
     "tuple",
     """|object A{
        |  val (<<alpha>>, beta) = (123, 12)
        |}""".stripMargin,
     """|object A{
        |  val (alpha: Int, beta) = (123, 12)
+       |}""".stripMargin
+  )
+
+  checkEdit(
+    "tuple-inner",
+    """|object A{
+       |  val ((<<alpha>>, gamma), beta) = ((123, 1), 12)
+       |}""".stripMargin,
+    """|object A{
+       |  val ((alpha: Int, gamma), beta) = ((123, 1), 12)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "tuple-var",
+    """|object A{
+       |  var (<<alpha>>, beta) = (123, 12)
+       |}""".stripMargin,
+    """|object A{
+       |  var (alpha: Int, beta) = (123, 12)
        |}""".stripMargin
   )
 
@@ -267,56 +295,47 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  val additionalSpace: String = if (isScala3Version(scalaVersion)) " " else ""
   checkEdit(
     "higher-kinded-types",
     """|package io
        |
-       |import cats.Parallel
-       |import cats.effect.ConcurrentEffect
-       |import cats.effect.ContextShift
-       |import cats.effect.IOApp
        |import cats.effect.Resource
-       |import cats.effect.Timer
        |
        |object Main2 extends IOApp {
        |
        |  trait Logger[T[_]]
        |
-       |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
+       |  def mkLogger[F[_]]: Resource[F, Logger[F]] = ???
        |
-       |  def <<serve>>[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel]() =
+       |  def <<serve>>[F[_]]() =
        |    for {
        |      logger <- mkLogger[F]
        |    } yield ()
        |
        |}
        |""".stripMargin,
-    """|package io
-       |
-       |import cats.Parallel
-       |import cats.effect.ConcurrentEffect
-       |import cats.effect.ContextShift
-       |import cats.effect.IOApp
-       |import cats.effect.Resource
-       |import cats.effect.Timer
-       |
-       |object Main2 extends IOApp {
-       |
-       |  trait Logger[T[_]]
-       |
-       |  def mkLogger[F[_]: ConcurrentEffect: Timer: ContextShift]: Resource[F, Logger[F]] = ???
-       |
-       |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel](): Resource[F,Unit] =
-       |    for {
-       |      logger <- mkLogger[F]
-       |    } yield ()
-       |
-       |}
-       |""".stripMargin
+    s"""|package io
+        |
+        |import cats.effect.Resource
+        |
+        |object Main2 extends IOApp {
+        |
+        |  trait Logger[T[_]]
+        |
+        |  def mkLogger[F[_]]: Resource[F, Logger[F]] = ???
+        |
+        |  def serve[F[_]](): Resource[F,${additionalSpace}Unit] =
+        |    for {
+        |      logger <- mkLogger[F]
+        |    } yield ()
+        |
+        |}
+        |""".stripMargin
   )
 
   checkEdit(
-    "path",
+    "path".tag(IgnoreScala3),
     """|import java.nio.file.Paths
        |object ExplicitResultTypesPrefix {
        |  class Path
@@ -411,18 +430,19 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   def checkEdit(
       name: TestOptions,
       original: String,
-      expected: String
-  ): Unit =
+      expected: String,
+      compat: Map[String, String] = Map.empty
+  )(implicit location: Location): Unit =
     test(name) {
       val edits = getAutoImplement(original)
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
   def getAutoImplement(
       original: String,
-      filename: String = "A.scala"
+      filename: String = "file:/A.scala"
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
