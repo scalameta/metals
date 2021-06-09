@@ -57,16 +57,16 @@ final class InferredTypeProvider(
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
 
     given locatedCtx: Context = driver.localContext(params)
-    val symbolPrinter = new SymbolPrinter()
-    val namesInScope = NamesInScope.build(unit.tpdTree)
+    val indexedCtx = IndexedContext(locatedCtx)
     val autoImportsGen = AutoImports.generator(
       pos,
       params.text,
       unit.tpdTree,
-      namesInScope,
+      indexedCtx,
       config
     )
-    val shortenedNames = new ShortenedNames(locatedCtx, namesInScope.renames)
+    val symbolPrinter = new SymbolPrinter()
+    val shortenedNames = new ShortenedNames(indexedCtx)
 
     def imports: List[TextEdit] =
       shortenedNames.imports(autoImportsGen)

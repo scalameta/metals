@@ -54,9 +54,11 @@ object AutoImports {
       pos: SourcePosition,
       text: String,
       tree: Tree,
-      namesInScope: NamesInScope,
+      indexedContext: IndexedContext,
       config: PresentationCompilerConfig
-  )(using ctx: Context): AutoImportsGenerator = {
+  ): AutoImportsGenerator = {
+
+    import indexedContext.ctx
 
     val importPos = autoImportPosition(pos, text, tree)
     val renameConfig: Map[SimpleName, String] =
@@ -64,8 +66,21 @@ object AutoImports {
         val fullName = from.stripSuffix("/").replace("/", ".")
         val pkg = requiredPackage(fullName)
         (pkg.name.toSimpleName, to.stripSuffix(".").stripSuffix("#"))
-      }.toMap ++ namesInScope.renames
-    new AutoImportsGenerator(pos, importPos, namesInScope, renameConfig)
+      }.toMap
+
+    val renames =
+      (name: SimpleName) => {
+        renameConfig
+          .get(name)
+          .orElse(indexedContext.rename(name))
+      }
+
+    new AutoImportsGenerator(
+      pos,
+      importPos,
+      indexedContext.importContext,
+      renames
+    )
   }
 
   case class AutoImportEdits(
@@ -89,9 +104,13 @@ object AutoImports {
   class AutoImportsGenerator(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
-      namesInScope: NamesInScope,
-      renameConfig: Map[SimpleName, String]
-  )(using ctx: Context) {
+      indexedContext: IndexedContext,
+      renames: SimpleName => Option[String]
+      // namesInScope: NamesInScope,
+      // renameConfig: Map[SimpleName, String]
+  ) {
+
+    import indexedContext.ctx
 
     def forSymbol(symbol: Symbol): Option[List[l.TextEdit]] =
       editsForSymbol(symbol).map(_.edits)
@@ -103,34 +122,34 @@ object AutoImports {
           case _: AutoImport.Simple =>
             AutoImportEdits.importOnly(mkImportEdit)
           case AutoImport.SpecifiedOwner(sym)
-              if namesInScope.lookupSym(sym.owner).exists =>
+              if indexedContext.lookupSym(sym.owner).exists =>
             AutoImportEdits.nameOnly(specifyOwnerEdit(sym, sym.owner.showName))
           case AutoImport.SpecifiedOwner(sym) =>
             AutoImportEdits(
               specifyOwnerEdit(sym, sym.owner.showName),
               mkImportEdit
             )
-          case AutoImport.Renamed(sym, rename)
-              if namesInScope.symbolByName(rename).isDefined =>
-            AutoImportEdits.nameOnly(specifyOwnerEdit(sym, rename))
-          case AutoImport.Renamed(sym, rename) =>
-            AutoImportEdits(specifyOwnerEdit(sym, rename), mkImportEdit)
+          case AutoImport.Renamed(sym, ownerRename)
+              if indexedContext.hasRename(sym.owner, ownerRename) =>
+            AutoImportEdits.nameOnly(specifyOwnerEdit(sym, ownerRename))
+          case AutoImport.Renamed(sym, ownerRename) =>
+            AutoImportEdits(specifyOwnerEdit(sym, ownerRename), mkImportEdit)
         }
       }
     }
 
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
-      namesInScope.lookupSym(symbol) match {
-        case NamesInScope.Result.Missing => Some(AutoImport.Simple(symbol))
-        case NamesInScope.Result.Conflict =>
+      indexedContext.lookupSym(symbol) match {
+        case IndexedContext.Result.Missing => Some(AutoImport.Simple(symbol))
+        case IndexedContext.Result.Conflict =>
           val owner = symbol.owner
           val simpleName = owner.name.toSimpleName
-          renameConfig.get(simpleName) match {
+          renames(simpleName) match {
             case Some(rename) =>
               Some(AutoImport.renamedOrSpecified(symbol, rename))
             case _ => None
           }
-        case NamesInScope.Result.InScope => None
+        case IndexedContext.Result.InScope => None
       }
     }
 
@@ -166,9 +185,11 @@ object AutoImports {
       @tailrec
       def toplevelClashes(sym: Symbol): Boolean = {
         if (sym == NoSymbol || sym.owner == NoSymbol || sym.owner.isRoot)
-          namesInScope.lookupSym(sym).exists
-        else
-          toplevelClashes(sym.owner)
+          indexedContext.lookupSym(sym) match {
+            case IndexedContext.Result.Conflict => true
+            case _ => false
+          }
+        else toplevelClashes(sym.owner)
       }
       if (toplevelClashes(sym)) s"_root_.${sym.fullNameBackticked}"
       else sym.fullNameBackticked

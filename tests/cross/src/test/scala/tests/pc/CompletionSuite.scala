@@ -351,7 +351,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3.0" ->
         """|TrieMap scala.collection.concurrent
-           |TrieMapSerializationEnd scala.collection.concurrent
+           |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin
     )
   )

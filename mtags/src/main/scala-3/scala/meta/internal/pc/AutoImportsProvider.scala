@@ -43,7 +43,14 @@ final class AutoImportsProvider(
 
     val pos = driver.sourcePosition(params)
 
-    given Context = driver.currentCtx
+    val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
+    val path =
+      Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
+
+    val indexedContext = IndexedContext(
+      MetalsInteractive.contextOfPath(path)(using newctx)
+    )
+    import indexedContext.ctx
 
     val isSeen = mutable.Set.empty[String]
     val symbols = List.newBuilder[Symbol]
@@ -64,15 +71,14 @@ final class AutoImportsProvider(
     val results = symbols.result.filter(isExactMatch(_, name))
 
     if (results.nonEmpty) {
-      val path = Interactive.pathTo(driver.openedTrees(uri), pos)
       val correctedPos = CompletionPos.infer(pos, params.text, path).sourcePos
-      val namesInScope = NamesInScope.build(tree)
+      // val namesInScope = NamesInScope.build(ctx)
       val generator =
         AutoImports.generator(
           correctedPos,
           params.text,
           tree,
-          namesInScope,
+          indexedContext.importContext,
           config
         )
 
