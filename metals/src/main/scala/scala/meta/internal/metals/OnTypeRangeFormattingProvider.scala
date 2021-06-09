@@ -3,8 +3,11 @@ package scala.meta.internal.metals
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.onTypeRangeFormatters.IndentOnPaste
+import scala.meta.internal.metals.onTypeRangeFormatters.IndentOnPaste.EndPosition
+import scala.meta.internal.metals.onTypeRangeFormatters.IndentOnPaste.StartPosition
 import scala.meta.internal.metals.onTypeRangeFormatters.MultilineString
-import scala.meta.internal.metals.onTypeRangeFormatters.OnTypeRangeFormatter
+import scala.meta.internal.metals.onTypeRangeFormatters.OnTypeFormatter
+import scala.meta.internal.metals.onTypeRangeFormatters.RangeFormatter
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Tokens
@@ -15,55 +18,9 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextEdit
 
-class OnTypeRangeFormattingProvider(
-    buffers: Buffers,
-    trees: Trees,
-    userConfig: () => UserConfiguration
-) {
+sealed abstract class OnTypeRangeFormattingProvider(buffers: Buffers) {
 
-  type StartPosition = meta.Position
-  type EndPosition = meta.Position
-  // The order of which this is important to know which will first return the Edits
-  val formatters: List[OnTypeRangeFormatter] = List(
-    MultilineString(),
-    IndentOnPaste()
-  )
-
-  def format(
-      params: DocumentOnTypeFormattingParams,
-      trees: Trees
-  ): List[TextEdit] = {
-    val uri = params.getTextDocument.getUri.toAbsolutePath
-    val doc = params.getTextDocument
-    val range = new Range(params.getPosition, params.getPosition)
-    val enableStripMargin = userConfig().enableStripMarginOnTypeFormatting
-    val triggerChar = params.getCh
-    val position = params.getPosition
-
-    contribute(uri, doc, range, trees) {
-      (sourceText, startPos, endPos, tokensOpt) =>
-        val splitLines = sourceText.split('\n')
-        formatters
-          .foldLeft[Option[List[TextEdit]]](None) { (opt, formatter) =>
-            opt.orElse(
-              formatter.onTypeContribute(
-                sourceText,
-                range,
-                splitLines,
-                startPos,
-                endPos,
-                triggerChar,
-                position,
-                enableStripMargin,
-                tokensOpt
-              )
-            )
-          }
-          .getOrElse(Nil)
-    }
-  }
-
-  private def contribute(
+  protected def contribute(
       uri: AbsolutePath,
       textId: TextDocumentIdentifier,
       range: Range,
@@ -82,7 +39,7 @@ class OnTypeRangeFormattingProvider(
       .getOrElse(Nil)
   }
 
-  private def withToken(
+  protected def withToken(
       textId: TextDocumentIdentifier,
       sourceText: String,
       range: Range,
@@ -103,6 +60,60 @@ class OnTypeRangeFormattingProvider(
       fn(startPos, endPos, tokens)
     } else Nil
   }
+}
+
+class OnTypeFormattingProvider(
+    buffers: Buffers,
+    userConfig: () => UserConfiguration
+) extends OnTypeRangeFormattingProvider(buffers) {
+  val enableStripMargin: Boolean =
+    userConfig().enableStripMarginOnTypeFormatting
+
+  // The order of which this is important to know which will first return the Edits
+  val formatters: List[OnTypeFormatter] = List(
+    MultilineString(enableStripMargin)
+  )
+
+  def format(
+      params: DocumentOnTypeFormattingParams,
+      trees: Trees
+  ): List[TextEdit] = {
+    val uri = params.getTextDocument.getUri.toAbsolutePath
+    val doc = params.getTextDocument
+    val range = new Range(params.getPosition, params.getPosition)
+    val triggerChar = params.getCh
+    val position = params.getPosition
+
+    contribute(uri, doc, range, trees) {
+      (sourceText, startPos, endPos, tokensOpt) =>
+        val splitLines = sourceText.split('\n')
+        formatters
+          .foldLeft[Option[List[TextEdit]]](None) { (opt, formatter) =>
+            opt.orElse(
+              formatter.contribute(
+                sourceText,
+                splitLines,
+                startPos,
+                endPos,
+                triggerChar,
+                position,
+                tokensOpt
+              )
+            )
+          }
+          .getOrElse(Nil)
+    }
+  }
+}
+
+class rangeFormattingProvider(
+    buffers: Buffers
+) extends OnTypeRangeFormattingProvider(buffers) {
+  val formatters: List[RangeFormatter] = List(
+    // enableStripMargin is not used on rangeFormatting
+    MultilineString(enableStripMargin = false),
+    IndentOnPaste
+  )
 
   def format(
       params: DocumentRangeFormattingParams,
@@ -119,7 +130,7 @@ class OnTypeRangeFormattingProvider(
         formatters
           .foldLeft[Option[List[TextEdit]]](None) { (opt, formatter) =>
             opt.orElse(
-              formatter.onRangeContribute(
+              formatter.contribute(
                 sourceText,
                 range,
                 splitLines,
@@ -132,6 +143,5 @@ class OnTypeRangeFormattingProvider(
           }
           .getOrElse(Nil)
     }
-
   }
 }

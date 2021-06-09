@@ -932,7 +932,7 @@ final class TestingServer(
       original: String,
       paste: String,
       root: AbsolutePath,
-      formattingOptions: Option[FormattingOptions]
+      formattingOptions: Option[FormattingOptions] = None
   ): Future[(String, DocumentRangeFormattingParams)] = {
     positionFromString(filename, original, root, replaceWith = paste) {
       case (text, textId, start) =>

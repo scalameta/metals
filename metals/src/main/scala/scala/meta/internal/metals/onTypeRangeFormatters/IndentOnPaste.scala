@@ -6,10 +6,52 @@ import org.eclipse.lsp4j
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
+import scala.util.matching.Regex
 
-case class IndentOnPaste() extends OnTypeRangeFormatter {
+object IndentOnPaste extends RangeFormatter {
 
-  override def onRangeContribute(
+  val increaseIndentPatternRegex: Regex =
+    raw"""(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$|(^.*\{[^}"']*$$)""".r
+  val indentRegex: Regex = raw"\S".r
+
+  private def codeStartPosition(line: String): Option[Int] =
+    indentRegex.findFirstMatchIn(line).map(_.start)
+
+  private def increaseIndentation(line: String) =
+    increaseIndentPatternRegex.findFirstIn(line).nonEmpty
+
+  private def stringRepeat(s: String, n: Int): String =
+    ("%0" + n + "d").format(0).replace("0", s)
+
+  // converts spaces into tabs and vice-versa, normalizing the lengths of indentations
+  private def normalizeSpacesAndTabs(
+      line: String,
+      codeStartPos: Int,
+      blank: String,
+      tabSize: Int
+  ): String = {
+    if (codeStartPos != 0) {
+      val substrLength = math.min(line.length, codeStartPos)
+      val indentation = line.substring(0, substrLength)
+      val indentChars = indentation.split("")
+      val pastedBlank = indentChars.head
+      blank match {
+        case "\t" if pastedBlank == blank => line
+        case " " if pastedBlank == blank => line
+        case "\t" if pastedBlank == " " =>
+          val tabNum = math.ceil(pastedBlank.length / 2).toInt
+          stringRepeat(blank, tabNum) ++ line.slice(codeStartPos, line.length)
+        case " " if pastedBlank == "\t" =>
+          stringRepeat(blank, tabSize) ++ line.slice(
+            codeStartPos,
+            line.length
+          )
+        case _ => line
+      }
+    } else line
+  }
+
+  override def contribute(
       sourceText: String,
       range: lsp4j.Range,
       splitLines: Array[String],
@@ -30,20 +72,6 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
     val inRangeLines = splitLinesWithIndex.slice(startLine, endLine + 1)
     val pastedLines = inRangeLines.map(_._1)
     val pastedLinesWithIndex = pastedLines.zipWithIndex
-
-    val increaseIndentPatternRegex =
-      raw"""(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$|(^.*\{[^}"']*$$)""".r
-    raw"""((^\s*end\b\s*)\b(if|while|for|match|try|\w+)$$|(^(.*\*/)?\s*}.*)$$)""".r
-    val indentRegex = raw"\S".r
-
-    def codeStartPosition(line: String): Option[Int] =
-      indentRegex.findFirstMatchIn(line).map(_.start)
-
-    def increaseIndentation(line: String) =
-      increaseIndentPatternRegex.findFirstIn(line).nonEmpty
-
-    def stringRepeat(s: String, n: Int): String =
-      ("%0" + n + "d").format(0).replace("0", s)
 
     val (blank, tabSize) =
       if (insertSpaces) (" ", originalTabSize) else ("\t", 1)
@@ -71,29 +99,6 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       (text, idx) <- pastedLinesWithIndex if text.trim().nonEmpty
     } yield idx).toList
 
-    // converts spaces into tabs and vice-versa, normalizing the lengths of indentations
-    def normalizeSpacesAndTabs(line: String, codeStartPos: Int): String = {
-      if (codeStartPos != 0) {
-        val substrLength = math.min(line.length, codeStartPos)
-        val indentation = line.substring(0, substrLength)
-        val indentChars = indentation.split("")
-        val pastedBlank = indentChars.head
-        blank match {
-          case "\t" if pastedBlank == blank => line
-          case " " if pastedBlank == blank => line
-          case "\t" if pastedBlank == " " =>
-            val tabNum = math.ceil(pastedBlank.length / 2).toInt
-            stringRepeat(blank, tabNum) ++ line.slice(codeStartPos, line.length)
-          case " " if pastedBlank == "\t" =>
-            stringRepeat(blank, tabSize) ++ line.slice(
-              codeStartPos,
-              line.length
-            )
-          case _ => line
-        }
-      } else line
-    }
-
     /**
      * Computing correct line indentation from second pasted line going on
      * assuming that from the second line they have correct relative indentation to themselves.
@@ -106,7 +111,7 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
         pastedLines(secondLineIdx)
       )
       convertedLines = pastedLines.map(
-        normalizeSpacesAndTabs(_, preNormalizeCodeStartPosition)
+        normalizeSpacesAndTabs(_, preNormalizeCodeStartPosition, blank, tabSize)
       )
       pastedIndentation <- codeStartPosition(convertedLines(secondLineIdx))
       headIdx <- codeLinesIdxs.headOption
@@ -119,13 +124,13 @@ case class IndentOnPaste() extends OnTypeRangeFormatter {
       pastedLineIndentation <- codeStartPosition(line)
     } yield {
       val diff = currentIndentationLevel + blockIndent - pastedIndentation
-      if (diff != 0)
-        if (diff < 0) {
-          if (pastedLineIndentation < -diff) {
-            stringRepeat(blank, currentIndentationLevel + blockIndent) ++ line
-              .slice(pastedLineIndentation, line.length)
-          } else line.slice(-diff, line.length)
-        } else stringRepeat(blank, diff) ++ line
+
+      if (diff < 0) {
+        if (pastedLineIndentation < -diff) {
+          stringRepeat(blank, currentIndentationLevel + blockIndent) ++ line
+            .slice(pastedLineIndentation, line.length)
+        } else line.slice(-diff, line.length)
+      } else if (diff > 0) stringRepeat(blank, diff) ++ line
       else line
     }
 
