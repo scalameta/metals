@@ -402,6 +402,9 @@ final class TestingServer(
     QuickBuild.bloopInstall(workspace)
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
+    val fileOpCapabilities = new l.FileOperationsWorkspaceCapabilities()
+    fileOpCapabilities.setDidCreate(true)
+    workspaceCapabilities.setFileOperations(fileOpCapabilities)
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
@@ -595,6 +598,20 @@ final class TestingServer(
       )
       .asScala
   }
+
+  def createFile(relativePath: String, contents: String = ""): Future[Unit] =
+    Future {
+      Debug.printEnclosing(relativePath)
+      val path = workspace.resolve(relativePath)
+      path.toFile.createNewFile()
+      path.writeText(contents)
+      val uri = path.toURI.toString
+
+      val file = new l.FileCreate(uri)
+      val didCreateFileParams = new l.CreateFilesParams(List(file).asJava)
+      server
+        .didCreateFiles(didCreateFileParams)
+    }
 
   def didClose(filename: String): Future[Unit] = {
     Debug.printEnclosing(filename)

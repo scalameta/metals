@@ -791,9 +791,24 @@ class MetalsLanguageServer(
         textDocumentSyncOptions.setChange(TextDocumentSyncKind.Full)
         textDocumentSyncOptions.setSave(new SaveOptions(true))
         textDocumentSyncOptions.setOpenClose(true)
-
         capabilities.setTextDocumentSync(textDocumentSyncOptions)
 
+        if (initializeParams.supportsDidCreateFiles) {
+          val fileOperations = new FileOperationsServerCapabilities()
+          val fileFilters = new FileOperationOptions(
+            List(
+              new FileOperationFilter(
+                new FileOperationPattern("**/*.{sc,sbt,scala}")
+              )
+            ).asJava
+          )
+          fileOperations.setDidCreate(fileFilters)
+
+          val workspaceCapabilities = new WorkspaceServerCapabilities()
+          workspaceCapabilities.setFileOperations(fileOperations)
+
+          capabilities.setWorkspace(workspaceCapabilities)
+        }
         val serverInfo = new ServerInfo("Metals", BuildInfo.metalsVersion)
         new InitializeResult(capabilities, serverInfo)
       })
@@ -951,11 +966,13 @@ class MetalsLanguageServer(
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
-    packageProvider
-      .workspaceEdit(path)
-      .map(new ApplyWorkspaceEditParams(_))
-      .foreach(languageClient.applyEdit)
-
+    // If didCreateFile notifications are not sent try to infer if a file is new based on contents
+    if (!initializeParams.supportsDidCreateFiles) {
+      packageProvider
+        .workspaceEdit(path)
+        .map(new ApplyWorkspaceEditParams(_))
+        .foreach(languageClient.applyEdit)
+    }
     // trigger compilation in preparation for definition requests for dependency sources and standalone files
     val loadInteractive = Future {
       interactiveSemanticdbs.textDocument(path)
@@ -1486,6 +1503,27 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[l.CodeAction]] =
     CancelTokens.future { token =>
       codeActionProvider.codeActions(params, token).map(_.asJava)
+    }
+
+  @JsonRequest("workspace/didCreateFiles")
+  def didCreateFiles(
+      params: CreateFilesParams
+  ): CompletableFuture[Unit] =
+    CancelTokens { _ =>
+      val changes = params
+        .getFiles()
+        .asScala
+        .map { file =>
+          file.getUri -> packageProvider
+            .textEdit(file.getUri().toAbsolutePath)
+            .toList
+            .asJava
+        }
+        .toMap
+        .asJava
+      languageClient.applyEdit(
+        new ApplyWorkspaceEditParams(new WorkspaceEdit(changes))
+      )
     }
 
   @JsonRequest("textDocument/codeLens")

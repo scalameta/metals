@@ -15,9 +15,14 @@ import org.eclipse.lsp4j.WorkspaceEdit
 class PackageProvider(private val buildTargets: BuildTargets) {
 
   def workspaceEdit(path: AbsolutePath): Option[WorkspaceEdit] = {
-    packageStatement(path).map(template =>
-      workspaceEdit(path, template.fileContent)
-    )
+    packageStatement(path).map { template =>
+      val textEdits = List(textEdit(path, template.fileContent)).asJava
+      val changes = Map(path.toURI.toString -> textEdits).asJava
+      new WorkspaceEdit(changes)
+    }
+  }
+  def textEdit(path: AbsolutePath): Option[TextEdit] = {
+    packageStatement(path).map(template => textEdit(path, template.fileContent))
   }
 
   def packageStatement(path: AbsolutePath): Option[NewFileTemplate] = {
@@ -69,16 +74,14 @@ class PackageProvider(private val buildTargets: BuildTargets) {
 
   private def wrap(str: String) = Identifier.backtickWrap(str)
 
-  private def workspaceEdit(
+  private def textEdit(
       path: AbsolutePath,
       packageStatement: String
-  ): WorkspaceEdit = {
+  ): TextEdit = {
     val textEdit = new TextEdit(
       new Range(new Position(0, 0), new Position(0, 0)),
       packageStatement
     )
-    val textEdits = List(textEdit).asJava
-    val changes = Map(path.toURI.toString -> textEdits).asJava
-    new WorkspaceEdit(changes)
+    textEdit
   }
 }

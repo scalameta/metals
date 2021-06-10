@@ -689,6 +689,15 @@ object MetalsEnrichments
         )
       } yield hierarchicalDocumentSymbolSupport.booleanValue).getOrElse(false)
 
+    def supportsDidCreateFiles: Boolean =
+      (for {
+        params <- initializeParams
+        capabilities <- Option(params.getCapabilities())
+        workspace <- Option(capabilities.getWorkspace())
+        fileOperations <- Option(workspace.getFileOperations())
+        didCreate <- Option(fileOperations.getDidCreate())
+      } yield didCreate.booleanValue).getOrElse(false)
+
     def supportsCompletionSnippets: Boolean =
       (for {
         params <- initializeParams

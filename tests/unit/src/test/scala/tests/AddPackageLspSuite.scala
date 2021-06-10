@@ -81,6 +81,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
       cleanCompileCache("a")
       RecursivelyDelete(workspace.resolve("a"))
       Files.createDirectories(workspace.toNIO.resolve(parent))
+
       for {
         _ <- server.initialize(
           """|/metals.json
@@ -89,11 +90,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
              |}
         """.stripMargin
         )
-        _ =
-          workspace
-            .resolve(fileToCreate)
-            .toFile
-            .createNewFile()
+        _ <- server.createFile(fileToCreate)
         _ <- server.didOpen(fileToCreate)
         _ = assertNoDiff(
           workspace.resolve(fileToCreate).readText,
