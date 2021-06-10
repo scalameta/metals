@@ -68,20 +68,19 @@ object IndentOnPaste extends RangeFormatter {
     val startLine = startPos.toLSP.getStart.getLine
     val endLine = endPos.toLSP.getEnd.getLine
 
-    val splitLinesWithIndex = splitLines.zipWithIndex
-    val inRangeLines = splitLinesWithIndex.slice(startLine, endLine + 1)
-    val pastedLines = inRangeLines.map(_._1)
+    val inRangeLines = splitLines.slice(startLine, endLine + 1)
+    val pastedLines = inRangeLines
     val pastedLinesWithIndex = pastedLines.zipWithIndex
 
     val (blank, tabSize) =
       if (insertSpaces) (" ", originalTabSize) else ("\t", 1)
 
     // These are the lines from the first pasted line, going above
-    val prePastedLines = splitLinesWithIndex.take(startLine).reverse
+    val prePastedLines = splitLines.take(startLine).reverse
 
     val currentIndentationLevel = (for {
-      (line, _) <- prePastedLines.find(t => {
-        val trimmed = t._1.trim()
+      line <- prePastedLines.find(t => {
+        val trimmed = t.trim()
         trimmed.nonEmpty && !trimmed.startsWith("|")
       }) // Find first line non empty (aka code) that is not a piped multi-string
 
