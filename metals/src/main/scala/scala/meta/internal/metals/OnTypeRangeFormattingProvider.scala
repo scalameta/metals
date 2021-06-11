@@ -7,7 +7,10 @@ import scala.meta.internal.metals.onTypeRangeFormatters.IndentOnPaste.EndPositio
 import scala.meta.internal.metals.onTypeRangeFormatters.IndentOnPaste.StartPosition
 import scala.meta.internal.metals.onTypeRangeFormatters.MultilineString
 import scala.meta.internal.metals.onTypeRangeFormatters.OnTypeFormatter
+import scala.meta.internal.metals.onTypeRangeFormatters.OnTypeFormatterParams
 import scala.meta.internal.metals.onTypeRangeFormatters.RangeFormatter
+import scala.meta.internal.metals.onTypeRangeFormatters.RangeFormatterParams
+import scala.meta.internal.metals.onTypeRangeFormatters.TokensParams
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Tokens
@@ -86,18 +89,15 @@ class OnTypeFormattingProvider(
 
     contribute(uri, doc, range, trees) {
       (sourceText, startPos, endPos, tokensOpt) =>
-        val splitLines = sourceText.split('\n')
+        val tokensParams = TokensParams(startPos, endPos, tokensOpt)
+        val onTypeformatterParams =
+          OnTypeFormatterParams(sourceText, position, triggerChar)
         formatters
           .foldLeft[Option[List[TextEdit]]](None) { (opt, formatter) =>
             opt.orElse(
               formatter.contribute(
-                sourceText,
-                splitLines,
-                startPos,
-                endPos,
-                triggerChar,
-                position,
-                tokensOpt
+                onTypeformatterParams,
+                tokensParams
               )
             )
           }
@@ -126,18 +126,15 @@ class rangeFormattingProvider(
 
     contribute(uri, doc, range, trees) {
       (sourceText, startPos, endPos, tokensOpt) =>
-        val splitLines = sourceText.split('\n')
+        val rangeFormatterParams =
+          RangeFormatterParams(sourceText, range, formattingOptions)
+        val tokensParams = TokensParams(startPos, endPos, tokensOpt)
         formatters
           .foldLeft[Option[List[TextEdit]]](None) { (opt, formatter) =>
             opt.orElse(
               formatter.contribute(
-                sourceText,
-                range,
-                splitLines,
-                startPos,
-                endPos,
-                formattingOptions,
-                tokensOpt
+                rangeFormatterParams,
+                tokensParams
               )
             )
           }

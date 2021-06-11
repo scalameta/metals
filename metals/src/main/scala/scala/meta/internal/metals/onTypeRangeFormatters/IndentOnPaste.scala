@@ -1,12 +1,10 @@
 package scala.meta.internal.metals.onTypeRangeFormatters
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.tokens.Tokens
+import scala.util.matching.Regex
 
-import org.eclipse.lsp4j
-import org.eclipse.lsp4j.FormattingOptions
+import scala.meta.internal.mtags.MtagsEnrichments._
+
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-import scala.util.matching.Regex
 
 object IndentOnPaste extends RangeFormatter {
 
@@ -52,14 +50,14 @@ object IndentOnPaste extends RangeFormatter {
   }
 
   override def contribute(
-      sourceText: String,
-      range: lsp4j.Range,
-      splitLines: Array[String],
-      startPos: StartPosition,
-      endPos: EndPosition,
-      formattingOptions: FormattingOptions,
-      tokens: Option[Tokens]
+      rangeFormatterParams: RangeFormatterParams,
+      tokensParams: TokensParams
   ): Option[List[TextEdit]] = {
+    val formattingOptions = rangeFormatterParams.formattingOptions
+    val startPos = tokensParams.startPos
+    val endPos = tokensParams.endPos
+    val splitLines = rangeFormatterParams.splitLines
+
     val insertSpaces = formattingOptions.isInsertSpaces
     val originalTabSize = formattingOptions.getTabSize
     val rangeStart = startPos.toLSP.getStart

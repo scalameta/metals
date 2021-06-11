@@ -1,6 +1,7 @@
 package tests.rangeFormatting
 
 import munit.Location
+import org.eclipse.lsp4j.FormattingOptions
 import tests.BaseLspSuite
 
 class MultilineStringRangeFormattingWhenSelectingSuite
@@ -126,6 +127,8 @@ class MultilineStringRangeFormattingWhenSelectingSuite
        |}""".stripMargin
   )
 
+  val formattingOptions = new FormattingOptions(2, true)
+
   def check(
       name: String,
       testCase: String,
@@ -153,7 +156,8 @@ class MultilineStringRangeFormattingWhenSelectingSuite
         _ <- server.rangeFormatting(
           "a/src/main/scala/a/Main.scala",
           testCode, // with << >>
-          expected
+          expected,
+          formattingOptions = Some(formattingOptions)
         )
       } yield ()
     }

@@ -5,7 +5,6 @@ import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
 
-import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
@@ -349,14 +348,16 @@ case class MultilineString(enableStripMargin: Boolean)
   }
 
   override def contribute(
-      sourceText: String,
-      splitLines: Array[String],
-      startPos: StartPosition,
-      endPos: EndPosition,
-      triggerChar: String,
-      position: Position,
-      tokensOpt: Option[Tokens]
+      onTypeFormatterParams: OnTypeFormatterParams,
+      tokensParams: TokensParams
   ): Option[List[TextEdit]] = {
+    val tokensOpt = tokensParams.tokens
+    val startPos = tokensParams.startPos
+    val endPos = tokensParams.endPos
+    val triggerChar = onTypeFormatterParams.triggerChar
+    val splitLines = onTypeFormatterParams.splitLines
+    val position = onTypeFormatterParams.position
+    val sourceText = onTypeFormatterParams.sourceText
     tokensOpt match {
       case Some(tokens) =>
         indentTokensOnTypeFormatting(
@@ -383,14 +384,15 @@ case class MultilineString(enableStripMargin: Boolean)
   }
 
   override def contribute(
-      sourceText: String,
-      range: Range,
-      splitLines: Array[String],
-      startPos: StartPosition,
-      endPos: EndPosition,
-      formattingOptions: FormattingOptions,
-      tokensOpt: Option[Tokens]
+      rangeFormatterParams: RangeFormatterParams,
+      tokensParams: TokensParams
   ): Option[List[TextEdit]] = {
+    val tokensOpt = tokensParams.tokens
+    val startPos = tokensParams.startPos
+    val endPos = tokensParams.endPos
+    val sourceText = rangeFormatterParams.sourceText
+    val range = rangeFormatterParams.range
+    val splitLines = rangeFormatterParams.splitLines
     tokensOpt.flatMap { tokens =>
       tokens.toIterator.zipWithIndex.flatMap { case (token, index) =>
         isStringOrInterpolation(
