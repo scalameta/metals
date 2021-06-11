@@ -675,12 +675,15 @@ final class TestingServer(
 
   def assertSelectionRanges(
       filename: String,
-      expected: String,
-      ranges: List[l.SelectionRange]
+      ranges: List[l.SelectionRange],
+      expected: List[String]
   ): Unit = {
-    val edits = RangesTextEdits.fromSelectionRanges(ranges)
-    val edited = TextEdits.applyEdits(textContents(filename), edits)
-    Assertions.assertNoDiff(edited, expected)
+    expected.headOption.foreach { expectedRange =>
+      val edits = RangesTextEdits.fromSelectionRanges(ranges)
+      val edited = TextEdits.applyEdits(textContents(filename), edits)
+      Assertions.assertNoDiff(edited, expectedRange)
+      assertSelectionRanges(filename, ranges.map(_.getParent()), expected.tail)
+    }
   }
 
   def onTypeFormatting(

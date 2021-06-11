@@ -42,35 +42,27 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
       )
       _ = server.assertSelectionRanges(
         "a/src/main/scala/a/Main.scala",
-        """|object Main extends App {
-           |  >>region>>def double(a: Int) = {
-           |    a * 2
-           |  }<<region<<
-           |}
-           |""".stripMargin,
-        ranges.asScala.toList
-      )
-      parents = ranges.asScala.toList.map(_.getParent())
-      _ = server.assertSelectionRanges(
-        "a/src/main/scala/a/Main.scala",
-        """|object Main >>region>>extends App {
-           |  def double(a: Int) = {
-           |    a * 2
-           |  }
-           |}<<region<<
-           |""".stripMargin,
-        parents
-      )
-      parantsParents = parents.map(_.getParent())
-      _ = server.assertSelectionRanges(
-        "a/src/main/scala/a/Main.scala",
-        """|>>region>>object Main extends App {
-           |  def double(a: Int) = {
-           |    a * 2
-           |  }
-           |}<<region<<
-           |""".stripMargin,
-        parantsParents
+        ranges.asScala.toList,
+        List(
+          """|object Main extends App {
+             |  >>region>>def double(a: Int) = {
+             |    a * 2
+             |  }<<region<<
+             |}
+             |""".stripMargin,
+          """|object Main >>region>>extends App {
+             |  def double(a: Int) = {
+             |    a * 2
+             |  }
+             |}<<region<<
+             |""".stripMargin,
+          """|>>region>>object Main extends App {
+             |  def double(a: Int) = {
+             |    a * 2
+             |  }
+             |}<<region<<
+             |""".stripMargin
+        )
       )
 
     } yield ()
@@ -104,46 +96,33 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
       )
       _ = server.assertSelectionRanges(
         "a/src/main/scala/a/Main.scala",
-        """|object Main extends App {
-           |  def double(>>region>>a: Int<<region<<) = {
-           |    * 2
-           |  }
-           |}
-           |""".stripMargin,
-        ranges.asScala.toList
-      )
-      parents = ranges.asScala.toList.map(_.getParent())
-      _ = server.assertSelectionRanges(
-        "a/src/main/scala/a/Main.scala",
-        """|object Main extends App {
-           |  >>region>>def double(a: Int) = {
-           |    * 2
-           |  }<<region<<
-           |}
-           |""".stripMargin,
-        parents
-      )
-      parentsParents = parents.map(_.getParent())
-      _ = server.assertSelectionRanges(
-        "a/src/main/scala/a/Main.scala",
-        """|object Main >>region>>extends App {
-           |  def double(a: Int) = {
-           |    * 2
-           |  }
-           |}<<region<<
-           |""".stripMargin,
-        parentsParents
-      )
-      parantsParentsParents = parentsParents.map(_.getParent())
-      _ = server.assertSelectionRanges(
-        "a/src/main/scala/a/Main.scala",
-        """|>>region>>object Main extends App {
-           |  def double(a: Int) = {
-           |    * 2
-           |  }
-           |}<<region<<
-           |""".stripMargin,
-        parantsParentsParents
+        ranges.asScala.toList,
+        List(
+          """|object Main extends App {
+             |  def double(>>region>>a: Int<<region<<) = {
+             |    * 2
+             |  }
+             |}
+             |""".stripMargin,
+          """|object Main extends App {
+             |  >>region>>def double(a: Int) = {
+             |    * 2
+             |  }<<region<<
+             |}
+             |""".stripMargin,
+          """|object Main >>region>>extends App {
+             |  def double(a: Int) = {
+             |    * 2
+             |  }
+             |}<<region<<
+             |""".stripMargin,
+          """|>>region>>object Main extends App {
+             |  def double(a: Int) = {
+             |    * 2
+             |  }
+             |}<<region<<
+             |""".stripMargin
+        )
       )
     } yield ()
   }
