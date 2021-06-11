@@ -326,7 +326,7 @@ final class FormattingProvider(
     if (tables.dismissedNotifications.UpdateScalafmtConf.isDismissed)
       Future.unit
     else {
-      inspectDialectRewrite(config) match {
+      Future(inspectDialectRewrite(config)).flatMap {
         case Some(rewrite) =>
           val canUpdate = rewrite.canUpdate && scalafmtConf.isInside(workspace)
           val params =
