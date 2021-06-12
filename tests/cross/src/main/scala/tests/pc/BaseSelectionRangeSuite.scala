@@ -21,7 +21,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       name: TestOptions,
       original: String,
       expectedRanges: List[String],
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, List[String]] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
@@ -51,7 +51,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       // the tests.
       assertSelectionRanges(
         selectionRanges.headOption,
-        expectedRanges,
+        compatOrDefault(expectedRanges, compat, scalaVersion),
         code
       )
     }

@@ -288,9 +288,15 @@ case class ScalaPresentationCompiler(
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[SelectionRange]] = {
-    CompletableFuture.completedFuture(
-      List.empty[SelectionRange].asJava
-    )
+    CompletableFuture.completedFuture {
+      compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
+        pc =>
+          new SelectionRangeProvider(
+            pc.compiler(),
+            params
+          ).selectionRange().asJava
+      }
+    }
   }
 
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
