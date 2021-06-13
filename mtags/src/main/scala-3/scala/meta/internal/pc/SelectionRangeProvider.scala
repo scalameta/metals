@@ -60,8 +60,31 @@ class SelectionRangeProvider(
       child: SelectionRange,
       parent: SelectionRange
   ): SelectionRange = {
-    child.setParent(parent)
-    child
+    // If the parent and the child have the same exact range we just skip it.
+    // This happens in a lot of various places. For example:
+    //
+    // val total = for {
+    //   a <- >>region>>Some(1)<<region<<
+    // } yield a
+    //
+    //Apply(
+    //  Select(Apply(Ident(Some), List(Literal(Constant(1)))), flatMap), <-- This range
+    //  List(
+    //    Function(
+    //      List(ValDef(Modifiers(8192L, , List()), a, <type ?>, <empty>)),
+    //      Apply(
+    //        Select(Apply(Ident(Some), List(Literal(Constant(2)))), map), <-- Same as this range
+    //        ...
+    //      )
+    //    )
+    //  )
+    //)
+    if (child.getRange() == parent.getRange()) {
+      parent
+    } else {
+      child.setParent(parent)
+      child
+    }
   }
 
 }

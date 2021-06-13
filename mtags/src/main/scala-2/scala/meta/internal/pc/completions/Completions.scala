@@ -600,6 +600,7 @@ trait Completions { this: MetalsGlobal =>
           None
       }
   }
+
   class MetalsLocator(pos: Position) extends Traverser {
     def locateIn(root: Tree): Tree = {
       lastVisitedParentTrees = Nil
@@ -616,7 +617,7 @@ trait Completions { this: MetalsGlobal =>
             if tt.original != null && (tt.pos includes tt.original.pos) =>
           traverse(tt.original)
         case _ =>
-          if (t.pos includes pos) {
+          if (t.pos.includes(pos)) {
             if (isEligible(t)) {
               lastVisitedParentTrees ::= t
             }
