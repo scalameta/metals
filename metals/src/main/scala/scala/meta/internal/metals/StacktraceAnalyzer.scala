@@ -119,7 +119,7 @@ class StacktraceAnalyzer(
       }
       val fileStartPos = new l.Position(0, 0)
       val range = new l.Range(fileStartPos, fileStartPos)
-      val stackTraceLocation = new l.Location(pathStr, range)
+      val stackTraceLocation = new l.Location(path.toURI.toString(), range)
       Some(makeGotoCommandParams(stackTraceLocation))
     }
   }
