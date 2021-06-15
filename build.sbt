@@ -430,7 +430,7 @@ lazy val metals = project
       "net.java.dev.jna" % "jna" % "5.8.0",
       "net.java.dev.jna" % "jna-platform" % "5.8.0",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.3.0",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.3.1",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-launcher" % V.bloopNightly,
       // for LSP
