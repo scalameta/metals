@@ -21,13 +21,6 @@ the result on a real-world project.
 The work presented in this post was done as part of my job at the
 [Scala Center](https://scala.epfl.ch/).
 
-<style>
-blockquote {
-  background-color: rgba(100, 205, 255, 0.3);
-  border-left: 8px solid #64cdff;
-}
-</style>
-
 ## Problem statement
 
 What happens when you run Goto Definition? In reality, a lot goes on but in this
@@ -201,7 +194,7 @@ evaluate how our indexer performs in the real world, we test Metals on the
 Scala that replaces traditional ORMs and data access layers with a universal
 database abstraction.
 
-<img width="998" alt="prisma" src="https://user-images.githubusercontent.com/1408093/49875321-08cf9d80-fe21-11e8-9f02-54ff4960a7af.png">
+![prisma](https://user-images.githubusercontent.com/1408093/49875321-08cf9d80-fe21-11e8-9f02-54ff4960a7af.png)
 
 The project has around 80k lines of Scala code.
 
