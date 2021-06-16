@@ -4,6 +4,7 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -15,12 +16,18 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.Failure
+import scala.util.Success
 
 import scala.meta._
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
+import scala.meta.internal.metals.Messages.UpdateScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.semver.SemVer
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import org.scalafmt.dynamic.ScalafmtDynamicError
@@ -39,9 +46,13 @@ final class FormattingProvider(
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     icons: Icons,
-    tables: Tables
+    tables: Tables,
+    buildTargets: BuildTargets
 )(implicit ec: ExecutionContext)
     extends Cancelable {
+
+  import FormattingProvider._
+
   override def cancel(): Unit = {
     scalafmt.clear()
   }
@@ -148,8 +159,7 @@ final class FormattingProvider(
       case Some(version) =>
         val text = config.toInputFromBuffers(buffers).text
         val newText =
-          s"""version = "$version"
-             |""".stripMargin + text
+          ScalafmtConfig.update(text, Some(version), None, Map.empty)
         Files.write(config.toNIO, newText.getBytes(StandardCharsets.UTF_8))
         clearDiagnostics(config)
         client.showMessage(
@@ -195,11 +205,9 @@ final class FormattingProvider(
       val params = MissingScalafmtConf.params(path)
       client.showMessageRequest(params).asScala.map { item =>
         if (item == MissingScalafmtConf.createFile) {
-          val text =
-            s"""version = "${BuildInfo.scalafmtVersion}"
-               |""".stripMargin
           Files.createDirectories(path.toNIO.getParent)
-          Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
+          Files
+            .write(path.toNIO, initialConfig().getBytes(StandardCharsets.UTF_8))
           client.showMessage(MissingScalafmtConf.fixedParams(isCancelled))
           true
         } else if (item == Messages.notNow) {
@@ -213,6 +221,155 @@ final class FormattingProvider(
         } else false
       }
     } else Future.successful(false)
+  }
+
+  private def initialConfig(): String = {
+    val version = BuildInfo.scalafmtVersion
+    val initialConfig =
+      ScalafmtConfig.empty
+        .copy(version = Some(SemVer.Version.fromString(version)))
+
+    val versionText = s"""version = "${BuildInfo.scalafmtVersion}""""
+    inspectDialectRewrite(initialConfig) match {
+      case Some(rewrite) => rewrite.rewrite(versionText)
+      case None => versionText
+    }
+  }
+
+  private def inspectDialectRewrite(
+      config: ScalafmtConfig
+  ): Option[DialectRewrite] = {
+
+    import ScalafmtDialect.ord
+
+    def nonExcludedSources(sourceItem: AbsolutePath): List[AbsolutePath] =
+      if (sourceItem.exists)
+        FileIO
+          .listAllFilesRecursively(sourceItem)
+          .filter(f => f.isScalaFilename && !config.isExcluded(f))
+          .toList
+      else
+        List.empty
+
+    def hasCorrectDialectOverride(
+        files: List[AbsolutePath],
+        dialect: ScalafmtDialect
+    ): Boolean = {
+      config.fileOverrides.nonEmpty &&
+      files.forall(p => config.overrideFor(p).exists(d => ord.gteq(dialect, d)))
+    }
+
+    def inferDialectForSourceItem(
+        sourceItem: AbsolutePath,
+        buildTargetIds: List[BuildTargetIdentifier],
+        default: ScalafmtDialect
+    ): Option[ScalafmtDialect] = {
+      if (buildTargetIds.nonEmpty && sourceItem.exists) {
+        val required =
+          buildTargetIds
+            .flatMap(buildTargets.scalaTarget)
+            .map(_.fmtDialect)
+            .sorted
+            .headOption
+            .getOrElse(ScalafmtDialect.Scala213)
+
+        if (ord.gt(required, default)) {
+          nonExcludedSources(sourceItem) match {
+            case Nil => None
+            case items if !hasCorrectDialectOverride(items, required) =>
+              Some(required)
+            case _ => None
+          }
+        } else None
+      } else None
+    }
+
+    val default = config.runnerDialect.getOrElse(ScalafmtDialect.Scala213)
+
+    val itemsRequiresUpgrade =
+      buildTargets.sourceItemsToBuildTargets.toList.flatMap {
+        case (path, ids) =>
+          inferDialectForSourceItem(path, ids.asScala.toList, default).map(d =>
+            (path, d)
+          )
+      }
+
+    if (itemsRequiresUpgrade.nonEmpty) {
+      val (items, dialects) = itemsRequiresUpgrade.unzip
+      val directories = items.map(_.toRelative(workspace))
+
+      val nonSbtTargets = buildTargets.all.toList.filter(!_.isSbt)
+      val needFileOverride =
+        nonSbtTargets.map(_.fmtDialect).distinct.size > 1
+      val upgradeType =
+        if (needFileOverride && config.fileOverrides.nonEmpty)
+          RewriteType.Manual
+        else if (needFileOverride)
+          RewriteType.FileOverrideDialect
+        else
+          RewriteType.GlobalDialect
+
+      val out = DialectRewrite(
+        directories,
+        dialects.max,
+        upgradeType,
+        config
+      )
+      Some(out)
+    } else None
+  }
+
+  private def checkIfDialectUpgradeRequired(
+      config: ScalafmtConfig
+  ): Future[Unit] = {
+
+    if (tables.dismissedNotifications.UpdateScalafmtConf.isDismissed)
+      Future.unit
+    else {
+      Future(inspectDialectRewrite(config)).flatMap {
+        case Some(rewrite) =>
+          val canUpdate = rewrite.canUpdate && scalafmtConf.isInside(workspace)
+          val params =
+            UpdateScalafmtConf.params(rewrite.maxDialect, canUpdate)
+
+          scribe.info(
+            s"Required scalafmt dialect rewrite to '${rewrite.maxDialect.value}'." +
+              s" Directories:\n${rewrite.directories.mkString("- ", "\n- ", "")}"
+          )
+
+          client.showMessageRequest(params).asScala.map { item =>
+            if (item == UpdateScalafmtConf.letUpdate) {
+              val text = scalafmtConf.toInputFromBuffers(buffers).text
+              val updatedText = rewrite.rewrite(text)
+              Files.write(
+                scalafmtConf.toNIO,
+                updatedText.getBytes(StandardCharsets.UTF_8)
+              )
+            } else if (item == Messages.notNow) {
+              tables.dismissedNotifications.UpdateScalafmtConf
+                .dismiss(24, TimeUnit.HOURS)
+            } else if (item == Messages.dontShowAgain) {
+              tables.dismissedNotifications.UpdateScalafmtConf.dismissForever()
+            } else ()
+          }
+        case None => Future.unit
+      }
+    }
+  }
+
+  def validateWorkspace(): Future[Unit] = {
+    if (scalafmtConf.exists) {
+      val text = scalafmtConf.toInputFromBuffers(buffers).text
+      ScalafmtConfig.parse(text) match {
+        case Failure(e) =>
+          scribe.error(s"Failed to parse ${scalafmtConf}", e)
+          Future.unit
+        case Success(values) =>
+          checkIfDialectUpgradeRequired(values)
+      }
+    } else {
+      Future.unit
+    }
   }
 
   private def scalafmtConf: AbsolutePath = {
@@ -299,10 +456,75 @@ final class FormattingProvider(
 }
 
 object FormattingProvider {
+
+  sealed trait RewriteType
+  object RewriteType {
+    case object Manual extends RewriteType
+    sealed trait Auto extends RewriteType
+    case object GlobalDialect extends Auto
+    case object FileOverrideDialect extends Auto
+  }
+
+  case class DialectRewrite(
+      directories: List[RelativePath],
+      maxDialect: ScalafmtDialect,
+      rewriteType: RewriteType,
+      config: ScalafmtConfig
+  ) {
+
+    def canUpdate: Boolean =
+      rewriteType match {
+        case _: RewriteType.Auto => true
+        case RewriteType.Manual => false
+      }
+
+    def rewrite(text: String): String = {
+      val updVersion = versionUpgrade
+      rewriteType match {
+        case RewriteType.GlobalDialect =>
+          ScalafmtConfig.update(
+            text,
+            version = updVersion,
+            runnerDialect = Some(maxDialect)
+          )
+        case RewriteType.FileOverrideDialect =>
+          val fileOverride =
+            directories.map { path =>
+              // globs should work with `/` on all platforms
+              val unifiedPath =
+                if (scala.util.Properties.isWin)
+                  path.toString.replace(
+                    FileSystems.getDefault.getSeparator,
+                    "/"
+                  )
+                else
+                  path.toString
+
+              (s"glob:**/$unifiedPath/**" -> maxDialect)
+            }.toMap
+          ScalafmtConfig.update(
+            text,
+            version = updVersion,
+            fileOverride = fileOverride
+          )
+        case RewriteType.Manual => text
+      }
+    }
+
+    private def versionUpgrade: Option[String] = {
+      config.version match {
+        case Some(v) if v.major >= 3 => None
+        case _ => Some(BuildInfo.scalafmtVersion)
+      }
+    }
+
+  }
+
   def newScalafmt(respectVersion: Boolean = true): Scalafmt =
     Scalafmt
       .create(this.getClass.getClassLoader)
       .withReporter(EmptyScalafmtReporter)
       .withDefaultVersion(BuildInfo.scalafmtVersion)
       .withRespectVersion(respectVersion)
+
 }

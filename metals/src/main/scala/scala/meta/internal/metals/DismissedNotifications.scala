@@ -18,6 +18,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val ChangeScalafmtVersion = new Notification(8)
   val AmmoniteImportAuto = new Notification(9)
   val ReconnectAmmonite = new Notification(10)
+  val UpdateScalafmtConf = new Notification(11)
 
   class Notification(val id: Int)(implicit name: sourcecode.Name) {
     override def toString: String = s"Notification(${name.value}, $id)"

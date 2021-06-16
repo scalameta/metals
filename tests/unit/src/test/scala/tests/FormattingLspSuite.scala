@@ -4,6 +4,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
+import scala.meta.internal.metals.ScalafmtDialect
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import com.google.gson.JsonObject
@@ -275,6 +276,85 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
               |""".stripMargin
         )
       }
+    } yield ()
+  }
+
+  test("rewrite-dialect-global") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      val expected =
+        Messages.UpdateScalafmtConf.createMessage(ScalafmtDialect.Scala3)
+      if (params.getMessage() == expected) {
+        params.getActions.asScala
+          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
+      } else {
+        None
+      }
+    }
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{
+           |  "a": {
+           |     "scalaVersion": "3.0.0"
+           |  }
+           |}
+           |/.scalafmt.conf
+           |version = "2.7.5"
+           |/a/src/main/scala/A.scala
+           |object A
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        server.textContents(".scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |runner.dialect = scala3
+            |""".stripMargin
+      )
+
+    } yield ()
+  }
+
+  test("rewrite-dialect-file-override") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      val expected =
+        Messages.UpdateScalafmtConf.createMessage(ScalafmtDialect.Scala3)
+      if (params.getMessage() == expected) {
+        params.getActions.asScala
+          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
+      } else {
+        None
+      }
+    }
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{
+           |  "a": {
+           |     "scalaVersion": "3.0.0"
+           |  },
+           |  "b" : {
+           |     "scalaVersion": "2.13.5"
+           |  }
+           |}
+           |/.scalafmt.conf
+           |version = "2.7.5"
+           |/a/src/main/scala/A.scala
+           |object A
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        server.textContents(".scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |fileOverride {
+            |  "glob:**/a/src/main/scala/**" {
+            |     runner.dialect = scala3
+            |  }
+            |}
+            |""".stripMargin
+      )
+
     } yield ()
   }
 

@@ -113,6 +113,15 @@ object ScalaVersions {
     }
   }
 
+  def fmtDialectForScalaVersion(
+      scalaVersion: String,
+      includeSource3: Boolean
+  ): ScalafmtDialect = {
+    if (isScala3Version(scalaVersion)) ScalafmtDialect.Scala3
+    else if (includeSource3) ScalafmtDialect.Scala213Source3
+    else ScalafmtDialect.Scala213
+  }
+
   private val scalaVersionRegex =
     "(_)?(\\d)(\\.\\d{1,2})?(\\.\\d(-(RC|M)\\d)?)?".r
 

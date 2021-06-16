@@ -542,6 +542,34 @@ object Messages {
     }
   }
 
+  object UpdateScalafmtConf {
+
+    def letUpdate = new MessageActionItem("Let Metals update .scalafmt.conf")
+    def createMessage(dialect: ScalafmtDialect): String = {
+      s"Some source directories can't be formatted by scalafmt " +
+        s"because they require the `runner.dialect = ${dialect.value}` setting." +
+        "[See scalafmt docs](https://scalameta.org/scalafmt/docs/configuration.html#scala-3)" +
+        " and logs for more details"
+    }
+
+    def params(
+        dialect: ScalafmtDialect,
+        canUpdate: Boolean
+    ): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(createMessage(dialect))
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          if (canUpdate) Some(letUpdate) else None,
+          if (canUpdate) Some(notNow) else None,
+          Some(dontShowAgain)
+        ).flatten.asJava
+      )
+      params
+    }
+  }
+
   object WorkspaceSymbolDependencies {
     def title: String =
       "Add ';' to search library dependencies"

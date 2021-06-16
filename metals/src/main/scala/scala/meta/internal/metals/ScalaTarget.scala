@@ -27,7 +27,6 @@ case class ScalaTarget(
       case other =>
         val dialect =
           ScalaVersions.dialectForScalaVersion(other, includeSource3 = false)
-        def containsSource3 = scalac.getOptions().contains("-Xsource:3")
         dialect match {
           case Scala213 if containsSource3 =>
             Scala213Source3
@@ -37,6 +36,9 @@ case class ScalaTarget(
         }
     }
   }
+
+  def fmtDialect: ScalafmtDialect =
+    ScalaVersions.fmtDialectForScalaVersion(scalaVersion, containsSource3)
 
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
 
@@ -71,4 +73,6 @@ case class ScalaTarget(
   def displayName: String = info.getDisplayName()
 
   def scalaBinaryVersion: String = scalaInfo.getScalaBinaryVersion()
+
+  private def containsSource3 = scalac.getOptions().contains("-Xsource:3")
 }

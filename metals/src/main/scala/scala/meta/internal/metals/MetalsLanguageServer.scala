@@ -479,7 +479,8 @@ class MetalsLanguageServer(
           clientConfig,
           statusBar,
           clientConfig.icons,
-          tables
+          tables,
+          buildTargets
         )
         newFileProvider = new NewFileProvider(
           workspace,
@@ -2304,6 +2305,7 @@ class MetalsLanguageServer(
       check()
       buildTools
         .loadSupported()
+      formattingProvider.validateWorkspace()
     }
     timerProvider.timedThunk(
       "started file watcher",
