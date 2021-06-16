@@ -466,6 +466,12 @@ class MetalsGlobal(
     onUnitOf(pos.source) { unit => new MetalsLocator(pos).locateIn(unit.body) }
   }
 
+  def locateUntyped(pos: Position): Tree = {
+    onUnitOf(pos.source) { unit =>
+      new MetalsLocator(pos).locateIn(parseTree(unit.source))
+    }
+  }
+
   def CURSOR = "_CURSOR_"
 
   def addCompilationUnit(

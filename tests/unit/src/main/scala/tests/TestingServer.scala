@@ -12,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -640,7 +641,7 @@ final class TestingServer(
     val params = new FoldingRangeRequestParams(new TextDocumentIdentifier(uri))
     for {
       ranges <- server.foldingRange(params).asScala
-      textEdits = FoldingRangesTextEdits(ranges)
+      textEdits = RangesTextEdits.fromFoldingRanges(ranges)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
@@ -651,6 +652,39 @@ final class TestingServer(
       folded <- foldingRange(filename)
       _ = Assertions.assertNoDiff(folded, expected)
     } yield ()
+
+  def retrieveRanges(
+      filename: String,
+      expected: String
+  ): Future[ju.List[l.SelectionRange]] = {
+    val path = toPath(filename)
+    val input = path.toInputFromBuffers(buffers)
+    val offset = expected.indexOf("@@")
+    if (offset < 0) sys.error("missing @@")
+    val start = input.text.indexOf(expected.replace("@@", ""))
+    val point = start + offset
+    val pos = m.Position.Range(input, point, point)
+    val params =
+      new l.SelectionRangeParams(
+        path.toTextDocumentIdentifier,
+        List(pos.toLSP.getStart).asJava
+      )
+
+    server.selectionRange(params).asScala
+  }
+
+  def assertSelectionRanges(
+      filename: String,
+      ranges: List[l.SelectionRange],
+      expected: List[String]
+  ): Unit = {
+    expected.headOption.foreach { expectedRange =>
+      val edits = RangesTextEdits.fromSelectionRanges(ranges)
+      val edited = TextEdits.applyEdits(textContents(filename), edits)
+      Assertions.assertNoDiff(edited, expectedRange)
+      assertSelectionRanges(filename, ranges.map(_.getParent()), expected.tail)
+    }
+  }
 
   def onTypeFormatting(
       filename: String,

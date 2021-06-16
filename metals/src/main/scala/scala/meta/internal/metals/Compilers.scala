@@ -24,6 +24,7 @@ import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 
@@ -36,6 +37,8 @@ import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.SelectionRange
+import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
@@ -357,6 +360,17 @@ class Compilers(
       pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
     }
 
+  def selectionRange(
+      params: SelectionRangeParams,
+      token: CancelToken
+  ): Future[ju.List[SelectionRange]] = {
+    withPCAndAdjustLsp(params) { (pc, positions) =>
+      val offsetPositions: ju.List[OffsetParams] =
+        positions.map(CompilerOffsetParams.fromPos(_, token))
+      pc.selectionRange(offsetPositions).asScala
+    }
+  }
+
   def loadCompiler(
       path: AbsolutePath
   ): Option[PresentationCompiler] = {
@@ -491,6 +505,22 @@ class Compilers(
       } yield res
     else
       None
+
+  private def withPCAndAdjustLsp[T](
+      params: SelectionRangeParams
+  )(fn: (PresentationCompiler, ju.List[Position]) => T): T = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val compiler =
+      loadCompiler(path).getOrElse(fallbackCompiler)
+
+    val input = path
+      .toInputFromBuffers(buffers)
+      .copy(path = params.getTextDocument.getUri)
+
+    val positions = params.getPositions().map(_.toMeta(input))
+
+    fn(compiler, positions)
+  }
 
   private def withPCAndAdjustLsp[T](
       params: TextDocumentPositionParams

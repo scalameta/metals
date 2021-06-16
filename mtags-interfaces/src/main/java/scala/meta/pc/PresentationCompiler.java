@@ -12,7 +12,7 @@ import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
-import org.eclipse.lsp4j.FoldingRange;
+import org.eclipse.lsp4j.SelectionRange;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -102,6 +102,11 @@ public abstract class PresentationCompiler {
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
     public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
+
+    /**
+     * Return the selections ranges for the given positions. 
+     */
+    public abstract CompletableFuture<List<SelectionRange>> selectionRange(List<OffsetParams> params);
 
     // =================================
     // Configuration and lifecycle APIs.

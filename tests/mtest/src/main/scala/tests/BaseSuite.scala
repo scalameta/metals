@@ -60,15 +60,23 @@ class BaseSuite extends munit.FunSuite with Assertions {
       }
       .getOrElse(identity[String] _)
 
-    val result = compat
+    val result = compatOrDefault(default, compat, scalaVersion)
+
+    postProcess(result)
+  }
+
+  def compatOrDefault[A](
+      default: A,
+      compat: Map[String, A],
+      scalaVersion: String
+  ): A =
+    compat
       .collect {
-        case (ver, code) if scalaVersion.startsWith(ver) => code
+        case (ver, compatCode) if scalaVersion.startsWith(ver) => compatCode
       }
       .headOption
       .getOrElse(default)
 
-    postProcess(result)
-  }
   protected def toJsonArray(list: List[String]): String = {
     if (list.isEmpty) "[]"
     else s"[${list.mkString("\"", """", """", "\"")}]"

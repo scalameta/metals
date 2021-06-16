@@ -76,6 +76,7 @@ import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.TextEdit
@@ -281,6 +282,20 @@ case class ScalaPresentationCompiler(
       new InferredTypeProvider(params, pc.compiler(), config)
         .inferredTypeEdits()
         .asJava
+    }
+  }
+
+  override def selectionRange(
+      params: ju.List[OffsetParams]
+  ): CompletableFuture[ju.List[SelectionRange]] = {
+    CompletableFuture.completedFuture {
+      compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
+        pc =>
+          new SelectionRangeProvider(
+            pc.compiler(),
+            params
+          ).selectionRange().asJava
+      }
     }
   }
 
