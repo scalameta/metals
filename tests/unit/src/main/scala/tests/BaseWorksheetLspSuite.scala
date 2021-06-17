@@ -477,20 +477,10 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        getExpected(
-          """|/a/src/main/scala/Main.worksheet.sc
-             |val message/*L0*/ = "Hello World!"
-             |println/*Predef.scala*/(message/*L0*/)
-             |""".stripMargin,
-          Map(
-            V.scala3 ->
-              """|/a/src/main/scala/Main.worksheet.sc
-                 |val message/*L0*/ = "Hello World!"
-                 |println/*<no symbol>*/(message/*L0*/)
-                 |""".stripMargin
-          ),
-          scalaVersion
-        )
+        """|/a/src/main/scala/Main.worksheet.sc
+           |val message/*L0*/ = "Hello World!"
+           |println/*Predef.scala*/(message/*L0*/)
+           |""".stripMargin
       )
     } yield ()
   }
@@ -530,7 +520,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                   |""".stripMargin,
             V.scala3 ->
               """|/Main.worksheet.sc
-                 |import java/*<no symbol>*/.time/*<no symbol>*/.Instant/*Instant.java*/
+                 |import java.time.Instant/*Instant.java*/
                  |
                  |val x/*L2*/ = Instant/*Instant.java*/.now/*Instant.java*/()
                  |val y/*L3*/ = List/*package.scala*/.fill/*Factory.scala*/(2)(2)

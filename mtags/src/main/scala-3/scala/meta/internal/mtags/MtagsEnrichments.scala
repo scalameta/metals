@@ -58,6 +58,13 @@ object MtagsEnrichments extends CommonMtagsEnrichments {
       )
     }
 
+    def toLocation: Option[l.Location] = {
+      for {
+        uri <- InteractiveDriver.toUriOption(pos.source)
+        range <- if (pos.exists) Some(pos.toLSP) else None
+      } yield new l.Location(uri.toString, range)
+    }
+
   extension (sym: Symbol)(using Context) {
     def fullNameBackticked: String = {
       @tailrec
