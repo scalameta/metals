@@ -1,7 +1,6 @@
 package tests.pc
 
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -9,6 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 import scala.meta.internal.pc.CompilerJobQueue
 
@@ -32,12 +32,11 @@ class CompilerJobQueueSuite extends BaseSuite {
     jobs.submit(
       cancelled,
       () => {
-        Thread.sleep(50)
+        Thread.sleep(1000)
       }
     )
-    jobs.executor().shutdown()
-    // Assert that cancelled task never execute.
-    jobs.executor().awaitTermination(10, TimeUnit.MILLISECONDS)
+    jobs.shutdown()
+    assert(Try(cancelled.get).isFailure)
   }
 
   test("order") {
