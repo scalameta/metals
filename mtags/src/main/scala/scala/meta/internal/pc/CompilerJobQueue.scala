@@ -28,39 +28,67 @@ import java.{util => ju}
  *   - CompletableFuture[T] can be converted to Scala Futures for easier composition.
  */
 class CompilerJobQueue(newExecutor: () => ThreadPoolExecutor) {
-  private val myExecutor = new AtomicReference[ThreadPoolExecutor]()
-  def executor(): ThreadPoolExecutor = {
-    val result = myExecutor.get()
-    if (result != null) {
-      if (result.isShutdown()) {
-        myExecutor.compareAndSet(result, null)
-        executor()
-      } else {
-        result
-      }
-    } else {
-      val next = newExecutor()
-      val isSet = myExecutor.compareAndSet(null, next)
-      if (!isSet) {
-        next.shutdown()
-      }
-      myExecutor.get()
-    }
-  }
-  override def toString(): String = s"CompilerJobQueue(${myExecutor.get()})"
-  def shutdown(): Unit = {
-    val ex = myExecutor.get()
-    if (ex != null) {
-      ex.shutdown()
-      myExecutor.compareAndSet(ex, null)
-    }
-  }
+  import CompilerJobQueue.State
+
+  private val state = new AtomicReference[State](State.Empty)
+
   def submit(fn: () => Unit): Unit = {
     submit(new CompletableFuture[Unit](), fn)
   }
   def submit(result: CompletableFuture[_], fn: () => Unit): Unit = {
-    executor().execute(new CompilerJobQueue.Job(result, fn))
+    onExecutor(
+      _.execute(new CompilerJobQueue.Job(result, fn)),
+      () => result.completeExceptionally(new CancellationException())
+    )
   }
+
+  private def onExecutor[A](
+      f: ThreadPoolExecutor => A,
+      fallback: () => A
+  ): A = {
+    state.get() match {
+      case State.Empty =>
+        if (state.compareAndSet(State.Empty, State.Initializing)) {
+          val value = newExecutor()
+          state.set(State.Initialized(value))
+          f(value)
+        } else {
+          delay()
+          onExecutor(f, fallback)
+        }
+      case State.Initialized(v) => f(v)
+      case State.Initializing =>
+        delay()
+        onExecutor(f, fallback)
+      case State.Stopped => fallback()
+    }
+  }
+
+  def shutdown(): Unit = {
+    state.get() match {
+      case State.Empty =>
+        if (!state.compareAndSet(State.Empty, State.Stopped)) {
+          delay()
+          shutdown()
+        }
+      case curr @ State.Initialized(v) =>
+        if (state.compareAndSet(curr, State.Stopped)) {
+          v.shutdown()
+        } else {
+          delay()
+          shutdown()
+        }
+      case State.Initializing =>
+        delay()
+        shutdown()
+      case State.Stopped =>
+    }
+  }
+
+  private def delay(): Unit = Thread.sleep(50)
+
+  override def toString(): String = s"CompilerJobQueue(${state.get})"
+
   // The implementation of `Executors.newSingleThreadExecutor()` uses finalize.
   override def finalize(): Unit = {
     shutdown()
@@ -68,6 +96,14 @@ class CompilerJobQueue(newExecutor: () => ThreadPoolExecutor) {
 }
 
 object CompilerJobQueue {
+
+  sealed trait State
+  object State {
+    case object Empty extends State
+    final case class Initialized(v: ThreadPoolExecutor) extends State
+    case object Initializing extends State
+    case object Stopped extends State
+  }
 
   def apply(): CompilerJobQueue = {
     new CompilerJobQueue(() => {
