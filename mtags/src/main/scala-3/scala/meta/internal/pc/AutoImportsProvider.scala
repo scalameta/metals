@@ -72,7 +72,6 @@ final class AutoImportsProvider(
 
     if (results.nonEmpty) {
       val correctedPos = CompletionPos.infer(pos, params.text, path).sourcePos
-      // val namesInScope = NamesInScope.build(ctx)
       val generator =
         AutoImports.generator(
           correctedPos,

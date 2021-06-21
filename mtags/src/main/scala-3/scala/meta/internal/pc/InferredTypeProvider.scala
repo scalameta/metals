@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.nio.file.Paths
 
+import scala.annotation.tailrec
 import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -14,7 +15,7 @@ import scala.meta.tokens.{Token => T}
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Symbols.NoSymbol
+import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
@@ -65,7 +66,6 @@ final class InferredTypeProvider(
       indexedCtx,
       config
     )
-    val symbolPrinter = new SymbolPrinter()
     val shortenedNames = new ShortenedNames(indexedCtx)
 
     def imports: List[TextEdit] =
@@ -73,7 +73,8 @@ final class InferredTypeProvider(
 
     def printType(tpe: Type): String = {
       val short = shortType(tpe, shortenedNames)
-      symbolPrinter.typeString(short)
+      val printer = ScopeAwareTypePrinter(indexedCtx)
+      printer.typeString(short)
     }
     /*
      * Get the exact position in ValDef pattern for val (a, b) = (1, 2)

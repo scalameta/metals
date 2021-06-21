@@ -9,8 +9,10 @@ import dotty.tools.dotc.interactive.Interactive
 
 object MetalsInteractive {
 
-  // this is a copy of dotty.tools.dotc.Interactive.contextOfPath
+  // This is a copy of dotty.tools.dotc.Interactive.contextOfPath
   // with a minor fix in how it processes `Template`
+  //
+  // Might be removed after merging https://github.com/lampepfl/dotty/pull/12783
   def contextOfPath(path: List[Tree])(using Context): Context = path match {
     case Nil | _ :: Nil =>
       ctx.fresh

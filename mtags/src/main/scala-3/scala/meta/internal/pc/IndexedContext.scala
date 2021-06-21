@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IndexedContext.Result
 
@@ -48,38 +50,47 @@ sealed trait IndexedContext {
     }
   }
 
+  @tailrec
+  final def toplevelClashes(sym: Symbol): Boolean = {
+    if (sym == NoSymbol || sym.owner == NoSymbol || sym.owner.isRoot)
+      lookupSym(sym) match {
+        case IndexedContext.Result.Conflict => true
+        case _ => false
+      }
+    else toplevelClashes(sym.owner)
+  }
+
 }
+
 object IndexedContext {
 
   def apply(ctx: Context): IndexedContext =
     ctx match {
       case null => Empty
       case NoContext => Empty
-      case _ => LazyWrapper(ctx)
+      case _ => LazyWrapper(using ctx)
     }
 
   case object Empty extends IndexedContext {
     given ctx: Context = NoContext
     def findSymbol(name: String): Option[List[Symbol]] = None
-    def symbolByName(name: String): Option[List[Symbol]] = None
     def scopeSymbols: List[Symbol] = List.empty
     def rename(name: SimpleName): Option[String] = None
     def outer: IndexedContext = this
   }
 
-  class LazyWrapper(underlying: Context) extends IndexedContext {
-    given ctx: Context = underlying
-    val outer: IndexedContext = IndexedContext(underlying.outer)
-    private lazy val names: Names = extractNames(underlying)
+  class LazyWrapper(using val ctx: Context) extends IndexedContext {
+    val outer: IndexedContext = IndexedContext(ctx.outer)
+    private lazy val names: Names = extractNames(ctx)
 
     def findSymbol(name: String): Option[List[Symbol]] = {
-      symbolByName(name).orElse(outer.findSymbol(name))
+      names.symbols
+        .get(name)
+        .map(_.toList)
+        .orElse(outer.findSymbol(name))
     }
 
-    def symbolByName(name: String): Option[List[Symbol]] =
-      names.symbols.get(name).map(_.toList)
-
-    def scopeSymbols: List[Symbol] =
+    lazy val scopeSymbols: List[Symbol] =
       names.symbols.values.toList.flatten ++ outers.flatMap(_.scopeSymbols)
 
     def rename(name: SimpleName): Option[String] = {

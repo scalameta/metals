@@ -106,8 +106,6 @@ object AutoImports {
       importPosition: AutoImportPosition,
       indexedContext: IndexedContext,
       renames: SimpleName => Option[String]
-      // namesInScope: NamesInScope,
-      // renameConfig: Map[SimpleName, String]
   ) {
 
     import indexedContext.ctx
@@ -182,16 +180,8 @@ object AutoImports {
     }
 
     private def importName(sym: Symbol): String = {
-      @tailrec
-      def toplevelClashes(sym: Symbol): Boolean = {
-        if (sym == NoSymbol || sym.owner == NoSymbol || sym.owner.isRoot)
-          indexedContext.lookupSym(sym) match {
-            case IndexedContext.Result.Conflict => true
-            case _ => false
-          }
-        else toplevelClashes(sym.owner)
-      }
-      if (toplevelClashes(sym)) s"_root_.${sym.fullNameBackticked}"
+      if (indexedContext.toplevelClashes(sym))
+        s"_root_.${sym.fullNameBackticked}"
       else sym.fullNameBackticked
     }
   }

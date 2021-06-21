@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -20,11 +21,9 @@ import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
 import org.eclipse.lsp4j.TextEdit
-import scala.annotation.tailrec
 
 class ShortenedNames(
     val indexedContext: IndexedContext
-    // val renames: Map[SimpleName, String] = Map.empty
 ) {
   private val history = collection.mutable.Map.empty[Name, ShortName]
 
