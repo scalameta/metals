@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.onTypeRangeFormatters
 
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Interpolation
@@ -8,7 +9,6 @@ import scala.meta.tokens.Tokens
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.internal.metals.UserConfiguration
 
 case class MultilineString(userConfig: () => UserConfiguration)
     extends OnTypeFormatter
