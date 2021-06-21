@@ -69,4 +69,42 @@ class CrossDebugSuite extends BaseDapSuite("cross-debug") {
                 |""".stripMargin
   )
 
+  assertBreakpoints(
+    "optional-braces",
+    main = Some("a.hello")
+  )(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |
+                |@main 
+                |def hello(): Unit = 
+                |  greet("Alice")
+                |  System.exit(0)
+                |
+                |def greet(name: String) = 
+                |>>val message = s"Hello, $name!"
+                |>>println(message)
+                |
+                |""".stripMargin
+  )
+
+  assertBreakpoints(
+    "optional-braces-main",
+    main = Some("a.hello")
+  )(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |
+                |@main 
+                |def hello(): Unit = 
+                |>>greet("Alice")
+                |>>System.exit(0)
+                |
+                |def greet(name: String) = 
+                |  val message = s"Hello, $name!"
+                |  println(message)
+                |
+                |""".stripMargin
+  )
+
 }

@@ -145,6 +145,25 @@ class ClassBreakpointSuite extends FunSuite {
     scalaVersion = V.scala3
   )
 
+  check(
+    "optional-braces",
+    """|package a
+       |
+       |@main 
+       |def hello(): Unit = 
+       |  greet("Alice")
+       |  greet("Bob")
+       |  System.exit(0)
+       |
+       |def greet(name: String) = 
+       |  val message = s"Hello, $name!"
+       |>>println(message)
+       |
+       |""".stripMargin,
+    "a.Main$package",
+    scalaVersion = V.scala3
+  )
+
   def check(
       name: TestOptions,
       original: String,
@@ -162,7 +181,7 @@ class ClassBreakpointSuite extends FunSuite {
       val classFinder = new ClassFinder(trees)
       val filename: String = "Main.scala"
       val path = AbsolutePath(Paths.get(filename))
-      val sourceText = original.replace(">>", "")
+      val sourceText = original.replace(">>", "  ")
       val offset = original.indexOf(">>")
       val input = Input.VirtualFile(filename, sourceText)
       val pos: scala.meta.Position =
