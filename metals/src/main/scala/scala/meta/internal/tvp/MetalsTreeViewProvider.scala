@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.concurrent.TrieMap
 
+import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -267,7 +268,14 @@ class MetalsTreeViewProvider(
   ): Option[TreeViewNodeRevealResult] = {
     val input = path.toInput
     val occurrences =
-      Mtags.allToplevels(input).occurrences.filterNot(_.symbol.isPackage)
+      Mtags
+        .allToplevels(
+          input,
+          // TreeViewProvider doesn't work with Scala 3 - see #2859
+          dialects.Scala213
+        )
+        .occurrences
+        .filterNot(_.symbol.isPackage)
     if (occurrences.isEmpty) None
     else {
       val closestSymbol = occurrences.minBy { occ =>

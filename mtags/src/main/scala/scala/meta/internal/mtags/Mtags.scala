@@ -86,7 +86,7 @@ object Mtags {
 
   def allToplevels(
       input: Input.VirtualFile,
-      dialect: Dialect = dialects.Scala213
+      dialect: Dialect
   ): TextDocument = {
     input.toLanguage match {
       case Language.JAVA =>

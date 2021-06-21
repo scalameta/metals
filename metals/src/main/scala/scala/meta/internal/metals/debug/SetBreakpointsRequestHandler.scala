@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.JvmSignatures
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.semanticdb.Language
@@ -20,7 +21,8 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint
 private[debug] final class SetBreakpointsRequestHandler(
     server: ServerAdapter,
     adapters: MetalsDebugAdapters,
-    classFinder: ClassFinder
+    classFinder: ClassFinder,
+    scalaVersionSelector: ScalaVersionSelector
 )(implicit ec: ExecutionContext) {
 
   private val previousBreakpointClassNames =
@@ -40,7 +42,10 @@ private[debug] final class SetBreakpointsRequestHandler(
     val symbols: Array[(SourceBreakpoint, Option[String])] =
       path.toLanguage match {
         case Language.JAVA =>
-          val topLevels = Mtags.allToplevels(path.toInput)
+          val topLevels = Mtags.allToplevels(
+            path.toInput,
+            scalaVersionSelector.getDialect(path)
+          )
           request.getBreakpoints.map { breakpoint =>
             val symbol = topLevels.occurrences.minBy(distanceFrom(breakpoint))
             (breakpoint, Option(JvmSignatures.toTypeSignature(symbol).value))

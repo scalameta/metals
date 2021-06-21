@@ -1,7 +1,9 @@
 package scala.meta.internal.metals
 
-import scala.meta.Dialect
+import scala.meta._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
 
 class ScalaVersionSelector(
     userConfig: () => UserConfiguration,
@@ -48,5 +50,29 @@ class ScalaVersionSelector(
       fallbackScalaVersion(isAmmonite),
       includeSource3 = true
     )
+  }
+
+  def getDialect(path: AbsolutePath): Dialect = {
+
+    def dialectFromBuildTarget = buildTargets
+      .inverseSources(path)
+      .flatMap(id => buildTargets.scalaTarget(id))
+      .map(_.dialect)
+
+    Option(path.extension) match {
+      case Some("scala") =>
+        dialectFromBuildTarget.getOrElse(
+          fallbackDialect(isAmmonite = false)
+        )
+      case Some("sbt") => dialects.Sbt
+      case Some("sc") =>
+        // worksheets support Scala 3, but ammonite scripts do not
+        val dialect = dialectFromBuildTarget.getOrElse(
+          fallbackDialect(isAmmonite = path.isAmmoniteScript)
+        )
+        dialect
+          .copy(allowToplevelTerms = true, toplevelSeparator = "")
+      case _ => fallbackDialect(isAmmonite = false)
+    }
   }
 }

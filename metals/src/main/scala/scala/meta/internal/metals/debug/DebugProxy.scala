@@ -9,6 +9,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.GlobalTrace
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
@@ -30,6 +31,7 @@ private[debug] final class DebugProxy(
     server: ServerAdapter,
     classFinder: ClassFinder,
     stackTraceAnalyzer: StacktraceAnalyzer,
+    scalaVersionSelector: ScalaVersionSelector,
     stripColor: Boolean
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
@@ -40,7 +42,12 @@ private[debug] final class DebugProxy(
   private val adapters = new MetalsDebugAdapters
 
   private val handleSetBreakpointsRequest =
-    new SetBreakpointsRequestHandler(server, adapters, classFinder)
+    new SetBreakpointsRequestHandler(
+      server,
+      adapters,
+      classFinder,
+      scalaVersionSelector
+    )
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -162,6 +169,7 @@ private[debug] object DebugProxy {
       connectToServer: () => Future[Socket],
       classFinder: ClassFinder,
       stacktraceAnalyzer: StacktraceAnalyzer,
+      scalaVersionSelector: ScalaVersionSelector,
       stripColor: Boolean
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
@@ -181,6 +189,7 @@ private[debug] object DebugProxy {
       server,
       classFinder,
       stacktraceAnalyzer,
+      scalaVersionSelector,
       stripColor
     )
   }

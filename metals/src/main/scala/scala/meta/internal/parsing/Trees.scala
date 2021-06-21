@@ -32,7 +32,7 @@ final class Trees(
   def get(path: AbsolutePath): Option[Tree] =
     trees.get(path).orElse {
       // Fallback to parse without caching result.
-      parse(path, getDialect(path)).flatMap(_.toOption)
+      parse(path, scalaVersionSelector.getDialect(path)).flatMap(_.toOption)
     }
 
   def didClose(fileUri: AbsolutePath): Unit = {
@@ -80,7 +80,7 @@ final class Trees(
    * @return list of errors if the file failed to parse
    */
   def didChange(path: AbsolutePath): List[Diagnostic] = {
-    val dialect = getDialect(path)
+    val dialect = scalaVersionSelector.getDialect(path)
     parse(path, dialect) match {
       case Some(parsed) =>
         parsed match {
@@ -102,7 +102,7 @@ final class Trees(
   }
 
   def tokenized(input: inputs.Input.VirtualFile): Tokenized =
-    getDialect(AbsolutePath(input.path))(input).tokenize
+    scalaVersionSelector.getDialect(AbsolutePath(input.path))(input).tokenize
 
   private def parse(
       path: AbsolutePath,
@@ -113,32 +113,6 @@ final class Trees(
     } yield {
       val input = Input.VirtualFile(path.toString(), text)
       dialect(input).parse[Source]
-    }
-  }
-
-  private def getDialect(path: AbsolutePath): Dialect = {
-
-    def dialectFromBuildTarget = buildTargets
-      .inverseSources(path)
-      .flatMap(id => buildTargets.scalaTarget(id))
-      .map(_.dialect)
-
-    Option(path.extension) match {
-      case Some("scala") =>
-        dialectFromBuildTarget.getOrElse(
-          scalaVersionSelector.fallbackDialect(isAmmonite = false)
-        )
-      case Some("sbt") => dialects.Sbt
-      case Some("sc") =>
-        // worksheets support Scala 3, but ammonite scripts do not
-        val dialect = dialectFromBuildTarget.getOrElse(
-          scalaVersionSelector.fallbackDialect(isAmmonite =
-            path.isAmmoniteScript
-          )
-        )
-        dialect
-          .copy(allowToplevelTerms = true, toplevelSeparator = "")
-      case _ => scalaVersionSelector.fallbackDialect(isAmmonite = false)
     }
   }
 
