@@ -11,6 +11,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
@@ -40,7 +41,8 @@ final class ImplementationProvider(
     buildTargets: BuildTargets,
     buffer: Buffers,
     definitionProvider: DefinitionProvider,
-    trees: Trees
+    trees: Trees,
+    scalaVersionSelector: ScalaVersionSelector
 ) {
   import ImplementationProvider._
 
@@ -432,6 +434,23 @@ final class ImplementationProvider(
     classInfo.map(inf => dealiasClass(inf, findSymbol))
   }
 
+  private def findDefOccurrence(
+      semanticDb: TextDocument,
+      symbol: String,
+      source: AbsolutePath
+  ): Option[SymbolOccurrence] = {
+    def isDefinitionOccurrence(occ: SymbolOccurrence) =
+      occ.role.isDefinition && occ.symbol == symbol
+
+    semanticDb.occurrences
+      .find(isDefinitionOccurrence)
+      .orElse(
+        Mtags
+          .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
+          .occurrences
+          .find(isDefinitionOccurrence)
+      )
+  }
 }
 
 object ImplementationProvider {
@@ -534,24 +553,6 @@ object ImplementationProvider {
       case _ =>
         Seq.empty
     }
-  }
-
-  def findDefOccurrence(
-      semanticDb: TextDocument,
-      symbol: String,
-      source: AbsolutePath
-  ): Option[SymbolOccurrence] = {
-    def isDefinitionOccurrence(occ: SymbolOccurrence) =
-      occ.role.isDefinition && occ.symbol == symbol
-
-    semanticDb.occurrences
-      .find(isDefinitionOccurrence)
-      .orElse(
-        Mtags
-          .allToplevels(source.toInput)
-          .occurrences
-          .find(isDefinitionOccurrence)
-      )
   }
 
   def isClassLike(info: SymbolInformation): Boolean =

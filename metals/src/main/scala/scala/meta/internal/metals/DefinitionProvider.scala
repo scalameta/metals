@@ -52,7 +52,8 @@ final class DefinitionProvider(
     compilers: () => Compilers,
     remote: RemoteLanguageServer,
     trees: Trees,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    scalaVersionSelector: ScalaVersionSelector
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -210,7 +211,7 @@ final class DefinitionProvider(
 
   private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
     Mtags
-      .allToplevels(source.toInput)
+      .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
       .occurrences
       .find(_.encloses(dirtyPos))
   }

@@ -35,6 +35,7 @@ import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsStatusParams
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.config.RunType
@@ -79,7 +80,8 @@ class DebugProvider(
   )
 
   def start(
-      parameters: b.DebugSessionParams
+      parameters: b.DebugSessionParams,
+      scalaVersionSelector: ScalaVersionSelector
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     Future.fromTry(parseSessionName(parameters)).flatMap { sessionName =>
       val inetAddress = InetAddress.getByName("127.0.0.1")
@@ -132,6 +134,7 @@ class DebugProvider(
             connectToServer,
             classFinder,
             stacktraceAnalyzer,
+            scalaVersionSelector,
             clientConfig.disableColorOutput()
           )
       }

@@ -10,13 +10,11 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
-import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
@@ -290,13 +288,8 @@ final class BuildTargets(
    * When encountering an unknown `readonly/` file we do the following steps to
    * infer what build target it belongs to:
    *
-   * - if file is in `.metals/readonly/dependencies/${source-jar-name}`
-   *    - find the build targets that have a sourceDependency with that name
-   * - if it isn't
-   *    - extract toplevel symbol definitions from the source code.
-   *    - find a jar file from any classfile that defines one of the toplevel
-   *      symbols.
-   *    - find the build target which has that jar file in it's classpath.
+   * - check if file is in `.metals/readonly/dependencies/${source-jar-name}`
+   * - find the build targets that have a sourceDependency with that name
    *
    * Otherwise if it's a jar file we find a build target it belongs to.
    *
@@ -318,7 +311,7 @@ final class BuildTargets(
                   ids.head
               }
           case _ =>
-            Try(unsafeInferBuildTarget(source)).getOrElse(None)
+            None
         }
       case None =>
         // else it can be a source file inside a jar
@@ -370,21 +363,6 @@ final class BuildTargets(
       .map(_.getId())
   }
 
-  private def unsafeInferBuildTarget(
-      source: AbsolutePath
-  ): Option[BuildTargetIdentifier] = {
-    val input = source.toInput
-    val toplevels = Mtags
-      .allToplevels(input)
-      .occurrences
-      .map(occ => Symbol(occ.symbol).toplevel)
-      .toSet
-    inferBuildTarget(toplevels).map { inferred =>
-      // Persist inferred result to avoid re-computing it again and again.
-      tables.foreach(_.dependencySources.setBuildTarget(source, inferred.id))
-      inferred.id
-    }
-  }
   case class InferredBuildTarget(
       jar: AbsolutePath,
       symbol: String,

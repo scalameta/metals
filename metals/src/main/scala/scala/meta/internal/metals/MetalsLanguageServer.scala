@@ -469,7 +469,8 @@ class MetalsLanguageServer(
           () => compilers,
           remote,
           trees,
-          buildTargets
+          buildTargets,
+          scalaVersionSelector
         )
         formattingProvider = new FormattingProvider(
           workspace,
@@ -503,7 +504,8 @@ class MetalsLanguageServer(
           buildTargets,
           buffers,
           definitionProvider,
-          trees
+          trees,
+          scalaVersionSelector
         )
 
         supermethods = new Supermethods(
@@ -1692,7 +1694,8 @@ class MetalsLanguageServer(
         val session = for {
           params <- debugSessionParams
           server <- debugProvider.start(
-            params
+            params,
+            scalaVersionSelector
           )
         } yield {
           cancelables.add(server)
