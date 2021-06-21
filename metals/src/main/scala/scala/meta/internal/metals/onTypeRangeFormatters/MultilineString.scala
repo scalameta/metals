@@ -8,8 +8,9 @@ import scala.meta.tokens.Tokens
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.internal.metals.UserConfiguration
 
-case class MultilineString(enableStripMargin: Boolean)
+case class MultilineString(userConfig: () => UserConfiguration)
     extends OnTypeFormatter
     with RangeFormatter {
 
@@ -99,6 +100,7 @@ case class MultilineString(enableStripMargin: Boolean)
       splitLines: Array[String],
       position: Position
   ): List[TextEdit] = {
+    val enableStripMargin = userConfig().enableStripMarginOnTypeFormatting
     if (
       enableStripMargin && startToken.pos.startLine == position.getLine - 1 && endToken.pos.endLine == position.getLine
     ) {

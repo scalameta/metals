@@ -163,7 +163,7 @@ object IndentOnPaste extends RangeFormatter {
       .map(lines =>
         new TextEdit(
           pastedRange,
-          lines.mkString(util.Properties.lineSeparator)
+          lines.mkString("\n")
         ) :: Nil
       )
   }

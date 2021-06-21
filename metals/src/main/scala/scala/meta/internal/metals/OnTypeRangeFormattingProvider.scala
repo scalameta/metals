@@ -69,12 +69,10 @@ class OnTypeFormattingProvider(
     buffers: Buffers,
     userConfig: () => UserConfiguration
 ) extends OnTypeRangeFormattingProvider(buffers) {
-  val enableStripMargin: Boolean =
-    userConfig().enableStripMarginOnTypeFormatting
 
   // The order of which this is important to know which will first return the Edits
   val formatters: List[OnTypeFormatter] = List(
-    MultilineString(enableStripMargin)
+    MultilineString(userConfig)
   )
 
   def format(
@@ -106,12 +104,12 @@ class OnTypeFormattingProvider(
   }
 }
 
-class rangeFormattingProvider(
+class RangeFormattingProvider(
     buffers: Buffers
 ) extends OnTypeRangeFormattingProvider(buffers) {
   val formatters: List[RangeFormatter] = List(
     // enableStripMargin is not used on rangeFormatting
-    MultilineString(enableStripMargin = false),
+    MultilineString(() => UserConfiguration()),
     IndentOnPaste
   )
 
