@@ -778,7 +778,7 @@ object MetalsEnrichments
       breakpoint: l.debug.SourceBreakpoint
   ) {
 
-    // LSP Postion is 0-based, while breakpoints are 1-based
+    // LSP Position is 0-based, while breakpoints are 1-based
     def toLSP = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
   }
 
