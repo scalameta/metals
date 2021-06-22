@@ -12,7 +12,6 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
@@ -52,8 +51,7 @@ private[debug] final class SetBreakpointsRequestHandler(
           }
         case _ =>
           request.getBreakpoints.map { breakpoint =>
-            val pos = new Position(breakpoint.getLine(), breakpoint.getColumn())
-            val sym = classFinder.findClass(path, pos)
+            val sym = classFinder.findClass(path, breakpoint.toLSP)
             (breakpoint, sym)
           }
       }

@@ -774,6 +774,14 @@ object MetalsEnrichments
       trailingTokens.find(predicate)
   }
 
+  implicit class XtensionSourceBreakpoint(
+      breakpoint: l.debug.SourceBreakpoint
+  ) {
+
+    // LSP Position is 0-based, while breakpoints are 1-based
+    def toLSP = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
+  }
+
   object PathMatcher {
     def unapplySeq(path: Path): Option[Seq[String]] = {
       Some(path.iterator.asScala.toList.map(_.filename))
