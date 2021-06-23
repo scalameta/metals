@@ -56,11 +56,7 @@ object MetalsPlugin extends AutoPlugin {
            } else None)).distinct
       }
     },
-    semanticdbEnabled := {
-      val old = semanticdbEnabled.value
-      if (ScalaInstance.isDotty(scalaVersion.value)) true
-      else old
-    },
+    semanticdbEnabled := true,
     semanticdbTargetRoot := {
       val in = semanticdbIncludeInJar.value
       if (in) classDirectory.value
