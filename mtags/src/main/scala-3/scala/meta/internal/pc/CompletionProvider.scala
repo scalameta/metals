@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.collection.mutable
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.pc._
 
@@ -9,6 +10,7 @@ import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.Symbols._
@@ -27,7 +29,7 @@ class CompletionProvider(
     search: SymbolSearch,
     buildTargetIdentifier: String,
     completionPos: CompletionPos,
-    namesInScope: NamesInScope,
+    indexedContext: IndexedContext,
     path: List[Tree]
 ) {
 
@@ -56,14 +58,16 @@ class CompletionProvider(
     val query = completionPos.query
     completionPos.kind match {
       case CompletionKind.Empty =>
-        val filtered = namesInScope.scopeSymbols.flatMap(sym =>
+        val filtered = indexedContext.scopeSymbols.flatMap(sym =>
           if (sym.isRealMethod) Some(sym).filter(!_.isConstructor)
+          else if (sym.isClass || sym.is(Module)) Some(sym)
           else if (sym.isType) Option(sym.companionModule).filter(_ != NoSymbol)
           else if (sym.isPackageObject) Some(sym)
           else None
         )
         filtered.map { sym =>
-          val completion = Completion(sym.showName, description(sym), List(sym))
+          val completion =
+            Completion(sym.decodedName, description(sym), List(sym))
           visit(CompletionValue.Scope(completion))
         }
         Some(SymbolSearch.Result.INCOMPLETE)
@@ -72,7 +76,7 @@ class CompletionProvider(
           query,
           sym => {
             val completion =
-              Completion(sym.showName, description(sym), List(sym))
+              Completion(sym.decodedName, description(sym), List(sym))
             visit(CompletionValue.Workspace(completion))
           }
         )
@@ -103,7 +107,7 @@ class CompletionProvider(
               .mkString("(", ",", ")")
         sym.showFullName + sigString
       } else {
-        sym.showFullName
+        sym.fullName.stripModuleClassSuffix.show
       }
     }
   }

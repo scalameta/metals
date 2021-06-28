@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -22,8 +23,7 @@ import dotty.tools.dotc.core.Types._
 import org.eclipse.lsp4j.TextEdit
 
 class ShortenedNames(
-    context: Context,
-    val renames: Map[SimpleName, String] = Map.empty
+    val indexedContext: IndexedContext
 ) {
   private val history = collection.mutable.Map.empty[Name, ShortName]
 
@@ -33,16 +33,14 @@ class ShortenedNames(
     }.toList
   }
 
-  def lookupSymbol(short: ShortName): Type = {
-    context.findRef(short.name)
-  }
+  def lookupSymbols(short: ShortName): List[Symbol] =
+    indexedContext.findSymbol(short.name).getOrElse(Nil)
 
   def tryShortenName(short: ShortName)(using Context): Boolean = {
     history.get(short.name) match {
       case Some(ShortName(_, other)) => true
       case None =>
-        val foundTpe = lookupSymbol(short)
-        val syms = List(foundTpe.termSymbol, foundTpe.typeSymbol)
+        val syms = lookupSymbols(short)
         val isOk = syms.filter(_ != NoSymbol) match {
           case Nil =>
             if (
@@ -122,29 +120,30 @@ def shortType(longType: Type, history: ShortenedNames)(using
           if (designator.isInstanceOf[Symbol])
             designator.asInstanceOf[Symbol]
           else tpe.typeSymbol
-        history.renames.get(sym.name.toSimpleName) match {
-          case Some(rename) =>
-            PrettyType(rename)
-          case _ =>
-            val renamedOwnerIndex =
-              sym.ownersIterator.indexWhere(s =>
-                history.renames.contains(s.name.toSimpleName)
-              )
-            if (renamedOwnerIndex < 0) {
+
+        @tailrec
+        def processOwners(
+            sym: Symbol,
+            prev: List[Symbol],
+            ownersLeft: List[Symbol]
+        ): Type = {
+          ownersLeft match {
+            case Nil =>
               val short = ShortName(sym)
               TypeRef(loop(prefix, Some(short)), sym)
-            } else {
-              val renamedOnwers =
-                sym.ownersIterator.take(renamedOwnerIndex + 1).toList.reverse
-
-              PrettyType(
-                history.renames(
-                  renamedOnwers.head.name.toSimpleName
-                ) + "." + renamedOnwers.tail.map(_.name).mkString(".")
-              )
-
-            }
+            case h :: tl =>
+              history.indexedContext.rename(h.name.toSimpleName) match {
+                case Some(rename) =>
+                  PrettyType(
+                    (rename :: prev.map(_.name)).mkString(".")
+                  )
+                case None =>
+                  processOwners(sym, h :: prev, tl)
+              }
+          }
         }
+
+        processOwners(sym, Nil, sym.ownersIterator.toList)
 
       case TermRef(prefix, designator) =>
         val sym =

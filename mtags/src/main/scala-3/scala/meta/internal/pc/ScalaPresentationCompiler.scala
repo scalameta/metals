@@ -141,9 +141,9 @@ case class ScalaPresentationCompiler(
             Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
               newctx
             )
-          val locatedCtx = Interactive.contextOfPath(tpdPath)(using newctx)
-          val namesInScope =
-            NamesInScope.build(unit.tpdTree)(using locatedCtx)
+          val locatedCtx =
+            MetalsInteractive.contextOfPath(tpdPath)(using newctx)
+          val indexedCtx = IndexedContext(locatedCtx)
           val completionPos =
             CompletionPos.infer(pos, params.text, path)(using newctx)
           val (completions, searchResult) =
@@ -153,18 +153,18 @@ case class ScalaPresentationCompiler(
               search,
               buildTargetIdentifier,
               completionPos,
-              namesInScope,
+              indexedCtx,
               path
             )
               .completions()
-          val history = ShortenedNames(locatedCtx)
+          val history = ShortenedNames(indexedCtx)
           val autoImportsGen = AutoImports.generator(
             completionPos.sourcePos,
             params.text,
             unit.tpdTree,
-            namesInScope,
+            indexedCtx,
             config
-          )(using ctx)
+          )
 
           val items = completions.zipWithIndex.flatMap { case (item, idx) =>
             completionItems(
@@ -174,7 +174,7 @@ case class ScalaPresentationCompiler(
               autoImportsGen,
               completionPos,
               path,
-              namesInScope
+              indexedCtx
             )(using newctx)
           }
           val isIncomplete = searchResult match {
@@ -330,7 +330,7 @@ case class ScalaPresentationCompiler(
               tpw match {
                 // https://github.com/lampepfl/dotty/issues/8891
                 case tpw: ImportType =>
-                  val history = new ShortenedNames(ctx)
+                  val history = new ShortenedNames(IndexedContext(ctx))
                   printer.hoverDetails(
                     symbol,
                     history,
@@ -346,11 +346,11 @@ case class ScalaPresentationCompiler(
                         pos.span
                       )(using newctx)
                       val context =
-                        Interactive.contextOfPath(tpdPath)(using newctx)
-                      val history = new ShortenedNames(context)
+                        MetalsInteractive.contextOfPath(tpdPath)(using newctx)
+                      val history = new ShortenedNames(IndexedContext(context))
                       printer.hoverDetails(symbol, history, tpw)(using context)
                     case None =>
-                      val history = new ShortenedNames(ctx)
+                      val history = new ShortenedNames(IndexedContext(ctx))
                       printer.hoverDetails(symbol, history, tpw)
                   }
               }
@@ -483,7 +483,7 @@ case class ScalaPresentationCompiler(
       autoImports: AutoImportsGenerator,
       completionPos: CompletionPos,
       path: List[Tree],
-      namesInScope: NamesInScope
+      indexedContext: IndexedContext
   )(using Context): List[CompletionItem] = {
     val printer = SymbolPrinter()(using ctx)
 
@@ -632,9 +632,9 @@ case class ScalaPresentationCompiler(
                       )
                   }
                 case None =>
-                  val r = namesInScope.lookupSym(sym)
+                  val r = indexedContext.lookupSym(sym)
                   r match {
-                    case NamesInScope.Result.InScope =>
+                    case IndexedContext.Result.InScope =>
                       mkItem(ident, ident.backticked)
                     case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
                   }

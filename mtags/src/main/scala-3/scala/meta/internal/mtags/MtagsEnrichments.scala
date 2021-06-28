@@ -4,6 +4,7 @@ import java.net.URI
 
 import scala.annotation.tailrec
 
+import scala.meta.internal.pc.MetalsInteractive
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.Driver
@@ -17,9 +18,7 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j => l}
 
-object MtagsEnrichments
-    extends CommonMtagsEnrichments
-    with VersionSpecificEnrichments {
+object MtagsEnrichments extends CommonMtagsEnrichments {
 
   extension (driver: InteractiveDriver)
     def sourcePosition(params: OffsetParams): SourcePosition =
@@ -48,7 +47,7 @@ object MtagsEnrichments
         Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
           newctx
         )
-      Interactive.contextOfPath(tpdPath)(using newctx)
+      MetalsInteractive.contextOfPath(tpdPath)(using newctx)
     }
 
   extension (pos: SourcePosition)
