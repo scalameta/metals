@@ -1,8 +1,10 @@
 package scala.meta.internal.decorations
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.semanticdb.Print
+import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.metap.Format
 
@@ -16,6 +18,8 @@ class SemanticdbTreePrinter(
 
   lazy val symtab = createSymtab
 
+  val nonPrintable: Set[String] = Set("apply", "unapply", "unapplySeq")
+
   def printType(t: s.Type): String =
     t match {
       case s.Type.Empty => ""
@@ -24,14 +28,14 @@ class SemanticdbTreePrinter(
       case s.SingleType(prefix, symbol) =>
         s"${printPrefix(prefix)}${printSymbol(symbol)}"
       case s.TypeRef(prefix, symbol, typeArguments) =>
-        val isTuple = symbol.startsWith("scala/Tuple")
+        val tuple = isTuple(symbol)
         val isFunction = symbol.startsWith("scala/Function")
         val sym =
-          if (isTuple || isFunction) ""
+          if (tuple || isFunction) ""
           // don't print unnamed types
           else if (symbol.startsWith("local")) "_"
           else printSymbol(symbol)
-        val typeArgs = printTypeArgs(typeArguments, isTuple, isFunction)
+        val typeArgs = printTypeArgs(typeArguments, tuple, isFunction)
         s"${printPrefix(prefix)}${sym}${typeArgs}"
       case s.WithType(types) =>
         val simpleTypes = types.dropWhile {
@@ -115,7 +119,7 @@ class SemanticdbTreePrinter(
   def printArgs(args: Seq[s.Tree]): String =
     args match {
       case Nil => ""
-      case _ => args.flatMap(printTree).mkString("(", ", ", ")")
+      case _ => args.flatMap(printTree(_)).mkString("(", ", ", ")")
     }
 
   def printConstant(c: s.Constant): String =
@@ -134,24 +138,34 @@ class SemanticdbTreePrinter(
       case s.StringConstant(value) => value
     }
 
-  def printTree(t: s.Tree): Option[String] =
+  def printTree(
+      t: s.Tree,
+      isExplicitTuple: => Boolean = false
+  ): Option[String] =
     t match {
       case s.Tree.Empty => None
       case s.OriginalTree(_) => None
-      case s.TypeApplyTree(function, typeArguments) =>
-        Some(printTree(function).getOrElse("") + printTypeArgs(typeArguments))
+      case s.TypeApplyTree(function, typeArguments)
+          // only print type parameters for tuple if it's not a tuple literal
+          if isNotTupleTree(function) || isExplicitTuple =>
+        Some(
+          printTree(function)
+            .filterNot(nonPrintable)
+            .getOrElse("") + printTypeArgs(typeArguments)
+        )
       case s.ApplyTree(function, arguments) =>
         Some(printTree(function).getOrElse("") + printArgs(arguments))
       case s.LiteralTree(constant) =>
         Some(printConstant(constant))
       case s.SelectTree(_, id) =>
-        id.flatMap(printTree)
+        id.flatMap(printTree(_))
       case s.FunctionTree(parameters, body) =>
         printTree(body).map(printed => printArgs(parameters) + "=>" + printed)
       case s.IdTree(symbol) =>
         Some(printSymbol(symbol))
       case s.MacroExpansionTree(beforeExpansion, _) =>
         printTree(beforeExpansion)
+      case _ => None
     }
 
   def printSyntheticInfo(
@@ -161,10 +175,13 @@ class SemanticdbTreePrinter(
       isInlineProvider: Boolean = false
   ): List[(String, s.Range)] = {
 
+    def isExplicitTuple(range: s.Range) =
+      range.inString(textDocument.text).startsWith("Tuple")
+
     def gatherSynthetics(tree: s.Tree) = {
       for {
-        syntheticString <- printTree(tree).toList
         range <- synthetic.range.toList
+        syntheticString <- printTree(tree, isExplicitTuple(range)).toList
       } yield (syntheticString, range)
     }
     synthetic.tree match {
@@ -181,7 +198,7 @@ class SemanticdbTreePrinter(
        *  def hello[T](T object) = object
        *  hello<<[String]>>("")
        */
-      case tree @ s.TypeApplyTree(_: s.OriginalTree, _)
+      case tree @ s.TypeApplyTree(_: s.OriginalTree | _: s.SelectTree, _)
           if userConfig.showInferredType =>
         gatherSynthetics(tree)
       /**
@@ -220,5 +237,12 @@ class SemanticdbTreePrinter(
 
       case _ => Nil
     }
+  }
+
+  private def isTuple(symbol: String) = symbol.startsWith("scala/Tuple")
+
+  private def isNotTupleTree(function: s.Tree) = function match {
+    case SelectTree(_, Some(id)) => !isTuple(id.symbol)
+    case _ => true
   }
 }

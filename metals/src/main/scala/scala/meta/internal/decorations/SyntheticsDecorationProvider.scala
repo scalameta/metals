@@ -87,12 +87,9 @@ final class SyntheticsDecorationProvider(
     for {
       focused <- focusedDocument()
       if path == focused || !clientConfig.isDidFocusProvider()
-      textDoc <- textDocument.documents.headOption
-      source <- fingerprints.loadLastValid(path, textDoc.md5, charset)
+      textDoc <- enrichWithText(textDocument.documents.headOption, path)
     } {
-      val docWithText = textDoc.withText(source)
-      Document.set(docWithText)
-      publishSyntheticDecorations(path, docWithText)
+      publishSyntheticDecorations(path, textDoc)
     }
   }
 
@@ -258,9 +255,20 @@ final class SyntheticsDecorationProvider(
         val textDocument = semanticdbs
           .textDocument(path)
           .documentIncludingStale
-        textDocument.foreach(Document.set)
-        textDocument
+        enrichWithText(textDocument, path)
     }
+  }
+
+  private def enrichWithText(
+      textDocument: Option[s.TextDocument],
+      path: AbsolutePath
+  ): Option[TextDocument] = {
+    for {
+      doc <- textDocument
+      source <- fingerprints.loadLastValid(path, doc.md5, charset)
+      docWithText = doc.withText(source)
+      _ = Document.set(docWithText)
+    } yield docWithText
   }
 
   private def toSymbolName(symbol: String, textDoc: TextDocument): String = {
