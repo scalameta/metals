@@ -360,7 +360,11 @@ class WorksheetProvider(
     val input = path.toInputFromBuffers(buffers)
     val relativePath = path.toRelative(workspace)
     val evaluatedWorksheet =
-      mdoc.evaluateWorksheet(relativePath.toString(), input.value)
+      mdoc.evaluateWorksheet(
+        relativePath.toString(),
+        input.value,
+        "reset-object"
+      )
     val classpath = evaluatedWorksheet.classpath().asScala.toList
     val previousDigest = worksheetsDigests.getOrElse(path, "")
     val newDigest = calculateDigest(classpath)
