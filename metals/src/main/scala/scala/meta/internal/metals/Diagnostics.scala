@@ -35,7 +35,7 @@ import org.eclipse.{lsp4j => l}
  * goto definition in stale buffers.
  */
 final class Diagnostics(
-    buildTargets: BuildTargets,
+    buildTargets: BuildTargets, // TODO this can be removed
     buffers: Buffers,
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
@@ -168,6 +168,19 @@ final class Diagnostics(
 
   def hasSyntaxError(path: AbsolutePath): Boolean =
     syntaxError.contains(path)
+
+  def hasDiagnosticError(path: AbsolutePath): Boolean = {
+    val fileDiagnostics = diagnostics
+      .get(path)
+
+    fileDiagnostics match {
+      case Some(diagnostics) =>
+        diagnostics.asScala.exists(
+          _.getSeverity() == l.DiagnosticSeverity.Error
+        )
+      case None => false
+    }
+  }
 
   private def publishDiagnostics(
       path: AbsolutePath,

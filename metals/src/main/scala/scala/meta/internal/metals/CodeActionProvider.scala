@@ -15,7 +15,9 @@ final class CodeActionProvider(
     buffers: Buffers,
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider,
-    trees: Trees
+    trees: Trees,
+    diagnostics: Diagnostics,
+    languageClient: MetalsLanguageClient
 )(implicit ec: ExecutionContext) {
 
   private val extractMemberAction = new ExtractRenameMember(buffers, trees)
@@ -26,7 +28,12 @@ final class CodeActionProvider(
     new CreateNewSymbol(),
     new StringActions(buffers, trees),
     extractMemberAction,
-    new OrganizeImports(scalafixProvider, buildTargets),
+    new OrganizeImports(
+      scalafixProvider,
+      buildTargets,
+      diagnostics,
+      languageClient
+    ),
     new InsertInferredType(trees, compilers)
   )
 

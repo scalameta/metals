@@ -636,14 +636,17 @@ class MetalsLanguageServer(
           compilations,
           clientConfig.icons(),
           languageClient,
-          buildTargets
+          buildTargets,
+          buildClient
         )
         codeActionProvider = new CodeActionProvider(
           compilers,
           buffers,
           buildTargets,
           scalafixProvider,
-          trees
+          trees,
+          diagnostics,
+          languageClient
         )
         doctor = new Doctor(
           workspace,

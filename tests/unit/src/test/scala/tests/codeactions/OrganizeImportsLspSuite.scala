@@ -150,4 +150,29 @@ class OrganizeImportsLspSuite
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption
   )
+
+  check(
+    "stale",
+    """|package a
+       |
+       |<<import java.time.Instant>>
+       |
+       |object A {
+       |  val a: Int = "no one wants unused imports"
+       |}
+       |""".stripMargin,
+    "", // This should give back no code action
+    """|package a
+       |
+       |import java.time.Instant
+       |
+       |object A {
+       |  val a: Int = "no one wants unused imports"
+       |}
+       |""".stripMargin,
+    kind = List(kind),
+    scalafixConf = scalafixConf(),
+    scalacOptions = scalacOption,
+    expectNoDiagnostics = false
+  )
 }
