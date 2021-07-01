@@ -360,7 +360,7 @@ val mtagsSettings = List(
         .cross(CrossVersion.for3Use2_13)
     )
   ),
-  libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.7.1"),
+  libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.8.0"),
   libraryDependencies ++= {
     if (isCI) Nil
     // NOTE(olafur) pprint is indispensable for me while developing, I can't
