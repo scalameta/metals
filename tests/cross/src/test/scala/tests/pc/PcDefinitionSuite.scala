@@ -342,4 +342,13 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "do-not-point-at ::",
+    """|
+       |class Main {
+       |  val all = Option(42)./*scala/Option#get(). Option.scala*/@@get :: List("1", "2")
+       |}
+       |""".stripMargin
+  )
 }
