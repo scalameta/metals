@@ -12,15 +12,12 @@ Metals out-of-the-box.
 
 ![Import build](https://i.imgur.com/t5RJ3q6.png)
 
-## Install without Bloop
-
-Automatic build import for sbt happens through
-[Bloop](https://scalacenter.github.io/bloop/), a compile server for Scala. Bloop
-implements the
-[Build Server Protocol (BSP)](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md)
-that Metals uses to learn the directory structure of your project and its
-library dependencies. sbt does not implement BSP so Metals is not able to import
-sbt builds without Bloop.
+The Automatic build import process for sbt happens through
+[Bloop](https://scalacenter.github.io/bloop/), a build server for Scala. Bloop
+implements the [Build Server Protocol
+(BSP)](https://build-server-protocol.github.io/docs/specification) that Metals
+uses to learn the directory structure of your project, its library dependencies,
+and to build or run your code. 
 
 ## Manual installation
 
