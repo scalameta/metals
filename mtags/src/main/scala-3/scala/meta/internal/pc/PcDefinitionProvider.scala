@@ -19,6 +19,7 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Denotations
 import dotty.tools.dotc.core.Denotations.Denotation
 import dotty.tools.dotc.core.Denotations.MultiPreDenotation
+import dotty.tools.dotc.core.Denotations.PreDenotation
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Names
@@ -158,17 +159,19 @@ class PcDefinitionProvider(
   ): List[Symbol] = {
     import indexed.ctx
 
-    def recoverDenot(d: Denotation): List[Symbol] = d match {
-      case multi: MultiPreDenotation =>
-        List(multi.first, multi.last)
-          .map(_.symbol)
-          .filter(_ != NoSymbol)
-      case _ => List(d.symbol).filter(_ != NoSymbol)
+    def extractSymbols(d: PreDenotation): List[Symbol] = {
+      d match {
+        case multi: MultiPreDenotation =>
+          extractSymbols(multi.denot1) ++ extractSymbols(multi.denot2)
+        case d: Denotation => List(d.symbol)
+        case _ => List.empty
+      }
     }
 
     tree match {
       case select: Select =>
-        recoverDenot(select.qualifier.typeOpt.member(select.name))
+        extractSymbols(select.qualifier.typeOpt.member(select.name))
+          .filter(_ != NoSymbol)
       case ident: Ident => indexed.findSymbol(ident.name).toList.flatten
       case _ => Nil
     }

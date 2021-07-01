@@ -147,6 +147,15 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "error3",
+    """|
+       |object Main {
+       |  1./*scala/Predef.Ensuring#ensuring(). Predef.scala*//*scala/Predef.Ensuring#ensuring(+1). Predef.scala*//*scala/Predef.Ensuring#ensuring(+2). Predef.scala*//*scala/Predef.Ensuring#ensuring(+3). Predef.scala*/@@ensuring
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "new",
     """|
        |object Main {
