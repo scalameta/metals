@@ -113,11 +113,8 @@ class PcDefinitionProvider(
       // For a named arg, find the target `DefDef` and jump to the param
       case NamedArg(name, _) :: Apply(fn, _) :: _ =>
         val funSym = fn.symbol
-        if (
-          funSym.name == StdNames.nme.copy
-          && funSym.is(Synthetic)
-          && funSym.owner.is(CaseClass)
-        ) List(funSym.owner.info.member(name).symbol)
+        if (funSym.is(Synthetic) && funSym.owner.is(CaseClass))
+          List(funSym.owner.info.member(name).symbol)
         else {
           val classTree = funSym.topLevelClass.asClass.rootTree
           val paramSymbol =
@@ -163,7 +160,7 @@ class PcDefinitionProvider(
 
     def recoverDenot(d: Denotation): List[Symbol] = d match {
       case multi: MultiPreDenotation =>
-        List(multi.last, multi.first)
+        List(multi.first, multi.last)
           .map(_.symbol)
           .filter(_ != NoSymbol)
       case _ => List(d.symbol).filter(_ != NoSymbol)

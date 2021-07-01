@@ -313,4 +313,24 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |class Main(x: /*scala/Int# Int.scala*/@@Int)
        |""".stripMargin
   )
+
+  check(
+    "case-class-apply".tag(IgnoreScala2),
+    """|
+       |case class Foo(<<a>>: Int, b: String)
+       |class Main {
+       |  Foo(@@a = 3, b = "42")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "case-class-copy".tag(IgnoreScala2),
+    """|
+       |case class Foo(<<a>>: Int, b: String)
+       |class Main {
+       |  Foo(2, "4").copy(@@a = 3, b = "42")
+       |}
+       |""".stripMargin
+  )
 }
