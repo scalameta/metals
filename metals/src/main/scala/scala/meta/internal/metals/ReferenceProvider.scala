@@ -186,7 +186,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
-    if (occ.symbol.isLocal || source.isDependencySource(workspace)) {
+    if (occ.symbol.isLocal) {
       referenceLocations(
         snapshot,
         isSymbol,
@@ -198,6 +198,19 @@ final class ReferenceProvider(
       )
     } else {
       val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+      // when searching for references of dependency source symbol from the source itself we should return both local and workspace usage
+      val localLocations: Seq[Location] =
+        if (source.isDependencySource(workspace)) {
+          referenceLocations(
+            snapshot,
+            isSymbol,
+            distance,
+            params.getTextDocument.getUri,
+            isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics
+          )
+        } else Seq.empty
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
         if isSymbol.exists(bloom.mightContain)
@@ -234,7 +247,7 @@ final class ReferenceProvider(
               Nil
           }
       } yield reference
-      results.toSeq
+      results.toSeq ++ localLocations
     }
   }
 

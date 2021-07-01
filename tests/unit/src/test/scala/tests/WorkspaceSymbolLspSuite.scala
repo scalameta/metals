@@ -163,7 +163,10 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         .replace("\\", "/")
       _ = assertNoDiff(
         optionReferences,
-        s"""|$optionSourcePath:29:50: info: reference
+        s"""|a/src/main/scala/a/A.scala:4:24: info: reference
+            |  val x: Option[Int] = None
+            |                       ^^^^
+            |$optionSourcePath:29:50: info: reference
             |  def apply[A](x: A): Option[A] = if (x == null) None else Some(x)
             |                                                 ^^^^
             |$optionSourcePath:34:30: info: reference
