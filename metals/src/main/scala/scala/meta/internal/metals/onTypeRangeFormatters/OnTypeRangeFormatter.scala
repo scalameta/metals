@@ -37,7 +37,7 @@ case class TokensParams(
 trait FormatterParams {
   val sourceText: String
   val range: Range
-  lazy val splitLines: Array[String] = sourceText.split('\n')
+  lazy val splitLines: Array[String] = sourceText.split(System.lineSeparator)
 }
 
 case class OnTypeFormatterParams(
