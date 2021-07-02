@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Properties
 
 import scala.meta.inputs.Input
@@ -28,8 +29,10 @@ case class SbtBuildTool(
    * can't rely on `sbt` resolving correctly when using system processes, at
    * least it failed on Windows when I tried it.
    */
-  lazy val embeddedSbtLauncher: AbsolutePath = {
-    val out = BuildTool.copyFromResource(tempDir, "sbt-launch.jar")
+  def embeddedSbtLauncher(
+      outDir: Path
+  ): AbsolutePath = {
+    val out = BuildTool.copyFromResource(outDir, "sbt-launch.jar")
     AbsolutePath(out)
   }
 
@@ -39,7 +42,7 @@ case class SbtBuildTool(
       "-Dbloop.export-jar-classifiers=sources",
       "bloopInstall"
     )
-    val allArgs = composeArgs(bloopInstallArgs, workspace)
+    val allArgs = composeArgs(bloopInstallArgs, workspace, tempDir)
     removeLegacyGlobalPlugin()
     writeBloopPlugin(workspace)
     allArgs
@@ -54,12 +57,14 @@ case class SbtBuildTool(
     val bspConfigArgs = List[String](
       "bspConfig"
     )
-    composeArgs(bspConfigArgs, workspace)
+    val bspDir = workspace.resolve(".bsp").toNIO
+    composeArgs(bspConfigArgs, workspace, bspDir)
   }
 
   private def composeArgs(
       sbtArgs: List[String],
-      workspace: AbsolutePath
+      workspace: AbsolutePath,
+      sbtLauncherOutDir: Path
   ): List[String] = {
     userConfig().sbtScript match {
       case Some(script) =>
@@ -73,7 +78,7 @@ case class SbtBuildTool(
         )
         val jarArgs = List(
           "-jar",
-          embeddedSbtLauncher.toString()
+          embeddedSbtLauncher(sbtLauncherOutDir).toString()
         )
         val sbtVersion =
           if (workspaceVersion.isEmpty) List(s"-Dsbt.version=$version") else Nil
