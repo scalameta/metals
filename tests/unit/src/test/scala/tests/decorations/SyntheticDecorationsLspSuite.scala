@@ -77,7 +77,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  augmentString("foo").map[Char, String](c: Char => charWrapper(c).toUpper)(StringCanBuildFrom)
            |  augmentString("foo").map[Int, IndexedSeq[Int]](c: Char => c.toInt)(fallbackStringCanBuildFrom[Int])
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-           |  Future{
+           |  Future[Unit]{
            |    println("")
            |  }(ec)
            |}
@@ -361,6 +361,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  println("Hello!")
            |  val abc = 123
            |  val tupleBound @ (one, two) = ("1", "2")
+           |  val tupleExplicit = Tuple2("1", "2")
+           |  val tupleExplicitApply = Tuple2.apply("1", "2")
            |  var variable = 123
            |  val bcd: Int = 2
            |  val (hello, bye) = ("hello", "bye")
@@ -408,11 +410,13 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|object Main{
-           |  val head: Double :: tail: List[Double] = List(0.1, 0.2, 0.3)
-           |  val List(l1: Int, l2: Int) = List(12, 13)
+           |  val head: Double :: tail: List[Double] = List[Double](0.1, 0.2, 0.3)
+           |  val List[Int](l1: Int, l2: Int) = List[Int](12, 13)
            |  println("Hello!")
            |  val abc: Int = 123
            |  val tupleBound @ (one: String, two: String) = ("1", "2")
+           |  val tupleExplicit: (String, String) = Tuple2[String, String]("1", "2")
+           |  val tupleExplicitApply: (String, String) = Tuple2.apply[String, String]("1", "2")
            |  var variable: Int = 123
            |  val bcd: Int = 2
            |  val (hello: String, bye: String) = ("hello", "bye")
