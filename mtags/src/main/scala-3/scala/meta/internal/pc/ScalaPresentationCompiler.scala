@@ -198,18 +198,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      val ctx = driver.currentCtx
-      val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(uri, sourceFile)
-      val pos = sourcePosition(driver, params, uri)
-      val path = Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
-      val definitions = Interactive.findDefinitions(path, pos, driver).toList
-
-      DefinitionResultImpl(
-        "",
-        definitions.flatMap(d => location(d.namePos(using ctx))).asJava
-      )
+      PcDefinitionProvider(driver, params, search).definitions()
     }
   }
 
@@ -441,13 +430,6 @@ case class ScalaPresentationCompiler(
 
   def withWorkspace(workspace: Path): PresentationCompiler = {
     copy(workspace = Some(workspace))
-  }
-
-  private def location(p: SourcePosition): Option[Location] = {
-    for {
-      uri <- toUriOption(p.source)
-      r <- range(p)
-    } yield new Location(uri.toString, r)
   }
 
   private def sourcePosition(

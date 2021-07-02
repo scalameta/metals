@@ -8,28 +8,33 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import munit.Location
+import munit.TestOptions
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
 import tests.BasePCSuite
+import tests.pc.CrossTestEnrichments._
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
+
   def check(
-      name: String,
+      options: TestOptions,
       original: String,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    test(name) {
-      val noRange = original
-        .replace("<<", "")
-        .replace(">>", "")
+    test(options) {
       val filename = "A.scala"
       val uri = s"file:///$filename"
-      val (code, offset) = params(noRange, filename)
+
+      val (_, offset) = params(original.removeRanges, filename)
+      val cleanedCode =
+        getExpected(original, compat, scalaVersion).removeRanges.removePos
+
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
-      val offsetRange = Position.Range(Input.String(code), offset, offset).toLSP
+      val offsetRange =
+        Position.Range(Input.String(cleanedCode), offset, offset).toLSP
       val defn = presentationCompiler
-        .definition(CompilerOffsetParams(URI.create(uri), code, offset))
+        .definition(CompilerOffsetParams(URI.create(uri), cleanedCode, offset))
         .get()
       val edits = defn.locations().asScala.toList.flatMap { location =>
         if (location.getUri() == uri) {
@@ -52,19 +57,16 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
         } else {
           val filename = location.getUri()
           val comment = s"/*$filename*/"
-          if (code.contains(comment)) {
-            Nil
-          } else {
-            List(new TextEdit(offsetRange, comment))
-          }
+          List(new TextEdit(offsetRange, comment))
         }
       }
-      val obtained = TextEdits.applyEdits(code, edits)
-      val expected = original.replace("@@", "")
+      val obtained = TextEdits.applyEdits(cleanedCode, edits)
+      val expected = getExpected(original, compat, scalaVersion).removePos
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion)
+        expected
       )
     }
   }
+
 }

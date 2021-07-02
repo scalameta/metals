@@ -47,12 +47,14 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         )
       } else {
         val res = new ju.ArrayList[Location]()
-        tree.symbol.alternatives.foreach { alternative =>
-          val sym = semanticdbSymbol(alternative)
-          if (sym.isGlobal) {
-            res.addAll(search.definition(sym, params.uri()))
+        tree.symbol.alternatives
+          .map(semanticdbSymbol)
+          .sorted
+          .foreach { sym =>
+            if (sym.isGlobal) {
+              res.addAll(search.definition(sym, params.uri()))
+            }
           }
-        }
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           res
