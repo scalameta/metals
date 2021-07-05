@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
@@ -14,10 +15,9 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.process.ExitCodes
-import scala.meta.internal.process.ProcessHandler
+import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
-import com.zaxxer.nuprocess.NuProcessBuilder
 import coursierapi._
 
 class ShellRunner(
@@ -66,17 +66,13 @@ class ShellRunner(
       additionalEnv: Map[String, String] = Map.empty
   ): Future[Int] = {
     val elapsed = new Timer(time)
-    val handler = ProcessHandler(
-      commandRun,
-      joinErrorWithInfo = redirectErrorOutput
+
+    val ps = SystemProcess.run(
+      args,
+      directory,
+      redirectErrorOutput,
+      additionalEnv
     )
-    val pb = new NuProcessBuilder(handler, args.asJava)
-    pb.setCwd(directory.toNIO)
-    userConfig().javaHome.foreach(pb.environment().put("JAVA_HOME", _))
-    additionalEnv.foreach { case (key, value) =>
-      pb.environment().put(key, value)
-    }
-    val runningProcess = pb.start()
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button
     // stays forever in view even after successful build import. In newer
@@ -85,28 +81,32 @@ class ShellRunner(
       languageClient.metalsSlowTask(
         new MetalsSlowTaskParams(commandRun)
       )
-    handler.response = Some(taskResponse)
-    val processFuture = handler.completeProcess.future.map { result =>
-      taskResponse.cancel(false)
-      scribe.info(
-        s"time: ran '$commandRun' in $elapsed"
-      )
-      result
+
+    val result = Promise[Int]
+    taskResponse.asScala.foreach { item =>
+      if (item.cancel) {
+        scribe.info(s"user cancelled $commandRun")
+        result.trySuccess(ExitCodes.Cancel)
+        ps.cancel
+      }
     }
+    cancelables
+      .add(() => ps.cancel)
+      .add(() => taskResponse.cancel(false))
+
+    val processFuture = ps.complete
     statusBar.trackFuture(
       s"Running '$commandRun'",
       processFuture
     )
-    taskResponse.asScala.foreach { item =>
-      if (item.cancel) {
-        scribe.info(s"user cancelled $commandRun")
-        handler.completeProcess.trySuccess(ExitCodes.Cancel)
-        ProcessHandler.destroyProcess(runningProcess)
-      }
+    processFuture.map { code =>
+      taskResponse.cancel(false)
+      scribe.info(
+        s"time: ran '$commandRun' in $elapsed"
+      )
+      result.trySuccess(code)
     }
-    cancelables
-      .add(() => ProcessHandler.destroyProcess(runningProcess))
-      .add(() => taskResponse.cancel(false))
-    processFuture
+    result.future
   }
+
 }

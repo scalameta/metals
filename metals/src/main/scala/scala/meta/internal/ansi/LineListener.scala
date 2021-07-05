@@ -46,6 +46,8 @@ class LineListener(onLine: String => Unit) {
     )
   }
 
+  def appendLine(text: String): this.type = appendString(text + "\n")
+
   def appendBytes(bytes: ByteBuffer): this.type = {
     // NOTE(olafur): this is a hot execution path so the code is not implemented in the most readable
     // or maintainable way for performance reasons. We are streaming the output from build logs
