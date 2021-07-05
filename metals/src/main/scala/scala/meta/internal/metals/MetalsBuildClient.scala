@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.tvp.TreeViewCompilations
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -33,6 +34,8 @@ trait MetalsBuildClient {
   def ongoingCompilations(): TreeViewCompilations
 
   def buildHasErrors(buildTargetId: b.BuildTargetIdentifier): Boolean
+
+  def buildHasErrors(file: AbsolutePath): Boolean
 
   def buildHasErrors: Boolean
 }

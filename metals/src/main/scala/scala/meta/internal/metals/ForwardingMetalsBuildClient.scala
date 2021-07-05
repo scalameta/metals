@@ -15,6 +15,7 @@ import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
 import ch.epfl.scala.{bsp4j => b}
@@ -61,6 +62,14 @@ final class ForwardingMetalsBuildClient(
   def buildHasErrors(buildTargetId: BuildTargetIdentifier): Boolean = {
     buildTargets
       .buildTargetTransitiveDependencies(buildTargetId)
+      .exists(hasReportedError.contains(_))
+  }
+
+  def buildHasErrors(file: AbsolutePath): Boolean = {
+    buildTargets
+      .inverseSources(file)
+      .toIterable
+      .flatMap(buildTargets.buildTargetTransitiveDependencies)
       .exists(hasReportedError.contains(_))
   }
 

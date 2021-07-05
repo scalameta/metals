@@ -33,7 +33,7 @@ case class ScalafixProvider(
     icons: Icons,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
-    buildClinet: MetalsBuildClient
+    buildClient: MetalsBuildClient
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
@@ -89,7 +89,7 @@ case class ScalafixProvider(
           case Success(results)
               if !scalafixSucceded(results) && hasStaleSemanticdb(
                 results
-              ) && buildTargetHasError(file) =>
+              ) && buildClient.buildHasErrors(file) =>
             val msg = "Attempt to organize your imports failed. " +
               "It looks like you have compilation issues causing your semanticdb to be stale. " +
               "Ensure everything is compiling and try again."
@@ -135,14 +135,6 @@ case class ScalafixProvider(
       .getFileEvaluations()
       .forall(_.isSuccessful)
 
-  // TODO move this out and refactor other places that also use this logic
-  private def buildTargetHasError(file: AbsolutePath): Boolean = {
-    buildTargets
-      .inverseSources(file)
-      .map(buildClinet.buildHasErrors(_))
-      .getOrElse(false)
-  }
-
   private def hasStaleSemanticdb(evaluation: ScalafixEvaluation): Boolean = {
     evaluation
       .getFileEvaluations()
@@ -152,10 +144,11 @@ case class ScalafixProvider(
   }
 
   /**
-   * Assumes that scalafixSucceded has been called and returned false
+   * Assumes that [[ScalafixProvider.scalafixSucceded]] has been called and
+   * returned false
    *
    * @param evaluation
-   * @return
+   * @return the error message of the evaluation or file evaluation
    */
   private def getMessageErrorFromScalafix(
       evaluation: ScalafixEvaluation
