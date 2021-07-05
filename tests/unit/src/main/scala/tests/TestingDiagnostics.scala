@@ -17,7 +17,6 @@ object TestingDiagnostics {
       trees: Trees
   ): Diagnostics = {
     new Diagnostics(
-      buildTargets,
       buffers,
       new TestingClient(workspace, buffers),
       StatisticsConfig.default,

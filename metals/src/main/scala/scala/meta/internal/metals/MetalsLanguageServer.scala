@@ -376,7 +376,6 @@ class MetalsLanguageServer(
           compilations.isCurrentlyCompiling
         )
         diagnostics = new Diagnostics(
-          buildTargets,
           buffers,
           languageClient,
           clientConfig.initialConfig.statistics,
@@ -636,14 +635,17 @@ class MetalsLanguageServer(
           compilations,
           clientConfig.icons(),
           languageClient,
-          buildTargets
+          buildTargets,
+          buildClient
         )
         codeActionProvider = new CodeActionProvider(
           compilers,
           buffers,
           buildTargets,
           scalafixProvider,
-          trees
+          trees,
+          diagnostics,
+          languageClient
         )
         doctor = new Doctor(
           workspace,

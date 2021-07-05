@@ -5,8 +5,10 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.CodeAction
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
@@ -18,7 +20,9 @@ import org.eclipse.{lsp4j => l}
 
 final class OrganizeImports(
     scalafixProvider: ScalafixProvider,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
+    languageClient: MetalsLanguageClient
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
@@ -31,9 +35,8 @@ final class OrganizeImports(
     val file = uri.toAbsolutePath
 
     if (
-      isScalaOrSbt(file) && (isSourceOrganizeImportCalled(
-        params
-      ) || hasUnusedImport(params))
+      explicitlyCalledAndAllowed(file, params)
+      || hasUnusedImportAndAllowed(file, params)
     ) {
 
       val scalaTarget = for {
@@ -69,15 +72,43 @@ final class OrganizeImports(
 
   }
 
-  private def hasUnusedImport(
+  private def explicitlyCalledAndAllowed(
+      file: AbsolutePath,
       params: CodeActionParams
   ): Boolean = {
-    params
+    val validCall = isScalaOrSbt(file) && isSourceOrganizeImportCalled(params)
+    if (validCall) {
+      if (diagnostics.hasDiagnosticError(file)) {
+        languageClient.showMessage(
+          l.MessageType.Warning,
+          s"Fix ${file.toNIO.getFileName} before trying to organize your imports"
+        )
+        scribe.info("Can not organize imports if file has error")
+        false
+      } else {
+        true
+      }
+    } else {
+      false
+    }
+  }
+
+  private def hasUnusedImportAndAllowed(
+      file: AbsolutePath,
+      params: CodeActionParams
+  ): Boolean = {
+    val hasUnused = params
       .getContext()
       .getDiagnostics()
       .asScala
       .collect { case ScalacDiagnostic.UnusedImport(name) => name }
       .nonEmpty
+
+    if (hasUnused && !diagnostics.hasDiagnosticError(file)) {
+      true
+    } else {
+      false
+    }
   }
 
   private def isSourceOrganizeImportCalled(

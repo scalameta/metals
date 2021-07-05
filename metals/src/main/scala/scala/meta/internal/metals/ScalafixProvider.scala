@@ -21,6 +21,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixEvaluation
+import scalafix.interfaces.ScalafixFileEvaluationError
 
 case class ScalafixProvider(
     buffers: Buffers,
@@ -31,7 +32,8 @@ case class ScalafixProvider(
     compilations: Compilations,
     icons: Icons,
     languageClient: MetalsLanguageClient,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    buildClient: MetalsBuildClient
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
@@ -84,6 +86,21 @@ case class ScalafixProvider(
               exception
             )
             Future.failed(exception)
+          case Success(results)
+              if !scalafixSucceded(results) && hasStaleSemanticdb(
+                results
+              ) && buildClient.buildHasErrors(file) =>
+            val msg = "Attempt to organize your imports failed. " +
+              "It looks like you have compilation issues causing your semanticdb to be stale. " +
+              "Ensure everything is compiling and try again."
+            scribe.warn(
+              msg
+            )
+            languageClient.showMessage(
+              MessageType.Warning,
+              msg
+            )
+            Future.successful(Nil)
           case Success(results) if !scalafixSucceded(results) =>
             val scalafixError = getMessageErrorFromScalafix(results)
             val exception = ScalafixRunException(scalafixError)
@@ -104,21 +121,46 @@ case class ScalafixProvider(
       }
     }
   }
+
+  /**
+   * Scalafix may be ran successfully, but that doesn't mean that every file
+   * evaluation also ran succesfully. This ensure that the scalafix run was successful
+   * and also that every file evaluation was successful.
+   *
+   * @param evaluation
+   * @return true only if the evaulation for every single file contains no errors
+   */
   private def scalafixSucceded(evaluation: ScalafixEvaluation): Boolean =
     evaluation.isSuccessful && evaluation
       .getFileEvaluations()
       .forall(_.isSuccessful)
 
+  private def hasStaleSemanticdb(evaluation: ScalafixEvaluation): Boolean = {
+    evaluation
+      .getFileEvaluations()
+      .headOption
+      .flatMap(_.getError().asScala)
+      .contains(ScalafixFileEvaluationError.StaleSemanticdbError)
+  }
+
+  /**
+   * Assumes that [[ScalafixProvider.scalafixSucceded]] has been called and
+   * returned false
+   *
+   * @param evaluation
+   * @return the error message of the evaluation or file evaluation
+   */
   private def getMessageErrorFromScalafix(
       evaluation: ScalafixEvaluation
   ): String = {
-    (if (!evaluation.isSuccessful)
+    (if (!evaluation.isSuccessful())
        evaluation.getErrorMessage().asScala
      else
        evaluation
          .getFileEvaluations()
          .headOption
-         .flatMap(_.getErrorMessage.asScala)).getOrElse(defaultErrorMessage)
+         .flatMap(_.getErrorMessage().asScala))
+      .getOrElse("Unexpected error while running Scalafix.")
   }
 
   private def scalafixConf: Option[Path] = {
@@ -142,7 +184,6 @@ case class ScalafixProvider(
       case _ => None
     }
   }
-
   private def scalafixEvaluate(
       file: AbsolutePath,
       scalaTarget: ScalaTarget
@@ -259,9 +300,6 @@ object ScalafixProvider {
 
   case class ScalafixRunException(msg: String) extends Exception(msg)
 
-  val defaultErrorMessage: String =
-    """|Unexpected error while running scalafix. Semanticdb might have been stale, which 
-       |would require successful compilation to be created.""".stripMargin
   val organizeImportRuleName = "OrganizeImports"
 
 }
