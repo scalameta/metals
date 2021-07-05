@@ -376,7 +376,6 @@ class MetalsLanguageServer(
           compilations.isCurrentlyCompiling
         )
         diagnostics = new Diagnostics(
-          buildTargets,
           buffers,
           languageClient,
           clientConfig.initialConfig.statistics,

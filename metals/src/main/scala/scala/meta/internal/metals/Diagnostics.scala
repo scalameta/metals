@@ -35,7 +35,6 @@ import org.eclipse.{lsp4j => l}
  * goto definition in stale buffers.
  */
 final class Diagnostics(
-    buildTargets: BuildTargets, // TODO this can be removed
     buffers: Buffers,
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
