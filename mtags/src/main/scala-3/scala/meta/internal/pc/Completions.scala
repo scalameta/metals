@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.mtags.MtagsEnrichments._
+
 import dotty.tools.dotc.ast.tpd.Apply
 import dotty.tools.dotc.ast.tpd.Block
 import dotty.tools.dotc.ast.tpd.Ident
@@ -96,7 +98,7 @@ case class ArgCompletion(
     val printer = SymbolPrinter()
     params.map(p => {
       val completion = Completion(
-        s"${p.name.toString} = ",
+        s"${p.nameBackticked} = ",
         printer.typeString(p.info),
         List(p)
       )
