@@ -301,6 +301,30 @@ class CompletionArgSuite extends BaseCompletionSuite {
     )
   )
 
+  check(
+    "named-backticked",
+    s"""|object Main {
+        |  def foo(`type` : Int) : Int = argument
+        |  val number = 1
+        |  val number2 = 2
+        |  foo(ty@@)
+        |}
+        |""".stripMargin,
+    """|`type` = : Int
+       |`type` = number : Int
+       |`type` = number2 : Int
+       |""".stripMargin,
+    topLines = Some(5),
+    compat = Map(
+      "3.0.0-RC1" ->
+        """|`type` = : Int
+           |""".stripMargin,
+      "3.0" ->
+        """|`type` = : Int
+           |""".stripMargin
+    )
+  )
+
   checkEditLine(
     "auto-no-show".tag(IgnoreScala3),
     s"""|object Main {
@@ -387,6 +411,19 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "foo(auto@@)",
     "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})"
+  )
+
+  checkEditLine(
+    "wrap-idents".tag(IgnoreScala3),
+    s"""|object Main {
+        |  def f(a: String, b: String, `type`: String) = a + b + `type`
+        |  val str = ""
+        |  val str1 = ""
+        |  ___
+        |}
+        |""".stripMargin,
+    "f(auto@@)",
+    "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})"
   )
 
 }

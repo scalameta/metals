@@ -2,6 +2,7 @@ package scala.meta.internal.pc.completions
 
 import scala.collection.immutable.Nil
 
+import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
@@ -119,7 +120,7 @@ trait ArgCompletions { this: MetalsGlobal =>
         val editText = allParams.zipWithIndex
           .collect {
             case (param, index) if !param.hasDefault =>
-              s"${param.name} = $${${index + 1}${findDefaultValue(param)}}"
+              s"${Identifier.backtickWrap(param.name)} = $${${index + 1}${findDefaultValue(param)}}"
           }
           .mkString(", ")
         val edit = new l.TextEdit(editRange, editText)
@@ -138,9 +139,10 @@ trait ArgCompletions { this: MetalsGlobal =>
 
     private def findPossibleDefaults(): List[TextEditMember] = {
       params.flatMap { param =>
-        val allMemebers = matchingTypesInScope(param.tpe)
-        allMemebers.map { memberName =>
-          val editText = "" + param.name + " = " + memberName
+        val allMembers = matchingTypesInScope(param.tpe)
+        allMembers.map { memberName =>
+          val editText =
+            Identifier.backtickWrap(param.name) + " = " + memberName
           val edit = new l.TextEdit(editRange, editText)
           new TextEditMember(
             filterText = param.name.toString(),
