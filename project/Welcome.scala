@@ -29,7 +29,7 @@ object Welcome {
     ),
     UsefulTask(
       "",
-      "slow/test -- tests.sbt.*",
+      "slow/testOnly -- tests.sbt.*",
       "run all slow tests inside tests.sbt package, they will publish needed mtags locally."
     ),
     UsefulTask(
