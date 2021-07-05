@@ -28,7 +28,13 @@ final class CodeActionProvider(
     new CreateNewSymbol(),
     new StringActions(buffers, trees),
     extractMemberAction,
-    new OrganizeImports(
+    new SourceOrganizeImports(
+      scalafixProvider,
+      buildTargets,
+      diagnostics,
+      languageClient
+    ),
+    new OrganizeImportsQuickFix(
       scalafixProvider,
       buildTargets,
       diagnostics,

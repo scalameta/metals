@@ -16,10 +16,19 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
 
   def checkNoAction(
       name: TestOptions,
-      input: String
+      input: String,
+      scalafixConf: String = "",
+      scalacOptions: List[String] = Nil
   ): Unit = {
     val fileContent = input.replace("<<", "").replace(">>", "")
-    check(name, input, "", fileContent)
+    check(
+      name,
+      input,
+      "",
+      fileContent,
+      scalafixConf = scalafixConf,
+      scalacOptions = scalacOptions
+    )
   }
 
   def check(

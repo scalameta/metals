@@ -18,7 +18,7 @@ import scala.meta.pc.CancelToken
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
 
-final class OrganizeImports(
+sealed abstract class OrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
     diagnostics: Diagnostics,
@@ -26,19 +26,18 @@ final class OrganizeImports(
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
-  override def kind: String = OrganizeImports.kind
-
+  protected def title: String
+  protected def isCallAllowed(
+      file: AbsolutePath,
+      params: CodeActionParams
+  ): Boolean
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
     val uri = params.getTextDocument.getUri
     val file = uri.toAbsolutePath
 
-    if (
-      explicitlyCalledAndAllowed(file, params)
-      || hasUnusedImportAndAllowed(file, params)
-    ) {
-
+    if (isCallAllowed(file, params)) {
       val scalaTarget = for {
         buildId <- buildTargets.inverseSources(file)
         target <- buildTargets.scalaTarget(buildId)
@@ -49,7 +48,6 @@ final class OrganizeImports(
         case _ => Future.successful(Seq())
       }
     } else Future.successful(Seq())
-
   }
 
   private def organizeImportsEdits(
@@ -60,8 +58,8 @@ final class OrganizeImports(
       .organizeImports(path, scalaVersion)
       .map { edits =>
         val codeAction = new l.CodeAction()
-        codeAction.setTitle(OrganizeImports.title)
-        codeAction.setKind(l.CodeActionKind.SourceOrganizeImports)
+        codeAction.setTitle(this.title)
+        codeAction.setKind(this.kind)
         codeAction.setEdit(
           new l.WorkspaceEdit(
             Map(path.toURI.toString -> edits.asJava).asJava
@@ -69,10 +67,31 @@ final class OrganizeImports(
         )
         Seq(codeAction)
       }
-
   }
 
-  private def explicitlyCalledAndAllowed(
+  protected def isScalaOrSbt(file: AbsolutePath): Boolean =
+    Seq("scala", "sbt").contains(file.extension)
+}
+
+object OrganizeImports {}
+
+class SourceOrganizeImports(
+    scalafixProvider: ScalafixProvider,
+    buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
+    languageClient: MetalsLanguageClient
+)(implicit ec: ExecutionContext)
+    extends OrganizeImports(
+      scalafixProvider,
+      buildTargets,
+      diagnostics,
+      languageClient
+    ) {
+
+  override val kind: String = SourceOrganizeImports.kind
+  override protected val title: String = SourceOrganizeImports.title
+
+  override protected def isCallAllowed(
       file: AbsolutePath,
       params: CodeActionParams
   ): Boolean = {
@@ -93,7 +112,35 @@ final class OrganizeImports(
     }
   }
 
-  private def hasUnusedImportAndAllowed(
+  protected def isSourceOrganizeImportCalled(
+      params: CodeActionParams
+  ): Boolean =
+    Option(params.getContext.getOnly)
+      .map(_.asScala.toList.contains(kind))
+      .isDefined
+}
+
+object SourceOrganizeImports {
+  final val kind: String = l.CodeActionKind.SourceOrganizeImports
+  final val title: String = "Source organize imports"
+}
+
+class OrganizeImportsQuickFix(
+    scalafixProvider: ScalafixProvider,
+    buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
+    languageClient: MetalsLanguageClient
+)(implicit ec: ExecutionContext)
+    extends OrganizeImports(
+      scalafixProvider,
+      buildTargets,
+      diagnostics,
+      languageClient
+    ) {
+
+  override val kind: String = OrganizeImportsQuickFix.kind
+  override protected val title: String = OrganizeImportsQuickFix.title
+  override protected def isCallAllowed(
       file: AbsolutePath,
       params: CodeActionParams
   ): Boolean = {
@@ -111,21 +158,9 @@ final class OrganizeImports(
     }
   }
 
-  private def isSourceOrganizeImportCalled(
-      params: CodeActionParams
-  ): Boolean =
-    Option(params.getContext.getOnly)
-      .map(_.asScala.toList.contains(kind))
-      .isDefined
-
-  private def isScalaOrSbt(file: AbsolutePath): Boolean =
-    Seq("scala", "sbt").contains(file.extension)
-
 }
-object OrganizeImports {
-  def title: String = "Organize imports"
-  def kind: String = l.CodeActionKind.SourceOrganizeImports
 
-  type ScalaBinaryVersion = String
-  type ScalaVersion = String
+object OrganizeImportsQuickFix {
+  final val kind: String = l.CodeActionKind.QuickFix
+  final val title: String = "Quick fix organize imports"
 }
