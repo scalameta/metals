@@ -1297,4 +1297,25 @@ class CompletionSuite extends BaseCompletionSuite {
     _.nonEmpty
   )
 
+  checkEdit(
+    "newline-dot",
+    """|object O {
+       |  val a = List(1, 2)
+       |    .m@@
+       |}""".stripMargin,
+    """|object O {
+       |  val a = List(1, 2)
+       |    .map($0)
+       |}""".stripMargin,
+    compat = Map(
+      "3.0" ->
+        """|object O {
+           |  val a = List(1, 2)
+           |    .map
+           |}""".stripMargin
+    ),
+    filter = _.contains("map["),
+    assertSingleItem = false
+  )
+
 }
