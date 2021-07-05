@@ -9,13 +9,15 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.mtags.Semanticdbs
 
 final class CodeActionProvider(
     compilers: Compilers,
     buffers: Buffers,
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider,
-    trees: Trees
+    trees: Trees,
+    semanticdbs: Semanticdbs
 )(implicit ec: ExecutionContext) {
 
   private val extractMemberAction = new ExtractRenameMember(buffers, trees)
@@ -27,7 +29,8 @@ final class CodeActionProvider(
     new StringActions(buffers, trees),
     extractMemberAction,
     new OrganizeImports(scalafixProvider, buildTargets),
-    new InsertInferredType(trees, compilers)
+    new InsertInferredType(trees, compilers),
+    new RenameImport(trees, semanticdbs)
   )
 
   def codeActions(
