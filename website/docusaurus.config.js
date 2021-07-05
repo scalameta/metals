@@ -48,6 +48,12 @@ module.exports = {
     ]
   ],
   "themeConfig": {
+    "colorMode": {
+      "switchConfig": {
+        "darkIcon": "🌙",
+        "lightIcon": "☀️"
+      }
+    },
     "navbar": {
       "title": "Metals",
       "logo": {
