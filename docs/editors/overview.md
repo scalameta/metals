@@ -14,6 +14,7 @@ specific sections.
 
 ```
 
+
 ## Editor support
 
 Metals works with the following text editors with varying degree of

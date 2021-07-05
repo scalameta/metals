@@ -6,6 +6,10 @@ title: Visual Studio Code
 
 ![Goto Definition](https://user-images.githubusercontent.com/1408093/48776422-1f764f00-ecd0-11e8-96d1-170f2354d50e.gif)
 
+```scala mdoc:requirements
+
+```
+
 
 ## Installation
 
