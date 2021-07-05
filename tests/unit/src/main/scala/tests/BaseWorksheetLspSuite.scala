@@ -179,7 +179,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |```
              |1.to(10).toVector
              |```scala
-             |res2: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+             |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
              |```
              |val List(a, b) = List(42, 10)
              |```scala
@@ -205,7 +205,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |```
                  |1.to(10).toVector
                  |```scala
-                 |res2: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                 |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                  |```
                  |val List(a, b) = List(42, 10)
                  |```scala
@@ -277,36 +277,18 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         getExpected(
-          """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.ExceptionInInitializerError
-             |	at repl.MdocSession$App.<init>(Main.worksheet.sc:5)
+          """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
+             |	at repl.MdocSession$App.<init>(Main.worksheet.sc:11)
              |	at repl.MdocSession$.app(Main.worksheet.sc:3)
-             |Caused by: java.lang.RuntimeException: boom
-             |	at repl.MdocSession$App0$.<init>(Main.worksheet.sc:14)
-             |	at repl.MdocSession$App0$.<clinit>(Main.worksheet.sc)
-             |	... 2 more
              |
              |throw new RuntimeException("boom")
              |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
              |""".stripMargin,
           Map(
             V.scala3 ->
-              """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.ExceptionInInitializerError
-                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:6)
+              """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.RuntimeException: boom
+                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:12)
                  |	at repl.MdocSession$.app(Main.worksheet.sc:3)
-                 |Caused by: java.lang.RuntimeException: boom
-                 |	at repl.MdocSession$App0$.<clinit>(Main.worksheet.sc:17)
-                 |	... 2 more
-                 |
-                 |throw new RuntimeException("boom")
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |""".stripMargin,
-            V.scala213 ->
-              """|a/src/main/scala/Main.worksheet.sc:2:1: error: java.lang.ExceptionInInitializerError
-                 |	at repl.MdocSession$App.<init>(Main.worksheet.sc:5)
-                 |	at repl.MdocSession$.app(Main.worksheet.sc:3)
-                 |Caused by: java.lang.RuntimeException: boom
-                 |	at repl.MdocSession$App0$.<clinit>(Main.worksheet.sc:14)
-                 |	... 2 more
                  |
                  |throw new RuntimeException("boom")
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -580,7 +562,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
                  |""".stripMargin,
             V.scala3 ->
               """|a/src/main/scala/Main.worksheet.sc:5:1: error:
-                 |Found:    repl.MdocSession.App0.Structural
+                 |Found:    App.this.Structural
                  |Required: Selectable
                  |new Foo().asInstanceOf[Structural].foo()
                  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -613,82 +595,25 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ <- server.didOpen("a/src/main/scala/NoSuchMethodError.worksheet.sc")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        getExpected(
-          """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
-             |	at repl.MdocSession$App0$.<clinit>(IncompatibleClassChangeError.worksheet.sc:11)
-             |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:5)
-             |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
-             |
-             |throw new IncompatibleClassChangeError()
-             |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-             |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
-             |	at repl.MdocSession$App0$.<clinit>(NoSuchMethodError.worksheet.sc:11)
-             |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:5)
-             |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
-             |
-             |throw new NoSuchMethodError()
-             |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-             |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
-             |	at repl.MdocSession$App0$.<clinit>(StackOverflowError.worksheet.sc:11)
-             |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:5)
-             |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
-             |
-             |throw new StackOverflowError()
-             |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-             |""".stripMargin,
-          Map(
-            V.scala212 ->
-              """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
-                 |	at repl.MdocSession$App0$.<init>(IncompatibleClassChangeError.worksheet.sc:11)
-                 |	at repl.MdocSession$App0$.<clinit>(IncompatibleClassChangeError.worksheet.sc)
-                 |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:5)
-                 |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
-                 |
-                 |throw new IncompatibleClassChangeError()
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
-                 |	at repl.MdocSession$App0$.<init>(NoSuchMethodError.worksheet.sc:11)
-                 |	at repl.MdocSession$App0$.<clinit>(NoSuchMethodError.worksheet.sc)
-                 |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:5)
-                 |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
-                 |
-                 |throw new NoSuchMethodError()
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
-                 |	at repl.MdocSession$App0$.<init>(StackOverflowError.worksheet.sc:11)
-                 |	at repl.MdocSession$App0$.<clinit>(StackOverflowError.worksheet.sc)
-                 |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:5)
-                 |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
-                 |
-                 |throw new StackOverflowError()
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |""".stripMargin,
-            V.scala3 ->
-              """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
-                 |	at repl.MdocSession$App0$.<clinit>(IncompatibleClassChangeError.worksheet.sc:13)
-                 |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:6)
-                 |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
-                 |
-                 |throw new IncompatibleClassChangeError()
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
-                 |	at repl.MdocSession$App0$.<clinit>(NoSuchMethodError.worksheet.sc:13)
-                 |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:6)
-                 |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
-                 |
-                 |throw new NoSuchMethodError()
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
-                 |	at repl.MdocSession$App0$.<clinit>(StackOverflowError.worksheet.sc:13)
-                 |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:6)
-                 |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
-                 |
-                 |throw new StackOverflowError()
-                 |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                 |""".stripMargin
-          ),
-          scalaVersion
-        )
+        """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
+           |	at repl.MdocSession$App.<init>(IncompatibleClassChangeError.worksheet.sc:8)
+           |	at repl.MdocSession$.app(IncompatibleClassChangeError.worksheet.sc:3)
+           |
+           |throw new IncompatibleClassChangeError()
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
+           |	at repl.MdocSession$App.<init>(NoSuchMethodError.worksheet.sc:8)
+           |	at repl.MdocSession$.app(NoSuchMethodError.worksheet.sc:3)
+           |
+           |throw new NoSuchMethodError()
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
+           |	at repl.MdocSession$App.<init>(StackOverflowError.worksheet.sc:8)
+           |	at repl.MdocSession$.app(StackOverflowError.worksheet.sc:3)
+           |
+           |throw new StackOverflowError()
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
       )
     } yield ()
   }
