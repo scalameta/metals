@@ -40,6 +40,12 @@ module.exports = {
       {
         "fromExtensions": [
           "html"
+        ],
+        "redirects": [
+          {
+            "to": "/docs/",
+            "from": "/docs/editors/overview.html"
+          }
         ]
       }
     ]
