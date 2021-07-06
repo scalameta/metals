@@ -1,440 +1,262 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>http://scalameta.org/metals/blog</id>
+    <id>http://scalameta.org/blog</id>
     <title>Metals Blog</title>
-    <updated>2021-05-31T06:00:00.000Z</updated>
+    <updated>2021-05-31T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="http://scalameta.org/metals/blog"/>
-    <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
-    <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
-    <rights>Copyright © 2021 Metals</rights>
+    <link rel="alternate" href="http://scalameta.org/blog"/>
+    <subtitle>Metals Blog</subtitle>
+    <icon>http://scalameta.org/img/favicon.ico</icon>
     <entry>
         <title type="html"><![CDATA[Metals v0.10.4 - Tungsten]]></title>
-        <id>http://scalameta.org/metals/blog/2021/05/31/tungsten.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/05/31/tungsten.html"/>
-        <updated>2021-05-31T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.10.4, which adds support for Scala 2.12.14.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">24</td> </tr> <tr> <td>Merged PRs</td> <td align="center">11</td> </tr> <tr> <td>Contributors</td> <td align="center">4</td> </tr> <tr> <td>Closed issues</td> <td align="center">3</td> </tr> <tr> <td>New features</td> <td align="center">1</td> </tr> </tbody> </table> <p>For full details: <a href="https://github.com/scalameta/metals/milestone/39?closed=1">https://github.com/scalameta/metals...</a></p>]]></summary>
-        <author>
-            <name>Vadim Chelyshov</name>
-            <uri>https://twitter.com/_dos65</uri>
-        </author>
+        <id>Metals v0.10.4 - Tungsten</id>
+        <link href="http://scalameta.org/metals/blog/2021/05/31/tungsten"/>
+        <updated>2021-05-31T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.10.4, which adds support for Scala 2.12.14.]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.10.3 - Tungsten]]></title>
-        <id>http://scalameta.org/metals/blog/2021/05/17/tungsten.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/05/17/tungsten.html"/>
-        <updated>2021-05-17T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.10.3, which brings support for the long awaited Scala 3.0.0 version together with some important improvements.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">104</td> </tr> <tr> <td>Merged PRs</td> <td align="center">49</td> </tr> <tr> <td>Contributors</td> <td align="center">6</td> </tr> <tr> <td>Closed issues</td> <td align="center">12</td> </tr> <tr> <td>Ne...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.10.3 - Tungsten</id>
+        <link href="http://scalameta.org/metals/blog/2021/05/17/tungsten"/>
+        <updated>2021-05-17T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.10.3, which brings support for]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.10.2 - Tungsten]]></title>
-        <id>http://scalameta.org/metals/blog/2021/04/20/tungsten.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/04/20/tungsten.html"/>
-        <updated>2021-04-20T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.10.2, which mainly adds support for Scala 3.0.0-RC3 as well a couple of smaller improvements.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">62</td> </tr> <tr> <td>Merged PRs</td> <td align="center">30</td> </tr> <tr> <td>Contributors</td> <td align="center">8</td> </tr> <tr> <td>Closed issues</td> <td align="center">8</td> </tr> <tr> <td>New features</td> <td align="center">4</td> </tr> </tbody> </table> <p>For...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.10.2 - Tungsten</id>
+        <link href="http://scalameta.org/metals/blog/2021/04/20/tungsten"/>
+        <updated>2021-04-20T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.10.2, which mainly adds support]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.10.1 - Tungsten]]></title>
-        <id>http://scalameta.org/metals/blog/2021/04/06/tungsten.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/04/06/tungsten.html"/>
-        <updated>2021-04-06T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.10.1, which mainly concentrated on bugfixes together with a couple of smaller improvements. We also added support for the almost ready Scala 3 version 3.0.0-RC2. Its final release is coming soon and Me...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.10.1 - Tungsten</id>
+        <link href="http://scalameta.org/metals/blog/2021/04/06/tungsten"/>
+        <updated>2021-04-06T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.10.1, which mainly concentrated]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.10.0 - Tungsten]]></title>
-        <id>http://scalameta.org/metals/blog/2021/02/24/tungsten.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/02/24/tungsten.html"/>
-        <updated>2021-02-24T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.10.0, which is the first release in the &quot;Tungsten&quot; line. In <code>0.10.x</code> we will focus on polishing existing features, fixing bugs and improving the Scala 3 support at least to the level of Scala 2...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.10.0 - Tungsten</id>
+        <link href="http://scalameta.org/metals/blog/2021/02/24/tungsten"/>
+        <updated>2021-02-24T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.10.0, which is the first]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[A Metals Retrospective (Part 1)]]></title>
-        <id>http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1.html"/>
-        <updated>2021-02-02T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p><img src="https://i.imgur.com/FYZXteD.png" alt="metals-banner"></p> <p>At the end of 2020 the Metals team sent out a survey to gather input from our users in hopes to get a better picture of who you are, what you want out of Metals, and any other useful feedback you may have wanted to provide. With just under 400 respo...</p>]]></summary>
-        <author>
-            <name>Chris Kipp</name>
-            <uri>https://twitter.com/ckipp01</uri>
-        </author>
+        <id>A Metals Retrospective (Part 1)</id>
+        <link href="http://scalameta.org/metals/blog/2021/02/02/metals-retro-part1"/>
+        <updated>2021-02-02T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[metals-banner]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.10 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2021/01/19/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2021/01/19/lithium.html"/>
-        <updated>2021-01-19T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.10, which contains a number of fixes and more importantly support for Scala 2.12.13. We're skipping over the v0.9.9 release due to a significant bug that showed up after the release.</p> <table> <tbody> <tr> <td>Commits since...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.10 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2021/01/19/lithium"/>
+        <updated>2021-01-19T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.10, which contains a number]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.8 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/12/19/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/12/19/lithium.html"/>
-        <updated>2020-12-19T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.8, which brings along a number of smaller improvements, new Scala 3 milestone support and a hot new feature.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">100</td> </tr> <tr> <td>Merged PRs</td> <td align="center">41</td> </tr> <tr> <td>Contributors</td> <td align="center">4</td> </tr> <tr> <td>Closed issues</td> <td align="center">5</td> </tr> <tr> <td>New...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.8 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/12/19/lithium"/>
+        <updated>2020-12-19T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.8, which brings along a]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.7 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/11/26/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/11/26/lithium.html"/>
-        <updated>2020-11-26T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.7, which introduces the support for the newest Scala 3 milestone, <code>3.0.0-M2</code>.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">17</td> </tr> <tr> <td>Merged PRs</td> <td align="center">7</td> </tr> <tr> <td>Contributors</td> <td align="center">5</td> </tr> <tr> <td>Closed issues</td> <td align="center">3</td> </tr> <tr> <td>New features</td> <td align="center">0</td> </tr> </tbody> </table> <p>For full details: <a href="https://github.com/scalameta/metals/milestone/30?closed=1">ht...</a></p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.7 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/11/26/lithium"/>
+        <updated>2020-11-26T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.7, which introduces the]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.6 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/11/20/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/11/20/lithium.html"/>
-        <updated>2020-11-20T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.6, which mostly concentrates on adding support for the newly released Scala 2.13.4, but also adds some improvements for already existing features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">59</td> </tr> <tr> <td>Merged PRs</td> <td align="center">31</td> </tr> <tr> <td>C...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.6 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/11/20/lithium"/>
+        <updated>2020-11-20T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.6, which mostly concentrates]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.5 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/11/10/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/11/10/lithium.html"/>
-        <updated>2020-11-10T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.5, which brings about some of the long awaited features such as implicit decorations and the organize imports code action. We also greatly simplified connecting to the sbt BSP server and added suppor...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.5 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/11/10/lithium"/>
+        <updated>2020-11-10T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.5, which brings about some of]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[sbt BSP support]]></title>
-        <id>http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support.html"/>
-        <updated>2020-11-06T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>If you've been following the <a href="https://github.com/sbt/sbt/releases">sbt releases</a>, 1.4.x introduced some great new features, one of those being BSP support. This effort was initiated by community members and proposed to the <a href="https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md">Scala Center Advisory Board</a>. Then thanks to the work of <a href="https://twitter.com/adrienpi2">Adrien Piq...</a></p>]]></summary>
-        <author>
-            <name>Chris Kipp</name>
-            <uri>https://twitter.com/ckipp01</uri>
-        </author>
+        <id>sbt BSP support</id>
+        <link href="http://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support"/>
+        <updated>2020-11-06T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[If you've been following the [sbt]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.4 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/09/21/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/09/21/lithium.html"/>
-        <updated>2020-09-21T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.4, which focuses on improvements in Scala 3 worksheets, a couple of new features, and a number of smaller improvements.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">115</td> </tr> <tr> <td>Merged PRs</td> <td align="center">50</td> </tr> <tr> <td>Contributors</td> <td align="center">6</td> </tr> <tr> <td>Closed iss...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.4 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/09/21/lithium"/>
+        <updated>2020-09-21T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.4, which focuses on]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.3 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/08/19/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/08/19/lithium.html"/>
-        <updated>2020-08-19T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.3, which adds a couple of useful new features as well as support for Scala 0.25.0 and 0.26.0-RC1.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">123</td> </tr> <tr> <td>Merged PRs</td> <td align="center">59</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Closed issues</td> <td align="center">31</td> </tr> <tr> <td>New features</td> ...</tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.3 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/08/19/lithium"/>
+        <updated>2020-08-19T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.3, which adds a couple of]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[A Dive into Configuring Metals]]></title>
-        <id>http://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html"/>
-        <updated>2020-07-23T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>As of this last Metals release, it's now 100% possible to fully configure Metals without any need to pass in server properties. Depending on your editor of choice, the process to configure Metals may be completely abstracted away. You simply click in...</p>]]></summary>
-        <author>
-            <name>Chris Kipp</name>
-            <uri>https://twitter.com/ckipp01</uri>
-        </author>
+        <id>A Dive into Configuring Metals</id>
+        <link href="http://scalameta.org/metals/blog/2020/07/23/configuring-a-client"/>
+        <updated>2020-07-23T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[As of this last Metals release, it's now 100% possible to fully configure Metals]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.2 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/07/15/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/07/15/lithium.html"/>
-        <updated>2020-07-15T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.2, which mostly adds support for Scala 2.12.12.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">50</td> </tr> <tr> <td>Merged PRs</td> <td align="center">24</td> </tr> <tr> <td>Contributors</td> <td align="center">6</td> </tr> <tr> <td>Closed issues</td> <td align="center">14</td> </tr> <tr> <td>New features</td> <td align="center">2</td> </tr> </tbody> </table> <p>For full details: <a href="https://github.com/scalameta/metals/milestone/25?closed=1">https://github.com/scalameta...</a></p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.2 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/07/15/lithium"/>
+        <updated>2020-07-15T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.2, which mostly adds support]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.1 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/07/01/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/07/01/lithium.html"/>
-        <updated>2020-07-01T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.9.1, which focused on fixing issues with the recently released Scala 3 support, Ammonite support and a couple of new features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">287</td> </tr> <tr> <td>Merged PRs</td> <td align="center">106</td> </tr> <tr> <td>Contributors</td> <td align="center">16</td> </tr> <tr> <td>Clo...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.1 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/07/01/lithium"/>
+        <updated>2020-07-01T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.9.1, which focused on fixing]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.9.0 - Lithium]]></title>
-        <id>http://scalameta.org/metals/blog/2020/05/04/lithium.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/05/04/lithium.html"/>
-        <updated>2020-05-04T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.9.0, codename &quot;Lithium&quot;, which main focus is introducing support for Scala 3 starting with versions 0.23.0 and 0.24.0-RC1. We also added support for Scala 2.13.2 and a number of other useful...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.9.0 - Lithium</id>
+        <link href="http://scalameta.org/metals/blog/2020/05/04/lithium"/>
+        <updated>2020-05-04T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are happy to announce the release of Metals v0.9.0, codename "Lithium", which]]></summary>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.5.0 (Redirect)]]></title>
+        <id>Metals v0.5.0 (Redirect)</id>
+        <link href="http://scalameta.org/metals/blog/2020/04/12/mercury"/>
+        <updated>2020-04-12T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[This blog post has been moved to]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.4 - Cobalt]]></title>
-        <id>http://scalameta.org/metals/blog/2020/04/10/cobalt.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/04/10/cobalt.html"/>
-        <updated>2020-04-10T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.8.4, which will most likely be the last 0.8.x version.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">174</td> </tr> <tr> <td>Merged PRs</td> <td align="center">55</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Closed issues</td> <td align="center">13</td> </tr> <tr> <td>New features</td> <td align="center">3</td> </tr> </tbody> </table> <p>For full details: <a href="https://github.com/scalameta/metals/milestone/22?closed=1">https://github.com/sc...</a></p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.8.4 - Cobalt</id>
+        <link href="http://scalameta.org/metals/blog/2020/04/10/cobalt"/>
+        <updated>2020-04-10T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are happy to announce the release of Metals v0.8.4, which will most likely be]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.3 - Cobalt]]></title>
-        <id>http://scalameta.org/metals/blog/2020/03/19/cobalt.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/03/19/cobalt.html"/>
-        <updated>2020-03-19T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.8.3, which main purpose is adding support for the new Scala version, 2.12.11. Additionally, we included a couple of recent fixes.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">61</td> </tr> <tr> <td>Merged PRs</td> <td align="center">18</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Cl...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.8.3 - Cobalt</id>
+        <link href="http://scalameta.org/metals/blog/2020/03/19/cobalt"/>
+        <updated>2020-03-19T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are happy to announce the release of Metals v0.8.3, which main purpose is]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.1 - Cobalt]]></title>
-        <id>http://scalameta.org/metals/blog/2020/02/26/cobalt.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/02/26/cobalt.html"/>
-        <updated>2020-02-26T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.8.1. This release includes a large number of bug fixes and some new features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">313</td> </tr> <tr> <td>Merged PRs</td> <td align="center">100</td> </tr> <tr> <td>Contributors</td> <td align="center">19</td> </tr> <tr> <td>Closed issues</td> <td align="center">52</td> </tr> <tr> <td>New features</td> <td align="center">2</td> </tr> </tbody> </table> <p>For full det...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.8.1 - Cobalt</id>
+        <link href="http://scalameta.org/metals/blog/2020/02/26/cobalt"/>
+        <updated>2020-02-26T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.8.1. This release includes a]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.0 - Cobalt]]></title>
-        <id>http://scalameta.org/metals/blog/2020/01/10/cobalt.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/01/10/cobalt.html"/>
-        <updated>2020-01-10T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.8.0, codename Cobalt. This release includes a large number of new features and improvements, which have been under development since September 2019.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">772</td> </tr> <tr> <td>Merged PRs</td> <td align="center">21...</td></tr></tbody></table>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.8.0 - Cobalt</id>
+        <link href="http://scalameta.org/metals/blog/2020/01/10/cobalt"/>
+        <updated>2020-01-10T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.8.0, codename Cobalt. This]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.7.6 - Thorium]]></title>
-        <id>http://scalameta.org/metals/blog/2019/09/23/thorium.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/09/23/thorium.html"/>
-        <updated>2019-09-23T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.6, which will most likely be the last release before the v0.8.0 one. This release includes support for new Scala versions (2.12.10, 2.13.1) and a couple of fixes. It also adds a new formatting on ...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.7.6 - Thorium</id>
+        <link href="http://scalameta.org/metals/blog/2019/09/23/thorium"/>
+        <updated>2019-09-23T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.7.6, which will most likely]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.7.5 - Thorium]]></title>
-        <id>http://scalameta.org/metals/blog/2019/09/12/thorium.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/09/12/thorium.html"/>
-        <updated>2019-09-12T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.5 - codename &quot;Thorium&quot; 🎉 The release includes couple of bug fixes for 0.7.2, which were present in some rare scenarios. We also added a new experimental feature, which we would be happy ...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.7.5 - Thorium</id>
+        <link href="http://scalameta.org/metals/blog/2019/09/12/thorium"/>
+        <updated>2019-09-12T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.7.5 - codename "Thorium" 🎉]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.7.2 - Thorium]]></title>
-        <id>http://scalameta.org/metals/blog/2019/09/02/thorium.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/09/02/thorium.html"/>
-        <updated>2019-09-02T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.2 - codename &quot;Thorium&quot; 🎉 The release includes mostly bug fixes with some smaller new features. We are skipping over 0.7.1 due to a critical bug we discovered</p> <p>Metals is a language server ...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/TomekGodzik</uri>
-        </author>
+        <id>Metals v0.7.2 - Thorium</id>
+        <link href="http://scalameta.org/metals/blog/2019/09/02/thorium"/>
+        <updated>2019-09-02T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.7.2 - codename "Thorium" 🎉]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.7.0 - Thorium]]></title>
-        <id>http://scalameta.org/metals/blog/2019/06/28/thorium.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/06/28/thorium.html"/>
-        <updated>2019-06-28T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.0 - codename &quot;Thorium&quot; 🎉 The release includes several new features along with bug fixes.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, Sublime Text and Emacs....</p>]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.7.0 - Thorium</id>
+        <link href="http://scalameta.org/metals/blog/2019/06/28/thorium"/>
+        <updated>2019-06-28T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.7.0 - codename "Thorium" 🎉]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.6.1 - Radium]]></title>
-        <id>http://scalameta.org/metals/blog/2019/06/11/radium.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/06/11/radium.html"/>
-        <updated>2019-06-11T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.6.1, codename &quot;Radium&quot; 🎉 The release mostly focused on adding support for the build tools Gradle, Maven and Mill.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, ...</p>]]></summary>
-        <author>
-            <name>Tomasz Godzik</name>
-            <uri>https://twitter.com/tomekgodzik</uri>
-        </author>
+        <id>Metals v0.6.1 - Radium</id>
+        <link href="http://scalameta.org/metals/blog/2019/06/11/radium"/>
+        <updated>2019-06-11T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.6.1, codename "Radium" 🎉]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.5.1 - Mercury]]></title>
-        <id>http://scalameta.org/metals/blog/2019/04/26/mercury.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/04/26/mercury.html"/>
-        <updated>2019-04-26T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>This release introduces minor improvements and bug fixes with highlights including:</p> <ul> <li>auto-imports are inserted at the toplevel instead of locally</li> <li>document symbol lists inner methods and anonymous classes</li> <li>the recommended Vim client is now coc.nvim</li> <li>dia...</li></ul>]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.5.1 - Mercury</id>
+        <link href="http://scalameta.org/metals/blog/2019/04/26/mercury"/>
+        <updated>2019-04-26T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[This release introduces minor improvements and bug fixes with highlights]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.5.0 - Mercury]]></title>
-        <id>http://scalameta.org/metals/blog/2019/04/12/mercury.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/04/12/mercury.html"/>
-        <updated>2019-04-12T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code fo...</li></ul>]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.5.0 - Mercury</id>
+        <link href="http://scalameta.org/metals/blog/2019/04/12/mercury"/>
+        <updated>2019-04-12T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.5, codename "Mercury" 🎉]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.4.4 - Tin]]></title>
-        <id>http://scalameta.org/metals/blog/2019/02/01/tin.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/02/01/tin.html"/>
-        <updated>2019-02-01T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
-Sublime Text and Emacs. Metals is developed at the
-<a href="https://scala.epfl.ch/">Scala Center</a> along with contributors from the
-community.</p>
-]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.4.4 - Tin</id>
+        <link href="http://scalameta.org/metals/blog/2019/02/01/tin"/>
+        <updated>2019-02-01T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Metals is a language server for Scala that works with VS Code, Atom, Vim,]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.4.0 - Tin]]></title>
-        <id>http://scalameta.org/metals/blog/2019/01/24/tin.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/01/24/tin.html"/>
-        <updated>2019-01-24T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.4, codename &quot;Tin&quot; 🎉 Metals
-is a language server for Scala that works with VS Code, Atom, Vim, Sublime Text
-and Emacs. Metals is developed at the <a href="https://scala.epfl.ch/">Scala Center</a>
-with contributors from the community.</p>
-]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.4.0 - Tin</id>
+        <link href="http://scalameta.org/metals/blog/2019/01/24/tin"/>
+        <updated>2019-01-24T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.4, codename "Tin" 🎉 Metals]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Low-memory symbol indexing with bloom filters]]></title>
-        <id>http://scalameta.org/metals/blog/2019/01/22/bloom-filters.html</id>
-        <link href="http://scalameta.org/metals/blog/2019/01/22/bloom-filters.html"/>
-        <updated>2019-01-22T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>The latest Metals release introduces three new in-memory indexes to implement
-the features &quot;find symbol references&quot; and &quot;fuzzy symbol search&quot;. Indexes are
-important to provide fast response times for user requests but they come at the
-price of higher memory usage. To keep memory usage low, Metals uses a data
-structure called bloom filters that implements space-efficient sets. Thanks to
-bloom filters, the three new indexes added in the last release use only a few
-megabytes of memory even for large projects with &gt;500k lines of code.</p>
-<p>In this post, we look into how Metals uses bloom filters for fast indexing with
-small memory footprint. We explain what bloom filters are and how we can encode
-problems like fuzzy searching to take advantage of the nice properties of bloom
-filters. Finally, we evaluate these new features on a real-world project: the
-<a href="https://github.com/akka/akka">Akka</a> build.</p>
-]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Low-memory symbol indexing with bloom filters</id>
+        <link href="http://scalameta.org/metals/blog/2019/01/22/bloom-filters"/>
+        <updated>2019-01-22T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[The latest Metals release introduces three new in-memory indexes to implement]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.3.2 - Iron]]></title>
-        <id>http://scalameta.org/metals/blog/2018/12/14/iron.html</id>
-        <link href="http://scalameta.org/metals/blog/2018/12/14/iron.html"/>
-        <updated>2018-12-14T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are pleased to announce the release of Metals v0.3.2. Metals is a language
-server for Scala that works with VS Code, Atom, Vim, Sublime Text and Emacs.
-Metals is developed at the <a href="https://scala.epfl.ch/">Scala Center</a> with
-contributors from the community.</p>
-]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.3.2 - Iron</id>
+        <link href="http://scalameta.org/metals/blog/2018/12/14/iron"/>
+        <updated>2018-12-14T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are pleased to announce the release of Metals v0.3.2. Metals is a language]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Fast goto definition with low memory footprint]]></title>
-        <id>http://scalameta.org/metals/blog/2018/12/12/fast-goto-definition.html</id>
-        <link href="http://scalameta.org/metals/blog/2018/12/12/fast-goto-definition.html"/>
-        <updated>2018-12-12T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>Metals throws away its navigation index when it shuts down. Next time it starts,
-the index is computed again from scratch. Although this approach is simple, it
-requires indexing to be fast enough so you don't mind running it again and
-again. Also, because we don't persist the index to disk, we need to be careful
-with memory usage.</p>
-<p>This post covers how Metals achieves fast source indexing for Scala with a small
-memory footprint. We describe the problem statement, explain the initial
-solution and how an optimization delivered a 10x speedup. Finally, we evaluate
-the result on a real-world project.</p>
-]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Fast goto definition with low memory footprint</id>
+        <link href="http://scalameta.org/metals/blog/2018/12/12/fast-goto-definition"/>
+        <updated>2018-12-12T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Metals throws away its navigation index when it shuts down. Next time it starts,]]></summary>
     </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.3 - Iron]]></title>
-        <id>http://scalameta.org/metals/blog/2018/12/06/iron.html</id>
-        <link href="http://scalameta.org/metals/blog/2018/12/06/iron.html"/>
-        <updated>2018-12-06T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.3, codename &quot;Iron&quot; 🎉 Metals
-is a language server for Scala.</p>
-<h2><a class="anchor" aria-hidden="true" id="tldr"></a><a href="#tldr" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TL;DR</h2>
-<ul>
-<li>simple installation</li>
-<li>accurate diagnostics</li>
-<li>goto definition</li>
-<li>text editors: Visual Studio Code, Atom, Vim and Sublime Text</li>
-<li>no completions</li>
-</ul>
-<p>Check out the website and give Metals a try: <a href="https://scalameta.org/metals/">https://scalameta.org/metals/</a></p>
-]]></summary>
-        <author>
-            <name>Ólafur Páll Geirsson</name>
-            <uri>https://twitter.com/olafurpg</uri>
-        </author>
+        <id>Metals v0.3 - Iron</id>
+        <link href="http://scalameta.org/metals/blog/2018/12/06/iron"/>
+        <updated>2018-12-06T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We are excited to announce the release of Metals v0.3, codename "Iron" 🎉 Metals]]></summary>
     </entry>
 </feed>
