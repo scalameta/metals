@@ -81,7 +81,10 @@ object CompletionPos {
           else {
             head match {
               case i: Ident => i.sourcePos.point
-              case Select(qual, _) => qual.endPos.point + 1
+              case s: Select =>
+                // in case of error `point` might be greater than end
+                // Example: `List.@@`
+                math.min(s.span.point, s.span.end)
               case _ => fallback
             }
           }
