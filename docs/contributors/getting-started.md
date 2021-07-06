@@ -161,7 +161,7 @@ coursier bootstrap \
 
 **NOTE** if you're able to configure your client using initialization options,
 then the `client` property is not necessary. You can see all the options
-[here](https://scalameta.org/metals/docs/integrations/new-editor.html#initializationoptions).
+[here](https://scalameta.org/metals/docs/integrations/new-editor#initializationoptions).
 
 Finally, start Vim with the local Metals version
 

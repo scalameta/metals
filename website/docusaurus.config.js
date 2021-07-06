@@ -5,9 +5,6 @@ module.exports = {
   "baseUrl": "/metals/",
   "organizationName": "scalameta",
   "projectName": "metals",
-  "stylesheets": [
-    "/metals/css/custom.css"
-  ],
   "favicon": "img/favicon.ico",
   "customFields": {
     "repoUrl": "https://github.com/scalameta/metals"
@@ -43,6 +40,12 @@ module.exports = {
       {
         "fromExtensions": [
           "html"
+        ],
+        "redirects": [
+          {
+            "to": "/docs/",
+            "from": "/docs/editors/overview.html"
+          }
         ]
       }
     ]

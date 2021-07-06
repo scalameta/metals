@@ -392,7 +392,7 @@ having multiple windows, you can use `<C-w> + w` to jump into it.
 ## Other Available Commands
 
 You can see a full list of the Metals server commands
-[here](https://scalameta.org/metals/docs/integrations/new-editor.html#metals-server-commands).
+[here](https://scalameta.org/metals/docs/integrations/new-editor#metals-server-commands).
 
 ## Show document symbols
 
@@ -532,4 +532,4 @@ potential client. So make sure it matches your client name. This line isn't
 mandatory though as your client can fully be configured via
 `InitializationOptions`, which should be easily configurable by your client. You
 can read more about his
-[here](https://scalameta.org/metals/blog/2020/07/23/configuring-a-client.html#initializationoptions).
+[here](https://scalameta.org/metals/blog/2020/07/23/configuring-a-client#initializationoptions).
