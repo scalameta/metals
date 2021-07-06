@@ -115,53 +115,6 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
     } yield ()
   }
 
-  // We use Mdoc with `reset-object` modifier which makes sure that object is used to wrap statements
-  test("reset-object") {
-    val path = "hi.worksheet.sc"
-    for {
-      _ <- server.initialize(
-        s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/${path}
-           |import scala.annotation.tailrec
-           |
-           |object Foo {
-           |  case class Bar(b: Int) extends AnyVal
-           |}
-           |
-           |@tailrec
-           |def factorial(n: BigInt, acc: BigInt): BigInt = {
-           |  if (n <=1) acc
-           |  else factorial(n-1, n*acc)
-           |}
-           |
-           |factorial(3,1)
-           |""".stripMargin
-      )
-      _ <- server.didOpen(path)
-      _ = assertNoDiff(
-        client.workspaceDecorations,
-        """|import scala.annotation.tailrec
-           |
-           |object Foo {
-           |  case class Bar(b: Int) extends AnyVal
-           |}
-           |
-           |@tailrec
-           |def factorial(n: BigInt, acc: BigInt): BigInt = {
-           |  if (n <=1) acc
-           |  else factorial(n-1, n*acc)
-           |}
-           |
-           |factorial(3,1) // : BigInt = 6
-           |""".stripMargin
-      )
-    } yield ()
-  }
-
   test("akka") {
     val path = "hi.worksheet.sc"
     for {
