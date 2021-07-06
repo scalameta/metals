@@ -1,0 +1,25 @@
+:root{
+  --ifm-color-primary-lightest: #0AA4B5;
+  --ifm-color-primary-lighter: #0991A0;
+  --ifm-color-primary-light: #098B99;
+  --ifm-color-primary: #087E8B;
+  --ifm-color-primary-dark: #07717D;
+  --ifm-color-primary-darker: #076B76;
+  --ifm-color-primary-darkest: #065861;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}
+
+.flex-row-reverse{
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+}
+
+.footer__logo {
+  max-height: 50px;
+}

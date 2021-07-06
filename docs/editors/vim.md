@@ -1,5 +1,6 @@
 ---
 id: vim
+sidebar_label: Vim
 title: Vim
 ---
 

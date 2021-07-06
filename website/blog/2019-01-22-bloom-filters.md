@@ -24,13 +24,6 @@ filters. Finally, we evaluate these new features on a real-world project: the
 The work presented in this post was done as part of my job at the
 [Scala Center](https://scala.epfl.ch/).
 
-<style>
-blockquote {
-  background-color: rgba(100, 205, 255, 0.3);
-  border-left: 8px solid #64cdff;
-}
-</style>
-
 ## Bloom filters
 
 [Bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) are a probabilistic
@@ -363,9 +356,7 @@ bottle-neck appears to be starting the file watcher and parsing all `*.scala`
 and `*.java` sources in the workspace. The following flamegraph shows a detailed
 breakdown of what goes on during indexing.
 
-<a href="https://geirsson.com/assets/metals-akka-initialize.svg" target="_blank">
-  <img src="https://i.imgur.com/Xhr1wXp.jpg" alt="Akka indexing flamegraph">
-</a>
+![Akka indexing flamegraph](https://i.imgur.com/Xhr1wXp.jpg)(https://geirsson.com/assets/metals-akka-initialize.svg)
 
 > Click on image to interactively explore the flamegraph.
 
@@ -382,9 +373,7 @@ the distribution is different for how long each indexing task takes. Prisma has
 fewer sources (80k lines of Scala code, no Java) and a larger number of library
 dependencies compared to Akka.
 
-<a href="https://geirsson.com/assets/metals-prisma-initialize.svg" target="_blank">
-  <img src="https://i.imgur.com/JR3SNx6.jpg" alt="Prisma indexing flamegraph">
-</a>
+![Prisma indexing flamegraph](https://i.imgur.com/JR3SNx6.jpg)(https://geirsson.com/assets/metals-prisma-initialize.svg)
 
 > Click on image to interactively explore the flamegraph.
 

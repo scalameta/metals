@@ -1,5 +1,6 @@
 ---
 id: vscode
+sidebar_label: VS Code
 title: Visual Studio Code
 ---
 
@@ -8,6 +9,7 @@ title: Visual Studio Code
 ```scala mdoc:requirements
 
 ```
+
 
 ## Installation
 

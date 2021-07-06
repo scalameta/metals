@@ -2,6 +2,7 @@
 id: overview
 title: Text Editors
 sidebar_label: Overview
+slug: /
 ---
 
 ## Latest Metals server versions
@@ -126,7 +127,6 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-  </tr>
   </tr>
   <tr>
     <td>Worksheets</td>

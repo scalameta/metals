@@ -10,9 +10,11 @@ object Docs {
   def releasesResolverTable: String = {
     <table>
       <thead>
-        <th>Version</th>
-        <th>Published</th>
-        <th>Resolver</th>
+        <tr>
+          <th>Version</th>
+          <th>Published</th>
+          <th>Resolver</th>
+        </tr>
       </thead>
       <tbody>
         <tr>
@@ -32,8 +34,10 @@ object Docs {
   def releasesTable: String = {
     <table>
       <thead>
-        <th>Version</th>
-        <th>Published</th>
+        <tr>
+          <th>Version</th>
+          <th>Published</th>
+        </tr>
       </thead>
       <tbody>
         <tr>
