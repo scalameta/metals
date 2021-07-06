@@ -31,7 +31,7 @@ In this file you see the first configuration options that existed for Metals.
 You see things like `isLogShowMessage` to ensure users were correctly getting
 status messages instead of everything just going into the logs. (This was also
 before
-[`metals/status`](https://scalameta.org/metals/docs/editors/new-editor.html#metalsstatus)
+[`metals/status`](https://scalameta.org/metals/docs/integrations/new-editor#metalsstatus)
 existed which is used today for a better status experience in Metals). You also
 see other options like `isHttpEnabled` for Metals to start the Doctor for those
 that needed an HTTP client interface, or even an `icons` setting to ensure
@@ -150,7 +150,7 @@ properties. In theory this also meant that you could not use the same Metals
 executable for VS Code, Vim, or Emacs since the server is fully being configured
 by the client itself. The current settings that can be passed in and their
 defaults are explained in detail [here on the
-website](https://scalameta.org/metals/docs/editors/new-editor.html#initializationoptions),
+website](https://scalameta.org/metals/docs/integrations/new-editor#initializationoptions),
 but the interface is as follows:
 
 ```typescript
@@ -204,7 +204,7 @@ recommended to use them to configure Metals. However, there are still a few
 server properties that remain only server properties since they are not meant to
 be widely used, and aren't exactly recommended to use for the average user. You
 can see an up to date list of these [here on the
-website](https://scalameta.org/metals/docs/editors/new-editor.html#metals-server-properties)
+website](https://scalameta.org/metals/docs/integrations/new-editor#metals-server-properties)
 and what functionality they provide.
 
 ## Conclusion
