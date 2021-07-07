@@ -610,6 +610,20 @@ trait Completions { this: MetalsGlobal =>
         case _ => EmptyTree
       }
     }
+    private def addToPath(path: List[Tree], t: Tree): List[Tree] = {
+      def goesAfter(prev: Tree): Boolean =
+        // in most cases prev tree should include next one
+        // however it doesn't work for some synthetic trees
+        // in this case check if both tree have different position ranges
+        prev.pos.includes(t.pos) || !t.pos.includes(prev.pos)
+
+      path match {
+        case Nil => List(t)
+        case head :: tl if goesAfter(head) => t :: head :: tl
+        case head :: tl => head :: addToPath(tl, t)
+      }
+    }
+
     protected def isEligible(t: Tree): Boolean = !t.pos.isTransparent
     override def traverse(t: Tree): Unit = {
       t match {
@@ -619,7 +633,7 @@ trait Completions { this: MetalsGlobal =>
         case _ =>
           if (t.pos.includes(pos)) {
             if (isEligible(t)) {
-              lastVisitedParentTrees ::= t
+              lastVisitedParentTrees = addToPath(lastVisitedParentTrees, t)
             }
             super.traverse(t)
           } else {

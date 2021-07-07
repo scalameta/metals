@@ -20,6 +20,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         params.uri().toString(),
         None
       )
+      typeCheck(unit)
       val pos = unit.position(params.offset())
       val tree = definitionTypedTreeAt(pos)
       if (
@@ -95,7 +96,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         case _ => tree
       }
     }
-    val typedTree = typedTreeAt(pos)
+    val typedTree = locateTree(pos)
     val tree0 = typedTree match {
       case sel @ Select(qual, _) if sel.tpe == ErrorType => qual
       case Import(expr, _) => expr
@@ -133,4 +134,5 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         loop(tree)
     }
   }
+
 }
