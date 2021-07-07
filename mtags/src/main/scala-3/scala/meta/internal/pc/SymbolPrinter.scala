@@ -40,12 +40,12 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
           name = super.nameString(sym.name)
         } yield name
         "package " + owners.toList.reverse.mkString(".")
-      // enum
-      case _ if sym.companionClass.is(Flags.Enum) =>
-        s"enum $name: "
       // enum case
       case _ if sym.is(Flags.EnumVal) =>
         s"case $name: "
+      // enum
+      case _ if sym.is(Flags.Enum) || sym.companionClass.is(Flags.Enum) =>
+        s"enum $name: "
       // default
       case key =>
         // no need to add final on object, since they are all final
@@ -73,7 +73,12 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
     val typeSymbol = info.typeSymbol
     sym match {
       case p if p.is(Flags.Package) => fullDef
-      case p if typeSymbol.is(Flags.Module) =>
+      /* Type cannot be shown on the right since it is already a type
+       * let's instead use that space to show the full path.
+       */
+      case p
+          if typeSymbol.is(Flags.Module) || // object
+            (sym.is(Flags.Enum) && !sym.is(Flags.EnumVal)) => // enum
         fullDef.trim + " " + typeSymbol.owner.fullName.stripModuleClassSuffix.toString
       case m if m.is(Flags.Method) =>
         fullDef + defaultMethodSignature(m, history, info)
