@@ -1318,4 +1318,24 @@ class CompletionSuite extends BaseCompletionSuite {
     assertSingleItem = false
   )
 
+  checkEdit(
+    "dot-error-tree-edit",
+    """
+      |case class A(x: Int) {
+      |  "".@@
+      |  def foo: Int = {
+      |    val a = 42
+      |     a
+      |  }
+      |}""".stripMargin,
+    """
+      |case class A(x: Int) {
+      |  "".toInt
+      |  def foo: Int = {
+      |    val a = 42
+      |     a
+      |  }
+      |}""".stripMargin,
+    filter = _.startsWith("toInt:")
+  )
 }
