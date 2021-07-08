@@ -162,5 +162,5 @@ class OrganizeImportsQuickFix(
 
 object OrganizeImportsQuickFix {
   final val kind: String = l.CodeActionKind.QuickFix
-  final val title: String = "Fix organize imports"
+  final val title: String = "Fix imports"
 }
