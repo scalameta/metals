@@ -4,6 +4,7 @@ import scala.meta.internal.tokenizers.Chars
 
 import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import org.eclipse.{lsp4j => l}
@@ -82,9 +83,8 @@ object CompletionPos {
             head match {
               case i: Ident => i.sourcePos.point
               case s: Select =>
-                // in case of error `point` might be greater than end
-                // Example: `List.@@`
-                math.min(s.span.point, s.span.end)
+                if (s.name.toTermName == nme.ERROR) fallback
+                else s.span.point
               case _ => fallback
             }
           }
