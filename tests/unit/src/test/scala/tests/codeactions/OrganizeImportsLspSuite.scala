@@ -139,7 +139,7 @@ class OrganizeImportsLspSuite
        |  val a = "no one wants unused imports"
        |}
        |""".stripMargin,
-    s"${SourceOrganizeImports.title}",
+    s"${OrganizeImportsQuickFix.title}",
     """|package a
        |
        |
@@ -148,7 +148,7 @@ class OrganizeImportsLspSuite
        |  val a = "no one wants unused imports"
        |}
        |""".stripMargin,
-    kind = List(sourceKind),
+    kind = List(quickFixKind),
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption
   )
@@ -193,54 +193,12 @@ class OrganizeImportsLspSuite
     expectNoDiagnostics = false
   )
 
-  check(
-    "quickfix-available",
-    """
-      |import scala.util.Try<<>>
-      |
-      |object A {
-      |  val action = "quick should be available"
-      |}
-      |""".stripMargin,
-    s"${OrganizeImportsQuickFix.title}",
-    """
-      |
-      |
-      |object A {
-      |  val action = "quick should be available"
-      |}
-      |""".stripMargin,
-    kind = List(quickFixKind),
-    scalacOptions = scalacOption
-  )
-
-  check(
-    "quickfix-available-on-hover",
-    """
-      |import scala.@@util.Try
-      |
-      |object A {
-      |  <<val action = "quick should be available">>
-      |}
-      |""".stripMargin,
-    s"${OrganizeImportsQuickFix.title}",
-    """
-      |
-      |
-      |object A {
-      |  val action = "quick should be available"
-      |}
-      |""".stripMargin,
-    kind = List(quickFixKind),
-    scalacOptions = scalacOption
-  )
-
   checkNoAction(
-    "no-quickfix-availale",
+    "no-quickfix-available",
     """
       |<<>>
       |object A {
-      |  val action = "quick should not be available"
+      |  val action = "quick fix should not be available"
       |}
       |""".stripMargin
   )

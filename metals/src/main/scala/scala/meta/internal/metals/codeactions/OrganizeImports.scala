@@ -122,7 +122,7 @@ class SourceOrganizeImports(
 
 object SourceOrganizeImports {
   final val kind: String = l.CodeActionKind.SourceOrganizeImports
-  final val title: String = "Source organize imports"
+  final val title: String = "Organize imports"
 }
 
 class OrganizeImportsQuickFix(
@@ -162,5 +162,5 @@ class OrganizeImportsQuickFix(
 
 object OrganizeImportsQuickFix {
   final val kind: String = l.CodeActionKind.QuickFix
-  final val title: String = "Quick fix organize imports"
+  final val title: String = "Fix organize imports"
 }
