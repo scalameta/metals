@@ -94,7 +94,7 @@ module.exports = {
             "to": "docs/build-tools/overview"
           },
           {
-            "label": "Build Tools",
+            "label": "Project Goals",
             "to": "docs/contributors/project-goals"
           },
           {
