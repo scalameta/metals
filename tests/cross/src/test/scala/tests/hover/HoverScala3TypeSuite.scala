@@ -57,6 +57,31 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
   )
 
   check(
+    "enums2",
+    """|
+       |object SimpleEnum:
+       |  enum <<Col@@or>>:
+       |   case Red, Green, Blue
+       |
+       |""".stripMargin,
+    """|enum Color: enums2.SimpleEnum
+       |""".stripMargin.hover
+  )
+
+  check(
+    "enums3",
+    """|
+       |object SimpleEnum:
+       |  enum Color:
+       |    case Red, Green, Blue
+       |  val color = <<Col@@or>>.Red
+       |
+       |""".stripMargin,
+    """|enum Color: enums3.SimpleEnum
+       |""".stripMargin.hover
+  )
+
+  check(
     "enum-params",
     """|
        |object SimpleEnum:
