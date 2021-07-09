@@ -3,7 +3,8 @@ package tests.feature
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.InsertInferredType
-import scala.meta.internal.metals.codeactions.OrganizeImports
+import scala.meta.internal.metals.codeactions.SourceOrganizeImports
+import scala.meta.internal.metals.codeactions.SourceOrganizeImports.kind
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
 import munit.Location
@@ -38,7 +39,7 @@ class Scala3CodeActionLspSuite
       |  val tr = Try{ new Exception("name") }
       |}
       |""".stripMargin,
-    s"${OrganizeImports.title}",
+    s"${SourceOrganizeImports.title}",
     """|package a
        |import scala.concurrent.ExecutionContext
        |import scala.concurrent.Future
@@ -50,7 +51,7 @@ class Scala3CodeActionLspSuite
        |  val tr = Try{ new Exception("name") }
        |}
        |""".stripMargin,
-    kind = List(OrganizeImports.kind)
+    kind = List(SourceOrganizeImports.kind)
   )
 
   checkExtractedMember(

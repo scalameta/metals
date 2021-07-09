@@ -1,10 +1,12 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.OrganizeImports
+import scala.meta.internal.metals.codeactions.OrganizeImportsQuickFix
+import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 
 class OrganizeImportsLspSuite
     extends BaseCodeActionLspSuite("OrganizeImports") {
-  val kind: String = OrganizeImports.kind
+  val sourceKind: String = SourceOrganizeImports.kind
+  val quickFixKind: String = OrganizeImportsQuickFix.kind
   val scalacOption: List[String] = List("-Ywarn-unused-import")
   def scalafixConf(path: String = "/.scalafix.conf"): String =
     s"""|$path
@@ -42,7 +44,7 @@ class OrganizeImportsLspSuite
       |  val k = Future.successful(1)
       |}
       |""".stripMargin,
-    s"${OrganizeImports.title}",
+    s"${SourceOrganizeImports.title}",
     """
       |package a
       |import scala.concurrent.Future
@@ -53,7 +55,7 @@ class OrganizeImportsLspSuite
       |  val k = Future.successful(1)
       |}
       |""".stripMargin,
-    kind = List(kind),
+    kind = List(sourceKind),
     scalacOptions = scalacOption
   )
 
@@ -69,7 +71,7 @@ class OrganizeImportsLspSuite
       |  val optional = Optional.empty()
       |}
       |""".stripMargin,
-    s"${OrganizeImports.title}",
+    s"${SourceOrganizeImports.title}",
     """
       |package a
       |import scala.concurrent.duration._
@@ -81,7 +83,7 @@ class OrganizeImportsLspSuite
       |  val optional = Optional.empty()
       |}
       |""".stripMargin,
-    kind = List(kind),
+    kind = List(sourceKind),
     scalafixConf = scalafixConf("/project/scalafix.conf"),
     scalacOptions = scalacOption,
     configuration = Some {
@@ -110,7 +112,7 @@ class OrganizeImportsLspSuite
       |  val optional = Optional.empty()
       |}
       |""".stripMargin,
-    s"${OrganizeImports.title}",
+    s"${SourceOrganizeImports.title}",
     """
       |package a
       |import scala.concurrent.duration._
@@ -122,7 +124,7 @@ class OrganizeImportsLspSuite
       |  val optional = Optional.empty()
       |}
       |""".stripMargin,
-    kind = List(kind),
+    kind = List(sourceKind),
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption
   )
@@ -137,7 +139,7 @@ class OrganizeImportsLspSuite
        |  val a = "no one wants unused imports"
        |}
        |""".stripMargin,
-    s"${OrganizeImports.title}",
+    s"${OrganizeImportsQuickFix.title}",
     """|package a
        |
        |
@@ -146,7 +148,22 @@ class OrganizeImportsLspSuite
        |  val a = "no one wants unused imports"
        |}
        |""".stripMargin,
-    kind = List(kind),
+    kind = List(quickFixKind),
+    scalafixConf = scalafixConf(),
+    scalacOptions = scalacOption
+  )
+
+  checkNoAction(
+    "on-used",
+    """|package a
+       |
+       |<<import scala.util.Try>>
+       |
+       |object A {
+       |  val a = "everyone wants used imports"
+       |  val b: Try[Unit] = ???
+       |}
+       |""".stripMargin,
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption
   )
@@ -170,9 +187,19 @@ class OrganizeImportsLspSuite
        |  val a: Int = "no one wants unused imports"
        |}
        |""".stripMargin,
-    kind = List(kind),
+    kind = List(sourceKind),
     scalafixConf = scalafixConf(),
     scalacOptions = scalacOption,
     expectNoDiagnostics = false
+  )
+
+  checkNoAction(
+    "no-quickfix-available",
+    """
+      |<<>>
+      |object A {
+      |  val action = "quick fix should not be available"
+      |}
+      |""".stripMargin
   )
 }
