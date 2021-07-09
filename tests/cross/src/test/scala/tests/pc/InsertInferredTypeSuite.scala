@@ -11,7 +11,6 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 import tests.BaseCodeActionSuite
-import tests.BuildInfoVersions
 
 class InsertInferredTypeSuite extends BaseCodeActionSuite {
 
@@ -21,10 +20,6 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
       Dependency.of("org.typelevel", s"cats-effect_$binaryVersion", "3.1.1")
     )
   }
-
-  // To avoid dealing with different cats-effect versions
-  override protected def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3RCVersions.toSet
 
   checkEdit(
     "val",
