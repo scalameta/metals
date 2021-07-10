@@ -99,7 +99,7 @@ class CompletionProvider(
           }
       }
       val item = new CompletionItem(label)
-      if (metalsConfig.isCompletionItemDetailEnabled) {
+      if (metalsConfig.isCompletionItemDetailEnabled && !detail.isEmpty()) {
         item.setDetail(detail)
       }
       val templateSuffix =
