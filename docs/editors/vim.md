@@ -11,14 +11,14 @@ Metals-specific extensions to get the best experience since they offer
 Metals-specific commands and implement the Metals LSP extensions. 
 
 - [coc-metals](https://github.com/scalameta/coc-metals) An extension for
-    [`coc.nvim`](https://github.com/neoclide/coc.nvim) This provides the most
-    feature-filled experience. This is recommended for most users, and the
-    majority of the documentation below reflects this option.
+    [`coc.nvim`](https://github.com/neoclide/coc.nvim) If you're already using
+    other coc.nvim plugins or you are using Vim instead of Neovim, then this is
+    probably the best option for you. Most of the documentation below refers to
+    coc-metals.
 - [nvim-metals](https://github.com/scalameta/nvim-metals) A Lua extension for
-    the [built-in LSP support](https://neovim.io/doc/user/lsp.html) in Neovim
-    0.5.x. Recommended for those that like a thinner client. _NOTE_: This option
-    is _not_ as stable as `coc-metals` yet and requires the nightly version of
-    Neovim. You can find detailed instructions for this plugin
+    the [built-in LSP support](https://neovim.io/doc/user/lsp.html) in Neovim.
+    Note that this requires at least the 0.5.0 release of Neovim. You can find
+    the full documentation for nvim-metals
     [here](https://github.com/scalameta/nvim-metals/blob/master/doc/metals.txt).
 
 ```scala mdoc:requirements
@@ -58,7 +58,7 @@ curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 ## Installing coc.nvim
 
 Once the requirements are satisfied, we can now proceed to install
-[`neoclide/coc.nvim`] (https://github.com/neoclide/coc.nvim/), which provides
+[`neoclide/coc.nvim`](https://github.com/neoclide/coc.nvim/), which provides
 Language Server Protocol support to Vim/Nvim  to communicate with the Metals
 language server.
 
