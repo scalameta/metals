@@ -200,6 +200,7 @@ lazy val V = new {
   val bsp = "2.0.0-M13"
   val bloop = "1.4.8-19-4d9f966b"
   val scala3 = "3.0.1"
+  val nextScala3RC = "3.0.2-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -242,11 +243,7 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions =
-    Seq(
-      scala3,
-      "3.0.0"
-    )
+  def nonDeprecatedScala3Versions = Seq(nextScala3RC, scala3, "3.0.0")
   def deprecatedScala3Versions = Seq()
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
@@ -612,13 +609,7 @@ lazy val mtest = project
     testSettings,
     sharedSettings,
     libraryDependencies ++= List(
-      if (
-        scalaVersion.value == "3.0.0-RC1" || scalaVersion.value == "3.0.0-RC2"
-      ) {
-        "org.scalameta" %% "munit" % "0.7.23"
-      } else {
-        "org.scalameta" %% "munit" % V.munit
-      },
+      "org.scalameta" %% "munit" % V.munit,
       "io.get-coursier" % "interface" % V.coursierInterfaces
     ),
     buildInfoPackage := "tests",
