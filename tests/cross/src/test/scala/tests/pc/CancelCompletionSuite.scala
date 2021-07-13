@@ -38,7 +38,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       name: TestOptions,
       query: String,
       expected: String,
-      compat: Map[String, String]
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = params(query)
@@ -90,10 +90,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|assert(assertion: Boolean): Unit
        |assert(assertion: Boolean, message: => Any): Unit
-       |""".stripMargin,
-    compat = Map(
-      "3.0.0-RC1" -> "assert(assertion: Boolean): Unit"
-    )
+       |""".stripMargin
   )
 
 }

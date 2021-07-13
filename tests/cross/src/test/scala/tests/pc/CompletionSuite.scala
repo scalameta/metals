@@ -129,7 +129,7 @@ class CompletionSuite extends BaseCompletionSuite {
   check(
     // before 3.0.1 completions with the same name were included in one completion in a random order
     "dot".tag(
-      IgnoreScalaVersion(Set("3.0.0-RC1", "3.0.0-RC2", "3.0.0-RC3", "3.0.0"))
+      IgnoreScalaVersion(Set("3.0.0"))
     ),
     """
       |object A {
@@ -697,16 +697,13 @@ class CompletionSuite extends BaseCompletionSuite {
        |readAttributes[A <: BasicFileAttributes](path: Path, type: Class[A], options: LinkOption*): A
        |""".stripMargin,
     compat = Map(
-      "3.0.0-RC1" ->
-        """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
-           |""".stripMargin,
-      "3.0.1" ->
-        """|readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
-           |readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
-           |""".stripMargin,
-      "3.0" ->
+      "3.0.0" ->
         """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
            |readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
+           |""".stripMargin,
+      "3.0" ->
+        """|readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
+           |readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
            |""".stripMargin
     )
   )
@@ -815,7 +812,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |until(end: Long): NumericRange.Exclusive[Long]
            |until(end: Long, step: Long): NumericRange.Exclusive[Long]
            |""".stripMargin,
-      "3.0.0-RC1" -> "until(end: Int, step: Int): Range",
       "3.0" ->
         """|until(end: Int): Range
            |until(end: Int, step: Int): Range
@@ -1021,11 +1017,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
-      "3.0.0-RC1" ->
-        """|Seq scala.collection.immutable
-           |Set scala.collection.immutable
-           |StringBuilder scala.collection.mutable
-           |""".stripMargin,
       "3.0" ->
         """|Seq scala.collection.immutable
            |Set scala.collection.immutable
@@ -1052,15 +1043,15 @@ class CompletionSuite extends BaseCompletionSuite {
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
-      "3.0.1" ->
-        """|Seq scala.collection.immutable
-           |Set scala.collection.immutable
-           |Stream scala.collection.immutable
-           |""".stripMargin,
-      "3.0" ->
+      "3.0.0" ->
         """|SafeVarargs java.lang
            |SafeVarargs java.lang
            |ScalaReflectionException scala
+           |""".stripMargin,
+      "3.0" ->
+        """|Seq scala.collection.immutable
+           |Set scala.collection.immutable
+           |Stream scala.collection.immutable
            |""".stripMargin
     )
   )
@@ -1085,11 +1076,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Option(3),
     compat = Map(
-      "3.0.0-RC1" ->
-        """|NotString: Int
-           |Number: Regex
-           |Nil scala.collection.immutable
-           |""".stripMargin,
       "3.0" ->
         """|NotString: Int
            |Nil scala.collection.immutable
@@ -1163,14 +1149,13 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     filterText = "substring",
     compat = Map(
-      "3.0.0-RC1" -> "substring(x$0: Int, x$1: Int): String",
-      "3.0.1" ->
-        """|substring(x$0: Int): String
-           |substring(x$0: Int, x$1: Int): String
-           |""".stripMargin,
-      "3.0" ->
+      "3.0.0" ->
         """|substring(x$0: Int, x$1: Int): String
            |substring(x$0: Int): String
+           |""".stripMargin,
+      "3.0" ->
+        """|substring(x$0: Int): String
+           |substring(x$0: Int, x$1: Int): String
            |""".stripMargin
     )
   )

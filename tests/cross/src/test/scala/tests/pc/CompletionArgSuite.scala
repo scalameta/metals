@@ -291,9 +291,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      "3.0.0-RC1" ->
-        """|argument = : Int
-           |""".stripMargin,
       "3.0" ->
         """|argument = : Int
            |Calendar - java.util
@@ -316,9 +313,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      "3.0.0-RC1" ->
-        """|`type` = : Int
-           |""".stripMargin,
       "3.0" ->
         """|`type` = : Int
            |""".stripMargin
