@@ -9,7 +9,6 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.GlobalTrace
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
@@ -18,36 +17,26 @@ import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
-import scala.meta.internal.parsing.ClassFinder
 
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 
 private[debug] final class DebugProxy(
     sessionName: String,
-    sourcePathProvider: SourcePathProvider,
     client: RemoteEndpoint,
     server: ServerAdapter,
-    classFinder: ClassFinder,
+    debugAdapter: MetalsDebugAdapter,
     stackTraceAnalyzer: StacktraceAnalyzer,
-    scalaVersionSelector: ScalaVersionSelector,
     stripColor: Boolean
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
   @volatile private var debugMode: DebugMode = DebugMode.Enabled
-
   private val cancelled = new AtomicBoolean()
-  private val adapters = new MetalsDebugAdapters
 
-  private val handleSetBreakpointsRequest =
-    new SetBreakpointsRequestHandler(
-      server,
-      adapters,
-      classFinder,
-      scalaVersionSelector
-    )
+  @volatile private var clientAdapter = ClientConfigurationAdapter.default
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -72,7 +61,7 @@ private[debug] final class DebugProxy(
     case _ if cancelled.get() =>
       () // ignore
     case request @ InitializeRequest(args) =>
-      adapters.initialize(args)
+      clientAdapter = ClientConfigurationAdapter.initialize(args)
       server.send(request)
     case request @ LaunchRequest(debugMode) =>
       this.debugMode = debugMode
@@ -88,12 +77,45 @@ private[debug] final class DebugProxy(
       response.setBreakpoints(Array.empty)
       client.consume(DebugProtocol.syntheticResponse(request, response))
     case request @ SetBreakpointRequest(args) =>
-      handleSetBreakpointsRequest(args)
+      val originalSource = DebugProtocol.copy(args.getSource)
+      val metalsSourcePath = clientAdapter.toMetalsPath(originalSource.getPath)
+
+      args.getBreakpoints.foreach { breakpoint =>
+        val line = clientAdapter.normalizeLineForServer(breakpoint.getLine)
+        breakpoint.setLine(line)
+      }
+
+      val requests =
+        debugAdapter.adaptSetBreakpointsRequest(metalsSourcePath, args)
+      server
+        .sendPartitioned(requests.map(DebugProtocol.syntheticRequest))
+        .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
+        .map(_.flatMap(_.toList))
+        .map(assembleResponse(_, originalSource))
         .map(DebugProtocol.syntheticResponse(request, _))
         .foreach(client.consume)
 
     case message =>
       server.send(message)
+  }
+
+  private def assembleResponse(
+      responses: Iterable[SetBreakpointsResponse],
+      originalSource: Source
+  ): SetBreakpointsResponse = {
+    val breakpoints = for {
+      response <- responses
+      breakpoint <- response.getBreakpoints
+    } yield {
+      val line = clientAdapter.adaptLineForClient(breakpoint.getLine)
+      breakpoint.setSource(originalSource)
+      breakpoint.setLine(line)
+      breakpoint
+    }
+
+    val response = new SetBreakpointsResponse
+    response.setBreakpoints(breakpoints.toArray)
+    response
   }
 
   private val handleServerMessage: Message => Unit = {
@@ -105,32 +127,23 @@ private[debug] final class DebugProxy(
     // any actual logs from the restarted process
     case response @ DebugProtocol.StackTraceResponse(args) =>
       import scala.meta.internal.metals.JsonParser._
-      args.getStackFrames.foreach {
-        case frame if frame.getSource == null =>
-        // send as is, it is most often a frame for a synthetic class
-        case frame =>
-          sourcePathProvider.findPathFor(frame.getSource) match {
-            case Some(path) =>
-              frame.getSource.setPath(adapters.adaptPathForClient(path))
-            case None =>
-              // don't send invalid source if we couldn't adapt it
-              frame.setSource(null)
-          }
-      }
+      for {
+        stackFrame <- args.getStackFrames
+        frameSource <- Option(stackFrame.getSource)
+        sourcePath <- Option(frameSource.getPath)
+        metalsSource <- debugAdapter.adaptStackFrameSource(
+          sourcePath,
+          frameSource.getName
+        )
+      } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
       response.setResult(args.toJson)
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
-      stackTraceAnalyzer
+      val analyzedMessage = stackTraceAnalyzer
         .fileLocationFromLine(output.getOutput())
-        .map { location =>
-          val response =
-            DebugProtocol.stacktraceOutputResponse(output, location)
-          client.consume(response)
-        }
-        .getOrElse {
-          client.consume(message)
-        }
-
+        .map(DebugProtocol.stacktraceOutputResponse(output, _))
+        .getOrElse(message)
+      client.consume(analyzedMessage)
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       // As long as the color codes are valid this should correctly strip
@@ -164,12 +177,10 @@ private[debug] object DebugProxy {
 
   def open(
       name: String,
-      sourcePathProvider: SourcePathProvider,
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket],
-      classFinder: ClassFinder,
-      stacktraceAnalyzer: StacktraceAnalyzer,
-      scalaVersionSelector: ScalaVersionSelector,
+      debugAdapter: MetalsDebugAdapter,
+      stackTraceAnalyzer: StacktraceAnalyzer,
       stripColor: Boolean
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
@@ -184,12 +195,10 @@ private[debug] object DebugProxy {
         .map(new MessageIdAdapter(_))
     } yield new DebugProxy(
       name,
-      sourcePathProvider,
       client,
       server,
-      classFinder,
-      stacktraceAnalyzer,
-      scalaVersionSelector,
+      debugAdapter,
+      stackTraceAnalyzer,
       stripColor
     )
   }
