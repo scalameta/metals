@@ -206,8 +206,8 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.2.21"
-  val scalafmt = "3.0.0-RC6"
-  val munit = "0.7.26"
+  val scalafmt = "3.0.0-RC3"
+  val munit = "0.7.27"
   val scalafix = "0.9.29"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
@@ -342,13 +342,13 @@ val mtagsSettings = List(
     if2 = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "org.jsoup" % "jsoup" % "1.13.1", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.14.1", // for extracting HTML from javadocs
       "com.lihaoyi" %% "geny" % V.genyVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.3",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.4",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
         .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
@@ -421,7 +421,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.8.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.10.0",
+      "org.flywaydb" % "flyway-core" % "7.11.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting embedded buildTool processes
       "com.zaxxer" % "nuprocess" % "2.0.1",
@@ -729,7 +729,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.13.1"
+      "org.jsoup" % "jsoup" % "1.14.1"
     )
   )
   .dependsOn(metals)
