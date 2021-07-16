@@ -67,11 +67,12 @@ class ShellRunner(
   ): Future[Int] = {
     val elapsed = new Timer(time)
 
+    val env = additionalEnv ++ userConfig().javaHome.map("JAVA_HOME" -> _).toMap
     val ps = SystemProcess.run(
       args,
       directory,
       redirectErrorOutput,
-      additionalEnv
+      env
     )
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button

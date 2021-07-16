@@ -10,7 +10,7 @@ import scala.jdk.CollectionConverters._
 import scala.sys.process.BasicIO
 import scala.util.control.NonFatal
 
-import scala.meta.internal.ansi.LineListener
+import scala.meta.internal.ansi.AnsiFilter
 import scala.meta.io.AbsolutePath
 
 trait SystemProcess {
@@ -49,12 +49,12 @@ object SystemProcess {
       redirectErrorOutput: Boolean
   ): SystemProcess = {
     def readOutput(stream: InputStream, f: String => Unit): Thread = {
-      val lineListeneter = new LineListener(f)
+      val filter = AnsiFilter()
       val thread = new Thread {
         override def run(): Unit = {
           // use scala.sys.process implementation
           try {
-            BasicIO.processFully(line => lineListeneter.appendLine(line))(
+            BasicIO.processFully(line => f(filter(line)))(
               stream
             )
           } catch {
