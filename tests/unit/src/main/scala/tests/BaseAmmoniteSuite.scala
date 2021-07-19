@@ -319,6 +319,39 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("completion-class") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/Other.sc
+           |val name = "Bob"
+           |
+           |/main.sc
+           | // scala $scalaVersion
+           |import $$file.Other
+           |case class Test(aaa: Int, b: String)
+           |val test = Test(1, "one")
+           |test.aaa
+           |Other.name
+           |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand("ammonite-start")
+      completionList <- server.completion("main.sc", "test.a@@")
+      _ = assert(completionList.startsWith("aaa: Int\n"))
+      completionList <- server.completion("main.sc", "Other.name@@")
+      _ = assertNoDiff(completionList, "name: String")
+
+    } yield ()
+  }
+
   test("simple errored script") {
     val expectedDiagnostics =
       """main.sc:15:25: error: not found: type Fooz

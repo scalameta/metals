@@ -503,10 +503,8 @@ trait Completions { this: MetalsGlobal =>
           ident.pos.start,
           _ => true
         )
-      case Import(select, selector) :: _
-          if pos.source.file.name.isAmmoniteGeneratedFile && select
-            .toString()
-            .startsWith("$file") =>
+      case (imp @ Import(select, selector)) :: _
+          if isAmmoniteFileCompletionPosition(imp, pos) =>
         AmmoniteFileCompletions(select, selector, pos, editRange)
       case _ =>
         inferCompletionPosition(
@@ -517,6 +515,16 @@ trait Completions { this: MetalsGlobal =>
           completions,
           editRange
         )
+    }
+  }
+
+  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean = {
+    tree match {
+      case Import(select, _) =>
+        pos.source.file.name.isAmmoniteGeneratedFile && select
+          .toString()
+          .startsWith("$file")
+      case _ => false
     }
   }
 

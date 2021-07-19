@@ -285,8 +285,15 @@ class CompletionProvider(
       def isFileAmmoniteCompletion() =
         isAmmoniteScript && {
           head match {
-            case mem: TypeMember =>
-              mem.sym.owner.fullName.contains("$file")
+            /* By default Scala compiler tries to suggest completions based on
+             * generated file in `$file`, which is not valid from Ammonite point of view
+             * We create other completions as ScopeMember in AmmoniteFileCompletions and
+             * filter out the default ones here.
+             */
+            case _: TypeMember =>
+              latestParentTrees.headOption.exists(tree =>
+                isAmmoniteFileCompletionPosition(tree, pos)
+              )
             case _ =>
               false
           }
