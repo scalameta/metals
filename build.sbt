@@ -425,10 +425,6 @@ lazy val metals = project
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "7.11.2",
       "com.h2database" % "h2" % "1.4.200",
-      // for starting embedded buildTool processes
-      "com.zaxxer" % "nuprocess" % "2.0.1",
-      "net.java.dev.jna" % "jna" % "5.8.0",
-      "net.java.dev.jna" % "jna-platform" % "5.8.0",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
