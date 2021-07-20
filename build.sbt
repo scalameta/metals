@@ -356,6 +356,8 @@ val mtagsSettings = List(
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .cross(CrossVersion.for3Use2_13)
+        .exclude("org.scala-lang", "scala-reflect")
+        .exclude("org.scala-lang", "scala-compiler")
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.8.0"),
