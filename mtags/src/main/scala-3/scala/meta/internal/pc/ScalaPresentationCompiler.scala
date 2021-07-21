@@ -320,7 +320,7 @@ case class ScalaPresentationCompiler(
                 // https://github.com/lampepfl/dotty/issues/8891
                 case tpw: ImportType =>
                   val history = new ShortenedNames(IndexedContext(ctx))
-                  printer.hoverDetails(
+                  printer.hoverDetailString(
                     symbol,
                     history,
                     symbol.paramRef
@@ -337,10 +337,12 @@ case class ScalaPresentationCompiler(
                       val context =
                         MetalsInteractive.contextOfPath(tpdPath)(using newctx)
                       val history = new ShortenedNames(IndexedContext(context))
-                      printer.hoverDetails(symbol, history, tpw)(using context)
+                      printer.hoverDetailString(symbol, history, tpw)(using
+                        context
+                      )
                     case None =>
                       val history = new ShortenedNames(IndexedContext(ctx))
-                      printer.hoverDetails(symbol, history, tpw)
+                      printer.hoverDetailString(symbol, history, tpw)
                   }
               }
             }
@@ -469,29 +471,6 @@ case class ScalaPresentationCompiler(
   )(using Context): List[CompletionItem] = {
     val printer = SymbolPrinter()(using ctx)
 
-    /**
-     * Calculate the string for "detail" field in CompletionItem.
-     *
-     * for class or module, it's package name that it belongs to (e.g. "scala.collection" for "scala.collection.Seq")
-     * otherwise, it's shortened type/method signature
-     * e.g. "[A: Ordering](x: List[Int]): A", " java.lang.String"
-     *
-     * @param sym The symbol for completion item.
-     */
-    def detailString(sym: Symbol): String = {
-      if (sym.isClass || sym.is(Module)) {
-        val printer = SymbolPrinter()
-        s" ${printer.fullNameString(sym.owner)}"
-      } else {
-        printer.hoverDetails(
-          sym,
-          history,
-          sym.info.widenTermRefExpr,
-          addFullDef = false
-        )(using ctx)
-      }
-    }
-
     def completionItemKind(
         sym: Symbol
     )(using ctx: Context): CompletionItemKind = {
@@ -519,7 +498,7 @@ case class ScalaPresentationCompiler(
       // related issue https://github.com/lampepfl/dotty/issues/11941
       lazy val kind: CompletionItemKind = completionItemKind(sym)
 
-      val description = detailString(sym)
+      val description = printer.completionDetailString(sym, history)
 
       def mkItem0(
           ident: String,
