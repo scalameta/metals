@@ -98,6 +98,7 @@ case class ScalaPresentationCompiler(
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
+  private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] = {
     Scala3CompilerAccess(
       config,
@@ -111,8 +112,9 @@ case class ScalaPresentationCompiler(
   def newDriver: InteractiveDriver = {
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
+    val filteredOptions = options.filterNot(forbiddenOptions)
     val settings =
-      options ::: defaultFlags ::: implicitSuggestionTimeout ::: "-classpath" :: classpath
+      filteredOptions ::: defaultFlags ::: implicitSuggestionTimeout ::: "-classpath" :: classpath
         .mkString(
           File.pathSeparator
         ) :: Nil
