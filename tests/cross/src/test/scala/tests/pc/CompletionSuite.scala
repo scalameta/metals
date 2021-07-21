@@ -257,7 +257,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |fromSpecific(it: IterableOnce[A]): C
            |iterate[A](start: A, len: Int)(f: A => A): CC[A]
            |newBuilder[A]: Builder[A, List[A]]
-           |nn[T](x: T | Null): x.type & T
+           |nn: x.type & T
            |range[A: Integral](start: A, end: A, step: A): CC[A]
            |range[A: Integral](start: A, end: A): CC[A]
            |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A] @uncheckedVariance]
