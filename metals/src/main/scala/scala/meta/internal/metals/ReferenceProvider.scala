@@ -22,6 +22,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
@@ -33,12 +34,17 @@ final class ReferenceProvider(
     buffers: Buffers,
     definition: DefinitionProvider,
     remote: RemoteLanguageServer,
-    trees: Trees
+    trees: Trees,
+    buildTargets: BuildTargets
 ) {
   private var referencedPackages: BloomFilter[CharSequence] =
     BloomFilters.create(10000)
-  val index: TrieMap[Path, BloomFilter[CharSequence]] =
-    TrieMap.empty[Path, BloomFilter[CharSequence]]
+
+  case class IndexEntry(
+      id: BuildTargetIdentifier,
+      bloom: BloomFilter[CharSequence]
+  )
+  val index: TrieMap[Path, IndexEntry] = TrieMap.empty
 
   def reset(): Unit = {
     index.clear()
@@ -48,29 +54,33 @@ final class ReferenceProvider(
   }
 
   def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
-    val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
-    val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
-    val bloom = BloomFilter.create(
-      Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf((count + syntheticsCount) * 2),
-      0.01
-    )
-    index(file.toNIO) = bloom
-    docs.documents.foreach { d =>
-      d.occurrences.foreach { o =>
-        if (o.symbol.endsWith("/")) {
-          referencedPackages.put(o.symbol)
+    buildTargets.inverseSources(file).map { id =>
+      val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
+      val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
+      val bloom = BloomFilter.create(
+        Funnels.stringFunnel(StandardCharsets.UTF_8),
+        Integer.valueOf((count + syntheticsCount) * 2),
+        0.01
+      )
+
+      val entry = IndexEntry(id, bloom)
+      index(file.toNIO) = entry
+      docs.documents.foreach { d =>
+        d.occurrences.foreach { o =>
+          if (o.symbol.endsWith("/")) {
+            referencedPackages.put(o.symbol)
+          }
+          bloom.put(o.symbol)
         }
-        bloom.put(o.symbol)
-      }
-      d.synthetics.foreach { synthetic =>
-        Synthetics.foreachSymbol(synthetic) { sym =>
-          bloom.put(sym)
-          Synthetics.Continue
+        d.synthetics.foreach { synthetic =>
+          Synthetics.foreachSymbol(synthetic) { sym =>
+            bloom.put(sym)
+            Synthetics.Continue
+          }
         }
       }
+      resizeReferencedPackages()
     }
-    resizeReferencedPackages()
   }
 
   def references(
@@ -174,6 +184,59 @@ final class ReferenceProvider(
     }
   }
 
+  private def workspaceReferences(
+      source: AbsolutePath,
+      isSymbol: Set[String],
+      isIncludeDeclaration: Boolean,
+      findRealRange: AdjustRange,
+      includeSynthetics: Synthetic => Boolean
+  ): Seq[Location] = {
+    buildTargets.inverseSources(source) match {
+      case None => Seq.empty
+      case Some(id) =>
+        val allowedBuildTargets = buildTargets.allInverseDependencies(id)
+        val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+        val result = for {
+          (path, entry) <- index.iterator
+          if allowedBuildTargets.contains(entry.id) &&
+            isSymbol.exists(entry.bloom.mightContain)
+          scalaPath = AbsolutePath(path)
+          if !visited(scalaPath)
+          _ = visited.add(scalaPath)
+          if scalaPath.exists
+          semanticdb <-
+            semanticdbs
+              .textDocument(scalaPath)
+              .documentIncludingStale
+              .iterator
+          semanticdbDistance = buffers.tokenEditDistance(
+            scalaPath,
+            semanticdb.text,
+            trees
+          )
+          uri = scalaPath.toURI.toString
+          reference <-
+            try {
+              referenceLocations(
+                semanticdb,
+                isSymbol,
+                semanticdbDistance,
+                uri,
+                isIncludeDeclaration,
+                findRealRange,
+                includeSynthetics
+              )
+            } catch {
+              case NonFatal(e) =>
+                // Can happen for example if the SemanticDB text is empty for some reason.
+                scribe.error(s"reference: $scalaPath", e)
+                Nil
+            }
+        } yield reference
+        result.toSeq
+    }
+  }
+
   private def references(
       source: AbsolutePath,
       params: ReferenceParams,
@@ -186,69 +249,42 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
-    if (occ.symbol.isLocal) {
-      referenceLocations(
-        snapshot,
-        isSymbol,
-        distance,
-        params.getTextDocument.getUri,
-        isIncludeDeclaration,
-        findRealRange,
-        includeSynthetics
-      )
-    } else {
-      val visited = scala.collection.mutable.Set.empty[AbsolutePath]
-      // when searching for references of dependency source symbol from the source itself we should return both local and workspace usage
-      val localLocations: Seq[Location] =
-        if (source.isDependencySource(workspace)) {
-          referenceLocations(
-            snapshot,
-            isSymbol,
-            distance,
-            params.getTextDocument.getUri,
-            isIncludeDeclaration,
-            findRealRange,
-            includeSynthetics
-          )
-        } else Seq.empty
-      val results: Iterator[Location] = for {
-        (path, bloom) <- index.iterator
-        if isSymbol.exists(bloom.mightContain)
-        scalaPath = AbsolutePath(path)
-        if !visited(scalaPath)
-        _ = visited.add(scalaPath)
-        if scalaPath.exists
-        semanticdb <-
-          semanticdbs
-            .textDocument(scalaPath)
-            .documentIncludingStale
-            .iterator
-        semanticdbDistance = buffers.tokenEditDistance(
-          scalaPath,
-          semanticdb.text,
-          trees
+    val isLocal = occ.symbol.isLocal
+
+    /* search local in the following cases:
+     * - it's local symbol
+     * - it's a dependency source.
+     *   We can't search references inside dependencies so at least show them in a source file.
+     * - it's a standalone file that doesn't belong to any build target
+     */
+    val searchLocal =
+      isLocal || source.isDependencySource(workspace) ||
+        buildTargets.inverseSources(source).isEmpty
+    val local =
+      if (searchLocal)
+        referenceLocations(
+          snapshot,
+          isSymbol,
+          distance,
+          params.getTextDocument.getUri,
+          isIncludeDeclaration,
+          findRealRange,
+          includeSynthetics
         )
-        uri = scalaPath.toURI.toString
-        reference <-
-          try {
-            referenceLocations(
-              semanticdb,
-              isSymbol,
-              semanticdbDistance,
-              uri,
-              isIncludeDeclaration,
-              findRealRange,
-              includeSynthetics
-            )
-          } catch {
-            case NonFatal(e) =>
-              // Can happen for example if the SemanticDB text is empty for some reason.
-              scribe.error(s"reference: $scalaPath", e)
-              Nil
-          }
-      } yield reference
-      results.toSeq ++ localLocations
-    }
+      else Seq.empty
+
+    val workspaceRefs =
+      if (!isLocal)
+        workspaceReferences(
+          source,
+          isSymbol,
+          isIncludeDeclaration,
+          findRealRange,
+          includeSynthetics
+        )
+      else
+        Seq.empty
+    workspaceRefs ++ local
   }
 
   private def referenceLocations(

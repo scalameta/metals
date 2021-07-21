@@ -725,6 +725,30 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     newName = "foo2"
   )
 
+  renamed(
+    "ignores-unrelated-build-targets",
+    """|/a/src/main/scala/a/Main.scala
+       |trait <<@@A>>
+       |/a/src/main/scala/a/B.scala
+       |trait B extends <<A>>
+       |/b/src/main/scala/b/Main.scala
+       |trait A
+       |/b/src/main/scala/b/B.scala
+       |trait B extends A
+       |""".stripMargin,
+    metalsJson = Some(
+      s"""|{
+          |  "a" : {
+          |    "scalaVersion": "${BuildInfo.scalaVersion}"
+          |  },
+          |  "b" : {
+          |    "scalaVersion": "${BuildInfo.scalaVersion}"
+          |  }
+          |}""".stripMargin
+    ),
+    newName = "C"
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
 
