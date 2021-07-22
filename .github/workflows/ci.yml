@@ -112,6 +112,15 @@ jobs:
         with:
           java-version: "adopt@1.11"
       - uses: coursier/cache-action@v6.2
+      - name: Checkout scala-debug-adapter
+        uses: actions/checkout@v2
+        with:
+          repository: adpi2/scala-debug-adapter
+          ref: source-lookup
+          path: scala-debug-adapter
+      - name: Publish scala-debug-adpater locally
+        working-directory: scala-debug-adapter
+        run: sbt publishLocal
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:
