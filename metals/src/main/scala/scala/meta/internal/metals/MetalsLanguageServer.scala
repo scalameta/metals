@@ -56,6 +56,8 @@ import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
+import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinder
@@ -206,9 +208,9 @@ class MetalsLanguageServer(
   private val trees = new Trees(buildTargets, buffers, scalaVersionSelector)
   private val documentSymbolProvider = new DocumentSymbolProvider(trees)
   private val onTypeFormattingProvider =
-    new OnTypeFormattingProvider(buffers, () => userConfig)
+    new OnTypeFormattingProvider(buffers, trees, () => userConfig)
   private val rangeFormattingProvider =
-    new RangeFormattingProvider(buffers)
+    new RangeFormattingProvider(buffers, trees)
   private val classFinder = new ClassFinder(trees)
   private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
   // These can't be instantiated until we know the workspace root directory.
@@ -1368,7 +1370,7 @@ class MetalsLanguageServer(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      onTypeFormattingProvider.format(params, trees).asJava
+      onTypeFormattingProvider.format(params).asJava
     }
 
   @JsonRequest("textDocument/rangeFormatting")
@@ -1376,7 +1378,7 @@ class MetalsLanguageServer(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      rangeFormattingProvider.format(params, trees).asJava
+      rangeFormattingProvider.format(params).asJava
     }
 
   @JsonRequest("textDocument/prepareRename")
