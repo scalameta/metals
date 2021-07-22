@@ -96,25 +96,67 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin.hover
   )
 
-  // https://github.com/scalameta/metals/issues/1991
   check(
     "extension-methods",
     """|
        |object Foo:
-       |    extension (s: String):
+       |    extension (s: String)
        |        def double = s + s
        |        def double2 = s + s        
        |    end extension
        |    "".<<doub@@le2>>
        |end Foo
        |""".stripMargin,
-    ""
+    "extension (s: String) def double2: String".hover
   )
 
-  // TODO: better printing for using
-  // currently "def apply[T](a: T)(implicit x$2: Int): T"
+  /* Currently there is no way to differentiate between
+   * trailing using params in extension parameter and the
+   * starting using params for the actual method.
+   * As user can actually supply params to them by hand when
+   * invoking the extension method, we always show them next to the
+   * method itself.
+   * https://github.com/lampepfl/dotty/issues/13123
+   */
   check(
-    "using".fail,
+    "extension-methods-complex",
+    """|class A
+       |class B
+       |class C
+       |object Foo:
+       |    extension [T](using A)(s: T)(using B)
+       |        def double[G](using C)(times: G) = (s.toString + s.toString) * times
+       |    end extension
+       |    given A with {}
+       |    given B with {}
+       |    given C with {}
+       |    "".<<doub@@le(1)>>
+       |end Foo
+       |""".stripMargin,
+    "extension [T](using A)(s: T) def double(using B)[G](using C)(times: G): String".hover
+  )
+
+  check(
+    "extension-methods-complex-binary",
+    """|class A
+       |class B
+       |class C
+       |
+       |object Foo:
+       |    extension [T](using A)(main: T)(using B)
+       |      def %:[R](res: R)(using C): R = ???
+       |    given A with {}
+       |    given B with {}
+       |    given C with {}
+       |    val c = C()
+       |    "" <<%@@:>> 11
+       |end Foo
+       |""".stripMargin,
+    "extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): Int".hover
+  )
+
+  check(
+    "using",
     """
       |object a {
       |  def apply[T](a: T)(using Int): T = ???
@@ -122,7 +164,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |  <<ap@@ply("test")>>
       |}
       |""".stripMargin,
-    """|def apply[T](a: T)(using: Int): T
+    """|def apply[T](a: T)(using Int): T
        |""".stripMargin.hover
   )
 }
