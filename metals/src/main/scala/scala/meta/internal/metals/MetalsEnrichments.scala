@@ -15,6 +15,7 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import scala.annotation.tailrec
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.collection.mutable
@@ -207,6 +208,26 @@ object MetalsEnrichments
         out.add(fn(iter.next()))
       }
       out
+    }
+  }
+
+  implicit class XtensionList[T](lst: List[T]) {
+    def acceptFirst[R](
+        accept: T => Option[List[R]]
+    ): List[R] = {
+      @tailrec
+      def loop(toCheck: List[T]): List[R] = {
+        toCheck match {
+          case prioritized :: rest =>
+            val contributed = accept(prioritized)
+            contributed match {
+              case Some(edits) => edits
+              case None => loop(rest)
+            }
+          case Nil => Nil
+        }
+      }
+      loop(lst)
     }
   }
 

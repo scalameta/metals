@@ -1,4 +1,4 @@
-package scala.meta.internal.metals.onTypeRangeFormatters
+package scala.meta.internal.metals.formatting
 
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -134,7 +134,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
 
   private def indent(
       splitLines: Array[String],
-      startPosition: StartPosition,
+      startPosition: meta.Position,
       range: Range
   ): List[TextEdit] = {
     // position.startLine since we want to check current line on rangeFormatting
@@ -184,8 +184,8 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   private def indentTokensOnTypeFormatting(
-      startPosition: StartPosition,
-      endPosition: EndPosition,
+      startPosition: meta.Position,
+      endPosition: meta.Position,
       tokens: Tokens,
       triggerChar: String,
       splitLines: Array[String],
@@ -220,8 +220,8 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   def isStringOrInterpolation(
-      startPosition: StartPosition,
-      endPosition: EndPosition,
+      startPosition: meta.Position,
+      endPosition: meta.Position,
       token: Token,
       index: Int,
       text: String,
@@ -350,12 +350,11 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   override def contribute(
-      onTypeFormatterParams: OnTypeFormatterParams,
-      tokensParams: TokensParams
+      onTypeFormatterParams: OnTypeFormatterParams
   ): Option[List[TextEdit]] = {
-    val tokensOpt = tokensParams.tokens
-    val startPos = tokensParams.startPos
-    val endPos = tokensParams.endPos
+    val tokensOpt = onTypeFormatterParams.tokens
+    val startPos = onTypeFormatterParams.startPos
+    val endPos = onTypeFormatterParams.endPos
     val triggerChar = onTypeFormatterParams.triggerChar
     val splitLines = onTypeFormatterParams.splitLines
     val position = onTypeFormatterParams.position
@@ -386,12 +385,11 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   override def contribute(
-      rangeFormatterParams: RangeFormatterParams,
-      tokensParams: TokensParams
+      rangeFormatterParams: RangeFormatterParams
   ): Option[List[TextEdit]] = {
-    val tokensOpt = tokensParams.tokens
-    val startPos = tokensParams.startPos
-    val endPos = tokensParams.endPos
+    val tokensOpt = rangeFormatterParams.tokens
+    val startPos = rangeFormatterParams.startPos
+    val endPos = rangeFormatterParams.endPos
     val sourceText = rangeFormatterParams.sourceText
     val range = rangeFormatterParams.range
     val splitLines = rangeFormatterParams.splitLines

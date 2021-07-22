@@ -1,4 +1,4 @@
-package scala.meta.internal.metals.onTypeRangeFormatters
+package scala.meta.internal.metals.formatting
 import scala.util.matching.Regex
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -50,12 +50,11 @@ object IndentOnPaste extends RangeFormatter {
   }
 
   override def contribute(
-      rangeFormatterParams: RangeFormatterParams,
-      tokensParams: TokensParams
+      rangeFormatterParams: RangeFormatterParams
   ): Option[List[TextEdit]] = {
     val formattingOptions = rangeFormatterParams.formattingOptions
-    val startPos = tokensParams.startPos
-    val endPos = tokensParams.endPos
+    val startPos = rangeFormatterParams.startPos
+    val endPos = rangeFormatterParams.endPos
     val splitLines = rangeFormatterParams.splitLines
 
     val insertSpaces = formattingOptions.isInsertSpaces
