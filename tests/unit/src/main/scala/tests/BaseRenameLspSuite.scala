@@ -31,8 +31,9 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty,
       scalaVersion: Option[String] = None,
-      expectedError: Boolean = false
-  )(implicit loc: Location): Unit =
+      expectedError: Boolean = false,
+      metalsJson: Option[String] = None
+  )(implicit loc: Location): Unit = {
     check(
       name,
       input,
@@ -42,8 +43,10 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       breakingChange,
       fileRenames,
       scalaVersion,
-      expectedError
+      expectedError,
+      metalsJson = metalsJson
     )
+  }
 
   private def check(
       name: TestOptions,
@@ -54,7 +57,8 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty,
       scalaVersion: Option[String] = None,
-      expectedError: Boolean = false
+      expectedError: Boolean = false,
+      metalsJson: Option[String] = None
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
@@ -84,21 +88,10 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
 
       val openedFiles = files.keySet.diff(nonOpened)
       val fullInput = input.replaceAll(allMarkersRegex, "")
-      val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
       for {
         _ <- server.initialize(
           s"""/metals.json
-             |{
-             |  "a" : {
-             |    "scalaVersion": "$actualScalaVersion",
-             |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
-             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
-             |  },
-             |  "b" : {
-             |    "scalaVersion": "$actualScalaVersion",
-             |    "dependsOn": [ "a" ]
-             |  }
-             |}
+             |${metalsJson.getOrElse(defaultMetalsJson(scalaVersion))}
              |$fullInput""".stripMargin
         )
         _ <- Future.sequence {
@@ -126,5 +119,20 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
         )
       } yield ()
     }
+  }
+
+  private def defaultMetalsJson(scalaVersion: Option[String]): String = {
+    val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
+    s"""|{
+        |  "a" : {
+        |    "scalaVersion": "$actualScalaVersion",
+        |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
+        |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+        |  },
+        |  "b" : {
+        |    "scalaVersion": "$actualScalaVersion",
+        |    "dependsOn": [ "a" ]
+        |  }
+        |}""".stripMargin
   }
 }
