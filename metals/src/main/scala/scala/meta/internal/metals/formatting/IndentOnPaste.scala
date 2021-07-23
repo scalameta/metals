@@ -8,8 +8,13 @@ import org.eclipse.lsp4j.TextEdit
 
 object IndentOnPaste extends RangeFormatter {
 
+  private val noEndClause = raw"((<!\bend\b\s*?)\b(if|while|for|match|try))"
+  private val ifThenClause = raw"(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)"
+  private val keywordClause = raw"\b(then|else|do|catch|finally|yield|case)"
+  private val openBraceClause = raw"""(^.*\{[^}"']*$$)"""
+  private val extensionClause = raw"""extension\s*((\(|\[).*(\)|\]))+"""
   val increaseIndentPatternRegex: Regex =
-    raw"""(((<!\bend\b\s*?)\b(if|while|for|match|try))|(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)|(\b(then|else|do|catch|finally|yield|case))|=|=>|<-|=>>|:)\s*?$$|(^.*\{[^}"']*$$)""".r
+    raw"""($noEndClause|$ifThenClause|$keywordClause|$extensionClause|=|=>|<-|=>>|:)\s*?$$|$openBraceClause""".r
   val indentRegex: Regex = raw"\S".r
 
   private def codeStartPosition(line: String): Option[Int] =

@@ -272,6 +272,46 @@ class IndentWhenPastingSuite
     formattingOptions
   )
 
+  check(
+    "extension",
+    s"""
+       |object Main:
+       |  @@
+       |end Main""".stripMargin,
+    s"""
+       |extension [T](using b: B)(s: String)(using A)
+       |  def double = s * 2
+       |""".stripMargin,
+    """|object Main:
+       |  extension [T](using b: B)(s: String)(using A)
+       |    def double = s * 2
+       |end Main
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "if-paren",
+    s"""
+       |object Main:
+       |  @@
+       |end Main""".stripMargin,
+    s"""
+       |if (cond)
+       |  def double = s * 2
+       |  double
+       |""".stripMargin,
+    """|object Main:
+       |  if (cond)
+       |    def double = s * 2
+       |    double
+       |end Main
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
   def check(
       name: TestOptions,
       testCase: String,
