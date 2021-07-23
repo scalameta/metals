@@ -56,7 +56,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def apply(name: String): Person
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "case class Person: case-apply".hover
+      "3.0" -> "case class Person: `case-apply`".hover
     )
   )
 
@@ -147,7 +147,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       // https://github.com/lampepfl/dotty/issues/8835
-      "3.0" -> "object num: interpolator-unapply.a$.Xtension".hover
+      "3.0" -> "object num: `interpolator-unapply`.a.Xtension".hover
     )
   )
 
