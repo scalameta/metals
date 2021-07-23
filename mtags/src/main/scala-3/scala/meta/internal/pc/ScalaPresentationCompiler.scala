@@ -111,7 +111,7 @@ case class ScalaPresentationCompiler(
 
   def newDriver: InteractiveDriver = {
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
-    val defaultFlags = List("-color:never")
+    val defaultFlags = List("-color:never", "-Ydrop-docs")
     val filteredOptions = options.filterNot(forbiddenOptions)
     val settings =
       filteredOptions ::: defaultFlags ::: implicitSuggestionTimeout ::: "-classpath" :: classpath
