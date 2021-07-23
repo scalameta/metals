@@ -1238,43 +1238,35 @@ class MetalsLanguageServer(
   private def didChangeWatchedFiles(
       event: DirectoryChangeEvent
   ): CompletableFuture[Unit] = {
-    if (event.eventType() == EventType.OVERFLOW && event.path() == null) {
+    val path = AbsolutePath(event.path())
+    val isScalaOrJava = path.isScalaOrJava
+    if (isScalaOrJava && event.eventType() == EventType.DELETE) {
       Future {
-        semanticDBIndexer.onOverflow()
+        diagnostics.didDelete(path)
       }.asJava
-    } else {
-      val path = AbsolutePath(event.path())
-      val isScalaOrJava = path.isScalaOrJava
-      if (isScalaOrJava && event.eventType() == EventType.DELETE) {
-        Future {
-          diagnostics.didDelete(path)
-        }.asJava
-      } else if (
-        isScalaOrJava && !savedFiles.isRecentlyActive(path) && !buffers
-          .contains(path)
-      ) {
-        event.eventType() match {
-          case EventType.CREATE =>
-            buildTargets.onCreate(path)
-          case _ =>
-        }
-        onChange(List(path)).asJava
-      } else if (path.isSemanticdb) {
-        Future {
-          event.eventType() match {
-            case EventType.DELETE =>
-              semanticDBIndexer.onDelete(event.path())
-            case EventType.CREATE | EventType.MODIFY =>
-              semanticDBIndexer.onChange(event.path())
-            case EventType.OVERFLOW =>
-              semanticDBIndexer.onOverflow(event.path())
-          }
-        }.asJava
-      } else if (path.isBuild) {
-        onBuildChanged(List(path)).ignoreValue.asJava
-      } else {
-        CompletableFuture.completedFuture(())
+    } else if (
+      isScalaOrJava && !savedFiles.isRecentlyActive(path) && !buffers
+        .contains(path)
+    ) {
+      event.eventType() match {
+        case EventType.CREATE =>
+          buildTargets.onCreate(path)
+        case _ =>
       }
+      onChange(List(path)).asJava
+    } else if (path.isSemanticdb) {
+      Future {
+        event.eventType() match {
+          case EventType.DELETE =>
+            semanticDBIndexer.onDelete(event.path())
+          case EventType.CREATE | EventType.MODIFY =>
+            semanticDBIndexer.onChange(event.path())
+        }
+      }.asJava
+    } else if (path.isBuild) {
+      onBuildChanged(List(path)).ignoreValue.asJava
+    } else {
+      CompletableFuture.completedFuture(())
     }
   }
 

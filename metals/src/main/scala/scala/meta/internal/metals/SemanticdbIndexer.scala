@@ -45,33 +45,6 @@ class SemanticdbIndexer(
     implementationProvider.onDelete(file)
   }
 
-  /**
-   * Handle EventType.OVERFLOW, meaning we lost file events for a given path.
-   *
-   * We walk up the file tree to the parent `META-INF/semanticdb` parent directory
-   * and re-index all of its `*.semanticdb` children.
-   */
-  def onOverflow(path: Path): Unit = {
-    path.semanticdbRoot.foreach(onChangeDirectory(_))
-  }
-
-  /**
-   * Handle EventType.OVERFLOW, meaning we lost file events, when we don't know the path.
-   * We walk up the file tree for all targets `META-INF/semanticdb` directory
-   * and re-index all of its `*.semanticdb` children.
-   */
-  def onOverflow(): Unit = {
-    for {
-      item <- buildTargets.scalacOptions
-      scalaInfo <- buildTargets.scalaInfo(item.getTarget)
-    } {
-      val targetroot = item.targetroot(scalaInfo.getScalaVersion)
-      if (!targetroot.isJar) {
-        onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
-      }
-    }
-  }
-
   private def onChangeDirectory(dir: Path): Unit = {
     if (Files.isDirectory(dir)) {
       val stream = Files.walk(dir)

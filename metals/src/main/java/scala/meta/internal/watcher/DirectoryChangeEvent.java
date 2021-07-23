@@ -33,10 +33,7 @@ public final class DirectoryChangeEvent {
     MODIFY(StandardWatchEventKinds.ENTRY_MODIFY),
 
     /* A file was deleted */
-    DELETE(StandardWatchEventKinds.ENTRY_DELETE),
-
-    /* An overflow occurred; some events were lost */
-    OVERFLOW(StandardWatchEventKinds.OVERFLOW);
+    DELETE(StandardWatchEventKinds.ENTRY_DELETE);
 
     private WatchEvent.Kind<?> kind;
 

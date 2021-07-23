@@ -45,6 +45,8 @@ final class FileWatcher(
     buildTargets: BuildTargets,
     didChangeWatchedFiles: DirectoryChangeEvent => Unit
 ) extends Cancelable {
+  private var repository: Option[FileTreeRepository[HashCode]] = None
+
   private def newRepository: FileTreeRepository[HashCode] = {
     val hasher = FileHasher.DEFAULT_FILE_HASHER
     val converter: Converter[HashCode] = (path: TypedPath) =>
@@ -72,13 +74,10 @@ final class FileWatcher(
     })
     repo
   }
-  private val repository = new AtomicReference[FileTreeRepository[HashCode]]
 
   override def cancel(): Unit = {
-    repository.getAndSet(null) match {
-      case null =>
-      case r => r.close()
-    }
+    repository.map(_.close())
+    repository = None
   }
 
   def restart(): Unit = {
@@ -126,13 +125,11 @@ final class FileWatcher(
       }
 
     }
-    val repo = repository.get match {
-      case null =>
-        val r = newRepository
-        repository.set(r)
-        r
-      case r => r
-    }
+
+    repository.map(_.close())
+    val repo = newRepository
+    repository = Some(repo)
+
     // The second parameter of repo.register is the recursive depth of the watch.
     // A value of -1 means only watch this exact path. A value of 0 means only
     // watch the immediate children of the path. A value of 1 means watch the
