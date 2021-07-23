@@ -1,8 +1,10 @@
-package tests
+package tests.rangeFormatting
 
 import munit.Location
+import org.eclipse.lsp4j.FormattingOptions
+import tests.BaseLspSuite
 
-class RangeFormattingWhenSelectingSuite
+class MultilineStringRangeFormattingWhenSelectingSuite
     extends BaseLspSuite("rangeFormatting") {
   check(
     "start-misindent-line",
@@ -98,8 +100,10 @@ class RangeFormattingWhenSelectingSuite
        |}""".stripMargin
   )
 
-  // This test shows that currently we don't handle
-  // if current selection contains more than one and only one multi-line string
+  val blank = ""
+
+  // This test shows that currently if current selection contains more than one and only one multi-line string
+  // we use the IndentOnPaste onRangeFormatter
   check(
     "two-string",
     s"""
@@ -115,14 +119,15 @@ class RangeFormattingWhenSelectingSuite
     s"""
        |object Main {
        |  val firstString = '''
-       |                        |first line
-       |                            |second line'''.stripMargin
-       |
+       |  |first line
+       |      |second line'''.stripMargin
        |  val str2 = '''
-       |               |first line
-       |               |second line'''.stripMargin
+       |  |first line
+       |  |second line'''.stripMargin
        |}""".stripMargin
   )
+
+  val formattingOptions = new FormattingOptions(2, true)
 
   def check(
       name: String,
@@ -151,7 +156,8 @@ class RangeFormattingWhenSelectingSuite
         _ <- server.rangeFormatting(
           "a/src/main/scala/a/Main.scala",
           testCode, // with << >>
-          expected
+          expected,
+          formattingOptions = Some(formattingOptions)
         )
       } yield ()
     }

@@ -1,10 +1,18 @@
-package tests
+package tests.rangeFormatting
 
 import munit.Location
 import munit.TestOptions
+import org.eclipse.lsp4j.FormattingOptions
+import tests.BaseLspSuite
 
-class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
-  private val indent = "  "
+class MultilineStringRangeFormattingWhenPastingSuite
+    extends BaseLspSuite("rangeFormatting") {
+  val formattingOptions: FormattingOptions = new FormattingOptions(
+    /** tabSize: */
+    2,
+    /** insertSpaces */
+    true
+  )
 
   check(
     "lines",
@@ -214,8 +222,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |object Main {
        |  val str = '''
        |  |first line
-       |second line
-       | different indent
+       |  second line
+       |   different indent
        |  '''
        |}""".stripMargin
   )
@@ -319,10 +327,9 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
        |object Main {
        |  val str = s'''
        |               |ok'''.stripMargin
-       |$indent
        |  val other = '''
-       |              |  some text
-       |              |'''.stripMargin
+       |  |  some text
+       |  |'''.stripMargin
        |}""".stripMargin
   )
 
@@ -353,7 +360,8 @@ class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
           testCode, // bez @@
           expected,
           unmangle(paste),
-          workspace
+          workspace,
+          Some(formattingOptions)
         )
       } yield ()
     }

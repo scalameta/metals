@@ -717,10 +717,17 @@ final class TestingServer(
       query: String,
       expected: String,
       paste: String,
-      root: AbsolutePath
+      root: AbsolutePath,
+      formattingOptions: Option[FormattingOptions]
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      (_, params) <- rangeFormattingParams(filename, query, paste, root)
+      (_, params) <- rangeFormattingParams(
+        filename,
+        query,
+        paste,
+        root,
+        formattingOptions
+      )
       multiline <- server.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -734,10 +741,16 @@ final class TestingServer(
       filename: String,
       query: String,
       expected: String,
-      root: AbsolutePath = workspace
+      root: AbsolutePath = workspace,
+      formattingOptions: Option[FormattingOptions] = None
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      (_, params) <- rangeFormattingParams(filename, query, root)
+      (_, params) <- rangeFormattingParams(
+        filename,
+        query,
+        root,
+        formattingOptions
+      )
       multiline <- server.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -924,7 +937,8 @@ final class TestingServer(
       filename: String,
       original: String,
       paste: String,
-      root: AbsolutePath
+      root: AbsolutePath,
+      formattingOptions: Option[FormattingOptions] = None
   ): Future[(String, DocumentRangeFormattingParams)] = {
     positionFromString(filename, original, root, replaceWith = paste) {
       case (text, textId, start) =>
@@ -935,6 +949,7 @@ final class TestingServer(
         val params = new DocumentRangeFormattingParams()
         params.setRange(range)
         params.setTextDocument(textId)
+        formattingOptions.foreach(params.setOptions)
         (text, params)
     }
   }
@@ -942,13 +957,15 @@ final class TestingServer(
   private def rangeFormattingParams(
       filename: String,
       original: String,
-      root: AbsolutePath
+      root: AbsolutePath,
+      formattingOptions: Option[FormattingOptions]
   ): Future[(String, DocumentRangeFormattingParams)] = {
     rangeFromString(filename, original, root) {
       case (text, textId, rangeSelection) =>
         val params = new DocumentRangeFormattingParams()
         params.setRange(rangeSelection)
         params.setTextDocument(textId)
+        formattingOptions.foreach(params.setOptions)
         (text, params)
     }
   }
