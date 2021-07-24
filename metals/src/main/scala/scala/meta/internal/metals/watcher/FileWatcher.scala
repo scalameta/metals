@@ -1,16 +1,14 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.watcher
 
 import java.io.IOException
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.mutable
 
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.watcher.DirectoryChangeEvent
-import scala.meta.internal.watcher.DirectoryChangeEvent.EventType
-import scala.meta.internal.watcher.hashing.FileHasher
-import scala.meta.internal.watcher.hashing.HashCode
 import scala.meta.io.AbsolutePath
 
 import com.swoval.files.FileTreeDataViews.CacheObserver
@@ -18,7 +16,9 @@ import com.swoval.files.FileTreeDataViews.Converter
 import com.swoval.files.FileTreeDataViews.Entry
 import com.swoval.files.FileTreeRepositories
 import com.swoval.files.FileTreeRepository
-import com.swoval.files.TypedPath
+import java.io.BufferedInputStream
+import java.nio.file.Files
+import scala.util.hashing.MurmurHash3
 
 /**
  * Handles file watching of interesting files in this build.
@@ -36,38 +36,39 @@ import com.swoval.files.TypedPath
  * have a single file watching solution that we have control over.
  *
  * This class does not watch for changes in `*.sbt` files in the workspace directory and
- * in the `project/`. Those notifications are nice-to-have, but not critical. The library we are
- * using https://github.com/gmethvin/directory-watcher only supports recursive directory meaning
- * we would have to watch the workspace directory, resulting in a LOT of redundant file events.
- * Editors are free to send `workspace/didChangedWatchedFiles` notifications for these directories.
+ * in the `project/`. Those notifications are nice-to-have, but not critical.
  */
 final class FileWatcher(
     buildTargets: BuildTargets,
-    didChangeWatchedFiles: DirectoryChangeEvent => Unit
+    didChangeWatchedFiles: FileWatcherEvent => Unit
 ) extends Cancelable {
-  private var repository: Option[FileTreeRepository[HashCode]] = None
+  import FileWatcher._
 
-  private def newRepository: FileTreeRepository[HashCode] = {
-    val hasher = FileHasher.DEFAULT_FILE_HASHER
-    val converter: Converter[HashCode] = (path: TypedPath) =>
-      try hasher.hash(path.getPath)
-      catch { case _: IOException => HashCode.empty() }
+  private var repository: Option[FileTreeRepository[Hash]] = None
+
+  private def newRepository: FileTreeRepository[Hash] = {
+    val converter: Converter[Hash] = typedPath => hashFile(typedPath.getPath())
     val repo = FileTreeRepositories.get(converter, /*follow symlinks*/ true)
-    def entryToEvent(kind: EventType, entry: Entry[_]): DirectoryChangeEvent =
-      new DirectoryChangeEvent(kind, entry.getTypedPath.getPath, 1)
-    repo.addCacheObserver(new CacheObserver[HashCode] {
-      override def onCreate(entry: Entry[HashCode]): Unit = {
-        didChangeWatchedFiles(entryToEvent(EventType.CREATE, entry))
+
+    repo.addCacheObserver(new CacheObserver[Hash] {
+      override def onCreate(entry: Entry[Hash]): Unit = {
+        didChangeWatchedFiles(
+          FileWatcherEvent.create(entry.getTypedPath.getPath)
+        )
       }
-      override def onDelete(entry: Entry[HashCode]): Unit = {
-        didChangeWatchedFiles(entryToEvent(EventType.DELETE, entry))
+      override def onDelete(entry: Entry[Hash]): Unit = {
+        didChangeWatchedFiles(
+          FileWatcherEvent.delete(entry.getTypedPath.getPath)
+        )
       }
       override def onUpdate(
-          previous: Entry[HashCode],
-          current: Entry[HashCode]
+          previous: Entry[Hash],
+          current: Entry[Hash]
       ): Unit = {
         if (previous.getValue != current.getValue) {
-          didChangeWatchedFiles(entryToEvent(EventType.MODIFY, current))
+          didChangeWatchedFiles(
+            FileWatcherEvent.modify(current.getTypedPath.getPath)
+          )
         }
       }
       override def onError(ex: IOException) = {}
@@ -142,6 +143,23 @@ final class FileWatcher(
       if (dir.isEmptyDirectory) {
         dir.delete()
       }
+    }
+  }
+}
+
+object FileWatcher {
+  type Hash = Int
+
+  def hashFile(path: Path): Hash = {
+    val inputStream = new BufferedInputStream(Files.newInputStream(path))
+    try {
+      MurmurHash3.orderedHash(
+        Stream.continually(inputStream.read()).takeWhile(_ != -1)
+      )
+    } catch {
+      case _: IOException => 0
+    } finally {
+      inputStream.close()
     }
   }
 }

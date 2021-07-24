@@ -59,6 +59,9 @@ import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.watcher.FileWatcher
+import scala.meta.internal.metals.watcher.FileWatcherEvent
+import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.DocumentSymbolProvider
@@ -70,8 +73,6 @@ import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
-import scala.meta.internal.watcher.DirectoryChangeEvent
-import scala.meta.internal.watcher.DirectoryChangeEvent.EventType
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
@@ -1145,8 +1146,7 @@ class MetalsLanguageServer(
             .resolve(Directories.semanticdb)
         generatedFile <- semanticdb.listRecursive
       } {
-        val event =
-          new DirectoryChangeEvent(EventType.MODIFY, generatedFile.toNIO, 1)
+        val event = FileWatcherEvent.modify(generatedFile.toNIO)
         didChangeWatchedFiles(event).get()
       }
     }
@@ -1234,13 +1234,13 @@ class MetalsLanguageServer(
     onChange(paths).asJava
   }
 
-  // This method is run the FileWatcher, so it should not do anything expensive on the main thread
+  // This method is run synchronously in the FileWatcher, so it should not do anything expensive on the main thread
   private def didChangeWatchedFiles(
-      event: DirectoryChangeEvent
+      event: FileWatcherEvent
   ): CompletableFuture[Unit] = {
-    val path = AbsolutePath(event.path())
+    val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
-    if (isScalaOrJava && event.eventType() == EventType.DELETE) {
+    if (isScalaOrJava && event.eventType == EventType.Delete) {
       Future {
         diagnostics.didDelete(path)
       }.asJava
@@ -1248,19 +1248,19 @@ class MetalsLanguageServer(
       isScalaOrJava && !savedFiles.isRecentlyActive(path) && !buffers
         .contains(path)
     ) {
-      event.eventType() match {
-        case EventType.CREATE =>
+      event.eventType match {
+        case EventType.Create =>
           buildTargets.onCreate(path)
         case _ =>
       }
       onChange(List(path)).asJava
     } else if (path.isSemanticdb) {
       Future {
-        event.eventType() match {
-          case EventType.DELETE =>
-            semanticDBIndexer.onDelete(event.path())
-          case EventType.CREATE | EventType.MODIFY =>
-            semanticDBIndexer.onChange(event.path())
+        event.eventType match {
+          case EventType.Delete =>
+            semanticDBIndexer.onDelete(event.path)
+          case EventType.Create | EventType.Modify =>
+            semanticDBIndexer.onChange(event.path)
         }
       }.asJava
     } else if (path.isBuild) {
