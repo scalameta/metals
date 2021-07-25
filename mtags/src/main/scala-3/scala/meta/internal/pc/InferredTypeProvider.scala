@@ -76,6 +76,7 @@ final class InferredTypeProvider(
       val printer = ScopeAwareTypePrinter(indexedCtx)
       printer.typeString(short)
     }
+
     /*
      * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
      * Suprisingly, val ((a, c), b) = ((1, 3), 2) will be covered by Bind
@@ -133,23 +134,42 @@ final class InferredTypeProvider(
           )
         }
 
+        def checkForParensAndEdit(
+            applyEndingPos: Int,
+            toCheckFor: Char,
+            blockStartPos: SourcePosition
+        ) = {
+          val text = params.text.toString()
+          val isParensFunction: Boolean = text(applyEndingPos) == toCheckFor
+
+          val alreadyHasParens =
+            text(blockStartPos.start) == '('
+
+          if (isParensFunction && !alreadyHasParens) {
+            new TextEdit(blockStartPos.toLSP, "(") :: baseEdit(withParens =
+              true
+            ) :: Nil
+          } else {
+            baseEdit(withParens = false) :: Nil
+          }
+        }
+
         def typeNameEdit: List[TextEdit] = {
           path match {
-            // lambda `{a => ??? }` block and `map{a => ??? }` apply
+            // lambda `map(a => ???)` apply
             case _ :: _ :: (block: untpd.Block) :: (appl: untpd.Apply) :: _
                 if isParam =>
-              val isParensFunction =
-                params.text.toString()(appl.fun.endPos.end) == '('
-              val alreadyHasParens =
-                params.text.toString()(block.startPos.start) == '('
-              if (isParensFunction && !alreadyHasParens)
-                new TextEdit(block.startPos.toLSP, "(") :: baseEdit(withParens =
-                  true
-                ) :: Nil
-              else
-                baseEdit(withParens = false) :: Nil
+              checkForParensAndEdit(appl.fun.endPos.end, '(', block.startPos)
 
-            case _ => baseEdit(withParens = false) :: Nil
+            // labda `map{a => ???}` apply
+            // Ensures that this becomes {(a: Int) => ???} since parentheses
+            // are required around the parameter of a lambda in Scala 3
+            case valDef :: defDef :: (block: untpd.Block) :: (_: untpd.Block) :: (appl: untpd.Apply) :: _
+                if isParam =>
+              checkForParensAndEdit(appl.fun.endPos.end, '{', block.startPos)
+
+            case _ =>
+              baseEdit(withParens = false) :: Nil
           }
 
         }
