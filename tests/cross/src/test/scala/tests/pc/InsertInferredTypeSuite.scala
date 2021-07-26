@@ -170,7 +170,13 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |}""".stripMargin,
     """|object A{
        |  val toStringList = List(1, 2, 3).map{int: Int => int.toString}
-       |}""".stripMargin
+       |}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object A{
+           |  val toStringList = List(1, 2, 3).map{(int: Int) => int.toString}
+           |}""".stripMargin
+    )
   )
 
   checkEdit(
