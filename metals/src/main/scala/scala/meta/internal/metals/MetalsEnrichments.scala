@@ -474,7 +474,7 @@ object MetalsEnrichments
       if (index < safeLowerBound) -1 else index
     }
 
-    private def indicesOf(str: String): List[Int] = {
+    def indicesOf(str: String): List[Int] = {
       val b = new mutable.ListBuffer[Int]
       var idx = 0
       while (idx < value.length && idx >= 0) {

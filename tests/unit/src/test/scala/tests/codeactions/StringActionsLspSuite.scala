@@ -106,7 +106,7 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |
        |object A {
        |  val e = "hello"
-       |  val c = "this <<is>> a string"
+       |  val c = "this $ <<is>> a string"
        |  val d = "hello"
        |}
        |""".stripMargin,
@@ -116,11 +116,32 @@ class StringActionsLspSuite extends BaseCodeActionLspSuite("stringActions") {
        |
        |object A {
        |  val e = "hello"
-       |  val c = s"this is a string"
+       |  val c = s"this $$ is a string"
        |  val d = "hello"
        |}
-       |""".stripMargin.replace("'", "\""),
+       |""".stripMargin,
     selectedActionIndex = 1
+  )
+
+  check(
+    "multiline-string-interpolation",
+    """|package a
+       |
+       |object A {
+       |  val c = '''hello
+       |  this $ <<is>> a string
+       |  '''
+       |}
+       |""".stripMargin.replace("'", "\""),
+    s"${StringActions.interpolationTitle}",
+    """|package a
+       |
+       |object A {
+       |  val c = s'''hello
+       |  this $$ is a string
+       |  '''
+       |}
+       |""".stripMargin.replace("'", "\"")
   )
 
   checkNoAction(
