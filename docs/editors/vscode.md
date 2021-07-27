@@ -49,9 +49,9 @@ variables.
 ## Configure Java version
 
 The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
-[`locate-java-home`](https://www.npmjs.com/package/locate-java-home)) to locate the
-`java` executable. To override the default Java home location, update the "Java
-Home" variable in the settings menu.
+[`locate-java-home`](https://www.npmjs.com/package/locate-java-home)) to locate
+the `java` executable. To override the default Java home location, update the
+"Java Home" variable in the settings menu.
 
 ![Java Home setting](https://i.imgur.com/sKrPKk2.png)
 
@@ -217,6 +217,18 @@ the correct target names please run the command `Metals: Run Doctor`.
 Multiple configurations can be stored in that file and can be chosen either
 manually in the `Run` view or can be picked by invoking a shortcut defined under
 `workbench.action.debug.selectandstart`.
+
+### via Metals' commands
+
+You can also use commands that can be easily bound to shortcuts:
+
+- `metals.run-current-file` - Run main class in the current file.
+- `metals.test-current-file` - Run test class in the current file
+- `metals.test-current-target` - Run all tests in the current project.
+
+To assign shortcuts just go to the Keyboard Shortcuts page (`File` ->
+`Preferences` -> `Keyboard Shortcuts`) and search for a command, click on it and
+use you preffered shortcut.
 
 ## On type formatting for multiline string formatting
 
