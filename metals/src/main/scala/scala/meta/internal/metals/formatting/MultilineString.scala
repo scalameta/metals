@@ -1,14 +1,23 @@
 package scala.meta.internal.metals.formatting
 
+import scala.annotation.tailrec
+import scala.meta
+
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
-import scala.meta.tokens.Token.Interpolation
 import scala.meta.tokens.Tokens
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
+
+private case class StringLiteralExpr(
+    input: meta.Input,
+    startPos: meta.Position,
+    endPos: meta.Position,
+    hasStripMargin: Boolean
+)
 
 case class MultilineString(userConfig: () => UserConfiguration)
     extends OnTypeFormatter
@@ -17,6 +26,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   private val quote = '"'
   private val space = " "
   private val stripMargin = "stripMargin"
+  private val spaceAndBrackets = raw"[ ]*[\}\)\]]+.*"
 
   private def hasStripMarginSuffix(
       stringTokenIndex: Int,
@@ -95,41 +105,70 @@ case class MultilineString(userConfig: () => UserConfiguration)
     )
 
   private def indentWhenNoStripMargin(
-      startToken: Token,
-      endToken: Token,
+      expr: StringLiteralExpr,
       splitLines: Array[String],
       position: Position
   ): List[TextEdit] = {
+    val nextLineIdx = position.getLine + 1
     val enableStripMargin = userConfig().enableStripMarginOnTypeFormatting
+    def isLineWithBracket =
+      expr.endPos.endLine == nextLineIdx && splitLines(
+        nextLineIdx
+      ).matches(spaceAndBrackets)
     if (
-      enableStripMargin && startToken.pos.startLine == position.getLine - 1 && endToken.pos.endLine == position.getLine
+      enableStripMargin && expr.startPos.startLine == position.getLine - 1 &&
+      (expr.endPos.endLine == position.getLine || isLineWithBracket)
     ) {
       val newPos =
         new scala.meta.inputs.Position.Range(
-          endToken.input,
-          endToken.end,
-          endToken.end
+          expr.input,
+          expr.endPos.end,
+          expr.endPos.end
         )
-      List(
-        indent(splitLines, position),
+      indent(splitLines, position, expr) ++ List(
         new TextEdit(newPos.toLSP, ".stripMargin")
       )
-    } else List(indent(splitLines, position))
+    } else indent(splitLines, position, expr)
   }
 
   private def indent(
       splitLines: Array[String],
-      position: Position
-  ): TextEdit = {
+      position: Position,
+      expr: StringLiteralExpr
+  ): List[TextEdit] = {
     // position line -1 since we are checking the line before when doing onType
     val defaultIndent = determineDefaultIndent(splitLines, position.getLine - 1)
-    val existingSpaces = position.getCharacter()
+    val existingSpaces = position.getCharacter
     val addedSpaces = defaultIndent.drop(existingSpaces)
     val startChar = defaultIndent.size - addedSpaces.size
     position.setCharacter(startChar)
     val endChar = startChar + Math.max(0, existingSpaces - defaultIndent.size)
     val endPosition = new Position(position.getLine(), endChar)
-    new TextEdit(new Range(position, endPosition), addedSpaces + "|")
+    val firstEdit =
+      new TextEdit(new Range(position, endPosition), addedSpaces + "|")
+
+    val formatBraces = {
+      val nextLineIdx = position.getLine + 1
+      val isRangeValid = nextLineIdx <= expr.endPos.endLine
+      def isLineWithBracket =
+        splitLines(nextLineIdx).matches(spaceAndBrackets)
+      if (isRangeValid && isLineWithBracket) {
+        val nextLine = splitLines(nextLineIdx)
+        val nextLineContent = nextLine.dropWhile(_.isWhitespace)
+        val startPos = new Position(nextLineIdx, 0)
+        val endPos = new Position(
+          nextLineIdx,
+          nextLine.size
+        )
+        List(
+          new TextEdit(
+            new Range(startPos, endPos),
+            defaultIndent + "|" + nextLineContent
+          )
+        )
+      } else Nil
+    }
+    List(firstEdit) ++ formatBraces
   }
 
   private def indent(
@@ -150,10 +189,10 @@ case class MultilineString(userConfig: () => UserConfiguration)
   private def inToken(
       startPos: meta.Position,
       endPos: meta.Position,
-      startToken: Token,
-      endToken: Token
+      startTokenPos: meta.Position,
+      endTokenPos: meta.Position
   ): Boolean =
-    startPos.startLine >= startToken.pos.startLine && endPos.endLine <= endToken.pos.endLine
+    startPos.startLine >= startTokenPos.startLine && endPos.endLine <= endTokenPos.endLine
 
   private def pipeInScope(
       startPos: meta.Position,
@@ -181,80 +220,6 @@ case class MultilineString(userConfig: () => UserConfiguration)
       endPos.end - 1
     )
     pipeBetweenLastLineAndPos != -1 || pipeBetweenSelection != -1
-  }
-
-  private def indentTokensOnTypeFormatting(
-      startPosition: meta.Position,
-      endPosition: meta.Position,
-      tokens: Tokens,
-      triggerChar: String,
-      splitLines: Array[String],
-      position: Position,
-      text: String
-  ): Option[List[TextEdit]] = {
-    if (triggerChar == "\n") {
-      tokens.toIterator.zipWithIndex.flatMap { case (token, index) =>
-        isStringOrInterpolation(
-          startPosition,
-          endPosition,
-          token,
-          index,
-          text,
-          tokens,
-          newlineAdded = true
-        ) { (startToken, endToken, endIndex) =>
-          if (hasStripMarginSuffix(endIndex, tokens))
-            Some(List(indent(splitLines, position)))
-          else
-            Some(
-              indentWhenNoStripMargin(
-                startToken,
-                endToken,
-                splitLines,
-                position
-              )
-            )
-        }
-      }.headOption
-    } else None
-  }
-
-  def isStringOrInterpolation(
-      startPosition: meta.Position,
-      endPosition: meta.Position,
-      token: Token,
-      index: Int,
-      text: String,
-      tokens: Tokens,
-      newlineAdded: Boolean
-  )(
-      indent: (Token, Token, Int) => Option[List[TextEdit]]
-  ): Option[List[TextEdit]] = {
-    token match {
-      case startToken @ (_: Token.Constant.String | _: Interpolation.Start) =>
-        val endIndex = if (startToken.isInstanceOf[Interpolation.Start]) {
-          var endIndex = index + 1
-          while (
-            !tokens(endIndex)
-              .isInstanceOf[Interpolation.End]
-          ) endIndex += 1
-          endIndex
-        } else index
-        val endToken = tokens(endIndex)
-        if (
-          inToken(startPosition, endPosition, startToken, endToken)
-          && isMultilineString(startToken) &&
-          pipeInScope(
-            startPosition,
-            endPosition,
-            text,
-            newlineAdded
-          )
-        ) indent(startToken, endToken, endIndex)
-        else None
-      case _ => None
-
-    }
   }
 
   private def doubleQuoteNotClosed(
@@ -349,66 +314,94 @@ case class MultilineString(userConfig: () => UserConfiguration)
     }
   }
 
-  override def contribute(
-      onTypeFormatterParams: OnTypeFormatterParams
-  ): Option[List[TextEdit]] = {
-    val tokensOpt = onTypeFormatterParams.tokens
-    val startPos = onTypeFormatterParams.startPos
-    val endPos = onTypeFormatterParams.endPos
-    val triggerChar = onTypeFormatterParams.triggerChar
-    val splitLines = onTypeFormatterParams.splitLines
-    val position = onTypeFormatterParams.position
-    val sourceText = onTypeFormatterParams.sourceText
-    tokensOpt match {
-      case Some(tokens) =>
-        indentTokensOnTypeFormatting(
+  private def collectStringAndInterpolations(
+      tokens: Tokens
+  ): PartialFunction[(Token, Int), StringLiteralExpr] = {
+    case (token: Token.Constant.String, i) if isMultilineString(token) =>
+      val hasSuffix = hasStripMarginSuffix(i, tokens)
+      StringLiteralExpr(token.input, token.pos, token.pos, hasSuffix)
+    case (token: Token.Interpolation.Start, i) if isMultilineString(token) =>
+      // interpolations can be nested!
+      @tailrec
+      def findInterpolationEnd(idx: Int, openedInterpolations: Int): Int = {
+        tokens(idx) match {
+          case _: Token.Interpolation.Start =>
+            findInterpolationEnd(idx + 1, openedInterpolations + 1)
+          case _: Token.Interpolation.End =>
+            if (openedInterpolations == 1) idx
+            else findInterpolationEnd(idx + 1, openedInterpolations - 1)
+          case _ => findInterpolationEnd(idx + 1, openedInterpolations)
+        }
+      }
+      val endIndex = findInterpolationEnd(i + 1, 1)
+      val endToken = tokens(endIndex)
+      val hasSuffix = hasStripMarginSuffix(endIndex, tokens)
+      StringLiteralExpr(token.input, token.pos, endToken.pos, hasSuffix)
+  }
+
+  private def getStringLiterals(
+      tokens: Tokens,
+      params: FormatterParams,
+      newlineAdded: Boolean
+  ): Iterator[StringLiteralExpr] = {
+    val startPos = params.startPos
+    val endPos = params.endPos
+    val sourceText = params.sourceText
+    tokens.toIterator.zipWithIndex
+      .collect(collectStringAndInterpolations(tokens))
+      .filter { td =>
+        inToken(startPos, endPos, td.startPos, td.endPos) &&
+        pipeInScope(
           startPos,
           endPos,
-          tokens,
-          triggerChar,
-          splitLines,
-          position,
-          sourceText
+          sourceText,
+          newlineAdded
         )
-      case None =>
-        if (triggerChar == "\"" && onlyFourQuotes(splitLines, position))
-          Some(replaceWithSixQuotes(position))
-        else if (
-          triggerChar == "\n" && doubleQuoteNotClosed(
-            splitLines,
-            position
-          )
-        )
-          Some(fixStringNewline(position, splitLines))
-        else None
+      }
+  }
+
+  override def contribute(
+      params: OnTypeFormatterParams
+  ): Option[List[TextEdit]] = {
+    val splitLines = params.splitLines
+    val position = params.position
+    val triggerChar = params.triggerChar
+    (params.tokens, triggerChar) match {
+      case (Some(tokens), "\n") =>
+        getStringLiterals(tokens, params, true)
+          .map { expr =>
+            if (expr.hasStripMargin)
+              indent(splitLines, position, expr)
+            else
+              indentWhenNoStripMargin(
+                expr,
+                splitLines,
+                position
+              )
+          }
+          .find(_.nonEmpty)
+      case (None, "\"") if onlyFourQuotes(splitLines, position) =>
+        Some(replaceWithSixQuotes(position))
+      case (None, "\n") if doubleQuoteNotClosed(splitLines, position) =>
+        Some(fixStringNewline(position, splitLines))
+      case _ => None
     }
   }
 
   override def contribute(
-      rangeFormatterParams: RangeFormatterParams
+      params: RangeFormatterParams
   ): Option[List[TextEdit]] = {
-    val tokensOpt = rangeFormatterParams.tokens
-    val startPos = rangeFormatterParams.startPos
-    val endPos = rangeFormatterParams.endPos
-    val sourceText = rangeFormatterParams.sourceText
-    val range = rangeFormatterParams.range
-    val splitLines = rangeFormatterParams.splitLines
-    tokensOpt.flatMap { tokens =>
-      tokens.toIterator.zipWithIndex.flatMap { case (token, index) =>
-        isStringOrInterpolation(
-          startPos,
-          endPos,
-          token,
-          index,
-          sourceText,
-          tokens,
-          newlineAdded = false
-        ) { (_, _, endIndex) =>
-          if (hasStripMarginSuffix(endIndex, tokens))
-            Some(indent(splitLines, startPos, range))
-          else None
+    val startPos = params.startPos
+
+    params.tokens.flatMap { tokens =>
+      getStringLiterals(tokens, params, false)
+        .filter(_.hasStripMargin)
+        .map { expr =>
+          val range = params.range
+          val splitLines = params.splitLines
+          indent(splitLines, startPos, range)
         }
-      }.headOption
+        .find(_.nonEmpty)
     }
   }
 }
