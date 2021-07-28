@@ -7,8 +7,10 @@ import scala.meta.io.AbsolutePath
 
 import munit.Location
 
-abstract class BaseImportSuite(suiteName: String)
-    extends BaseLspSuite(suiteName) {
+abstract class BaseImportSuite(
+    suiteName: String,
+    initializer: BuildServerInitializer = BloopImportInitializer
+) extends BaseLspSuite(suiteName, initializer) {
 
   def buildTool: BuildTool
 

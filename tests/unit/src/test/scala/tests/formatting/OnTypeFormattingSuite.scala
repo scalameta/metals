@@ -584,7 +584,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     val expected = unmangle(expectedCase)
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{}}
              |/a/src/main/scala/a/Main.scala

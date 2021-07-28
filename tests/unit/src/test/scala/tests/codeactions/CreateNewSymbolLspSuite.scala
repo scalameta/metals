@@ -98,13 +98,13 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
     test(name) {
       cleanWorkspace()
       for {
-        _ <- server.initialize(s"""/metals.json
-                                  |{"a":{}}
-                                  |/$path
-                                  |${input
+        _ <- initialize(s"""/metals.json
+                           |{"a":{}}
+                           |/$path
+                           |${input
           .replace("<<", "")
           .replace(">>", "")}
-                                  |""".stripMargin)
+                           |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <-
           server.assertCodeAction(path, input, expectedActions, Nil)

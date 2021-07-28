@@ -20,7 +20,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("run") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -53,7 +53,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("run-multiple") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -90,7 +90,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("no-main") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -122,7 +122,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("workspace-error") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -156,7 +156,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     val fakePath = workspace + "fake-path"
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -189,7 +189,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("testFile") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -222,7 +222,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("testTarget") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -261,7 +261,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
   test("no-tests") {
     val notATestPath = "a/src/main/scala/a/NotATest.scala"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -291,7 +291,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("no-semanticdb") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {

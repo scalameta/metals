@@ -4,7 +4,7 @@ class WindowStateDidChangeLspSuite
     extends BaseLspSuite("window-state-did-change") {
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{ "a": {} }

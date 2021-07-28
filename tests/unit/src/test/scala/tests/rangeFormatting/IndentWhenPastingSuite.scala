@@ -340,7 +340,7 @@ class IndentWhenPastingSuite
     val expected = expectedCase
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{"scalaVersion" : "$scalaVersion"}}
              |/a/src/main/scala/a/Main.scala

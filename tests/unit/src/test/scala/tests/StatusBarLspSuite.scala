@@ -6,7 +6,7 @@ class StatusBarLspSuite extends BaseLspSuite("status-bar") {
   test("compile-success") {
     cleanCompileCache("a")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{ "a": {} }

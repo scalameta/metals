@@ -13,14 +13,14 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
-import tests.ScriptsAssertions
+import tests.SbtServerInitializer
 
 /**
  * Basic suite to ensure that a connection to sbt server can be made.
  */
 class SbtServerSuite
     extends BaseImportSuite("sbt-server")
-    with ScriptsAssertions {
+    with SbtServerInitializer {
 
   val preBspVersion = "1.3.13"
   val supportedBspVersion = V.sbtVersion
@@ -34,7 +34,7 @@ class SbtServerSuite
   test("too-old") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$preBspVersion
             |/build.sbt
@@ -70,7 +70,7 @@ class SbtServerSuite
     def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$supportedBspVersion
             |/build.sbt
@@ -104,7 +104,7 @@ class SbtServerSuite
   test("reload") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$supportedBspVersion
             |/build.sbt
@@ -144,7 +144,7 @@ class SbtServerSuite
     )
     mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=${V.sbtVersion}
             |/build.sbt

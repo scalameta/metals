@@ -11,7 +11,7 @@ class Worksheet213LspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
 
   test("literals") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "${V.scala213}"}}

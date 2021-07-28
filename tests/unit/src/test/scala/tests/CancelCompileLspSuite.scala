@@ -9,7 +9,7 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{
           |  "a": {},

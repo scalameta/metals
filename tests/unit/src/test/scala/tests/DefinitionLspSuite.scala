@@ -11,7 +11,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   test("definition") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{
@@ -126,7 +126,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   // https://github.com/scalameta/metals/issues/755
   test("definition-fallback-to-show-usages") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -179,7 +179,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   test("stale") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -217,7 +217,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   test("annotations") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -264,7 +264,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   test("fallback-to-presentation-compiler") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{"a":{}}
@@ -298,7 +298,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   test("rambo") {
     cleanDatabase()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -328,7 +328,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   test("clashing-references") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

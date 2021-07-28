@@ -33,7 +33,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |""".stripMargin
@@ -59,6 +59,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
         defaultPom.replace("<!--URL-->", "http://www.example.com")
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("pom.xml")(identity)
     } yield {
       assertNoDiff(
@@ -75,7 +76,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("force-command") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |""".stripMargin
@@ -101,7 +102,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("run") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |/src/main/scala/a/Main.scala
@@ -143,7 +144,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("new-dependency") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |/src/main/scala/reload/Main.scala
@@ -155,6 +156,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("pom.xml") { text =>
         text.replace(
           "<!--DEPENDENCY-->",
@@ -190,7 +192,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
          |""".stripMargin
     )
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$badPom
             |""".stripMargin,
@@ -229,7 +231,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("fatal-warnings") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/pom.xml
            |${defaultPom.replace("<!--CONFIGURATION-->", scalacArgs)}

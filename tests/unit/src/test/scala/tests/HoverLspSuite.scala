@@ -6,7 +6,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
   test("basic".tag(FlakyWindows)) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{"a":{}}
         """.stripMargin
@@ -24,7 +24,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
   test("basic-rambo".tag(FlakyWindows)) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/a/src/main/scala/a/Main.scala
            |object Main extends App {
            |  // @@
@@ -45,7 +45,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
   test("docstrings".tag(FlakyWindows)) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{"a":{}}
           |/a/src/main/scala/a/Def.scala
@@ -77,7 +77,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
   test("update-docstrings".tag(FlakyWindows)) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{"a":{}}
           |/a/src/main/scala/a/Def.scala
@@ -125,7 +125,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
   test("dependencies".tag(FlakyWindows)) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{"a":{}}
           |/a/src/main/scala/a/Main.scala

@@ -28,7 +28,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   test("simple script") {
     // single script with import $ivy-s
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -93,7 +93,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   test("invalid-version") {
     val fakeScalaVersion = "30.3.4"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -121,7 +121,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   // https://github.com/scalameta/metals/issues/1801
   test("hover".flaky) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -191,7 +191,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("file-completion") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -246,7 +246,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("file-completion-path") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -281,7 +281,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("completion") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -321,7 +321,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("completion-class") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -359,7 +359,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         |                        ^^^^
         |""".stripMargin
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -401,7 +401,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   test("multi script") {
     // multiple scripts with mixed import $file-s and $ivy-s
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -490,7 +490,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("ignore build.sc") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

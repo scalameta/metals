@@ -4,7 +4,7 @@ class QuickBuildSuite extends BaseLspSuite("quick-build") {
   test("basic") {
     cleanCompileCache("b")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

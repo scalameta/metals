@@ -8,7 +8,7 @@ class Ammonite212Suite extends tests.BaseAmmoniteSuite(V.ammonite212) {
 
   test("global-version-fallback") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

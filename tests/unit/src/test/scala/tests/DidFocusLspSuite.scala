@@ -13,7 +13,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
   test("is-compiled") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -71,7 +71,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
   test("497") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

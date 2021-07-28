@@ -277,12 +277,12 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
       }
 
       val testFuture = for {
-        _ <- server.initialize(s"""
-                                  |/metals.json
-                                  |{
-                                  |  "a": { }
-                                  |}
-                                  |""".stripMargin)
+        _ <- initialize(s"""
+                           |/metals.json
+                           |{
+                           |  "a": { }
+                           |}
+                           |""".stripMargin)
         _ <-
           server
             .executeCommand(

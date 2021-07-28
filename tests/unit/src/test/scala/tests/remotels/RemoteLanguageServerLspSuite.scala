@@ -13,7 +13,7 @@ class RemoteLanguageServerLspSuite extends tests.BaseLspSuite("remotels") {
 
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": { }

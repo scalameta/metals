@@ -26,7 +26,7 @@ class CompletionCrossLspSuite
   test("serializable-2.13") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": { "scalaVersion": "${V.scala213}" }

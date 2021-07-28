@@ -9,7 +9,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     cleanWorkspace()
     val using = V.deprecatedScalaVersions.filter(_.startsWith("2.12")).head
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -35,7 +35,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     val using = V.deprecatedScalaVersions.filter(_.startsWith("2.12")).head
     val older = "2.12.4"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -61,7 +61,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     cleanWorkspace()
     val using = V.scala211
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -84,7 +84,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     cleanWorkspace()
     val using = "2.12.4"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -107,7 +107,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     cleanWorkspace()
     val using = V.deprecatedScalaVersions.filter(_.startsWith("2.13")).head
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -130,7 +130,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     cleanWorkspace()
     val using = V.scala3
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {

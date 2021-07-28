@@ -402,13 +402,14 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       )
 
       val futureToRecover = for {
-        _ <- server.initialize(s"""
-                                  |/metals.json
-                                  |{
-                                  |  "a": { }
-                                  |}
-                                  |$existingFiles
-                                  |""".stripMargin)
+        _ <- initialize(
+          s"""/metals.json
+             |{
+             |  "a": { }
+             |}
+             |$existingFiles
+          """.stripMargin
+        )
         _ <-
           server
             .executeCommand(

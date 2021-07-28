@@ -6,7 +6,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
   test("reset-pc") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{
           |  "a": {},

@@ -165,7 +165,7 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
       val navigator = instrument(StepNavigator(workspace))
 
       for {
-        _ <- server.initialize(layout)
+        _ <- initialize(layout)
         debugger <- debugMain("a", main, navigator)
         _ <- debugger.initialize
         _ <- debugger.launch
