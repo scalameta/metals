@@ -1,10 +1,9 @@
 package tests.sbt
 
-import java.util.concurrent.TimeUnit
-
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -13,14 +12,14 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
+import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 
 /**
  * Basic suite to ensure that a connection to sbt server can be made.
  */
 class SbtServerSuite
-    extends BaseImportSuite("sbt-server")
-    with SbtServerInitializer {
+    extends BaseImportSuite("sbt-server", SbtServerInitializer) {
 
   val preBspVersion = "1.3.13"
   val supportedBspVersion = V.sbtVersion
@@ -33,23 +32,24 @@ class SbtServerSuite
 
   test("too-old") {
     cleanWorkspace()
+    writeLayout(
+      s"""|/project/build.properties
+          |sbt.version=$preBspVersion
+          |/build.sbt
+          |${SbtBuildLayout.commonSbtSettings}
+          |scalaVersion := "${V.scala212}"
+          |""".stripMargin
+    )
     for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$preBspVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
-      )
+      _ <- server.initialize()
+      _ <- server.initialized()
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importBuildMessage,
-          progressMessage
+          importBuildMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear()
-      _ = assertStatus(_.isInstalled)
       // Attempt to create a .bsp/sbt.json file
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
     } yield {
@@ -69,25 +69,17 @@ class SbtServerSuite
     def sbtBspPlugin = workspace.resolve("project/metals.sbt")
     def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
+    writeLayout(SbtBuildLayout("", V.scala212))
     for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$supportedBspVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
-      )
+      _ <- server.initialize()
+      _ <- server.initialized()
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          // since bloop is still the default
-          importBuildMessage,
-          progressMessage
-        ).mkString("\n")
+        // Project has no .bloop directory so user is asked to "import via bloop"
+        // since bloop is still the default
+        importBuildMessage
       )
       _ = client.messageRequests.clear() // restart
-      _ = assertStatus(_.isInstalled)
       _ = assert(!sbtBspConfig.exists)
       // At this point, we want to use sbt server, so create the sbt.json file.
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
@@ -104,24 +96,19 @@ class SbtServerSuite
   test("reload") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$supportedBspVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
-      )
-      _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
-      // A bit obnoxious, but this taks a long time to connect in CI
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(20))
+      _ <- initialize(SbtBuildLayout("", V.scala212))
+      // reload build after build.sbt changes
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
            |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
            |""".stripMargin
       }
       _ = {
-        val msgs = client.workspaceErrorShowMessages
-        assertNoDiff(msgs, Messages.ReloadProjectFailed.getMessage())
+        assertNoDiff(
+          client.workspaceErrorShowMessages,
+          Messages.ReloadProjectFailed.getMessage
+        )
         client.showMessages.clear()
       }
       _ <- server.didSave("build.sbt") { _ =>
@@ -130,7 +117,7 @@ class SbtServerSuite
            |""".stripMargin
       }
       _ = {
-        assert(client.workspaceErrorShowMessages.isEmpty())
+        assert(client.workspaceErrorShowMessages.isEmpty)
       }
     } yield ()
   }
@@ -150,6 +137,7 @@ class SbtServerSuite
             |/build.sbt
             |import sbt.internal.bsp.BuildTargetIdentifier
             |import java.net.URI
+            |${SbtBuildLayout.commonSbtSettings}
             |scalaVersion := "${V.scala212}"
             |Compile / bspTargetIdentifier := {
             |  BuildTargetIdentifier(new URI("debug"))

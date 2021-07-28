@@ -2083,6 +2083,7 @@ class MetalsLanguageServer(
           Future.successful(BuildChange.None)
       }
       _ = {
+        tables.dismissedNotifications.ImportChanges.reset()
         treeView.init()
       }
     } yield result)
