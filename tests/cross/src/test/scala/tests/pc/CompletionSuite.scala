@@ -1323,4 +1323,17 @@ class CompletionSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     filter = _.startsWith("toInt:")
   )
+
+  checkItems(
+    "select-ignores-next-line",
+    s"""
+       |object Main {
+       |  def hello =
+       |    val name = Option("Bob")
+       |    name.@@
+       |    println(msg) 
+       |}
+       |""".stripMargin,
+    _.nonEmpty
+  )
 }
