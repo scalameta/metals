@@ -120,6 +120,7 @@ object Messages {
   object ImportBuildChanges {
     def yes: MessageActionItem =
       new MessageActionItem("Import changes")
+    def notNow: MessageActionItem = Messages.notNow
     def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(s"$buildToolName build needs to be re-imported")
@@ -137,6 +138,7 @@ object Messages {
 
   object ImportBuild {
     def yes = new MessageActionItem("Import build")
+    def notNow: MessageActionItem = Messages.notNow
     def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
