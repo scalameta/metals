@@ -3,7 +3,8 @@ package tests
 import munit.Location
 import munit.TestOptions
 
-class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
+class DocumentHighlightLspSuite
+    extends BaseQuickBuildSuite("documentHighlight") {
 
   check(
     "single",
@@ -107,7 +108,7 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
     val base = testCase.replaceAll("(<<|>>|@@)", "")
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{}}
              |/a/src/main/scala/a/Main.scala

@@ -6,13 +6,13 @@ import scala.meta.internal.metals.ServerCommands
 
 import bill.Bill
 
-class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
+class BspSwitchLspSuite extends BaseQuickBuildSuite("bsp-switch") {
 
   test("switch".flaky) {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize("")
+      _ <- initialize("")
       _ = {
         client.messageRequests.clear()
         assertConnectedToBuildServer("Bill")

@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.DidFocusResult._
 import scala.meta.internal.metals.Time
 
-class DidFocusLspSuite extends BaseLspSuite("did-focus") {
+class DidFocusLspSuite extends BaseQuickBuildSuite("did-focus") {
   var fakeTime: FakeTime = _
   override def time: Time = fakeTime
   override def beforeEach(context: BeforeEach): Unit = {
@@ -13,7 +13,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
   test("is-compiled") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -71,7 +71,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
   test("497") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

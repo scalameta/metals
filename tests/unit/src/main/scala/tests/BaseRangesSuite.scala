@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
-abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
+abstract class BaseRangesSuite(name: String) extends BaseQuickBuildSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
   protected def compilerPlugins: List[String] = Nil
@@ -47,7 +47,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
     test(name) {
       cleanWorkspace()
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":
              |  {

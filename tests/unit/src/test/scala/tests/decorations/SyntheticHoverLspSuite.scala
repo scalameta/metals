@@ -1,12 +1,12 @@
 package tests.decorations
 
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
-class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
+class SyntheticHoverLspSuite extends BaseQuickBuildSuite("implicits") {
 
   test("hovers") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

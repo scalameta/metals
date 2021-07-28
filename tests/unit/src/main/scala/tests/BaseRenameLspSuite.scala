@@ -7,7 +7,7 @@ import scala.meta.internal.pc.Identifier
 import munit.Location
 import munit.TestOptions
 
-class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
+class BaseRenameLspSuite(name: String) extends BaseQuickBuildSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
   protected def compilerPlugins: List[String] = Nil
@@ -86,7 +86,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       val fullInput = input.replaceAll(allMarkersRegex, "")
       val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{
              |  "a" : {

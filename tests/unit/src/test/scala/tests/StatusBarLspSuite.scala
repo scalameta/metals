@@ -1,12 +1,12 @@
 package tests
 import scala.meta.internal.metals.Icons
 
-class StatusBarLspSuite extends BaseLspSuite("status-bar") {
+class StatusBarLspSuite extends BaseQuickBuildSuite("status-bar") {
   override def icons: Icons = Icons.vscode
   test("compile-success") {
     cleanCompileCache("a")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{ "a": {} }

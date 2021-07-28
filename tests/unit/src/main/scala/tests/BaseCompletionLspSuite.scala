@@ -7,7 +7,8 @@ import scala.meta.internal.metals.TextEdits
 import munit.Location
 import org.eclipse.lsp4j.CompletionList
 
-abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
+abstract class BaseCompletionLspSuite(name: String)
+    extends BaseQuickBuildSuite(name) {
 
   def withCompletion(query: String, project: Char = 'a')(
       fn: CompletionList => Unit
@@ -74,7 +75,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   def basicTest(scalaVersion: String): Future[Unit] = {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": { "scalaVersion": "${scalaVersion}" }
@@ -195,7 +196,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   def matchKeywordTest(scalaVersion: String): Future[Unit] = {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": { "scalaVersion": "${scalaVersion}" }

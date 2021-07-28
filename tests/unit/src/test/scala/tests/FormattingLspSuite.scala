@@ -10,10 +10,10 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 
-class FormattingLspSuite extends BaseLspSuite("formatting") {
+class FormattingLspSuite extends BaseQuickBuildSuite("formatting") {
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/.scalafmt.conf
             |maxColumn = 100
             |version=${V.scalafmtVersion}
@@ -37,7 +37,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   test("require-config") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/a/src/main/scala/a/Main.scala
            |object FormatMe {
            | val x = 1  }
@@ -62,7 +62,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   test("custom-config-path") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/.scalafmt.conf
             |maxColumn=100
             |version=${V.scalafmtVersion}
@@ -95,7 +95,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   test("version") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|.scalafmt.conf
             |version=${V.scalafmtVersion}
             |maxColumn=30
@@ -123,7 +123,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   // Ignored because it's very slow, takes ~15s because of HTTP retries.
   test("download-error".ignore) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|.scalafmt.conf
            |version="does-not-exist"
            |/Main.scala
@@ -145,7 +145,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   test("config-error") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|.scalafmt.conf
             |version=${V.scalafmtVersion}
             |align=does-not-exist
@@ -170,7 +170,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   test("filters") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/.scalafmt.conf
             |version=${V.scalafmtVersion}
             |project.includeFilters = [
@@ -215,7 +215,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   test("sbt") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/.scalafmt.conf
             |version=${V.scalafmtVersion}
             |/project/plugins.sbt
@@ -244,7 +244,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       }
     }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/.scalafmt.conf
            |maxColumn=40
            |/Main.scala
@@ -292,7 +292,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       }
     }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": {
@@ -328,7 +328,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       }
     }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": {
@@ -368,7 +368,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       }
     }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/.scalafmt.conf
            |maxColumn=40
            |/Main.scala

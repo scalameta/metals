@@ -5,16 +5,16 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import munit.Location
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 import tests.TestHovers
 
 class WorksheetNoDecorationsLspSuite
-    extends BaseLspSuite("worksheet-no-decorations")
+    extends BaseQuickBuildSuite("worksheet-no-decorations")
     with TestHovers {
 
   test("edits-and-hovers") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -52,7 +52,7 @@ class WorksheetNoDecorationsLspSuite
 
   test("new-edits") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

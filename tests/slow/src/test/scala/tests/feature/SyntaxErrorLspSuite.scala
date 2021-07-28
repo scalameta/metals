@@ -6,9 +6,9 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.semver.SemVer
 
 import munit.Location
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
-class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
+class SyntaxErrorLspSuite extends BaseQuickBuildSuite("syntax-error") {
 
   case class Assert(didChange: String => String, expectedDiagnostics: String)
   def check(
@@ -33,7 +33,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         }
 
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""
              |/metals.json
              |{"a": {}}
@@ -49,7 +49,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{"a": {}}
@@ -93,7 +93,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   test("mix1") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{"a": {}}
@@ -129,7 +129,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   test("mix2") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{"a": {}}
@@ -163,7 +163,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   test("no-build-tool") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/A.scala
           |object A { val x = }
@@ -183,7 +183,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   test("unclosed-literal") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{"a": {}}
@@ -321,7 +321,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
   test("literal-types") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": { "scalaVersion": "${V.scala213}" }}
@@ -346,7 +346,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         .sortWith(_ > _)
         .head
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": { "scalaVersion": "$latestScala3" }}

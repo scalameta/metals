@@ -20,7 +20,7 @@ import munit.TestOptions
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
-class NewProjectLspSuite extends BaseLspSuite("new-project") {
+class NewProjectLspSuite extends BaseQuickBuildSuite("new-project") {
 
   override def initializationOptions: Option[InitializationOptions] =
     Some(
@@ -277,12 +277,12 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
       }
 
       val testFuture = for {
-        _ <- server.initialize(s"""
-                                  |/metals.json
-                                  |{
-                                  |  "a": { }
-                                  |}
-                                  |""".stripMargin)
+        _ <- initialize(s"""
+                           |/metals.json
+                           |{
+                           |  "a": { }
+                           |}
+                           |""".stripMargin)
         _ <-
           server
             .executeCommand(

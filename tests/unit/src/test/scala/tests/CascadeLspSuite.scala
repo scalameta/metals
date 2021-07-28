@@ -2,10 +2,10 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-class CascadeLspSuite extends BaseLspSuite("cascade") {
+class CascadeLspSuite extends BaseQuickBuildSuite("cascade") {
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

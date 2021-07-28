@@ -676,7 +676,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
     )
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{ "a": {} }
             |
@@ -725,7 +725,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
     val navigator = navigateExpectedBreakpoints(modifiedBreakpoints)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{ "a": {} }
             |
@@ -759,7 +759,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
     )
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{ "a": {} }
             |

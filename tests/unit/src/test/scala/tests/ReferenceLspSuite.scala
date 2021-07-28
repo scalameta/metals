@@ -9,7 +9,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   test("case-class") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -83,7 +83,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   test("synthetic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -233,7 +233,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   test("edit-distance".flaky) {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -279,7 +279,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
 
   test("var") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -302,7 +302,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
 
   test("implicit") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

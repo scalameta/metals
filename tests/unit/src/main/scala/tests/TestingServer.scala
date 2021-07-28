@@ -159,10 +159,6 @@ final class TestingServer(
     all.distinct.mkString("\n")
   }
 
-  private def write(layout: String): Unit = {
-    FileLayout.fromString(layout, root = workspace)
-  }
-
   def workspaceSymbol(
       query: String,
       includeKind: Boolean = false,
@@ -393,14 +389,8 @@ final class TestingServer(
   }
 
   def initialize(
-      layout: String,
-      expectError: Boolean = false,
-      preInitialized: () => Future[Unit] = () => Future.successful(()),
       workspaceFolders: List[String] = Nil
-  ): Future[Unit] = {
-    Debug.printEnclosing()
-    write(layout)
-    QuickBuild.bloopInstall(workspace)
+  ): Future[l.InitializeResult] = {
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
@@ -447,15 +437,11 @@ final class TestingServer(
         .asJava
     )
     params.setRootUri(workspace.toURI.toString)
-    for {
-      _ <- server.initialize(params).asScala
-      _ <- preInitialized()
-      _ <- server.initialized(new InitializedParams).asScala
-    } yield {
-      if (!expectError) {
-        assertBuildServerConnection()
-      }
-    }
+    server.initialize(params).asScala
+  }
+
+  def initialized(): Future[Unit] = {
+    server.initialized(new InitializedParams).asScala
   }
 
   def assertBuildServerConnection(): Unit = {
@@ -938,7 +924,7 @@ final class TestingServer(
       original: String,
       paste: String,
       root: AbsolutePath,
-      formattingOptions: Option[FormattingOptions] = None
+      formattingOptions: Option[FormattingOptions]
   ): Future[(String, DocumentRangeFormattingParams)] = {
     positionFromString(filename, original, root, replaceWith = paste) {
       case (text, textId, start) =>

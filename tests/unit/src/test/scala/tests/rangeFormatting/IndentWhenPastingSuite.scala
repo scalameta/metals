@@ -5,10 +5,10 @@ import scala.meta.internal.metals.BuildInfo
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.FormattingOptions
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
 class IndentWhenPastingSuite
-    extends BaseLspSuite("IndentOnPasteRangeFormatting") {
+    extends BaseQuickBuildSuite("IndentOnPasteRangeFormatting") {
 
   protected val scalaVersion: String = BuildInfo.scala3
   val formattingOptions: FormattingOptions = new FormattingOptions(
@@ -325,7 +325,7 @@ class IndentWhenPastingSuite
     val expected = expectedCase
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{"scalaVersion" : "$scalaVersion"}}
              |/a/src/main/scala/a/Main.scala

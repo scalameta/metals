@@ -8,7 +8,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 
 import munit.TestOptions
 
-class AddPackageLspSuite extends BaseLspSuite("add-package") {
+class AddPackageLspSuite extends BaseQuickBuildSuite("add-package") {
 
   check("single-level")(
     "a/src/main/scala/a/Main.scala",
@@ -82,7 +82,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
       RecursivelyDelete(workspace.resolve("a"))
       Files.createDirectories(workspace.toNIO.resolve(parent))
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           """|/metals.json
              |{
              |  "a": { }

@@ -2,13 +2,13 @@ package tests.feature
 
 import scala.meta.internal.metals.{BuildInfo => V}
 
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
-class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
+class FoldingCrossLspSuite extends BaseQuickBuildSuite("foldingRange-cross") {
 
   test("base-213") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|
             |/metals.json
             |{
@@ -44,7 +44,7 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
 
   test("source-3") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|
             |/metals.json
             |{

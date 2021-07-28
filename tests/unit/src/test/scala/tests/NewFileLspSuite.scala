@@ -15,7 +15,7 @@ import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
-class NewFileLspSuite extends BaseLspSuite("new-file") {
+class NewFileLspSuite extends BaseQuickBuildSuite("new-file") {
 
   override def initializationOptions: Option[InitializationOptions] =
     Some(InitializationOptions.Default.copy(inputBoxProvider = Some(true)))
@@ -402,13 +402,14 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       )
 
       val futureToRecover = for {
-        _ <- server.initialize(s"""
-                                  |/metals.json
-                                  |{
-                                  |  "a": { }
-                                  |}
-                                  |$existingFiles
-                                  |""".stripMargin)
+        _ <- initialize(
+          s"""/metals.json
+             |{
+             |  "a": { }
+             |}
+             |$existingFiles
+          """.stripMargin
+        )
         _ <-
           server
             .executeCommand(

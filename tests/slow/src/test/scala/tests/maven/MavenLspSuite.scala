@@ -13,9 +13,9 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import tests.BaseImportSuite
+import tests.BaseBloopImportSuite
 
-class MavenLspSuite extends BaseImportSuite("maven-import") {
+class MavenLspSuite extends BaseBloopImportSuite("maven-import") {
 
   val buildTool: MavenBuildTool = MavenBuildTool(() => userConfig)
 
@@ -33,7 +33,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |""".stripMargin
@@ -63,11 +63,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+        // Project has .bloop directory so user is asked to "re-import project"
+        importBuildChangesMessage
       )
     }
   }
@@ -75,7 +72,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("force-command") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |""".stripMargin
@@ -101,7 +98,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("run") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |/src/main/scala/a/Main.scala
@@ -143,7 +140,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("new-dependency") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$defaultPom
             |/src/main/scala/reload/Main.scala
@@ -155,6 +152,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("pom.xml") { text =>
         text.replace(
           "<!--DEPENDENCY-->",
@@ -190,7 +188,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
          |""".stripMargin
     )
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/pom.xml
             |$badPom
             |""".stripMargin,
@@ -229,7 +227,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
   test("fatal-warnings") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/pom.xml
            |${defaultPom.replace("<!--CONFIGURATION-->", scalacArgs)}

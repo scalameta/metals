@@ -11,7 +11,7 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 
 class UnsupportedDebuggingLspSuite
-    extends BaseLspSuite("unsupported-debugging") {
+    extends BaseQuickBuildSuite("unsupported-debugging") {
 
   override val initializationOptions: Some[InitializationOptions] =
     Some(
@@ -21,7 +21,7 @@ class UnsupportedDebuggingLspSuite
 
   test("no-code-lenses") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{ "a": { } }
            |
@@ -50,7 +50,7 @@ class UnsupportedDebuggingLspSuite
 
   test("suppress-model-refresh") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{ "a": { } }
            |

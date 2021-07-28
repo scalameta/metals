@@ -12,11 +12,11 @@ import scala.collection.JavaConverters._
  *  request, and instead they just rely on the tree to continue selecting. So
  *  we mimic that here in the tests.
  */
-class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
+class SelectionRangeLspSuite extends BaseQuickBuildSuite("selectionRange") {
 
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{
@@ -70,7 +70,7 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
 
   test("non-compiling") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{

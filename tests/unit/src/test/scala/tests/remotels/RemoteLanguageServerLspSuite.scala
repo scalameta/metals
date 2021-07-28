@@ -2,7 +2,8 @@ package tests.remotels
 
 import scala.meta.internal.metals.UserConfiguration
 
-class RemoteLanguageServerLspSuite extends tests.BaseLspSuite("remotels") {
+class RemoteLanguageServerLspSuite
+    extends tests.BaseQuickBuildSuite("remotels") {
 
   private val remote = TestingRemoteLanguageServer()
 
@@ -13,7 +14,7 @@ class RemoteLanguageServerLspSuite extends tests.BaseLspSuite("remotels") {
 
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": { }

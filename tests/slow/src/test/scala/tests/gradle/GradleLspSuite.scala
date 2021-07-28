@@ -13,9 +13,9 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import tests.BaseImportSuite
+import tests.BaseBloopImportSuite
 
-class GradleLspSuite extends BaseImportSuite("gradle-import") {
+class GradleLspSuite extends BaseBloopImportSuite("gradle-import") {
 
   val buildTool: GradleBuildTool = GradleBuildTool(() => userConfig)
 
@@ -26,7 +26,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.gradle
             |plugins {
             |    id 'scala'
@@ -62,11 +62,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+        // Project has .bloop directory so user is asked to "re-import project"
+        importBuildChangesMessage
       )
     }
   }
@@ -74,7 +71,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("basic-configured") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/gradle.properties
             |# Signals that bloop is configured in the project
             |bloop.configured=true
@@ -122,11 +119,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+        // Project has .bloop directory so user is asked to "re-import project"
+        importBuildChangesMessage
       )
     }
   }
@@ -135,7 +129,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test(javaOnlyTestName) {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.gradle
             |plugins {
             |    id 'java'
@@ -186,7 +180,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("transitive") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.gradle
             |plugins {
             |    id 'scala'
@@ -215,7 +209,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("force-command") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.gradle
             |plugins {
             |    id 'scala'
@@ -250,7 +244,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("new-dependency") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.gradle
             |plugins {
             |    id 'scala'
@@ -270,6 +264,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.gradle") { text =>
         s"""$text
            |dependencies {
@@ -290,7 +285,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("error") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/build.gradle
            |, syntax error
            |""".stripMargin,
@@ -348,7 +343,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("different-scala".flaky) {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/build.gradle
            |${projectWithVersion("2.12.7")}
@@ -422,7 +417,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
   test("fatal-warnings") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/build.gradle
            |plugins {

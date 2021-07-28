@@ -4,7 +4,8 @@ import scala.collection.mutable
 
 import org.eclipse.{lsp4j => l}
 
-class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
+class AnalyzeStacktraceLspSuite
+    extends BaseQuickBuildSuite("analyzestacktrace") {
 
   check(
     "simple",
@@ -63,7 +64,7 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
     test(name) {
       cleanWorkspace()
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""
              |/metals.json
              |{"a":{}}

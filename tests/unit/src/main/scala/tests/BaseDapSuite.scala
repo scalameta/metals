@@ -22,7 +22,8 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 
-abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
+abstract class BaseDapSuite(suiteName: String)
+    extends BaseQuickBuildSuite(suiteName) {
 
   private val dapClient =
     GlobalTrace.protocolTracePath(DebugProtocol.clientName)
@@ -122,7 +123,7 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
       val navigator = navigateExpectedBreakpoints(workspaceLayout)
 
       for {
-        _ <- server.initialize(layout)
+        _ <- initialize(layout)
         _ = assertNoDiagnostics()
         debugger <- debugMain("a", main.getOrElse("a.Main"), navigator)
         _ <- debugger.initialize

@@ -18,11 +18,11 @@ import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import tests.BaseImportSuite
+import tests.BaseBloopImportSuite
 import tests.ScriptsAssertions
 
 class SbtBloopLspSuite
-    extends BaseImportSuite("sbt-bloop-import")
+    extends BaseBloopImportSuite("sbt-bloop-import")
     with ScriptsAssertions {
 
   val sbtVersion = V.sbtVersion
@@ -36,7 +36,7 @@ class SbtBloopLspSuite
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
@@ -66,11 +66,8 @@ class SbtBloopLspSuite
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+        // Project has .bloop directory so user is asked to "re-import project"
+        importBuildChangesMessage
       )
     }
   }
@@ -78,7 +75,7 @@ class SbtBloopLspSuite
   test("no-sbt-version") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "${V.scala212}"
             |""".stripMargin
@@ -92,7 +89,7 @@ class SbtBloopLspSuite
   test("force-command") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
@@ -121,7 +118,7 @@ class SbtBloopLspSuite
   test("new-dependency") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
@@ -135,6 +132,7 @@ class SbtBloopLspSuite
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt") { text =>
         s"""$text
            |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
@@ -161,7 +159,7 @@ class SbtBloopLspSuite
     }
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/project/build.properties
            |sbt.version=$sbtVersion
@@ -185,7 +183,7 @@ class SbtBloopLspSuite
   test("error") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
@@ -223,7 +221,7 @@ class SbtBloopLspSuite
   test("supported-scala") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/project/build.properties
            |sbt.version=$sbtVersion
@@ -283,6 +281,7 @@ class SbtBloopLspSuite
         client.showMessages.clear()
         client.clientCommands.clear()
       }
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt")(_ =>
         s"""scalaVersion := "${V.scala212}" """
       )
@@ -301,7 +300,7 @@ class SbtBloopLspSuite
   test("sbtopts") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/project/build.properties
            |sbt.version=$sbtVersion
@@ -322,7 +321,7 @@ class SbtBloopLspSuite
   test("jvmopts") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/project/build.properties
            |sbt.version=$sbtVersion
@@ -342,7 +341,7 @@ class SbtBloopLspSuite
   test("fatal-warnings") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/project/build.properties
            |sbt.version=$sbtVersion
@@ -383,30 +382,32 @@ class SbtBloopLspSuite
 
   test("sbt-script") {
     cleanWorkspace()
+    writeLayout(
+      s"""
+         |/project/build.properties
+         |sbt.version=$sbtVersion
+         |/build.sbt
+         |scalaVersion := "${V.scala212}"
+         |""".stripMargin
+    )
     for {
-      _ <- server.initialize(
-        s"""
-           |/project/build.properties
-           |sbt.version=$sbtVersion
-           |/build.sbt
-           |scalaVersion := "${V.scala212}"
-           |""".stripMargin,
-        expectError = true,
-        preInitialized = () => {
-          val doesNotExist = workspace.resolve("does-not-exist")
-          val config = new JsonObject
-          config.add("sbt-script", new JsonPrimitive(doesNotExist.toString()))
-          server.didChangeConfiguration(config.toString)
-        }
-      )
-      _ = assertStatus(!_.isInstalled)
-    } yield ()
+      _ <- server.initialize()
+      _ <- Future {
+        val doesNotExist = workspace.resolve("does-not-exist")
+        val config = new JsonObject
+        config.add("sbt-script", new JsonPrimitive(doesNotExist.toString()))
+        server.didChangeConfiguration(config.toString)
+      }
+      _ <- server.initialized()
+    } yield {
+      assertStatus(!_.isInstalled)
+    }
   }
 
   test("sbt-version") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/project/build.properties
            |sbt.version=0.13.15
            |""".stripMargin,
@@ -426,7 +427,7 @@ class SbtBloopLspSuite
       SbtBuildTool(None, () => UserConfiguration.default).minimumVersion
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$minimal
             |""".stripMargin
@@ -438,7 +439,7 @@ class SbtBloopLspSuite
   test("definition-deps") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=${V.sbtVersion}
             |
@@ -458,7 +459,7 @@ class SbtBloopLspSuite
   test("definition-meta") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/project/plugins.sbt
             |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.21")
             |
@@ -477,7 +478,7 @@ class SbtBloopLspSuite
   test("definition-local") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/build.sbt
            |scalaVersion := "$scalaVersion"
@@ -499,7 +500,7 @@ class SbtBloopLspSuite
   test("sbt-file-hover") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "$scalaVersion"
          """.stripMargin
@@ -519,7 +520,7 @@ class SbtBloopLspSuite
   test("scala-file-hover") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "$scalaVersion"
             |/project/Deps.scala
@@ -547,7 +548,7 @@ class SbtBloopLspSuite
   test("sbt-file-autocomplete") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "$scalaVersion"
             |libraryDependencies ++= Seq()
@@ -563,7 +564,7 @@ class SbtBloopLspSuite
   test("sbt-meta-scala-source-basics") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := MetaValues.scalaVersion
             |/project/MetaValues.scala
@@ -590,7 +591,7 @@ class SbtBloopLspSuite
   test("sbt-meta-symbols") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := MetaValues.scalaVersion
             |/project/MetaValues.scala
@@ -614,7 +615,7 @@ class SbtBloopLspSuite
   test("sbt-references") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |def foo(): String = "2.13.2"
             |def bar(): String = foo() 
@@ -638,7 +639,7 @@ class SbtBloopLspSuite
   test("sbt-rename") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |def foo(): String = "2.13.2"
             |def bar(): String = foo() 

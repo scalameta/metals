@@ -4,7 +4,7 @@ import java.nio.file.Files
 
 import scala.meta.internal.metals.RecursivelyDelete
 
-class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
+class FileWatcherLspSuite extends BaseQuickBuildSuite("file-watcher") {
   test("basic") {
     cleanCompileCache("a")
     cleanCompileCache("b")
@@ -21,7 +21,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
     Files.createDirectories(workspace.resolve("b/src/main/scala").toNIO)
     Files.createDirectories(workspace.resolve("c/src/main/scala").toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

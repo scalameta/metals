@@ -3,10 +3,10 @@ package tests.rangeFormatting
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.FormattingOptions
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
 class MultilineStringRangeFormattingWhenPastingSuite
-    extends BaseLspSuite("rangeFormatting") {
+    extends BaseQuickBuildSuite("rangeFormatting") {
   val formattingOptions: FormattingOptions = new FormattingOptions(
     /** tabSize: */
     2,
@@ -348,7 +348,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
     val expected = unmangle(expectedCase)
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{}}
              |/a/src/main/scala/a/Main.scala

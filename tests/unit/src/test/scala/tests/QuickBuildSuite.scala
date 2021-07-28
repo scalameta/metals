@@ -1,10 +1,10 @@
 package tests
 
-class QuickBuildSuite extends BaseLspSuite("quick-build") {
+class QuickBuildSuite extends BaseQuickBuildSuite("quick-build") {
   test("basic") {
     cleanCompileCache("b")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

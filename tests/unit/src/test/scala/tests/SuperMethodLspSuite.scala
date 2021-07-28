@@ -4,7 +4,7 @@ import scala.concurrent.Future
 
 import org.eclipse.lsp4j.Position
 
-class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
+class SuperMethodLspSuite extends BaseQuickBuildSuite("gotosupermethod") {
 
   test("simple") {
     val code =
@@ -241,7 +241,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
     cleanWorkspace()
     for {
-      _ <- server.initialize(strip(header))
+      _ <- initialize(strip(header))
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiagnostics()
@@ -274,7 +274,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
     cleanWorkspace()
     for {
-      _ <- server.initialize(strip(header + code))
+      _ <- initialize(strip(header + code))
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
 

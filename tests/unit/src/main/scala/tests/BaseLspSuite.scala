@@ -43,6 +43,10 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
 
   protected def initializationOptions: Option[InitializationOptions] = None
 
+  protected def writeLayout(layout: String): Unit = {
+    FileLayout.fromString(layout, root = workspace)
+  }
+
   override def afterAll(): Unit = {
     if (server != null) {
       server.server.cancelAll()

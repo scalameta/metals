@@ -1,9 +1,9 @@
 package tests
 
-class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
+class FoldingRangeLspSuite extends BaseQuickBuildSuite("foldingRange") {
   test("parse-error") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{

@@ -1,14 +1,14 @@
 package tests
 
 class BuildTargetsLspSuite
-    extends BaseLspSuite("build-targets")
+    extends BaseQuickBuildSuite("build-targets")
     with TestHovers {
 
   override def munitIgnore: Boolean = isWindows
 
   test("scala-priority") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {

@@ -6,9 +6,9 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-import tests.BaseImportSuite
+import tests.BaseBloopImportSuite
 
-class MillLspSuite extends BaseImportSuite("mill-import") {
+class MillLspSuite extends BaseBloopImportSuite("mill-import") {
 
   val buildTool: MillBuildTool = MillBuildTool(() => userConfig)
 
@@ -19,7 +19,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/build.sc
            |import mill._, scalalib._
@@ -56,11 +56,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage
-        ).mkString("\n")
+        // Project has .bloop directory so user is asked to "re-import project"
+        importBuildChangesMessage
       )
     }
   }
@@ -68,7 +65,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
   test("new-dependency") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/build.sc
            |import mill._, scalalib._
@@ -85,6 +82,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       )
       _ <- server.didOpen("foo/src/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sc") { text =>
         text.replace(
           "/*DEPS*/",
@@ -104,7 +102,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
   test("error") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/build.sc
            |, syntax error
            |""".stripMargin,
@@ -129,7 +127,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |object foo extends ScalaModule {
            |  def scalaVersion = "${V.scala212}"
            |}
-        """.stripMargin,
+        """.stripMargin
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -145,7 +143,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
   test("fatal-warnings") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/build.sc
            |import mill._, scalalib._

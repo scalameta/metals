@@ -171,7 +171,7 @@ class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
       val stackFrameCollector = new StackFrameCollector
 
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{ "a": {} }
              |

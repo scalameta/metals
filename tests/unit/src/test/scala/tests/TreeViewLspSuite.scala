@@ -8,7 +8,7 @@ import scala.meta.internal.tvp.TreeViewProvider
  * @note This suite will fail on openjdk8 < 262)
  *       due to https://mail.openjdk.java.net/pipermail/jdk8u-dev/2020-July/012143.html
  */
-class TreeViewLspSuite extends BaseLspSuite("tree-view") {
+class TreeViewLspSuite extends BaseQuickBuildSuite("tree-view") {
 
   /**
    * The libraries we expect to find for tests in this file.
@@ -54,40 +54,40 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   test("projects") {
     cleanWorkspace()
     for {
-      _ <- server.initialize("""
-                               |/metals.json
-                               |{
-                               |  "a": {},
-                               |  "b": {}
-                               |}
-                               |/a/src/main/scala/a/Zero.scala
-                               |class Zero {
-                               | val a = 1
-                               |}
-                               |/a/src/main/scala/a/First.scala
-                               |package a
-                               |class First {
-                               |  def a = 1
-                               |  val b = 2
-                               |}
-                               |object First
-                               |/a/src/main/scala/a/Second.scala
-                               |package a
-                               |class Second {
-                               |  def a = 1
-                               |  val b = 2
-                               |  var c = 2
-                               |}
-                               |object Second
-                               |/b/src/main/scala/b/Third.scala
-                               |package b
-                               |class Third
-                               |object Third
-                               |/b/src/main/scala/b/Fourth.scala
-                               |package b
-                               |class Fourth
-                               |object Fourth
-                               |""".stripMargin)
+      _ <- initialize("""
+                        |/metals.json
+                        |{
+                        |  "a": {},
+                        |  "b": {}
+                        |}
+                        |/a/src/main/scala/a/Zero.scala
+                        |class Zero {
+                        | val a = 1
+                        |}
+                        |/a/src/main/scala/a/First.scala
+                        |package a
+                        |class First {
+                        |  def a = 1
+                        |  val b = 2
+                        |}
+                        |object First
+                        |/a/src/main/scala/a/Second.scala
+                        |package a
+                        |class Second {
+                        |  def a = 1
+                        |  val b = 2
+                        |  var c = 2
+                        |}
+                        |object Second
+                        |/b/src/main/scala/b/Third.scala
+                        |package b
+                        |class Third
+                        |object Third
+                        |/b/src/main/scala/b/Fourth.scala
+                        |package b
+                        |class Fourth
+                        |object Fourth
+                        |""".stripMargin)
       _ = assertNoDiff(
         client.workspaceTreeViewChanges,
         s"""|${TreeViewProvider.Project} <root>
@@ -143,7 +143,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   test("libraries") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -482,7 +482,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   test(noOp.flaky) {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -512,7 +512,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         cancelServer()
         newServer(noOp)
       }
-      _ <- server.initialize("")
+      _ <- initialize("")
 
       // This request triggers a no-op background compilation in the "b" project
       // but immediately returns an empty result since the class directory

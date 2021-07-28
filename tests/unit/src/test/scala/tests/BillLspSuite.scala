@@ -11,14 +11,14 @@ import scala.meta.io.AbsolutePath
 
 import bill._
 
-class BillLspSuite extends BaseLspSuite("bill") {
+class BillLspSuite extends BaseQuickBuildSuite("bill") {
 
   def globalBsp: AbsolutePath = workspace.resolve("global-bsp")
   override def bspGlobalDirectories: List[AbsolutePath] =
     List(globalBsp.resolve("bsp"))
   def testRoundtripCompilation(): Future[Unit] = {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -55,7 +55,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -91,7 +91,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -131,7 +131,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -187,8 +187,12 @@ class BillLspSuite extends BaseLspSuite("bill") {
   }
 
   def testSelectServerDialogue(): Future[Unit] = {
+    // when asked, choose the Bob build tool
+    client.selectBspServer = { actions =>
+      actions.find(_.getTitle == "Bob").get
+    }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/App.scala
           |object App {}

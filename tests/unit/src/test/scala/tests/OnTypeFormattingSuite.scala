@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
-class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
+class OnTypeFormattingSuite extends BaseQuickBuildSuite("onTypeFormatting") {
   private val indent = "  "
   private val escapedNewline = "\\n"
   private val escapedQuote = "\""
@@ -477,7 +477,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     val expected = unmangle(expectedCase)
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{}}
              |/a/src/main/scala/a/Main.scala

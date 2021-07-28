@@ -2,13 +2,13 @@ package tests
 
 import java.nio.file.Files
 
-class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
+class DiagnosticsLspSuite extends BaseQuickBuildSuite("diagnostics") {
 
   test("diagnostics") {
     cleanCompileCache("a")
     cleanCompileCache("b")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{
@@ -96,7 +96,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
   test("reset".ignore) {
     cleanCompileCache("a")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{"a": {}}
@@ -132,7 +132,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
   test("post-typer") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|
             |/metals.json
             |{
@@ -160,7 +160,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
   test("deprecation") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|
             |/metals.json
             |{
@@ -197,7 +197,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
          |}
          |""".stripMargin
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|
             |/metals.json
             |{
@@ -224,7 +224,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     cleanWorkspace()
     import scala.meta.internal.metals.ServerCommands
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|
             |/metals.json
             |{
@@ -267,7 +267,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
   test("delete") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{"a": {}}
@@ -300,7 +300,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
   test("single-source") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

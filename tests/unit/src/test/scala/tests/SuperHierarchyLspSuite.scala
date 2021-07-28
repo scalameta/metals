@@ -4,7 +4,8 @@ import scala.concurrent.Future
 
 import org.eclipse.lsp4j.Position
 
-class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
+class SuperHierarchyLspSuite
+    extends BaseQuickBuildSuite("super-method-hierarchy") {
 
   test("simple") {
     val code =
@@ -115,7 +116,7 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
 
     cleanWorkspace()
     for {
-      _ <- server.initialize(strip(header + code))
+      _ <- initialize(strip(header + code))
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
 

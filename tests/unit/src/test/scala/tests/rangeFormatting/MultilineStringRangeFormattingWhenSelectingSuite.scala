@@ -2,10 +2,10 @@ package tests.rangeFormatting
 
 import munit.Location
 import org.eclipse.lsp4j.FormattingOptions
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
 class MultilineStringRangeFormattingWhenSelectingSuite
-    extends BaseLspSuite("rangeFormatting") {
+    extends BaseQuickBuildSuite("rangeFormatting") {
   check(
     "start-misindent-line",
     s"""
@@ -145,7 +145,7 @@ class MultilineStringRangeFormattingWhenSelectingSuite
     val expected = unmangle(expectedCase)
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":{}}
              |/a/src/main/scala/a/Main.scala

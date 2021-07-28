@@ -9,7 +9,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
-    extends BaseLspSuite("worksheet") {
+    extends BaseQuickBuildSuite("worksheet") {
   override def initializationOptions: Option[InitializationOptions] =
     Some(InitializationOptions.Default.copy(decorationProvider = Some(true)))
 
@@ -24,7 +24,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     test("completion") {
       assume(!isWindows, "This test is flaky on Windows")
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""
              |/metals.json
              |{
@@ -78,7 +78,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("outside-target") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -122,7 +122,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("render") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -227,7 +227,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       Some(MetalsSlowTaskResult(cancel = true))
     }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -257,7 +257,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("crash") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -302,7 +302,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("dependsOn") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -335,7 +335,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("no-worksheet".flaky) {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{"a": {"scalaVersion": "$scalaVersion"}}
             |/a/src/main/scala/Main.sc
@@ -359,7 +359,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   test("update-classpath") {
     client.slowTaskHandler = _ => None
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -396,7 +396,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("syntax-error") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{"a": {"scalaVersion": "$scalaVersion"}}
             |/a/src/main/scala/a/Main.worksheet.sc
@@ -465,7 +465,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     //         |println/*<no symbol>*/(message/*<no symbol>*/)
     assume(!isWindows, "This test fails unpredictably on Window")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -489,7 +489,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     assume(!isWindows, "This test fails unpredictably on Window")
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -534,7 +534,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("no-position") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -576,7 +576,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("fatal-exception") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "$scalaVersion"}}
@@ -621,7 +621,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   test("export") {
     assume(!isWindows, "This test is flaky on Windows")
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{"a": {"scalaVersion": "${scalaVersion}"}}

@@ -7,7 +7,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 class MultipleBuildFilesLspSuite
-    extends BaseImportSuite("multiple-build-files") {
+    extends BaseBloopImportSuite("multiple-build-files") {
 
   // SBT will be the main tool for this test, which is what will be
   // chosen when the user is prompted in the test
@@ -25,7 +25,7 @@ class MultipleBuildFilesLspSuite
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "${V.scala212}"
             |/build.sc

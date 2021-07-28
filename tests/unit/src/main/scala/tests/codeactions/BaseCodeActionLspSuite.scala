@@ -7,10 +7,10 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.Location
 import munit.TestOptions
-import tests.BaseLspSuite
+import tests.BaseQuickBuildSuite
 
 abstract class BaseCodeActionLspSuite(suiteName: String)
-    extends BaseLspSuite(suiteName) {
+    extends BaseQuickBuildSuite(suiteName) {
 
   protected val scalaVersion: String = V.scala212
 
@@ -60,11 +60,11 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
     test(name) {
       cleanWorkspace()
       for {
-        _ <- server.initialize(s"""/metals.json
-                                  |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
-                                  |$scalafixConf
-                                  |/$path
-                                  |$fileContent""".stripMargin)
+        _ <- initialize(s"""/metals.json
+                           |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
+                           |$scalafixConf
+                           |/$path
+                           |$fileContent""".stripMargin)
         _ <- server.didOpen(path)
         _ <- {
           configuration match {
