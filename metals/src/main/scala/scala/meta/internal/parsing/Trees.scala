@@ -39,30 +39,36 @@ final class Trees(
     trees.remove(fileUri)
   }
 
+  private def enclosedChildren(
+      children: List[Tree],
+      pos: Position
+  ): Option[Tree] = {
+    children
+      .find { child =>
+        child.pos.start <= pos.start && pos.start <= child.pos.end
+      }
+  }
+
   /**
    * Find last tree matching T that encloses the position.
    *
    * @param source source to load the tree for
    * @param lspPos cursor position
+   * @param predicate predicate which T must fulfill
    * @return found tree node of type T or None
    */
   def findLastEnclosingAt[T <: Tree: ClassTag](
       source: AbsolutePath,
-      lspPos: l.Position
+      lspPos: l.Position,
+      predicate: T => Boolean = (_: T) => true
   ): Option[T] = {
 
-    def enclosedChildren(children: List[Tree], pos: Position): Option[Tree] = {
-      children
-        .find { child =>
-          child.pos.start <= pos.start && pos.start <= child.pos.end
-        }
-    }
     def loop(t: Tree, pos: Position): Option[T] = {
       t match {
         case t: T =>
           enclosedChildren(t.children, pos)
             .flatMap(loop(_, pos))
-            .orElse(Some(t))
+            .orElse(if (predicate(t)) Some(t) else None)
         case other =>
           enclosedChildren(other.children, pos).flatMap(loop(_, pos))
       }
