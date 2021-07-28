@@ -10,6 +10,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import tests.MetalsTestEnrichments._
+import scala.util.Failure
+import scala.meta.internal.io.FileIO
 
 class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
@@ -126,7 +128,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
   test("dependencies") {
     cleanWorkspace()
-    for {
+    val f = for {
       _ <- server.initialize(
         """
           |/metals.json
@@ -196,6 +198,16 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
             |""".stripMargin
       )
     } yield ()
+    f.transform { v =>
+      v match {
+        case Failure(_) =>
+          val depsDir = workspace.resolve(".metals").resolve("dependencies")
+          val all = FileIO.listAllFilesRecursively(depsDir).mkString("\n")
+          println(all)
+        case _ =>
+      }
+      v
+    }
   }
 
   test("workspace-only") {
