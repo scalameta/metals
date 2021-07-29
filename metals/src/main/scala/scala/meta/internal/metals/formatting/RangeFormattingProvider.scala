@@ -19,7 +19,7 @@ case class RangeFormatterParams(
     startPos: meta.Position,
     endPos: meta.Position,
     tokens: Option[Tokens]
-) {
+) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
 }
 

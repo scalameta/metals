@@ -1,9 +1,11 @@
-package tests
+package tests.formatting
 
 import scala.concurrent.Future
 
 import munit.Location
 import munit.TestOptions
+import tests.BaseLspSuite
+import tests.TestingServer
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   private val indent = "  "
@@ -124,6 +126,21 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  |word
        |  '''.stripMargin
        |}""".stripMargin
+  )
+
+  check(
+    "nested-interpolation",
+    """
+      |object Main {
+      |  val x = List(1)
+      |  val y = s'''|abc @@${x.mkString(s"\n")}''''
+      |}""".stripMargin,
+    """
+      |object Main {
+      |  val x = List(1)
+      |  val y = s'''|abc 
+      |              |${x.mkString(s"\n")}''''.stripMargin
+      |}""".stripMargin
   )
 
   check(
@@ -409,7 +426,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
-    "add-stripMargin-with-config",
+    "dont-add-stripMargin-with-config",
     s"""
        |object Main {
        |  val str = '''|@@'''
@@ -442,6 +459,96 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
           |""".stripMargin
       )
     }
+  )
+
+  // tests prefixed with "vscode" mimic vscode behavior when typing newline
+  check(
+    "vscode-without-stripMargin-bracket-same-line",
+    // inserting newline at """|{@@}"""
+    s"""
+       |object Main {
+       |  val str = '''|{@@
+       |  }'''
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|{
+       |               |
+       |               |}'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "vscode-stripMargin-bracket-same-line",
+    // inserting newline at """|{@@}""".stripMargin
+    s"""
+       |object Main {
+       |  val str = '''|{@@
+       |  }'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|{
+       |               |
+       |               |}'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "vscode-strip-margin-bracket",
+    // inserting newline at """|{@@}
+    //                         |""".stripMargin
+    s"""
+       |object Main {
+       |  val str = '''|{@@
+       |  }
+       |               |'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|{
+       |               |
+       |               |}
+       |               |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "vscode-strip-margin-bracket-interpolation-string",
+    // inserting newline at s"""|{@@}
+    //                         |""".stripMargin
+    s"""
+       |object Main {
+       |  val str = s'''|{@@
+       |  }
+       |                |'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = s'''|{
+       |                |
+       |                |}
+       |                |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "vscode-strip-margin-multiple-brackets",
+    // inserting newline at """|{([@@])}
+    //                         |""".stripMargin
+    s"""
+       |object Main {
+       |  val str = '''|{([@@
+       |  ])}
+       |               |'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|{([
+       |               |
+       |               |])}
+       |               |'''.stripMargin
+       |}""".stripMargin
   )
 
   check(
