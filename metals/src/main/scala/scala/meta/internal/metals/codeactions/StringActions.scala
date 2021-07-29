@@ -71,7 +71,7 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
             val interpolationActions = tokens.collect {
               case token: Token.Constant.String
                   if token.pos.toLSP.overlapsWith(range) =>
-                interpolateAction(uri, token.pos.toLSP)
+                interpolateAction(uri, token)
             }.toList
 
             val removeInterpolationActions = tokens.zipWithIndex
@@ -119,13 +119,29 @@ class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
 
   def interpolateAction(
       uri: String,
-      range: l.Range
+      token: Token.Constant.String
   ): l.CodeAction = {
-    val startRange = new l.Range(range.getStart, range.getStart)
+    val range = token.pos.toLSP
+    val start = range.getStart()
+    val dollarIndexes = token.value.indicesOf("$")
+    lazy val newlineIndexes = token.value.indicesOf("\n")
+    val dollarEdits = for (dolarIndex <- dollarIndexes) yield {
+      val newlinesBeforeDolar = newlineIndexes.takeWhile(_ < dolarIndex)
+      val updatedCharacter =
+        if (newlinesBeforeDolar.isEmpty) start.getCharacter() + dolarIndex + 1
+        else dolarIndex - newlinesBeforeDolar.lastOption.getOrElse(0)
+      val dollarPos =
+        new l.Position(
+          start.getLine() + newlinesBeforeDolar.size,
+          updatedCharacter
+        )
+      val dollarRange = new l.Range(dollarPos, dollarPos)
+      new l.TextEdit(dollarRange, "$")
+    }
 
-    val edits = List(
-      new l.TextEdit(startRange, "s")
-    )
+    val startRange = new l.Range(start, start)
+
+    val edits = new l.TextEdit(startRange, "s") :: dollarEdits
 
     codeRefactorAction(StringActions.interpolationTitle, uri, edits)
   }
