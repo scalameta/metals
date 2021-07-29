@@ -159,15 +159,13 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       _ <- debugger.awaitOutput("Foo\n")
 
       _ <- server.didSave("a/src/main/scala/a/Main.scala")(
-        _.replaceAll("Foo", "Bar")
+        _.replace("Foo", "Bar").replace("synchronized(wait())", "")
       )
       _ <- debugger.restart
-
       _ <- debugger.initialize
       _ <- debugger.launch
       _ <- debugger.configurationDone
       _ <- debugger.awaitOutput("Bar\n")
-      _ <- debugger.disconnect
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "Bar\n")

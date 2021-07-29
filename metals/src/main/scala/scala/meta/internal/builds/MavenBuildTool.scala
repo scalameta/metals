@@ -22,7 +22,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
   def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     def command(versionToUse: String) =
       List(
-        s"ch.epfl.scala:maven-bloop_2.12:$versionToUse:bloopInstall",
+        s"ch.epfl.scala:maven-bloop_2.13:$versionToUse:bloopInstall",
         "-DdownloadSources=true"
       )
     userConfig().mavenScript match {

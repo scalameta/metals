@@ -24,8 +24,12 @@ class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
                 |  }
                 |}""".stripMargin,
     expectedFrames = List(
-      Variables(Scope.local(Variable("value: int = 1"))),
-      Variables(Scope.local(Variable("value: int = 2")))
+      Variables(
+        Scope.local(Variable("MODULE$: Main$"), Variable("value: int = 1"))
+      ),
+      Variables(
+        Scope.local(Variable("MODULE$: Main$"), Variable("value: int = 2"))
+      )
     )
   )
 
@@ -97,12 +101,18 @@ class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
                 |""".stripMargin,
     expectedFrames = List(
       Variables( // before calculating `z`
-        Scope.local(Variable("x: int = 1"))
+        Scope.local(Variable("MODULE$: Main$"), Variable("x: int = 1"))
       ),
       Variables( // after calculating `z`
-        Scope.local(Variable("x: int = 1"), Variable("z: int = 3"))
+        Scope.local(
+          Variable("MODULE$: Main$"),
+          Variable("x: int = 1"),
+          Variable("z: int = 3")
+        )
       ),
-      Variables(Scope.local(Variable("x$1: Tuple2$mcII$sp")))
+      Variables(
+        Scope.local(Variable("MODULE$: Main$"), Variable("x$1: Tuple2$mcII$sp"))
+      )
     )
   )
 
