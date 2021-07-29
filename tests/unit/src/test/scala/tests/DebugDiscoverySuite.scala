@@ -13,7 +13,7 @@ import scala.meta.io.AbsolutePath
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
+class DebugDiscoverySuite extends BaseQuickBuildDapSuite("debug-discovery") {
   private val mainPath = "a/src/main/scala/a/Main.scala"
   private val fooPath = "a/src/main/scala/a/Foo.scala"
   private val barPath = "a/src/main/scala/a/Bar.scala"

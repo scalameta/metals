@@ -2,9 +2,9 @@ package tests.feature
 
 import scala.meta.internal.metals.{BuildInfo => V}
 
-import tests.BaseDapSuite
+import tests.BaseQuickBuildDapSuite
 
-class CrossDebugSuite extends BaseDapSuite("cross-debug") {
+class CrossDebugSuite extends BaseQuickBuildDapSuite("cross-debug") {
 
   override def scalaVersion: String = V.scala3
 

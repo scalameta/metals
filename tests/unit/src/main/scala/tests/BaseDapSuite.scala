@@ -22,8 +22,8 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 
-abstract class BaseDapSuite(suiteName: String)
-    extends BaseQuickBuildSuite(suiteName) {
+abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
+  this: BuildServerInitializer with BuildToolLayout =>
 
   private val dapClient =
     GlobalTrace.protocolTracePath(DebugProtocol.clientName)
@@ -111,24 +111,17 @@ abstract class BaseDapSuite(suiteName: String)
     test(name) {
 
       cleanWorkspace()
-      val workspaceLayout = DebugWorkspaceLayout(source)
-      val layout =
-        s"""|/metals.json
-            |{ 
-            |  "a": {"scalaVersion": "$scalaVersion"},  "b": {"scalaVersion": "$scalaVersion"} 
-            |}
-            |$workspaceLayout
-            |""".stripMargin
-
-      val navigator = navigateExpectedBreakpoints(workspaceLayout)
+      val debugLayout = DebugWorkspaceLayout(source)
+      val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
+      val navigator = navigateExpectedBreakpoints(debugLayout)
 
       for {
-        _ <- initialize(layout)
+        _ <- initialize(workspaceLayout)
         _ = assertNoDiagnostics()
         debugger <- debugMain("a", main.getOrElse("a.Main"), navigator)
         _ <- debugger.initialize
         _ <- debugger.launch
-        _ <- setBreakpoints(debugger, workspaceLayout)
+        _ <- setBreakpoints(debugger, debugLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
       } yield ()

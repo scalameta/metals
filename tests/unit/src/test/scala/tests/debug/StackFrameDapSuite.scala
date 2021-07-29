@@ -8,11 +8,11 @@ import scala.meta.internal.metals.debug.Variables
 
 import munit.Location
 import munit.TestOptions
-import tests.BaseDapSuite
+import tests.BaseQuickBuildDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
+class StackFrameDapSuite extends BaseQuickBuildDapSuite("debug-stack-frame") {
   assertStackFrame("foreach")(
     source = """|a/src/main/scala/Main.scala
                 |object Main {

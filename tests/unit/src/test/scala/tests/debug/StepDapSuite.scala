@@ -6,11 +6,11 @@ import scala.meta.internal.metals.debug.StepNavigator
 
 import munit.Location
 import munit.TestOptions
-import tests.BaseDapSuite
+import tests.BaseQuickBuildDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class StepDapSuite extends BaseDapSuite("debug-step") {
+class StepDapSuite extends BaseQuickBuildDapSuite("debug-step") {
 
   assertSteps("step-out")(
     sources = """|/a/src/main/scala/Main.scala

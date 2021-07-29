@@ -3,11 +3,11 @@ package tests.debug
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.Stoppage
 
-import tests.BaseDapSuite
+import tests.BaseQuickBuildDapSuite
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
+class BreakpointDapSuite extends BaseQuickBuildDapSuite("debug-breakpoint") {
 
   assertBreakpoints("preceding-class")(
     source = """|/a/src/main/scala/a/Main.scala
