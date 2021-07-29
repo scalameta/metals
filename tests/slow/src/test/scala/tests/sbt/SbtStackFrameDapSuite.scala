@@ -1,17 +1,18 @@
-package tests.debug
+package tests.sbt
 
 import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
 
-import tests.QuickBuildInitializer
-import tests.QuickBuildLayout
+import tests.SbtBuildLayout
+import tests.SbtServerInitializer
+import tests.debug.BaseStackFrameDapSuite
 
-class StackFrameDapSuite
+class SbtStackFrameDapSuite
     extends BaseStackFrameDapSuite(
-      "debug-stack-frame",
-      QuickBuildInitializer,
-      QuickBuildLayout
+      "sbt-debug-stack-frame",
+      SbtServerInitializer,
+      SbtBuildLayout
     ) {
 
   assertStackFrame("foreach")(
@@ -25,8 +26,12 @@ class StackFrameDapSuite
                 |  }
                 |}""".stripMargin,
     expectedFrames = List(
-      Variables(Scope.local(Variable("value: int = 1"))),
-      Variables(Scope.local(Variable("value: int = 2")))
+      Variables(
+        Scope.local(Variable("MODULE$: Main$"), Variable("value: int = 1"))
+      ),
+      Variables(
+        Scope.local(Variable("MODULE$: Main$"), Variable("value: int = 2"))
+      )
     )
   )
 
@@ -44,12 +49,19 @@ class StackFrameDapSuite
                 |""".stripMargin,
     expectedFrames = List(
       Variables( // before calculating `z`
-        Scope.local(Variable("x: int = 1"))
+        Scope.local(Variable("MODULE$: Main$"), Variable("x: int = 1"))
       ),
       Variables( // after calculating `z`
-        Scope.local(Variable("x: int = 1"), Variable("z: int = 3"))
+        Scope.local(
+          Variable("MODULE$: Main$"),
+          Variable("x: int = 1"),
+          Variable("z: int = 3")
+        )
       ),
-      Variables(Scope.local(Variable("x$1: Tuple2$mcII$sp")))
+      Variables(
+        Scope.local(Variable("MODULE$: Main$"), Variable("x$1: Tuple2$mcII$sp"))
+      )
     )
   )
+
 }

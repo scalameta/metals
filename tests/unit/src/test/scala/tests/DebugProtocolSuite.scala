@@ -19,7 +19,12 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
+class DebugProtocolSuite
+    extends BaseDapSuite(
+      "debug-protocol",
+      QuickBuildInitializer,
+      QuickBuildLayout
+    ) {
 
   test("start") {
     val mainClass = new ScalaMainClass(
