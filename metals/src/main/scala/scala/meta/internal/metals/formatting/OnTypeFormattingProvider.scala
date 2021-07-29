@@ -12,13 +12,6 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
-class OnTypeFormatter {
-  def contribute(
-      onTypeformatterParams: OnTypeFormatterParams
-  ): Option[List[TextEdit]] = None
-
-}
-
 case class OnTypeFormatterParams(
     sourceText: String,
     position: Position,
@@ -26,9 +19,15 @@ case class OnTypeFormatterParams(
     startPos: meta.Position,
     endPos: meta.Position,
     tokens: Option[Tokens]
-) {
+) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
   val range = new Range(position, position)
+}
+
+class OnTypeFormatter {
+  def contribute(
+      onTypeformatterParams: OnTypeFormatterParams
+  ): Option[List[TextEdit]] = None
 }
 
 class OnTypeFormattingProvider(

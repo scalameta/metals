@@ -677,7 +677,7 @@ final class TestingServer(
       query: String,
       expected: String,
       autoIndent: String,
-      replaceWith: String,
+      triggerChar: String,
       root: AbsolutePath = workspace
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
@@ -686,7 +686,7 @@ final class TestingServer(
         query,
         root,
         autoIndent,
-        replaceWith
+        triggerChar
       )
       multiline <- server.onTypeFormatting(params).asScala
       format = TextEdits.applyEdits(
