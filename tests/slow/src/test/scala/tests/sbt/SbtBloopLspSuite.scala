@@ -58,6 +58,7 @@ class SbtBloopLspSuite
       _ <- server.didSave("build.sbt")(identity)
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didChange("build.sbt") { text =>
         text + "\nversion := \"1.0.0\"\n"
       }
@@ -66,8 +67,11 @@ class SbtBloopLspSuite
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        // Project has .bloop directory so user is asked to "re-import project"
-        importBuildChangesMessage
+        List(
+          // Project has .bloop directory so user is asked to "re-import project"
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
       )
     }
   }

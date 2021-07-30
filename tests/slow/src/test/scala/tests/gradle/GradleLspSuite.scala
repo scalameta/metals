@@ -58,12 +58,16 @@ class GradleLspSuite extends BaseBloopImportSuite("gradle-import") {
         text + "\ndef version = \"1.0.0\"\n"
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.gradle")(identity)
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        // Project has .bloop directory so user is asked to "re-import project"
-        importBuildChangesMessage
+        List(
+          // Project has .bloop directory so user is asked to "re-import project"
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
       )
     }
   }

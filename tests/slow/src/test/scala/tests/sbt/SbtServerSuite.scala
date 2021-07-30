@@ -12,6 +12,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
+import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 
 /**
@@ -19,16 +20,13 @@ import tests.SbtServerInitializer
  */
 class SbtServerSuite
     extends BaseImportSuite("sbt-server")
-    with SbtServerInitializer {
+    with SbtServerInitializer
+    with SbtBuildLayout {
 
   val preBspVersion = "1.3.13"
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala212
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
-  val sbtCommonSettings: String =
-    """|import scala.concurrent.duration._
-       |Global / serverIdleTimeout := Some(1 minute)
-       |""".stripMargin
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -40,7 +38,7 @@ class SbtServerSuite
       s"""|/project/build.properties
           |sbt.version=$preBspVersion
           |/build.sbt
-          |$sbtCommonSettings
+          |$commonSbtSettings
           |scalaVersion := "${V.scala212}"
           |""".stripMargin
     )
@@ -73,14 +71,7 @@ class SbtServerSuite
     def sbtBspPlugin = workspace.resolve("project/metals.sbt")
     def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
-    writeLayout(
-      s"""|/project/build.properties
-          |sbt.version=$supportedBspVersion
-          |/build.sbt
-          |$sbtCommonSettings
-          |scalaVersion := "${V.scala212}"
-          |""".stripMargin
-    )
+    writeLayout(buildToolLayout("", V.scala212))
     for {
       _ <- server.initialize()
       _ <- server.initialized()
@@ -107,14 +98,7 @@ class SbtServerSuite
   test("reload") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$supportedBspVersion
-            |/build.sbt
-            |$sbtCommonSettings
-            |scalaVersion := "${V.scala212}"
-            |""".stripMargin
-      )
+      _ <- initialize(buildToolLayout("", V.scala212))
       // reload build after build.sbt changes
       _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt") { text =>
@@ -155,7 +139,7 @@ class SbtServerSuite
             |/build.sbt
             |import sbt.internal.bsp.BuildTargetIdentifier
             |import java.net.URI
-            |$sbtCommonSettings
+            |$commonSbtSettings
             |scalaVersion := "${V.scala212}"
             |Compile / bspTargetIdentifier := {
             |  BuildTargetIdentifier(new URI("debug"))

@@ -52,12 +52,16 @@ class MillLspSuite extends BaseBloopImportSuite("mill-import") {
               |""".stripMargin
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sc")(identity)
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        // Project has .bloop directory so user is asked to "re-import project"
-        importBuildChangesMessage
+        List(
+          // Project has .bloop directory so user is asked to "re-import project"
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
       )
     }
   }

@@ -59,12 +59,16 @@ class MavenLspSuite extends BaseBloopImportSuite("maven-import") {
         defaultPom.replace("<!--URL-->", "http://www.example.com")
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("pom.xml")(identity)
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        // Project has .bloop directory so user is asked to "re-import project"
-        importBuildChangesMessage
+        List(
+          // Project has .bloop directory so user is asked to "re-import project"
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
       )
     }
   }

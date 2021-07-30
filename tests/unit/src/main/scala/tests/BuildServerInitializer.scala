@@ -17,6 +17,10 @@ trait BuildServerInitializer {
   def initialize(layout: String, expectError: Boolean = false): Future[Unit]
 }
 
+/**
+ * Set up your workspace using QuickBuild as your build tool.
+ * This will take your `metals.json` file and quickly produce `.bloop/` files from it.
+ */
 trait QuickBuildInitializer extends BuildServerInitializer {
   this: BaseLspSuite =>
   override def initialize(
@@ -37,12 +41,17 @@ trait QuickBuildInitializer extends BuildServerInitializer {
   }
 }
 
+/**
+ * Set up your workspace by responding to an Import Build request which will
+ * run Bloop Install via the build tool being used.
+ */
 trait BloopImportInitializer extends BuildServerInitializer {
   this: BaseLspSuite =>
   override def initialize(
       layout: String,
       expectError: Boolean = false
   ): Future[Unit] = {
+    Debug.printEnclosing()
     writeLayout(layout)
     for {
       _ <- server.initialize()
@@ -57,12 +66,18 @@ trait BloopImportInitializer extends BuildServerInitializer {
   }
 }
 
+/**
+ * Assumes sbt is being used as a build tool and also for your BSP server.
+ * This generates the .bsp/sbt.json file and invoke the BSP switch command
+ * with sbt as the build server.
+ */
 trait SbtServerInitializer extends BuildServerInitializer {
   this: BaseLspSuite =>
   override def initialize(
       layout: String,
       expectError: Boolean = false
   ): Future[Unit] = {
+    Debug.printEnclosing()
     writeLayout(layout)
     generateBspConig()
     for {
@@ -70,7 +85,7 @@ trait SbtServerInitializer extends BuildServerInitializer {
       _ <- server.initialized()
       // choose sbt as the Bsp Server
       _ = client.selectBspServer = { _ => new MessageActionItem("sbt") }
-      _ <- server.executeCommand(ServerCommands.BspSwitch.id, "sbt")
+      _ <- server.executeCommand(ServerCommands.BspSwitch.id)
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()
