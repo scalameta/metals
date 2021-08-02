@@ -1,5 +1,12 @@
 # Metals
-
+Just a small town girl
+Livin' in a lonely world
+She took the midnight train
+Goin' anywhere
+Just a city boy
+Born and raised in South Detroit
+He took the midnight train
+Goin' anywhere.
 <a href="https://gitter.im/scalameta/metals">
 <img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&color=F71263" />
 </a>
