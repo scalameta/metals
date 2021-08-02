@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
@@ -31,6 +32,7 @@ import scala.util.control.NonFatal
 import scala.{meta => m}
 
 import scala.meta.inputs.Input
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -324,17 +326,49 @@ object MetalsEnrichments
      *
      * In case if path is jar then target directory is $workspace/.metals/readonly/dependencies/$jarName
      */
-    def toFileOnDisk(workspace: AbsolutePath): AbsolutePath = {
-      if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
-        path
-      } else {
-        val target =
-          path.jarPath match {
-            case Some(jar) =>
-              workspace.resolve(Directories.dependencies).resolve(jar.filename)
-            case None => workspace.resolve(Directories.readonly)
+    def toFileOnDisk(workspace: AbsolutePath): AbsolutePath =
+      toFileOnDisk0(workspace, 0)
+
+    private def toFileOnDisk0(
+        workspace: AbsolutePath,
+        retryCount: Int
+    ): AbsolutePath = {
+      def toJarMeta(jar: AbsolutePath): String = {
+        val time = Files.getLastModifiedTime(jar.toNIO).toMillis()
+        s"$time\n${jar.toNIO}"
+      }
+
+      def readJarMeta(jarMetaFile: AbsolutePath): Option[String] = {
+        if (jarMetaFile.exists)
+          Some(FileIO.slurp(jarMetaFile, StandardCharsets.UTF_8))
+        else None
+      }
+
+      def withJarDirLock[A](dir: AbsolutePath)(f: => A)(fallback: => A): A = {
+        if (!dir.exists) Files.createDirectories(dir.toNIO)
+        val lockFile = dir.resolve(".lock")
+        if (lockFile.exists) {
+          fallback
+        } else {
+          try {
+            Files.createFile(lockFile.toNIO)
+            f
+          } catch {
+            case _: IOException =>
+              fallback
+          } finally {
+            Files.deleteIfExists(lockFile.toNIO)
           }
-        val out = target.resolveZipPath(path.toNIO).toNIO
+        }
+      }
+
+      def retry: AbsolutePath = {
+        Thread.sleep(50)
+        this.toFileOnDisk0(workspace, retryCount + 1)
+      }
+
+      def copyFile(path: AbsolutePath, to: AbsolutePath): AbsolutePath = {
+        val out = to.toNIO
         Files.createDirectories(out.getParent)
         if (!Properties.isWin && Files.isRegularFile(out)) {
           out.toFile.setWritable(true)
@@ -351,6 +385,43 @@ object MetalsEnrichments
             () // ignore
         }
         AbsolutePath(out)
+      }
+
+      // prevent inifinity loop
+      if (retryCount > 5) {
+        throw new Exception(s"Unable to save $path in workspace")
+      } else if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
+        path
+      } else {
+        path.jarPath match {
+          case Some(jar) =>
+            val jarDir =
+              workspace.resolve(Directories.dependencies).resolve(jar.filename)
+            val out = jarDir.resolveZipPath(path.toNIO)
+            val jarMetaFile = jarDir.resolve(".jar.meta")
+
+            lazy val currentJarMeta = readJarMeta(jarMetaFile)
+            lazy val jarMeta = toJarMeta(jar)
+
+            val updateMeta = !jarDir.exists || !currentJarMeta.contains(jarMeta)
+            if (!out.exists || updateMeta) {
+              withJarDirLock(jarDir) {
+                if (updateMeta) {
+                  val prevFiles = FileIO
+                    .listAllFilesRecursively(jarDir)
+                    .filter(_.filename != ".lock")
+                  prevFiles.foreach(_.delete())
+                  Files.write(jarMetaFile.toNIO, jarMeta.getBytes)
+                }
+                copyFile(path, out)
+              }(retry)
+            } else
+              out
+          case None =>
+            val out =
+              workspace.resolve(Directories.readonly).resolveZipPath(path.toNIO)
+            copyFile(path, out)
+        }
       }
     }
 
