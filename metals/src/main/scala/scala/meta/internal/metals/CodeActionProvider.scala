@@ -40,7 +40,8 @@ final class CodeActionProvider(
       diagnostics,
       languageClient
     ),
-    new InsertInferredType(trees, compilers)
+    new InsertInferredType(trees, compilers),
+    new PatternMatchRefactor(trees)
   )
 
   def codeActions(
