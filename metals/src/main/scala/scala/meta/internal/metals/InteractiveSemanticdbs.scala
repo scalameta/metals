@@ -87,8 +87,7 @@ final class InteractiveSemanticdbs(
           if (existingDoc == null || existingDoc.md5 != sha) {
             val compiled = compile(path, text)
             Option(compiled).foreach(doc =>
-              // don't index dependency source files or worksheets, since their definitions are local
-              if (!source.isDependencySource(workspace) && !source.isWorksheet)
+              if (!source.isDependencySource(workspace))
                 semanticdbIndexer().onChange(source, doc)
             )
             compiled

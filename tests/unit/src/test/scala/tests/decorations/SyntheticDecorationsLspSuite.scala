@@ -311,10 +311,9 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didOpen("standalone/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        // currently interactive semanticdb doesn't produce symbol signatures
         client.workspaceDecorations,
         """|object Main{
-           |  val value = augmentString("asd.").stripSuffix(".")
+           |  val value: String = augmentString("asd.").stripSuffix(".")
            |}
            |""".stripMargin
       )

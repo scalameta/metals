@@ -992,6 +992,7 @@ class MetalsLanguageServer(
     val loadInteractive = Future {
       interactiveSemanticdbs.textDocument(path)
     }
+    parseTrees(path).flatMap(_ => syntheticsDecorator.publishSynthetics(path))
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
         // publish diagnostics
@@ -1008,9 +1009,6 @@ class MetalsLanguageServer(
         .sequence(
           List(
             loadInteractive,
-            parseTrees(path).flatMap(_ =>
-              syntheticsDecorator.publishSynthetics(path)
-            ),
             loadFuture,
             compileFuture
           )
@@ -1050,6 +1048,7 @@ class MetalsLanguageServer(
         // Don't trigger compilation on didFocus events under cascade compilation
         // because save events already trigger compile in inverse dependencies.
         if (path.isDependencySource(workspace)) {
+          syntheticsDecorator.publishSynthetics(path)
           CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
         } else if (openedFiles.isRecentlyActive(path)) {
           CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
