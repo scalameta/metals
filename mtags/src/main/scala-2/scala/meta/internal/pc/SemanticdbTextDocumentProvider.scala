@@ -9,8 +9,10 @@ import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
-class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal)
-    extends WorksheetSemanticdbProvider {
+class SemanticdbTextDocumentProvider(
+    val compiler: MetalsGlobal,
+    semanticdbCompilerOptions: List[String]
+) extends WorksheetSemanticdbProvider {
   import compiler._
 
   def textDocument(
@@ -31,11 +33,7 @@ class SemanticdbTextDocumentProvider(val compiler: MetalsGlobal)
     // This cache is never updated in semanticdb and will contain the old source
     gSourceFileInputCache.remove(unit.source)
     semanticdbOps.config = SemanticdbConfig.parse(
-      List(
-        "-P:semanticdb:synthetics:on",
-        "-P:semanticdb:symbols:none",
-        "-P:semanticdb:text:on"
-      ),
+      semanticdbCompilerOptions,
       _ => (),
       compiler.reporter,
       SemanticdbConfig.default
