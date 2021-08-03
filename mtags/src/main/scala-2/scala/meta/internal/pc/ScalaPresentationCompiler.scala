@@ -202,7 +202,10 @@ case class ScalaPresentationCompiler(
       Array.emptyByteArray,
       EmptyCancelToken
     ) { pc =>
-      new SemanticdbTextDocumentProvider(pc.compiler())
+      new SemanticdbTextDocumentProvider(
+        pc.compiler(),
+        config.semanticdbCompilerOptions().asScala.toList
+      )
         .textDocument(uri, code)
         .toByteArray
     }

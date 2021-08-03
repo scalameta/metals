@@ -24,7 +24,9 @@ case class PresentationCompilerConfigImpl(
     isCompletionItemResolve: Boolean = true,
     _isStripMarginOnTypeFormattingEnabled: () => Boolean = () => true,
     timeoutDelay: Long = 20,
-    timeoutUnit: TimeUnit = TimeUnit.SECONDS
+    timeoutUnit: TimeUnit = TimeUnit.SECONDS,
+    semanticdbCompilerOptions: util.List[String] =
+      PresentationCompilerConfig.defaultSemanticdbCompilerOptions()
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

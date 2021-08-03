@@ -1,6 +1,8 @@
 package scala.meta.pc;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -97,5 +99,20 @@ public interface PresentationCompilerConfig {
      * The unit to use for <code>timeoutDelay</code>.
      */
     TimeUnit timeoutUnit();
+
+    /**
+     * The SemanticDB compiler options to use for the <code>semanticdbTextDocument</code> method.
+     *
+     * The full list of supported options is documented here https://scalameta.org/docs/semanticdb/guide.html#scalac-compiler-plugin
+     */
+    List<String> semanticdbCompilerOptions();
+
+    static List<String> defaultSemanticdbCompilerOptions() {
+        return Arrays.asList(
+            "-P:semanticdb:synthetics:on",
+            "-P:semanticdb:symbols:none",
+            "-P:semanticdb:text:on"
+        );
+    }
 
 }
