@@ -3,6 +3,7 @@ import scala.util.matching.Regex
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
@@ -66,14 +67,17 @@ object IndentOnPaste extends RangeFormatter {
     val originalTabSize = formattingOptions.getTabSize
     val rangeStart = startPos.toLSP.getStart
     rangeStart.setCharacter(0)
-    val pastedRange = new Range(rangeStart, endPos.toLSP.getEnd)
+    // we format full lines even if not everything was pasted
+    val realEndColumn =
+      if (endPos.endLine < splitLines.size) splitLines(endPos.endLine).size
+      else endPos.endColumn
+    val pastedRange =
+      new Range(rangeStart, new Position(endPos.endLine, realEndColumn))
     val startLine = startPos.toLSP.getStart.getLine
     val endLine = endPos.toLSP.getEnd.getLine
 
-    val inRangeLines = splitLines.slice(startLine, endLine + 1)
-    val pastedLines = inRangeLines
+    val pastedLines = splitLines.slice(startLine, endLine + 1)
     val pastedLinesWithIndex = pastedLines.zipWithIndex
-
     val (blank, tabSize) =
       if (insertSpaces) (" ", originalTabSize) else ("\t", 1)
 
