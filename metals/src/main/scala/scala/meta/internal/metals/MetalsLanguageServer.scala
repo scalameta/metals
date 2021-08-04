@@ -498,7 +498,8 @@ class MetalsLanguageServer(
           buffers,
           definitionProvider,
           remote,
-          trees
+          trees,
+          buildTargets
         )
         implementationProvider = new ImplementationProvider(
           semanticdbs,
