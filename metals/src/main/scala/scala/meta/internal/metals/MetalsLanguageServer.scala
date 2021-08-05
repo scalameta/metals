@@ -182,7 +182,9 @@ class MetalsLanguageServer(
   )
   private val fileWatcher = register(
     new FileWatcher(
+      () => workspace,
       buildTargets,
+      fileWatchFilter,
       params => didChangeWatchedFiles(params)
     )
   )
@@ -1234,7 +1236,23 @@ class MetalsLanguageServer(
     onChange(paths).asJava
   }
 
-  // This method is run synchronously in the FileWatcher, so it should not do anything expensive on the main thread
+  /**
+   * This filter is an optimization and it is closely related to which files are processed
+   * in [[didChangeWatchedFiles]]
+   */
+  private def fileWatchFilter(path: Path): Boolean = {
+    val abs = AbsolutePath(path)
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild
+  }
+
+  /**
+   * Callback that is executed on a file change event by the file watcher.
+   *
+   * Note that if you are adding processing of another kind of a file,
+   * be sure to include it in the [[fileWatchFilter]]
+   *
+   * This method is run synchronously in the FileWatcher, so it should not do anything expensive on the main thread
+   */
   private def didChangeWatchedFiles(
       event: FileWatcherEvent
   ): CompletableFuture[Unit] = {
