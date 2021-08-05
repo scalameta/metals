@@ -312,6 +312,21 @@ class IndentWhenPastingSuite
     formattingOptions
   )
 
+  check(
+    "breaking-code",
+    """
+      |object Main:
+      |  @@val outFile = ""
+      |end Main""".stripMargin,
+    "outFile",
+    """
+      |object Main:
+      |  outFileval outFile = ""
+      |end Main""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
   def check(
       name: TestOptions,
       testCase: String,
