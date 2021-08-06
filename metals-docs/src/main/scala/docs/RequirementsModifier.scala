@@ -35,12 +35,12 @@ class RequirementsModifier extends StringModifier {
     s"""
        |## Requirements
        |
-       |**Java 8 or 11 provided by OpenJDK or Oracle**. Eclipse OpenJ9 is not
+       |**Java 8, 11, 17 provided by OpenJDK or Oracle**. Eclipse OpenJ9 is not
        |supported, please make sure the `JAVA_HOME` environment variable
-       |points to a valid Java 8 or 11 installation.
+       |points to a valid Java 8, 11 or 17 installation.
        |
-       |**macOS, Linux or Windows**. Metals is developed on macOS and every PR is
-       |tested on Ubuntu+Windows.
+       |**macOS, Linux or Windows**. Metals is developed on many operating systems and 
+       |every PR is tested on Ubuntu, Windows and MacOS.
        |
        |**Scala 2.13, 2.12, 2.11 and Scala 3**. Metals supports these Scala versions:
        |

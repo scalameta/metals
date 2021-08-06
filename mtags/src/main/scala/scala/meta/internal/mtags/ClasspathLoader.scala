@@ -36,7 +36,16 @@ object ClasspathLoader {
         val unsafe = field.get(null).asInstanceOf[Unsafe]
 
         // jdk.internal.loader.ClassLoaders.AppClassLoader.ucp
-        val ucpField = classLoader.getClass().getDeclaredField("ucp")
+        val ucpField = {
+          if (
+            System.getProperty("java.version").split("(\\.|-)")(0).toInt >= 16
+          ) {
+            // the `ucp` field is  not in `AppClassLoader` anymore, but in `BuiltinClassLoader`
+            classLoader.getClass().getSuperclass()
+          } else {
+            classLoader.getClass()
+          }
+        }.getDeclaredField("ucp")
         val ucpFieldOffset: Long = unsafe.objectFieldOffset(ucpField)
         val ucpObject = unsafe.getObject(classLoader, ucpFieldOffset)
 
