@@ -19,7 +19,7 @@ import dotty.tools.dotc.semanticdb.internal.SemanticdbOutputStream
 import dotty.tools.dotc.util.SourceFile
 
 class SemanticdbTextDocumentProvider(
-    driver: InteractiveDriver,
+    driver: MetalsDriver,
     workspace: Option[Path]
 ) extends WorksheetSemanticdbProvider {
 
@@ -29,14 +29,13 @@ class SemanticdbTextDocumentProvider(
   ): Array[Byte] = {
     val filePath = Paths.get(uri)
     val validCode = removeMagicImports(sourceCode, AbsolutePath(filePath))
-    driver.run(
+    val result = driver.run(
       uri,
       SourceFile.virtual(filePath.toString, validCode)
     )
-    val tree = driver.currentCtx.run.units.head.tpdTree
     val extract = ExtractSemanticDB()
     val extractor = extract.Extractor()
-    extractor.traverse(tree)(using driver.currentCtx)
+    extractor.traverse(result.tree)(using result.context)
     val path = workspace
       .flatMap { workspacePath =>
         scala.util.Try(workspacePath.relativize(filePath)).toOption

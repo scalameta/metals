@@ -180,11 +180,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |package b.pkg
       |```
       |""".stripMargin,
-    automaticPackage = false,
-    compat = Map(
-      // TODO hover doesn't show information on package
-      "3.0" -> "".hover
-    )
+    automaticPackage = false
   )
 
   check(

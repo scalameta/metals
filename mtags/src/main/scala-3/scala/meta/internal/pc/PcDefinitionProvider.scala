@@ -12,6 +12,8 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 
+import com.fasterxml.jackson.databind.util.Named
+import dotty.tools.dotc.ast.Trees.NamedDefTree
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd._
 import dotty.tools.dotc.ast.untpd
@@ -28,6 +30,7 @@ import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types.NamedType
 import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.interactive.Interactive.Include
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.interactive.SourceTree
 import dotty.tools.dotc.transform.SymUtils._
@@ -37,7 +40,7 @@ import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
 
 class PcDefinitionProvider(
-    driver: InteractiveDriver,
+    driver: MetalsDriver,
     params: OffsetParams,
     search: SymbolSearch
 ) {
@@ -45,26 +48,24 @@ class PcDefinitionProvider(
   def definitions(): DefinitionResult = {
     val uri = params.uri
     val filePath = Paths.get(uri)
-    val diagnostics = driver.run(
+    val result = driver.run(
       uri,
       SourceFile.virtual(filePath.toString, params.text)
     )
-    val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
 
-    val pos = driver.sourcePosition(params)
+    val pos = result.positionOf(params.offset)
     val path =
-      Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
-    given ctx: Context = driver.localContext(params)
+      Interactive.pathTo(result.tree, pos.span)(using result.context)
+    given ctx: Context =
+      MetalsInteractive.contextOfPath(path)(using result.context)
     val indexedContext = IndexedContext(ctx)
-    findDefinitions(tree, path, pos, driver, indexedContext)
+    findDefinitions(result.tree, path, pos, indexedContext)
   }
 
   private def findDefinitions(
       tree: Tree,
       path: List[Tree],
       pos: SourcePosition,
-      driver: InteractiveDriver,
       indexed: IndexedContext
   ): DefinitionResult = {
     import indexed.ctx
@@ -72,11 +73,8 @@ class PcDefinitionProvider(
       case symbols @ (sym :: other) =>
         val isLocal = sym.source == pos.source
         if (isLocal)
-          val defs =
-            Interactive.findDefinitions(List(sym), driver, false, false)
-          defs.headOption match {
-            case Some(srcTree) =>
-              val pos = srcTree.namePos
+          findLocal(tree, sym.name) match {
+            case Some((sym, pos)) =>
               pos.toLocation match {
                 case None => DefinitionResultImpl.empty
                 case Some(loc) =>
@@ -101,6 +99,27 @@ class PcDefinitionProvider(
         }
       case Nil => DefinitionResultImpl.empty
     }
+  }
+
+  private def findLocal(tree: Tree, name: Name)(using
+      Context
+  ): Option[(Symbol, SourcePosition)] = {
+    var result = Option.empty[(Symbol, SourcePosition)]
+    val traverser = new TreeTraverser {
+
+      override def traverse(tree: Tree)(using Context): Unit = {
+        tree match {
+          case named: tpd.NamedDefTree
+              if named.name == name && result.isEmpty =>
+            result = Some(named.symbol, named.namePos)
+          case _ if result.isEmpty =>
+            traverseChildren(tree)
+          case _ =>
+        }
+      }
+    }
+    traverser.traverse(tree)
+    result
   }
 
   @tailrec

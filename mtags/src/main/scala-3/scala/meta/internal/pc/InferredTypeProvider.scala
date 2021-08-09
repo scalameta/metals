@@ -43,7 +43,7 @@ import org.eclipse.lsp4j.TextEdit
  */
 final class InferredTypeProvider(
     params: OffsetParams,
-    driver: InteractiveDriver,
+    driver: MetalsDriver,
     config: PresentationCompilerConfig
 ) {
 
@@ -51,18 +51,18 @@ final class InferredTypeProvider(
     val uri = params.uri
     val filePath = Paths.get(uri)
     val source = SourceFile.virtual(filePath.toString, params.text)
-    driver.run(uri, source)
-    val unit = driver.currentCtx.run.units.head
-    val pos = driver.sourcePosition(params)
-    val path =
-      Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
+    val result = driver.run(uri, source)
+    val pos = result.positionOf(params.offset)
+    val path = result.pathTo(params.offset)
 
-    given locatedCtx: Context = driver.localContext(params)
+    given locatedCtx: Context = {
+      MetalsInteractive.contextOfPath(path)(using result.context)
+    }
     val indexedCtx = IndexedContext(locatedCtx)
     val autoImportsGen = AutoImports.generator(
       pos,
       params.text,
-      unit.tpdTree,
+      result.tree,
       indexedCtx,
       config
     )
@@ -98,7 +98,7 @@ final class InferredTypeProvider(
             val tuplePartTpe = applied.args(tupleIndex)
             val typeEndPos = tpl.args(tupleIndex).pos.end
             val namePos = typeEndPos + valdefOffset - 4
-            val lspPos = driver.sourcePosition(params.uri, namePos).toLSP
+            val lspPos = result.positionOf(namePos).toLSP
             val typeNameEdit =
               new TextEdit(
                 lspPos,

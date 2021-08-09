@@ -21,7 +21,7 @@ import org.eclipse.lsp4j.SelectionRange
  * @param params offset params converted from the selectionRange params.
  */
 class SelectionRangeProvider(
-    driver: InteractiveDriver,
+    driver: MetalsDriver,
     params: ju.List[OffsetParams]
 ) {
 
@@ -31,17 +31,14 @@ class SelectionRangeProvider(
    * @return selection ranges
    */
   def selectionRange(): List[SelectionRange] = {
-    given ctx: Context = driver.currentCtx
-
     val selectionRanges = params.asScala.toList.map { param =>
 
       val uri = param.uri
       val filePath = Paths.get(uri)
       val source = SourceFile.virtual(filePath.toString, param.text)
-      driver.run(uri, source)
-      val pos = driver.sourcePosition(param)
-      val path =
-        Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+      val result = driver.run(uri, param.text)
+      given Context = result.context
+      val path = result.pathTo(param.offset)
 
       val bareRanges = path
         .map { tree =>

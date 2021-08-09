@@ -25,7 +25,6 @@ import dotty.tools.dotc.util.SrcPos
 
 class CompletionProvider(
     pos: SourcePosition,
-    ctx: Context,
     search: SymbolSearch,
     buildTargetIdentifier: String,
     completionPos: CompletionPos,
@@ -33,7 +32,7 @@ class CompletionProvider(
     path: List[Tree]
 ) {
 
-  implicit val context: Context = ctx
+  import indexedContext.ctx
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) = {
     val (_, compilerCompletions) = Completion.completions(pos)

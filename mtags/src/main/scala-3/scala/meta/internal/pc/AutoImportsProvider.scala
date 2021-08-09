@@ -25,7 +25,7 @@ import org.eclipse.{lsp4j => l}
 
 final class AutoImportsProvider(
     search: SymbolSearch,
-    driver: InteractiveDriver,
+    driver: MetalsDriver,
     name: String,
     params: OffsetParams,
     config: PresentationCompilerConfig
@@ -34,21 +34,17 @@ final class AutoImportsProvider(
   def autoImports(): List[AutoImportsResult] = {
     val uri = params.uri
     val filePath = Paths.get(uri)
-    driver.run(
+    val result = driver.run(
       uri,
-      SourceFile.virtual(filePath.toString, params.text)
+      params.text
     )
-    val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
+    val tree = result.tree
 
-    val pos = driver.sourcePosition(params)
-
-    val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
-    val path =
-      Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
+    val pos = result.positionOf(params.offset)
+    val path = result.pathTo(params.offset)
 
     val indexedContext = IndexedContext(
-      MetalsInteractive.contextOfPath(path)(using newctx)
+      MetalsInteractive.contextOfPath(path)(using result.context)
     )
     import indexedContext.ctx
 

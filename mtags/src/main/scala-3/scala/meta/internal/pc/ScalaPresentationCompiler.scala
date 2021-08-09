@@ -94,12 +94,12 @@ case class ScalaPresentationCompiler(
 
   def this() = this("", Nil, Nil)
 
-  import InteractiveDriver._
+  // import InteractiveDriver._
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
-  val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] = {
+  val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] = {
     Scala3CompilerAccess(
       config,
       sh,
@@ -109,7 +109,7 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  def newDriver: InteractiveDriver = {
+  def newDriver: MetalsDriver = {
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
     val filteredOptions = options.filterNot(forbiddenOptions)
@@ -118,7 +118,8 @@ case class ScalaPresentationCompiler(
         .mkString(
           File.pathSeparator
         ) :: Nil
-    new InteractiveDriver(settings)
+
+    MetalsDriver.create(settings)
   }
 
   def complete(params: OffsetParams): CompletableFuture[CompletionList] = {
@@ -129,62 +130,48 @@ case class ScalaPresentationCompiler(
       val driver = access.compiler()
       val uri = params.uri
       val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(uri, sourceFile)
+      val result = driver.run(uri, sourceFile)
 
-      val ctx = driver.currentCtx
-      val pos = sourcePosition(driver, params, uri)
-      val (items, isIncomplete) = driver.compilationUnits.get(uri) match {
-        case Some(unit) =>
-          val path =
-            Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
+      val pos = result.positionOf(params.offset)
+      val path = result.pathTo(params.offset)
+      val locatedCtx =
+        MetalsInteractive.contextOfPath(path)(using result.context)
+      val indexedCtx = IndexedContext(locatedCtx)
+      val completionPos =
+        CompletionPos.infer(pos, params.text, path)(using result.context)
+      val (completions, searchResult) =
+        CompletionProvider(
+          pos,
+          search,
+          buildTargetIdentifier,
+          completionPos,
+          indexedCtx,
+          path
+        )
+          .completions()
+      val history = ShortenedNames(indexedCtx)
+      val autoImportsGen = AutoImports.generator(
+        completionPos.sourcePos,
+        params.text,
+        result.tree,
+        indexedCtx,
+        config
+      )
 
-          val newctx = ctx.fresh.setCompilationUnit(unit)
-          val tpdPath =
-            Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
-              newctx
-            )
-          val locatedCtx =
-            MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-          val indexedCtx = IndexedContext(locatedCtx)
-          val completionPos =
-            CompletionPos.infer(pos, params.text, path)(using newctx)
-          val (completions, searchResult) =
-            CompletionProvider(
-              pos,
-              ctx.fresh.setCompilationUnit(unit),
-              search,
-              buildTargetIdentifier,
-              completionPos,
-              indexedCtx,
-              path
-            )
-              .completions()
-          val history = ShortenedNames(indexedCtx)
-          val autoImportsGen = AutoImports.generator(
-            completionPos.sourcePos,
-            params.text,
-            unit.tpdTree,
-            indexedCtx,
-            config
-          )
-
-          val items = completions.zipWithIndex.flatMap { case (item, idx) =>
-            completionItems(
-              item,
-              history,
-              idx,
-              autoImportsGen,
-              completionPos,
-              path,
-              indexedCtx
-            )(using newctx)
-          }
-          val isIncomplete = searchResult match {
-            case SymbolSearch.Result.COMPLETE => false
-            case SymbolSearch.Result.INCOMPLETE => true
-          }
-          (items, isIncomplete)
-        case None => (Nil, false)
+      val items = completions.zipWithIndex.flatMap { case (item, idx) =>
+        completionItems(
+          item,
+          history,
+          idx,
+          autoImportsGen,
+          completionPos,
+          path,
+          indexedCtx
+        )(using result.context)
+      }
+      val isIncomplete = searchResult match {
+        case SymbolSearch.Result.COMPLETE => false
+        case SymbolSearch.Result.INCOMPLETE => true
       }
 
       new CompletionList(
@@ -297,14 +284,15 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(uri, sourceFile)
+      val result = driver.run(uri, params.text)
 
-      given ctx: Context = driver.currentCtx
-      val pos = sourcePosition(driver, params, uri)
-      val trees = driver.openedTrees(uri)
-      val path = Interactive.pathTo(trees, pos)
-      val tp = Interactive.enclosingType(trees, pos)
+      given ctx: Context = result.context
+      val pos = result.positionOf(params.offset)
+      val path = result.pathTo(params.offset)
+      val tp = path match {
+        case head :: _ => head.tpe
+        case _ => NoType
+      }
       val tpw = tp.widenTermRefExpr
 
       if (tp.isError || tpw == NoType || tpw.isError)
@@ -328,24 +316,8 @@ case class ScalaPresentationCompiler(
                     symbol.paramRef
                   )
                 case _ =>
-                  driver.compilationUnits.get(uri) match {
-                    case Some(unit) =>
-                      val newctx =
-                        ctx.fresh.setCompilationUnit(unit)
-                      val tpdPath = Interactive.pathTo(
-                        newctx.compilationUnit.tpdTree,
-                        pos.span
-                      )(using newctx)
-                      val context =
-                        MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-                      val history = new ShortenedNames(IndexedContext(context))
-                      printer.hoverDetailString(symbol, history, tpw)(using
-                        context
-                      )
-                    case None =>
-                      val history = new ShortenedNames(IndexedContext(ctx))
-                      printer.hoverDetailString(symbol, history, tpw)
-                  }
+                  val history = new ShortenedNames(IndexedContext(ctx))
+                  printer.hoverDetailString(symbol, history, tpw)
               }
             }
             val content = hoverContent(hoverString, docComments)
@@ -373,18 +345,16 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(uri, sourceFile)
+      val result = driver.run(uri, params.text)
 
-      val ctx = driver.currentCtx
+      val ctx = result.context
 
-      val pos = sourcePosition(driver, params, uri)
-      val trees = driver.openedTrees(uri)
+      val pos = result.positionOf(params.offset)
 
       // @tgodzik tpd.TypeApply doesn't seem to be handled here
       val path =
-        Interactive
-          .pathTo(trees, pos)(using ctx)
+        result
+          .pathTo(params.offset)
           .dropWhile(!_.isInstanceOf[tpd.Apply])
 
       val (paramN, callableN, alternatives) =
@@ -404,12 +374,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[Diagnostic]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
-  override def didClose(uri: URI): Unit = {
-    compilerAccess.withNonInterruptableCompiler(
-      (),
-      EmptyCancelToken
-    ) { access => access.compiler().close(uri) }
-  }
+  override def didClose(uri: URI): Unit = {}
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -434,16 +399,6 @@ case class ScalaPresentationCompiler(
 
   def withWorkspace(workspace: Path): PresentationCompiler = {
     copy(workspace = Some(workspace))
-  }
-
-  private def sourcePosition(
-      driver: InteractiveDriver,
-      params: OffsetParams,
-      uri: URI
-  ): SourcePosition = {
-    val source = driver.openedFiles(uri)
-    val p = Spans.Span(params.offset)
-    new SourcePosition(source, p)
   }
 
   private def range(p: SourcePosition): Option[Range] = {

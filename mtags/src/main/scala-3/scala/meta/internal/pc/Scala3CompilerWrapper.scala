@@ -7,19 +7,16 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
 
-class Scala3CompilerWrapper(driver: InteractiveDriver)
-    extends CompilerWrapper[StoreReporter, InteractiveDriver] {
+class Scala3CompilerWrapper(driver: MetalsDriver)
+    extends CompilerWrapper[StoreReporter, MetalsDriver] {
 
-  override def compiler(): InteractiveDriver = driver
+  override def compiler(): MetalsDriver = driver
 
-  override def resetReporter(): Unit = {
-    val ctx = driver.currentCtx
-    ctx.reporter.removeBufferedMessages(using ctx)
-  }
+  override def resetReporter(): Unit = ()
 
   override def reporterAccess: ReporterAccess[StoreReporter] =
     new ReporterAccess[StoreReporter] {
-      def reporter = driver.currentCtx.reporter.asInstanceOf[StoreReporter]
+      def reporter = new StoreReporter(null)
     }
 
   override def askShutdown(): Unit = {}

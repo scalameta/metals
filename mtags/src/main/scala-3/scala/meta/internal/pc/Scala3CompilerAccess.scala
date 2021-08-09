@@ -16,7 +16,6 @@ import scala.meta.internal.pc.ReporterAccess
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
 
-import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.StoreReporter
 
 class Scala3CompilerAccess(
@@ -24,7 +23,7 @@ class Scala3CompilerAccess(
     sh: Option[ScheduledExecutorService],
     newCompiler: () => Scala3CompilerWrapper
 )(using ec: ExecutionContextExecutor)
-    extends CompilerAccess[StoreReporter, InteractiveDriver](
+    extends CompilerAccess[StoreReporter, MetalsDriver](
       config,
       sh,
       newCompiler
