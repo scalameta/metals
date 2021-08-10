@@ -19,7 +19,12 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
+class DebugProtocolSuite
+    extends BaseDapSuite(
+      "debug-protocol",
+      QuickBuildInitializer,
+      QuickBuildLayout
+    ) {
 
   test("start") {
     val mainClass = new ScalaMainClass(
@@ -29,7 +34,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
     )
     mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -70,7 +75,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
         new ScalaMainClass("a.Main", Nil.asJava, Nil.asJava)
       )
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -101,7 +106,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
 
   test("disconnect") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -132,7 +137,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
 
   test("restart") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -185,7 +190,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       )
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -232,7 +237,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
       Files.write(tmpPath, "MIDDLE_NAME=Emily\nLAST_NAME=Morris".getBytes())
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -274,7 +279,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
     cleanCompileCache("a")
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {},
@@ -316,7 +321,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
     cleanCompileCache("a")
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {"dependsOn": ["c"]},
@@ -366,7 +371,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
     cleanCompileCache("a")
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -397,7 +402,7 @@ class DebugProtocolSuite extends BaseDapSuite("debug-protocol") {
     cleanCompileCache("a")
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {

@@ -12,7 +12,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize("")
+      _ <- initialize("")
       _ = {
         client.messageRequests.clear()
         assertConnectedToBuildServer("Bill")

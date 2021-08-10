@@ -8,7 +8,7 @@ class BuildTargetsLspSuite
 
   test("scala-priority") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {

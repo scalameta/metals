@@ -16,7 +16,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -59,48 +59,49 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
   test("pre-initialized") {
     var request = Future.successful[List[List[SymbolInformation]]](Nil)
+    writeLayout(
+      """
+        |/metals.json
+        |{
+        |  "a": {}
+        |}
+        |/a/src/main/scala/a/b/A.scala
+        |package a
+        |package b
+        |
+        |object PazQux {
+        |  class Inner
+        |}
+        |""".stripMargin
+    )
+    QuickBuild.bloopInstall(workspace)
     for {
-      _ <- server.initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {}
-          |}
-          |/a/src/main/scala/a/b/A.scala
-          |package a
-          |package b
-          |
-          |object PazQux {
-          |  class Inner
-          |}
-          |""".stripMargin,
-        preInitialized = { () =>
-          request = Future
-            .sequence(1.to(10).map { _ =>
-              server.server
-                .workspaceSymbol(new WorkspaceSymbolParams("PazQux.I"))
-                .asScala
-                .map(_.asScala.toList)
-            })
-            .map(_.toList)
-          Thread.sleep(10) // take a moment to delay
-          Future.successful(())
-        }
-      )
-      results <- request
-      _ = {
-        val obtained = results.distinct
-        // Assert that all results are the same, makesure we don't return empty/incomplete results
-        // before indexing is complete.
-        assert(obtained.length == 1)
-        assert(obtained.head.head.fullPath == "a.b.PazQux.Inner")
+      _ <- server.initialize()
+      _ <- Future {
+        request = Future
+          .sequence(1.to(10).map { _ =>
+            server.server
+              .workspaceSymbol(new WorkspaceSymbolParams("PazQux.I"))
+              .asScala
+              .map(_.asScala.toList)
+          })
+          .map(_.toList)
+        Thread.sleep(10) // take a moment to delay
       }
-    } yield ()
+      _ <- server.initialized()
+      results <- request
+    } yield {
+      val obtained = results.distinct
+      // Assert that all results are the same, make sure we don't return empty/incomplete results
+      // before indexing is complete.
+      assert(obtained.length == 1)
+      assert(obtained.head.head.fullPath == "a.b.PazQux.Inner")
+    }
   }
 
   test("duplicate") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -127,7 +128,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
   test("dependencies") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -201,7 +202,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
   test("workspace-only") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{"a": {}}
@@ -247,7 +248,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
   test("deleted") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{"a": {}}
@@ -280,7 +281,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
   test("excluded") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{"a": {}}

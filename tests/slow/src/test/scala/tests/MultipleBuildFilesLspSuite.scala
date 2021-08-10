@@ -25,7 +25,7 @@ class MultipleBuildFilesLspSuite
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "${V.scala212}"
             |/build.sc

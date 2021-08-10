@@ -18,7 +18,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     List(globalBsp.resolve("bsp"))
   def testRoundtripCompilation(): Future[Unit] = {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -55,7 +55,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -91,7 +91,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -131,7 +131,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/com/App.scala
           |object App {
@@ -187,8 +187,12 @@ class BillLspSuite extends BaseLspSuite("bill") {
   }
 
   def testSelectServerDialogue(): Future[Unit] = {
+    // when asked, choose the Bob build tool
+    client.selectBspServer = { actions =>
+      actions.find(_.getTitle == "Bob").get
+    }
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/src/App.scala
           |object App {}

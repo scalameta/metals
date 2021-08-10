@@ -17,7 +17,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   test("workspace".flaky) {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{
           |  "b": {},
@@ -62,7 +62,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   )(implicit loc: Location): Unit =
     test(name) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{
              |  "a": {
@@ -141,7 +141,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   test("symbol-prefixes") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{
           |  "a": {}
@@ -211,7 +211,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   test("rambo".flaky) {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/a/src/main/scala/a/A.scala
            |object Main extends App {
            |  // @@
@@ -233,7 +233,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   test("with-exclusions") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """/metals.json
           |{
           |  "a": {}

@@ -8,7 +8,7 @@ class BuildServerConnectionLspSuite
   test("basic") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{
@@ -45,7 +45,7 @@ class BuildServerConnectionLspSuite
     cleanWorkspace()
     val updatedBloopVersion = "1.4.0-RC1-76-1488031d"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{"a":
             |  {}

@@ -16,7 +16,7 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
 
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{
@@ -70,7 +70,7 @@ class SelectionRangeLspSuite extends BaseLspSuite("selectionRange") {
 
   test("non-compiling") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{

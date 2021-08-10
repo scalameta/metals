@@ -74,7 +74,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   def basicTest(scalaVersion: String): Future[Unit] = {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": { "scalaVersion": "${scalaVersion}" }
@@ -195,7 +195,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   def matchKeywordTest(scalaVersion: String): Future[Unit] = {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": { "scalaVersion": "${scalaVersion}" }

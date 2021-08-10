@@ -32,7 +32,7 @@ class DefinitionCrossLspSuite
   test("underscore") {
     cleanDatabase()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -65,7 +65,7 @@ class DefinitionCrossLspSuite
   def basicDefinitionTest(scalaVersion: String): Future[Unit] = {
     cleanDatabase()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

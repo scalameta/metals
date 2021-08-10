@@ -82,7 +82,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
       RecursivelyDelete(workspace.resolve("a"))
       Files.createDirectories(workspace.toNIO.resolve(parent))
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           """|/metals.json
              |{
              |  "a": { }

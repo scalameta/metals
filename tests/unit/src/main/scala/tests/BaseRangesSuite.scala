@@ -47,7 +47,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
     test(name) {
       cleanWorkspace()
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |{"a":
              |  {

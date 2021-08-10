@@ -5,7 +5,7 @@ class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
   test("parse-error") {
     for {
       // start with code that does not parse (notice the first char in Main.scala)
-      _ <- server.initialize(
+      _ <- initialize(
         """|
            |/metals.json
            |{

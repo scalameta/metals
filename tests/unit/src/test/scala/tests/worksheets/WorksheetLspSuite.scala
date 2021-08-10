@@ -16,7 +16,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   def checkWorksheetDeps(opts: TestOptions, path: String): Unit = {
     test(opts) {
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""
              |/metals.json
              |{
@@ -74,7 +74,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   test("bad-dep") {
     val path = "hi.worksheet.sc"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -97,7 +97,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   test("classloader") {
     val path = "hi.worksheet.sc"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -118,7 +118,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   test("akka") {
     val path = "hi.worksheet.sc"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

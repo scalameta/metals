@@ -115,7 +115,7 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
 
     cleanWorkspace()
     for {
-      _ <- server.initialize(strip(header + code))
+      _ <- initialize(strip(header + code))
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
 

@@ -6,7 +6,7 @@ class SyntheticHoverLspSuite extends BaseLspSuite("implicits") {
 
   test("hovers") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

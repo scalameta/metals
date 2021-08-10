@@ -14,7 +14,7 @@ class WorksheetNoDecorationsLspSuite
 
   test("edits-and-hovers") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -52,7 +52,7 @@ class WorksheetNoDecorationsLspSuite
 
   test("new-edits") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{

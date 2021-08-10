@@ -32,7 +32,7 @@ class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 
       val libraryString = library.map(s => s""" "$s" """).getOrElse("")
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""|/metals.json
               |{
               |  "a": { 

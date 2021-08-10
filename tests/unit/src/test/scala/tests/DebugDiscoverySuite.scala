@@ -13,14 +13,19 @@ import scala.meta.io.AbsolutePath
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
-class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
+class DebugDiscoverySuite
+    extends BaseDapSuite(
+      "debug-discovery",
+      QuickBuildInitializer,
+      QuickBuildLayout
+    ) {
   private val mainPath = "a/src/main/scala/a/Main.scala"
   private val fooPath = "a/src/main/scala/a/Foo.scala"
   private val barPath = "a/src/main/scala/a/Bar.scala"
 
   test("run") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -53,7 +58,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("run-multiple") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -90,7 +95,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("no-main") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -122,7 +127,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("workspace-error") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -156,7 +161,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
     val fakePath = workspace + "fake-path"
 
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -189,7 +194,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("testFile") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -222,7 +227,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("testTarget") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
@@ -261,7 +266,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
   test("no-tests") {
     val notATestPath = "a/src/main/scala/a/NotATest.scala"
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
@@ -291,7 +296,7 @@ class DebugDiscoverySuite extends BaseDapSuite("debug-discovery") {
 
   test("no-semanticdb") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {

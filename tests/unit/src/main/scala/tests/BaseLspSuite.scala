@@ -5,10 +5,12 @@ import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.InitializationOptions
@@ -26,7 +28,10 @@ import munit.Location
 /**
  * Full end to end integration tests against a full metals language server.
  */
-abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
+abstract class BaseLspSuite(
+    suiteName: String,
+    initializer: BuildServerInitializer = QuickBuildInitializer
+) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
@@ -49,6 +54,16 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     }
     ex.shutdown()
     sh.shutdown()
+  }
+
+  def writeLayout(layout: String): Unit = {
+    FileLayout.fromString(layout, workspace)
+  }
+
+  def initialize(layout: String, expectError: Boolean = false): Future[Unit] = {
+    Debug.printEnclosing()
+    writeLayout(layout)
+    initializer.initialize(workspace, server, client, layout, expectError)
   }
 
   def assertConnectedToBuildServer(

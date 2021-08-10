@@ -56,8 +56,28 @@ import tests.TestOrderings._
  * - Can customize how to respond to window/showMessageRequest
  * - Aggregates published diagnostics and pretty-prints them as strings
  */
-final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
+class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     extends NoopLanguageClient {
+  // Customization of the window/showMessageRequest response
+  var importBuildChanges: MessageActionItem = ImportBuildChanges.notNow
+  var importBuild: MessageActionItem = ImportBuild.notNow
+  var restartBloop: MessageActionItem = BloopVersionChange.notNow
+  var getDoctorInformation: MessageActionItem = CheckDoctor.moreInformation
+  var selectBspServer: Seq[MessageActionItem] => MessageActionItem = { _ =>
+    null
+  }
+  var chooseBuildTool: Seq[MessageActionItem] => MessageActionItem = {
+    actions =>
+      actions
+        .find(_.getTitle == "sbt")
+        .getOrElse(new MessageActionItem("fail"))
+  }
+  var createScalaFmtConf: MessageActionItem = null
+  var chooseMainClass: Seq[MessageActionItem] => MessageActionItem = {
+    actions =>
+      actions.find(_.getTitle == "a.Main").get
+  }
+
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
     TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
   val diagnosticsCount: TrieMap[AbsolutePath, AtomicInteger] =
@@ -270,23 +290,21 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
         if (isSameMessage(ImportBuildChanges.params)) {
-          ImportBuildChanges.yes
+          importBuildChanges
         } else if (isSameMessage(ImportBuild.params)) {
-          ImportBuild.yes
+          importBuild
         } else if (BloopVersionChange.params() == params) {
-          BloopVersionChange.notNow
+          restartBloop
         } else if (CheckDoctor.isDoctor(params)) {
-          CheckDoctor.moreInformation
+          getDoctorInformation
         } else if (SelectBspServer.isSelectBspServer(params)) {
-          params.getActions.asScala.find(_.getTitle == "Bob").get
+          selectBspServer(params.getActions.asScala)
         } else if (isSameMessageFromList(ChooseBuildTool.params)) {
-          params.getActions.asScala.toList
-            .find(_.getTitle == "sbt")
-            .getOrElse(new MessageActionItem("fail"))
+          chooseBuildTool(params.getActions.asScala)
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
-          null
+          createScalaFmtConf
         } else if (params.getMessage() == MainClass.message) {
-          params.getActions.asScala.find(_.getTitle == "a.Main").get
+          chooseMainClass(params.getActions.asScala)
         } else {
           throw new IllegalArgumentException(params.toString)
         }

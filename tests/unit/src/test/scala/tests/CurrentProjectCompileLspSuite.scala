@@ -3,7 +3,7 @@ package tests
 class CurrentProjectCompileLspSuite extends BaseLspSuite("current-project") {
   test("basic") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """
           |/metals.json
           |{

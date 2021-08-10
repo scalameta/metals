@@ -62,7 +62,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   test("run-many-main-files") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": { }
@@ -109,7 +109,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   test("run-multi-module") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": { },
@@ -132,7 +132,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   test("remove-stale-lenses") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{
            |  "a": { }
@@ -162,7 +162,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   test("keep-after-error") {
     cleanWorkspace()
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{ "a": { } }
            |

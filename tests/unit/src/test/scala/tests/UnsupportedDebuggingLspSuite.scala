@@ -21,7 +21,7 @@ class UnsupportedDebuggingLspSuite
 
   test("no-code-lenses") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{ "a": { } }
            |
@@ -50,7 +50,7 @@ class UnsupportedDebuggingLspSuite
 
   test("suppress-model-refresh") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         """|/metals.json
            |{ "a": { } }
            |

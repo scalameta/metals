@@ -89,7 +89,7 @@ class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       val openedFiles = files.keySet.diff(nonOpened)
       val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
-        _ <- server.initialize(
+        _ <- initialize(
           s"""/metals.json
              |${metalsJson.getOrElse(defaultMetalsJson(scalaVersion))}
              |$fullInput""".stripMargin

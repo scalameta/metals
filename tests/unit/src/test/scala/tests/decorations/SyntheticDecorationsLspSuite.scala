@@ -16,7 +16,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("all-synthetics") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -151,7 +151,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("single-option") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -241,7 +241,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("augment-string") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{
             |  "a": {}
@@ -289,7 +289,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("readonly-files") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""|/metals.json
             |{
             |  "a": {}
@@ -347,7 +347,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("inferred-type-various") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -455,7 +455,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("inferred-type-complex") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -521,7 +521,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("inferred-type-changes") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
@@ -582,7 +582,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
   test("inferred-type-hkt") {
     for {
-      _ <- server.initialize(
+      _ <- initialize(
         s"""
            |/metals.json
            |{
