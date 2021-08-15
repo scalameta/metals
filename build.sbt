@@ -423,7 +423,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.10.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.11.4",
+      "org.flywaydb" % "flyway-core" % "7.13.0",
       "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
