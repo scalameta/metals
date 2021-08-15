@@ -195,7 +195,7 @@ lazy val V = new {
   val scala213 = "2.13.6"
   val ammonite212Version = "2.12.13"
   val ammonite213Version = scala213
-  val scalameta = "4.4.26"
+  val scalameta = "4.4.27"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
   val bloop = "1.4.8-19-4d9f966b"
@@ -206,8 +206,8 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.2.22"
-  val scalafmt = "3.0.0-RC7"
-  val munit = "0.7.27"
+  val scalafmt = "3.0.0-RC3"
+  val munit = "0.7.28"
   val scalafix = "0.9.29"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
@@ -420,10 +420,10 @@ lazy val metals = project
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.6",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.9.Final",
+      "io.undertow" % "undertow-core" % "2.2.10.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.11.4",
+      "org.flywaydb" % "flyway-core" % "7.13.0",
       "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
