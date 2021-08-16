@@ -1,7 +1,6 @@
 package scala.meta.internal.metals.debug
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Directories
@@ -16,42 +15,25 @@ final class StepNavigator(
 ) extends Stoppage.Handler {
   private val expectedSteps = mutable.Queue(steps: _*)
 
-  override def apply(stoppage: Stoppage): Future[DebugStep] = {
+  override def apply(stoppage: Stoppage): DebugStep = {
     if (expectedSteps.isEmpty) {
       val error = s"Unexpected ${stoppage.cause} stoppage at ${stoppage.frame}"
-      Future.failed(new IllegalStateException(error))
+      throw new IllegalStateException(error)
     } else {
       val info = stoppage.frame.info
       val (actualPath, actualLine) =
         if (info.getSource == null) (null, info.getLine)
         else (info.getSource.getPath.toAbsolutePath, info.getLine)
 
-      val (location, nextStep) = expectedSteps.dequeue()
+      val (expected, nextStep) = expectedSteps.dequeue()
 
-      for {
-        path <- expectedPath(location.file)
-        _ <-
-          if (actualLine == location.line && actualPath == path)
-            Future.unit
-          else {
-            val error =
-              s"Obtained [$actualPath, $actualLine], expected [$path, ${location.line}]"
-            Future.failed(new Exception(error))
-          }
-      } yield nextStep
-    }
-  }
-
-  private def expectedPath(filePath: FilePath): Future[AbsolutePath] = {
-    filePath match {
-      case FilePath.Source(value) => Future.successful(value)
-      case FilePath.DependencySource(path) =>
-        val lookup = dependencies.list.map(_.resolve(path)).find(p => p.exists)
-        lookup match {
-          case None =>
-            Future.failed(new Exception(s"dependency file: $path is not found"))
-          case Some(path) => Future.successful(path)
-        }
+      if (actualLine == expected.line && actualPath == expected.file) {
+        nextStep
+      } else {
+        val error =
+          s"Obtained [$actualPath, $actualLine], expected [${expected.file}, ${expected.line}]"
+        throw new Exception(error)
+      }
     }
   }
 
@@ -59,21 +41,17 @@ final class StepNavigator(
     at(root.resolve(path), line)(nextStep)
   }
 
-  def at(path: AbsolutePath, line: Int)(nextStep: DebugStep): StepNavigator = {
-    atFilePath(FilePath.Source(path), line)(nextStep)
+  private def at(path: AbsolutePath, line: Int)(
+      nextStep: DebugStep
+  ): StepNavigator = {
+    val location = Location(path, line)
+    new StepNavigator(root, dependencies, steps :+ (location -> nextStep))
   }
 
   def atDependency(path: String, line: Int)(
       nextStep: DebugStep
   ): StepNavigator = {
-    atFilePath(FilePath.DependencySource(path), line)(nextStep)
-  }
-
-  def atFilePath(path: FilePath, line: Int)(
-      nextStep: DebugStep
-  ): StepNavigator = {
-    val location = Location(path, line)
-    new StepNavigator(root, dependencies, steps :+ (location -> nextStep))
+    at(dependencies.resolve(path), line)(nextStep)
   }
 
   override def shutdown: Future[Unit] = {
@@ -91,13 +69,7 @@ object StepNavigator {
   def apply(root: AbsolutePath): StepNavigator =
     new StepNavigator(root, root.resolve(Directories.dependencies), Nil)
 
-  sealed trait FilePath
-  object FilePath {
-    final case class Source(value: AbsolutePath) extends FilePath
-    final case class DependencySource(path: String) extends FilePath
-  }
-
-  case class Location(file: FilePath, line: Long) {
+  case class Location(file: AbsolutePath, line: Long) {
     override def toString: String = s"$file:$line"
   }
 
