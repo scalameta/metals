@@ -15,6 +15,7 @@ import dotty.tools.dotc.typer.ImportInfo
 sealed trait IndexedContext {
   given ctx: Context
   def scopeSymbols: List[Symbol]
+  def names: IndexedContext.Names
   def rename(name: SimpleName): Option[String]
   def outer: IndexedContext
 
@@ -75,13 +76,14 @@ object IndexedContext {
     given ctx: Context = NoContext
     def findSymbol(name: String): Option[List[Symbol]] = None
     def scopeSymbols: List[Symbol] = List.empty
+    val names: Names = Names(Map.empty, Map.empty)
     def rename(name: SimpleName): Option[String] = None
     def outer: IndexedContext = this
   }
 
   class LazyWrapper(using val ctx: Context) extends IndexedContext {
     val outer: IndexedContext = IndexedContext(ctx.outer)
-    private lazy val names: Names = extractNames(ctx)
+    val names: Names = extractNames(ctx)
 
     def findSymbol(name: String): Option[List[Symbol]] = {
       names.symbols
@@ -90,8 +92,13 @@ object IndexedContext {
         .orElse(outer.findSymbol(name))
     }
 
-    lazy val scopeSymbols: List[Symbol] =
-      names.symbols.values.toList.flatten ++ outers.flatMap(_.scopeSymbols)
+    def scopeSymbols: List[Symbol] = {
+      val acc = List.newBuilder[Symbol]
+      (this :: outers).foreach { ref =>
+        acc ++= ref.names.symbols.values.flatten
+      }
+      acc.result
+    }
 
     def rename(name: SimpleName): Option[String] = {
       names.renames
@@ -119,7 +126,7 @@ object IndexedContext {
     }
   }
 
-  private case class Names(
+  case class Names(
       symbols: Map[String, List[Symbol]],
       renames: Map[SimpleName, String]
   )
