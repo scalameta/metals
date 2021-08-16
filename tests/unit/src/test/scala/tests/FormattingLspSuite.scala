@@ -1,5 +1,7 @@
 package tests
 
+import java.io.File
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
@@ -158,9 +160,12 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       _ <- server.formatting("Main.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        s"""|.scalafmt.conf:1:1: error: Invalid config: Type mismatch;
+        s"""|.scalafmt.conf:1:1: error: Invalid config: $workspace${File.separator}.scalafmt.conf:2:0 error: Type mismatch;
             |  found    : String (value: "does-not-exist")
             |  expected : Object
+            |align=does-not-exis
+            |^
+            |
             |> version=${V.scalafmtVersion}
             |> align=does-not-exist
         """.stripMargin
