@@ -10,7 +10,6 @@ title: Visual Studio Code
 
 ```
 
-
 ## Installation
 
 Install the Metals extension from the
@@ -271,3 +270,14 @@ extension to use default IntelliJ shortcuts with VS Code.
 | Type info        | Show hover                |
 | Expand           | Fold                      |
 | Extend Selection | Expand selection          |
+
+## GitHub Codespaces and GitHub.dev support
+
+First, some definitions:
+
+- [GitHub Codespaces] are remote dev containers you can connect to using VS Code Desktop or VS Code Web.
+- GitHub.dev, also referred to as ["Browser-based editor"](https://code.visualstudio.com/docs/remote/codespaces#_browserbased-editor), is a version of VS Code Web that runs entirely in your browser (crucially, this is different than connecting to a Codespace using VS Code Web).
+
+Metals fully works in GitHub Codespaces, but not on GitHub.dev.
+
+This is because Codespaces can run Java (being full fledged containerized environments) and extensions have access to a real file system, whereas GitHub.dev is limited to browser-only technologies, hence it can't run Java and it accesses files using a virtual file system (see [Virtual Workspaces](https://github.com/microsoft/vscode/wiki/Virtual-Workspaces)). These limitations make it impossible to run Metals on GitHub.dev. For more details, see [this issue](https://github.com/scalameta/metals-feature-requests/issues/225).
