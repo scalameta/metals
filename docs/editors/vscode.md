@@ -10,7 +10,6 @@ title: Visual Studio Code
 
 ```
 
-
 ## Installation
 
 Install the Metals extension from the
@@ -271,3 +270,7 @@ extension to use default IntelliJ shortcuts with VS Code.
 | Type info        | Show hover                |
 | Expand           | Fold                      |
 | Extend Selection | Expand selection          |
+
+## GitHub Codespaces and GitHub.dev support
+
+See https://scalameta.org/metals/docs/editors/online-ides#github-codespaces-and-githubdev
