@@ -1,5 +1,9 @@
 object TestGroups {
 
+  /**
+   * The unit test groups contain two sets of classes that should be executed on separate shards
+   * on CI. Best to always add to the shard that executes in less time.
+   */
   val testGroups = List(
     Set("tests.RenameLspSuite", "tests.ImplementationLspSuite",
       "tests.worksheets.WorksheetLspSuite",
@@ -28,7 +32,8 @@ object TestGroups {
       "tests.MetalsEnrichmentsSuite", "tests.DefinitionDirectorySuite",
       "tests.SuperMethodSuite", "tests.StatusBarSuite",
       "tests.CompressionSuite", "tests.OpenBrowserSuite",
-      "tests.FilenameLength", "tests.PrettyPrintTreeSuite"),
+      "tests.FilenameLength", "tests.PrettyPrintTreeSuite",
+      "tests.decorations.SyntheticDecorationsLspSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -56,7 +61,27 @@ object TestGroups {
       "tests.MessagesSuite", "tests.pants.PantsGlobsSuite",
       "tests.SelectBspServerSuite", "tests.InverseDependenciesSuite",
       "tests.pantsbuild.PantsProjectNameSuite", "tests.TrigramSubstringsSuite",
-      "tests.TimerSuite", "tests.FoldingRangesSuite")
+      "tests.TimerSuite", "tests.FoldingRangesSuite",
+      "tests.rangeFormatting.MultilineStringRangeFormattingWhenPastingSuite",
+      "tests.codeactions.PatternMatchRefactorLspSuite",
+      "tests.ScalaToplevelLibrarySuite",
+      "tests.decorations.SyntheticHoverLspSuite",
+      "tests.rangeFormatting.MultilineStringRangeFormattingWhenSelectingSuite",
+      "tests.rangeFormatting.IndentWhenPastingSuite",
+      "tests.DebugDiscoverySuite", "tests.SemanticdbScala2Suite",
+      "tests.SelectionRangeLspSuite",
+      "tests.codeactions.OrganizeImportsLspSuite",
+      "tests.codeactions.InsertInferredTypeLspSuite",
+      "tests.FoldingRangeScala2Suite", "tests.SystemProcessSuite",
+      "tests.formatting.OnTypeFormattingSuite", "tests.DefinitionScala3Suite",
+      "tests.AnsiFilterSuite", "tests.DocumentSymbolScala3Suite",
+      "tests.ClassBreakpointSuite", "tests.FoldingRangeScala3Suite",
+      "tests.ScalafmtConfigSuite", "tests.DocumentSymbolScala2Suite",
+      "tests.StacktraceParseSuite", "tests.WorksheetDependencySourcesSuite",
+      "tests.DefinitionScala2Suite", "tests.AnalyzeStacktraceLspSuite",
+      "tests.codeactions.ExtractRenameMemberLspSuite",
+      "tests.debug.DotEnvFileParserSuite", "tests.SemanticdbScala3Suite",
+      "tests.troubleshoot.ProblemResolverSuite")
   )
 
 }

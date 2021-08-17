@@ -640,11 +640,18 @@ lazy val cross = project
   )
   .dependsOn(mtest, mtags)
 
-def isInTestShard(name: String) = {
+def isInTestShard(name: String, logger: Logger): Boolean = {
+  val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
+  if (groupIndex == -1) {
+    logger.warn(
+      s"""|Test is not contained in a shard: $name
+          |It will be executed by default in the first shard.
+          |Please add it to "project/TestGroups.scala". """.stripMargin
+    )
+  }
   if (!isCI) {
     true
   } else {
-    val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
     val groupId = Math.max(0, groupIndex) + 1
     System.getenv("TEST_SHARD").toInt == groupId
   }
@@ -654,7 +661,9 @@ lazy val unit = project
   .in(file("tests/unit"))
   .settings(
     testSettings,
-    Test / testOptions ++= Seq(Tests.Filter(name => isInTestShard(name))),
+    Test / testOptions ++= Seq(
+      Tests.Filter(name => isInTestShard(name, sLog.value))
+    ),
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
