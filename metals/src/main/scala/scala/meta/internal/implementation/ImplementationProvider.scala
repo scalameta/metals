@@ -19,7 +19,6 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.ClassSignature
-import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -218,34 +217,25 @@ final class ImplementationProvider(
   private def methodInParentSignature(
       currentClassSig: ClassSignature,
       bottomSymbol: SymbolInformation,
-      bottomClassSig: ClassSignature,
-      childASF: Map[String, String] = Map.empty
+      bottomClassSig: ClassSignature
   ): Seq[Location] = {
     currentClassSig.parents.flatMap {
       case parentSym: TypeRef =>
         val parentTextDocument = findSemanticDbForSymbol(parentSym.symbol)
         def search(symbol: String) =
           parentTextDocument.flatMap(findSymbol(_, symbol))
-        val parentASF =
-          AsSeenFrom.calculateAsSeenFrom(
-            parentSym,
-            currentClassSig.typeParameters
-          )
-        val asSeenFrom = AsSeenFrom.translateAsSeenFrom(childASF, parentASF)
         search(parentSym.symbol).map(_.signature) match {
           case Some(parenClassSig: ClassSignature) =>
             val fromParent = methodInParentSignature(
               parenClassSig,
               bottomSymbol,
-              bottomClassSig,
-              asSeenFrom
+              bottomClassSig
             )
             if (fromParent.isEmpty) {
               locationFromClass(
                 bottomSymbol,
                 bottomClassSig,
                 parenClassSig,
-                asSeenFrom,
                 search,
                 parentTextDocument
               )
@@ -263,15 +253,12 @@ final class ImplementationProvider(
       bottomSymbolInformation: SymbolInformation,
       bottomClassSignature: ClassSignature,
       parentClassSig: ClassSignature,
-      asSeenFrom: Map[String, String],
       search: String => Option[SymbolInformation],
       parentTextDocument: Option[TextDocument]
   ): Option[Location] = {
     val matchingSymbol = MethodImplementation.findParentSymbol(
       bottomSymbolInformation,
-      bottomClassSignature,
       parentClassSig,
-      asSeenFrom,
       search
     )
     for {
@@ -302,8 +289,6 @@ final class ImplementationProvider(
     def findImplementationSymbol(
         parentSymbolInfo: SymbolInformation,
         implDocument: TextDocument,
-        symbolClass: SymbolInformation,
-        classContext: InheritanceContext,
         implReal: ClassLocation
     ): Option[String] = {
       if (isClassLike(parentSymbolInfo))
@@ -312,8 +297,6 @@ final class ImplementationProvider(
         val symbolSearch = defaultSymbolSearch(source, implDocument)
         MethodImplementation.findInherited(
           parentSymbolInfo,
-          symbolClass,
-          classContext,
           implReal,
           symbolSearch
         )
@@ -324,8 +307,7 @@ final class ImplementationProvider(
 
     for {
       classContext <- inheritanceContext.toIterable
-      plainParentSymbol <- classContext.findSymbol(symbol).toIterable
-      parentSymbol = addParameterSignatures(plainParentSymbol, classContext)
+      parentSymbol <- classContext.findSymbol(symbol).toIterable
       symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
       locationsByFile = findImplementation(
         symbolClass.symbol,
@@ -338,13 +320,10 @@ final class ImplementationProvider(
       implDocument <- findSemanticdb(implPath).toIterable
       distance = buffer.tokenEditDistance(implPath, implDocument.text, trees)
       implLocation <- locations
-      implReal = implLocation.toRealNames(symbolClass, translateKey = true)
       implSymbol <- findImplementationSymbol(
         parentSymbol,
         implDocument,
-        symbolClass,
-        classContext,
-        implReal
+        implLocation
       )
       if !findSymbol(implDocument, implSymbol).exists(
         _.kind == SymbolInformation.Kind.TYPE
@@ -380,11 +359,7 @@ final class ImplementationProvider(
           (loc.symbol.isLocal && loc.file != currentPath)
         }
       directImplementations ++ directImplementations
-        .flatMap { loc =>
-          val allPossible = loop(loc.symbol, loc.file)
-          allPossible.map(_.translateAsSeenFrom(loc))
-
-        }
+        .flatMap { loc => loop(loc.symbol, loc.file) }
     }
 
     loop(symbol, Some(file)).groupBy(_.file).collect {
@@ -516,18 +491,9 @@ object ImplementationProvider {
     def fromClassSignature(
         classSig: ClassSignature
     ): Seq[(String, ClassLocation)] = {
-      val allLocations = classSig.parents.collect { case t: TypeRef =>
-        val loc =
-          ClassLocation(
-            symbol,
-            filePath.map(_.toNIO),
-            t,
-            classSig.typeParameters
-          )
-        t.symbol -> loc
-
+      classSig.parents.collect { case t: TypeRef =>
+        t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO))
       }
-      allLocations
     }
 
     def fromTypeSignature(typeSig: TypeSignature) = {
@@ -536,9 +502,7 @@ object ImplementationProvider {
           Seq(
             tr.symbol -> ClassLocation(
               symbol,
-              filePath.map(_.toNIO),
-              tr,
-              typeSig.typeParameters
+              filePath.map(_.toNIO)
             )
           )
         case _ => Seq.empty
@@ -558,41 +522,4 @@ object ImplementationProvider {
   def isClassLike(info: SymbolInformation): Boolean =
     info.isObject || info.isClass || info.isTrait || info.isType
 
-  def addParameterSignatures(
-      plainParentSymbol: SymbolInformation,
-      classContext: InheritanceContext
-  ): SymbolInformation = {
-    plainParentSymbol.copy(
-      signature = addParameterSignatures(
-        plainParentSymbol.signature,
-        classContext.findSymbol
-      )
-    )
-  }
-
-  def addParameterSignatures(
-      signature: Signature,
-      findSymbol: String => Option[SymbolInformation]
-  ): Signature = {
-    signature match {
-      case methodSignature: MethodSignature =>
-        addParameterSignatures(methodSignature, findSymbol)
-      case _ => signature
-    }
-  }
-
-  def addParameterSignatures(
-      signature: MethodSignature,
-      findSymbol: String => Option[SymbolInformation]
-  ): MethodSignature = {
-    val allParams = signature.parameterLists.map { scope =>
-      if (scope.symlinks.size > scope.hardlinks.size) {
-        val hardlinks = scope.symlinks.flatMap { sym => findSymbol(sym) }
-        scope.copy(hardlinks = hardlinks)
-      } else {
-        scope
-      }
-    }
-    signature.copy(parameterLists = allParams)
-  }
 }
