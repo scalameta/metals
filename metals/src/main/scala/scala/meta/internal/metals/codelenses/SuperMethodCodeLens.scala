@@ -2,9 +2,6 @@ package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
 
-import scala.collection.{mutable => m}
-
-import scala.meta.internal.implementation.ClassHierarchyItem
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.TextDocumentWithPath
@@ -13,11 +10,8 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.LensGoSuperCache
-import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolOccurrence
 
 import org.eclipse.{lsp4j => l}
 
@@ -48,10 +42,7 @@ final class SuperMethodCodeLens(
       if occurrence.role.isDefinition
       symbol = occurrence.symbol
       gotoSuperMethod <- createSuperMethodCommand(
-        textDocumentWithPath,
         symbol,
-        occurrence.role,
-        emptyLensGoSuperCache(),
         search
       ).toIterable
       range <-
@@ -62,20 +53,13 @@ final class SuperMethodCodeLens(
   }
 
   private def createSuperMethodCommand(
-      docWithPath: TextDocumentWithPath,
       symbol: String,
-      role: SymbolOccurrence.Role,
-      cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): Option[l.Command] = {
     for {
       symbolInformation <- findSymbol(symbol)
       gotoParentSymbol <- SuperMethodProvider.findSuperForMethodOrField(
-        symbolInformation,
-        docWithPath,
-        role,
-        findSymbol,
-        cache
+        symbolInformation
       )
     } yield convertToSuperMethodCommand(
       gotoParentSymbol,
@@ -93,13 +77,5 @@ final class SuperMethodCodeLens(
       singletonList(symbol)
     )
   }
-
-}
-
-object SuperMethodCodeLens {
-  type LensGoSuperCache =
-    m.Map[String, List[ClassHierarchyItem]]
-
-  def emptyLensGoSuperCache(): LensGoSuperCache = m.Map()
 
 }

@@ -12,9 +12,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsQuickPickItem
 import scala.meta.internal.metals.MetalsQuickPickParams
-import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -77,13 +75,7 @@ class Supermethods(
       symbolInformation <- findSymbol(symbolOcc.symbol)
       gotoSymbol <- {
         if (symbolOcc.role.isDefinition) {
-          val docText = TextDocumentWithPath(textDocument, filePath)
-          findSuperMethodSymbol(
-            symbolInformation,
-            symbolOcc.role,
-            docText,
-            findSymbol
-          )
+          findSuperMethodSymbol(symbolInformation)
         } else {
           Some(symbolInformation.symbol)
         }
@@ -131,27 +123,16 @@ class Supermethods(
       )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       docText = TextDocumentWithPath(textDocument, filePath)
-      hierarchy <- SuperMethodProvider.getSuperMethodHierarchy(
-        symbolInformation,
-        docText,
-        symbolOcc.role,
-        findSymbol
-      )
-    } yield hierarchy.map(_.symbol)
+    } yield SuperMethodProvider.getSuperMethodHierarchy(
+      symbolInformation
+    )
   }
 
   private def findSuperMethodSymbol(
-      symbolInformation: SymbolInformation,
-      role: SymbolOccurrence.Role,
-      docText: TextDocumentWithPath,
-      findSymbol: String => Option[SymbolInformation]
+      symbolInformation: SymbolInformation
   ): Option[String] = {
     SuperMethodProvider.findSuperForMethodOrField(
-      symbolInformation,
-      docText,
-      role,
-      findSymbol,
-      emptyLensGoSuperCache()
+      symbolInformation
     )
   }
 
