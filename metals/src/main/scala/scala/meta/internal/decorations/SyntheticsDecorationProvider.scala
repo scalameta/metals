@@ -14,6 +14,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
@@ -107,7 +108,7 @@ final class SyntheticsDecorationProvider(
           val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
           val printer = new SemanticdbTreePrinter(
             isHover = true,
-            toHoverString(textDocument),
+            toHoverString(textDocument, params.textDocument.getUri()),
             PrinterSymtab.fromTextDocument(textDocument),
             clientConfig.icons().rightArrow,
             clientConfig.icons().ellipsis
@@ -174,11 +175,8 @@ final class SyntheticsDecorationProvider(
     if (interestingSynthetics.nonEmpty)
       addToHover(
         pcHover,
-        "**Synthetics**:\n"
-          +
-            HoverMarkup(
-              interestingSynthetics.mkString("\n")
-            )
+        "**Synthetics**:\n\n"
+          + interestingSynthetics.mkString("\n")
       )
     else None
   }
@@ -217,9 +215,7 @@ final class SyntheticsDecorationProvider(
     addToHover(
       pcHover,
       "**With synthetics added**:\n"
-        + HoverMarkup(
-          lineWithDecorations.trim()
-        )
+        + HoverMarkup(lineWithDecorations.trim())
     )
   }
 
@@ -269,23 +265,70 @@ final class SyntheticsDecorationProvider(
     } yield docWithText
   }
 
-  private def toSymbolName(symbol: String, textDoc: TextDocument): String = {
-    if (symbol.isLocal)
-      textDoc.symbols
-        .find(_.symbol == symbol)
-        .map(_.displayName)
-        .getOrElse(symbol)
-    else symbol
+  private def localSymbolName(symbol: String, textDoc: TextDocument): String = {
+    textDoc.symbols
+      .find(_.symbol == symbol)
+      .map(_.displayName)
+      .getOrElse(symbol)
   }
 
-  private def toHoverString(textDoc: TextDocument)(symbol: String): String = {
-    toSymbolName(symbol, textDoc)
-      .replace("/", ".")
-      .stripSuffix(".")
-      .stripSuffix("#")
-      .stripPrefix("_empty_.")
-      .replace("#", ".")
-      .replace("()", "")
+  private def fullyQualifiedName(
+      symbol: String,
+      textDoc: TextDocument
+  ): String = {
+    if (symbol.isLocal) localSymbolName(symbol, textDoc)
+    else {
+      symbol
+        .replace("/", ".")
+        .stripSuffix(".")
+        .stripSuffix("#")
+        .stripPrefix("_empty_.")
+        .replace("#", ".")
+        .replaceAll(raw"\(\+?\d*\)", "")
+    }
+  }
+
+  private def toHoverString(textDoc: TextDocument, uri: String)(
+      symbol: String
+  ): String = {
+    gotoLink(symbol, textDoc, uri) match {
+      case Some(link) if clientConfig.isCommandInHtmlSupported() =>
+        val simpleName =
+          if (symbol.isLocal) localSymbolName(symbol, textDoc)
+          else symbol.desc.name.value
+        s"[$simpleName]($link)"
+      case _ => fullyQualifiedName(symbol, textDoc)
+    }
+  }
+
+  private def gotoLink(
+      symbol: String,
+      textDocument: s.TextDocument,
+      uri: String
+  ): Option[String] = {
+    if (symbol.isLocal) {
+      textDocument.occurrences.collectFirst {
+        case s.SymbolOccurrence(Some(range), `symbol`, role)
+            if role.isDefinition =>
+          gotoLocationUsingUri(uri, range.startLine, range.startCharacter)
+      }
+    } else {
+      Some(gotoSymbolUsingUri(symbol))
+    }
+  }
+
+  private def gotoLocationUsingUri(
+      uri: String,
+      line: Int,
+      character: Int
+  ): String = {
+    val pos = new l.Position(line, character)
+    val location = new l.Location(uri, new l.Range(pos, pos))
+    ServerCommands.GotoPosition.toCommandLink(location)
+  }
+
+  private def gotoSymbolUsingUri(symbol: String): String = {
+    ServerCommands.GotoSymbol.toCommandLink(symbol)
   }
 
   private def toDecorationString(

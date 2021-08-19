@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.net.URLEncoder
+
 import scala.reflect.ClassTag
 import scala.util.matching.Regex
 
@@ -34,6 +36,8 @@ case class Command(
       List[Object]().asJava
     )
   }
+
+  def toCommandLink: String = s"command:metals.$id"
 
 }
 
@@ -77,6 +81,11 @@ case class ParametrizedCommand[T: ClassTag](
         case _ => None
       }
     }
+  }
+
+  def toCommandLink(argument: T): String = {
+    val param = s"[${argument.toJson.toString()}]"
+    s"command:metals.$id?${URLEncoder.encode(param)}"
   }
 
   def toLSP(argument: T): l.Command =
@@ -135,6 +144,12 @@ case class ParametrizedCommand2[T1: ClassTag, T2: ClassTag](
         argument2.toJson
       ).asJava
     )
+  }
+
+  def toCommandLink(argument1: T1, argument2: T2): String = {
+    val param =
+      s"[${argument1.toJson.toString()}, ${argument2.toJson.toString()}]"
+    s"command:metals.$id?${URLEncoder.encode(param)}"
   }
 }
 

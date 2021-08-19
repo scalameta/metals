@@ -1,5 +1,7 @@
 package tests.decorations
 
+import java.net.URLEncoder
+
 import scala.meta.internal.metals.InitializationOptions
 
 import tests.BaseLspSuite
@@ -10,7 +12,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
     Some(
       InitializationOptions.Default.copy(
         inlineDecorationProvider = Some(true),
-        decorationProvider = Some(true)
+        decorationProvider = Some(true),
+        isCommandInHtmlSupported = Some(true)
       )
     )
 
@@ -84,43 +87,53 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |""".stripMargin
       )
       // Implicit parameters
+      expectedParamsAndy = URLEncoder.encode("""["_empty_/Main.andy."]""")
+      mainClassPath = workspace
+        .resolve("a/src/main/scala/Main.scala")
+        .toURI
+        .toString()
+      expectedParamsBoston = URLEncoder.encode(
+        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":17}}}]"""
+      )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "    hello()@@",
-        """|**Synthetics**:
-           |```scala
-           |(Main.andy, boston)
-           |```
-           |""".stripMargin
+        s"""|**Synthetics**:
+            |
+            |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.goto-position?$expectedParamsBoston))
+            |""".stripMargin
       )
-      // Implicit converions
+      // Implicit conversions
+      augmentStringParams = URLEncoder.encode(
+        """["scala/Predef.augmentString()."]"""
+      )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  @@\"foo\".map(c => c.toUpper)",
-        """|**Synthetics**:
-           |```scala
-           |scala.Predef.augmentString
-           |```
-           |""".stripMargin
+        s"""|**Synthetics**:
+            |
+            |[augmentString](command:metals.goto?$augmentStringParams)
+            |""".stripMargin
       )
+      charParams = URLEncoder.encode("""["scala/Char#"]""")
+      stringParams = URLEncoder.encode("""["scala/Predef.String#"]""")
       // Inferred type parameters
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  \"foo\".map@@(c => c.toUpper)",
-        """|**Expression type**:
-           |```scala
-           |String
-           |```
-           |**Symbol signature**:
-           |```scala
-           |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
-           |```
-           |
-           |**Synthetics**:
-           |```scala
-           |[scala.Char, scala.Predef.String]
-           |```
-           |""".stripMargin
+        s"""|**Expression type**:
+            |```scala
+            |String
+            |```
+            |**Symbol signature**:
+            |```scala
+            |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
+            |```
+            |
+            |**Synthetics**:
+            |
+            |[[Char](command:metals.goto?$charParams), [String](command:metals.goto?$stringParams)]
+            |""".stripMargin
       )
       // Normal hover without synthetics
       _ <- server.assertHoverAtLine(
@@ -136,15 +149,18 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |```
            |""".stripMargin
       )
+      intParams = URLEncoder.encode("""["scala/Int#"]""")
+      fallbackParams = URLEncoder.encode(
+        """["scala/LowPriorityImplicits#fallbackStringCanBuildFrom()."]"""
+      )
       // Implicit parameter from Predef
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  \"foo\".map(c => c.toInt)@@",
-        """|**Synthetics**:
-           |```scala
-           |(scala.LowPriorityImplicits.fallbackStringCanBuildFrom[scala.Int])
-           |```
-           |""".stripMargin
+        s"""|**Synthetics**:
+            |
+            |([fallbackStringCanBuildFrom](command:metals.goto?$fallbackParams)[[Int](command:metals.goto?$intParams)])
+            |""".stripMargin
       )
     } yield ()
   }
@@ -275,14 +291,16 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      augmentStringParams = URLEncoder.encode(
+        """["scala/Predef.augmentString()."]"""
+      )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  (@@\"1\" + \"2\")",
-        """|**Synthetics**:
-           |```scala
-           |scala.Predef.augmentString
-           |```
-           |""".stripMargin
+        s"""|**Synthetics**:
+            |
+            |[augmentString](command:metals.goto?$augmentStringParams)
+            |""".stripMargin
       )
     } yield ()
   }
@@ -317,14 +335,16 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      augmentStringParams = URLEncoder.encode(
+        """["scala/Predef.augmentString()."]"""
+      )
       _ <- server.assertHoverAtLine(
         "standalone/Main.scala",
         "  val value = @@\"asd.\".stripSuffix(\".\")",
-        """|**Synthetics**:
-           |```scala
-           |scala.Predef.augmentString
-           |```
-           |""".stripMargin
+        s"""|**Synthetics**:
+            |
+            |[augmentString](command:metals.goto?$augmentStringParams)
+            |""".stripMargin
       )
       _ <- server.didSave("standalone/Main.scala") { _ =>
         s"""|object Main{
