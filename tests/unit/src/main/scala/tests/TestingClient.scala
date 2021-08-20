@@ -56,7 +56,7 @@ import tests.TestOrderings._
  * - Can customize how to respond to window/showMessageRequest
  * - Aggregates published diagnostics and pretty-prints them as strings
  */
-class TestingClient(workspace: AbsolutePath, buffers: Buffers)
+class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     extends NoopLanguageClient {
   // Customization of the window/showMessageRequest response
   var importBuildChanges: MessageActionItem = ImportBuildChanges.notNow
@@ -78,6 +78,7 @@ class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       actions.find(_.getTitle == "a.Main").get
   }
 
+  val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
     TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
   val diagnosticsCount: TrieMap[AbsolutePath, AtomicInteger] =
@@ -137,10 +138,9 @@ class TestingClient(workspace: AbsolutePath, buffers: Buffers)
         val document = textDocumentEdit.getTextDocument
         val edits = textDocumentEdit.getEdits
         val uri = document.getUri
-
         applyEdits(uri, edits)
       case Right(resourceOperation: ResourceOperation) =>
-        ResourceOperations.applyResourceOperation(resourceOperation)
+        resources.applyResourceOperation(resourceOperation)
     }
   }
 
@@ -149,12 +149,10 @@ class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       textEdits: java.util.List[TextEdit]
   ): Unit = {
     val path = AbsolutePath.fromAbsoluteUri(URI.create(uri))
-
-    val content = path.readText
+    val content = buffers.get(path).getOrElse("")
     val editedContent =
       TextEdits.applyEdits(content, textEdits.asScala.toList)
-
-    path.writeText(editedContent)
+    buffers.put(path, editedContent)
   }
 
   def workspaceClientCommands: List[String] = {

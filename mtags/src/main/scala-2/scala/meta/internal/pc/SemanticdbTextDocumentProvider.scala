@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.nio.file.Paths
 
+import scala.util.Properties
+
 import scala.meta.dialects
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
@@ -52,7 +54,10 @@ class SemanticdbTextDocumentProvider(
         scala.util.Try(workspacePath.relativize(filePath.toNIO)).toOption
       }
       .map { relativeUri =>
-        document.withUri(relativeUri.toString())
+        val relativeString =
+          if (Properties.isWin) relativeUri.toString().replace("\\", "/")
+          else relativeUri.toString()
+        document.withUri(relativeString)
       }
       .getOrElse(document)
   }

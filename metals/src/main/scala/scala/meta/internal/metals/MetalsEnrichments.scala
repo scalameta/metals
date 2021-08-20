@@ -477,6 +477,10 @@ object MetalsEnrichments
       Files.delete(path.dealias.toNIO)
     }
 
+    def deleteRecursively(): Unit = {
+      path.listRecursive.toList.reverse.foreach(_.delete())
+    }
+
     def writeText(text: String): Unit = {
       path.parent.createDirectories()
       val tmp = Files.createTempFile("metals", path.filename)

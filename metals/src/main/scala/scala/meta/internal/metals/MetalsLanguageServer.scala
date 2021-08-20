@@ -641,7 +641,8 @@ class MetalsLanguageServer(
           clientConfig.icons(),
           languageClient,
           buildTargets,
-          buildClient
+          buildClient,
+          interactiveSemanticdbs
         )
         codeActionProvider = new CodeActionProvider(
           compilers,

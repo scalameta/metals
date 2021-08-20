@@ -2,6 +2,7 @@ package tests
 
 import java.nio.file.StandardCopyOption
 
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.lsp4j.CreateFile
@@ -14,7 +15,7 @@ import org.eclipse.lsp4j.ResourceOperation
 /**
  * Client implementation of how to interpret `ResourceOperation` from LSP, used for testing purposes.
  */
-object ResourceOperations {
+class ResourceOperations(buffers: Buffers) {
 
   def applyResourceOperation(resourceOperation: ResourceOperation): Unit = {
     resourceOperation match {
@@ -48,6 +49,7 @@ object ResourceOperations {
     val path = uri.toAbsolutePath
     val fileExists = path.exists
 
+    buffers.put(path, "")
     if (fileExists && !ignoreIfExists && overwrite) {
       path.writeText("")
     } else if (!fileExists) {
@@ -72,6 +74,12 @@ object ResourceOperations {
     val newPath = newUri.toAbsolutePath
     val fileExists = newPath.exists
 
+    val oldContents = buffers.get(oldPath)
+    oldContents.foreach { old =>
+      buffers.remove(oldPath)
+      buffers.put(newPath, old)
+    }
+
     if (fileExists && !ignoreIfExists && overwrite) {
       oldPath.move(newPath, Some(StandardCopyOption.REPLACE_EXISTING))
     } else {
@@ -87,6 +95,7 @@ object ResourceOperations {
     val uri = operation.getUri
     val path = uri.toAbsolutePath
     path.delete()
+    buffers.remove(path)
   }
 
 }

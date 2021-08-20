@@ -53,12 +53,20 @@ final class InteractiveSemanticdbs(
     reset()
   }
 
-  override def textDocument(source: AbsolutePath): TextDocumentLookup = {
+  override def textDocument(
+      source: AbsolutePath
+  ): TextDocumentLookup = textDocument(source, unsavedContents = None)
+
+  def textDocument(
+      source: AbsolutePath,
+      unsavedContents: Option[String]
+  ): TextDocumentLookup = {
 
     def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
     def shouldTryCalculateInteractiveSemanticdb = {
       source.isLocalFileSystem(workspace) && (
-        source.isInReadonlyDirectory(workspace) || // dependencies
+        unsavedContents.isDefined ||
+          source.isInReadonlyDirectory(workspace) || // dependencies
           source.isSbt || // sbt files
           source.isWorksheet || // worksheets
           doesNotBelongToBuildTarget // standalone files
@@ -74,7 +82,7 @@ final class InteractiveSemanticdbs(
       val result = textDocumentCache.compute(
         source,
         (path, existingDoc) => {
-          val text = FileIO.slurp(source, charset)
+          val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
           val sha = MD5.compute(text)
           if (existingDoc == null || existingDoc.md5 != sha) {
             val compiled = compile(path, text)
