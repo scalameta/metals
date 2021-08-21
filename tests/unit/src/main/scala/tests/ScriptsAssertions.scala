@@ -6,12 +6,12 @@ import java.nio.file.Paths
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import scala.meta.internal.metals.HoverExtParams
 
 trait ScriptsAssertions { self: BaseLspSuite =>
 

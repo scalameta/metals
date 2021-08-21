@@ -35,6 +35,7 @@ import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
@@ -52,7 +53,6 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.internal.tvp.TreeViewProvider

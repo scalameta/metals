@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 import scala.util.control.NonFatal
 
@@ -10,7 +11,6 @@ import scala.meta.pc.RangeParams
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
-import scala.reflect.internal.util.Position
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._

@@ -13,9 +13,9 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.internal.mtags.Semanticdbs
