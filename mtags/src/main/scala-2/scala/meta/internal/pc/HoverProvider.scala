@@ -19,7 +19,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     case _ if params.isWhitespace => None
     case _ => hoverOffset(params)
   }
-  
+
   def hoverOffset(params: OffsetParams): Option[Hover] = {
     val unit = addCompilationUnit(
       code = params.text(),
@@ -28,7 +28,12 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     )
     val (pos, tree) = params match {
       case params: RangeParams =>
-        val pos = Position.range(unit.source, params.offset(), params.offset(), params.endOffset())
+        val pos = Position.range(
+          unit.source,
+          params.offset(),
+          params.offset(),
+          params.endOffset()
+        )
         val tree = typedHoverTreeAt(pos)
         (pos, tree)
       case params: OffsetParams =>
@@ -80,7 +85,9 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         )
       // Def, val or val definition, example `val x: Int = 1`
       // Matches only if the cursor is over the definition name.
-      case v: ValOrDefDef if (v.namePos.includes(pos) || pos.includes(v.namePos)) && v.symbol != null =>
+      case v: ValOrDefDef
+          if (v.namePos
+            .includes(pos) || pos.includes(v.namePos)) && v.symbol != null =>
         val symbol = (v.symbol.getter: Symbol) match {
           case NoSymbol => v.symbol
           case getter => getter

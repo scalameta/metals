@@ -211,9 +211,13 @@ abstract class BasePCSuite extends BaseSuite {
     (code2, offset)
   }
 
-  def hoverParams(code: String, filename: String = "test.scala"): (String, Int, Int) = {
+  def hoverParams(
+      code: String,
+      filename: String = "test.scala"
+  ): (String, Int, Int) = {
     val code2 = code.replace("@@", "").replace("%<%", "").replace("%>%", "")
-    val positionOffset = code.replace("%<%", "").replace("%>%", "").indexOf("@@")
+    val positionOffset =
+      code.replace("%<%", "").replace("%>%", "").indexOf("@@")
     val startOffset = code.replace("@@", "").indexOf("%<%")
     val endOffset = code.replace("@@", "").replace("%<%", "").indexOf("%>%")
     (positionOffset, startOffset, endOffset) match {

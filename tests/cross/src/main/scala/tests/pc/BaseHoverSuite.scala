@@ -54,11 +54,15 @@ abstract class BaseHoverSuite
         h <- hover.asScala
         range <- Option(h.getRange)
       } {
-        val base = codeOriginal.replace("@@", "").replace("%<%", "").replace("%>%", "")
+        val base =
+          codeOriginal.replace("@@", "").replace("%<%", "").replace("%>%", "")
         val withRange = replaceInRange(base, range)
         assertNoDiff(
           withRange,
-          packagePrefix + original.replace("@@", "").replace("%<%", "").replace("%>%", ""),
+          packagePrefix + original
+            .replace("@@", "")
+            .replace("%<%", "")
+            .replace("%>%", ""),
           "Invalid range"
         )
       }

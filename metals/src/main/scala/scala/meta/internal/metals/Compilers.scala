@@ -322,7 +322,8 @@ class Compilers(
           .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
       }
     } else {
-      val param: TextDocumentPositionParams = new TextDocumentPositionParams(params.textDocument, params.position)
+      val param: TextDocumentPositionParams =
+        new TextDocumentPositionParams(params.textDocument, params.position)
       withPCAndAdjustLsp(param) { (pc, pos, adjust) =>
         pc.hover(CompilerOffsetParams.fromPos(pos, token))
           .asScala

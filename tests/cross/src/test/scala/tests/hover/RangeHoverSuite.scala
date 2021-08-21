@@ -3,7 +3,7 @@ package tests.hover
 import tests.pc.BaseHoverSuite
 
 class RangeHoverSuite extends BaseHoverSuite {
-  
+
   check(
     "range-sum-method",
     """|package helpers
