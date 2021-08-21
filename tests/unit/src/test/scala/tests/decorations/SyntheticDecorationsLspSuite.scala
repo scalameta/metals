@@ -97,7 +97,11 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  @@\"foo\".map(c => c.toUpper)",
-        """|**Synthetics**:
+        """|```scala
+           |String
+           |```
+           |
+           |**Synthetics**:
            |```scala
            |scala.Predef.augmentString
            |```
@@ -278,7 +282,11 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  (@@\"1\" + \"2\")",
-        """|**Synthetics**:
+        """|```scala
+           |String
+           |```
+           |
+           |**Synthetics**:
            |```scala
            |scala.Predef.augmentString
            |```
@@ -320,7 +328,11 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.assertHoverAtLine(
         "standalone/Main.scala",
         "  val value = @@\"asd.\".stripSuffix(\".\")",
-        """|**Synthetics**:
+        """|```scala
+           |String
+           |```
+           |
+           |**Synthetics**:
            |```scala
            |scala.Predef.augmentString
            |```

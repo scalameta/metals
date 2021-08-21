@@ -12,7 +12,7 @@ trait TestHovers {
     def hover: String =
       string.trim.linesIterator.toList match {
         case List(symbolSignature) =>
-          HoverMarkup("", symbolSignature, "")
+          HoverMarkup(symbolSignature)
         case List(expressionType, symbolSignature) =>
           HoverMarkup(expressionType, symbolSignature, "")
         case _ =>

@@ -18,7 +18,8 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
           |object Main {
           |  Option(1).he@@ad
           |}""".stripMargin,
-        """override def head: Int""".hover
+        """|Int
+           |override def head: Int""".stripMargin.hover
       )
     } yield ()
   }
@@ -41,7 +42,8 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
           |object Main {
           |  Option(1).he@@ad
           |}""".stripMargin,
-        """override def head: Int""".hover
+        """|Int
+           |override def head: Int""".stripMargin.hover
       )
     } yield ()
   }
@@ -69,11 +71,15 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
           |object Main {
           |  val res = Def.fo@@o(1)
           |}""".stripMargin,
-        """|```scala
+        """|**Expression type**:
+           |```scala
+           |Int
+           |```
+           |**Symbol signature**:
+           |```scala
            |def foo(x: Int): Int
            |```
-           |test
-           |""".stripMargin.hover
+           |test""".stripMargin
       )
     } yield ()
   }
@@ -101,11 +107,15 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
           |object Main {
           |  val res = Def.fo@@o(1)
           |}""".stripMargin,
-        """|```scala
+        """|**Expression type**:
+           |```scala
+           |Int
+           |```
+           |**Symbol signature**:
+           |```scala
            |def foo(x: Int): Int
            |```
-           |test
-           |""".stripMargin.hover
+           |test""".stripMargin
       )
       _ <- server.didSave("a/src/main/scala/a/Def.scala")(s =>
         s.replace("test", "test2")
@@ -117,11 +127,15 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
           |object Main {
           |  val res = Def.fo@@o(1)
           |}""".stripMargin,
-        """|```scala
+        """|**Expression type**:
+           |```scala
+           |Int
+           |```
+           |**Symbol signature**:
+           |```scala
            |def foo(x: Int): Int
            |```
-           |test2
-           |""".stripMargin.hover
+           |test2""".stripMargin
       )
     } yield ()
   }
@@ -147,7 +161,8 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
           |object Main {
           |  Option(1).he@@ad
           |}""".stripMargin,
-        """override def head: Int""".hover,
+        """|Int
+           |override def head: Int""".stripMargin.hover,
         root = workspace.resolve(Directories.readonly)
       )
     } yield ()

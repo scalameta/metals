@@ -98,6 +98,9 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|immutable.IndexedSeq[Int]
        |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hover,
     compat = Map(
+      "2.13" ->
+        """|IndexedSeq[Int]
+           |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hover,
       "3.0" -> "x: Int".hover
     )
   )
@@ -122,6 +125,9 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|List[Int]
        |override def apply[A](xs: A*): List[A]""".stripMargin.hover,
     compat = Map(
+      "2.13" ->
+        """|List[Int]
+           |def apply[A](elems: A*): List[A]""".stripMargin.hover,
       "3.0" -> "def apply[A](elems: A*): Int".hover
     )
   )
@@ -146,7 +152,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|List[Int]
        |val l: List[Int]""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "".hover
+      "3.0" -> "val l: List[Int]".hover
     )
   )
 }

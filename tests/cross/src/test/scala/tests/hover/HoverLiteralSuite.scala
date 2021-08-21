@@ -12,7 +12,10 @@ class HoverLiteralSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|```scala
        |Int
-       |```""".stripMargin.hover
+       |```""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val x: Int".hover
+    )
   )
 
   check(
@@ -23,7 +26,10 @@ class HoverLiteralSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|```scala
        |Double
-       |```""".stripMargin.hover
+       |```""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val x: Double".hover
+    )
   )
 
   check(
@@ -34,7 +40,10 @@ class HoverLiteralSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|```scala
        |Float
-       |```""".stripMargin.hover
+       |```""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val x: Float".hover
+    )
   )
 
   check(
@@ -45,7 +54,10 @@ class HoverLiteralSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|```scala
        |Long
-       |```""".stripMargin.hover
+       |```""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val x: Long".hover
+    )
   )
 
   check(
@@ -56,7 +68,10 @@ class HoverLiteralSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|```scala
        |String
-       |```""".stripMargin.hover
+       |```""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val x: String".hover
+    )
   )
 
   check(
@@ -68,7 +83,10 @@ class HoverLiteralSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|```scala
        |String
-       |```""".stripMargin
+       |```""".stripMargin,
+    compat = Map(
+      "3.0" -> "final object StringContext: String".hover
+    )
   )
 
 }

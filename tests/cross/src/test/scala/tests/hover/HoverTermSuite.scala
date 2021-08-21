@@ -72,7 +72,10 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|String
        |val name: String
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val name: String".hover
+    )
   )
 
   check(
@@ -90,7 +93,8 @@ class HoverTermSuite extends BaseHoverSuite {
       "2.13" ->
         """|String
            |def s(args: Any*): String = macro
-           |""".stripMargin.hover
+           |""".stripMargin.hover,
+      "3.0" -> "def s(args: Any*): String".hover
     )
   )
 
@@ -231,7 +235,10 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Int
        |x: Int
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "x: Int".hover
+    )
   )
 
   check(
@@ -437,7 +444,10 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|String
        |def stripSuffix(suffix: String): String
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "def stripSuffix(suffix: String): String".hover
+    )
   )
 
   check(
@@ -455,7 +465,10 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Int
        |val number: Int
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "val number: Int".hover
+    )
   )
 
   check(
