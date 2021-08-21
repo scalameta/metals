@@ -11,6 +11,7 @@ import munit.TestOptions
 import tests.BasePCSuite
 import tests.RangeReplace
 import tests.TestHovers
+import scala.meta.internal.metals.CompilerRangeParams
 
 abstract class BaseHoverSuite
     extends BasePCSuite
@@ -35,11 +36,14 @@ abstract class BaseHoverSuite
         if (automaticPackage) s"package $pkg\n"
         else ""
       val codeOriginal = packagePrefix + noRange
-      val (code, offset) = params(codeOriginal, filename)
+      val (code, so, eo) = hoverParams(codeOriginal, filename)
+      val pcParams = if (so == eo) {
+        CompilerOffsetParams(Paths.get(filename).toUri(), code, so)
+      } else {
+        CompilerRangeParams(Paths.get(filename).toUri(), code, so, eo)
+      }
       val hover = presentationCompiler
-        .hover(
-          CompilerOffsetParams(Paths.get(filename).toUri(), code, offset)
-        )
+        .hover(pcParams)
         .get()
       val obtained: String = renderAsString(code, hover.asScala, includeRange)
       assertNoDiff(
@@ -50,11 +54,11 @@ abstract class BaseHoverSuite
         h <- hover.asScala
         range <- Option(h.getRange)
       } {
-        val base = codeOriginal.replace("@@", "")
+        val base = codeOriginal.replace("@@", "").replace("%<%", "").replace("%>%", "")
         val withRange = replaceInRange(base, range)
         assertNoDiff(
           withRange,
-          packagePrefix + original.replace("@@", ""),
+          packagePrefix + original.replace("@@", "").replace("%<%", "").replace("%>%", ""),
           "Invalid range"
         )
       }

@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import scala.meta.internal.metals.HoverExtParams
 
 trait ScriptsAssertions { self: BaseLspSuite =>
 
@@ -82,7 +83,7 @@ trait ScriptsAssertions { self: BaseLspSuite =>
   ): Future[String] =
     server.server
       .hover(
-        new TextDocumentPositionParams(
+        new HoverExtParams(
           new TextDocumentIdentifier(
             server.toPath(path).toNIO.toUri.toASCIIString
           ),

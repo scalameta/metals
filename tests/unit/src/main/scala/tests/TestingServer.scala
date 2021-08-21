@@ -52,6 +52,7 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.internal.tvp.TreeViewProvider
@@ -889,6 +890,15 @@ final class TestingServer(
       (text, new TextDocumentPositionParams(textId, start))
     }
 
+  private def hoverExtParams(
+      filename: String,
+      original: String,
+      root: AbsolutePath
+  ): Future[(String, HoverExtParams)] =
+    positionFromString(filename, original, root) { case (text, textId, start) =>
+      (text, new HoverExtParams(textId, start))
+    }
+
   private def codeActionParams(
       filename: String,
       original: String,
@@ -1010,7 +1020,7 @@ final class TestingServer(
       root: AbsolutePath
   ): Future[String] = {
     for {
-      (text, params) <- offsetParams(filename, query, root)
+      (text, params) <- hoverExtParams(filename, query, root)
       hover <- server.hover(params).asScala
     } yield TestHovers.renderAsString(text, Option(hover), includeRange = false)
   }

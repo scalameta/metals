@@ -207,6 +207,27 @@ abstract class BasePCSuite extends BaseSuite {
     if (offset < 0) {
       fail("missing @@")
     }
+    inspectDialect(filename, code2)
+    (code2, offset)
+  }
+
+  def hoverParams(code: String, filename: String = "test.scala"): (String, Int, Int) = {
+    val code2 = code.replace("@@", "").replace("%<%", "").replace("%>%", "")
+    val positionOffset = code.replace("%<%", "").replace("%>%", "").indexOf("@@")
+    val startOffset = code.replace("@@", "").indexOf("%<%")
+    val endOffset = code.replace("@@", "").replace("%<%", "").indexOf("%>%")
+    (positionOffset, startOffset, endOffset) match {
+      case (po, so, eo) if po < 0 && so < 0 && eo < 0 =>
+        fail("missing @@ and (%<% and %>%)")
+      case (_, so, eo) if so >= 0 && eo >= 0 =>
+        (code2, so, eo)
+      case (po, _, _) =>
+        inspectDialect(filename, code2)
+        (code2, po, po)
+    }
+  }
+
+  private def inspectDialect(filename: String, code2: String) = {
     val file = tmp.resolve(filename)
     Files.write(file.toNIO, code2.getBytes(StandardCharsets.UTF_8))
     val dialect =
@@ -217,7 +238,6 @@ abstract class BasePCSuite extends BaseSuite {
         println(s"warn: $e")
     }
     workspace.inputs(filename) = (code2, dialect)
-    (code2, offset)
   }
 
   def doc(e: JEither[String, MarkupContent]): String = {

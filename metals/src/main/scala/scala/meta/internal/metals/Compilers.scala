@@ -312,14 +312,24 @@ class Compilers(
   }
 
   def hover(
-      params: TextDocumentPositionParams,
+      params: HoverExtParams,
       token: CancelToken
-  ): Future[Option[Hover]] =
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.hover(CompilerOffsetParams.fromPos(pos, token))
-        .asScala
-        .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
+  ): Future[Option[Hover]] = {
+    if (params.range != null) {
+      withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+        pc.hover(CompilerRangeParams.fromPos(pos, token))
+          .asScala
+          .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
+      }
+    } else {
+      val param: TextDocumentPositionParams = new TextDocumentPositionParams(params.textDocument, params.position)
+      withPCAndAdjustLsp(param) { (pc, pos, adjust) =>
+        pc.hover(CompilerOffsetParams.fromPos(pos, token))
+          .asScala
+          .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
+      }
     }
+  }
 
   def definition(
       params: TextDocumentPositionParams,
@@ -538,7 +548,21 @@ class Compilers(
       )
     val metaPos = pos.toMeta(input)
     fn(compiler, metaPos, adjust)
+  }
 
+  private def withPCAndAdjustLsp[T](
+      params: HoverExtParams
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
+    val path = params.textDocument.getUri.toAbsolutePath
+    val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
+
+    val (input, _, adjust) =
+      sourceAdjustments(
+        new TextDocumentPositionParams(params.textDocument, params.position),
+        compiler.scalaVersion()
+      )
+    val metaPos = params.range.toMeta(input)
+    fn(compiler, metaPos, adjust)
   }
 
   private def sourceAdjustments(
