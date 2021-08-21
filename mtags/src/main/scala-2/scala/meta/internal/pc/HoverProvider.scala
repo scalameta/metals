@@ -36,8 +36,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         val tree = typedHoverTreeAt(pos)
         (pos, tree)
     }
-    pprint.log(tree)
-    println(s"tree: ${tree.tpe}")
     tree match {
       case i @ Import(_, _) =>
         for {
@@ -198,12 +196,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       pos: Position,
       range: Position
   ): Option[Hover] = {
-    println(symbol)
-    println(keyword)
-    println(seenFrom)
-    println(tpe)
-    println(pos)
-    println(range)
     if (tpe == null || tpe.isErroneous || tpe == NoType) None
     else if (symbol == null || symbol == NoSymbol || symbol.isErroneous) {
       val context = doLocateContext(pos)
