@@ -1,6 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.InsertInferredType
+import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class InsertInferredTypeLspSuite
     extends BaseCodeActionLspSuite("implementAbstractMembers") {
@@ -95,6 +96,7 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map(c<<>>h => ch.toInt)
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
+        |${RewriteBracesParensCodeAction.toBraces}
         |""".stripMargin,
     """|object A{
        |  val list = "123".map((ch: Char) => ch.toInt)
@@ -108,6 +110,7 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map{c<<>>h => ch.toInt}
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
+        |${RewriteBracesParensCodeAction.toParens}
         |""".stripMargin,
     """|object A{
        |  val list = "123".map{ch: Char => ch.toInt}
