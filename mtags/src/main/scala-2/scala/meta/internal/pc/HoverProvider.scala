@@ -36,7 +36,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         val tree = typedHoverTreeAt(pos)
         (pos, tree)
     }
-    println(tree.summaryString)
+    pprint.log(tree)
+    println(s"tree: ${tree.tpe}")
     tree match {
       case i @ Import(_, _) =>
         for {
@@ -44,12 +45,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           hover <- toHover(member, pos)
         } yield hover
       case _: Select | _: Apply | _: TypeApply | _: Ident =>
-        println(tree.tpe)
-        println("Parents:")
-        lastVisitedParentTrees.foreach { tree =>
-          println(tree)
-          println(tree.tpe)
-        }
         val expanded = expandRangeToEnclosingApply(pos)
         if (
           expanded != null &&
@@ -87,7 +82,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         )
       // Def, val or val definition, example `val x: Int = 1`
       // Matches only if the cursor is over the definition name.
-      case v: ValOrDefDef if v.namePos.includes(pos) && v.symbol != null =>
+      case v: ValOrDefDef if (v.namePos.includes(pos) || pos.includes(v.namePos)) && v.symbol != null =>
         val symbol = (v.symbol.getter: Symbol) match {
           case NoSymbol => v.symbol
           case getter => getter

@@ -139,7 +139,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
   )
 
   check(
-    "range-longer-expression",
+    "range-longer-expression-1",
     """|package helpers
        |
        |class XDClass {
@@ -169,7 +169,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
   )
 
   check(
-    "range-longer-expression",
+    "range-expression-in-closure",
     """|package helpers
        |
        |class XDClass {
@@ -195,6 +195,31 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |```""".stripMargin.hover,
     compat = Map(
       "3.0" -> "def apply[A](elems: A*): Int".hover
+    )
+  )
+
+  check(
+    "range-lfs-of-valdef",
+    """|package helpers
+       |
+       |class XDClass {
+       |  def xd: Int = {
+       |    <<val %<%l%>% = List(1,2,3)>>
+       |    l.map { x =>
+       |      x.to(x*x)
+       |        .flatMap { y =>
+       |          List(y + 2137)
+       |        }
+       |      .sum
+       |    }.sum
+       |  }
+       |}
+       |""".stripMargin,
+    """```scala
+       |val l: List[Int]
+       |```""".stripMargin.hover,
+    compat = Map(
+      "3.0" -> "".hover
     )
   )
 }
