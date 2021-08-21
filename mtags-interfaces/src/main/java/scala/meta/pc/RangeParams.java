@@ -1,12 +1,12 @@
 package scala.meta.pc;
 
 /**
- * Parameters for a presentation compiler request at a given offset in a single source file.
+ * Parameters for a presentation compiler request at a given range in a single source file.
  */
 public interface RangeParams extends OffsetParams {
 
     /**
-     * The character offset of the request.
+     * The character end offset of the request.
      */
     int endOffset();
 
