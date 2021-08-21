@@ -9,7 +9,7 @@ class A >>region>>{
   import>>imports>> scala.util
   import scala.util<<imports<<
   def foo = {
-    import scala.util
-    import scala.util
+    import>>imports>> scala.util
+    import scala.util<<imports<<
   }
 }<<region<<

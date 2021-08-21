@@ -19,7 +19,8 @@ final class FoldingRangeExtractor(
     distance: TokenEditDistance,
     foldOnlyLines: Boolean
 ) {
-  private val spanThreshold = 3
+  private val spanThreshold = 2
+  private val distanceToEnclosingThreshold = 3
 
   private val ranges = new FoldingRanges(foldOnlyLines)
 
@@ -32,7 +33,8 @@ final class FoldingRangeExtractor(
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
     if (span(tree.pos) > spanThreshold) {
       val newEnclosing = tree match {
-        case Foldable(pos) if span(enclosing) - span(pos) > spanThreshold =>
+        case Foldable(pos)
+            if span(enclosing) - span(pos) > distanceToEnclosingThreshold =>
           distance.toRevised(pos.toLSP) match {
             case Some(revisedPos) =>
               val range = createRange(revisedPos)
@@ -43,7 +45,6 @@ final class FoldingRangeExtractor(
         case _ =>
           enclosing
       }
-
       val (importGroups, otherChildren) = extractImports(tree.children)
       importGroups.foreach(group => foldImports(group))
 
@@ -202,7 +203,22 @@ final class FoldingRangeExtractor(
               range(tree.pos.input, template.pos.start, template.pos.end)
           }
 
-        case _: Term.Block => Some(tree.pos)
+        case block: Term.Block => {
+          if (
+            isScala3BlockWithoutOptionalBraces(block) && block.pos.startLine > 0
+          ) {
+            range(
+              tree.pos.input,
+              tree.pos.input
+                .lineToOffset(tree.pos.startLine) - System.lineSeparator().size,
+              tree.pos.end
+            )
+          } else if (span(block.pos) - 1 > spanThreshold) {
+            Some(tree.pos)
+          } else {
+            None
+          }
+        }
         case _: Stat =>
           tree.parent.collect {
             case _: Term.Block | _: Term.Function | _: Template | _: Defn =>
@@ -210,6 +226,11 @@ final class FoldingRangeExtractor(
           }
         case _ => None
       }
+
+    private def isScala3BlockWithoutOptionalBraces(block: Term.Block) = {
+      val firstChar = block.pos.input.chars(block.pos.start)
+      block.pos.startLine != block.pos.endLine && firstChar != '{'
+    }
 
     private def range(input: Input, start: Int, end: Int): Option[Position] =
       Some(Position.Range(input, start, end))
