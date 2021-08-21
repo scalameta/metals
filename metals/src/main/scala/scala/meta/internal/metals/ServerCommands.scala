@@ -190,6 +190,14 @@ object ServerCommands {
     "[string], where the string is a stacktrace."
   )
 
+  val Decompile = new Command(
+    "decompile",
+    "Show TASTy",
+    """|Show tasty file and show its content.
+       |""".stripMargin,
+    "[string], where the string is a path to tasty file."
+  )
+
   val GotoSymbol = new Command(
     "goto",
     "Goto location for symbol",
@@ -407,6 +415,7 @@ object ServerCommands {
       CascadeCompile,
       CleanCompile,
       CopyWorksheetOutput,
+      Decompile,
       ExtractMemberDefinition,
       GenerateBspConfig,
       GotoPosition,

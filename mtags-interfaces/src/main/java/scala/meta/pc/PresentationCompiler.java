@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 
 import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentRangeFormattingParams;
 import org.eclipse.lsp4j.TextEdit;
@@ -72,6 +73,12 @@ public abstract class PresentationCompiler {
 
      */
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
+
+    /**
+     * Decompile .tasty or .class file.
+
+     */
+    public abstract CompletableFuture<Optional<ExecuteCommandParams>> decompile(URI targetUri);
 
     /**
      * Return the necessary imports for a symbol at the given position.

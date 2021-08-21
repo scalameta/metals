@@ -257,6 +257,14 @@ final class TestingServer(
     }
   }
 
+  def assertShowTasty(
+      filePath: String
+  ): Future[ju.Optional[l.ExecuteCommandParams]] = {
+    server.decompiler.decompile(
+      new ExecuteCommandParams(ServerCommands.Decompile.id, toJson(filePath))
+    )
+  }
+
   def assertSuperMethodHierarchy(
       uri: String,
       expectations: List[(Int, List[String])],
@@ -451,11 +459,14 @@ final class TestingServer(
   def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
+  private def toJson(params: Object*): java.util.List[Object] = {
+    params.map(_.toJson.asInstanceOf[Object]).asJava
+  }
+
   def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
     scribe.info(s"Executing command [$command]")
-    val args: java.util.List[Object] =
-      params.map(_.toJson.asInstanceOf[Object]).asJava
+    val args = toJson(params)
 
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
