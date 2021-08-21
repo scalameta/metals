@@ -16,17 +16,14 @@ object HoverMarkup {
       docstring: String
   ): String = {
     val markdown = new StringBuilder()
-    val needsExpressionType = !symbolSignature.endsWith(expressionType)
-    if (needsExpressionType) {
-      markdown
-        .append("**Expression type**:\n")
-        .append("```scala\n")
-        .append(expressionType)
-        .append("\n```\n")
-    }
+    markdown
+      .append("**Expression type**:\n")
+      .append("```scala\n")
+      .append(expressionType)
+      .append("\n```\n")
     if (symbolSignature.nonEmpty) {
       markdown
-        .append(if (needsExpressionType) "**Symbol signature**:\n" else "")
+        .append("**Symbol signature**:\n")
         .append("```scala\n")
         .append(symbolSignature)
         .append("\n```")

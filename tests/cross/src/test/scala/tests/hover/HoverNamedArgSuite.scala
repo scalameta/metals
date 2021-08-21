@@ -16,7 +16,12 @@ class HoverNamedArgSuite extends BaseHoverSuite {
       |  <<foo(nam@@ed = 2)>>
       |}
       |""".stripMargin,
-    """|```scala
+    """|**Expression type**:
+       |```scala
+       |Unit
+       |```
+       |**Symbol signature**:
+       |```scala
        |def foo(named: Int): Unit
        |```
        |Runs foo
@@ -62,7 +67,8 @@ class HoverNamedArgSuite extends BaseHoverSuite {
       |  println(<<new User(age = 42, n@@ame = "")>>)
       |}
       |""".stripMargin,
-    "def this(name: String, age: Int): User".hover,
+    """|User
+       |def this(name: String, age: Int): User""".stripMargin.hover,
     compat = Map(
       "3" -> "name: String".hover
     )
@@ -85,7 +91,8 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    "def sum[B >: Int](implicit num: Numeric[B]): B".hover,
+    """|B
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hover,
     compat = Map(
       "3.0" -> "def sum[B >: A](implicit num: Numeric[B]): B".hover
     )
@@ -108,7 +115,9 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    "Int".hover,
+    """|```scala
+       |Int
+       |```""".stripMargin,
     compat = Map(
       "3.0" -> "def +(x: Int): Int".hover
     )
@@ -132,7 +141,8 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    "def sum[B >: Int](implicit num: Numeric[B]): B".hover,
+    """|B
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hover,
     compat = Map(
       "3.0" -> "val l: List[Int]".hover
     )
@@ -155,14 +165,8 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|**Expression type**:
-       |```scala
-       |immutable.IndexedSeq[Int]
-       |```
-       |**Symbol signature**:
-       |```scala
-       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That
-       |```""".stripMargin.hover,
+    """|immutable.IndexedSeq[Int]
+       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hover,
     compat = Map(
       "3.0" -> "x: Int".hover
     )
@@ -185,14 +189,8 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|**Expression type**:
-       |```scala
-       |List[Int]
-       |```
-       |**Symbol signature**:
-       |```scala
-       |override def apply[A](xs: A*): List[A]
-       |```""".stripMargin.hover,
+    """|List[Int]
+       |override def apply[A](xs: A*): List[A]""".stripMargin.hover,
     compat = Map(
       "3.0" -> "def apply[A](elems: A*): Int".hover
     )
@@ -215,9 +213,8 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """```scala
-       |val l: List[Int]
-       |```""".stripMargin.hover,
+    """|List[Int]
+       |val l: List[Int]""".stripMargin.hover,
     compat = Map(
       "3.0" -> "".hover
     )
