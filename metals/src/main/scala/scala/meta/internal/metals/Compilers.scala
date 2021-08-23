@@ -315,20 +315,10 @@ class Compilers(
       params: HoverExtParams,
       token: CancelToken
   ): Future[Option[Hover]] = {
-    if (params.range != null) {
-      withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-        pc.hover(CompilerRangeParams.fromPos(pos, token))
-          .asScala
-          .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
-      }
-    } else {
-      val param: TextDocumentPositionParams =
-        new TextDocumentPositionParams(params.textDocument, params.position)
-      withPCAndAdjustLsp(param) { (pc, pos, adjust) =>
-        pc.hover(CompilerOffsetParams.fromPos(pos, token))
-          .asScala
-          .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
-      }
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.hover(CompilerRangeParams.fromPos(pos, token))
+        .asScala
+        .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
   }
 
@@ -539,8 +529,7 @@ class Compilers(
       params: TextDocumentPositionParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val compiler =
-      loadCompiler(path).getOrElse(fallbackCompiler)
+    val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
 
     val (input, pos, adjust) =
       sourceAdjustments(
@@ -554,16 +543,21 @@ class Compilers(
   private def withPCAndAdjustLsp[T](
       params: HoverExtParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
+    val positionParams =
+      new TextDocumentPositionParams(params.textDocument, params.position)
     val path = params.textDocument.getUri.toAbsolutePath
     val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
 
-    val (input, _, adjust) =
+    val (input, pos, adjust) =
       sourceAdjustments(
-        new TextDocumentPositionParams(params.textDocument, params.position),
+        positionParams,
         compiler.scalaVersion()
       )
-    val metaPos = params.range.toMeta(input)
-    fn(compiler, metaPos, adjust)
+
+    if (params.range != null)
+      fn(compiler, params.range.toMeta(input), adjust)
+    else
+      fn(compiler, pos.toMeta(input), adjust)
   }
 
   private def sourceAdjustments(
