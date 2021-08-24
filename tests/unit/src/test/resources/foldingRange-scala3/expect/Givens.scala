@@ -20,8 +20,8 @@ given x: AnyRef>>region>> with
         "o" +
         "o"<<region<<
 
-given stringV: String =
-  >>region>>val a = "a"
+given stringV: String =>>region>>
+  val a = "a"
   val b = "b"
   val c = "c"
   val d = "d"
