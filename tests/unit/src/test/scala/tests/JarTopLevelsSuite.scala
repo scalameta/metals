@@ -55,7 +55,6 @@ class JarTopLevelsSuite extends BaseTablesSuite {
   test("noSymbols") {
     jarSymbols.putTopLevels(jar1, List.empty)
     val result = jarSymbols.getTopLevels(jar1)
-    assert(result.isDefined)
-    assert(result.get.isEmpty)
+    assert(result.isEmpty)
   }
 }
