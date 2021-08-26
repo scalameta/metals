@@ -186,7 +186,7 @@ class DebugProtocolSuite
         workspace
           .resolve(Random.alphanumeric.take(10).mkString.toLowerCase + ".env")
           .toNIO,
-        "MIDDLE_NAME=Emily\nLAST_NAME=Morris".getBytes()
+        "MIDDLE_NAME=Emily\n#comment\nLAST_NAME=Morris".getBytes()
       )
 
     for {

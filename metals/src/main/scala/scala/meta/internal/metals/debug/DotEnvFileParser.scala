@@ -30,7 +30,7 @@ object DotEnvFileParser {
       [^\r\n]*                # unquoted value    
     )
     \s*                       # trailing whitespace
-    (?:\#.*)?                 # optional comment
+    (?:\#[^\n]*)?                 # optional comment
     $                         # end of line
   """.r
 
