@@ -63,39 +63,42 @@ final class JarTopLevels(conn: () => Connection) {
       path: AbsolutePath,
       toplevels: List[(String, AbsolutePath)]
   ): Int = {
-    // Add jar to H2
-    var jarStmt: PreparedStatement = null
-    val jar =
-      try {
-        jarStmt = conn().prepareStatement(
-          s"insert into indexed_jar (md5) values (?)",
-          Statement.RETURN_GENERATED_KEYS
-        )
-        jarStmt.setString(1, getMD5Digest(path))
-        jarStmt.executeUpdate()
-        val rs = jarStmt.getGeneratedKeys
-        rs.next()
-        rs.getInt("id")
-      } finally {
-        if (jarStmt != null) jarStmt.close()
-      }
+    if (toplevels.isEmpty) 0
+    else {
+      // Add jar to H2
+      var jarStmt: PreparedStatement = null
+      val jar =
+        try {
+          jarStmt = conn().prepareStatement(
+            s"insert into indexed_jar (md5) values (?)",
+            Statement.RETURN_GENERATED_KEYS
+          )
+          jarStmt.setString(1, getMD5Digest(path))
+          jarStmt.executeUpdate()
+          val rs = jarStmt.getGeneratedKeys
+          rs.next()
+          rs.getInt("id")
+        } finally {
+          if (jarStmt != null) jarStmt.close()
+        }
 
-    // Add symbols for jar to H2
-    var symbolStmt: PreparedStatement = null
-    try {
-      symbolStmt = conn().prepareStatement(
-        s"insert into toplevel_symbol (symbol, path, jar) values (?, ?, ?)"
-      )
-      toplevels.foreach { case (symbol, source) =>
-        symbolStmt.setString(1, symbol)
-        symbolStmt.setString(2, source.toString)
-        symbolStmt.setInt(3, jar)
-        symbolStmt.addBatch()
+      // Add symbols for jar to H2
+      var symbolStmt: PreparedStatement = null
+      try {
+        symbolStmt = conn().prepareStatement(
+          s"insert into toplevel_symbol (symbol, path, jar) values (?, ?, ?)"
+        )
+        toplevels.foreach { case (symbol, source) =>
+          symbolStmt.setString(1, symbol)
+          symbolStmt.setString(2, source.toString)
+          symbolStmt.setInt(3, jar)
+          symbolStmt.addBatch()
+        }
+        // Return number of rows inserted
+        symbolStmt.executeBatch().sum
+      } finally {
+        if (symbolStmt != null) symbolStmt.close()
       }
-      // Return number of rows inserted
-      symbolStmt.executeBatch().sum
-    } finally {
-      if (symbolStmt != null) symbolStmt.close()
     }
   }
 
