@@ -89,7 +89,7 @@ final class TestDebugger(
   }
 
   def disconnect: Future[Unit] = {
-    ifNotFailed(debugger.disconnect)
+    ifNotFailed(debugger.disconnect).map(_ => terminated.trySuccess(()))
   }
 
   /**

@@ -65,7 +65,6 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
   def disconnect: Future[Unit] = {
     val args = new DisconnectArguments
     args.setRestart(false)
-    args.setTerminateDebuggee(false)
     server.disconnect(args).asScala.ignoreValue
   }
 
