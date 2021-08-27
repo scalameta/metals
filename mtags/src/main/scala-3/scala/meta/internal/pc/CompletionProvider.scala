@@ -40,10 +40,15 @@ class CompletionProvider(
 
     val (completions, result) =
       compilerCompletions.map(CompletionValue.Compiler(_)).filterInteresting()
+
     val args = Completions.namedArgCompletions(pos, path)
 
-    val values =
-      (completions ++ args).sorted(completionOrdering)
+    val all = (completions ++ args)
+
+    val application = CompletionApplication.fromPath(path)
+    val ordering = completionOrdering(application)
+
+    val values = all.sorted(ordering)
     (values, result)
   }
 
@@ -58,13 +63,9 @@ class CompletionProvider(
     val query = completionPos.query
     completionPos.kind match {
       case CompletionKind.Empty =>
-        val filtered = indexedContext.scopeSymbols.flatMap(sym =>
-          if (sym.isRealMethod) Some(sym).filter(!_.isConstructor)
-          else if (sym.isClass || sym.is(Module)) Some(sym)
-          else if (sym.isType) Option(sym.companionModule).filter(_ != NoSymbol)
-          else if (sym.isPackageObject) Some(sym)
-          else None
-        )
+        val filtered = indexedContext.scopeSymbols
+          .filter(sym => !sym.is(Synthetic) && !sym.isConstructor)
+
         filtered.map { sym =>
           val completion =
             Completion(sym.decodedName, description(sym), List(sym))
@@ -77,7 +78,13 @@ class CompletionProvider(
           sym => {
             val completion =
               Completion(sym.decodedName, description(sym), List(sym))
-            visit(CompletionValue.Workspace(completion))
+            val value =
+              indexedContext.lookupSym(sym) match {
+                case IndexedContext.Result.InScope =>
+                  CompletionValue.Scope(completion)
+                case _ => CompletionValue.Workspace(completion)
+              }
+            visit(value)
           }
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
@@ -121,7 +128,12 @@ class CompletionProvider(
           case _: CompletionValue.NamedArg =>
             sym.detailString + "="
           case _ =>
-            sym.detailString
+            val name = SemanticdbSymbols.symbolName(sym)
+            if (sym.isClass || sym.is(Module))
+              // drop #|. at the end to avoid duplication
+              name.substring(0, name.length - 1)
+            else
+              name
         }
         def isNotLocalForwardReference: Boolean =
           !sym.isLocalToBlock ||
@@ -170,7 +182,8 @@ class CompletionProvider(
   ).flatMap(_.alternatives.map(_.symbol)).toSet
 
   private def computeRelevancePenalty(
-      completion: CompletionValue
+      completion: CompletionValue,
+      application: CompletionApplication
   ): Int = {
     import MemberOrdering._
     var relevance = 0
@@ -185,10 +198,11 @@ class CompletionProvider(
       case _ => false
     }
 
-    // local symbols are more relevant
-    if (!sym.isLocalToBlock) relevance |= IsNotLocalByBlock
     // symbols defined in this file are more relevant
-    if (pos.source != sym.source || sym.is(Package))
+    if (
+      (pos.source != sym.source || sym.is(Package)) &&
+      !completion.isInstanceOf[CompletionValue.NamedArg]
+    )
       relevance |= IsNotDefinedInFile
     // fields are more relevant than non fields
     if (!hasGetter) relevance |= IsNotGetter
@@ -196,19 +210,26 @@ class CompletionProvider(
     if (sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass)
       relevance |= IsInheritedBaseMethod
     // symbols not provided via an implicit are more relevant
-    if (sym.is(Implicit)) relevance |= IsImplicitConversion
+    if (
+      sym.is(Implicit) ||
+      sym.is(ExtensionMethod) ||
+      application.isImplicitConversion(sym)
+    ) relevance |= IsImplicitConversion
+    if (application.isInherited(sym)) relevance |= IsInherited
     if (sym.is(Package)) relevance |= IsPackage
     // accessors of case class members are more relevant
     if (!sym.is(CaseAccessor)) relevance |= IsNotCaseAccessor
     // public symbols are more relevant
     if (!sym.isPublic) relevance |= IsNotCaseAccessor
     // synthetic symbols are less relevant (e.g. `copy` on case classes)
-    if (sym.is(Synthetic)) relevance |= IsSynthetic
+    if (sym.is(Synthetic) && !sym.isAllOf(EnumCase)) relevance |= IsSynthetic
     if (sym.isDeprecated) relevance |= IsDeprecated
     if (isEvilMethod(sym.name)) relevance |= IsEvilMethod
     completion match {
       case CompletionValue.Workspace(_) =>
         relevance |= (IsWorkspaceSymbol + sym.name.show.length)
+      case CompletionValue.NamedArg(_) =>
+        relevance |= IsNamedArg
       case _ =>
     }
     relevance
@@ -222,7 +243,42 @@ class CompletionProvider(
     nme.finalize_
   )
 
-  private def completionOrdering: Ordering[CompletionValue] =
+  trait CompletionApplication {
+    def isImplicitConversion(symbol: Symbol): Boolean
+    def isMember(symbol: Symbol): Boolean
+    def isInherited(symbol: Symbol): Boolean
+  }
+
+  object CompletionApplication {
+    val empty = new CompletionApplication {
+      def isImplicitConversion(symbol: Symbol): Boolean = false
+      def isMember(symbol: Symbol): Boolean = false
+      def isInherited(symbol: Symbol): Boolean = false
+    }
+
+    def forSelect(sel: Select): CompletionApplication = {
+      val tpe = sel.qualifier.tpe
+      val members = tpe.allMembers.map(_.symbol).toSet
+      new CompletionApplication {
+        def isImplicitConversion(symbol: Symbol): Boolean =
+          !isMember(symbol)
+        def isMember(symbol: Symbol): Boolean = members.contains(symbol)
+        def isInherited(symbol: Symbol): Boolean =
+          isMember(symbol) && symbol.owner != tpe.typeSymbol
+      }
+    }
+
+    def fromPath(path: List[Tree]): CompletionApplication =
+      path.headOption match {
+        case Some(Select(qual @ This(_), _)) if qual.span.isSynthetic => empty
+        case Some(select: Select) => forSelect(select)
+        case _ => empty
+      }
+  }
+
+  private def completionOrdering(
+      application: CompletionApplication
+  ): Ordering[CompletionValue] =
     new Ordering[CompletionValue] {
       val queryLower = completionPos.query.toLowerCase()
       val fuzzyCache = mutable.Map.empty[Symbol, Int]
@@ -250,46 +306,43 @@ class CompletionProvider(
           }
         )
       }
+
       override def compare(o1: CompletionValue, o2: CompletionValue): Int = {
-        val byCompletion = o1.priority - o2.priority
-        if (byCompletion != 0) byCompletion
+        val s1 = o1.value.sym
+        val s2 = o2.value.sym
+        val byLocalSymbol = compareLocalSymbols(o1, o2)
+        if (byLocalSymbol != 0) byLocalSymbol
         else {
-          val s1 = o1.value.sym
-          val s2 = o2.value.sym
-          val byLocalSymbol = compareLocalSymbols(o1, o2)
-          if (byLocalSymbol != 0) byLocalSymbol
+          val byRelevance = Integer.compare(
+            computeRelevancePenalty(o1, application),
+            computeRelevancePenalty(o2, application)
+          )
+          if (byRelevance != 0) byRelevance
           else {
-            val byRelevance = Integer.compare(
-              computeRelevancePenalty(o1),
-              computeRelevancePenalty(o2)
+            val byFuzzy = Integer.compare(
+              fuzzyScore(s1),
+              fuzzyScore(s2)
             )
-            if (byRelevance != 0) byRelevance
+            if (byFuzzy != 0) byFuzzy
             else {
-              val byFuzzy = Integer.compare(
-                fuzzyScore(s1),
-                fuzzyScore(s2)
+              val byIdentifier = IdentifierComparator.compare(
+                s1.name.show,
+                s2.name.show
               )
-              if (byFuzzy != 0) byFuzzy
+              if (byIdentifier != 0) byIdentifier
               else {
-                val byIdentifier = IdentifierComparator.compare(
-                  s1.name.toString,
-                  s2.name.toString
-                )
-                if (byIdentifier != 0) byIdentifier
+                val byOwner =
+                  s1.owner.fullName.toString
+                    .compareTo(s2.owner.fullName.toString)
+                if (byOwner != 0) byOwner
                 else {
-                  val byOwner =
-                    s1.owner.fullName.toString
-                      .compareTo(s2.owner.fullName.toString)
-                  if (byOwner != 0) byOwner
+                  val byParamCount = Integer.compare(
+                    s1.typeParams.size,
+                    s2.typeParams.size
+                  )
+                  if (byParamCount != 0) byParamCount
                   else {
-                    val byParamCount = Integer.compare(
-                      s1.typeParams.size,
-                      s2.typeParams.size
-                    )
-                    if (byParamCount != 0) byParamCount
-                    else {
-                      s1.detailString.compareTo(s2.detailString)
-                    }
+                    s1.detailString.compareTo(s2.detailString)
                   }
                 }
               }

@@ -120,10 +120,16 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |  .@@
        |}
        |""".stripMargin,
-    """|::[B >: Int](x: B): List[B]
+    """|::[B >: Int](elem: B): List[B]
        |:::[B >: Int](prefix: List[B]): List[B]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "2.12" ->
+        """|++[B >: Int, That](that: GenTraversableOnce[B])(implicit bf: CanBuildFrom[List[Int],B,That]): That
+           |+:[B >: Int, That](elem: B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
+           |""".stripMargin
+    )
   )
 
   check(

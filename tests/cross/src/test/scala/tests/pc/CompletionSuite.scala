@@ -238,26 +238,17 @@ class CompletionSuite extends BaseCompletionSuite {
            |toString(): String
            |""".stripMargin,
       "3" ->
-        """|->[B](y: B): (A, B)
+        """|empty[A]: List[A]
+           |from[B](coll: IterableOnce[B]): List[B]
+           |newBuilder[A]: Builder[A, List[A]]
            |apply[A](elems: A*): CC[A]
            |concat[A](xss: Iterable[A]*): CC[A]
-           |empty[A]: List[A]
-           |ensuring(cond: Boolean): A
-           |ensuring(cond: Boolean, msg: => Any): A
-           |ensuring(cond: A => Boolean): A
-           |ensuring(cond: A => Boolean, msg: => Any): A
            |fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A] @uncheckedVariance]
            |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]] @uncheckedVariance]
            |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
            |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
            |fill[A](n: Int)(elem: => A): CC[A]
-           |formatted(fmtstr: String): String
-           |from[B](coll: IterableOnce[B]): List[B]
-           |fromSpecific(from: From)(it: IterableOnce[A]): C
-           |fromSpecific(it: IterableOnce[A]): C
            |iterate[A](start: A, len: Int)(f: A => A): CC[A]
-           |newBuilder[A]: Builder[A, List[A]]
-           |nn: x.type & T
            |range[A: Integral](start: A, end: A, step: A): CC[A]
            |range[A: Integral](start: A, end: A): CC[A]
            |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A] @uncheckedVariance]
@@ -265,9 +256,18 @@ class CompletionSuite extends BaseCompletionSuite {
            |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
            |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
            |tabulate[A](n: Int)(f: Int => A): CC[A]
-           |toFactory(from: From): Factory[A, C]
            |unapplySeq[A](x: CC[A] @uncheckedVariance): UnapplySeqWrapper[A]
            |unfold[A, S](init: S)(f: S => Option[(A, S)]): CC[A]
+           |->[B](y: B): (A, B)
+           |ensuring(cond: Boolean): A
+           |ensuring(cond: Boolean, msg: => Any): A
+           |ensuring(cond: A => Boolean): A
+           |ensuring(cond: A => Boolean, msg: => Any): A
+           |formatted(fmtstr: String): String
+           |fromSpecific(from: From)(it: IterableOnce[A]): C
+           |fromSpecific(it: IterableOnce[A]): C
+           |nn: x.type & T
+           |toFactory(from: From): Factory[A, C]
            |→[B](y: B): (A, B)
            |iterableFactory[A]: Factory[A, CC[A]]
            |asInstanceOf[X0]: X0
@@ -1289,13 +1289,80 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  checkItems(
-    "scope-completions-empty-query",
-    s"""|class Foo {
-        |  @@
+  check(
+    "ordering-1",
+    s"""|object Main {
+        |  languageFeature.@@
         |}
         |""".stripMargin,
-    _.nonEmpty
+    """|dynamics scala.languageFeature
+       |existentials scala.languageFeature
+       |experimental scala.languageFeature
+       |higherKinds scala.languageFeature
+       |implicitConversions scala.languageFeature
+       |""".stripMargin,
+    topLines = Some(5)
+  )
+
+  check(
+    "ordering-2",
+    s"""|object Main {
+        |  1.@@
+        |}
+        |""".stripMargin,
+    """|!=(x: Byte): Boolean
+       |!=(x: Char): Boolean
+       |!=(x: Double): Boolean
+       |!=(x: Float): Boolean
+       |!=(x: Int): Boolean
+       |!=(x: Long): Boolean
+       |!=(x: Short): Boolean
+       |%(x: Byte): Int
+       |%(x: Char): Int
+       |%(x: Double): Double
+       |""".stripMargin,
+    topLines = Some(10)
+  )
+
+  check(
+    "ordering-3",
+    s"""|class A {
+        |  def fooA: String = ""
+        |}
+        |
+        |class B extends A {
+        |  def fooB: String = ""
+        |}
+        |
+        |object Main {
+        |    val x = new B()
+        |    x.foo@@
+        |}
+        |""".stripMargin,
+    """|fooB: String
+       |fooA: String
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  // issues with scala 3 https://github.com/lampepfl/dotty/pull/13515
+  check(
+    "ordering-4".tag(IgnoreScala3),
+    s"""|class Main {
+        |  def main(fooC: Int): Unit = {
+        |    val fooA = 1
+        |    val fooB = 2
+        |    println(foo@@)
+        |  }
+        |  def foo: String = ""
+        |}
+        |""".stripMargin,
+    """|fooB: Int
+       |fooA: Int
+       |fooC: Int
+       |foo: String
+       |""".stripMargin,
+    topLines = Some(4)
   )
 
   checkEdit(

@@ -140,7 +140,9 @@ object SemanticdbSymbols {
           b.append('('); addOverloadIdx(sym); b.append(").")
         else b.append('.')
 
-    addOwner(sym.owner); addDescriptor(sym)
+    if (!sym.isRoot)
+      addOwner(sym.owner)
+    addDescriptor(sym)
   end addSymName
 
 }

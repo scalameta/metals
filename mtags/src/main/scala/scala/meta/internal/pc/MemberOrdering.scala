@@ -14,7 +14,29 @@ object MemberOrdering {
   val IsSynthetic: Int = 1 << 20
   val IsDeprecated: Int = 1 << 19
   val IsEvilMethod: Int = 1 << 18 // example: clone() and finalize()
+  val IsNamedArg: Int = 1 << 17
 
   // OverrideDefMember
   val IsNotAbstract: Int = 1 << 30
+
+  def showFlags(value: Int): String = {
+    List(
+      (IsWorkspaceSymbol, "workspaceSymbol"),
+      (IsInheritedBaseMethod, "inheritedBaseMethod"),
+      (IsImplicitConversion, "implicitConvertion"),
+      (IsInherited, "inherited"),
+      (IsNotLocalByBlock, "notLocalByBlock"),
+      (IsNotDefinedInFile, "notDefinedInFile"),
+      (IsNotGetter, "notGetter"),
+      (IsPackage, "package"),
+      (IsNotCaseAccessor, "notCaseAccessor"),
+      (IsNotPublic, "notPublic"),
+      (IsSynthetic, "synthetic"),
+      (IsDeprecated, "deprecated"),
+      (IsEvilMethod, "evilMethod"),
+      (IsNotAbstract, "notAbstract"),
+      (IsNamedArg, "namedArg")
+    ).collect { case (i, name) if (value & i) > 0 => name }
+      .mkString(", ")
+  }
 }
