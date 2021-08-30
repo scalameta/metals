@@ -60,6 +60,82 @@ class OrganizeImportsLspSuite
   )
 
   check(
+    "basic-unsaved",
+    """
+      |package a
+      |import scala.concurrent.duration._
+      |import scala.concurrent.Future<<>>
+      |import scala.concurrent.ExecutionContext.global
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val k = Future.successful(1)
+      |}
+      |""".stripMargin,
+    s"${SourceOrganizeImports.title}",
+    """|package a
+       |import scala.concurrent.Future
+       |import scala.concurrent.duration._
+       |// comment
+       |
+       |object A {
+       |  val d = Duration(10, MICROSECONDS)
+       |  val k = Future.successful(1)
+       |}
+       |""".stripMargin,
+    kind = List(sourceKind),
+    scalacOptions = scalacOption,
+    changeFile = (txt: String) => {
+      txt.replace(
+        """|import scala.concurrent.ExecutionContext.global""".stripMargin,
+        """|import scala.concurrent.ExecutionContext.global
+           |import java.nio.file.Path
+           |// comment""".stripMargin
+      )
+    }
+  )
+
+  check(
+    "basic-unsaved-error",
+    """
+      |package a
+      |import scala.concurrent.duration._
+      |import scala.concurrent.Future<<>>
+      |import scala.concurrent.ExecutionContext.global
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val k = Future.successful(1)
+      |}
+      |""".stripMargin,
+    s"${SourceOrganizeImports.title}",
+    """|package a
+       |import java.nio.file.ClassDoNotExist
+       |import scala.concurrent.ExecutionContext.global
+       |import scala.concurrent.Future
+       |import scala.concurrent.duration._
+       |// comment
+       |
+       |object A {
+       |  val d = Duration(10, MICROSECONDS)
+       |  val k = Future.successful(1)
+       |}
+       |""".stripMargin,
+    kind = List(sourceKind),
+    scalacOptions = scalacOption,
+    changeFile = (txt: String) => {
+      txt.replace(
+        """|import scala.concurrent.ExecutionContext.global""".stripMargin,
+        """|import scala.concurrent.ExecutionContext.global
+           |import java.nio.file.ClassDoNotExist
+           |// comment""".stripMargin
+      )
+    },
+    expectError = true,
+    expectNoDiagnostics = false
+  )
+
+  check(
     "basic-with-custom-config",
     """
       |package a

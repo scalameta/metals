@@ -14,6 +14,8 @@ import scala.util.Try
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageParams
@@ -33,7 +35,8 @@ case class ScalafixProvider(
     icons: Icons,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
-    buildClient: MetalsBuildClient
+    buildClient: MetalsBuildClient,
+    interactive: InteractiveSemanticdbs
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
@@ -48,9 +51,10 @@ case class ScalafixProvider(
           case (_, targets) => targets.headOption
         }
         val tmp = AbsolutePath(Files.createTempFile("metals", ".scala"))
-        tmp.writeText("object Main{}\n")
+        val contents = "object Main{}\n"
+        tmp.writeText(contents)
         for (target <- targets)
-          scalafixEvaluate(tmp, target)
+          scalafixEvaluate(tmp, target, contents, produceSemanticdb = true)
 
         tmp.delete()
       } catch {
@@ -64,62 +68,96 @@ case class ScalafixProvider(
 
   def organizeImports(
       file: AbsolutePath,
-      scalaTarget: ScalaTarget
+      scalaTarget: ScalaTarget,
+      retried: Boolean = false
   ): Future[List[l.TextEdit]] = {
     val fromDisk = file.toInput
     val inBuffers = file.toInputFromBuffers(buffers)
-    if (isUnsaved(inBuffers.text, fromDisk.text)) {
-      scribe.info(s"Organize imports requires saving the file first")
-      languageClient.showMessage(
-        MessageType.Warning,
-        s"Save ${file.toNIO.getFileName} to compile it before organizing imports"
-      )
-      Future.successful(Nil)
-    } else {
-      compilations.compilationFinished(file).flatMap { _ =>
-        val scalafixEvaluation = scalafixEvaluate(file, scalaTarget)
 
-        scalafixEvaluation match {
-          case Failure(exception) =>
-            reportScalafixError(
-              "Unable to run scalafix, please check logs for more info.",
-              exception
-            )
+    compilations.compilationFinished(file).flatMap { _ =>
+      val scalafixEvaluation =
+        scalafixEvaluate(
+          file,
+          scalaTarget,
+          inBuffers.value,
+          retried || isUnsaved(inBuffers.text, fromDisk.text)
+        )
+
+      scalafixEvaluation match {
+        case Failure(exception) =>
+          reportScalafixError(
+            "Unable to run scalafix, please check logs for more info.",
+            exception
+          )
+          Future.failed(exception)
+        case Success(results)
+            if !scalafixSucceded(results) && hasStaleSemanticdb(
+              results
+            ) && buildClient.buildHasErrors(file) =>
+          val msg = "Attempt to organize your imports failed. " +
+            "It looks like you have compilation issues causing your semanticdb to be stale. " +
+            "Ensure everything is compiling and try again."
+          scribe.warn(
+            msg
+          )
+          languageClient.showMessage(
+            MessageType.Warning,
+            msg
+          )
+          Future.successful(Nil)
+        case Success(results) if !scalafixSucceded(results) =>
+          val scalafixError = getMessageErrorFromScalafix(results)
+          val exception = ScalafixRunException(scalafixError)
+          reportScalafixError(
+            scalafixError,
+            exception
+          )
+          if (!retried && hasStaleSemanticdb(results)) {
+            // Retry, since the semanticdb might be stale
+            organizeImports(file, scalaTarget, retried = true)
+          } else {
             Future.failed(exception)
-          case Success(results)
-              if !scalafixSucceded(results) && hasStaleSemanticdb(
-                results
-              ) && buildClient.buildHasErrors(file) =>
-            val msg = "Attempt to organize your imports failed. " +
-              "It looks like you have compilation issues causing your semanticdb to be stale. " +
-              "Ensure everything is compiling and try again."
-            scribe.warn(
-              msg
-            )
-            languageClient.showMessage(
-              MessageType.Warning,
-              msg
-            )
-            Future.successful(Nil)
-          case Success(results) if !scalafixSucceded(results) =>
-            val scalafixError = getMessageErrorFromScalafix(results)
-            val exception = ScalafixRunException(scalafixError)
-            reportScalafixError(
-              scalafixError,
-              exception
-            )
-            Future.failed(exception)
-          case Success(results) =>
-            Future.successful {
-              val edits = for {
-                fileEvaluation <- results.getFileEvaluations().headOption
-                patches <- fileEvaluation.previewPatches().asScala
-              } yield textEditsFrom(patches, fromDisk)
-              edits.getOrElse(Nil)
-            }
-        }
+          }
+        case Success(results) =>
+          Future.successful {
+            val edits = for {
+              fileEvaluation <- results.getFileEvaluations().headOption
+              patches <- fileEvaluation.previewPatches().asScala
+            } yield textEditsFrom(patches, inBuffers)
+            edits.getOrElse(Nil)
+          }
+
       }
     }
+  }
+
+  private def createTemporarySemanticdb(
+      file: AbsolutePath,
+      contents: String
+  ) = {
+    interactive
+      .textDocument(file, Some(contents))
+      .documentIncludingStale
+      .flatMap { semanticdb =>
+        /* We remove all diagnostics if there is an error so that
+         * we don't remove an import by mistake, which just has a typo
+         * for example and would produce an unsued warning.
+         * Without additional diagnotics imports will only get rearranged.
+         */
+        val toSave =
+          if (semanticdb.diagnostics.exists(_.severity.isError))
+            semanticdb.withDiagnostics(Seq.empty)
+          else
+            semanticdb
+        val dir = workspace.resolve(Directories.tmp)
+        val relativePath = file.toRelative(workspace)
+        val writeTo = dir.resolve(SemanticdbClasspath.fromScala(relativePath))
+        writeTo.parent.createDirectories()
+        val docs = TextDocuments(Seq(toSave))
+        Files.write(writeTo.toNIO, docs.toByteArray)
+        Some(dir.toNIO)
+      }
+
   }
 
   /**
@@ -184,19 +222,50 @@ case class ScalafixProvider(
       case _ => None
     }
   }
+
+  /**
+   * Tries to use the Scalafix rule to organize imports.
+   *
+   * @param file file to run the rule on
+   * @param scalaTarget target with all the data about the module
+   * @param inBuffers file version that might not be saved to disk
+   * @param produceSemanticdb when set to true, we will try to create semanticdb and
+   * save to disk for Scalafix to use. This make organize imports work even if the file is
+   * unsaved. This however requires us to save both the file and semanticdb.
+   * @return
+   */
   private def scalafixEvaluate(
       file: AbsolutePath,
-      scalaTarget: ScalaTarget
+      scalaTarget: ScalaTarget,
+      inBuffers: String,
+      produceSemanticdb: Boolean
   ): Try[ScalafixEvaluation] = {
     val defaultScalaVersion = scalaTarget.scalaBinaryVersion
     val scalaBinaryVersion =
       if (defaultScalaVersion.startsWith("3")) "2.13" else defaultScalaVersion
 
     val targetRoot =
-      buildTargets.scalacOptions(scalaTarget.info.getId()).map {
-        scalacOptions =>
-          scalacOptions.targetroot(scalaTarget.scalaVersion).toNIO
-      }
+      if (produceSemanticdb) createTemporarySemanticdb(file, inBuffers)
+      else
+        buildTargets.scalacOptions(scalaTarget.info.getId()).map {
+          scalacOptions =>
+            scalacOptions.targetroot(scalaTarget.scalaVersion).toNIO
+        }
+
+    val sourceroot =
+      if (produceSemanticdb)
+        targetRoot.map(AbsolutePath(_)).getOrElse(workspace)
+      else workspace
+
+    val diskFilePath = if (produceSemanticdb) {
+      val relativePath = file.toRelative(workspace)
+      val tempFilePath = sourceroot.resolve(relativePath)
+      tempFilePath.writeText(inBuffers)
+      tempFilePath
+    } else {
+      file
+    }
+
     val scalaVersion = scalaTarget.scalaVersion
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
@@ -214,17 +283,21 @@ case class ScalafixProvider(
         if (scalaBinaryVersion == "2.13") "-Wunused:imports"
         else "-Ywarn-unused-import"
 
-      api
+      val evaluated = api
         .newArguments()
         .withScalaVersion(scalaVersion)
         .withClasspath(classpath)
         .withToolClasspath(urlClassLoaderWithExternalRule)
         .withConfig(scalafixConf.asJava)
         .withRules(List(organizeImportRuleName).asJava)
-        .withPaths(List(file.toNIO).asJava)
-        .withSourceroot(workspace.toNIO)
+        .withPaths(List(diskFilePath.toNIO).asJava)
+        .withSourceroot(sourceroot.toNIO)
         .withScalacOptions(Collections.singletonList(scalacOption))
         .evaluate()
+
+      if (produceSemanticdb)
+        targetRoot.foreach(AbsolutePath(_).deleteRecursively())
+      evaluated
     }
   }
 
@@ -287,10 +360,14 @@ case class ScalafixProvider(
     }
   }
 
-  private def isUnsaved(fromBuffers: String, fromFile: String): Boolean =
-    fromBuffers.linesIterator.zip(fromFile.linesIterator).exists {
-      case (line1, line2) => line1 != line2
-    }
+  private def isUnsaved(fromBuffers: String, fromFile: String): Boolean = {
+    // zipAll will extend the shorter collection, which is needed for accurate comparison
+    fromBuffers.linesIterator
+      .zipAll(fromFile.linesIterator, null, null)
+      .exists { case (line1, line2) =>
+        line1 != line2
+      }
+  }
 
 }
 

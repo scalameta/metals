@@ -45,7 +45,9 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       scalaVersion: String = scalaVersion,
       renamePath: Option[String] = None,
       extraOperations: => Unit = (),
-      fileName: String = "A.scala"
+      fileName: String = "A.scala",
+      changeFile: String => String = identity,
+      expectError: Boolean = false
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -72,11 +74,24 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
             case None => Future {}
           }
         }
+        _ <- server.didChange(path)(txt => changeFile(txt))
         codeActions <-
-          server.assertCodeAction(path, input, expectedActions, kind)
+          server
+            .assertCodeAction(
+              path,
+              changeFile(input),
+              expectedActions,
+              kind
+            )
+            .recover {
+              case _: Throwable if expectError => Nil
+            }
         _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
         _ <- server.didSave(newPath) { _ =>
-          server.toPath(newPath).readText
+          if (newPath != path)
+            server.toPath(newPath).readText
+          else
+            server.bufferContents(newPath)
         }
         _ = assertNoDiff(server.bufferContents(newPath), actualExpectedCode)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
