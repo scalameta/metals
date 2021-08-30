@@ -328,8 +328,8 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |  val str = s'''
        |               |ok'''.stripMargin
        |  val other = '''
-       |  |  some text
-       |  |'''.stripMargin
+       |              |  some text
+       |              |'''.stripMargin
        |}""".stripMargin
   )
 

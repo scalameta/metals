@@ -17,6 +17,12 @@ class IndentWhenPastingSuite
     /** insertSpaces */
     true
   )
+  val tabsFormattingOptions: FormattingOptions = new FormattingOptions(
+    /** tabSize: */
+    1,
+    /** insertSpaces */
+    false
+  )
 
   val blank = " "
 
@@ -174,9 +180,9 @@ class IndentWhenPastingSuite
        |object Main:
        |  object SubMain:
        |    enum                        Color(val rgb: Int):
-       |      case Red   extends Color(0xFF0000)
-       |      case Green extends Color(0x00FF00)
-       |      case Blue  extends Color(0x0000FF)
+       |       case Red   extends Color(0xFF0000)
+       |       case Green extends Color(0x00FF00)
+       |       case Blue  extends Color(0x0000FF)
        |  end SubMain
        |end Main""".stripMargin,
     scalaVersion,
@@ -208,11 +214,12 @@ class IndentWhenPastingSuite
        |    val a: String = \"\"\"| multiline
        |                     | string
        |                     |
-       |    |
-       |    |\"\"\".stripMargin
+       |                       |
+       |                       |\"\"\".stripMargin
+       |
        |    val b: String = \"\"\"| multiline
-       |   | string
-       |   |\"\"\".stripMargin
+       |                      | string
+       |                      |\"\"\".stripMargin
        |  end SubMain
        |end Main""".stripMargin,
     scalaVersion,
@@ -292,6 +299,65 @@ class IndentWhenPastingSuite
   )
 
   check(
+    "keep-empty-lines-inside-paste",
+    s"""
+       |object Main:
+       |  @@
+       |end Main""".stripMargin,
+    s"""
+       |trait X[A] {
+       |    def doX: A
+       |}
+       |
+       |
+       |def foo: X[A] = ???
+       |
+       |
+       |def bar: X[A] = ???
+       |
+       |""".stripMargin,
+    """|object Main:
+       |  trait X[A] {
+       |      def doX: A
+       |  }
+       |
+       |
+       |  def foo: X[A] = ???
+       |
+       |
+       |  def bar: X[A] = ???
+       |end Main
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "keep-empty-lines-inside-paste2",
+    s"""
+       |object Main:
+       |  @@
+       |end Main""".stripMargin,
+    s"""
+       |trait X[A] {
+       |
+       |  def doX: A
+       |
+       |}
+       |""".stripMargin,
+    """|object Main:
+       |  trait X[A] {
+       |
+       |    def doX: A
+       |
+       |  }
+       |end Main
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
     "if-paren",
     s"""
        |object Main:
@@ -310,6 +376,71 @@ class IndentWhenPastingSuite
        |""".stripMargin,
     scalaVersion,
     formattingOptions
+  )
+
+  check(
+    "paste-without-leading-nl",
+    s"""
+       |object Main {
+       |  @@
+       |}""".stripMargin,
+    s"""trait X[A] {
+       |
+       |    def foo: X[A]
+       |}
+       |
+       |""".stripMargin,
+    """|object Main {
+       |  trait X[A] {
+       |
+       |      def foo: X[A]
+       |  }
+       |}
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "normalize-tabs-to-spaces",
+    s"""
+       |object Main:
+       |@@
+       |end Main""".stripMargin,
+    s"""
+       |\tif (cond)
+       |\t\tdef double = s * 2
+       |\t\tdouble
+       |""".stripMargin,
+    """|object Main:
+       |  if (cond)
+       |    def double = s * 2
+       |    double
+       |end Main
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "normalize-spaces-to-tabs",
+    s"""
+       |object Main:
+       |@@
+       |end Main""".stripMargin,
+    s"""
+       |if (cond)
+       |  def double = s * 2
+       |  double
+       |""".stripMargin,
+    """|object Main:
+       |\tif (cond)
+       |\t\tdef double = s * 2
+       |\t\tdouble
+       |end Main
+       |""".stripMargin,
+    scalaVersion,
+    tabsFormattingOptions
   )
 
   check(

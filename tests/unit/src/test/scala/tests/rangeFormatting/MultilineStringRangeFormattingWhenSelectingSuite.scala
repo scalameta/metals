@@ -3,6 +3,7 @@ package tests.rangeFormatting
 import munit.Location
 import org.eclipse.lsp4j.FormattingOptions
 import tests.BaseLspSuite
+import munit.TestOptions
 
 class MultilineStringRangeFormattingWhenSelectingSuite
     extends BaseLspSuite("rangeFormatting") {
@@ -119,18 +120,19 @@ class MultilineStringRangeFormattingWhenSelectingSuite
     s"""
        |object Main {
        |  val firstString = '''
-       |  |first line
-       |      |second line'''.stripMargin
+       |                        |first line
+       |                            |second line'''.stripMargin
+       |
        |  val str2 = '''
-       |  |first line
-       |  |second line'''.stripMargin
+       |               |first line
+       |               |second line'''.stripMargin
        |}""".stripMargin
   )
 
   val formattingOptions = new FormattingOptions(2, true)
 
   def check(
-      name: String,
+      name: TestOptions,
       testCase: String,
       expectedCase: String
   )(implicit loc: Location): Unit = {
