@@ -18,7 +18,6 @@ echo "-Xss4m" >> .jvmopts
 echo "-Xmx1G"  >> .jvmopts 
 echo "-XX:ReservedCodeCacheSize=1024m" >> .jvmopts
 echo "-XX:+TieredCompilation" >> .jvmopts
-echo "-XX:+CMSClassUnloadingEnabled" >> .jvmopts
 echo "-Dfile.encoding=UTF-8" >> .jvmopts
 
 sbt "$1"
