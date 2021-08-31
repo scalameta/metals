@@ -16,12 +16,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
       |  <<foo(nam@@ed = 2)>>
       |}
       |""".stripMargin,
-    """|**Expression type**:
-       |```scala
-       |Unit
-       |```
-       |**Symbol signature**:
-       |```scala
+    """|```scala
        |def foo(named: Int): Unit
        |```
        |Runs foo
@@ -67,8 +62,7 @@ class HoverNamedArgSuite extends BaseHoverSuite {
       |  println(<<new User(age = 42, n@@ame = "")>>)
       |}
       |""".stripMargin,
-    """|User
-       |def this(name: String, age: Int): User""".stripMargin.hover,
+    "def this(name: String, age: Int): User".hover,
     compat = Map(
       "3" -> "name: String".hover
     )

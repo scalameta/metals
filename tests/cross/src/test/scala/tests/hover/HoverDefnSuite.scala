@@ -10,12 +10,8 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<val @@x = List(1)>>
       |}
       |""".stripMargin,
-    """|List[Int]
-       |val x: List[Int]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "val x: List[Int]".hover
-    )
+    """|val x: List[Int]
+       |""".stripMargin.hover
   )
 
   check(
@@ -24,12 +20,8 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<var @@x = List(1)>>
       |}
       |""".stripMargin,
-    """|List[Int]
-       |var x: List[Int]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "var x: List[Int]".hover
-    )
+    """|var x: List[Int]
+       |""".stripMargin.hover
   )
 
   check(
@@ -38,12 +30,8 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<def @@x = List(1)>>
       |}
       |""".stripMargin,
-    """|List[Int]
-       |def x: List[Int]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "def x: List[Int]".hover
-    )
+    """|def x: List[Int]
+       |""".stripMargin.hover
   )
 
   check(
@@ -52,12 +40,8 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<def @@method(x: Int) = List(x)>>
       |}
       |""".stripMargin,
-    """|List[Int]
-       |def method(x: Int): List[Int]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "def method(x: Int): List[Int]".hover
-    )
+    """|def method(x: Int): List[Int]
+       |""".stripMargin.hover
   )
 
   check(
@@ -66,12 +50,8 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<def @@empty[T] = Option.empty[T]>>
       |}
       |""".stripMargin,
-    """|Option[T]
-       |def empty[T]: Option[T]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "def empty[T]: Option[T]".hover
-    )
+    """|def empty[T]: Option[T]
+       |""".stripMargin.hover
   )
 
   check(
@@ -83,10 +63,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """
       |Option[T]
       |def empty[T: Ordering]: Option[T]
-      |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "def empty[T: Ordering]: Option[T]".hover
-    )
+      |""".stripMargin.hover
   )
 
   check(
@@ -95,12 +72,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  List(1).map(<<@@x>> => )
       |}
       |""".stripMargin,
-    """|Int
+    """|```scala
        |x: Int
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "x: Int".hover
-    )
+       |```
+       |""".stripMargin
   )
 
   check(
@@ -109,12 +84,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  def method(<<@@x: Int>>): Int = x
       |}
       |""".stripMargin,
-    """|Int
+    """|```scala
        |x: Int
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "x: Int".hover
-    )
+       |```
+       |""".stripMargin
   )
 
   check(
@@ -123,9 +96,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<def t@@his(x: Int) = this()>>
       |}
       |""".stripMargin,
-    """|a
+    """|```scala
        |def this(x: Int): a
-       |""".stripMargin.hover,
+       |```
+       |""".stripMargin,
     compat = Map(
       "3" -> "def <init>(x: Int): a".hover
     )
@@ -137,12 +111,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  def this(<<@@x: Int>>) = this()
       |}
       |""".stripMargin,
-    """|Int
+    """|```scala
        |x: Int
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "x: Int".hover
-    )
+       |```
+       |""".stripMargin
   )
 
   check(
@@ -151,12 +123,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  def method(implicit <<@@x: Int>>) = this()
       |}
       |""".stripMargin,
-    """|Int
+    """|```scala
        |implicit x: Int
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "implicit x: Int".hover
-    )
+       |```
+       |""".stripMargin
   )
 
   check(
@@ -165,12 +135,10 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  def method(implicit y: Int, <<@@x: Int>>) = this()
       |}
       |""".stripMargin,
-    """|Int
+    """|```scala
        |implicit x: Int
-       |""".stripMargin.hover,
-    compat = Map(
-      "3.0" -> "implicit x: Int".hover
-    )
+       |```
+       |""".stripMargin
   )
 
   check(
@@ -228,8 +196,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  }
       |}
       |""".stripMargin,
-    """|Int
-       |head: Int""".stripMargin.hover,
+    "head: Int".hover,
     compat = Map(
       "3" -> "val head: Int".hover
     )
@@ -244,8 +211,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  }
       |}
       |""".stripMargin,
-    """|Int
-       |value: Int""".stripMargin.hover,
+    "value: Int".hover,
     compat = Map(
       "3" -> "val value: Int".hover
     )

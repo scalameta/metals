@@ -27,11 +27,11 @@ class BuildTargetsLspSuite
       // Assert that a supported Scala version target is picked over 2.10.
       _ <- server.assertHover(
         "shared/Main.scala",
-        """|object Main {
-           |  sourcecode.Line(1).val@@ue
-           |}""".stripMargin,
-        """|Int
-           |val value: Int""".stripMargin.hover
+        """
+          |object Main {
+          |  sourcecode.Line(1).val@@ue
+          |}""".stripMargin,
+        """val value: Int""".hover
       )
     } yield ()
   }

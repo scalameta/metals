@@ -65,4 +65,53 @@ class HoverNegativeSuite extends BaseHoverSuite {
       |""".stripMargin
   )
 
+  checkNegative(
+    "literal-int",
+    """object a {
+      |  val x = 4@@2
+      |}
+      |""".stripMargin
+  )
+
+  checkNegative(
+    "literal-double",
+    """object a {
+      |  val x = 4@@2d
+      |}
+      |""".stripMargin
+  )
+
+  checkNegative(
+    "literal-float",
+    """object a {
+      |  val x = 4@@2f
+      |}
+      |""".stripMargin
+  )
+
+  checkNegative(
+    "literal-long",
+    """object a {
+      |  val x = 4@@2L
+      |}
+      |""".stripMargin
+  )
+
+  checkNegative(
+    "literal-string",
+    """object a {
+      |  val x = "Hel@@lo"
+      |}
+      |""".stripMargin
+  )
+
+  checkNegative(
+    "interpolator-part",
+    """object a {
+      |  val name = "John"
+      |  s"Hel@@lo $name"
+      |}
+      |""".stripMargin
+  )
+
 }

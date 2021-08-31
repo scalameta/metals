@@ -43,15 +43,9 @@ class WorksheetNoDecorationsLspSuite
           |val foo = "bar"  /*>  : @@String = "bar"  */
           |println("metals")  /*>  @@metals  */
           |""".stripMargin,
-        """|```scala
-           |x: Int = 1
-           |```""".stripMargin,
-        """|```scala
-           |foo: String = "bar"
-           |```""".stripMargin,
-        """|```scala
-           |// metals
-           |```""".stripMargin
+        """x: Int = 1""".hover,
+        """foo: String = "bar"""".hover,
+        """// metals""".hover
       )
     } yield ()
   }
@@ -87,15 +81,9 @@ class WorksheetNoDecorationsLspSuite
           |val foo = "baz"  /*>  : String = "baz"@@  */
           |println("meta ls")  /*>  meta@@ ls  */
           |""".stripMargin,
-        """|```scala
-           |x: Int = 2
-           |```""".stripMargin,
-        """|```scala
-           |foo: String = "baz"
-           |```""".stripMargin,
-        """|```scala
-           |// meta ls
-           |```""".stripMargin
+        """x: Int = 2""".hover,
+        """foo: String = "baz"""".hover,
+        """// meta ls""".hover
       )
     } yield ()
   }

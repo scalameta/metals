@@ -543,12 +543,7 @@ class SbtBloopLspSuite
       )
       hoverRes <- assertHoverAtPos("project/Deps.scala", 3, 9)
       expectedHoverRes =
-        """|**Expression type**:
-           |```scala
-           |ModuleID
-           |```
-           |**Symbol signature**:
-           |```scala
+        """|```scala
            |val scalatest: ModuleID
            |```
            |```range

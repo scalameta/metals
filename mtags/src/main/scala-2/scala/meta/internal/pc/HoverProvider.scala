@@ -111,7 +111,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           pos = pos,
           range = pos
         )
-      case _: Literal =>
+      case _: Literal if params.isInstanceOf[RangeParams] =>
         val symbol = tree.symbol
         toHover(
           symbol = symbol,
@@ -204,7 +204,9 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       range: Position
   ): Option[Hover] = {
     if (tpe == null || tpe.isErroneous || tpe == NoType) None
-    else if (symbol == null || symbol == NoSymbol || symbol.isErroneous) {
+    else if (
+      pos.start != pos.end && (symbol == null || symbol == NoSymbol || symbol.isErroneous)
+    ) {
       val context = doLocateContext(pos)
       val history = new ShortenedNames(
         lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
@@ -258,7 +260,12 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         } else {
           ""
         }
-      val markdown = HoverMarkup(prettyType, prettySignature, docstring)
+      val markdown = HoverMarkup(
+        prettyType,
+        prettySignature,
+        docstring,
+        pos.start != pos.end
+      )
       val hover = new Hover(markdown.toMarkupContent)
       if (range.isRange) {
         hover.setRange(range.toLSP)
