@@ -1,20 +1,23 @@
 package scala.meta.internal.metals
 
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.Position
-import scala.collection.mutable.ArrayBuffer
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.util.control.NonFatal
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.io.FileIO
-import java.nio.file.Files
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.FileVisitResult
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+
+import scala.collection.mutable.ArrayBuffer
+import scala.util.control.NonFatal
+
+import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 
 class FindTextInFiles(
     buildTargets: BuildTargets,
