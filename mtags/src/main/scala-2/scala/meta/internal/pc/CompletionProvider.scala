@@ -412,6 +412,7 @@ class CompletionProvider(
           new DynamicFallbackCompletions(pos).print()
         case r => r
       }
+      // test string
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope
