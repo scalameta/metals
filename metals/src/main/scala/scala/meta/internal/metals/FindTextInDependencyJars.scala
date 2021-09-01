@@ -68,7 +68,10 @@ class FindTextInDependencyJars(
       .toList
   }
 
-  private def visitFileInsideJar(path: AbsolutePath, content: String): List[Range] = {
+  private def visitFileInsideJar(
+      path: AbsolutePath,
+      content: String
+  ): List[Range] = {
     var reader: BufferedReader = null
     val positions: ArrayBuffer[Int] = new ArrayBuffer[Int]()
     val results: ArrayBuffer[Range] = new ArrayBuffer[Range]()
