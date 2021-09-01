@@ -130,4 +130,70 @@ class RangeHoverSuite extends BaseHoverSuite {
       "3.0" -> "val l: List[Int]".hoveRanger
     )
   )
+
+  check(
+    "range-literal",
+    """|package helpers
+       |
+       |class XDClass {
+       |  def xd: Int = {
+       |    val l = List(1,2,3)
+       |    l.map { x =>
+       |      x.to(x*x)
+       |        .flatMap { y =>
+       |          List(y + <<%<%2137%>%>>)
+       |        }
+       |      .sum
+       |    }.sum
+       |  }
+       |}
+       |""".stripMargin,
+    """|```scala
+       |Int
+       |```""".stripMargin.hoveRanger,
+    compat = Map(
+      "3.0" -> "def +(x: Int): Int".hoveRanger
+    )
+  )
+
+  check(
+    "range-val-lhs-in-for",
+    """|package helpers
+       |
+       |class XDClass {
+       |  def xd: List[Int] =
+       |    for {
+       |      a <- List(11,23,17)
+       |      b <- a to a*a
+       |      <<%<%x%>% = b - 3>>
+       |    } yield x
+       |}
+       |""".stripMargin,
+    """|Int
+       |val x: Int""".stripMargin.hoveRanger,
+    compat = Map(
+      "3.0" -> "val x: Int".hoveRanger
+    )
+  )
+
+  check(
+    "range-binding-lhs-in-for",
+    """|package helpers
+       |
+       |class XDClass {
+       |  def xd: List[Int] =
+       |    for {
+       |      a <- List(11,23,17)
+       |      <<%<%b%>%>> <- a to a*a
+       |      x = b - 3
+       |    } yield x
+       |}
+       |""".stripMargin,
+    """|Int
+       |b: Int""".stripMargin.hoveRanger,
+    compat = Map(
+      "3.0" -> "b: Int".hoveRanger
+    )
+  )
+
 }
