@@ -288,7 +288,7 @@ class ScalaVersionsSuite extends BaseSuite {
         ("scala-library-2.13.1.jar", "2.13"),
         ("cool4.4_2.13-3.0.jar", "2.13"),
         ("scala3-library_3-3.0.0-sources.jar", "3"),
-        ("munit_3-0.7.28-sources.jar", "3")
+        ("munit_3-0.7.29-sources.jar", "3")
       )
     expected.foreach { case (jar, version) =>
       val out = ScalaVersions.scalaBinaryVersionFromJarName(jar)
