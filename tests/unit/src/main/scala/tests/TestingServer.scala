@@ -1472,6 +1472,10 @@ final class TestingServer(
     Assertions.assertNoDiff(obtained, expected)
   }
 
+  def findTextInFiles(mask: String, content: String): Future[List[Location]] = {
+    server.findTextInFilesCommand(FindNonSourceTextRequest(mask, content)).asScala.map(_.asScala.toList)
+  }
+
   def textContents(filename: String): String =
     toPath(filename).toInputFromBuffers(buffers).text
   def textContentsOnDisk(filename: String): String =

@@ -266,6 +266,7 @@ class MetalsLanguageServer(
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
+  var findTextInFiles: FindTextInFiles = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -754,6 +755,7 @@ class MetalsLanguageServer(
             () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
           )
         }
+        findTextInFiles = new FindTextInFiles(buildTargets, () => workspace)
     }
   }
 
@@ -1886,6 +1888,43 @@ class MetalsLanguageServer(
         )
         .orNull
     }.asJava
+
+  @JsonRequest("metals/findNonSourceFiles")
+  def findTextInFilesCommand(
+      params: FindNonSourceTextRequest
+  ): CompletableFuture[util.List[Location]] = {
+    def readMask: Future[String] = Option(params.mask) match {
+      case Some(mask) =>
+        Future.successful(mask)
+      case None =>
+        languageClient
+          .metalsInputBox(
+            MetalsInputBoxParams(value = ".conf", prompt = "Enter file mask")
+          )
+          .asScala
+          .map(result => result.value)
+    }
+
+    def readContent: Future[String] = Option(params.content) match {
+      case Some(content) =>
+        Future.successful(content)
+      case None =>
+        languageClient
+          .metalsInputBox(
+            MetalsInputBoxParams(
+              prompt = "Enter content to search for"
+            )
+          )
+          .asScala
+          .map(result => result.value)
+    }
+
+    (for {
+      mask <- readMask
+      content <- readContent
+      locations <- Future(findTextInFiles.find(mask, content).asJava)
+    } yield locations).asJava
+  }
 
   private def generateBspConfig(): Future[Unit] = {
     val servers: List[BuildTool with BuildServerProvider] =
