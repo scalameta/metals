@@ -190,12 +190,13 @@ object ServerCommands {
     "[string], where the string is a stacktrace."
   )
 
-  val Decompile = new Command(
-    "decompile",
+  val ShowTasty = new Command(
+    "show-tasty",
     "Show TASTy",
-    """|Show tasty file and show its content.
-       |""".stripMargin,
-    "[string], where the string is a path to tasty file."
+    """|If the file is a Scala 3 source  this command will try to find the relevant tasty file for it, 
+       |read it and display in a human readable form. If the argument already points to a Scala file, 
+       |it will be read directly.""".stripMargin,
+    "[string], where the string is a path to a Scala 3 source or a tasty file."
   )
 
   val GotoSymbol = new Command(
@@ -415,7 +416,7 @@ object ServerCommands {
       CascadeCompile,
       CleanCompile,
       CopyWorksheetOutput,
-      Decompile,
+      ShowTasty,
       ExtractMemberDefinition,
       GenerateBspConfig,
       GotoPosition,

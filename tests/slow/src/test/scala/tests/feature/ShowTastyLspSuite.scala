@@ -1,15 +1,13 @@
 package tests.feature
 
-import tests.BaseLspSuite
-import tests.Assertions
-
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.metals.MetalsEnrichments._
+
+import tests.Assertions
+import tests.BaseLspSuite
 
 class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
 
   test("open-existing-tasty-file") {
-    cleanWorkspace()
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -30,9 +28,8 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
         s"$workspace/app/src/main/scala/a/b/Main.scala"
       )
     } yield {
-      result.asScala match {
-        case Some(params) if params.getArguments.size > 0 =>
-          Assertions.assert(params.getArguments.asScala.nonEmpty)
+      result match {
+        case Some(content) if content.nonEmpty => ()
         case _ =>
           Assertions.fail("Obtained empty result")
       }
@@ -41,7 +38,6 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
   }
 
   test("dont-open-nonexisting-tasty-file") {
-    cleanWorkspace()
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -62,7 +58,7 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
         s"$workspace/app/src/main/scala/a/b/Main2.scala"
       )
     } yield {
-      result.asScala match {
+      result match {
         case None => ()
         case _ => Assertions.fail("Obtained nonempty result")
       }

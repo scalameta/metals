@@ -12,7 +12,6 @@ import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -44,10 +43,6 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
-import org.eclipse.lsp4j.ExecuteCommandParams
-import java.net.URI
-import scala.meta.internal.io.FileIO
-import ch.epfl.scala.bsp4j.BuildTarget
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -94,7 +89,6 @@ class Compilers(
     cache.get(PresentationCompilerKey.BuildTarget(id))
 
   private val worksheetsCache = jworksheetsCache.asScala
-  private val packageProvider = new PackageProvider(buildTargets)
 
   private def createStandaloneCompiler(
       scalaVersion: String,
@@ -375,44 +369,6 @@ class Compilers(
         positions.map(CompilerOffsetParams.fromPos(_, token))
       pc.selectionRange(offsetPositions).asScala
     }
-  }
-
-  def decompile(
-      uri: URI
-  ): Future[ju.Optional[ExecuteCommandParams]] = {
-    def buildTargetToPcAndFileUri(
-        target: ScalaTarget
-    ): Option[(PresentationCompiler, URI)] = {
-      val filePath = AbsolutePath.fromAbsoluteUri(uri)
-      val fileSourceDirOpt = buildTargets.inverseSourceItem(filePath)
-      val targetDirOpt = fileSourceDirOpt.map { fileSourceDir =>
-        val relative = filePath.toRelative(fileSourceDir)
-        val filename = PathIO.basename(filePath.toString).split('.').head
-        val packageStr = PathIO.dirname(relative.toString())
-        val classDir = target.scalac.getClassDirectory
-        new URI(s"$classDir$packageStr/$filename.tasty")
-      }
-      for {
-        pc <- loadCompilerForTarget(target)
-        targetDir <- targetDirOpt
-      } yield (pc, targetDir)
-    }
-
-    val pcAndTargetUriOpt = for {
-      buildTargetId <- buildTargets.inverseSources(
-        AbsolutePath.fromAbsoluteUri(uri)
-      )
-      buildTarget <- buildTargets.scalaTarget(buildTargetId)
-      (pc, targetUri) <- buildTargetToPcAndFileUri(buildTarget)
-    } yield (pc, targetUri)
-
-    pcAndTargetUriOpt match {
-      case Some((pc, targetUri))
-          if AbsolutePath.fromAbsoluteUri(targetUri).isFile =>
-        pc.decompile(targetUri).asScala
-      case _ => Future.successful(ju.Optional.empty())
-    }
-
   }
 
   def loadCompiler(

@@ -36,7 +36,6 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.ExecuteCommandParams
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -154,9 +153,10 @@ case class ScalaPresentationCompiler(
       new AutoImportsProvider(pc.compiler(), name, params).autoImports().asJava
     }
 
-  override def decompile(
-      targetUri: URI
-  ): CompletableFuture[Optional[ExecuteCommandParams]] =
+  override def getTasty(
+      targetUri: URI,
+      isHtmlSupported: Boolean
+  ): CompletableFuture[Optional[String]] =
     CompletableFuture.completedFuture {
       Optional.empty()
     }

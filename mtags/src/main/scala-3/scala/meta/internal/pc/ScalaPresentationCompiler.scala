@@ -122,11 +122,12 @@ case class ScalaPresentationCompiler(
     new InteractiveDriver(settings)
   }
 
-  override def decompile(
-      targetUri: URI
-  ): CompletableFuture[ju.Optional[ExecuteCommandParams]] =
+  override def getTasty(
+      targetUri: URI,
+      isHtmlSupported: Boolean
+  ): CompletableFuture[ju.Optional[String]] =
     CompletableFuture.completedFuture {
-      ju.Optional.of(TastyUtils.parseTasty(targetUri))
+      ju.Optional.of(TastyUtils.getTasty(targetUri, isHtmlSupported))
     }
 
   def complete(params: OffsetParams): CompletableFuture[CompletionList] = {

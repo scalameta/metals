@@ -75,10 +75,10 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
 
     /**
-     * Decompile .tasty or .class file.
+     * Return decoded and pretty printed TASTy content for .scala or .tasty file.
 
      */
-    public abstract CompletableFuture<Optional<ExecuteCommandParams>> decompile(URI targetUri);
+    public abstract CompletableFuture<Optional<String>> getTasty(URI targetUri, boolean isHtmlSupported);
 
     /**
      * Return the necessary imports for a symbol at the given position.

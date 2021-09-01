@@ -261,7 +261,7 @@ class MetalsLanguageServer(
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
-  var decompiler: Decompiler = _
+  var tastyHandler: TastyHandler = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -644,7 +644,12 @@ class MetalsLanguageServer(
           buildTargets,
           buildClient
         )
-        decompiler = new Decompiler(compilers)
+        tastyHandler = new TastyHandler(
+          compilers,
+          buildTargets,
+          languageClient,
+          clientConfig
+        )
         codeActionProvider = new CodeActionProvider(
           compilers,
           buffers,
@@ -1719,14 +1724,8 @@ class MetalsLanguageServer(
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
 
-      case ServerCommands.Decompile() =>
-        val command = decompiler.decompile(params)
-        command.map { commandOpt =>
-          commandOpt.asScala.foreach(
-            languageClient.metalsExecuteClientCommand
-          )
-          scribe.debug(s"Executing decompile ${command}")
-        }.asJavaObject
+      case ServerCommands.ShowTasty() =>
+        tastyHandler.executeShowTastyCommand(params).asJavaObject
 
       case ServerCommands.GotoSuperMethod() =>
         Future {

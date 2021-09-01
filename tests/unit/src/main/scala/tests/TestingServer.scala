@@ -257,13 +257,8 @@ final class TestingServer(
     }
   }
 
-  def assertShowTasty(
-      filePath: String
-  ): Future[ju.Optional[l.ExecuteCommandParams]] = {
-    server.decompiler.decompile(
-      new ExecuteCommandParams(ServerCommands.Decompile.id, toJson(filePath))
-    )
-  }
+  def assertShowTasty(filePath: String): Future[Option[String]] =
+    server.tastyHandler.getTastyForURI(AbsolutePath(filePath).toURI)
 
   def assertSuperMethodHierarchy(
       uri: String,

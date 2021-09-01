@@ -27,20 +27,21 @@ final class HtmlBuilder() {
         .element("div")(content)
     )
   }
-  def page(title: String, raw: String = "")(
+  def page(
+      title: String,
+      headElems: List[String] = Nil,
+      bodyAttributes: String = ""
+  )(
       body: HtmlBuilder => Unit
-  ): HtmlBuilder = {
-    element("html")(
+  ): HtmlBuilder = this
+    .raw("<!DOCTYPE html>")
+    .element("html")(
       _.element("head")(
         _.element("title")(_.text(title))
           .raw("""<meta charset="UTF-8">""")
-          .raw(raw)
-          .raw(
-            s"""<link href="https://unpkg.com/nes.css@0.0.2/css/nes.min.css" rel="stylesheet" />"""
-          )
-      ).element("body", "style='padding: .75rem; font-size: 10px'")(body)
+          .raw(headElems.mkString)
+      ).element("body", bodyAttributes)(body)
     )
-  }
 
   def submitButton(query: String, title: String): HtmlBuilder =
     element("form", s"action='/complete?$query' method='post'")(
@@ -122,6 +123,10 @@ final class HtmlBuilder() {
     this
   }
 
+  def pre(content: String): this.type = {
+    element("pre")(_.text(content))
+  }
+
   private def escape(s: String): String = {
     val out = new StringBuilder(Math.max(16, s.length()))
     var i = 0
@@ -138,4 +143,11 @@ final class HtmlBuilder() {
     }
     out.toString
   }
+}
+
+object HtmlBuilder {
+  def apply(): HtmlBuilder = new HtmlBuilder()
+  final val htmlCSS: String =
+    s"""<link href="https://unpkg.com/nes.css@0.0.2/css/nes.min.css" rel="stylesheet" />"""
+  final val bodyStyle = "style='padding: .75rem; font-size: 10px'"
 }
