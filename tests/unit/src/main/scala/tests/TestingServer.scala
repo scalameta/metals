@@ -35,6 +35,7 @@ import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.HoverExtParams
+import scala.meta.internal.metals.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
@@ -1472,9 +1473,12 @@ final class TestingServer(
     Assertions.assertNoDiff(obtained, expected)
   }
 
-  def findTextInFiles(mask: String, content: String): Future[List[Location]] = {
+  def findTextInDependencyJars(
+      mask: String,
+      content: String
+  ): Future[List[Location]] = {
     server
-      .findTextInFilesCommand(FindNonSourceTextRequest(mask, content))
+      .findTextInDependencyJars(FindTextInDependencyJarsRequest(mask, content))
       .asScala
       .map(_.asScala.toList)
   }

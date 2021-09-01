@@ -6,10 +6,17 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 
-class FindTextInFilesSuite extends BaseLspSuite("find-text-in-jar-files") {
+class FindTextInDependencyJarsSuite
+    extends BaseLspSuite("find-text-in-dependency-jars") {
   test("find exact string match in .conf file inside jar") {
     val expectedUri =
-      s"${workspace.resolve(Directories.dependencies)}/akka-actor_2.12-2.6.16.jar/reference.conf"
+      workspace
+        .resolve(Directories.dependencies)
+        .resolve("akka-actor_2.12-2.6.16.jar")
+        .resolve("reference.conf")
+        .toURI
+        .toString()
+
     val expectedLocations: List[Location] = List(
       new Location(
         expectedUri,
@@ -31,7 +38,10 @@ class FindTextInFilesSuite extends BaseLspSuite("find-text-in-jar-files") {
            |}
         """.stripMargin
       )
-      locations <- server.findTextInFiles(".conf", "jvm-shutdown-hooks")
+      locations <- server.findTextInDependencyJars(
+        ".conf",
+        "jvm-shutdown-hooks"
+      )
       _ = assertEquals(locations, expectedLocations)
     } yield ()
   }
