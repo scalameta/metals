@@ -1473,7 +1473,10 @@ final class TestingServer(
   }
 
   def findTextInFiles(mask: String, content: String): Future[List[Location]] = {
-    server.findTextInFilesCommand(FindNonSourceTextRequest(mask, content)).asScala.map(_.asScala.toList)
+    server
+      .findTextInFilesCommand(FindNonSourceTextRequest(mask, content))
+      .asScala
+      .map(_.asScala.toList)
   }
 
   def textContents(filename: String): String =
