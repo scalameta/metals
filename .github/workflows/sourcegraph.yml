@@ -11,7 +11,7 @@ jobs:
     name: "Upload LSIF"
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v12
+      - uses: olafurpg/setup-scala@v13
       - uses: actions/setup-go@v2
         with:
           go-version: "1.15.6"

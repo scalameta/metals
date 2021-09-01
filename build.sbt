@@ -207,8 +207,8 @@ lazy val V = new {
   val mavenBloop = bloop
   val mdoc = "2.2.22"
   val scalafmt = "3.0.0-RC7"
-  val munit = "0.7.29"
-  val scalafix = "0.9.29"
+  val munit = "0.7.28"
+  val scalafix = "0.9.30"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
   val genyVersion = "0.6.10"
@@ -342,13 +342,13 @@ val mtagsSettings = List(
     if2 = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "org.jsoup" % "jsoup" % "1.14.1", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.14.2", // for extracting HTML from javadocs
       "com.lihaoyi" %% "geny" % V.genyVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.4",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.5",
       ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
         .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
@@ -418,12 +418,12 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.16",
       // for file watching
-      "com.swoval" % "file-tree-views" % "2.1.6",
+      "com.swoval" % "file-tree-views" % "2.1.7",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.10.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.13.0",
+      "org.flywaydb" % "flyway-core" % "7.14.0",
       "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
@@ -736,7 +736,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.14.1"
+      "org.jsoup" % "jsoup" % "1.14.2"
     )
   )
   .dependsOn(metals)
