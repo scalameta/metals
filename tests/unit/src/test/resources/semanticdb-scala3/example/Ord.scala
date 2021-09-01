@@ -3,7 +3,7 @@ package example
 trait Ord/*example.Ord#*/[T/*example.Ord#[T]*/]:
    def compare/*example.Ord#compare().*/(x/*example.Ord#compare().(x)*/: T/*example.Ord#[T]*/, y/*example.Ord#compare().(y)*/: T/*example.Ord#[T]*/): Int/*scala.Int#*/
 
-/*example.Ord$package.*/given intOrd/*example.Ord$package.intOrd.*/: Ord/*example.Ord#*/[Int/*scala.Int#*/] with
+given intOrd/*example.Ord$package.intOrd.*/: Ord/*example.Ord#*/[Int/*scala.Int#*/] with
    def compare/*example.Ord$package.intOrd.compare().*/(x/*example.Ord$package.intOrd.compare().(x)*/: Int/*scala.Int#*/, y/*example.Ord$package.intOrd.compare().(y)*/: Int/*scala.Int#*/) =
      if x/*example.Ord$package.intOrd.compare().(x)*/ </*scala.Int#`<`(+3).*/ y/*example.Ord$package.intOrd.compare().(y)*/ then -1 else if x/*example.Ord$package.intOrd.compare().(x)*/ >/*scala.Int#`>`(+3).*/ y/*example.Ord$package.intOrd.compare().(y)*/ then +1/*scala.Int#`unary_+`().*/ else 0
 

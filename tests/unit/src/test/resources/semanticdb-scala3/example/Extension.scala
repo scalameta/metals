@@ -1,6 +1,6 @@
 package example
 
-/*example.Extension$package.*/extension (i/*example.Extension$package.asString().(i)*/: Int/*scala.Int#*/)
+extension (i/*example.Extension$package.asString().(i)*/: Int/*scala.Int#*/)
   def asString/*example.Extension$package.asString().*/: String/*scala.Predef.String#*/ = i/*example.Extension$package.asString().(i)*/.toString/*scala.Any#toString().*/
 
 extension (s/*example.Extension$package.asInt().(s)*//*example.Extension$package.double().(s)*/: String/*scala.Predef.String#*/) {
