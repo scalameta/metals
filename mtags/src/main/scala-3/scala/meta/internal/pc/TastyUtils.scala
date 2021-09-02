@@ -5,17 +5,17 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Optional
 
-import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.io.PathIO
 import scala.meta.internal.jdk.CollectionConverters.*
+import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonPrimitive
-import dotty.tools.dotc.core.tasty.TastyHTMLPrinter
 import dotty.tools.dotc.core.tasty.TastyAnsiiPrinter
+import dotty.tools.dotc.core.tasty.TastyHTMLPrinter
 import dotty.tools.dotc.core.tasty.TastyPrinter
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.io.PathIO
 
 object TastyUtils {
   def getTasty(

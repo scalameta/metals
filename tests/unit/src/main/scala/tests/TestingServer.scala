@@ -454,14 +454,11 @@ final class TestingServer(
   def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
-  private def toJson(params: Object*): java.util.List[Object] = {
-    params.map(_.toJson.asInstanceOf[Object]).asJava
-  }
-
   def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
     scribe.info(s"Executing command [$command]")
-    val args = toJson(params)
+    val args: java.util.List[Object] =
+      params.map(_.toJson.asInstanceOf[Object]).asJava
 
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
