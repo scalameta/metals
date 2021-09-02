@@ -1,15 +1,12 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import java.{util => ju}
 
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 
@@ -23,7 +20,7 @@ case class ScalaTarget(
 
   def dialect: Dialect = {
     scalaVersion match {
-      case _ if info.getDataKind() == "sbt" => Sbt
+      case _ if info.isSbtBuild => Sbt
       case other =>
         val dialect =
           ScalaVersions.dialectForScalaVersion(other, includeSource3 = false)
@@ -37,6 +34,12 @@ case class ScalaTarget(
     }
   }
 
+  def displayName: String = info.getDisplayName()
+
+  def dataKind: String = info.dataKind
+
+  def baseDirectory: String = info.baseDirectory
+
   def fmtDialect: ScalafmtDialect =
     ScalaVersions.fmtDialectForScalaVersion(scalaVersion, containsSource3)
 
@@ -44,33 +47,9 @@ case class ScalaTarget(
 
   def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared(scalaVersion)
 
-  def id: BuildTargetIdentifier = info.getId()
-
-  def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
-
-  def baseDirectory: String = {
-    val baseDir = info.getBaseDirectory()
-    if (baseDir != null) baseDir else ""
-  }
-
-  def fullClasspath: ju.List[Path] = {
-    scalac.getClasspath().map(_.toAbsolutePath.toNIO)
-  }
-
-  def jarClasspath: List[AbsolutePath] = {
-    scalac
-      .getClasspath()
-      .asScala
-      .toList
-      .filter(_.endsWith(".jar"))
-      .map(_.toAbsolutePath)
-  }
+  def fullClasspath: List[Path] = scalac.classpath.map(_.toAbsolutePath.toNIO)
 
   def scalaVersion: String = scalaInfo.getScalaVersion()
-
-  def classDirectory: String = scalac.getClassDirectory()
-
-  def displayName: String = info.getDisplayName()
 
   def scalaBinaryVersion: String = scalaInfo.getScalaBinaryVersion()
 

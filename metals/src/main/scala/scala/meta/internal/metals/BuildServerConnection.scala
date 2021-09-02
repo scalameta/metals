@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
-import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -145,10 +144,28 @@ class BuildServerConnection private (
     register(server => server.workspaceBuildTargets()).asScala
   }
 
+  def buildTargetJavacOptions(
+      params: JavacOptionsParams
+  ): Future[JavacOptionsResult] = {
+    val resultOnJavacOptionsUnsupported = new JavacOptionsResult(
+      List.empty[JavacOptionsItem].asJava
+    )
+    val onFail = Some(
+      (resultOnJavacOptionsUnsupported, "Java targets not supported by server")
+    )
+    register(server => server.buildTargetJavacOptions(params), onFail).asScala
+  }
+
   def buildTargetScalacOptions(
       params: ScalacOptionsParams
   ): Future[ScalacOptionsResult] = {
-    register(server => server.buildTargetScalacOptions(params)).asScala
+    val resultOnScalaOptionsUnsupported = new ScalacOptionsResult(
+      List.empty[ScalacOptionsItem].asJava
+    )
+    val onFail = Some(
+      (resultOnScalaOptionsUnsupported, "Scala targets not supported by server")
+    )
+    register(server => server.buildTargetScalacOptions(params), onFail).asScala
   }
 
   def buildTargetSources(params: SourcesParams): Future[SourcesResult] = {
@@ -213,7 +230,8 @@ class BuildServerConnection private (
 
   }
   private def register[T: ClassTag](
-      action: MetalsBuildServer => CompletableFuture[T]
+      action: MetalsBuildServer => CompletableFuture[T],
+      onFail: => Option[(T, String)] = None
   ): CompletableFuture[T] = {
     val original = connection
     val actionFuture = original
@@ -233,8 +251,15 @@ class BuildServerConnection private (
           }
         case t
             if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
-          val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
-          Future.failed(MetalsBspException(name, t.getMessage))
+          onFail
+            .map { case (defaultResult, message) =>
+              scribe.info(message)
+              Future.successful(defaultResult)
+            }
+            .getOrElse({
+              val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
+              Future.failed(MetalsBspException(name, t.getMessage))
+            })
       }
     CancelTokens.future(_ => actionFuture)
   }
@@ -330,6 +355,7 @@ object BuildServerConnection {
   }
 
   final case class BspExtraBuildParams(
+      javaSemanticdbVersion: String,
       semanticdbVersion: String,
       supportedScalaVersions: java.util.List[String]
   )
@@ -343,6 +369,7 @@ object BuildServerConnection {
       serverName: String
   ): InitializeBuildResult = {
     val extraParams = BspExtraBuildParams(
+      BuildInfo.javaSemanticdbVersion,
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScala2Versions.asJava
     )
@@ -354,7 +381,7 @@ object BuildServerConnection {
         BuildInfo.bspVersion,
         workspace.toURI.toString,
         new BuildClientCapabilities(
-          Collections.singletonList("scala")
+          List("scala", "java").asJava
         )
       )
       val gson = new Gson

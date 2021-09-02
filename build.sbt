@@ -197,6 +197,7 @@ lazy val V = new {
   val ammonite213Version = scala213
   val scalameta = "4.4.27"
   val semanticdb = scalameta
+  val javaSemanticdb = "0.6.8"
   val bsp = "2.0.0-M13"
   val bloop = "1.4.8-114-e47368ed"
   val scala3 = "3.0.2"
@@ -477,6 +478,7 @@ lazy val metals = project
       "mavenBloopVersion" -> V.mavenBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
+      "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
       "organizeImportVersion" -> V.organizeImportRule,

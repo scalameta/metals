@@ -295,6 +295,8 @@ trait CommonMtagsEnrichments {
       doc.endsWith(".worksheet.sc")
     def isScalaFilename: Boolean =
       doc.isScala || isScalaScript || isSbt
+    def isJavaFilename: Boolean =
+      doc.endsWith(".java")
     def isAmmoniteGeneratedFile: Boolean =
       doc.endsWith(".sc.scala")
     def isAmmoniteScript: Boolean =
@@ -316,6 +318,8 @@ trait CommonMtagsEnrichments {
   implicit class XtensionRelativePathMetals(file: RelativePath) {
     def filename: String = file.toNIO.filename
     def isScalaFilename: Boolean = filename.isScalaFilename
+    def isJavaFilename: Boolean = filename.isJavaFilename
+    def isScalaOrJavaFilename: Boolean = isScalaFilename || isJavaFilename
   }
 
   implicit class XtensionStream[A](stream: java.util.stream.Stream[A]) {
@@ -416,6 +420,9 @@ trait CommonMtagsEnrichments {
       isScalaScript && !isWorksheet
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
+    }
+    def isJavaFilename: Boolean = {
+      filename.isJavaFilename
     }
     def isScalaFilename: Boolean = {
       filename.isScalaFilename

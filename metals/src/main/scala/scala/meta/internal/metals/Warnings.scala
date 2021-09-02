@@ -33,6 +33,7 @@ final class Warnings(
     }
     val isReported: Option[Unit] = for {
       buildTarget <- buildTargets.inverseSources(path)
+      // TODO(arthurm1) add javaTarget warnings (targetroot, sourceroot, semanticDB etc.)
       info <- buildTargets.scalaTarget(buildTarget)
       scalacOptions <- buildTargets.scalacOptions(buildTarget)
     } yield {
@@ -53,7 +54,7 @@ final class Warnings(
         }
       } else {
         if (!info.isSourcerootDeclared) {
-          val option = workspace.sourcerootOption
+          val option = workspace.scalaSourcerootOption
           logger.error(
             s"$doesntWorkBecause the build target ${info.displayName} is missing the compiler option $option. " +
               s"To fix this problems, update the build settings to include this compiler option."
@@ -66,10 +67,11 @@ final class Warnings(
           )
           statusBar.addMessage(icons.info + tryAgain)
         } else if (!path.isSbt && !path.isWorksheet) {
-
           val targetRoot = scalacOptions.targetroot(info.scalaVersion)
           val targetfile = targetRoot
-            .resolve(SemanticdbClasspath.fromScala(path.toRelative(workspace)))
+            .resolve(
+              SemanticdbClasspath.fromScalaOrJava(path.toRelative(workspace))
+            )
           logger.error(
             s"$doesntWorkBecause the SemanticDB file '$targetfile' doesn't exist. " +
               s"There can be many reasons for this error. "

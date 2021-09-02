@@ -553,10 +553,10 @@ class DebugProvider(
           result <- Future.fromTry(f())
         } yield result
       case _: ClassNotFoundException =>
-        val allTargets = buildTargets.allBuildTargetIds
+        val allTargetIds = buildTargets.allBuildTargetIds
         for {
-          _ <- compilations.compileTargets(allTargets)
-          _ <- buildTargetClasses.rebuildIndex(allTargets)
+          _ <- compilations.compileTargets(allTargetIds)
+          _ <- buildTargetClasses.rebuildIndex(allTargetIds)
           result <- Future.fromTry(f())
         } yield result
     }

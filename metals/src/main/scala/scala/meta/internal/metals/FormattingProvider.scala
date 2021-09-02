@@ -298,7 +298,7 @@ final class FormattingProvider(
       val (items, dialects) = itemsRequiresUpgrade.unzip
       val directories = items.map(_.toRelative(workspace))
 
-      val nonSbtTargets = buildTargets.all.toList.filter(!_.isSbt)
+      val nonSbtTargets = buildTargets.allScala.toList.filter(!_.isSbt)
       val needFileOverride =
         nonSbtTargets.map(_.fmtDialect).distinct.size > 1
       val upgradeType =

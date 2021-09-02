@@ -14,7 +14,7 @@ class ScalaVersionSelector(
     val selected = userConfig().fallbackScalaVersion match {
       case Some(v) => v
       case None =>
-        buildTargets.all.toList
+        buildTargets.allScala.toList
           .map(_.scalaInfo.getScalaVersion)
           .sorted
           .lastOption
