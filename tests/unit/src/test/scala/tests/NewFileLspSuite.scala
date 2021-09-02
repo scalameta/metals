@@ -68,7 +68,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = ""
   )
 
-  check("new-class".only)(
+  check("new-class")(
     directory = Some("a/src/main/scala/foo/"),
     fileType = Right(Class),
     fileName = Right("Foo"),
