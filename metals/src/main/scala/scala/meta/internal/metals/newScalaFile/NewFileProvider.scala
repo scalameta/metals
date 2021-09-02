@@ -37,7 +37,8 @@ class NewFileProvider(
   def handleFileCreation(
       directoryUri: Option[URI],
       name: Option[String],
-      fileType: Option[String]
+      fileType: Option[String],
+      isScala: Boolean
   ): Future[Unit] = {
     val directory = directoryUri
       .map { uri =>
@@ -53,12 +54,17 @@ class NewFileProvider(
       fileType.flatMap(getFromString) match {
         case Some(ft) => createFile(directory, ft, name)
         case None =>
-          askForKind(
-            directory.forall(dir =>
-              ScalaVersions.isScala3Version(selector.scalaVersionForPath(dir))
-            )
-          )
-            .flatMapOption(createFile(directory, _, name))
+          val askForKind =
+            if (isScala)
+              askForScalaKind(
+                directory.forall(dir =>
+                  ScalaVersions.isScala3Version(
+                    selector.scalaVersionForPath(dir)
+                  )
+                )
+              )
+            else askForJavaKind
+          askForKind.flatMapOption(createFile(directory, _, name))
       }
     }
 
@@ -78,7 +84,12 @@ class NewFileProvider(
       case kind @ (Class | CaseClass | Object | Trait | Enum) =>
         getName(kind, name)
           .mapOption(
-            createClass(directory, _, kind)
+            createClass(directory, _, kind, ".scala")
+          )
+      case kind @ (JavaClass | JavaEnum | JavaInterface | JavaRecord) =>
+        getName(kind, name)
+          .mapOption(
+            createClass(directory, _, kind, ".java")
           )
       case ScalaFile =>
         getName(ScalaFile, name).mapOption(
@@ -99,28 +110,47 @@ class NewFileProvider(
     }
   }
 
-  private def askForKind(isScala3: Boolean): Future[Option[NewFileType]] = {
-    val allFileTypes = List(
-      ScalaFile.toQuickPickItem,
-      Class.toQuickPickItem,
-      CaseClass.toQuickPickItem,
-      Object.toQuickPickItem,
-      Trait.toQuickPickItem,
-      PackageObject.toQuickPickItem,
-      Worksheet.toQuickPickItem,
-      AmmoniteScript.toQuickPickItem
-    )
-    val withEnum =
-      if (isScala3) allFileTypes :+ Enum.toQuickPickItem else allFileTypes
+  private def askForKind(
+      kinds: List[NewFileType]
+  ): Future[Option[NewFileType]] = {
     client
       .metalsQuickPick(
         MetalsQuickPickParams(
-          withEnum.asJava,
+          kinds.map(_.toQuickPickItem).asJava,
           placeHolder = NewScalaFile.selectTheKindOfFileMessage
         )
       )
       .asScala
       .flatMapOptionInside(kind => getFromString(kind.itemId))
+  }
+
+  private def askForScalaKind(
+      isScala3: Boolean
+  ): Future[Option[NewFileType]] = {
+    val allFileTypes = List(
+      ScalaFile,
+      Class,
+      CaseClass,
+      Object,
+      Trait,
+      PackageObject,
+      Worksheet,
+      AmmoniteScript
+    )
+    val withEnum =
+      if (isScala3) allFileTypes :+ Enum else allFileTypes
+    askForKind(withEnum)
+  }
+
+  private def askForJavaKind: Future[Option[NewFileType]] = {
+    askForKind(
+      List(
+        JavaClass,
+        JavaInterface,
+        JavaEnum,
+        JavaRecord
+      )
+    )
   }
 
   private def askForName(kind: String): Future[Option[String]] = {
@@ -145,9 +175,10 @@ class NewFileProvider(
   private def createClass(
       directory: Option[AbsolutePath],
       name: String,
-      kind: NewFileType
+      kind: NewFileType,
+      ext: String
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.getOrElse(workspace).resolve(name + ".scala")
+    val path = directory.getOrElse(workspace).resolve(name + ext)
     //name can be actually be "foo/Name", where "foo" is a folder to create
     val className = Identifier.backtickWrap(
       directory.getOrElse(workspace).resolve(name).filename
@@ -155,7 +186,8 @@ class NewFileProvider(
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
       case Enum => enumTemplate(kind.id, className)
-      case _ => classTemplate(kind.id, className)
+      case JavaRecord => javaRecordTemplate(className)
+      case _ => classTemplate(kind.syntax, className)
     }
     val editText = template.map { s =>
       packageProvider
@@ -256,6 +288,13 @@ class NewFileProvider(
     val indent = "  "
     NewFileTemplate(s"""|$kind $name {
                         |${indent}case@@
+                        |}
+                        |""".stripMargin)
+  }
+
+  private def javaRecordTemplate(name: String): NewFileTemplate = {
+    NewFileTemplate(s"""|record $name(@@) {
+                        |
                         |}
                         |""".stripMargin)
   }

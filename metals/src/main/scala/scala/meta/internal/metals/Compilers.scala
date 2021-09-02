@@ -702,7 +702,7 @@ class Compilers(
       mtags: MtagsBinaries,
       search: SymbolSearch
   ): PresentationCompiler = {
-    val classpath = scalac.classpath.map(_.toNIO).toSeq
+    val classpath = scalac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
     newCompiler(scalac, target, mtags, classpath, search)
   }
 

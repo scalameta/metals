@@ -43,7 +43,10 @@ case class UserConfiguration(
     enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
-    testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses
+    testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
+    eclipseFormatConfigPath: Option[AbsolutePath] = None,
+    enableFormatJavaComments: Boolean = true,
+    eclipseFormatProfile: Option[String] = None
 ) {
 
   def currentBloopVersion: String =
@@ -249,6 +252,32 @@ object UserConfiguration {
         """{ "testUserInterface" : "Test explorer" } """,
         "Test UI used for tests and test suites",
         "Default way of handling tests and test suites."
+      ),
+      UserConfigurationOption(
+        "eclipse-format-config-path",
+        """empty string `""`.""",
+        """"formatters/eclipse-formatter.xml"""",
+        "Eclipse formatter config path",
+        """Optional custom path to the eclipse-formatter.xml file.
+          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "format-java-comments",
+        "false",
+        "false",
+        "Should format Java comments as well as code",
+        """|Default formatting of Java files only formats code.
+           |Select this to also format comments.
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "eclipse-format-profile",
+        """empty string `""`.""",
+        """"GoogleStyle"""",
+        "Eclipse formatting profile",
+        """|If the Eclipse formatter file contains more than one profile then specify the required profile name.
+           |""".stripMargin
       )
     )
 
@@ -420,6 +449,12 @@ object UserConfiguration {
           TestUserInterfaceKind.CodeLenses
       }
     }
+    val eclipseFormatConfigPath =
+      getStringKey("eclipse-format-config-path").map(AbsolutePath(_))
+    val shouldFormatJavaComments =
+      getBooleanKey("enable-format-java-comments").getOrElse(false)
+    val eclipseFormatProfile = getStringKey("eclipse-format-profile")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -445,7 +480,10 @@ object UserConfiguration {
           enableIndentOnPaste,
           excludedPackages,
           defaultScalaVersion,
-          disableTestCodeLenses
+          disableTestCodeLenses,
+          eclipseFormatConfigPath,
+          shouldFormatJavaComments,
+          eclipseFormatProfile
         )
       )
     } else {

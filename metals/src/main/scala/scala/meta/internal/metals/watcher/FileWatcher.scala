@@ -88,13 +88,9 @@ object FileWatcher {
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceRoots.foreach(collect)
     buildTargets.sourceItems.foreach(collect)
-    val semanticdbs = buildTargets.scalacOptions.flatMap { item =>
-      for {
-        scalaInfo <- buildTargets.scalaInfo(item.getTarget)
-        targetroot = item.targetroot(scalaInfo.getScalaVersion)
-        path = targetroot.resolve(Directories.semanticdb) if !targetroot.isJar
-      } yield path.toNIO
-    }
+    val semanticdbs = buildTargets.allTargetRoots
+      .filterNot(_.isJar)
+      .map(_.resolve(Directories.semanticdb).toNIO)
 
     FilesToWatch(
       sourceFilesToWatch.toSet,

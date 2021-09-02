@@ -15,6 +15,7 @@ import ch.epfl.scala.bsp4j._
 case class ImportedBuild(
     workspaceBuildTargets: WorkspaceBuildTargetsResult,
     scalacOptions: ScalacOptionsResult,
+    javacOptions: JavacOptionsResult,
     sources: SourcesResult,
     dependencySources: DependencySourcesResult
 ) {
@@ -25,6 +26,9 @@ case class ImportedBuild(
     val updatedScalacOptions = new ScalacOptionsResult(
       (scalacOptions.getItems.asScala ++ other.scalacOptions.getItems.asScala).asJava
     )
+    val updatedJavacOptions = new JavacOptionsResult(
+      (javacOptions.getItems.asScala ++ other.javacOptions.getItems.asScala).asJava
+    )
     val updatedSources = new SourcesResult(
       (sources.getItems.asScala ++ other.sources.getItems.asScala).asJava
     )
@@ -34,6 +38,7 @@ case class ImportedBuild(
     ImportedBuild(
       updatedBuildTargets,
       updatedScalacOptions,
+      updatedJavacOptions,
       updatedSources,
       updatedDependencySources
     )
@@ -50,6 +55,7 @@ object ImportedBuild {
     ImportedBuild(
       new WorkspaceBuildTargetsResult(ju.Collections.emptyList()),
       new ScalacOptionsResult(ju.Collections.emptyList()),
+      new JavacOptionsResult(ju.Collections.emptyList()),
       new SourcesResult(ju.Collections.emptyList()),
       new DependencySourcesResult(ju.Collections.emptyList())
     )
@@ -63,6 +69,9 @@ object ImportedBuild {
       scalacOptions <- conn.buildTargetScalacOptions(
         new ScalacOptionsParams(ids)
       )
+      javacOptions <- conn.buildTargetJavacOptions(
+        new JavacOptionsParams(ids)
+      )
       sources <- conn.buildTargetSources(new SourcesParams(ids))
       dependencySources <- conn.buildTargetDependencySources(
         new DependencySourcesParams(ids)
@@ -71,6 +80,7 @@ object ImportedBuild {
       ImportedBuild(
         workspaceBuildTargets,
         scalacOptions,
+        javacOptions,
         sources,
         dependencySources
       )

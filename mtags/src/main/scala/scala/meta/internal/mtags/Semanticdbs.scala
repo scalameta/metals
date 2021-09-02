@@ -26,24 +26,24 @@ object Semanticdbs {
   }
 
   def loadTextDocument(
-      scalaPath: AbsolutePath,
+      scalaOrJavaPath: AbsolutePath,
       sourceroot: AbsolutePath,
       charset: Charset,
       fingerprints: Md5Fingerprints,
       loader: RelativePath => Option[FoundSemanticDbPath]
   ): TextDocumentLookup = {
-    if (scalaPath.toNIO.getFileSystem != sourceroot.toNIO.getFileSystem) {
-      TextDocumentLookup.NotFound(scalaPath)
+    if (scalaOrJavaPath.toNIO.getFileSystem != sourceroot.toNIO.getFileSystem) {
+      TextDocumentLookup.NotFound(scalaOrJavaPath)
     } else {
-      val scalaRelativePath = scalaPath.toRelative(sourceroot.dealias)
+      val scalaRelativePath = scalaOrJavaPath.toRelative(sourceroot.dealias)
       val semanticdbRelativePath =
-        SemanticdbClasspath.fromScala(scalaRelativePath)
+        SemanticdbClasspath.fromScalaOrJava(scalaRelativePath)
       loader(semanticdbRelativePath) match {
         case None =>
-          TextDocumentLookup.NotFound(scalaPath)
+          TextDocumentLookup.NotFound(scalaOrJavaPath)
         case Some(semanticdbPath) =>
           loadResolvedTextDocument(
-            scalaPath,
+            scalaOrJavaPath,
             semanticdbPath.nonDefaultRelPath.getOrElse(scalaRelativePath),
             semanticdbPath.path,
             charset,

@@ -54,7 +54,7 @@ class MetalsTreeViewProvider(
     (path, symbol) => classpath.symbols(path, symbol)
   )
 
-  val projects = new ClasspathTreeView[ScalaTarget, BuildTargetIdentifier](
+  val projects = new ClasspathTreeView[CommonTarget, BuildTargetIdentifier](
     definitionIndex,
     Project,
     "projects",
@@ -65,18 +65,16 @@ class MetalsTreeViewProvider(
     _.displayName,
     _.baseDirectory,
     { () =>
-      buildTargets.all.filter(target =>
+      buildTargets.allCommon.filter(target =>
         buildTargets.buildTargetSources(target.id).nonEmpty
       )
     },
     { (id, symbol) =>
       if (isBloop()) doCompile(id)
-      buildTargets.scalacOptions(id) match {
-        case None =>
-          Nil.iterator
-        case Some(info) =>
-          classpath.symbols(info.getClassDirectory().toAbsolutePath, symbol)
-      }
+      buildTargets
+        .targetClassDirectories(id)
+        .flatMap(cd => classpath.symbols(cd.toAbsolutePath, symbol))
+        .iterator
     }
   )
 
@@ -102,7 +100,7 @@ class MetalsTreeViewProvider(
         !isCollapsed.getOrElse(id, true) &&
         isVisible(Project)
       }
-      .flatMap(buildTargets.scalaTarget)
+      .flatMap(buildTargets.commonTarget)
       .toArray
     if (toUpdate.nonEmpty) {
       val nodes = toUpdate.map { target =>
@@ -117,9 +115,9 @@ class MetalsTreeViewProvider(
   }
 
   override def onBuildTargetDidCompile(id: BuildTargetIdentifier): Unit = {
-    buildTargets.scalaTarget(id).foreach { target =>
-      classpath.clearCache(target.scalac.getClassDirectory().toAbsolutePath)
-    }
+    buildTargets
+      .targetClassDirectories(id)
+      .foreach(cd => classpath.clearCache(cd.toAbsolutePath))
     if (isCollapsed.contains(id)) {
       pendingProjectUpdates.add(id)
       flushPendingProjectUpdates()
@@ -213,7 +211,7 @@ class MetalsTreeViewProvider(
         )
       case Project =>
         Option(params.nodeUri) match {
-          case None if buildTargets.all.nonEmpty =>
+          case None if buildTargets.allTargets.nonEmpty =>
             Array(
               projects.root,
               libraries.root

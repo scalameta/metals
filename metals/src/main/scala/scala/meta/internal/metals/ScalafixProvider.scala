@@ -47,9 +47,10 @@ case class ScalafixProvider(
   def load(): Unit = {
     if (!Testing.isEnabled) {
       try {
-        val targets = buildTargets.all.toList.groupBy(_.scalaVersion).flatMap {
-          case (_, targets) => targets.headOption
-        }
+        val targets =
+          buildTargets.allScala.toList.groupBy(_.scalaVersion).flatMap {
+            case (_, targets) => targets.headOption
+          }
         val tmp = workspace
           .resolve(Directories.tmp)
           .resolve(s"Main${Random.nextLong()}.scala")
@@ -150,7 +151,8 @@ case class ScalafixProvider(
             semanticdb
         val dir = workspace.resolve(Directories.tmp)
         file.toRelativeInside(workspace).flatMap { relativePath =>
-          val writeTo = dir.resolve(SemanticdbClasspath.fromScala(relativePath))
+          val writeTo =
+            dir.resolve(SemanticdbClasspath.fromScalaOrJava(relativePath))
           writeTo.parent.createDirectories()
           val docs = TextDocuments(Seq(toSave))
           Files.write(writeTo.toNIO, docs.toByteArray)

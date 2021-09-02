@@ -33,7 +33,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       "org.eclipse.lsp4j.generator", "org.eclipse.lsp4j.jsonrpc",
       "org.eclipse.xtend.lib", "org.eclipse.xtend.lib.macro",
       "org.eclipse.xtext.xbase.lib", "scala-library", "scala-reflect",
-      "sourcecode_2.12"
+      "semanticdb-javac", "sourcecode_2.12"
     )
 
     if (scala.util.Properties.isJavaAtLeast(9.toString)) {

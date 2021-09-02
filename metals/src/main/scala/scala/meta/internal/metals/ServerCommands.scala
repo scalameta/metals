@@ -348,6 +348,19 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val NewJavaFile = new ListParametrizedCommand[String](
+    "new-java-file",
+    "Create new java file",
+    """|Create and open new file with either java class, enum or interface.
+       |
+       |Note: requires 'metals/inputBox' capability from language client.
+       |""".stripMargin,
+    """|[string[]], where the first is a directory location for the new file.
+       |The second and third positions correspond to the file name and file type to allow for quick
+       |creation of a file if all are present.
+       |""".stripMargin
+  )
+
   val NewScalaProject = new Command(
     "new-scala-project",
     "New Scala Project",
@@ -474,6 +487,7 @@ object ServerCommands {
       ImportBuild,
       InsertInferredType,
       NewScalaFile,
+      NewJavaFile,
       NewScalaProject,
       PresentationCompilerRestart,
       ResetChoicePopup,

@@ -84,7 +84,7 @@ object Digest {
     val ext = PathIO.extension(path.toNIO)
     val isScala = Set("sbt", "scala", "sc")(ext)
     // we can have both gradle and gradle.kts and build plugins can be written in any of three languages
-    val isGradle =
+    val isGeneralJVM =
       Set("gradle", "groovy", "gradle.kts", "java", "kts").exists(
         path.toString().endsWith(_)
       )
@@ -92,7 +92,7 @@ object Digest {
 
     if (isScala && path.isFile) {
       digestScala(path, digest)
-    } else if (isGradle && path.isFile) {
+    } else if (isGeneralJVM && path.isFile) {
       digestGeneralJvm(path, digest)
     } else if (isXml) {
       digestXml(path, digest)

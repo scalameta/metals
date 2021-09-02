@@ -249,6 +249,7 @@ class MetalsLanguageServer(
   private var renameProvider: RenameProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
+  private var javaFormattingProvider: JavaFormattingProvider = _
   private var syntheticsDecorator: SyntheticsDecorationProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
@@ -503,6 +504,12 @@ class MetalsLanguageServer(
           statusBar,
           clientConfig.icons,
           tables,
+          buildTargets
+        )
+        javaFormattingProvider = new JavaFormattingProvider(
+          workspace,
+          buffers,
+          () => userConfig,
           buildTargets
         )
         newFileProvider = new NewFileProvider(
@@ -1193,12 +1200,8 @@ class MetalsLanguageServer(
       // notifications to pick up `*.semanticdb` file updates and there's no
       // reliable way to await until those notifications appear.
       for {
-        item <- buildTargets.scalacOptions(report.getTarget())
-        scalaInfo <- buildTargets.scalaInfo(report.getTarget)
-        semanticdb =
-          item
-            .targetroot(scalaInfo.getScalaVersion)
-            .resolve(Directories.semanticdb)
+        targetroot <- buildTargets.targetRoots(report.getTarget)
+        semanticdb = targetroot.resolve(Directories.semanticdb)
         generatedFile <- semanticdb.listRecursive
       } {
         val event = FileWatcherEvent.modify(generatedFile.toNIO)
@@ -1426,10 +1429,11 @@ class MetalsLanguageServer(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { token =>
-      formattingProvider.format(
-        params.getTextDocument.getUri.toAbsolutePath,
-        token
-      )
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (path.isJava)
+        javaFormattingProvider.format(params)
+      else
+        formattingProvider.format(path, token)
     }
 
   @JsonRequest("textDocument/onTypeFormatting")
@@ -1437,7 +1441,11 @@ class MetalsLanguageServer(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      onTypeFormattingProvider.format(params).asJava
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (path.isJava)
+        javaFormattingProvider.format(params)
+      else
+        onTypeFormattingProvider.format(params).asJava
     }
 
   @JsonRequest("textDocument/rangeFormatting")
@@ -1445,7 +1453,11 @@ class MetalsLanguageServer(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      rangeFormattingProvider.format(params).asJava
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (path.isJava)
+        javaFormattingProvider.format(params)
+      else
+        rangeFormattingProvider.format(params).asJava
     }
 
   @JsonRequest("textDocument/prepareRename")
@@ -1805,7 +1817,15 @@ class MetalsLanguageServer(
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         newFileProvider
-          .handleFileCreation(directoryURI, name, fileType)
+          .handleFileCreation(directoryURI, name, fileType, true)
+          .asJavaObject
+
+      case ServerCommands.NewJavaFile(args) =>
+        val directoryURI = args.lift(0).flatten.map(new URI(_))
+        val name = args.lift(1).flatten
+        val fileType = args.lift(2).flatten
+        newFileProvider
+          .handleFileCreation(directoryURI, name, fileType, false)
           .asJavaObject
 
       case ServerCommands.StartAmmoniteBuildServer() =>
@@ -2350,6 +2370,7 @@ class MetalsLanguageServer(
       symbolSearch.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
+      buildTargets.addJavacOptions(i.javacOptions)
       for {
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
@@ -2382,10 +2403,16 @@ class MetalsLanguageServer(
       workspaceSymbols.indexClasspath()
     }
     timerProvider.timedThunk(
-      "indexed workspace SemanticDBs",
+      "indexed workspace Scala SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex
     ) {
       semanticDBIndexer.onScalacOptions(i.scalacOptions)
+    }
+    timerProvider.timedThunk(
+      "indexed workspace Java SemanticDBs",
+      clientConfig.initialConfig.statistics.isIndex
+    ) {
+      semanticDBIndexer.onJavacOptions(i.javacOptions)
     }
     timerProvider.timedThunk(
       "indexed workspace sources",
@@ -2406,7 +2433,7 @@ class MetalsLanguageServer(
         .foreach(focusedDocumentBuildTarget.set)
     }
 
-    val targets = buildTargets.all.map(_.id).toSeq
+    val targets = buildTargets.allBuildTargetIds
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach(_ => languageClient.refreshModel())
@@ -2453,6 +2480,7 @@ class MetalsLanguageServer(
     val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
+      // TODO(arthurm1) add java sources?  What dialect?
       scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       path = sourceUri.toAbsolutePath
@@ -2609,7 +2637,7 @@ class MetalsLanguageServer(
       definitionOnly: Boolean = false
   ): Future[DefinitionResult] = {
     val source = positionParams.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename) {
+    if (source.isScalaFilename || source.isJavaFilename) {
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
       (for {
@@ -2671,7 +2699,7 @@ class MetalsLanguageServer(
       token: CancelToken = EmptyCancelToken
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename) {
+    if (source.isScalaFilename || source.isJavaFilename) {
       val result =
         timerProvider.timedThunk(
           "definition",

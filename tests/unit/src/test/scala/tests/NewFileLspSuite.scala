@@ -4,6 +4,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
@@ -352,6 +353,174 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |""".stripMargin
   )
 
+  check("new-java-class")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaClass),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-class-name-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaClass),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-class-fully-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Left(JavaClass),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-interface")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaInterface),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |interface Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-interface-name-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaInterface),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |interface Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-interface-fully-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Left(JavaInterface),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |interface Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-enum")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaEnum),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |enum Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-enum-name-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaEnum),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |enum Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-enum-fully-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Left(JavaEnum),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = s"""|package foo;
+                          |
+                          |enum Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-record")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaRecord),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = """|package foo;
+                         |
+                         |record Foo() {
+                         |
+                         |}
+                         |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-record-name-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Right(JavaRecord),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = """|package foo;
+                         |
+                         |record Foo() {
+                         |
+                         |}
+                         |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
+  check("new-java-record-fully-provided")(
+    directory = Some("a/src/main/java/foo/"),
+    fileType = Left(JavaRecord),
+    fileName = Left("Foo"),
+    expectedFilePath = "a/src/main/java/foo/Foo.java",
+    expectedContent = """|package foo;
+                         |
+                         |record Foo() {
+                         |
+                         |}
+                         |""".stripMargin,
+    command = ServerCommands.NewJavaFile
+  )
+
   private lazy val indent = "  "
 
   type ProvidedFileType = NewFileType
@@ -369,6 +538,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       fileName: Either[Provided, Picked],
       expectedFilePath: String,
       expectedContent: String,
+      command: ListParametrizedCommand[String] = ServerCommands.NewScalaFile,
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
       scalaVersion: Option[String] = None
@@ -444,10 +614,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
         )
         _ <-
           server
-            .executeCommand(
-              ServerCommands.NewScalaFile,
-              args: _*
-            )
+            .executeCommand(command, args: _*)
         _ = {
           assertNoDiff(
             client.workspaceMessageRequests,

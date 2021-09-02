@@ -270,6 +270,7 @@ lazy val V = new {
   val bloop = "1.4.11-19-93ebe2c6"
   val scala3 = "3.1.0"
   val nextScala3RC = "3.1.1-RC1"
+  val javaSemanticdb = "0.7.2"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -538,6 +539,8 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0.1",
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
+      // for Java formatting
+      "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.26.0",
       // ==================
       // Scala dependencies
       // ==================
@@ -578,6 +581,7 @@ lazy val metals = project
       "mavenBloopVersion" -> V.mavenBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
+      "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
       "organizeImportVersion" -> V.organizeImportRule,

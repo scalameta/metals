@@ -104,6 +104,7 @@ object MetalsTestEnrichments {
         libraries.flatMap(_.classpath.entries).map(_.toURI.toString).asJava,
         ""
       )
+      // TODO(@arthurm1) test javacOptions?
       wsp.buildTargets.addScalacOptions(
         new ScalacOptionsResult(List(item).asJava)
       )
