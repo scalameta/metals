@@ -46,7 +46,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |List<String> s = Collections.emptyList();
            |```
            |""".stripMargin,
-      "3.0" -> "def emptyList[T]: java.util.List[T]".hover
+      "3" -> "def emptyList[T]: java.util.List[T]".hover
     )
   )
 

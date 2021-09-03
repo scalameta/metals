@@ -30,7 +30,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
            |unapplySeq
            |apply
            |""".stripMargin,
-      "3.0" -> "apply"
+      "3" -> "apply"
     )
   )
 
@@ -46,7 +46,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
        |println
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|println
            |println
            |""".stripMargin
@@ -69,7 +69,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     """|toString()
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "toString"
+      "3" -> "toString"
     )
   )
 

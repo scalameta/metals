@@ -15,7 +15,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|
            |object Main {
            |  val <<abc>> = 42
@@ -85,7 +85,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|
            |object Main {
            |  val <<increment>>: Int => Int = _ + 2
@@ -119,7 +119,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
            |}
            |""".stripMargin,
-      "3.0" ->
+      "3" ->
         """|
            |object Main {
            |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
@@ -163,7 +163,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|object Main {
            |  new/*java/io/File#`<init>`(+2). File.java*/ java.io.File("")
            |}
@@ -178,7 +178,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|
            |object <<Main>> extends java.io.Serializable {
            |}
@@ -194,7 +194,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|
            |import scala.concurrent./*scala/concurrent/Future# Future.scala*//*scala/concurrent/Future. Future.scala*/@@Future
            |object Main {
@@ -231,7 +231,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|
            |object Main {
            |  def foo(<<arg>>: Int): Unit = ()
@@ -254,7 +254,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     compat = Map(
       // in 3.0 here we obtain patched assert
       // see: https://github.com/scalameta/metals/issues/2918
-      "3.0" ->
+      "3" ->
         """|
            |object Main {
            |  assert(/*scala/Predef.assert(+1). Predef.scala*/@@assertion = true)
@@ -280,7 +280,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|
            |object Main {
            |  val <<number>>: Int = 1
