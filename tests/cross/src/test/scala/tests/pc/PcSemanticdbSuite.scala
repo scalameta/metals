@@ -48,7 +48,7 @@ class PcSemanticdbSuite extends BasePCSuite {
        |""".stripMargin,
     filename = "A.worksheet.sc",
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|import $ivy.`org.kohsuke:github-api:1.114`
            |
            |object O/*_empty_.O.*/ {

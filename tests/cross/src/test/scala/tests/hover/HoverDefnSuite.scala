@@ -101,7 +101,7 @@ class HoverDefnSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "def <init>(x: Int): a".hover
+      "3" -> "def <init>(x: Int): a".hover
     )
   )
 
@@ -147,7 +147,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "object MyObject: `object`".hover
+      "3" -> "object MyObject: `object`".hover
     )
   )
 
@@ -157,7 +157,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "trait MyTrait: MyTrait".hover
+      "3" -> "trait MyTrait: MyTrait".hover
     )
   )
 
@@ -167,7 +167,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "trait MyClass: MyClass".hover
+      "3" -> "trait MyClass: MyClass".hover
     )
   )
 
@@ -183,7 +183,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     automaticPackage = false,
     compat = Map(
       // TODO hover doesn't show information on package
-      "3.0" -> "".hover
+      "3" -> "".hover
     )
   )
 
@@ -198,7 +198,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "head: Int".hover,
     compat = Map(
-      "3.0" -> "val head: Int".hover
+      "3" -> "val head: Int".hover
     )
   )
 
@@ -213,7 +213,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |""".stripMargin,
     "value: Int".hover,
     compat = Map(
-      "3.0" -> "val value: Int".hover
+      "3" -> "val value: Int".hover
     )
   )
 

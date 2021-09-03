@@ -95,7 +95,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
              |substring(beginIndex: Int, endIndex: Int): String
              |""".stripMargin,
           Map(
-            "3.0" ->
+            "3" ->
               """|substring(x$0: Int): String
                  |substring(x$0: Int, x$1: Int): String
                  |""".stripMargin
@@ -136,7 +136,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |StreamShape - scala.collection.convert.StreamExtensions
                  |Streamable - scala.reflect.io
                  |""".stripMargin,
-            "3.0" ->
+            "3" ->
               """|BaseStream - java.util.stream
                  |InputStream - java.io
                  |IntStream - java.util.stream
@@ -170,7 +170,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
               """|TrieMap - scala.collection.concurrent
                  |TrieMapSerializationEnd - scala.collection.concurrent
                  |""".stripMargin,
-            "3.0" ->
+            "3" ->
               """|TrieMap - scala.collection.concurrent
                  |TrieMapSerializationEnd - scala.collection.concurrent
                  |""".stripMargin

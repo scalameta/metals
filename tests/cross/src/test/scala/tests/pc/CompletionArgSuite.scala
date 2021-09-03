@@ -114,7 +114,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Option(4),
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|age = : Int
            |followers = : Int
            |Main arg5
@@ -150,7 +150,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Option(2),
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|x = : A
            |Main arg7
            |""".stripMargin
@@ -245,7 +245,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |isResourceFile = isLargeBanana : Boolean
        |""".stripMargin,
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|isResourceFile = : Boolean
            |""".stripMargin
     )
@@ -265,7 +265,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(3),
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|argument = : Int
            |argument: Int
            |""".stripMargin
@@ -291,7 +291,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|argument = : Int
            |Calendar - java.util
            |""".stripMargin
@@ -313,7 +313,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     topLines = Some(5),
     compat = Map(
-      "3.0" ->
+      "3" ->
         """|`type` = : Int
            |""".stripMargin
     )

@@ -14,7 +14,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |final override def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "def map[B](f: A => B): List[B]".hover
+      "3" -> "def map[B](f: A => B): List[B]".hover
     )
   )
 
@@ -24,7 +24,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin,
     "abstract trait App: App".hover,
     compat = Map(
-      "3.0" -> "trait App: App".hover
+      "3" -> "trait App: App".hover
     )
   )
 
@@ -42,7 +42,7 @@ class HoverTermSuite extends BaseHoverSuite {
         """|List[Int]
            |def apply[A](elems: A*): List[A]
            |""".stripMargin.hover,
-      "3.0" -> "def apply[A](elems: A*): Int".hover
+      "3" -> "def apply[A](elems: A*): Int".hover
     )
   )
 
@@ -56,7 +56,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def apply(name: String): Person
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "case class Person: `case-apply`".hover
+      "3" -> "case class Person: `case-apply`".hover
     )
   )
 
@@ -103,7 +103,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def f[A >: Any](args: A*): String = macro
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "def f[A >: Any](args: A*): String".hover
+      "3" -> "def f[A >: Any](args: A*): String".hover
     )
   )
 
@@ -124,7 +124,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def apply[T](a: T)(implicit ev: Int): T
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "def apply[T](a: T)(implicit ev: Int): Int".hover
+      "3" -> "def apply[T](a: T)(implicit ev: Int): Int".hover
     )
   )
 
@@ -147,7 +147,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       // https://github.com/lampepfl/dotty/issues/8835
-      "3.0" -> "object num: `interpolator-unapply`.a.Xtension".hover
+      "3" -> "object num: `interpolator-unapply`.a.Xtension".hover
     )
   )
 
@@ -162,7 +162,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def this(name: String, age: Int): Foo
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "class Foo: Foo".hover
+      "3" -> "class Foo: Foo".hover
     )
   )
 
@@ -178,7 +178,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def this(name: String, age: T): Foo[T]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "class Foo: Int".hover
+      "3" -> "class Foo: Int".hover
     )
   )
 
@@ -194,7 +194,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def this(name: String, age: T): Foo[T]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "class Foo: Foo".hover
+      "3" -> "class Foo: Foo".hover
     )
   )
 
@@ -210,7 +210,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3.0" -> "class Foo: Foo".hover
+      "3" -> "class Foo: Foo".hover
     )
   )
 
@@ -243,7 +243,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def flatMap[B](f: Int => Option[B]): Option[B]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "val <local a$>: (x: Int): Boolean".hover
+      "3" -> "val <local a$>: (x: Int): Boolean".hover
     )
   )
 
@@ -262,7 +262,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |final def map[B](f: Int => B): Option[B]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "val <local a$>: (y: Int): String".hover
+      "3" -> "val <local a$>: (y: Int): String".hover
     )
   )
 
@@ -281,7 +281,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def flatMap[B](f: Int => Option[B]): Option[B]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "def flatMap[B](f: A => Option[B]): Option[String]".hover
+      "3" -> "def flatMap[B](f: A => Option[B]): Option[String]".hover
     )
   )
 
@@ -300,7 +300,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |final def map[B](f: Long => B): Option[B]
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "val <local a$>: (y: Long): String".hover
+      "3" -> "val <local a$>: (y: Long): String".hover
     )
   )
 
@@ -318,7 +318,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|final def withFilter(p: Int => Boolean): Option[Int]#WithFilter
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "val <local a$>: (x: Int): Boolean".hover
+      "3" -> "val <local a$>: (x: Int): Boolean".hover
     )
   )
 
@@ -335,7 +335,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3.0" -> "enum FileVisitResult: java.nio.file".hover
+      "3" -> "enum FileVisitResult: java.nio.file".hover
     )
   )
 
@@ -358,7 +358,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin,
     automaticPackage = false,
     compat = Map(
-      "3.0" -> "object Foo: app.Outer".hover
+      "3" -> "object Foo: app.Outer".hover
     )
   )
 
@@ -403,7 +403,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|class java.nio.file.Files
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "object Files: java.nio.file".hover
+      "3" -> "object Files: java.nio.file".hover
     )
   )
 
@@ -415,7 +415,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|class java.nio.file.Paths
        |""".stripMargin.hover,
     compat = Map(
-      "3.0" -> "object Paths: java.nio.file".hover
+      "3" -> "object Paths: java.nio.file".hover
     )
   )
 
@@ -456,7 +456,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """final val CONTINUE: FileVisitResult""".hover,
     compat = Map(
-      "3.0" -> "case CONTINUE: FileVisitResult".hover
+      "3" -> "case CONTINUE: FileVisitResult".hover
     )
   )
 }
