@@ -231,7 +231,7 @@ Configuration Options](#tree-view-protocol-configuration-options).
 `metals.treeviews.forceChildrenReload`          | Force the reloading of the children of this node. May be useful when the wrong result is cached and tree contains invalid data. (default `f`)
 `metals.treeviews.executeCommandAndOpenTab`     | Execute command and open node under cursor in tab (if node is class, trait and so on) (default `t`)
 `metals.treeviews.executeCommandAndOpenSplit`   | Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default `s`)
-`metals.treeviews.executeCommandAndOpenVSplit`  | Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default `v`)
+`metals.treeviews.executeCommandAndOpenVSplit`  | Execute command and open node under cursor in vertical split (if node is class, trait and so on) (default `v`)
 
 ## Goto Super Method
 
