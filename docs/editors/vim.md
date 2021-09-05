@@ -222,7 +222,7 @@ Configuration Options](#tree-view-protocol-configuration-options).
 `metals.treeviews.toggleNode`                   | Expand / Collapse tree node (default `<CR>`)
 `metals.treeviews.initialWidth`                 | Initial Tree Views panels (default `40`)
 `metals.treeviews.initialViews`                 | Initial views that the Tree View Panel displays. Don't mess with this unless you know what you're doing.
-`metals.treeviews.gotoLastChild`                | Go to the last child Node (defalt `J`)
+`metals.treeviews.gotoLastChild`                | Go to the last child Node (default `J`)
 `metals.treeviews.gotoParentNode`               | Go to parent Node (default `p`)
 `metals.treeviews.gotoFirstChild`               | Go to first child Node (default `K`)
 `metals.treeviews.executeCommand`               | Execute command for node (default `r`)
