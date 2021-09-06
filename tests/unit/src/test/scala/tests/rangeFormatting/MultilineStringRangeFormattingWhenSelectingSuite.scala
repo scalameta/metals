@@ -1,9 +1,9 @@
 package tests.rangeFormatting
 
 import munit.Location
+import munit.TestOptions
 import org.eclipse.lsp4j.FormattingOptions
 import tests.BaseLspSuite
-import munit.TestOptions
 
 class MultilineStringRangeFormattingWhenSelectingSuite
     extends BaseLspSuite("rangeFormatting") {
