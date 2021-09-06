@@ -777,6 +777,24 @@ object MetalsEnrichments
       classpath
         .filter(_.endsWith(".jar"))
         .map(_.toAbsolutePath)
+
+    def releaseVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(_ != "--release")
+        .drop(1)
+        .headOption
+
+    def sourceVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(f => f != "--source" && f != "-source" && f != "--release")
+        .drop(1)
+        .headOption
+
+    def targetVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(f => f != "--target" && f != "-target" && f != "--release")
+        .drop(1)
+        .headOption
   }
 
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {

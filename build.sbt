@@ -438,6 +438,8 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
+      // for Java formatting
+      "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.26.0",
       // ==================
       // Scala dependencies
       // ==================

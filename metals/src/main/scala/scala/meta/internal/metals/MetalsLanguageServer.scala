@@ -240,6 +240,7 @@ class MetalsLanguageServer(
   private var renameProvider: RenameProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
+  private var javaFormattingProvider: JavaFormattingProvider = _
   private var syntheticsDecorator: SyntheticsDecorationProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
@@ -487,6 +488,12 @@ class MetalsLanguageServer(
           statusBar,
           clientConfig.icons,
           tables,
+          buildTargets
+        )
+        javaFormattingProvider = new JavaFormattingProvider(
+          workspace,
+          buffers,
+          () => userConfig,
           buildTargets
         )
         newFileProvider = new NewFileProvider(
@@ -1367,10 +1374,11 @@ class MetalsLanguageServer(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { token =>
-      formattingProvider.format(
-        params.getTextDocument.getUri.toAbsolutePath,
-        token
-      )
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (path.isJava)
+        javaFormattingProvider.format(params)
+      else
+        formattingProvider.format(path, token)
     }
 
   @JsonRequest("textDocument/onTypeFormatting")
@@ -1378,7 +1386,11 @@ class MetalsLanguageServer(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      onTypeFormattingProvider.format(params).asJava
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (path.isJava)
+        javaFormattingProvider.format(params)
+      else
+        onTypeFormattingProvider.format(params).asJava
     }
 
   @JsonRequest("textDocument/rangeFormatting")
@@ -1386,7 +1398,11 @@ class MetalsLanguageServer(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens { _ =>
-      rangeFormattingProvider.format(params).asJava
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      if (path.isJava)
+        javaFormattingProvider.format(params)
+      else
+        rangeFormattingProvider.format(params).asJava
     }
 
   @JsonRequest("textDocument/prepareRename")

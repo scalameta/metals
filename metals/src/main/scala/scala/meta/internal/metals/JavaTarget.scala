@@ -20,4 +20,10 @@ case class JavaTarget(
   def isSourcerootDeclared: Boolean = javac.isSourcerootDeclared
 
   def isTargetrootDeclared: Boolean = javac.isTargetrootDeclared
+
+  def releaseVersion: Option[String] = javac.releaseVersion
+
+  def targetVersion: Option[String] = javac.targetVersion
+
+  def sourceVersion: Option[String] = javac.sourceVersion
 }
