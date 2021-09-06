@@ -4,9 +4,16 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Wed, 14 Jul 2021 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 06 Sep 2021 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
+        <item>
+            <title><![CDATA[Metals v0.10.6 - Tungsten]]></title>
+            <link>http://scalameta.org/metals/blog/2021/09/06/tungsten</link>
+            <guid>Metals v0.10.6 - Tungsten</guid>
+            <pubDate>Mon, 06 Sep 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[We're happy to announce the release of Metals v0.10.6, which brings about new]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.10.5 - Tungsten]]></title>
             <link>http://scalameta.org/metals/blog/2021/07/14/tungsten</link>
