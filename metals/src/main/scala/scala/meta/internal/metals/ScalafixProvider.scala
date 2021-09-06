@@ -9,6 +9,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Failure
+import scala.util.Random
 import scala.util.Success
 import scala.util.Try
 
@@ -50,7 +51,9 @@ case class ScalafixProvider(
         val targets = buildTargets.all.toList.groupBy(_.scalaVersion).flatMap {
           case (_, targets) => targets.headOption
         }
-        val tmp = AbsolutePath(Files.createTempFile("metals", ".scala"))
+        val tmp = workspace
+          .resolve(Directories.tmp)
+          .resolve(s"Main${Random.nextLong()}.scala")
         val contents = "object Main{}\n"
         tmp.writeText(contents)
         for (target <- targets)
@@ -150,12 +153,13 @@ case class ScalafixProvider(
           else
             semanticdb
         val dir = workspace.resolve(Directories.tmp)
-        val relativePath = file.toRelative(workspace)
-        val writeTo = dir.resolve(SemanticdbClasspath.fromScala(relativePath))
-        writeTo.parent.createDirectories()
-        val docs = TextDocuments(Seq(toSave))
-        Files.write(writeTo.toNIO, docs.toByteArray)
-        Some(dir.toNIO)
+        file.toRelativeInside(workspace).flatMap { relativePath =>
+          val writeTo = dir.resolve(SemanticdbClasspath.fromScala(relativePath))
+          writeTo.parent.createDirectories()
+          val docs = TextDocuments(Seq(toSave))
+          Files.write(writeTo.toNIO, docs.toByteArray)
+          Option(dir.toNIO)
+        }
       }
 
   }
@@ -258,10 +262,14 @@ case class ScalafixProvider(
       else workspace
 
     val diskFilePath = if (produceSemanticdb) {
-      val relativePath = file.toRelative(workspace)
-      val tempFilePath = sourceroot.resolve(relativePath)
-      tempFilePath.writeText(inBuffers)
-      tempFilePath
+      file
+        .toRelativeInside(workspace)
+        .map { relativePath =>
+          val tempFilePath = sourceroot.resolve(relativePath)
+          tempFilePath.writeText(inBuffers)
+          tempFilePath
+        }
+        .getOrElse(file)
     } else {
       file
     }
