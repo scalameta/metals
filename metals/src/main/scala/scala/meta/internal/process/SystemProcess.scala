@@ -24,7 +24,10 @@ object SystemProcess {
       cmd: List[String],
       cwd: AbsolutePath,
       redirectErrorOutput: Boolean,
-      env: Map[String, String]
+      env: Map[String, String],
+      processOut: String => Unit = scribe.info(_),
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false
   ): SystemProcess = {
 
     try {
@@ -35,18 +38,23 @@ object SystemProcess {
 
       builder.redirectErrorStream(redirectErrorOutput)
       val ps = builder.start()
-      wrapProcess(ps, redirectErrorOutput)
+      wrapProcess(ps, redirectErrorOutput, processOut, processErr)
     } catch {
       case NonFatal(e) =>
-        scribe.error(s"Running process '${cmd.mkString(" ")}' failed", e)
-        Failed
+        if (propagateError) throw e
+        else {
+          scribe.error(s"Running process '${cmd.mkString(" ")}' failed", e)
+          Failed
+        }
     }
 
   }
 
   def wrapProcess(
       ps: Process,
-      redirectErrorOutput: Boolean
+      redirectErrorOutput: Boolean,
+      processOut: String => Unit,
+      processErr: String => Unit
   ): SystemProcess = {
     def readOutput(stream: InputStream, f: String => Unit): Thread = {
       val filter = AnsiFilter()
@@ -73,9 +81,9 @@ object SystemProcess {
     ps.getOutputStream().close
 
     val outReaders = List(
-      Some(readOutput(ps.getInputStream(), scribe.info(_))),
+      Some(readOutput(ps.getInputStream(), processOut(_))),
       if (redirectErrorOutput) None
-      else Some(readOutput(ps.getErrorStream(), scribe.error(_)))
+      else Some(readOutput(ps.getErrorStream(), processErr(_)))
     ).flatten
 
     new SystemProcess {

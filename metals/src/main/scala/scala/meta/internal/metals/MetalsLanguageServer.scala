@@ -251,6 +251,7 @@ class MetalsLanguageServer(
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
+  private var fileDecoderProvider: FileDecoderProvider = _
   private var workspaceReload: WorkspaceReload = _
   private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
@@ -673,6 +674,14 @@ class MetalsLanguageServer(
           () => httpServer,
           tables,
           clientConfig
+        )
+        fileDecoderProvider = new FileDecoderProvider(
+          workspace,
+          compilers,
+          buildTargets,
+          () => userConfig,
+          shellRunner,
+          fileSystemSemanticdbs
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -1614,6 +1623,15 @@ class MetalsLanguageServer(
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
         disconnectOldBuildServer().asJavaObject
+      case ServerCommands.DecodeFile() =>
+        val argsMaybe = Option(params.getArguments())
+        (argsMaybe.flatMap(_.asScala.headOption) match {
+          case Some(arg: JsonPrimitive) =>
+            val uri = arg.getAsString()
+            fileDecoderProvider.decodedFileContents(uri)
+          case _ =>
+            Future { fileDecoderProvider.errorReponse(s"$params") }
+        }).asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
           doctor.executeRunDoctor()
