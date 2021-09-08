@@ -376,7 +376,8 @@ class Compilers(
   ): Option[PresentationCompiler] = {
 
     def fromBuildTarget: Option[PresentationCompiler] = {
-      val target = buildTargets.inverseSources(path)
+      val target = buildTargets
+        .inverseSources(path)
       target match {
         case None =>
           if (path.isScalaFilename) Some(fallbackCompiler)

@@ -257,7 +257,7 @@ final class TestingServer(
     }
   }
 
-  def assertShowTasty(filePath: String): Future[Option[String]] =
+  def showTasty(filePath: String): Future[Option[String]] =
     server.tastyHandler.getTastyForURI(AbsolutePath(filePath).toURI)
 
   def assertSuperMethodHierarchy(

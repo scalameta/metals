@@ -24,7 +24,7 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
             |""".stripMargin
       )
       _ <- server.didOpen("app/src/main/scala/a/b/Main.scala")
-      result <- server.assertShowTasty(
+      result <- server.showTasty(
         s"$workspace/app/src/main/scala/a/b/Main.scala"
       )
     } yield {
@@ -54,7 +54,7 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
             |""".stripMargin
       )
       _ <- server.didOpen("app/src/main/scala/a/b/Main.scala")
-      result <- server.assertShowTasty(
+      result <- server.showTasty(
         s"$workspace/app/src/main/scala/a/b/Main2.scala"
       )
     } yield {

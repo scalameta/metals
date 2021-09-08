@@ -9,6 +9,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.HtmlBuilder
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonPrimitive
