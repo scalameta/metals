@@ -45,6 +45,7 @@ class MetalsTreeViewProvider(
     "libraries",
     "Libraries",
     identity,
+    "library",
     _.toURI.toString(),
     _.toAbsolutePath,
     _.filename,
@@ -59,6 +60,7 @@ class MetalsTreeViewProvider(
     "projects",
     "Projects",
     _.id,
+    "project",
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
     _.displayName,
@@ -264,25 +266,27 @@ class MetalsTreeViewProvider(
       path: AbsolutePath,
       pos: l.Position
   ): Option[TreeViewNodeRevealResult] = {
-    val input = path.toInput
-    val occurrences =
-      Mtags
-        .allToplevels(
-          input,
-          // TreeViewProvider doesn't work with Scala 3 - see #2859
-          dialects.Scala213
-        )
-        .occurrences
-        .filterNot(_.symbol.isPackage)
-    if (occurrences.isEmpty) None
-    else {
-      val closestSymbol = occurrences.minBy { occ =>
-        val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
-        val distance = math.abs(pos.getLine - startLine)
-        val isLeading = pos.getLine() > startLine
-        (!isLeading, distance)
-      }
-      val result =
+    val result = if (path.isJar) {
+      Some(libraries.toUri(path).parentChain)
+    } else {
+      val input = path.toInput
+      val occurrences =
+        Mtags
+          .allToplevels(
+            input,
+            // TreeViewProvider doesn't work with Scala 3 - see #2859
+            dialects.Scala213
+          )
+          .occurrences
+          .filterNot(_.symbol.isPackage)
+      if (occurrences.isEmpty) None
+      else {
+        val closestSymbol = occurrences.minBy { occ =>
+          val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
+          val distance = math.abs(pos.getLine - startLine)
+          val isLeading = pos.getLine() > startLine
+          (!isLeading, distance)
+        }
         if (path.isDependencySource(workspace())) {
           buildTargets
             .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
@@ -294,13 +298,14 @@ class MetalsTreeViewProvider(
             .inverseSources(path)
             .map(id => projects.toUri(id, closestSymbol.symbol).parentChain)
         }
-      result.map { uriChain =>
-        uriChain.foreach { uri =>
-          // Cache results
-          children(TreeViewChildrenParams(Project, uri))
-        }
-        TreeViewNodeRevealResult(Project, uriChain.toArray)
       }
+    }
+    result.map { uriChain =>
+      uriChain.foreach { uri =>
+        // Cache results
+        children(TreeViewChildrenParams(Project, uri))
+      }
+      TreeViewNodeRevealResult(Project, uriChain.toArray)
     }
   }
 

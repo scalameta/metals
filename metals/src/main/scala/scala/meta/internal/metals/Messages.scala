@@ -598,6 +598,10 @@ object Messages {
 
   }
 
+  object DisplayBuildTarget {
+    def selectTheBuildTargetMessage = "Select the build target to display"
+  }
+
   private def usingString(usingNow: Iterable[String]): String = {
     if (usingNow.size == 1)
       s"Scala version ${usingNow.head}"

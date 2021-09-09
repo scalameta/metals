@@ -15,6 +15,12 @@ case class JavaTarget(
 
   def baseDirectory: String = info.baseDirectory
 
+  def classDirectory: String = javac.getClassDirectory()
+
+  def classpath: List[String] = javac.classpath
+
+  def options: List[String] = javac.getOptions().asScala.toList
+
   def isSemanticdbEnabled: Boolean = javac.isSemanticdbEnabled
 
   def isSourcerootDeclared: Boolean = javac.isSourcerootDeclared

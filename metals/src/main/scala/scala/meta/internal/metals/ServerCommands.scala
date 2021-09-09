@@ -56,6 +56,15 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val TargetInfoDisplay = new Command(
+    "target-info-display",
+    "Display target info",
+    """|Choose a Build Target and view information about its configuration.
+       |""".stripMargin,
+    """|[string], name of the Build Target.
+       |""".stripMargin
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -419,6 +428,7 @@ object ServerCommands {
       ResetChoicePopup,
       RestartBuildServer,
       RunDoctor,
+      TargetInfoDisplay,
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,

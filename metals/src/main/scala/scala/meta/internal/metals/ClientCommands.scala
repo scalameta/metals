@@ -85,6 +85,15 @@ object ClientCommands {
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
 
+  val TargetInfoDisplay = new Command(
+    "metals-target-info-display",
+    "Display target info",
+    """|Focus on a window displaying build target info.
+       |""".stripMargin,
+    arguments =
+      """`string`, the HTML to display in the focused window.""".stripMargin
+  )
+
   val ToggleLogs = new Command(
     "metals-logs-toggle",
     "Toggle logs",
@@ -211,6 +220,7 @@ object ClientCommands {
       OpenFolder,
       RunDoctor,
       ReloadDoctor,
+      TargetInfoDisplay,
       ToggleLogs,
       FocusDiagnostics,
       GotoLocation,

@@ -333,6 +333,11 @@ final class Doctor(
     }
   }
 
+  private def convertTarget(targetName: String): String = {
+    val param = s"""["$targetName"]"""
+    s"command:target-info-display?${URLEncoder.encode(param)}"
+  }
+
   private def buildTargetRows(
       html: HtmlBuilder,
       targetIds: Seq[BuildTargetIdentifier]
@@ -343,7 +348,9 @@ final class Doctor(
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
         html.element("tr")(
-          _.element("td")(_.text(targetInfo.name))
+          _.element("td")(
+            _.link(convertTarget(targetInfo.name), targetInfo.name)
+          )
             .element("td")(_.text(targetInfo.scalaVersion))
             .element("td", center)(_.text(Icons.unicode.check))
             .element("td", center)(_.text(targetInfo.definitionStatus))

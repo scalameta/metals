@@ -17,7 +17,6 @@ case class ScalaTarget(
     autoImports: Option[Seq[String]],
     isSbt: Boolean
 ) {
-
   def dialect: Dialect = {
     scalaVersion match {
       case _ if info.isSbtBuild => Sbt
@@ -39,6 +38,12 @@ case class ScalaTarget(
   def dataKind: String = info.dataKind
 
   def baseDirectory: String = info.baseDirectory
+
+  def classDirectory: String = scalac.getClassDirectory()
+
+  def classpath: List[String] = scalac.classpath
+
+  def options: List[String] = scalac.getOptions().asScala.toList
 
   def fmtDialect: ScalafmtDialect =
     ScalaVersions.fmtDialectForScalaVersion(scalaVersion, containsSource3)
