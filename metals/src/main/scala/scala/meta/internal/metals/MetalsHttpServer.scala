@@ -3,10 +3,14 @@ package scala.meta.internal.metals
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.InputStreamIO
@@ -76,7 +80,7 @@ object MetalsHttpServer {
       render: () => String,
       complete: HttpServerExchange => Unit,
       doctor: () => String
-  ): MetalsHttpServer = {
+  )(implicit ec: ExecutionContext): MetalsHttpServer = {
     val port = freePort(host, preferredPort)
     scribe.info(s"Selected port $port")
     val openChannels = mutable.Set.empty[WebSocketChannel]
@@ -125,6 +129,10 @@ object MetalsHttpServer {
           "/livereload",
           websocket(new LiveReloadConnectionCallback(openChannels))
         )
+        .addPrefixPath(
+          "/tasty",
+          tastyEndpointHandler(languageServer)
+        )
         .addExactPath("/", textHtmlHandler(render))
         .addExactPath("/doctor", textHtmlHandler(doctor))
     val httpServer = Undertow.builder
@@ -170,6 +178,44 @@ object MetalsHttpServer {
     } catch {
       case NonFatal(_: IOException) if maxRetries > 0 =>
         freePort(host, port + 1, maxRetries - 1)
+    }
+  }
+
+  private def tastyEndpointHandler(
+      languageServer: MetalsLanguageServer
+  )(implicit ec: ExecutionContext) = new HttpHandler {
+    override def handleRequest(exchange: HttpServerExchange): Unit = {
+      exchange.dispatch { () =>
+        val uri: Option[URI] = for {
+          params <- Option(exchange.getQueryParameters.get("file"))
+          path <- params.asScala.headOption
+        } yield new URI(path)
+
+        uri.filter(_.isAbsolute()) match {
+          case Some(uri) =>
+            languageServer.tastyHandler
+              .getTastyForURI(uri)
+              .onComplete {
+                case Success(Some(value)) =>
+                  exchange.getResponseSender().send(value)
+                case Failure(e) =>
+                  exchange.getResponseSender().send(e.getMessage())
+                case s =>
+                  scribe.error(s.toString())
+                  exchange
+                    .setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR)
+                    .getResponseSender()
+                    .send(StatusCodes.INTERNAL_SERVER_ERROR_STRING)
+              }
+          case None =>
+            exchange
+              .setStatusCode(StatusCodes.BAD_REQUEST)
+              .getResponseSender()
+              .send(
+                "Missing query parameter file or provided value has invalid format. File should be an absolute URI"
+              )
+        }
+      }
     }
   }
 

@@ -648,7 +648,8 @@ class MetalsLanguageServer(
           compilers,
           buildTargets,
           languageClient,
-          clientConfig
+          clientConfig,
+          () => httpServer
         )
         codeActionProvider = new CodeActionProvider(
           compilers,

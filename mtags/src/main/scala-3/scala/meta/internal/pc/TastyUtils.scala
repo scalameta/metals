@@ -21,15 +21,18 @@ import org.eclipse.{lsp4j => l}
 object TastyUtils {
   def getTasty(
       tastyURI: URI,
-      isHtmlSupported: Boolean
+      isHtmlSupported: Boolean,
+      isHttpEnabled: Boolean
   ): String =
-    if (isHtmlSupported)
+    if (isHttpEnabled)
+      getStandaloneHtmlTasty(tastyURI)
+    else if (isHtmlSupported)
       htmlTasty(tastyURI)
     else
       normalTasty(tastyURI)
 
   def getStandaloneHtmlTasty(tastyURI: URI): String = {
-    htmlTasty(tastyURI, List(HtmlBuilder.htmlCSS), HtmlBuilder.bodyStyle)
+    htmlTasty(tastyURI, List(standaloneHtmlStyles))
   }
 
   private def normalTasty(tastyURI: URI): String = {
@@ -48,7 +51,7 @@ object TastyUtils {
     HtmlBuilder()
       .page(title, htmlStyles :: headElems, bodyAttributes) { builder =>
         builder
-          .element("pre")(_.raw(tastyHtml))
+          .element("pre", "class='container is-dark'")(_.raw(tastyHtml))
       }
       .render
   }
@@ -57,6 +60,18 @@ object TastyUtils {
     val filename = PathIO.basename(AbsolutePath.fromAbsoluteUri(file).toString)
     s"TASTy for $filename"
   }
+
+  private val standaloneHtmlStyles =
+    """|<style>
+       |  body {
+       |    background-color: #212529;
+       |    color: wheat;
+       |    padding: 1em;
+       |    margin: 0;
+       |    font-size: 14px;
+       |  }
+       |</style>
+       |""".stripMargin
 
   private val htmlStyles =
     """|<style>

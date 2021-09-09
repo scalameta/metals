@@ -155,7 +155,8 @@ case class ScalaPresentationCompiler(
 
   override def getTasty(
       targetUri: URI,
-      isHtmlSupported: Boolean
+      isHtmlSupported: Boolean,
+      isHttpEnabled: Boolean
   ): CompletableFuture[Optional[String]] =
     CompletableFuture.completedFuture {
       Optional.empty()

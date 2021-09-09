@@ -5,6 +5,9 @@ import java.nio.file.Paths
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -16,36 +19,66 @@ class TastyHandler(
     compilers: Compilers,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    httpServer: () => Option[MetalsHttpServer]
 )(implicit ec: ExecutionContext) {
 
   def executeShowTastyCommand(
       params: l.ExecuteCommandParams
-  ): Future[Unit] = {
-    val tastyResponseOpt = getTasty(params)
-    tastyResponseOpt.map { tastyOpt =>
-      val commandOpt = tastyOpt.map { tasty =>
-        new l.ExecuteCommandParams(
-          "metals-show-tasty",
-          List[Object](tasty).asJava
-        )
+  ): Future[Unit] =
+    if (
+      clientConfig.isExecuteClientCommandProvider() && !clientConfig
+        .isHttpEnabled()
+    ) {
+      val tastyResponse = getTasty(params)
+      tastyResponse.map {
+        case Some(tasty) =>
+          val command = new l.ExecuteCommandParams(
+            "metals-show-tasty",
+            List[Object](tasty).asJava
+          )
+          languageClient.metalsExecuteClientCommand(command)
+          scribe.debug(s"Executing show TASTy ${command}")
+        case None =>
+          scribe.error(s"Show TASTy command failed")
+          languageClient.showMessage(
+            Messages.showTastyFailed
+          )
       }
-      commandOpt.foreach { command =>
-        languageClient.metalsExecuteClientCommand(command)
-        scribe.debug(s"Executing show TASTy ${command}")
+    } else {
+      (httpServer(), parseJsonParams(params)) match {
+        case (Some(server), Some(uri)) =>
+          Future.successful(
+            Urls.openBrowser(server.address + s"/tasty?file=$uri")
+          )
+        case (None, _) =>
+          Future.successful {
+            scribe.warn(
+              "Unable to run show tasty. Make sure `isHttpEnabled` is set to `true`."
+            )
+          }
+        case other =>
+          scribe.error(s"Show TASTy command failed $other")
+          languageClient.showMessage(
+            Messages.showTastyFailed
+          )
+          Future.successful(())
       }
     }
-  }
 
   def getTastyForURI(uri: URI): Future[Option[String]] =
-    getTasty(uri, clientConfig.isCommandInHtmlSupported())
+    getTasty(
+      uri,
+      clientConfig.isCommandInHtmlSupported(),
+      clientConfig.isHttpEnabled()
+    )
 
   private def getTasty(
       params: l.ExecuteCommandParams
   ): Future[Option[String]] =
     parseJsonParams(params) match {
       case Some(path) =>
-        val uri = Paths.get(path).toUri
+        val uri = new URI(path)
         getTastyForURI(uri)
       case None =>
         Future.successful(None)
@@ -68,12 +101,18 @@ class TastyHandler(
    */
   private def getTasty(
       uri: URI,
-      isHtmlSupported: Boolean
+      isHtmlSupported: Boolean,
+      isHttpEnabled: Boolean
   ): Future[Option[String]] = {
+    val absolutePathOpt = Try(AbsolutePath.fromAbsoluteUri(uri)) match {
+      case Success(value) => Some(value)
+      case Failure(exception) =>
+        scribe.error(exception.toString())
+        None
+    }
     val pcAndTargetUriOpt = for {
-      buildTargetId <- buildTargets.inverseSources(
-        AbsolutePath.fromAbsoluteUri(uri)
-      )
+      absolutePath <- absolutePathOpt
+      buildTargetId <- buildTargets.inverseSources(absolutePath)
       buildTarget <- buildTargets.scalaTarget(buildTargetId)
       pc <- compilers.loadCompilerForTarget(buildTarget)
       tastyFileURI <- getTastyFileURI(
@@ -84,7 +123,9 @@ class TastyHandler(
 
     pcAndTargetUriOpt match {
       case Some((pc, tastyUri)) =>
-        pc.getTasty(tastyUri, isHtmlSupported).asScala.map(_.asScala)
+        pc.getTasty(tastyUri, isHtmlSupported, isHttpEnabled)
+          .asScala
+          .map(_.asScala)
       case _ => Future.successful(None)
     }
   }
