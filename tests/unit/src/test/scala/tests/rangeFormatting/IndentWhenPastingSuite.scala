@@ -458,6 +458,63 @@ class IndentWhenPastingSuite
     formattingOptions
   )
 
+  check(
+    "issue-3108",
+    """
+      |object Main{
+      |  private def outFile(
+      |    abc@@: String
+      |  ) = ""
+      |}""".stripMargin,
+    "abc",
+    """
+      |object Main{
+      |  private def outFile(
+      |    abcabc: String
+      |  ) = ""
+      |}""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "paren-indent",
+    """
+      |object Main{
+      |  private def outFile(
+      |    @@
+      |  ) = ""
+      |}""".stripMargin,
+    "abc: String",
+    """
+      |object Main{
+      |  private def outFile(
+      |    abc: String
+      |  ) = ""
+      |}""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "paren-bracket",
+    """
+      |object Main{
+      |  private def outFile[
+      |    @@
+      |  ] = ""
+      |}""".stripMargin,
+    "String",
+    """
+      |object Main{
+      |  private def outFile[
+      |    String
+      |  ] = ""
+      |}""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
   def check(
       name: TestOptions,
       testCase: String,
@@ -480,7 +537,7 @@ class IndentWhenPastingSuite
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.rangeFormatting(
           "a/src/main/scala/a/Main.scala",
-          testCase, // bez @@
+          testCase, // without @@
           expected,
           paste,
           workspace,

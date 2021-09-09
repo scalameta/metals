@@ -12,10 +12,11 @@ object IndentOnPaste extends RangeFormatter {
   private val noEndClause = raw"((<!\bend\b\s*?)\b(if|while|for|match|try))"
   private val ifThenClause = raw"(\bif\s+(?!.*?\bthen\b.*?$$)[^\s]*?)"
   private val keywordClause = raw"\b(then|else|do|catch|finally|yield|case)"
-  private val openBraceClause = raw"""(^.*\{[^}"']*$$)"""
+  private val openBraceParenBracketClause =
+    raw"""(^.*(\{[^}"']*|\([^)"']*|\[[^]"']*)$$)"""
   private val extensionClause = raw"""extension\s*((\(|\[).*(\)|\]))+"""
   val increaseIndentPatternRegex: Regex =
-    raw"""($noEndClause|$ifThenClause|$keywordClause|$extensionClause|=|=>|<-|=>>|:)\s*?$$|$openBraceClause""".r
+    raw"""($noEndClause|$ifThenClause|$keywordClause|$extensionClause|=|=>|<-|=>>|:)\s*?$$|$openBraceParenBracketClause""".r
   val indentRegex: Regex = raw"\S".r
 
   private def codeStartPosition(line: String): Option[Int] =
@@ -59,6 +60,7 @@ object IndentOnPaste extends RangeFormatter {
     val splitLines = rangeFormatterParams.splitLines
 
     val rangeStart = startPos.toLSP.getStart
+    val originalStart = rangeStart.getCharacter()
     rangeStart.setCharacter(0)
     // we format full lines even if not everything was pasted
     val realEndColumn =
@@ -83,39 +85,54 @@ object IndentOnPaste extends RangeFormatter {
     // These are the lines from the first pasted line, going above
     val prePastedLines = splitLines.take(startLine).reverse
 
-    val currentIndentationLevel = (for {
-      line <- prePastedLines.find(t => {
-        val trimmed = t.trim()
-        trimmed.nonEmpty && !trimmed.startsWith("|")
-      }) // Find first line non empty (aka code) that is not a piped multi-string
+    // Do not adjust indentation if we pasted into an existing line content
+    def pastedIntoNonEmptyLine = {
+      pastedLines match {
+        case Array(singleLine) =>
+          val originalLine = singleLine.substring(0, originalStart) +
+            singleLine.substring(endPos.endColumn)
+          originalLine.trim().nonEmpty
+        case _ => false
+      }
+    }
 
-      indentation <- codeStartPosition(line) // get indentation spaces
-      nextIncrease = increaseIndentation(
-        line
-      ) // check if the next line needs to increase indentation
-    } yield {
-      if (nextIncrease)
-        indentation + opts.tabSize
-      else indentation
-    }).getOrElse(0)
-
-    val formatted =
-      processLines(
-        currentIndentationLevel,
-        pastedLines,
-        opts,
-        startPos.toLSP.getStart()
-      )
-
-    if (formatted.nonEmpty)
-      Some(
-        new TextEdit(
-          pastedRange,
-          formatted.mkString(System.lineSeparator)
-        ) :: Nil
-      )
-    else
+    if (pastedIntoNonEmptyLine) {
       None
+    } else {
+      val currentIndentationLevel = (for {
+        line <- prePastedLines.find(t => {
+          val trimmed = t.trim()
+          trimmed.nonEmpty && !trimmed.startsWith("|")
+        }) // Find first line non empty (aka code) that is not a piped multi-string
+
+        indentation <- codeStartPosition(line) // get indentation spaces
+        nextIncrease = increaseIndentation(
+          line
+        ) // check if the next line needs to increase indentation
+      } yield {
+        if (nextIncrease)
+          indentation + opts.tabSize
+        else indentation
+      }).getOrElse(0)
+
+      val formatted =
+        processLines(
+          currentIndentationLevel,
+          pastedLines,
+          opts,
+          startPos.toLSP.getStart()
+        )
+
+      if (formatted.nonEmpty)
+        Some(
+          new TextEdit(
+            pastedRange,
+            formatted.mkString(System.lineSeparator)
+          ) :: Nil
+        )
+      else
+        None
+    }
   }
 
   private def processLines(
@@ -210,7 +227,12 @@ object IndentOnPaste extends RangeFormatter {
         val identToStart = codeStartPosition(full).getOrElse(0)
 
         if (identToStart != expectedIdent) {
-          stringRepeat(opts.blank, expectedIdent) + full
+          def currentIndent = stringRepeat(opts.blank, identToStart)
+          stringRepeat(opts.blank, expectedIdent) + {
+            if (identToStart != 0)
+              full.stripPrefix(currentIndent)
+            else full
+          }
         } else {
           full
         }

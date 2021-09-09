@@ -929,7 +929,9 @@ final class TestingServer(
     positionFromString(filename, original, root, replaceWith = paste) {
       case (text, textId, start) =>
         val lines = paste.count(_ == '\n')
-        val char = paste.reverse.takeWhile(_ != '\n').size
+        val char =
+          if (lines == 0) start.getCharacter() + paste.size
+          else paste.reverse.takeWhile(_ != '\n').size
         val end = new l.Position(start.getLine() + lines, char)
         val range = new l.Range(start, end)
         val params = new DocumentRangeFormattingParams()
