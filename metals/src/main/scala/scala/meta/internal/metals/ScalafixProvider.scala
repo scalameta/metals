@@ -278,7 +278,7 @@ case class ScalafixProvider(
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
     val classpath =
-      (targetRoot.toList ++ scalaTarget.fullClasspath.asScala).asJava
+      (targetRoot.toList ++ scalaTarget.fullClasspath).asJava
 
     for {
       api <- getScalafix(scalaBinaryVersion)
