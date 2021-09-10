@@ -196,16 +196,10 @@ object MetalsHttpServer {
             languageServer.tastyHandler
               .getTastyForURI(uri)
               .onComplete {
-                case Success(Some(value)) =>
+                case Success(value) =>
                   exchange.getResponseSender().send(value)
                 case Failure(e) =>
                   exchange.getResponseSender().send(e.getMessage())
-                case s =>
-                  scribe.error(s.toString())
-                  exchange
-                    .setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR)
-                    .getResponseSender()
-                    .send(StatusCodes.INTERNAL_SERVER_ERROR_STRING)
               }
           case None =>
             exchange

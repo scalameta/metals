@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.nio.file.Paths
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -31,19 +30,13 @@ class TastyHandler(
         .isHttpEnabled()
     ) {
       val tastyResponse = getTasty(params)
-      tastyResponse.map {
-        case Some(tasty) =>
-          val command = new l.ExecuteCommandParams(
-            "metals-show-tasty",
-            List[Object](tasty).asJava
-          )
-          languageClient.metalsExecuteClientCommand(command)
-          scribe.debug(s"Executing show TASTy ${command}")
-        case None =>
-          scribe.error(s"Show TASTy command failed")
-          languageClient.showMessage(
-            Messages.showTastyFailed
-          )
+      tastyResponse.map { tasty =>
+        val command = new l.ExecuteCommandParams(
+          "metals-show-tasty",
+          List[Object](tasty).asJava
+        )
+        languageClient.metalsExecuteClientCommand(command)
+        scribe.debug(s"Executing show TASTy ${command}")
       }
     } else {
       (httpServer(), parseJsonParams(params)) match {
@@ -66,7 +59,7 @@ class TastyHandler(
       }
     }
 
-  def getTastyForURI(uri: URI): Future[Option[String]] =
+  def getTastyForURI(uri: URI): Future[String] =
     getTasty(
       uri,
       clientConfig.isCommandInHtmlSupported(),
@@ -75,13 +68,15 @@ class TastyHandler(
 
   private def getTasty(
       params: l.ExecuteCommandParams
-  ): Future[Option[String]] =
+  ): Future[String] =
     parseJsonParams(params) match {
       case Some(path) =>
         val uri = new URI(path)
         getTastyForURI(uri)
       case None =>
-        Future.successful(None)
+        val error = s"Error, invalid show TASTy arguments $params"
+        scribe.error(error)
+        Future.successful(error)
     }
 
   private def parseJsonParams(
@@ -103,7 +98,7 @@ class TastyHandler(
       uri: URI,
       isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
-  ): Future[Option[String]] = {
+  ): Future[String] = {
     val absolutePathOpt = Try(AbsolutePath.fromAbsoluteUri(uri)) match {
       case Success(value) => Some(value)
       case Failure(exception) =>
@@ -123,10 +118,8 @@ class TastyHandler(
 
     pcAndTargetUriOpt match {
       case Some((pc, tastyUri)) =>
-        pc.getTasty(tastyUri, isHtmlSupported, isHttpEnabled)
-          .asScala
-          .map(_.asScala)
-      case _ => Future.successful(None)
+        pc.getTasty(tastyUri, isHtmlSupported, isHttpEnabled).asScala
+      case _ => Future.successful("Error, .tasty file doesn't exist")
     }
   }
 

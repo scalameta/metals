@@ -157,9 +157,9 @@ case class ScalaPresentationCompiler(
       targetUri: URI,
       isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
-  ): CompletableFuture[Optional[String]] =
+  ): CompletableFuture[String] =
     CompletableFuture.completedFuture {
-      Optional.empty()
+      "Currently, there is no support for Show TASTy in Scala 2."
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because

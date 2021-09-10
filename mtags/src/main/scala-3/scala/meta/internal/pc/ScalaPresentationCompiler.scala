@@ -126,11 +126,9 @@ case class ScalaPresentationCompiler(
       targetUri: URI,
       isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
-  ): CompletableFuture[ju.Optional[String]] =
+  ): CompletableFuture[String] =
     CompletableFuture.completedFuture {
-      ju.Optional.of(
-        TastyUtils.getTasty(targetUri, isHtmlSupported, isHttpEnabled)
-      )
+      TastyUtils.getTasty(targetUri, isHtmlSupported, isHttpEnabled)
     }
 
   def complete(params: OffsetParams): CompletableFuture[CompletionList] = {
