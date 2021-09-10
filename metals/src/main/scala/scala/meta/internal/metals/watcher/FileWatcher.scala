@@ -42,6 +42,7 @@ final class FileWatcher(
 ) extends Cancelable {
   import FileWatcher._
 
+  @volatile
   private var disposeAction: Option[() => Unit] = None
 
   override def cancel(): Unit = {

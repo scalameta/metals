@@ -73,6 +73,9 @@ object Main {
         sys.exit(1)
     } finally {
       server.cancelAll()
+      ec.shutdownNow()
+
+      sys.exit(0)
     }
   }
 
