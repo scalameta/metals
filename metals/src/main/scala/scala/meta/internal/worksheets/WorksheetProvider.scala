@@ -439,7 +439,7 @@ class WorksheetProvider(
             info.scalaVersion,
             ScalaVersions.scalaBinaryVersionFromFullVersion(info.scalaVersion)
           )
-          .withClasspath(info.fullClasspath.asScala.distinct.asJava)
+          .withClasspath(info.fullClasspath.distinct.asJava)
           .withScalacOptions(scalacOptions)
         mdocs(key) = MdocRef(scalaVersion, mdoc)
         mdoc

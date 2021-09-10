@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import java.{util => ju}
 
 import scala.meta.Dialect
 import scala.meta.dialects._
@@ -53,8 +52,16 @@ case class ScalaTarget(
     if (baseDir != null) baseDir else ""
   }
 
-  def fullClasspath: ju.List[Path] = {
-    scalac.getClasspath().map(_.toAbsolutePath.toNIO)
+  def fullClasspath: List[Path] = {
+    scalac
+      .getClasspath()
+      .map(_.toAbsolutePath)
+      .asScala
+      .collect {
+        case path if path.isJar || path.isDirectory =>
+          path.toNIO
+      }
+      .toList
   }
 
   def jarClasspath: List[AbsolutePath] = {
