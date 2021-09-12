@@ -1807,6 +1807,37 @@ class MetalsLanguageServer(
             Future.unit
           }.withObjectValue
         }
+      case ServerCommands.PasteWithIndentation() =>
+        val args = params.getArguments().asScala
+        val futureEdits = for {
+          arg0 <- args.lift(0)
+          uri <- Argument.getAsString(arg0)
+          arg1 <- args.lift(1)
+          range <- Argument.getAsRange(arg1)
+          arg2 <- args.lift(2)
+          tabSize <- Argument.getAsInt(arg2)
+          arg3 <- args.lift(3)
+          isInsertSpaces <- Argument.getAsBoolean(arg3)
+        } yield {
+          val edits = rangeFormattingProvider.formatIdentOnPaste(
+            uri,
+            range,
+            tabSize,
+            isInsertSpaces
+          )
+          languageClient
+            .applyEdit(
+              new ApplyWorkspaceEditParams(
+                new WorkspaceEdit(Map(uri -> edits.asJava).asJava)
+              )
+            )
+            .asInstanceOf[CompletableFuture[Object]]
+        }
+        futureEdits.getOrElse {
+          languageClient.showMessage(Messages.PasteWithIndentationFailed)
+          Future.unit.asJavaObject
+        }
+
       case ServerCommands.ExtractMemberDefinition() =>
         CancelTokens.future { token =>
           val args = params.getArguments().asScala

@@ -10,6 +10,7 @@ import scala.meta.tokens.Tokens
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextEdit
 
 case class RangeFormatterParams(
@@ -33,14 +34,14 @@ class RangeFormattingProvider(
     buffers: Buffers,
     trees: Trees
 ) {
-  val formatters: List[RangeFormatter] = List(
+  val defaultFormatters: List[RangeFormatter] = List(
     // enableStripMargin is not used on rangeFormatting
-    MultilineString(() => UserConfiguration()),
-    IndentOnPaste
+    MultilineString(() => UserConfiguration())
   )
 
   def format(
-      params: DocumentRangeFormattingParams
+      params: DocumentRangeFormattingParams,
+      formatters: List[RangeFormatter] = defaultFormatters
   ): List[TextEdit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val range = params.getRange
@@ -66,5 +67,18 @@ class RangeFormattingProvider(
         )
       }
       .getOrElse(Nil)
+  }
+
+  def formatIdentOnPaste(
+      uri: String,
+      range: Range,
+      tabSize: Int,
+      isInsertSpaces: Boolean
+  ): List[TextEdit] = {
+    val textDocumentId = new TextDocumentIdentifier(uri)
+    val formatOpts = new FormattingOptions(tabSize, isInsertSpaces)
+    val params =
+      new DocumentRangeFormattingParams(textDocumentId, formatOpts, range)
+    format(params, formatters = List(IndentOnPaste))
   }
 }

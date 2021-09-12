@@ -478,7 +478,7 @@ class IndentWhenPastingSuite
       """.stripMargin + base
         )
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        _ <- server.rangeFormatting(
+        _ <- server.indentOnPaste(
           "a/src/main/scala/a/Main.scala",
           testCase, // bez @@
           expected,

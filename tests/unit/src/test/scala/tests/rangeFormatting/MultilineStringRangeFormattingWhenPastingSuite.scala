@@ -222,8 +222,8 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |object Main {
        |  val str = '''
        |  |first line
-       |  second line
-       |   different indent
+       |second line
+       | different indent
        |  '''
        |}""".stripMargin
   )
@@ -327,6 +327,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |object Main {
        |  val str = s'''
        |               |ok'''.stripMargin
+       |  
        |  val other = '''
        |              |  some text
        |              |'''.stripMargin

@@ -698,6 +698,32 @@ final class TestingServer(
     }
   }
 
+  def indentOnPaste(
+      filename: String,
+      query: String,
+      expected: String,
+      paste: String,
+      root: AbsolutePath,
+      formattingOptions: Option[FormattingOptions]
+  ): Future[Unit] =
+    for {
+      (_, params) <- rangeFormattingParams(
+        filename,
+        query,
+        paste,
+        root,
+        formattingOptions
+      )
+      multiline <- executeCommand(
+        ServerCommands.PasteWithIndentation.id,
+        params.getTextDocument().getUri(),
+        params.getRange(),
+        params.getOptions().getTabSize().asInstanceOf[Integer],
+        params.getOptions().isInsertSpaces().asInstanceOf[java.lang.Boolean]
+      )
+      format = bufferContents(filename)
+    } yield Assertions.assertNoDiff(format, expected)
+
   def rangeFormatting(
       filename: String,
       query: String,

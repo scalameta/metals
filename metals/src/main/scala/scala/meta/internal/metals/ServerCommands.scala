@@ -326,6 +326,18 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val PasteWithIndentation = new Command(
+    "paste-with-indentation",
+    "Automatically adjust the indentation of a pasted snippet",
+    """|Whenever a user send an indented snippet this command will adjust it
+       |to fit the last known indentation within a block.
+       |""".stripMargin,
+    """|[uri, range, tabSize, insertSpaces], uri to the document that the command needs to be invoked on 
+       |together with the range of where it's pasted, the size of a single tab and
+       |a flag stating whether the editor prefers spaces.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */
@@ -416,6 +428,7 @@ object ServerCommands {
       InsertInferredType,
       NewScalaFile,
       NewScalaProject,
+      PasteWithIndentation,
       ResetChoicePopup,
       RestartBuildServer,
       RunDoctor,
