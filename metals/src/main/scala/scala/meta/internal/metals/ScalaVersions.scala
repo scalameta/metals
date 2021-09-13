@@ -60,7 +60,7 @@ object ScalaVersions {
   }
 
   def isFutureVersion(scalaVersion: String): Boolean = {
-    latestBinaryVersionFor(scalaVersion)
+    def isFuture = latestBinaryVersionFor(scalaVersion)
       .map(latest =>
         latest != scalaVersion && SemVer
           .isLaterVersion(latest, scalaVersion)
@@ -73,6 +73,7 @@ object ScalaVersions {
             isLatestScalaVersion.filter(!isScala3Version(_))
         versions.forall(ver => SemVer.isLaterVersion(ver, scalaVersion))
       }
+    !supportedScala3Versions(scalaVersion) && isFuture
   }
 
   def isCurrentScalaCompilerVersion(version: String): Boolean =
@@ -81,9 +82,7 @@ object ScalaVersions {
     ) == mtags.BuildInfo.scalaCompilerVersion
 
   def scalaBinaryVersionFromFullVersion(scalaVersion: String): String = {
-    if (isScala3Milestone(scalaVersion))
-      scalaVersion
-    else if (scalaVersion.startsWith("3"))
+    if (scalaVersion.startsWith("3"))
       "3"
     else
       scalaVersion.split('.').take(2).mkString(".")
