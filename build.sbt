@@ -493,7 +493,8 @@ lazy val metals = project
       "ammonite212" -> V.ammonite212Version,
       "ammonite213" -> V.ammonite213Version,
       "scala213" -> V.scala213,
-      "scala3" -> V.scala3
+      "scala3" -> V.scala3,
+      "nextScala3RC" -> V.nextScala3RC
     )
   )
   .dependsOn(mtags)
