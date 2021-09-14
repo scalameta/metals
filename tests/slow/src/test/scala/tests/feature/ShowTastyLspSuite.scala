@@ -27,9 +27,8 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
       result <- server.showTasty(
         s"$workspace/app/src/main/scala/a/b/Main.scala"
       )
-      _ = println(result)
     } yield
-      if (result.contains("Error")) Assertions.fail("Command shouldn't failed")
+      if (result.isLeft) Assertions.fail("Command shouldn't failed")
       else ()
   }
 
@@ -53,13 +52,12 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
       result <- server.showTasty(
         s"$workspace/app/src/main/scala/a/b/Main2.scala"
       )
-      _ = println(result)
     } yield
-      if (result.contains("Error")) ()
+      if (result.isLeft) ()
       else Assertions.fail("Command should failed")
   }
 
-  test("dont-open-tasty-file-scala2".only) {
+  test("dont-open-tasty-file-scala2") {
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -79,9 +77,8 @@ class ShowTastyLspSuite extends BaseLspSuite("showTasty") {
       result <- server.showTasty(
         s"$workspace/app/src/main/scala/a/b/Main.scala"
       )
-      _ = println(result)
     } yield
-      if (result.contains("Error")) ()
+      if (result.isLeft) ()
       else Assertions.fail("Command should failed")
   }
 }

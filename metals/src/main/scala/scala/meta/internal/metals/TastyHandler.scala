@@ -14,6 +14,15 @@ import scala.meta.io.AbsolutePath
 import com.google.gson.JsonPrimitive
 import org.eclipse.{lsp4j => l}
 
+// response which is send to the lsp client. Because of java serialization we cannot use
+// sealed hierarchy to model union type of success and error.
+// Moreover, we canot also use Option, so instead every field is nullable
+private case class TastyResponse(
+    requestedUri: URI,
+    tasty: String,
+    error: String
+)
+
 class TastyHandler(
     compilers: Compilers,
     buildTargets: BuildTargets,
@@ -59,7 +68,7 @@ class TastyHandler(
       }
     }
 
-  def getTastyForURI(uri: URI): Future[String] =
+  def getTastyForURI(uri: URI): Future[Either[String, String]] =
     getTasty(
       uri,
       clientConfig.isCommandInHtmlSupported(),
@@ -68,15 +77,21 @@ class TastyHandler(
 
   private def getTasty(
       params: l.ExecuteCommandParams
-  ): Future[String] =
+  ): Future[TastyResponse] =
     parseJsonParams(params) match {
       case Some(path) =>
         val uri = new URI(path)
-        getTastyForURI(uri)
+        getTastyForURI(uri).map { result =>
+          TastyResponse(
+            uri,
+            result.fold(_ => null, identity),
+            result.fold(identity, _ => null)
+          )
+        }
       case None =>
         val error = s"Error, invalid show TASTy arguments $params"
         scribe.error(error)
-        Future.successful(error)
+        Future.successful(TastyResponse(null, null, error))
     }
 
   private def parseJsonParams(
@@ -98,18 +113,29 @@ class TastyHandler(
       uri: URI,
       isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
-  ): Future[String] = {
+  ): Future[Either[String, String]] = {
     val absolutePathOpt = Try(AbsolutePath.fromAbsoluteUri(uri)) match {
-      case Success(value) => Some(value)
+      case Success(value) => Right(value)
       case Failure(exception) =>
-        scribe.error(exception.toString())
-        None
+        val error = exception.toString
+        scribe.error(error)
+        Left(error)
     }
+
     val pcAndTargetUriOpt = for {
       absolutePath <- absolutePathOpt
-      buildTargetId <- buildTargets.inverseSources(absolutePath)
-      buildTarget <- buildTargets.scalaTarget(buildTargetId)
-      pc <- compilers.loadCompilerForTarget(buildTarget)
+      buildTarget <-
+        buildTargets
+          .inverseSources(absolutePath)
+          .flatMap { buildTargetId => buildTargets.scalaTarget(buildTargetId) }
+          .toRight(s"Cannot find build target for $uri")
+          .filterOrElse(
+            _.scalaInfo.getScalaVersion.startsWith("3."),
+            """Currently, there is no support for the "Show TASTy" feature in Scala 2."""
+          )
+      pc <- compilers
+        .loadCompilerForTarget(buildTarget)
+        .toRight("Cannot load presentation compiler")
       tastyFileURI <- getTastyFileURI(
         uri,
         buildTarget.scalac.getClassDirectory.toAbsolutePath
@@ -117,9 +143,11 @@ class TastyHandler(
     } yield (pc, tastyFileURI)
 
     pcAndTargetUriOpt match {
-      case Some((pc, tastyUri)) =>
-        pc.getTasty(tastyUri, isHtmlSupported, isHttpEnabled).asScala
-      case _ => Future.successful("Error, .tasty file doesn't exist")
+      case Right((pc, tastyUri)) =>
+        pc.getTasty(tastyUri, isHtmlSupported, isHttpEnabled)
+          .asScala
+          .map(Right(_))
+      case Left(error) => Future.successful(Left(error))
     }
   }
 
@@ -130,22 +158,27 @@ class TastyHandler(
   private def getTastyFileURI(
       uri: URI,
       classDir: AbsolutePath
-  ): Option[URI] = {
+  ): Either[String, URI] = {
     val filePath = AbsolutePath.fromAbsoluteUri(uri)
     val filePathString = filePath.toString
-    val tastyURIOpt =
+    val tastyURI =
       if (filePathString.endsWith(".tasty")) {
-        Some(filePath.toURI)
+        Right(filePath.toURI)
       } else if (filePathString.endsWith(".scala")) {
         val fileSourceDirOpt = buildTargets.inverseSourceItem(filePath)
-        fileSourceDirOpt.map { fileSourceDir =>
-          val relative = filePath
-            .toRelative(fileSourceDir)
-            .resolveSibling(p => p.stripSuffix(".scala") + ".tasty")
-          classDir.resolve(relative).toURI
-        }
-      } else None
+        fileSourceDirOpt
+          .map { fileSourceDir =>
+            val relative = filePath
+              .toRelative(fileSourceDir)
+              .resolveSibling(p => p.stripSuffix(".scala") + ".tasty")
+            classDir.resolve(relative).toURI
+          }
+          .toRight("Cannot find directory with compiled classes")
+      } else Left(s"$uri has incorrect file extension")
 
-    tastyURIOpt.filter(AbsolutePath.fromAbsoluteUri(_).isFile)
+    tastyURI.filterOrElse(
+      AbsolutePath.fromAbsoluteUri(_).isFile,
+      s"There is no .tasty file for $uri at $classDir}"
+    )
   }
 }

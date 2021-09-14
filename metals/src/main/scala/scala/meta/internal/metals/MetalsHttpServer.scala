@@ -191,15 +191,26 @@ object MetalsHttpServer {
           path <- params.asScala.headOption
         } yield new URI(path)
 
-        uri.filter(_.isAbsolute()) match {
+        uri match {
           case Some(uri) =>
             languageServer.tastyHandler
               .getTastyForURI(uri)
               .onComplete {
-                case Success(value) =>
-                  exchange.getResponseSender().send(value)
+                case Success(response) =>
+                  response match {
+                    case Right(value) =>
+                      exchange.getResponseSender().send(value)
+                    case Left(value) =>
+                      exchange
+                        .setStatusCode(StatusCodes.BAD_REQUEST)
+                        .getResponseSender()
+                        .send(value)
+                  }
                 case Failure(e) =>
-                  exchange.getResponseSender().send(e.getMessage())
+                  exchange
+                    .setStatusCode(StatusCodes.BAD_REQUEST)
+                    .getResponseSender()
+                    .send(e.getMessage())
               }
           case None =>
             exchange
