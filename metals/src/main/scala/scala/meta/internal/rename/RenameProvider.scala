@@ -128,6 +128,15 @@ final class RenameProvider(
           occ.symbol.isLocal || foundName.contains(realName)
         }
 
+        def shouldCheckImplementation(
+            symbol: String,
+            path: AbsolutePath,
+            textDocument: TextDocument
+        ) =
+          !symbol.desc.isType && !(symbol.isLocal && implementationProvider
+            .defaultSymbolSearch(path, textDocument)(symbol)
+            .exists(info => info.isTrait || info.isClass))
+
         val allReferences = for {
           (occurence, semanticDb) <- symbolOccurrence.toIterable
           definitionLoc <- definition.locations.asScala.headOption.toIterable
@@ -161,7 +170,11 @@ final class RenameProvider(
           companionRefs = companionReferences(occurence.symbol, source, newName)
           implReferences = implementations(
             txtParams,
-            !occurence.symbol.desc.isType,
+            shouldCheckImplementation(
+              occurence.symbol,
+              source,
+              semanticDb
+            ),
             newName
           )
           loc <-

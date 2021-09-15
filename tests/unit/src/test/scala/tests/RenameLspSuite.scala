@@ -749,6 +749,41 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     newName = "C"
   )
 
+  renamed(
+    "hierarchy-inside-method-trait",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  final def main(args: Array[String]) = {
+       |    sealed trait <<Sy@@mbol>>
+       |    case class Method(name: String) extends <<Symbol>>
+       |    case class Variable(value: String) extends <<Symbol>>
+       |
+       |    val symbol2: <<Symbol>> = Method("method")
+       |    val symbol3: <<Symbol>> = Variable("value")
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol"
+  )
+
+  renamed(
+    "hierarchy-inside-method-class",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  final def main(args: Array[String]) = {
+       |    sealed abstract class <<Sy@@mbol>>
+       |    case class Method(name: String) extends <<Symbol>>
+       |    case class Variable(value: String) extends <<Symbol>>
+       |
+       |    val symbol2: <<Symbol>> = Method("method")
+       |    val symbol3: <<Symbol>> = Variable("value")
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol"
+  )
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
 
