@@ -28,270 +28,254 @@ class IndentWhenPastingSuite
 
   check(
     "single-line",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""val a: String = "a"
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  val a: String = "a"
-       |end Main""".stripMargin,
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    """val a: String = "a"""",
+    """
+      |object Main:
+      |  val a: String = "a"
+      |end Main
+      |""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "single-code-line",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""
-       |val a: String = "a"
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  val a: String = "a"
-       |end Main""".stripMargin,
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    "val a: String = \"a\"",
+    """
+      |object Main:
+      |  val a: String = "a"
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "correct-indentation",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""
-       |enum Color(val rgb: Int):
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    """|enum Color(val rgb: Int):
        |  case Red   extends Color(0xFF0000)
        |  case Green extends Color(0x00FF00)
-       |  case Blue  extends Color(0x0000FF)
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  enum Color(val rgb: Int):
-       |    case Red   extends Color(0xFF0000)
-       |    case Green extends Color(0x00FF00)
-       |    case Blue  extends Color(0x0000FF)
-       |end Main""".stripMargin,
+       |  case Blue  extends Color(0x0000FF)""".stripMargin,
+    """
+      |object Main:
+      |  enum Color(val rgb: Int):
+      |    case Red   extends Color(0xFF0000)
+      |    case Green extends Color(0x00FF00)
+      |    case Blue  extends Color(0x0000FF)
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "correct-indentation-multi-level",
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    @@
-       |  end SubMain
-       |end Main""".stripMargin,
-    s"""
-       |enum Color(val rgb: Int):
+    """
+      |object Main:
+      |  object SubMain:
+      |    @@
+      |  end SubMain
+      |end Main""".stripMargin,
+    """|enum Color(val rgb: Int):
        |  case Red   extends Color(0xFF0000)
        |  case Green extends Color(0x00FF00)
-       |  case Blue  extends Color(0x0000FF)
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    enum Color(val rgb: Int):
-       |      case Red   extends Color(0xFF0000)
-       |      case Green extends Color(0x00FF00)
-       |      case Blue  extends Color(0x0000FF)
-       |  end SubMain
-       |end Main""".stripMargin,
+       |  case Blue  extends Color(0x0000FF)""".stripMargin,
+    """
+      |object Main:
+      |  object SubMain:
+      |    enum Color(val rgb: Int):
+      |      case Red   extends Color(0xFF0000)
+      |      case Green extends Color(0x00FF00)
+      |      case Blue  extends Color(0x0000FF)
+      |  end SubMain
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "cursor-init-line-multi-level",
-    s"""
-       |object Main:
-       |  object SubMain:
-       |@@
-       |  end SubMain
-       |end Main""".stripMargin,
-    s"""
-       |enum Color(val rgb: Int):
+    """
+      |object Main:
+      |  object SubMain:
+      |    @@
+      |  end SubMain
+      |end Main""".stripMargin,
+    """|enum Color(val rgb: Int):
        |  case Red   extends Color(0xFF0000)
        |  case Green extends Color(0x00FF00)
-       |  case Blue  extends Color(0x0000FF)
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    enum Color(val rgb: Int):
-       |      case Red   extends Color(0xFF0000)
-       |      case Green extends Color(0x00FF00)
-       |      case Blue  extends Color(0x0000FF)
-       |  end SubMain
-       |end Main""".stripMargin,
+       |  case Blue  extends Color(0x0000FF)""".stripMargin,
+    """
+      |object Main:
+      |  object SubMain:
+      |    enum Color(val rgb: Int):
+      |      case Red   extends Color(0xFF0000)
+      |      case Green extends Color(0x00FF00)
+      |      case Blue  extends Color(0x0000FF)
+      |  end SubMain
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "cursor-init-line-multi-level-spaced",
-    s"""
-       |object Main:
-       |  object SubMain:
-       |@@
-       |  end SubMain
-       |end Main""".stripMargin,
-    s"""
-       |                        enum Color(val rgb: Int):
+    """
+      |object Main:
+      |  object SubMain:
+      |    @@
+      |  end SubMain
+      |end Main""".stripMargin,
+    """|                        enum Color(val rgb: Int):
        |                          case Red   extends Color(0xFF0000)
        |                          case Green extends Color(0x00FF00)
-       |                          case Blue  extends Color(0x0000FF)
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    enum Color(val rgb: Int):
-       |      case Red   extends Color(0xFF0000)
-       |      case Green extends Color(0x00FF00)
-       |      case Blue  extends Color(0x0000FF)
-       |  end SubMain
-       |end Main""".stripMargin,
+       |                          case Blue  extends Color(0x0000FF)""".stripMargin,
+    """
+      |object Main:
+      |  object SubMain:
+      |    enum Color(val rgb: Int):
+      |      case Red   extends Color(0xFF0000)
+      |      case Green extends Color(0x00FF00)
+      |      case Blue  extends Color(0x0000FF)
+      |  end SubMain
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "line-continuation",
-    s"""
-       |object Main:
+    """
+      |object Main:
+      |  object SubMain:
+      |    enum @@
+      |  end SubMain
+      |end Main""".stripMargin,
+    """|                       Color(val rgb: Int):
+       |                          case Red   extends Color(0xFF0000)
+       |                          case Green extends Color(0x00FF00)
+       |                          case Blue  extends Color(0x0000FF)""".stripMargin,
+    """|object Main:
        |  object SubMain:
-       |    enum @@
-       |  end SubMain
-       |end Main""".stripMargin,
-    s"""                       Color(val rgb: Int):
+       |    enum                        Color(val rgb: Int):
        |                          case Red   extends Color(0xFF0000)
        |                          case Green extends Color(0x00FF00)
        |                          case Blue  extends Color(0x0000FF)
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    enum                        Color(val rgb: Int):
-       |       case Red   extends Color(0xFF0000)
-       |       case Green extends Color(0x00FF00)
-       |       case Blue  extends Color(0x0000FF)
        |  end SubMain
-       |end Main""".stripMargin,
+       |end Main
+       |""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "multistring-no-code-deletion",
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    val a: String = \"\"\"| multiline
-       |                     | string
-       |                     |
-       |    @@
-       |  end SubMain
-       |end Main""".stripMargin,
-    s"""
-       |                     |
+    """
+      |object Main:
+      |  object SubMain:
+      |    val a: String = \"\"\"| multiline
+      |                     | string
+      |                     |
+      |    @@
+      |  end SubMain
+      |end Main""".stripMargin,
+    """|                     |
        |                     |\"\"\".stripMargin
        |
        |  val b: String = \"\"\"| multiline
        |                    | string
-       |                    |\"\"\".stripMargin
-       |""".stripMargin,
-    s"""
-       |object Main:
+       |                    |\"\"\".stripMargin""".stripMargin,
+    """|object Main:
        |  object SubMain:
        |    val a: String = \"\"\"| multiline
        |                     | string
        |                     |
-       |                       |
+       |    |
        |                       |\"\"\".stripMargin
        |
        |    val b: String = \"\"\"| multiline
        |                      | string
        |                      |\"\"\".stripMargin
        |  end SubMain
-       |end Main""".stripMargin,
+       |end Main
+       |""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "correct-indentation-after-multiline-string",
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    val a: String = \"\"\"| multiline
-       |                     | string
-       |                     |\"\"\".stripMargin
-       |    @@
-       |  end SubMain
-       |end Main""".stripMargin,
-    s"""
-       |  val b: String = "b"
-       |  val c: String = "c"
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  object SubMain:
-       |    val a: String = \"\"\"| multiline
-       |                     | string
-       |                     |\"\"\".stripMargin
-       |    val b: String = "b"
-       |    val c: String = "c"
-       |  end SubMain
-       |end Main""".stripMargin,
+    """
+      |object Main:
+      |  object SubMain:
+      |    val a: String = \"\"\"| multiline
+      |                     | string
+      |                     |\"\"\".stripMargin
+      |    @@
+      |  end SubMain
+      |end Main""".stripMargin,
+    """|  val b: String = "b"
+       |  val c: String = "c"""".stripMargin,
+    """
+      |object Main:
+      |  object SubMain:
+      |    val a: String = \"\"\"| multiline
+      |                     | string
+      |                     |\"\"\".stripMargin
+      |    val b: String = "b"
+      |    val c: String = "c"
+      |  end SubMain
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "paste-after-correctly-indented-line",
-    s"""
-       |object Main:
-       |  val a: String = "a"
-       |@@
-       |end Main""".stripMargin,
-    s"""enum Color(val rgb: Int):
-       |  case Red   extends Color(0xFF0000)
-       |  case Green extends Color(0x00FF00)
-       |  case Blue  extends Color(0x0000FF)
-       |""".stripMargin,
-    s"""
-       |object Main:
-       |  val a: String = "a"
-       |  enum Color(val rgb: Int):
-       |    case Red   extends Color(0xFF0000)
-       |    case Green extends Color(0x00FF00)
-       |    case Blue  extends Color(0x0000FF)
-       |end Main""".stripMargin,
+    """
+      |object Main:
+      |  val a: String = "a"
+      |  @@
+      |end Main""".stripMargin,
+    """enum Color(val rgb: Int):
+      |  case Red   extends Color(0xFF0000)
+      |  case Green extends Color(0x00FF00)
+      |  case Blue  extends Color(0x0000FF)""".stripMargin,
+    """
+      |object Main:
+      |  val a: String = "a"
+      |  enum Color(val rgb: Int):
+      |    case Red   extends Color(0xFF0000)
+      |    case Green extends Color(0x00FF00)
+      |    case Blue  extends Color(0x0000FF)
+      |end Main""".stripMargin,
     scalaVersion,
     formattingOptions
   )
 
   check(
     "extension",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""
-       |extension [T](using b: B)(s: String)(using A)
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    """|extension [T](using b: B)(s: String)(using A)
        |  def double = s * 2
        |""".stripMargin,
     """|object Main:
        |  extension [T](using b: B)(s: String)(using A)
        |    def double = s * 2
+       |
        |end Main
        |""".stripMargin,
     scalaVersion,
@@ -300,12 +284,11 @@ class IndentWhenPastingSuite
 
   check(
     "keep-empty-lines-inside-paste",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""
-       |trait X[A] {
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    """|trait X[A] {
        |    def doX: A
        |}
        |
@@ -314,7 +297,6 @@ class IndentWhenPastingSuite
        |
        |
        |def bar: X[A] = ???
-       |
        |""".stripMargin,
     """|object Main:
        |  trait X[A] {
@@ -326,6 +308,7 @@ class IndentWhenPastingSuite
        |
        |
        |  def bar: X[A] = ???
+       |
        |end Main
        |""".stripMargin,
     scalaVersion,
@@ -334,17 +317,15 @@ class IndentWhenPastingSuite
 
   check(
     "keep-empty-lines-inside-paste2",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""
-       |trait X[A] {
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    """|trait X[A] {
        |
        |  def doX: A
        |
-       |}
-       |""".stripMargin,
+       |}""".stripMargin,
     """|object Main:
        |  trait X[A] {
        |
@@ -359,15 +340,13 @@ class IndentWhenPastingSuite
 
   check(
     "if-paren",
-    s"""
-       |object Main:
-       |  @@
-       |end Main""".stripMargin,
-    s"""
-       |if (cond)
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    """|if (cond)
        |  def double = s * 2
-       |  double
-       |""".stripMargin,
+       |  double""".stripMargin,
     """|object Main:
        |  if (cond)
        |    def double = s * 2
@@ -380,21 +359,21 @@ class IndentWhenPastingSuite
 
   check(
     "paste-without-leading-nl",
-    s"""
-       |object Main {
-       |  @@
-       |}""".stripMargin,
-    s"""trait X[A] {
-       |
-       |    def foo: X[A]
-       |}
-       |
-       |""".stripMargin,
+    """
+      |object Main {
+      |  @@
+      |}""".stripMargin,
+    """trait X[A] {
+      |
+      |    def foo: X[A]
+      |}
+      |""".stripMargin,
     """|object Main {
        |  trait X[A] {
        |
        |      def foo: X[A]
        |  }
+       |
        |}
        |""".stripMargin,
     scalaVersion,
@@ -403,15 +382,13 @@ class IndentWhenPastingSuite
 
   check(
     "normalize-tabs-to-spaces",
-    s"""
-       |object Main:
-       |@@
-       |end Main""".stripMargin,
-    s"""
-       |\tif (cond)
-       |\t\tdef double = s * 2
-       |\t\tdouble
-       |""".stripMargin,
+    """
+      |object Main:
+      |  @@
+      |end Main""".stripMargin,
+    s"""|\tif (cond)
+        |\t\tdef double = s * 2
+        |\t\tdouble""".stripMargin,
     """|object Main:
        |  if (cond)
        |    def double = s * 2
@@ -426,13 +403,11 @@ class IndentWhenPastingSuite
     "normalize-spaces-to-tabs",
     s"""
        |object Main:
-       |@@
+       |\t@@
        |end Main""".stripMargin,
-    s"""
-       |if (cond)
+    """|if (cond)
        |  def double = s * 2
-       |  double
-       |""".stripMargin,
+       |  double""".stripMargin,
     """|object Main:
        |\tif (cond)
        |\t\tdef double = s * 2
@@ -511,6 +486,79 @@ class IndentWhenPastingSuite
       |    String
       |  ] = ""
       |}""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "methods",
+    """
+      |object Main {
+      |  def hello() = 
+      |    println("hello")
+      |    println("hello")
+      |    @@ 
+      |}""".stripMargin,
+    """|def bye() =
+       |  println("bye")
+       |  println("bye") """.stripMargin,
+    """|object Main {
+       |  def hello() = 
+       |    println("hello")
+       |    println("hello")
+       |    def bye() =
+       |      println("bye")
+       |      println("bye")  
+       |}
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "methods-same-line",
+    """
+      |object Main {
+      |  def hello() = 
+      |    println("hello")
+      |    println("hello")
+      |  @@ 
+      |}""".stripMargin,
+    """|
+       |def bye() =
+       |  println("bye")
+       |
+       |  println("bye")
+       |""".stripMargin,
+    """|object Main {
+       |  def hello() = 
+       |    println("hello")
+       |    println("hello")
+       |
+       |  def bye() =
+       |    println("bye")
+       |
+       |    println("bye")
+       |
+       |}
+       |""".stripMargin,
+    scalaVersion,
+    formattingOptions
+  )
+
+  check(
+    "pasting-after-exiting-code",
+    s"""
+       |object Main {
+       |  ""@@
+       |}""".stripMargin,
+    s"""|.stripMargin
+        |  123""".stripMargin,
+    """|object Main {
+       |  "".stripMargin
+       |  123
+       |}
+       |""".stripMargin,
     scalaVersion,
     formattingOptions
   )
