@@ -9,6 +9,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands.TastyResponse
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonPrimitive
