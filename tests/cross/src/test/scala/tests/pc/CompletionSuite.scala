@@ -249,8 +249,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
            |fill[A](n: Int)(elem: => A): CC[A]
            |iterate[A](start: A, len: Int)(f: A => A): CC[A]
-           |range[A: Integral](start: A, end: A, step: A): CC[A]
            |range[A: Integral](start: A, end: A): CC[A]
+           |range[A: Integral](start: A, end: A, step: A): CC[A]
            |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A] @uncheckedVariance]
            |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): CC[CC[CC[A]] @uncheckedVariance]
            |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
@@ -260,8 +260,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |unfold[A, S](init: S)(f: S => Option[(A, S)]): CC[A]
            |->[B](y: B): (A, B)
            |ensuring(cond: Boolean): A
-           |ensuring(cond: Boolean, msg: => Any): A
            |ensuring(cond: A => Boolean): A
+           |ensuring(cond: Boolean, msg: => Any): A
            |ensuring(cond: A => Boolean, msg: => Any): A
            |formatted(fmtstr: String): String
            |fromSpecific(from: From)(it: IterableOnce[A]): C
@@ -672,8 +672,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
-           |readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
+        """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
+           |readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
            |""".stripMargin
     )
   )
@@ -930,10 +930,10 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some scala
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeToExpr - scala.quoted.ToExpr
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
+           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr - scala.quoted.FromExpr
+           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
   )
@@ -957,10 +957,10 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some scala
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeToExpr - scala.quoted.ToExpr
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
+           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr - scala.quoted.FromExpr
+           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
   )

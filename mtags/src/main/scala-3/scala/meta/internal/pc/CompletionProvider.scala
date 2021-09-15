@@ -39,7 +39,9 @@ class CompletionProvider(
     val (_, compilerCompletions) = Completion.completions(pos)
 
     val (completions, result) =
-      compilerCompletions.flatMap(CompletionValue.fromCompiler).filterInteresting()
+      compilerCompletions
+        .flatMap(CompletionValue.fromCompiler)
+        .filterInteresting()
 
     val args = Completions.namedArgCompletions(pos, path)
     val all = completions ++ args
@@ -75,7 +77,8 @@ class CompletionProvider(
           sym => {
             val value =
               indexedContext.lookupSym(sym) match {
-                case IndexedContext.Result.InScope => CompletionValue.scope(sym.decodedName, sym)
+                case IndexedContext.Result.InScope =>
+                  CompletionValue.scope(sym.decodedName, sym)
                 case _ => CompletionValue.workspace(sym.decodedName, sym)
               }
             visit(value)
@@ -275,9 +278,9 @@ class CompletionProvider(
         val s1 = o1.symbol
         val s2 = o2.symbol
         if (
-          s1.isLocal && s2.isLocal && 
-            o1.kind != CompletionValue.Kind.NamedArg &&
-            o2.kind != CompletionValue.Kind.NamedArg
+          s1.isLocal && s2.isLocal &&
+          o1.kind != CompletionValue.Kind.NamedArg &&
+          o2.kind != CompletionValue.Kind.NamedArg
         ) {
           if (s1.srcPos.isAfter(s2.srcPos)) -1
           else 1
@@ -326,8 +329,8 @@ class CompletionProvider(
                 if (byOwner != 0) byOwner
                 else {
                   val byParamCount = Integer.compare(
-                    s1.typeParams.size,
-                    s2.typeParams.size
+                    s1.paramSymss.flatten.size,
+                    s2.paramSymss.flatten.size
                   )
                   if (byParamCount != 0) byParamCount
                   else {
