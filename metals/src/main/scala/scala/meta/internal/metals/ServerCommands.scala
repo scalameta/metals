@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import javax.annotation.Nullable
 
 import scala.util.matching.Regex
@@ -188,6 +189,16 @@ object ServerCommands {
        |but with code lenses that direct user to proper location in codebase.
        |""".stripMargin,
     "[string], where the string is a stacktrace."
+  )
+
+  /* Response which is sent to the lsp client. Because of java serialization we cannot use
+   * sealed hierarchy to model union type of success and error.
+   * Moreover, we cannot use Option to indicate optional values, so instead every field is nullable.
+   * */
+  private[metals] case class TastyResponse(
+      requestedUri: URI,
+      tasty: String,
+      error: String
   )
 
   val ShowTasty = new Command(

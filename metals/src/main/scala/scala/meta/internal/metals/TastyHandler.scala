@@ -14,15 +14,15 @@ import scala.meta.io.AbsolutePath
 import com.google.gson.JsonPrimitive
 import org.eclipse.{lsp4j => l}
 
-// response which is send to the lsp client. Because of java serialization we cannot use
-// sealed hierarchy to model union type of success and error.
-// Moreover, we canot also use Option, so instead every field is nullable
-private case class TastyResponse(
-    requestedUri: URI,
-    tasty: String,
-    error: String
-)
-
+/**
+ * For clients supporting executing commands [[TastyResponse]] is returned and clients can determine on their own how to handle returned value.
+ * If client supports http, he is redirected to the tasty endpoint defined at [[MetalsHttpServer]].
+ * That endpoint reuses logic declared in [[TastyHandler]]
+ * In both cases logic is pretty same:
+ * - for a given URI (which could be .scala or .tasty file itself) try to find .tasty file
+ * - dispatch request to the Presentation Compiler. It's worth noting that PC takes into account
+ *   client configuration to determine proper response format (HTML, console or plain text)
+ */
 class TastyHandler(
     compilers: Compilers,
     buildTargets: BuildTargets,
@@ -104,17 +104,17 @@ class TastyHandler(
   } yield arg.getAsString()
 
   /**
-   * For given uri (could be both .scala and .tasty file) try to find:
+   * For a given uri (could be both .scala and .tasty file) try to find:
    * - build target
    * - uri to existing tasty file
-   * Iff they both exists get decoded tasty file content (pc.getTasty takes into account if client supports html)
+   * If they both exists get decoded tasty file content (pc.getTasty takes into account if client supports html)
    */
   private def getTasty(
       uri: URI,
       isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
   ): Future[Either[String, String]] = {
-    val absolutePathOpt = Try(AbsolutePath.fromAbsoluteUri(uri)) match {
+    val absolutePath = Try(AbsolutePath.fromAbsoluteUri(uri)) match {
       case Success(value) => Right(value)
       case Failure(exception) =>
         val error = exception.toString
@@ -122,11 +122,11 @@ class TastyHandler(
         Left(error)
     }
 
-    val pcAndTargetUriOpt = for {
-      absolutePath <- absolutePathOpt
+    val pcAndTargetUri = for {
+      filePath <- absolutePath
       buildTarget <-
         buildTargets
-          .inverseSources(absolutePath)
+          .inverseSources(filePath)
           .flatMap { buildTargetId => buildTargets.scalaTarget(buildTargetId) }
           .toRight(s"Cannot find build target for $uri")
           .filterOrElse(
@@ -142,18 +142,19 @@ class TastyHandler(
       )
     } yield (pc, tastyFileURI)
 
-    pcAndTargetUriOpt match {
+    pcAndTargetUri match {
       case Right((pc, tastyUri)) =>
         pc.getTasty(tastyUri, isHtmlSupported, isHttpEnabled)
           .asScala
           .map(Right(_))
-      case Left(error) => Future.successful(Left(error))
+      case Left(error) =>
+        Future.successful(Left(error))
     }
   }
 
   /**
    * @param classDir class directory of build target where .tasty file will be looked for
-   * @return Some(tastyURI) when tasty file for given uri exists or None otherwise
+   * @return Right with tasty file for given uri exists or Left with potential error otherwise
    */
   private def getTastyFileURI(
       uri: URI,
