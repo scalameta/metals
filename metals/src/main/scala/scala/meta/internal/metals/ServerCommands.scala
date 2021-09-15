@@ -205,7 +205,7 @@ object ServerCommands {
     "show-tasty",
     "Show TASTy",
     """|If the file is a Scala 3 source, this command will try to find the relevant tasty file for it, 
-       |read it and display it in a human readable format. If the argument already points to a Scala file, 
+       |read it and display it in a human readable format. If the argument already points to a TASTy file, 
        |it will be read directly.""".stripMargin,
     "[string], where the string is a path to a Scala 3 source or a tasty file."
   )
