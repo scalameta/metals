@@ -17,11 +17,15 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.{lsp4j => l}
 
+class X
+
 class CompletionProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams
 ) {
   import compiler._
+
+  val x: X = ???
 
   private def cursorName: String = {
     val i = params.offset() - 1

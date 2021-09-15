@@ -585,33 +585,6 @@ class CompletionSuite extends BaseCompletionSuite {
     // Scala 2.13.5 adds additional completions that actually fit, but are not useful for this test
     topLines = Some(25),
     compat = Map(
-      "3.0.0" ->
-        """|Function scala
-           |Function0 scala
-           |Function1 scala
-           |Function1 scala
-           |Function2 scala
-           |Function3 scala
-           |Function4 scala
-           |Function5 scala
-           |Function6 scala
-           |Function7 scala
-           |Function8 scala
-           |Function9 scala
-           |Function10 scala
-           |Function11 scala
-           |Function12 scala
-           |Function13 scala
-           |Function14 scala
-           |Function15 scala
-           |Function16 scala
-           |Function17 scala
-           |Function18 scala
-           |Function19 scala
-           |Function20 scala
-           |Function21 scala
-           |Function22 scala
-           |""".stripMargin,
       "3" ->
         """|Function scala
            |Function0 scala
@@ -698,10 +671,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |readAttributes[A <: BasicFileAttributes](path: Path, type: Class[A], options: LinkOption*): A
        |""".stripMargin,
     compat = Map(
-      "3.0.0" ->
-        """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
-           |readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
-           |""".stripMargin,
       "3" ->
         """|readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
            |readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
@@ -1059,11 +1028,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
            |""".stripMargin,
-      "3.0.0" ->
-        """|SafeVarargs java.lang
-           |SafeVarargs java.lang
-           |ScalaReflectionException scala
-           |""".stripMargin,
       "3" ->
         """|Seq scala.collection.immutable
            |Set scala.collection.immutable
@@ -1112,14 +1076,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |Nil scala.collection.immutable
        |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Option(3),
-    compat = Map(
-      "3.0.0" ->
-        """|Nil scala.collection.immutable
-           |NoManifest scala.reflect
-           |NegativeArraySizeException java.lang
-           |""".stripMargin
-    )
+    topLines = Option(3)
   )
 
   check(
@@ -1134,14 +1091,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |Nil scala.collection.immutable
        |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Option(3),
-    compat = Map(
-      "3.0.0" ->
-        """|Nil scala.collection.immutable
-           |NoManifest scala.reflect
-           |NegativeArraySizeException java.lang
-           |""".stripMargin
-    )
+    topLines = Option(3)
   )
 
   check(
@@ -1165,10 +1115,6 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     filterText = "substring",
     compat = Map(
-      "3.0.0" ->
-        """|substring(x$0: Int, x$1: Int): String
-           |substring(x$0: Int): String
-           |""".stripMargin,
       "3" ->
         """|substring(x$0: Int): String
            |substring(x$0: Int, x$1: Int): String

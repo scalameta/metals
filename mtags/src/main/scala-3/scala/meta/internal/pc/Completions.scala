@@ -97,12 +97,10 @@ case class ArgCompletion(
   def contribute: List[CompletionValue] = {
     val printer = SymbolPrinter()
     params.map(p => {
-      val completion = Completion(
+      CompletionValue.namedArg(
         s"${p.nameBackticked} = ",
-        printer.typeString(p.info),
-        List(p)
+        p
       )
-      CompletionValue.NamedArg(completion)
     })
   }
 

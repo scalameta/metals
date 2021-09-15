@@ -1,17 +1,30 @@
 package scala.meta.internal.pc
 
+import dotty.tools.dotc.core.Symbols.Symbol
+import scala.meta.internal.pc.CompletionValue.Kind
 import dotty.tools.dotc.interactive.Completion
 
-enum CompletionValue {
-  case NamedArg(v: Completion)
-  case Scope(v: Completion)
-  case Workspace(v: Completion)
-  case Compiler(v: Completion)
+case class CompletionValue(
+  label: String,
+  symbol: Symbol,
+  kind: Kind
+)
 
-  def value: Completion = this match {
-    case Workspace(v) => v
-    case Compiler(v) => v
-    case NamedArg(v) => v
-    case Scope(v) => v
+object CompletionValue {
+
+  enum Kind {
+    case NamedArg, Workspace, Compiler, Scope
   }
+
+  def fromCompiler(completion: Completion): List[CompletionValue] = 
+    completion.symbols.map(CompletionValue(completion.label, _, Kind.Compiler))
+
+  def namedArg(label: String, sym: Symbol): CompletionValue =
+    CompletionValue(label, sym, Kind.NamedArg)
+
+  def workspace(label: String, sym: Symbol): CompletionValue =
+    CompletionValue(label, sym, Kind.Workspace)
+  
+  def scope(label: String, sym: Symbol): CompletionValue =
+    CompletionValue(label, sym, Kind.Scope)
 }

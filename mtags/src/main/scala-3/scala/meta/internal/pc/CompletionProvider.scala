@@ -39,11 +39,10 @@ class CompletionProvider(
     val (_, compilerCompletions) = Completion.completions(pos)
 
     val (completions, result) =
-      compilerCompletions.map(CompletionValue.Compiler(_)).filterInteresting()
+      compilerCompletions.flatMap(CompletionValue.fromCompiler).filterInteresting()
 
     val args = Completions.namedArgCompletions(pos, path)
-
-    val all = (completions ++ args)
+    val all = completions ++ args
 
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
@@ -67,22 +66,17 @@ class CompletionProvider(
           .filter(sym => !sym.is(Synthetic) && !sym.isConstructor)
 
         filtered.map { sym =>
-          val completion =
-            Completion(sym.decodedName, description(sym), List(sym))
-          visit(CompletionValue.Scope(completion))
+          visit(CompletionValue.scope(sym.decodedName, sym))
         }
         Some(SymbolSearch.Result.INCOMPLETE)
       case CompletionKind.Scope =>
         val visitor = new CompilerSearchVisitor(
           query,
           sym => {
-            val completion =
-              Completion(sym.decodedName, description(sym), List(sym))
             val value =
               indexedContext.lookupSym(sym) match {
-                case IndexedContext.Result.InScope =>
-                  CompletionValue.Scope(completion)
-                case _ => CompletionValue.Workspace(completion)
+                case IndexedContext.Result.InScope => CompletionValue.scope(sym.decodedName, sym)
+                case _ => CompletionValue.workspace(sym.decodedName, sym)
               }
             visit(value)
           }
@@ -90,11 +84,6 @@ class CompletionProvider(
         Some(search.search(query, buildTargetIdentifier, visitor))
       case _ => None
     }
-  }
-
-  extension (c: Completion) {
-    // completionItem method either way takes only head symbol, so why can safely ignore the rest
-    def sym: Symbol = c.symbols.head
   }
 
   extension (s: SrcPos) {
@@ -123,9 +112,9 @@ class CompletionProvider(
       val isSeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
       def visit(head: CompletionValue): Boolean = {
-        val sym = head.value.sym
-        val id = head match {
-          case _: CompletionValue.NamedArg =>
+        val sym = head.symbol
+        val id = head.kind match {
+          case CompletionValue.Kind.NamedArg =>
             sym.detailString + "="
           case _ =>
             val name = SemanticdbSymbols.symbolName(sym)
@@ -187,7 +176,7 @@ class CompletionProvider(
   ): Int = {
     import MemberOrdering._
     var relevance = 0
-    val sym = completion.value.sym
+    val sym = completion.symbol
 
     def hasGetter = try {
       def isModuleOrClass = sym.is(Module) || sym.isClass
@@ -201,7 +190,7 @@ class CompletionProvider(
     // symbols defined in this file are more relevant
     if (
       (pos.source != sym.source || sym.is(Package)) &&
-      !completion.isInstanceOf[CompletionValue.NamedArg]
+      completion.kind != CompletionValue.Kind.NamedArg
     )
       relevance |= IsNotDefinedInFile
     // fields are more relevant than non fields
@@ -225,10 +214,10 @@ class CompletionProvider(
     if (sym.is(Synthetic) && !sym.isAllOf(EnumCase)) relevance |= IsSynthetic
     if (sym.isDeprecated) relevance |= IsDeprecated
     if (isEvilMethod(sym.name)) relevance |= IsEvilMethod
-    completion match {
-      case CompletionValue.Workspace(_) =>
+    completion.kind match {
+      case CompletionValue.Kind.Workspace =>
         relevance |= (IsWorkspaceSymbol + sym.name.show.length)
-      case CompletionValue.NamedArg(_) =>
+      case CompletionValue.Kind.NamedArg =>
         relevance |= IsNamedArg
       case _ =>
     }
@@ -283,12 +272,12 @@ class CompletionProvider(
       val queryLower = completionPos.query.toLowerCase()
       val fuzzyCache = mutable.Map.empty[Symbol, Int]
       def compareLocalSymbols(o1: CompletionValue, o2: CompletionValue): Int = {
-        val s1 = o1.value.sym
-        val s2 = o2.value.sym
+        val s1 = o1.symbol
+        val s2 = o2.symbol
         if (
-          s1.isLocal && s2.isLocal && !o1
-            .isInstanceOf[CompletionValue.NamedArg] && !o2
-            .isInstanceOf[CompletionValue.NamedArg]
+          s1.isLocal && s2.isLocal && 
+            o1.kind != CompletionValue.Kind.NamedArg &&
+            o2.kind != CompletionValue.Kind.NamedArg
         ) {
           if (s1.srcPos.isAfter(s2.srcPos)) -1
           else 1
@@ -308,8 +297,8 @@ class CompletionProvider(
       }
 
       override def compare(o1: CompletionValue, o2: CompletionValue): Int = {
-        val s1 = o1.value.sym
-        val s2 = o2.value.sym
+        val s1 = o1.symbol
+        val s2 = o2.symbol
         val byLocalSymbol = compareLocalSymbols(o1, o2)
         if (byLocalSymbol != 0) byLocalSymbol
         else {

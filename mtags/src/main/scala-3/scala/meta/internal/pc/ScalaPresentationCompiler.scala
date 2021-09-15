@@ -168,7 +168,7 @@ case class ScalaPresentationCompiler(
             config
           )
 
-          val items = completions.zipWithIndex.flatMap { case (item, idx) =>
+          val items = completions.zipWithIndex.map { case (item, idx) =>
             completionItems(
               item,
               history,
@@ -470,7 +470,7 @@ case class ScalaPresentationCompiler(
       completionPos: CompletionPos,
       path: List[Tree],
       indexedContext: IndexedContext
-  )(using Context): List[CompletionItem] = {
+  )(using Context): CompletionItem = {
     val printer = SymbolPrinter()(using ctx)
 
     def completionItemKind(
@@ -490,122 +490,119 @@ case class ScalaPresentationCompiler(
         CompletionItemKind.Field
     }
 
-    val rawCompletion = completion.value
-
     val editRange = completionPos.toEditRange
+    val sym = completion.symbol
 
-    rawCompletion.symbols.map { sym =>
-      // For overloaded signatures we get multiple symbols, so we need
-      // to recalculate the description
-      // related issue https://github.com/lampepfl/dotty/issues/11941
-      lazy val kind: CompletionItemKind = completionItemKind(sym)
+    // For overloaded signatures we get multiple symbols, so we need
+    // to recalculate the description
+    // related issue https://github.com/lampepfl/dotty/issues/11941
+    lazy val kind: CompletionItemKind = completionItemKind(sym)
 
-      val description = printer.completionDetailString(sym, history)
+    val description = printer.completionDetailString(sym, history)
 
-      def mkItem0(
-          ident: String,
-          nameEdit: TextEdit,
-          isFromWorkspace: Boolean = false,
-          additionalEdits: List[TextEdit] = Nil
-      ): CompletionItem = {
+    def mkItem0(
+        ident: String,
+        nameEdit: TextEdit,
+        isFromWorkspace: Boolean = false,
+        additionalEdits: List[TextEdit] = Nil
+    ): CompletionItem = {
 
-        val label =
-          kind match {
-            case CompletionItemKind.Method =>
+      val label =
+        kind match {
+          case CompletionItemKind.Method =>
+            s"${ident}${description}"
+          case CompletionItemKind.Variable | CompletionItemKind.Field =>
+            s"${ident}: ${description}"
+          case CompletionItemKind.Module | CompletionItemKind.Class =>
+            if (isFromWorkspace)
+              s"${ident} -${description}"
+            else
               s"${ident}${description}"
-            case CompletionItemKind.Variable | CompletionItemKind.Field =>
-              s"${ident}: ${description}"
-            case CompletionItemKind.Module | CompletionItemKind.Class =>
-              if (isFromWorkspace)
-                s"${ident} -${description}"
-              else
-                s"${ident}${description}"
-            case _ =>
-              ident
-          }
-        val item = new CompletionItem(label)
-
-        item.setSortText(f"${idx}%05d")
-        item.setDetail(description)
-        item.setFilterText(rawCompletion.label)
-
-        item.setTextEdit(nameEdit)
-
-        item.setAdditionalTextEdits(additionalEdits.asJava)
-
-        val documentation = ParsedComment.docOf(sym)
-        if (documentation.nonEmpty) {
-          item.setDocumentation(hoverContent(None, documentation.toList))
+          case _ =>
+            ident
         }
+      val item = new CompletionItem(label)
 
-        if (sym.isDeprecated) {
-          item.setTags(List(CompletionItemTag.Deprecated).asJava)
+      item.setSortText(f"${idx}%05d")
+      item.setDetail(description)
+      item.setFilterText(completion.label)
+
+      item.setTextEdit(nameEdit)
+
+      item.setAdditionalTextEdits(additionalEdits.asJava)
+
+      val documentation = ParsedComment.docOf(sym)
+      if (documentation.nonEmpty) {
+        item.setDocumentation(hoverContent(None, documentation.toList))
+      }
+
+      if (sym.isDeprecated) {
+        item.setTags(List(CompletionItemTag.Deprecated).asJava)
+      }
+
+      item.setKind(completionItemKind(sym))
+      item
+    }
+
+    def mkItem(
+        ident: String,
+        value: String,
+        isFromWorkspace: Boolean = false,
+        additionalEdits: List[TextEdit] = Nil
+    ): CompletionItem = {
+      val nameEdit = new TextEdit(
+        editRange,
+        value
+      )
+      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
+    }
+
+    def mkWorkspaceItem(
+        ident: String,
+        value: String,
+        additionalEdits: List[TextEdit] = Nil
+    ): CompletionItem =
+      mkItem(ident, value, isFromWorkspace = true, additionalEdits)
+
+    val ident = completion.label
+    completion.kind match {
+      case CompletionValue.Kind.Workspace =>
+        path match {
+          case (_: Ident) :: (_: Import) :: _ =>
+            mkWorkspaceItem(
+              ident,
+              sym.fullNameBackticked
+            )
+          case _ =>
+            autoImports.editsForSymbol(sym) match {
+              case Some(edits) =>
+                edits match {
+                  case AutoImportEdits(Some(nameEdit), other) =>
+                    mkItem0(
+                      ident,
+                      nameEdit,
+                      isFromWorkspace = true,
+                      other.toList
+                    )
+                  case _ =>
+                    mkItem(
+                      ident,
+                      ident.backticked,
+                      isFromWorkspace = true,
+                      edits.edits
+                    )
+                }
+              case None =>
+                val r = indexedContext.lookupSym(sym)
+                r match {
+                  case IndexedContext.Result.InScope =>
+                    mkItem(ident, ident.backticked)
+                  case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
+                }
+            }
         }
-
-        item.setKind(completionItemKind(sym))
-        item
-      }
-
-      def mkItem(
-          ident: String,
-          value: String,
-          isFromWorkspace: Boolean = false,
-          additionalEdits: List[TextEdit] = Nil
-      ): CompletionItem = {
-        val nameEdit = new TextEdit(
-          editRange,
-          value
-        )
-        mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
-      }
-
-      def mkWorkspaceItem(
-          ident: String,
-          value: String,
-          additionalEdits: List[TextEdit] = Nil
-      ): CompletionItem =
-        mkItem(ident, value, isFromWorkspace = true, additionalEdits)
-
-      val ident = rawCompletion.label
-      completion match {
-        case CompletionValue.Workspace(_) =>
-          path match {
-            case (_: Ident) :: (_: Import) :: _ =>
-              mkWorkspaceItem(
-                ident,
-                sym.fullNameBackticked
-              )
-            case _ =>
-              autoImports.editsForSymbol(sym) match {
-                case Some(edits) =>
-                  edits match {
-                    case AutoImportEdits(Some(nameEdit), other) =>
-                      mkItem0(
-                        ident,
-                        nameEdit,
-                        isFromWorkspace = true,
-                        other.toList
-                      )
-                    case _ =>
-                      mkItem(
-                        ident,
-                        ident.backticked,
-                        isFromWorkspace = true,
-                        edits.edits
-                      )
-                  }
-                case None =>
-                  val r = indexedContext.lookupSym(sym)
-                  r match {
-                    case IndexedContext.Result.InScope =>
-                      mkItem(ident, ident.backticked)
-                    case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
-                  }
-              }
-          }
-        case CompletionValue.NamedArg(_) => mkItem(ident, ident)
-        case _ => mkItem(ident, ident.backticked)
-      }
+      case CompletionValue.Kind.NamedArg => mkItem(ident, ident)
+      case _ => mkItem(ident, ident.backticked)
     }
   }
 
