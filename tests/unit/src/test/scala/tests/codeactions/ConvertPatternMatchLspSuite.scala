@@ -1,6 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
+import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class PatternMatchRefactorLspSuite
     extends BaseCodeActionLspSuite("patternMatchRefactor") {
@@ -59,7 +60,9 @@ class PatternMatchRefactorLspSuite
        |  }}
        |}
        |""".stripMargin,
-    PatternMatchRefactor.convertPatternMatch,
+    s"""|${PatternMatchRefactor.convertPatternMatch}
+        |${RewriteBracesParensCodeAction.toParens}
+        |""".stripMargin,
     """|object Main {
        |  var x = 0
        |  List(1,2).map { 
