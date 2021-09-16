@@ -3,7 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 
 class PatternMatchRefactorLspSuite
-    extends BaseCodeActionLspSuite("implementAbstractMembers") {
+    extends BaseCodeActionLspSuite("patternMatchRefactor") {
 
   check(
     "with-placeholder",
