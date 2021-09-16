@@ -658,9 +658,8 @@ class CompletionSuite extends BaseCompletionSuite {
     )
   )
 
-  // https://github.com/lampepfl/dotty/issues/13467
   check(
-    "implicit".tag(IgnoreScalaVersion("3.1.0-RC1")),
+    "implicit",
     """
       |object A {
       |  Array.concat@@
@@ -781,9 +780,8 @@ class CompletionSuite extends BaseCompletionSuite {
     )
   )
 
-  // https://github.com/lampepfl/dotty/issues/13467
   check(
-    "deprecated".tag(IgnoreScalaVersion("3.1.0-RC1")),
+    "deprecated",
     """
       |class A {
       |  1.until@@
