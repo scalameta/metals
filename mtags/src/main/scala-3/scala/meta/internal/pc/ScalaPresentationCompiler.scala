@@ -69,6 +69,7 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Location
@@ -120,6 +121,15 @@ case class ScalaPresentationCompiler(
         ) :: Nil
     new InteractiveDriver(settings)
   }
+
+  override def getTasty(
+      targetUri: URI,
+      isHtmlSupported: Boolean,
+      isHttpEnabled: Boolean
+  ): CompletableFuture[String] =
+    CompletableFuture.completedFuture {
+      TastyUtils.getTasty(targetUri, isHtmlSupported, isHttpEnabled)
+    }
 
   def complete(params: OffsetParams): CompletableFuture[CompletionList] = {
     compilerAccess.withInterruptableCompiler(

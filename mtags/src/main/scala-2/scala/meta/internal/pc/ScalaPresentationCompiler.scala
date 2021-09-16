@@ -153,6 +153,13 @@ case class ScalaPresentationCompiler(
       new AutoImportsProvider(pc.compiler(), name, params).autoImports().asJava
     }
 
+  override def getTasty(
+      targetUri: URI,
+      isHtmlSupported: Boolean,
+      isHttpEnabled: Boolean
+  ): CompletableFuture[String] =
+    CompletableFuture.completedFuture("")
+
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because
   // we don't typecheck any sources, we only poke into the symbol table.
   // If we used a shared compiler then we risk hitting `Thread.interrupt`,

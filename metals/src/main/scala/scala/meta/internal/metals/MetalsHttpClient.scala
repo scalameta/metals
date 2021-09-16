@@ -223,7 +223,11 @@ final class MetalsHttpClient(
 
   def renderHtml: String = {
     val livereload = Urls.livereload(url())
-    val result = new HtmlBuilder().page("Metals", livereload) { html =>
+    val result = HtmlBuilder().page(
+      "Metals",
+      List(livereload, HtmlBuilder.htmlCSS),
+      HtmlBuilder.bodyStyle
+    ) { html =>
       html
         .section(
           "metals/status",

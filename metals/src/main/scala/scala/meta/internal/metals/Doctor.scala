@@ -48,8 +48,12 @@ final class Doctor(
    */
   def problemsHtmlPage(url: String): String = {
     val livereload = Urls.livereload(url)
-    new HtmlBuilder()
-      .page(doctorTitle, livereload) { html =>
+    HtmlBuilder()
+      .page(
+        doctorTitle,
+        List(livereload, HtmlBuilder.htmlCSS),
+        HtmlBuilder.bodyStyle
+      ) { html =>
         html.section("Build targets", buildTargetsTable)
       }
       .render

@@ -264,6 +264,7 @@ class MetalsLanguageServer(
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
+  var tastyHandler: TastyHandler = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -646,6 +647,13 @@ class MetalsLanguageServer(
           buildTargets,
           buildClient,
           interactiveSemanticdbs
+        )
+        tastyHandler = new TastyHandler(
+          compilers,
+          buildTargets,
+          languageClient,
+          clientConfig,
+          () => httpServer
         )
         codeActionProvider = new CodeActionProvider(
           compilers,
@@ -1727,6 +1735,9 @@ class MetalsLanguageServer(
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
+
+      case ServerCommands.ShowTasty() =>
+        tastyHandler.executeShowTastyCommand(params).asJavaObject
 
       case ServerCommands.GotoSuperMethod() =>
         Future {

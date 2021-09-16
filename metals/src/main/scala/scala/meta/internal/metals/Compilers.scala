@@ -461,9 +461,11 @@ class Compilers(
   }
 
   def loadCompiler(
-      target: BuildTargetIdentifier
-  ): Option[PresentationCompiler] =
-    buildTargets.scalaTarget(target).flatMap(loadCompilerForTarget)
+      targetId: BuildTargetIdentifier
+  ): Option[PresentationCompiler] = {
+    val target = buildTargets.scalaTarget(targetId)
+    target.flatMap(loadCompilerForTarget)
+  }
 
   def loadCompilerForTarget(
       scalaTarget: ScalaTarget

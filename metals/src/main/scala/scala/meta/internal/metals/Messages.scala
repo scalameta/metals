@@ -30,6 +30,14 @@ object Messages {
        |Metals will not function correctly without either of these set since a workspace is needed.
        |Try opening your project at the workspace root.""".stripMargin
   )
+
+  val showTastyFailed = new MessageParams(
+    MessageType.Error,
+    """|Cannot execute show TASTy command because there is no .tasty file for given file.
+       |For now, this command only works with Scala 3.
+       |""".stripMargin
+  )
+
   object Worksheets {
     def unsupportedScalaVersion(
         unsupportedVersion: String,
