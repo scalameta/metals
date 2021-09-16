@@ -1,5 +1,7 @@
 package tests.rangeFormatting
 
+import scala.meta.internal.metals.UserConfiguration
+
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.FormattingOptions
@@ -7,6 +9,10 @@ import tests.BaseLspSuite
 
 class MultilineStringRangeFormattingWhenSelectingSuite
     extends BaseLspSuite("rangeFormatting") {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(enableIndentOnPaste = true)
+
   check(
     "start-misindent-line",
     s"""

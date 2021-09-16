@@ -213,7 +213,7 @@ class MetalsLanguageServer(
   private val onTypeFormattingProvider =
     new OnTypeFormattingProvider(buffers, trees, () => userConfig)
   private val rangeFormattingProvider =
-    new RangeFormattingProvider(buffers, trees)
+    new RangeFormattingProvider(buffers, trees, () => userConfig)
   private val classFinder = new ClassFinder(trees)
   private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
   // These can't be instantiated until we know the workspace root directory.

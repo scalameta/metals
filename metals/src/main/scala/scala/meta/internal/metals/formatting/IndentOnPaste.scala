@@ -1,13 +1,15 @@
 package scala.meta.internal.metals.formatting
 import scala.util.matching.Regex
 
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
-object IndentOnPaste extends RangeFormatter {
+case class IndentOnPaste(userConfig: () => UserConfiguration)
+    extends RangeFormatter {
 
   private val indentRegex: Regex = raw"\S".r
 
@@ -48,67 +50,71 @@ object IndentOnPaste extends RangeFormatter {
   override def contribute(
       rangeFormatterParams: RangeFormatterParams
   ): Option[List[TextEdit]] = {
-    val formattingOptions = rangeFormatterParams.formattingOptions
-    val startPos = rangeFormatterParams.startPos
-    val endPos = rangeFormatterParams.endPos
-    val splitLines = rangeFormatterParams.splitLines
+    if (userConfig().enableIndentOnPaste) {
+      val formattingOptions = rangeFormatterParams.formattingOptions
+      val startPos = rangeFormatterParams.startPos
+      val endPos = rangeFormatterParams.endPos
+      val splitLines = rangeFormatterParams.splitLines
 
-    val rangeStart = startPos.toLSP.getStart
-    val originalStart = rangeStart.getCharacter()
-    rangeStart.setCharacter(0)
-    // we format full lines even if not everything was pasted
-    val realEndColumn =
-      if (endPos.endLine < splitLines.size) splitLines(endPos.endLine).size
-      else endPos.endColumn
-    val pastedRange =
-      new Range(rangeStart, new Position(endPos.endLine, realEndColumn))
-    val startLine = startPos.toLSP.getStart.getLine
-    val endLine = endPos.toLSP.getEnd.getLine
+      val rangeStart = startPos.toLSP.getStart
+      val originalStart = rangeStart.getCharacter()
+      rangeStart.setCharacter(0)
+      // we format full lines even if not everything was pasted
+      val realEndColumn =
+        if (endPos.endLine < splitLines.size) splitLines(endPos.endLine).size
+        else endPos.endColumn
+      val pastedRange =
+        new Range(rangeStart, new Position(endPos.endLine, realEndColumn))
+      val startLine = startPos.toLSP.getStart.getLine
+      val endLine = endPos.toLSP.getEnd.getLine
 
-    val opts =
-      if (formattingOptions.isInsertSpaces)
-        FmtOptions.spaces(formattingOptions.getTabSize)
-      else
-        FmtOptions.tabs
+      val opts =
+        if (formattingOptions.isInsertSpaces)
+          FmtOptions.spaces(formattingOptions.getTabSize)
+        else
+          FmtOptions.tabs
 
-    val pastedLines = splitLines.slice(startLine, endLine + 1)
+      val pastedLines = splitLines.slice(startLine, endLine + 1)
 
-    // Do not adjust indentation if we pasted into an existing line content
-    def pastedIntoNonEmptyLine = {
-      pastedLines match {
-        case array if array.length > 0 =>
-          val firstLine = array.head
-          val originalLine = firstLine.substring(0, originalStart)
-          originalLine.trim().nonEmpty
-        case _ => false
+      // Do not adjust indentation if we pasted into an existing line content
+      def pastedIntoNonEmptyLine = {
+        pastedLines match {
+          case array if array.length > 0 =>
+            val firstLine = array.head
+            val originalLine = firstLine.substring(0, originalStart)
+            originalLine.trim().nonEmpty
+          case _ => false
+        }
       }
-    }
 
-    if (pastedIntoNonEmptyLine) {
-      None
-    } else {
-      val currentFirstLineIndent = pastedLines.headOption
-        .flatMap(codeStartPosition)
-        .getOrElse(originalStart)
-      val currentIndentationLevel =
-        Math.min(originalStart, currentFirstLineIndent)
-      val formatted =
-        processLines(
-          currentIndentationLevel,
-          pastedLines,
-          opts,
-          originalStart
-        )
-
-      if (formatted.nonEmpty)
-        Some(
-          new TextEdit(
-            pastedRange,
-            formatted.mkString(System.lineSeparator)
-          ) :: Nil
-        )
-      else
+      if (pastedIntoNonEmptyLine) {
         None
+      } else {
+        val currentFirstLineIndent = pastedLines.headOption
+          .flatMap(codeStartPosition)
+          .getOrElse(originalStart)
+        val currentIndentationLevel =
+          Math.min(originalStart, currentFirstLineIndent)
+        val formatted =
+          processLines(
+            currentIndentationLevel,
+            pastedLines,
+            opts,
+            originalStart
+          )
+
+        if (formatted.nonEmpty)
+          Some(
+            new TextEdit(
+              pastedRange,
+              formatted.mkString(System.lineSeparator)
+            ) :: Nil
+          )
+        else
+          None
+      }
+    } else {
+      None
     }
   }
 
