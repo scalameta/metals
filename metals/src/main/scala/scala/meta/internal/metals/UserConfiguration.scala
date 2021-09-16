@@ -40,6 +40,7 @@ case class UserConfiguration(
     showImplicitConversionsAndClasses: Boolean = false,
     remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
+    enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None
 ) {
@@ -209,6 +210,15 @@ object UserConfiguration {
         """|When this option is enabled, each place where an implicit method or class is used has it 
            |displayed either as additional decorations if they are supported by the editor or 
            |shown in the hover.
+           |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "enable-indent-on-paste",
+        "false",
+        "false",
+        "Should try adjust indentation on range formatting.",
+        """|When this option is enabled, when user pastes any snippet into a Scala file, Metals
+           |will try to adjust the indentation to that of the current cursor.
            |""".stripMargin
       ),
       UserConfigurationOption(
@@ -384,6 +394,8 @@ object UserConfiguration {
       getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
+    val enableIndentOnPaste =
+      getBooleanKey("enable-indent-on-paste").getOrElse(true)
     val excludedPackages =
       getStringListKey("excluded-packages")
     // `automatic` should be treated as None
@@ -412,6 +424,7 @@ object UserConfiguration {
           showImplicitConversionsAndClasses,
           remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
+          enableIndentOnPaste,
           excludedPackages,
           defaultScalaVersion
         )

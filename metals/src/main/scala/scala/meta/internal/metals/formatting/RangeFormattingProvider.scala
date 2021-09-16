@@ -31,12 +31,12 @@ trait RangeFormatter {
 
 class RangeFormattingProvider(
     buffers: Buffers,
-    trees: Trees
+    trees: Trees,
+    userConfig: () => UserConfiguration
 ) {
   val formatters: List[RangeFormatter] = List(
-    // enableStripMargin is not used on rangeFormatting
-    MultilineString(() => UserConfiguration()),
-    IndentOnPaste
+    MultilineString(userConfig),
+    IndentOnPaste(userConfig)
   )
 
   def format(

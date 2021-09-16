@@ -1,5 +1,7 @@
 package tests.rangeFormatting
 
+import scala.meta.internal.metals.UserConfiguration
+
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.FormattingOptions
@@ -13,6 +15,9 @@ class MultilineStringRangeFormattingWhenPastingSuite
     /** insertSpaces */
     true
   )
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(enableIndentOnPaste = true)
 
   check(
     "lines",

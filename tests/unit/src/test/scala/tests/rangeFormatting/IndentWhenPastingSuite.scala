@@ -1,6 +1,7 @@
 package tests.rangeFormatting
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.UserConfiguration
 
 import munit.Location
 import munit.TestOptions
@@ -25,6 +26,9 @@ class IndentWhenPastingSuite
   )
 
   val blank = " "
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(enableIndentOnPaste = true)
 
   check(
     "single-line",
