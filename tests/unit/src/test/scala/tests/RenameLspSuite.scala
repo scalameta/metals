@@ -695,7 +695,6 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     newName = "name"
   )
 
-  // https://github.com/scalameta/scalameta/issues/1909
   renamed(
     "type-params",
     """|/a/src/main/scala/a/Main.scala
@@ -703,7 +702,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
        |trait <<ABC>>
        |class CBD[T <: <<AB@@C>>]
        |object Main{
-       |  val a = classOf[ABC]
+       |  val a = classOf[<<ABC>>]
        |  val b = new CBD[<<ABC>>]
        |}
        |""".stripMargin,

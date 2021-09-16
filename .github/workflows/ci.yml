@@ -98,7 +98,7 @@ jobs:
             name: Scala cross tests
             os: ubuntu-latest
           - type: scalafix
-            command: sbt scalafixCheck docs/docusaurusCreateSite
+            command: sbt ++2.12.14 scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs
             os: ubuntu-latest
           - type: scalafmt

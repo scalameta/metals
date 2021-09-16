@@ -190,12 +190,12 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val sbtScala = "2.12.12"
-  val scala212 = "2.12.14"
+  val sbtScala = "2.12.14"
+  val scala212 = "2.12.15"
   val scala213 = "2.13.6"
   val ammonite212Version = "2.12.13"
   val ammonite213Version = scala213
-  val scalameta = "4.4.27"
+  val scalameta = "4.4.28"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
   val bloop = "1.4.9"
@@ -227,15 +227,15 @@ lazy val V = new {
 
   // Scala 2
   def deprecatedScala2Versions =
-    Seq(scala211, "2.12.8", "2.12.9", "2.13.0", "2.13.1", "2.13.2")
+    Seq(scala211, "2.12.8", "2.12.9", "2.12.10", "2.13.0", "2.13.1", "2.13.2")
   def nonDeprecatedScala2Versions =
     Seq(
       scala213,
       scala212,
+      "2.12.14",
       "2.12.13",
       "2.12.12",
       "2.12.11",
-      "2.12.10",
       "2.13.3",
       "2.13.4",
       "2.13.5"
