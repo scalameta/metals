@@ -110,23 +110,23 @@ class MultilineStringRangeFormattingWhenSelectingSuite
     s"""
        |object Main {
        |<<  val firstString = '''
-       |                        |first line
-       |                            |second line'''.stripMargin
+       |                      |first line
+       |                          |second line'''.stripMargin
        |
-       |  val str2 = '''
-       |               |first line
-       |               |second line'''.stripMargin>>
+       |val str2 = '''
+       |             |first line
+       |             |second line'''.stripMargin>>
        |}""".stripMargin,
-    s"""
-       |object Main {
-       |  val firstString = '''
-       |                        |first line
-       |                            |second line'''.stripMargin
+    """|object Main {
+       |val firstString = '''
+       |                      |first line
+       |                          |second line'''.stripMargin
        |
-       |  val str2 = '''
-       |               |first line
-       |               |second line'''.stripMargin
-       |}""".stripMargin
+       |val str2 = '''
+       |             |first line
+       |             |second line'''.stripMargin
+       |}
+       |""".stripMargin
   )
 
   val formattingOptions = new FormattingOptions(2, true)
