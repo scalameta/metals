@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.{BuildInfo => V}
 
 class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
@@ -25,11 +26,13 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
   test("basic-rambo".tag(FlakyWindows)) {
     for {
       _ <- initialize(
-        """|/a/src/main/scala/a/Main.scala
-           |object Main extends App {
-           |  // @@
-           |}
-           |""".stripMargin,
+        s"""|/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |/Main.scala
+            |object Main extends App {
+            |  // @@
+            |}
+            |""".stripMargin,
         expectError = true
       )
       _ <- server.assertHover(

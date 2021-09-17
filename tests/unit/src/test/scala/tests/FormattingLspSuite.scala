@@ -19,6 +19,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|/.scalafmt.conf
             |maxColumn = 100
             |version=${V.scalafmtVersion}
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
             |/a/src/main/scala/a/Main.scala
             |object FormatMe {
             | val x = 1  }
@@ -40,10 +42,12 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("require-config") {
     for {
       _ <- initialize(
-        """|/a/src/main/scala/a/Main.scala
-           |object FormatMe {
-           | val x = 1  }
-           |""".stripMargin,
+        s"""|/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |/a/src/main/scala/a/Main.scala
+            |object FormatMe {
+            | val x = 1  }
+            |""".stripMargin,
         expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
@@ -65,7 +69,9 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("custom-config-path") {
     for {
       _ <- initialize(
-        s"""|/project/.scalafmt.conf
+        s"""|/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |/project/.scalafmt.conf
             |maxColumn=100
             |version=${V.scalafmtVersion}
             |/a/src/main/scala/a/Main.scala
@@ -102,6 +108,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |version=${V.scalafmtVersion}
             |maxColumn=30
             |trailingCommas=never
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
             |/a/src/main/scala/a/Main.scala
             |case class User(
             |  name: String,
@@ -128,6 +136,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       _ <- initialize(
         """|.scalafmt.conf
            |version="does-not-exist"
+           |/metals.json
+           |{"a":{"scalaVersion" : ${V.scala212}}}
            |/Main.scala
            |object  Main
            |""".stripMargin,
@@ -151,6 +161,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|.scalafmt.conf
             |version=${V.scalafmtVersion}
             |align=does-not-exist
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
             |/Main.scala
             |object  Main
             |""".stripMargin,
@@ -184,6 +196,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |project.excludeFilters = [
             |  "UserSpec.scala$$"
             |]
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
             |/Main.scala
             |  object   Main
             |/UserSpec.scala
@@ -223,6 +237,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       _ <- initialize(
         s"""|/.scalafmt.conf
             |version=${V.scalafmtVersion}
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
             |/project/plugins.sbt
             |  object   Plugins
             |""".stripMargin,
@@ -250,11 +266,13 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     }
     for {
       _ <- initialize(
-        """|/.scalafmt.conf
-           |maxColumn=40
-           |/Main.scala
-           |object   Main
-           |""".stripMargin,
+        s"""|/.scalafmt.conf
+            |maxColumn=40
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |/Main.scala
+            |object   Main
+            |""".stripMargin,
         expectError = true
       )
       _ <- server.didOpen("Main.scala")
@@ -374,11 +392,13 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     }
     for {
       _ <- initialize(
-        """|/.scalafmt.conf
-           |maxColumn=40
-           |/Main.scala
-           |object   Main
-           |""".stripMargin,
+        s"""|/.scalafmt.conf
+            |maxColumn=40
+            |/metals.json
+            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |/Main.scala
+            |object   Main
+            |""".stripMargin,
         expectError = true
       )
       _ <- server.didOpen("Main.scala")
