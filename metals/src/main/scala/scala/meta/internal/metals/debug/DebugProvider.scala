@@ -140,8 +140,8 @@ class DebugProvider(
       val targets = parameters.getTargets.asScala
         .map(_.getUri)
         .map(new BuildTargetIdentifier(_))
-      val debugAdapter = {
-        if (buildServer.isSbt) {
+      val debugAdapter =
+        if (buildServer.usesScalaDebugAdapter2x) {
           MetalsDebugAdapter.`2.x`(
             buildTargets,
             targets
@@ -155,7 +155,6 @@ class DebugProvider(
             targets
           )
         }
-      }
       DebugProxy.open(
         sessionName,
         awaitClient,

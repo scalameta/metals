@@ -6,6 +6,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
 
+import scala.util.Properties
 import scala.util.matching.Regex
 
 import scala.meta.internal.io.FileIO
@@ -121,14 +122,16 @@ case class QuickBuild(
       }
 
     val allDependencies = scalaDependencies ++ libraryDependencies
-    val allJars = classDirectory :: QuickBuild.fetch(
+    val allJars = QuickBuild.fetch(
       allDependencies,
       scalaVersion,
       binaryVersion,
       sources = true
     )
-    val (dependencySources, classpath) =
-      allJars.partition(_.getFileName.toString.endsWith("-sources.jar"))
+    def isSourceJar(jarFile: Path): Boolean = {
+      jarFile.getFileName.toString.endsWith("-sources.jar")
+    }
+    val classpath = classDirectory :: allJars.filterNot(isSourceJar)
     val allPlugins =
       if (ScalaVersions.isSupportedScalaVersion(scalaVersion))
         s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
@@ -162,23 +165,30 @@ case class QuickBuild(
           scalacOptions.toList
         ).flatten
       }
-    val resolution = dependencySources.map { jar =>
-      C.Module(
-        "",
-        "",
-        "",
-        None,
-        artifacts = List(
-          C.Artifact(
-            "",
-            classifier = Some("sources"),
-            None,
-            path = jar
-          )
-        )
-      )
+    def artifactName(jarFile: Path): String = {
+      jarFile.getFileName.toString.stripSuffix(".jar").stripSuffix("-sources")
     }
-    val javaHome = Option(System.getProperty("java.home")).map(Paths.get(_))
+    val resolution = allJars
+      .groupBy(artifactName)
+      .map { case (name, jars) =>
+        val artifacts = jars.map { jar =>
+          val classifier = if (isSourceJar(jar)) Some("sources") else None
+          C.Artifact(
+            name,
+            classifier,
+            checksum = None,
+            jar
+          )
+        }
+        C.Module(
+          organization = "",
+          name,
+          version = "",
+          configurations = None,
+          artifacts
+        )
+      }
+    val javaHome = Option(Properties.jdkHome).map(Paths.get(_))
 
     val testFrameworks = {
       val frameworks = libraryDependencies
@@ -250,7 +260,7 @@ case class QuickBuild(
       platform = Some(
         C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None, None, None, None)
       ),
-      resolution = Some(C.Resolution(resolution)),
+      resolution = Some(C.Resolution(resolution.toList)),
       resources = None,
       tags = Some(tags)
     )
