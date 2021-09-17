@@ -1293,7 +1293,7 @@ class CompletionSuite extends BaseCompletionSuite {
 
   // issues with scala 3 https://github.com/lampepfl/dotty/pull/13515
   check(
-    "ordering-4".tag(IgnoreScala3),
+    "ordering-4".tag(IgnoreScalaVersion.for3LessThan("3.1.1")),
     s"""|class Main {
         |  def main(fooC: Int): Unit = {
         |    val fooA = 1

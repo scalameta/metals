@@ -19,6 +19,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
@@ -175,11 +176,12 @@ abstract class BasePCSuite extends BaseSuite {
       new TestTransform(
         "Ignore Scala version",
         { test =>
-          val isIgnoredScalaVersion = test.tags.collect {
-            case IgnoreScalaVersion(versions) => versions
-          }.flatten
+          val isIgnoredScalaVersion = test.tags.exists {
+            case IgnoreScalaVersion(isIgnored) => isIgnored(scalaVersion)
+            case _ => false
+          }
 
-          if (isIgnoredScalaVersion(scalaVersion))
+          if (isIgnoredScalaVersion)
             test.withTags(test.tags + munit.Ignore)
           else test
         }
@@ -232,7 +234,7 @@ abstract class BasePCSuite extends BaseSuite {
     else string.linesIterator.toList.sorted.mkString("\n")
   }
 
-  case class IgnoreScalaVersion(versions: Set[String])
+  case class IgnoreScalaVersion(ignored: String => Boolean)
       extends Tag("NoScalaVersion")
 
   object IgnoreScalaVersion {
@@ -242,6 +244,15 @@ abstract class BasePCSuite extends BaseSuite {
     def apply(version: String): IgnoreScalaVersion = {
       IgnoreScalaVersion(Set(version))
     }
+
+    def for3LessThan(version: String): IgnoreScalaVersion = {
+      val enableFrom = SemVer.Version.fromString(version)
+      IgnoreScalaVersion { v =>
+        val semver = SemVer.Version.fromString(v)
+        semver.major == 3 && !(semver >= enableFrom)
+      }
+    }
+
   }
 
   object IgnoreScala2

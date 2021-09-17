@@ -1,7 +1,8 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.core.Symbols.Symbol
 import scala.meta.internal.pc.CompletionValue.Kind
+
+import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.interactive.Completion
 
 case class CompletionValue(
