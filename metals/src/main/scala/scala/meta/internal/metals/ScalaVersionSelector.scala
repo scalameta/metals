@@ -18,7 +18,7 @@ class ScalaVersionSelector(
           .map(_.scalaInfo.getScalaVersion)
           .sorted
           .lastOption
-          .getOrElse(BuildInfo.scala212)
+          .getOrElse(BuildInfo.scala3)
     }
 
     val binary = ScalaVersions.scalaBinaryVersionFromFullVersion(selected)
