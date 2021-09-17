@@ -257,7 +257,7 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 ```
 
 ## Searching a symbol in the workspace
-Metals provide an alternative command to VS Code's native "Go to symbol in workspace..." command, in order to work around some of its limitations (see [this issue](https://github.com/microsoft/vscode/issues/98125) for more context) and provide richer search capabilities.
+Metals provides an alternative command to the native "Go to symbol in workspace..." command, in order to work around some VS Code limitations (see [this issue](https://github.com/microsoft/vscode/issues/98125) for more context) and provide richer search capabilities.
 
 You can invoke this command from the command palette (look for "Metals: Search symbol in workspace").
 Optionally you can also bind this command to a shorcut. For example, if you want to replace the native command with the Metals one you can configure this shortcut:
