@@ -16,9 +16,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|assertion = : Boolean
        |Main arg
-       |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(2)
   )
 
   check(
@@ -185,9 +184,8 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|end = : Int
        |Main arg9
-       |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(2)
   )
 
   check(
@@ -266,8 +264,29 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(3),
     compat = Map(
       "3" ->
-        """|argument = : Int
-           |argument: Int
+        """|argument: Int
+           |argument = : Int
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "priority-2",
+    s"""|case class A(argument: Int)
+        |object Main {
+        |  def foo(argument: Int): A =
+        |    A(arg@@)
+        |}
+        |""".stripMargin,
+    """|argument: Int
+       |argument = : Int
+       |argument = argument : Int
+       |""".stripMargin,
+    topLines = Some(3),
+    compat = Map(
+      "3" ->
+        """|argument: Int
+           |argument = : Int
            |""".stripMargin
     )
   )

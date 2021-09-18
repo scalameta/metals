@@ -199,7 +199,10 @@ trait Completions { this: MetalsGlobal =>
               if (byFuzzy != 0) byFuzzy
               else {
                 val byIdentifier =
-                  IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+                  IdentifierComparator.compare(
+                    o1.sym.name.decode,
+                    o2.sym.name.decode
+                  )
                 if (byIdentifier != 0) byIdentifier
                 else {
                   val byOwner =

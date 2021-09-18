@@ -1,30 +1,31 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.pc.CompletionValue.Kind
+
+import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.interactive.Completion
 
-/**
- * That is a termporal emulation of `scala.tools.nsc.interactive.CompilerControl.Member`
- * It's used in completions ordering.
- * Curently it's done only by `source of completion` and far from begin ideal.
- * Should be improved in future.
- */
-enum CompletionValue {
-  case NamedArg(v: Completion)
-  case Scope(v: Completion)
-  case Workspace(v: Completion)
-  case Compiler(v: Completion)
+case class CompletionValue(
+    label: String,
+    symbol: Symbol,
+    kind: Kind
+)
 
-  def value: Completion = this match {
-    case Workspace(v) => v
-    case Compiler(v) => v
-    case NamedArg(v) => v
-    case Scope(v) => v
+object CompletionValue {
+
+  enum Kind {
+    case NamedArg, Workspace, Compiler, Scope
   }
 
-  def priority: Int = this match {
-    case NamedArg(v) => 1
-    case Scope(v) => 2
-    case Compiler(v) => 3
-    case Workspace(v) => 4
-  }
+  def fromCompiler(completion: Completion): List[CompletionValue] =
+    completion.symbols.map(CompletionValue(completion.label, _, Kind.Compiler))
+
+  def namedArg(label: String, sym: Symbol): CompletionValue =
+    CompletionValue(label, sym, Kind.NamedArg)
+
+  def workspace(label: String, sym: Symbol): CompletionValue =
+    CompletionValue(label, sym, Kind.Workspace)
+
+  def scope(label: String, sym: Symbol): CompletionValue =
+    CompletionValue(label, sym, Kind.Scope)
 }

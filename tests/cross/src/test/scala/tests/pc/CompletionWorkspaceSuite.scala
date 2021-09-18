@@ -653,4 +653,34 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = _ == "Map - java.util"
   )
+
+  check(
+    "ordering-1",
+    """|import scala.concurrent.Future
+       |object Main {
+       |  def foo(
+       |    x: Futu@@
+       |  ): String = ???
+       |}
+       |""".stripMargin,
+    """|Future scala.concurrent
+       |Future - java.util.concurrent
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "ordering-2",
+    """|import java.util.concurrent.Future
+       |object Main {
+       |  def foo(
+       |    x: Futu@@
+       |  ): String = ???
+       |}
+       |""".stripMargin,
+    """|Future java.util.concurrent
+       |Future - scala.concurrent
+       |""".stripMargin,
+    topLines = Some(2)
+  )
 }
