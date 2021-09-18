@@ -22,7 +22,7 @@ jobs:
           export PATH="$PATH:$PWD/bin"
           sbt \
               'set every semanticdbEnabled := true' \
-              'set every semanticdbVersion := "4.4.24"' \
+              'set every semanticdbVersion := "4.4.28"' \
               sourcegraphUpload
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
