@@ -177,14 +177,14 @@ final class Doctor(
    *         exists. (Message, Explict Choice)
    */
   private def selectedBuildServerMessage(): (String, Boolean) = {
-    val current = currentBuildServer().map(_.main.name)
+    val current = currentBuildServer().map(s => (s.main.name, s.main.version))
     val chosen = tables.buildServers.selectedServer()
 
     (current, chosen) match {
-      case (Some(server), Some(_)) =>
-        (s"Build server currently being used is $server.", true)
-      case (Some(server), None) =>
-        (s"Build server currently being used is $server.", false)
+      case (Some((name, version)), Some(_)) =>
+        (s"Build server currently being used is $name v$version.", true)
+      case (Some((name, version)), None) =>
+        (s"Build server currently being used is $name v$version.", false)
       case (None, _) =>
         calculateNewBuildServer() match {
           case ResolvedNone =>
