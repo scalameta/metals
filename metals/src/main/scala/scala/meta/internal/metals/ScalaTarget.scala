@@ -20,9 +20,9 @@ case class ScalaTarget(
     isSbt: Boolean
 ) {
 
-  def dialect: Dialect = {
+  def dialect(path: AbsolutePath): Dialect = {
     scalaVersion match {
-      case _ if info.getDataKind() == "sbt" => Sbt
+      case _ if info.getDataKind() == "sbt" && path.isSbt => Sbt
       case other =>
         val dialect =
           ScalaVersions.dialectForScalaVersion(other, includeSource3 = false)

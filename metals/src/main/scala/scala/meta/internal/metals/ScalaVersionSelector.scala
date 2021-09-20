@@ -57,7 +57,7 @@ class ScalaVersionSelector(
     def dialectFromBuildTarget = buildTargets
       .inverseSources(path)
       .flatMap(id => buildTargets.scalaTarget(id))
-      .map(_.dialect)
+      .map(_.dialect(path))
 
     Option(path.extension) match {
       case Some("scala") =>
