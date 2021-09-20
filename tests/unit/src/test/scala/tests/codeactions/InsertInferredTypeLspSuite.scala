@@ -4,7 +4,7 @@ import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class InsertInferredTypeLspSuite
-    extends BaseCodeActionLspSuite("implementAbstractMembers") {
+    extends BaseCodeActionLspSuite("insertInferredType") {
 
   check(
     "val",
