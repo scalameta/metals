@@ -6,10 +6,13 @@ import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
+import javax.annotation.Nullable
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Failure
 import scala.util.Properties
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -22,21 +25,31 @@ import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
 import scala.meta.metap.Settings
+import scala.meta.pc.PresentationCompiler
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.{lsp4j => l}
 
+/* Response which is sent to the lsp client. Because of java serialization we cannot use
+ * sealed hierarchy to model union type of success and error.
+ * Moreover, we cannot use Option to indicate optional values, so instead every field is nullable.
+ * */
 final case class DecoderResponse(
-    requestedUri: String,
-    value: String,
-    error: String
+    @Nullable requestedUri: String,
+    @Nullable value: String,
+    @Nullable error: String
 )
+
 final class FileDecoderProvider(
     workspace: AbsolutePath,
     compilers: Compilers,
     buildTargets: BuildTargets,
     userConfig: () => UserConfiguration,
     shellRunner: ShellRunner,
-    fileSystemSemanticdbs: FileSystemSemanticdbs
+    fileSystemSemanticdbs: FileSystemSemanticdbs,
+    languageClient: MetalsLanguageClient,
+    clientConfig: ClientConfiguration,
+    httpServer: () => Option[MetalsHttpServer]
 )(implicit ec: ExecutionContext) {
 
   private case class PathInfo(
@@ -354,19 +367,102 @@ final class FileDecoderProvider(
 
   private def decodeFromTastyFile(
       pathInfo: PathInfo
-  ): Future[Option[String]] = {
+  ): Future[Option[String]] =
+    loadPresentationCompiler(pathInfo) match {
+      case Some(pc) =>
+        pc.getTasty(pathInfo.path.toURI, false, false).asScala.map(Some(_))
+      case None =>
+        Future.successful(None)
+    }
+
+  private def loadPresentationCompiler(
+      pathInfo: PathInfo
+  ): Option[PresentationCompiler] =
     for {
-      pc <- Future {
-        for {
-          targetId <- pathInfo.targetId
-          pc <- compilers.loadCompiler(targetId)
-        } yield pc
+      targetId <- pathInfo.targetId
+      pc <- compilers.loadCompiler(targetId)
+    } yield pc
+
+  /**
+   * For clients supporting executing commands [[TastyResponse]] is returned and clients can determine on their own how to handle returned value.
+   * If client supports http, he is redirected to the tasty endpoint defined at [[MetalsHttpServer]].
+   * That endpoint reuses logic declared in [[TastyHandler]]
+   * In both cases logic is pretty same:
+   * - for a given URI (which could be .scala or .tasty file itself) try to find .tasty file
+   * - dispatch request to the Presentation Compiler. It's worth noting that PC takes into account
+   *   client configuration to determine proper response format (HTML, console or plain text)
+   */
+  def executeShowTastyCommand(params: TextDocumentPositionParams): Future[Unit] =
+    if (
+      clientConfig.isExecuteClientCommandProvider() && !clientConfig
+        .isHttpEnabled()
+    ) {
+      val response = getTastyForURI(uri).map { result =>
+        DecoderResponse(
+          uri.toString(),
+          result.fold(_ => null, identity),
+          result.fold(identity, _ => null)
+        )
       }
-      output <- pc match {
-        case None => Future.successful(None)
-        case Some(pc) =>
-          pc.getTasty(pathInfo.path.toURI, false, false).asScala.map(Some(_))
+      response.map { tasty =>
+        val command = new l.ExecuteCommandParams(
+          "metals-show-tasty",
+          List[Object](tasty).asJava
+        )
+        languageClient.metalsExecuteClientCommand(command)
+        scribe.debug(s"Executing show TASTy $command")
       }
-    } yield output
+    } else
+      httpServer() match {
+        case Some(server) =>
+          Future.successful(
+            Urls.openBrowser(server.address + s"/tasty?file=$uri")
+          )
+        case None =>
+          Future.successful {
+            scribe.warn(
+              "Unable to run show tasty. Make sure `isHttpEnabled` is set to `true`."
+            )
+          }
+      }
+
+  def getTastyForURI(uri: URI): Future[Either[String, String]] = {
+    val error = s"Can't find existing build target for $uri"
+    val pcAndTargetUri =
+      for {
+        path <- Try(AbsolutePath.fromAbsoluteUri(uri)) match {
+          case Success(path) if !path.isFile => Left(s"$uri doesn't exist")
+          case Success(path) if path.isFile => Right(path)
+          case Failure(_) => Left(s"$uri has to be absolute")
+        }
+        pathInfo <-
+          if (path.isScala)
+            findClassesDirFileFromSource(path, "tasty").toRight(error)
+          else if (path.extension == "tasty")
+            findPathInfoFromClassesPath(path).toRight(error)
+          else Left(s"$uri has incorrect file extension")
+        _ <- pathInfo.targetId
+          .flatMap(buildTargets.scalaTarget)
+          .map(_.scalaInfo.getScalaVersion())
+          .filter(_.startsWith("3."))
+          .toRight(
+            """Currently, there is no support for the "Show TASTy" feature in Scala 2."""
+          )
+        pc <- loadPresentationCompiler(pathInfo).toRight(
+          s"Can't load presentation compiler for $uri"
+        )
+      } yield (pc, pathInfo.path.toURI)
+
+    pcAndTargetUri match {
+      case Right((pc, tastyUri)) =>
+        pc.getTasty(
+          tastyUri,
+          clientConfig.isCommandInHtmlSupported(),
+          clientConfig.isHttpEnabled()
+        ).asScala
+          .map(Right(_))
+      case Left(error) =>
+        Future.successful(Left(error))
+    }
   }
 }

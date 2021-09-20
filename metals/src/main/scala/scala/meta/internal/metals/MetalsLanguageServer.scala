@@ -251,7 +251,7 @@ class MetalsLanguageServer(
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
-  private var fileDecoderProvider: FileDecoderProvider = _
+  var fileDecoderProvider: FileDecoderProvider = _
   private var workspaceReload: WorkspaceReload = _
   private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
@@ -265,7 +265,6 @@ class MetalsLanguageServer(
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
-  var tastyHandler: TastyHandler = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -649,13 +648,6 @@ class MetalsLanguageServer(
           buildClient,
           interactiveSemanticdbs
         )
-        tastyHandler = new TastyHandler(
-          compilers,
-          buildTargets,
-          languageClient,
-          clientConfig,
-          () => httpServer
-        )
         codeActionProvider = new CodeActionProvider(
           compilers,
           buffers,
@@ -681,7 +673,10 @@ class MetalsLanguageServer(
           buildTargets,
           () => userConfig,
           shellRunner,
-          fileSystemSemanticdbs
+          fileSystemSemanticdbs,
+          languageClient,
+          clientConfig,
+          () => httpServer
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -1726,8 +1721,8 @@ class MetalsLanguageServer(
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
 
-      case ServerCommands.ShowTasty(uri) =>
-        tastyHandler.executeShowTastyCommand(uri).asJavaObject
+      case ServerCommands.ShowTasty(positionParams) =>
+        fileDecoderProvider.executeShowTastyCommand(positionParams).asJavaObject
 
       case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         Future {

@@ -193,7 +193,7 @@ object MetalsHttpServer {
 
         uri match {
           case Some(uri) =>
-            languageServer.tastyHandler
+            languageServer.fileDecoderProvider
               .getTastyForURI(uri)
               .onComplete {
                 case Success(response) =>

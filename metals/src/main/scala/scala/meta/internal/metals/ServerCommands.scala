@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.net.URI
 import javax.annotation.Nullable
 
 import ch.epfl.scala.{bsp4j => b}
@@ -205,17 +204,7 @@ object ServerCommands {
     "[string], where the string is a stacktrace."
   )
 
-  /* Response which is sent to the lsp client. Because of java serialization we cannot use
-   * sealed hierarchy to model union type of success and error.
-   * Moreover, we cannot use Option to indicate optional values, so instead every field is nullable.
-   * */
-  private[metals] case class TastyResponse(
-      requestedUri: URI,
-      tasty: String,
-      error: String
-  )
-
-  val ShowTasty = new ParametrizedCommand[String](
+  val ShowTasty = new ParametrizedCommand[TextDocumentPositionParams](
     "show-tasty",
     "Show TASTy",
     """|If the file is a Scala 3 source, this command will try to find the relevant tasty file for it, 

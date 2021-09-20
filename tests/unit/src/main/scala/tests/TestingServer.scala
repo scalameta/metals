@@ -260,7 +260,7 @@ final class TestingServer(
   }
 
   def showTasty(filePath: String): Future[Either[String, String]] =
-    server.tastyHandler.getTastyForURI(AbsolutePath(filePath).toURI)
+    server.fileDecoderProvider.getTastyForURI(AbsolutePath(filePath).toURI)
 
   def assertSuperMethodHierarchy(
       uri: String,
