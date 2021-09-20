@@ -57,6 +57,20 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  /** Decode a file e.g. javap, semanticdb */
+  val DecodeFile = new Command(
+    "file-decode",
+    "Decode file",
+    """|Decode a file into a human readable format.
+       |
+       |Compilation involves various binary files that can't be read directly
+       |in a text editor so they need to be decoded into a human readable format.
+       |Examples include `.class` and `.semanticdb`.
+       |""".stripMargin,
+    """|[uri], uri of the file with any parameters required for decoding.
+       |""".stripMargin
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -440,6 +454,7 @@ object ServerCommands {
       ResetChoicePopup,
       RestartBuildServer,
       RunDoctor,
+      DecodeFile,
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,

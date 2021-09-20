@@ -63,7 +63,11 @@ class ShellRunner(
       args: List[String],
       directory: AbsolutePath,
       redirectErrorOutput: Boolean,
-      additionalEnv: Map[String, String] = Map.empty
+      additionalEnv: Map[String, String] = Map.empty,
+      processOut: String => Unit = scribe.info(_),
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false,
+      logInfo: Boolean = true
   ): Future[Int] = {
     val elapsed = new Timer(time)
 
@@ -72,7 +76,10 @@ class ShellRunner(
       args,
       directory,
       redirectErrorOutput,
-      env
+      env,
+      processOut,
+      processErr,
+      propagateError
     )
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button
@@ -86,7 +93,8 @@ class ShellRunner(
     val result = Promise[Int]
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
-        scribe.info(s"user cancelled $commandRun")
+        if (logInfo)
+          scribe.info(s"user cancelled $commandRun")
         result.trySuccess(ExitCodes.Cancel)
         ps.cancel
       }
@@ -102,9 +110,8 @@ class ShellRunner(
     )
     processFuture.map { code =>
       taskResponse.cancel(false)
-      scribe.info(
-        s"time: ran '$commandRun' in $elapsed"
-      )
+      if (logInfo)
+        scribe.info(s"time: ran '$commandRun' in $elapsed")
       result.trySuccess(code)
     }
     result.future

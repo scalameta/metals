@@ -54,7 +54,7 @@ final class FileSystemSemanticdbs(
     }
   }
 
-  private def findSemanticDb(
+  def findSemanticDb(
       semanticdbRelativePath: RelativePath,
       targetroot: AbsolutePath,
       file: AbsolutePath,
