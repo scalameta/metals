@@ -96,7 +96,7 @@ final class Doctor(
   }
 
   private def executeDoctor(
-      clientCommand: Command,
+      clientCommand: BaseCommand,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
     if (

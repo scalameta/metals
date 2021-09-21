@@ -206,7 +206,7 @@ object ClientCommands {
     "[uri], the uri of the worksheet that you'd like to copy the contents of."
   )
 
-  def all: List[Command] =
+  def all: List[BaseCommand] =
     List(
       OpenFolder,
       RunDoctor,

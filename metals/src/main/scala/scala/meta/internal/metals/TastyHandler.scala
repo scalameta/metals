@@ -12,7 +12,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands.TastyResponse
 import scala.meta.io.AbsolutePath
 
-import com.google.gson.JsonPrimitive
 import org.eclipse.{lsp4j => l}
 
 /**
@@ -33,13 +32,13 @@ class TastyHandler(
 )(implicit ec: ExecutionContext) {
 
   def executeShowTastyCommand(
-      params: l.ExecuteCommandParams
+      path: String
   ): Future[Unit] =
     if (
       clientConfig.isExecuteClientCommandProvider() && !clientConfig
         .isHttpEnabled()
     ) {
-      val tastyResponse = getTasty(params)
+      val tastyResponse = getTasty(path)
       tastyResponse.map { tasty =>
         val command = new l.ExecuteCommandParams(
           "metals-show-tasty",
@@ -49,12 +48,12 @@ class TastyHandler(
         scribe.debug(s"Executing show TASTy ${command}")
       }
     } else {
-      (httpServer(), parseJsonParams(params)) match {
-        case (Some(server), Some(uri)) =>
+      httpServer() match {
+        case Some(server) =>
           Future.successful(
-            Urls.openBrowser(server.address + s"/tasty?file=$uri")
+            Urls.openBrowser(server.address + s"/tasty?file=$path")
           )
-        case (None, _) =>
+        case None =>
           Future.successful {
             scribe.warn(
               "Unable to run show tasty. Make sure `isHttpEnabled` is set to `true`."
@@ -77,32 +76,17 @@ class TastyHandler(
     )
 
   private def getTasty(
-      params: l.ExecuteCommandParams
-  ): Future[TastyResponse] =
-    parseJsonParams(params) match {
-      case Some(path) =>
-        val uri = new URI(path)
-        getTastyForURI(uri).map { result =>
-          TastyResponse(
-            uri,
-            result.fold(_ => null, identity),
-            result.fold(identity, _ => null)
-          )
-        }
-      case None =>
-        val error = s"Error, invalid show TASTy arguments $params"
-        scribe.error(error)
-        Future.successful(TastyResponse(null, null, error))
+      path: String
+  ): Future[TastyResponse] = {
+    val uri = new URI(path)
+    getTastyForURI(uri).map { result =>
+      TastyResponse(
+        uri,
+        result.fold(_ => null, identity),
+        result.fold(identity, _ => null)
+      )
     }
-
-  private def parseJsonParams(
-      commandParams: l.ExecuteCommandParams
-  ): Option[String] = for {
-    args <- Option(commandParams.getArguments)
-    arg <- args.asScala.headOption.collect {
-      case js: JsonPrimitive if js.isString => js
-    }
-  } yield arg.getAsString()
+  }
 
   /**
    * For a given uri (could be both .scala and .tasty file) try to find:

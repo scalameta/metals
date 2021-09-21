@@ -1,8 +1,8 @@
 package docs
 
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.BaseCommand
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.ServerCommands
 
 import mdoc.Reporter
@@ -11,7 +11,7 @@ import mdoc.StringModifier
 class CommandsModifiers extends StringModifier {
   override val name: String = "commands"
 
-  def format(commands: List[Command]): String = {
+  def format(commands: List[BaseCommand]): String = {
     commands
       .map { command =>
         s"""### ${command.title}

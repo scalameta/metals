@@ -3,12 +3,12 @@ package scala.meta.internal.metals.codelenses
 import java.util.Collections.singletonList
 
 import scala.meta.internal.implementation.TextDocumentWithPath
+import scala.meta.internal.metals.BaseCommand
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
@@ -136,7 +136,7 @@ final class RunTestCodeLens(
 
   private def command(
       name: String,
-      command: Command,
+      command: BaseCommand,
       params: b.DebugSessionParams
   ): l.Command = {
     new l.Command(name, command.id, singletonList(params))

@@ -25,7 +25,6 @@ import scala.util.matching.Regex
 import scala.{meta => m}
 
 import scala.meta.Input
-import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
@@ -228,7 +227,10 @@ final class TestingServer(
       toCheck match {
         case (pos, expectedPos) :: tl =>
           val (position, document) = context(pos)
-          val command = GoToSuperMethodParams(document, position)
+          val command = new TextDocumentPositionParams(
+            new TextDocumentIdentifier(document),
+            position
+          )
           executeCommand(ServerCommands.GotoSuperMethod.id, command)
             .flatMap(_ =>
               exec(tl).map(rest => expectedPos.flatMap(context.get) +: rest)
@@ -277,7 +279,10 @@ final class TestingServer(
     def exec(toCheck: List[(Int, List[String])]): Future[List[Set[String]]] = {
       toCheck match {
         case (pos, expected) :: tl =>
-          val command = GoToSuperMethodParams(uri, context(pos))
+          val command = new TextDocumentPositionParams(
+            new TextDocumentIdentifier(uri),
+            context(pos)
+          )
           executeCommand(ServerCommands.SuperMethodHierarchy.id, command)
             .flatMap(_ => exec(tl).map(rest => expected.toSet +: rest))
 

@@ -86,7 +86,7 @@ final class ConfiguredLanguageClient(
       params: ExecuteCommandParams
   ): Unit = {
     if (clientConfig.isExecuteClientCommandProvider) {
-      params.getCommand match {
+      params match {
         case ClientCommands.RefreshModel()
             if !clientConfig.isDebuggingProvider =>
           () // ignore
