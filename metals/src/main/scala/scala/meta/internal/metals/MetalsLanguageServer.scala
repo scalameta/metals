@@ -676,6 +676,7 @@ class MetalsLanguageServer(
           fileSystemSemanticdbs,
           languageClient,
           clientConfig,
+          classFinder,
           () => httpServer
         )
         popupChoiceReset = new PopupChoiceReset(

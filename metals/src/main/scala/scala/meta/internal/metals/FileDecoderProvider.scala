@@ -22,6 +22,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.parsing.ClassFinder
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
 import scala.meta.metap.Settings
@@ -49,6 +50,7 @@ final class FileDecoderProvider(
     fileSystemSemanticdbs: FileSystemSemanticdbs,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
+    classFinder: ClassFinder,
     httpServer: () => Option[MetalsHttpServer]
 )(implicit ec: ExecutionContext) {
 
@@ -98,13 +100,13 @@ final class FileDecoderProvider(
         case Some((decoder, path)) => decoder.decode(path)
       }
       checkedOutput = output match {
-        case None => errorReponse(uriAsStr)
+        case None => errorResponse(uriAsStr)
         case Some(success) => DecoderResponse(uriAsStr, success, null)
       }
     } yield checkedOutput
   }
 
-  def errorReponse(uriAsStr: String): DecoderResponse =
+  def errorResponse(uriAsStr: String): DecoderResponse =
     DecoderResponse(uriAsStr, null, errorMessage(uriAsStr))
 
   private def errorMessage(input: String): String =
@@ -279,9 +281,27 @@ final class FileDecoderProvider(
       oldExtension = sourceFile.extension
       relativePath = sourceFile
         .toRelative(sourceRoot)
-        .resolveSibling(_.stripSuffix(oldExtension) + newExtension)
+        .resolveSibling(_.stripSuffix(oldExtension) + "class")
     } yield PathInfo(Some(targetId), classDir.resolve(relativePath))
   }
+
+  private def findTastyDirFileFromSource(
+      sourceFile: AbsolutePath,
+      position: l.Position
+  ): Option[PathInfo] = {
+    for {
+      targetId <- buildTargets.sourceBuildTargets(sourceFile).headOption
+      target <- buildTargets.scalaTarget(targetId)
+      sourceRoot <- buildTargets.inverseSourceItem(sourceFile)
+      className <- classFinder.findTasty(sourceFile, position)
+    } yield {
+      val pathToTasty = className.replace('.', '/') + ".tasty"
+      val classDir = target.classDirectory.toAbsolutePath
+      val other = classDir.resolve(pathToTasty)
+      PathInfo(Some(targetId), other)
+    }
+  }
+
   private def findSemanticDBFileFromSource(
       sourceFile: AbsolutePath
   ): Option[PathInfo] = {
@@ -392,12 +412,16 @@ final class FileDecoderProvider(
    * - dispatch request to the Presentation Compiler. It's worth noting that PC takes into account
    *   client configuration to determine proper response format (HTML, console or plain text)
    */
-  def executeShowTastyCommand(params: TextDocumentPositionParams): Future[Unit] =
+  def executeShowTastyCommand(
+      params: l.TextDocumentPositionParams
+  ): Future[Unit] = {
+    val uri = new URI(params.getTextDocument().getUri())
+    val position = params.getPosition()
     if (
       clientConfig.isExecuteClientCommandProvider() && !clientConfig
         .isHttpEnabled()
     ) {
-      val response = getTastyForURI(uri).map { result =>
+      val response = getTastyForURI(uri, Some(position)).map { result =>
         DecoderResponse(
           uri.toString(),
           result.fold(_ => null, identity),
@@ -425,8 +449,12 @@ final class FileDecoderProvider(
             )
           }
       }
+  }
 
-  def getTastyForURI(uri: URI): Future[Either[String, String]] = {
+  def getTastyForURI(
+      uri: URI,
+      cursorPosition: Option[l.Position] = None
+  ): Future[Either[String, String]] = {
     val error = s"Can't find existing build target for $uri"
     val pcAndTargetUri =
       for {
@@ -437,7 +465,10 @@ final class FileDecoderProvider(
         }
         pathInfo <-
           if (path.isScala)
-            findClassesDirFileFromSource(path, "tasty").toRight(error)
+            cursorPosition
+              .flatMap(findTastyDirFileFromSource(path, _))
+              .orElse(findClassesDirFileFromSource(path, "tasty"))
+              .toRight(error)
           else if (path.extension == "tasty")
             findPathInfoFromClassesPath(path).toRight(error)
           else Left(s"$uri has incorrect file extension")
