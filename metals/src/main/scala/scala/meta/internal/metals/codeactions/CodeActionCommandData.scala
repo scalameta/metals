@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 
 trait CodeActionCommandData {
   def uri: String
-  val actionType: String
+  def actionType: String
 }
 
 case class ExtractMemberDefinitionData(

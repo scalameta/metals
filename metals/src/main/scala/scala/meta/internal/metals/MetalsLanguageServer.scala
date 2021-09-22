@@ -1761,9 +1761,9 @@ class MetalsLanguageServer(
         }).asJavaObject
 
       case ServerCommands.NewScalaFile(args) =>
-        val directoryURI = args.lift(0).map(new URI(_))
-        val name = args.lift(1)
-        val fileType = args.lift(2)
+        val directoryURI = args.lift(0).flatten.map(new URI(_))
+        val name = args.lift(1).flatten
+        val fileType = args.lift(2).flatten
         newFileProvider
           .handleFileCreation(directoryURI, name, fileType)
           .asJavaObject

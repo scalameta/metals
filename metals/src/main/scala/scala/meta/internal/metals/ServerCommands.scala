@@ -346,8 +346,15 @@ object ServerCommands {
       """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
          |command is later ran to extract the code and create a new file with it
          |""".stripMargin,
-      """|[uri, line, character], uri of the document that the command needs to be invoked on
-         |together with line number and character/column where the definition is.
+      """|Object with `document` and `position`
+         |
+         |Example:
+         |```json
+         |{
+         |  document: "file:///home/dev/foo/Bar.scala",
+         |  position: {line: 5, character: 12}
+         |}
+         |```
          |""".stripMargin
     )
 
@@ -357,8 +364,15 @@ object ServerCommands {
     """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
        |calculate the type and insert it in the correct location.
        |""".stripMargin,
-    """|[uri, line, character], uri to the document that the command needs to be invoked on 
-       |together with line number and character/column.
+    """|Object with `document` and `position`
+       |
+       |Example:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
        |""".stripMargin
   )
 

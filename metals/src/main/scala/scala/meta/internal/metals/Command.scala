@@ -7,7 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.{lsp4j => l}
 
-trait BaseCommand {
+sealed trait BaseCommand {
   def id: String
   def title: String
   def description: String
@@ -16,10 +16,8 @@ trait BaseCommand {
   def toLSP(arguments: List[AnyRef]): l.Command =
     new l.Command(title, id, arguments.asJava)
 
-  protected def isApplicableCommand(params: l.ExecuteCommandParams): Boolean = {
-    val command = Option(params.getCommand).getOrElse("")
-    command.stripPrefix("metals.") == id
-  }
+  protected def isApplicableCommand(params: l.ExecuteCommandParams): Boolean =
+    params.getCommand.stripPrefix("metals.") == id
 }
 
 case class Command(
@@ -70,7 +68,7 @@ case class ParametrizedCommand[T: ClassTag](
     else {
       args(0) match {
         case parser.Jsonized(t1) =>
-          Some(t1)
+          Option(t1)
         case _ => None
       }
     }
@@ -87,13 +85,13 @@ case class ListParametrizedCommand[T: ClassTag](
 
   private val parser = new JsonParser.Of[T]
 
-  def unapply(params: l.ExecuteCommandParams): Option[List[T]] = {
+  def unapply(params: l.ExecuteCommandParams): Option[List[Option[T]]] = {
     if (!isApplicableCommand(params)) None
     else {
       val args = Option(params.getArguments()).toList
         .flatMap(_.asScala)
-        .flatMap {
-          case parser.Jsonized(t) => Some(t)
+        .map {
+          case parser.Jsonized(t) => Option(t)
           case _ => None
         }
       Some(args)
