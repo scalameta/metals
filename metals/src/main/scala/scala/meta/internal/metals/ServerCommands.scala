@@ -304,7 +304,7 @@ object ServerCommands {
     "[string?], where string is a choice value."
   )
 
-  val NewScalaFile = new Command(
+  val NewScalaFile = new ListParametrizedCommand[String](
     "new-scala-file",
     "Create new scala file",
     """|Create and open new file with either scala class, object, trait, package object or worksheet.

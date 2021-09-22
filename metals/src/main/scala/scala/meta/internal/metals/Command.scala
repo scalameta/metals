@@ -5,7 +5,6 @@ import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
 
-import com.google.gson.JsonPrimitive
 import org.eclipse.{lsp4j => l}
 
 trait BaseCommand {
@@ -79,20 +78,25 @@ case class ParametrizedCommand[T: ClassTag](
 
 }
 
-object Argument {
+case class ListParametrizedCommand[T: ClassTag](
+    id: String,
+    title: String,
+    description: String,
+    arguments: String
+) extends BaseCommand {
 
-  def getAsString(obj: AnyRef): Option[String] = {
-    obj match {
-      case p: JsonPrimitive if p.isString => Option(p.getAsString())
-      case _ => None
+  private val parser = new JsonParser.Of[T]
+
+  def unapply(params: l.ExecuteCommandParams): Option[List[T]] = {
+    if (!isApplicableCommand(params)) None
+    else {
+      val args = Option(params.getArguments()).toList
+        .flatMap(_.asScala)
+        .flatMap {
+          case parser.Jsonized(t) => Some(t)
+          case _ => None
+        }
+      Some(args)
     }
   }
-
-  def getAsInt(obj: AnyRef): Option[Int] = {
-    obj match {
-      case p: JsonPrimitive if p.isNumber => Option(p.getAsInt())
-      case _ => None
-    }
-  }
-
 }

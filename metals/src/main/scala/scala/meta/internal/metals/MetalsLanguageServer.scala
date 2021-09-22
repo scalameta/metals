@@ -1760,12 +1760,10 @@ class MetalsLanguageServer(
             popupChoiceReset.interactiveReset()
         }).asJavaObject
 
-      case ServerCommands.NewScalaFile() =>
-        val args = params.getArguments.asScala
-        val directoryURI =
-          args.lift(0).flatMap(Argument.getAsString).map(new URI(_))
-        val name = args.lift(1).flatMap(Argument.getAsString)
-        val fileType = args.lift(2).flatMap(Argument.getAsString)
+      case ServerCommands.NewScalaFile(args) =>
+        val directoryURI = args.lift(0).map(new URI(_))
+        val name = args.lift(1)
+        val fileType = args.lift(2)
         newFileProvider
           .handleFileCreation(directoryURI, name, fileType)
           .asJavaObject
