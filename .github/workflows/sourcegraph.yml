@@ -11,18 +11,14 @@ jobs:
     name: "Upload LSIF"
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v13
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "1.15.6"
-      - run: |
+      - uses: coursier/setup-action@v1.1.1
+      - run: cs install --contrib lsif-java
+      - run: lsif-java index
+      - name: src lsif upload
+        run: |
           mkdir -p bin
           curl -L https://sourcegraph.com/.api/src-cli/src_linux_amd64 -o bin/src
           chmod +x bin/src
-          export PATH="$PATH:$PWD/bin"
-          sbt \
-              'set every semanticdbEnabled := true' \
-              'set every semanticdbVersion := "4.4.24"' \
-              sourcegraphUpload
+          ./bin/src lsif upload -github-token $GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
