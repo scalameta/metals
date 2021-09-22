@@ -1588,16 +1588,6 @@ class MetalsLanguageServer(
   def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] = {
-    def toTextDocumentParams(
-        uri: String,
-        line: Int,
-        character: Int
-    ): TextDocumentPositionParams = {
-      new l.TextDocumentPositionParams(
-        new TextDocumentIdentifier(uri),
-        new l.Position(line, character)
-      )
-    }
     params match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
@@ -1798,9 +1788,9 @@ class MetalsLanguageServer(
           Future.successful(()).asJavaObject
         }
 
-      case ServerCommands.InsertInferredType(uri, line, character) =>
+      case ServerCommands.InsertInferredType(textDocumentParams) =>
         CancelTokens.future { token =>
-          val textDocumentParams = toTextDocumentParams(uri, line, character)
+          val uri = textDocumentParams.getTextDocument().getUri()
           for {
             edits <- compilers.insertInferredType(textDocumentParams, token)
             if (!edits.isEmpty())
@@ -1811,11 +1801,9 @@ class MetalsLanguageServer(
           } yield ().asInstanceOf[Object]
         }
 
-      case ServerCommands.ExtractMemberDefinition(uri, line, character) =>
+      case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>
         CancelTokens.future { token =>
-          val textDocumentPositionParams =
-            toTextDocumentParams(uri, line, character)
-          val data = ExtractMemberDefinitionData(textDocumentPositionParams)
+          val data = ExtractMemberDefinitionData(textDocumentParams)
           val future = for {
             result <- codeActionProvider.executeCommands(data, token)
             future <- languageClient.applyEdit(result.edits).asScala

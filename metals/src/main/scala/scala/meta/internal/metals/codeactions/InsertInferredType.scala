@@ -35,9 +35,10 @@ class InsertInferredType(trees: Trees, compilers: Compilers)
       codeAction.setCommand(
         ServerCommands.InsertInferredType.toLSP(
           List(
-            params.getTextDocument().getUri(),
-            range.getLine(): java.lang.Integer,
-            range.getCharacter(): java.lang.Integer
+            new l.TextDocumentPositionParams(
+              params.getTextDocument(),
+              range
+            )
           )
         )
       )

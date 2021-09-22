@@ -56,51 +56,22 @@ object OpenBrowserCommand {
   }
 }
 
-case class ParametrizedCommand1[T1: ClassTag](
+case class ParametrizedCommand[T: ClassTag](
     id: String,
     title: String,
     description: String,
     arguments: String
 ) extends BaseCommand {
 
-  private val parser = new JsonParser.Of[T1]
+  private val parser = new JsonParser.Of[T]
 
-  def unapply(params: l.ExecuteCommandParams): Option[T1] = {
+  def unapply(params: l.ExecuteCommandParams): Option[T] = {
     val args = Option(params.getArguments()).toList.flatMap(_.asScala)
     if (args.size != 1 || !isApplicableCommand(params)) None
     else {
       args(0) match {
         case parser.Jsonized(t1) =>
           Some(t1)
-        case _ => None
-      }
-    }
-  }
-
-}
-
-case class ParametrizedCommand3[T1: ClassTag, T2: ClassTag, T3: ClassTag](
-    id: String,
-    title: String,
-    description: String,
-    arguments: String
-) extends BaseCommand {
-
-  private val parser1 = new JsonParser.Of[T1]
-  private val parser2 = new JsonParser.Of[T2]
-  private val parser3 = new JsonParser.Of[T3]
-
-  def unapply(params: l.ExecuteCommandParams): Option[(T1, T2, T3)] = {
-    val args = Option(params.getArguments()).toList.flatMap(_.asScala)
-    if (args.size != 3 || !isApplicableCommand(params)) None
-    else {
-      args match {
-        case Seq(
-              parser1.Jsonized(t1),
-              parser2.Jsonized(t2),
-              parser3.Jsonized(t3)
-            ) =>
-          Some((t1, t2, t3))
         case _ => None
       }
     }

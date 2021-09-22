@@ -58,7 +58,7 @@ object ServerCommands {
   )
 
   /** Decode a file e.g. javap, semanticdb */
-  val DecodeFile = new ParametrizedCommand1[String](
+  val DecodeFile = new ParametrizedCommand[String](
     "file-decode",
     "Decode file",
     """|Decode a file into a human readable format.
@@ -190,7 +190,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val AnalyzeStacktrace = new ParametrizedCommand1[String](
+  val AnalyzeStacktrace = new ParametrizedCommand[String](
     "analyze-stacktrace",
     "Analyze stacktrace",
     """|Converts provided stacktrace in the parameter to a format that contains links
@@ -215,7 +215,7 @@ object ServerCommands {
       error: String
   )
 
-  val ShowTasty = new ParametrizedCommand1[String](
+  val ShowTasty = new ParametrizedCommand[String](
     "show-tasty",
     "Show TASTy",
     """|If the file is a Scala 3 source, this command will try to find the relevant tasty file for it, 
@@ -224,7 +224,7 @@ object ServerCommands {
     "[string], where the string is a path to a Scala 3 source or a tasty file."
   )
 
-  val GotoSymbol = new ParametrizedCommand1[String](
+  val GotoSymbol = new ParametrizedCommand[String](
     "goto",
     "Goto location for symbol",
     """|Move the cursor to the definition of the argument symbol.
@@ -233,7 +233,7 @@ object ServerCommands {
     "[string], where the string is a SemanticDB symbol."
   )
 
-  val GotoPosition = new ParametrizedCommand1[Location](
+  val GotoPosition = new ParametrizedCommand[Location](
     "goto-position",
     "Goto location for position",
     """|Move the cursor to the location provided in arguments.
@@ -243,7 +243,7 @@ object ServerCommands {
     "[location], where the location is a lsp location object."
   )
 
-  val GotoSuperMethod = new ParametrizedCommand1[TextDocumentPositionParams](
+  val GotoSuperMethod = new ParametrizedCommand[TextDocumentPositionParams](
     "goto-super-method",
     "Go to super method/field definition",
     """|Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
@@ -268,7 +268,7 @@ object ServerCommands {
   )
 
   val SuperMethodHierarchy =
-    new ParametrizedCommand1[TextDocumentPositionParams](
+    new ParametrizedCommand[TextDocumentPositionParams](
       "super-method-hierarchy",
       "Go to super method/field definition in hierarchy",
       """|When user executes this command it will calculate inheritance hierarchy of a class that contains given method.
@@ -328,7 +328,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val CopyWorksheetOutput = new ParametrizedCommand1[String](
+  val CopyWorksheetOutput = new ParametrizedCommand[String](
     "copy-worksheet-output",
     "Copy Worksheet Output",
     """|Copy the contents of a worksheet to your local buffer.
@@ -339,18 +339,19 @@ object ServerCommands {
     "[uri], the uri of the worksheet that you'd like to copy the contents of."
   )
 
-  val ExtractMemberDefinition = new ParametrizedCommand3[String, Int, Int](
-    "extract-member-definition",
-    "Extract member definition",
-    """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
-       |command is later ran to extract the code and create a new file with it
-       |""".stripMargin,
-    """|[uri, line, character], uri of the document that the command needs to be invoked on
-       |together with line number and character/column where the definition is.
-       |""".stripMargin
-  )
+  val ExtractMemberDefinition =
+    new ParametrizedCommand[TextDocumentPositionParams](
+      "extract-member-definition",
+      "Extract member definition",
+      """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
+         |command is later ran to extract the code and create a new file with it
+         |""".stripMargin,
+      """|[uri, line, character], uri of the document that the command needs to be invoked on
+         |together with line number and character/column where the definition is.
+         |""".stripMargin
+    )
 
-  val InsertInferredType = new ParametrizedCommand3[String, Int, Int](
+  val InsertInferredType = new ParametrizedCommand[TextDocumentPositionParams](
     "insert-inferred-type",
     "Insert inferred type of a value",
     """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
