@@ -110,7 +110,6 @@ public interface PresentationCompilerConfig {
     static List<String> defaultSemanticdbCompilerOptions() {
         return Arrays.asList(
             "-P:semanticdb:synthetics:on",
-            "-P:semanticdb:symbols:none",
             "-P:semanticdb:text:on"
         );
     }

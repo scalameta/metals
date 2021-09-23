@@ -39,11 +39,12 @@ class PcSemanticdbSuite extends BasePCSuite {
        |  val a = 123
        |  val b = a + 1
        |}""".stripMargin,
-    """|import $ivy.`org.kohsuke:github-api:1.114`
+    // local0 comes most likely from the script object use to wrap ScriptSource
+    """|/*local0*/import $ivy.`org.kohsuke:github-api:1.114`
        |
-       |object O/*local0*/ {
-       |  val a/*local1*/ = 123
-       |  val b/*local2*/ = a/*local1*/ +/*scala.Int#`+`(+4).*/ 1
+       |object O/*local1*/ {
+       |  val a/*local2*/ = 123
+       |  val b/*local3*/ = a/*local2*/ +/*scala.Int#`+`(+4).*/ 1
        |}
        |""".stripMargin,
     filename = "A.worksheet.sc",

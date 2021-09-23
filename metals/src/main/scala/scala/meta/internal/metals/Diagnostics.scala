@@ -83,7 +83,7 @@ final class Diagnostics(
       case Some(diagnostic) if !workspace.exists(path.isInReadonlyDirectory) =>
         syntaxError(path) = diagnostic
         publishDiagnostics(path)
-      case None =>
+      case _ =>
         onNoSyntaxError(path)
     }
   }
