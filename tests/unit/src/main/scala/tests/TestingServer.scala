@@ -750,7 +750,9 @@ final class TestingServer(
     }
   }
 
-  def codeLenses(filename: String)(maxRetries: Int): Future[String] = {
+  def codeLenses(filename: String, printCommand: Boolean = false)(
+      maxRetries: Int
+  ): Future[String] = {
     val path = toPath(filename)
     val uri = path.toURI.toString
     val params = new CodeLensParams(new TextDocumentIdentifier(uri))
@@ -789,7 +791,7 @@ final class TestingServer(
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFile(path)
       lenses <- codeLenses.future
-      textEdits = CodeLensesTextEdits(lenses)
+      textEdits = CodeLensesTextEdits(lenses, printCommand)
     } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
   }
 

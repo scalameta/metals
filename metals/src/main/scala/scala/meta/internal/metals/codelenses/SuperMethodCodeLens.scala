@@ -11,7 +11,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
 
@@ -43,7 +47,9 @@ final class SuperMethodCodeLens(
       symbol = occurrence.symbol
       gotoSuperMethod <- createSuperMethodCommand(
         symbol,
-        search
+        search,
+        textDocument,
+        path
       ).toIterable
       range <-
         occurrence.range
@@ -54,28 +60,51 @@ final class SuperMethodCodeLens(
 
   private def createSuperMethodCommand(
       symbol: String,
-      findSymbol: String => Option[SymbolInformation]
+      findSymbol: String => Option[SymbolInformation],
+      textDocument: TextDocument,
+      path: AbsolutePath
   ): Option[l.Command] = {
     for {
       symbolInformation <- findSymbol(symbol)
       gotoParentSymbol <- SuperMethodProvider.findSuperForMethodOrField(
         symbolInformation
       )
-    } yield convertToSuperMethodCommand(
-      gotoParentSymbol,
-      symbolInformation.displayName
-    )
+      command <- convertToSuperMethodCommand(
+        gotoParentSymbol,
+        symbolInformation.displayName,
+        textDocument,
+        path
+      )
+    } yield command
   }
 
   private def convertToSuperMethodCommand(
       symbol: String,
-      name: String
-  ): l.Command = {
-    new l.Command(
-      s"${clientConfig.icons.findsuper} ${name}",
-      ServerCommands.GotoSymbol.id,
-      singletonList(symbol)
-    )
+      name: String,
+      textDocument: TextDocument,
+      path: AbsolutePath
+  ): Option[l.Command] = {
+    if (symbol.isLocal)
+      textDocument.occurrences.collectFirst {
+        case SymbolOccurrence(
+              Some(range),
+              `symbol`,
+              SymbolOccurrence.Role.DEFINITION
+            ) =>
+          new l.Command(
+            s"${clientConfig.icons.findsuper} ${name}",
+            ServerCommands.GotoPosition.id,
+            singletonList(new l.Location(path.toURI.toString(), range.toLSP))
+          )
+      }
+    else
+      Some {
+        new l.Command(
+          s"${clientConfig.icons.findsuper} ${name}",
+          ServerCommands.GotoSymbol.id,
+          singletonList(symbol)
+        )
+      }
   }
 
 }
