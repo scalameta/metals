@@ -1587,24 +1587,7 @@ class MetalsLanguageServer(
   def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] = {
-    def textDocumentPosition(
-        args: mutable.Buffer[AnyRef]
-    ): Option[(TextDocumentPositionParams, String)] = {
-      for {
-        arg0 <- args.lift(0)
-        uri <- Argument.getAsString(arg0)
-        arg1 <- args.lift(1)
-        line <- Argument.getAsInt(arg1)
-        arg2 <- args.lift(2)
-        character <- Argument.getAsInt(arg2)
-        pos = new l.Position(line, character)
-        textDoc = new l.TextDocumentIdentifier(uri)
-        params = new TextDocumentPositionParams(textDoc, pos)
-      } yield (params, uri)
-    }
-
-    val command = Option(params.getCommand).getOrElse("")
-    command.stripPrefix("metals.") match {
+    params match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
           indexWorkspaceSources()
@@ -1622,15 +1605,8 @@ class MetalsLanguageServer(
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
         disconnectOldBuildServer().asJavaObject
-      case ServerCommands.DecodeFile() =>
-        val argsMaybe = Option(params.getArguments())
-        (argsMaybe.flatMap(_.asScala.headOption) match {
-          case Some(arg: JsonPrimitive) =>
-            val uri = arg.getAsString()
-            fileDecoderProvider.decodedFileContents(uri)
-          case _ =>
-            Future { fileDecoderProvider.errorReponse(s"$params") }
-        }).asJavaObject
+      case ServerCommands.DecodeFile(uri) =>
+        fileDecoderProvider.decodedFileContents(uri).asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
           doctor.executeRunDoctor()
@@ -1646,7 +1622,7 @@ class MetalsLanguageServer(
             else Future.successful(())
           }
         } yield ()).asJavaObject
-      case ServerCommands.OpenBrowser(url) =>
+      case OpenBrowserCommand(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case ServerCommands.CascadeCompile() =>
         compilations
@@ -1663,24 +1639,21 @@ class MetalsLanguageServer(
         Future {
           compilers.restartAll()
         }.asJavaObject
-      case ServerCommands.GotoPosition() =>
+      case ServerCommands.GotoPosition(location) =>
         Future {
           // arguments are not checked but are of format:
           // singletonList(location: Location, otherWindow: Boolean)
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
-              params.getArguments()
+              List(location.asInstanceOf[AnyRef]).asJava
             )
           )
         }.asJavaObject
 
-      case ServerCommands.GotoSymbol() =>
+      case ServerCommands.GotoSymbol(symbol) =>
         Future {
           for {
-            args <- Option(params.getArguments())
-            argObject <- args.asScala.headOption
-            symbol <- Argument.getAsString(argObject)
             location <- definitionProvider
               .fromSymbol(symbol, focusedDocument)
               .asScala
@@ -1746,26 +1719,29 @@ class MetalsLanguageServer(
         }
         session.asJavaObject
 
-      case ServerCommands.AnalyzeStacktrace() =>
+      case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
-          val command = stacktraceAnalyzer.analyzeCommand(params)
+          val command = stacktraceAnalyzer.analyzeCommand(content)
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
 
-      case ServerCommands.ShowTasty() =>
-        tastyHandler.executeShowTastyCommand(params).asJavaObject
+      case ServerCommands.ShowTasty(uri) =>
+        tastyHandler.executeShowTastyCommand(uri).asJavaObject
 
-      case ServerCommands.GotoSuperMethod() =>
+      case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         Future {
-          val command = supermethods.getGoToSuperMethodCommand(params)
+          val command =
+            supermethods.getGoToSuperMethodCommand(textDocumentPositionParams)
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing GoToSuperMethod ${command}")
         }.asJavaObject
 
-      case ServerCommands.SuperMethodHierarchy() =>
-        scribe.debug(s"Executing SuperMethodHierarchy ${command}")
-        supermethods.jumpToSelectedSuperMethod(params).asJavaObject
+      case ServerCommands.SuperMethodHierarchy(textDocumentPositionParams) =>
+        scribe.debug(s"Executing SuperMethodHierarchy ${params.getCommand()}")
+        supermethods
+          .jumpToSelectedSuperMethod(textDocumentPositionParams)
+          .asJavaObject
 
       case ServerCommands.ResetChoicePopup() =>
         val argsMaybe = Option(params.getArguments())
@@ -1773,22 +1749,20 @@ class MetalsLanguageServer(
           case Some(arg: JsonPrimitive) =>
             val value = arg.getAsString().replace("+", " ")
             scribe.debug(
-              s"Executing ResetChoicePopup ${command} for choice ${value}"
+              s"Executing ResetChoicePopup ${params.getCommand()} for choice ${value}"
             )
             popupChoiceReset.reset(value)
           case _ =>
             scribe.debug(
-              s"Executing ResetChoicePopup ${command} in interactive mode."
+              s"Executing ResetChoicePopup ${params.getCommand()} in interactive mode."
             )
             popupChoiceReset.interactiveReset()
         }).asJavaObject
 
-      case ServerCommands.NewScalaFile() =>
-        val args = params.getArguments.asScala
-        val directoryURI =
-          args.lift(0).flatMap(Argument.getAsString).map(new URI(_))
-        val name = args.lift(1).flatMap(Argument.getAsString)
-        val fileType = args.lift(2).flatMap(Argument.getAsString)
+      case ServerCommands.NewScalaFile(args) =>
+        val directoryURI = args.lift(0).flatten.map(new URI(_))
+        val name = args.lift(1).flatten
+        val fileType = args.lift(2).flatten
         newFileProvider
           .handleFileCreation(directoryURI, name, fileType)
           .asJavaObject
@@ -1800,14 +1774,9 @@ class MetalsLanguageServer(
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
-      case ServerCommands.CopyWorksheetOutput() =>
-        val args = params.getArguments.asScala
-        val worksheet = args.lift(0).collect {
-          case ws: JsonPrimitive if ws.isString =>
-            ws.getAsString().toAbsolutePath
-        }
-
-        val output = worksheet.flatMap(worksheetProvider.copyWorksheetOutput(_))
+      case ServerCommands.CopyWorksheetOutput(path) =>
+        val worksheetPath = path.toAbsolutePath
+        val output = worksheetProvider.copyWorksheetOutput(worksheetPath)
 
         if (output.nonEmpty) {
           Future(output).asJavaObject
@@ -1816,58 +1785,48 @@ class MetalsLanguageServer(
           Future.successful(()).asJavaObject
         }
 
-      case ServerCommands.InsertInferredType() =>
+      case ServerCommands.InsertInferredType(textDocumentParams) =>
         CancelTokens.future { token =>
-          val args = params.getArguments().asScala
-          val futureOpt = textDocumentPosition(args).map { case (params, uri) =>
-            for {
-              edits <- compilers.insertInferredType(params, token)
-              if (!edits.isEmpty())
-              workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-              _ <- languageClient
-                .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
-                .asScala
-            } yield ()
-          }
-
-          futureOpt.getOrElse {
-            languageClient.showMessage(Messages.InsertInferredTypeFailed)
-            Future.unit
-          }.withObjectValue
+          val uri = textDocumentParams.getTextDocument().getUri()
+          for {
+            edits <- compilers.insertInferredType(textDocumentParams, token)
+            if (!edits.isEmpty())
+            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+            _ <- languageClient
+              .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
+              .asScala
+          } yield ().asInstanceOf[Object]
         }
-      case ServerCommands.ExtractMemberDefinition() =>
-        CancelTokens.future { token =>
-          val args = params.getArguments().asScala
 
-          val futureOpt = for {
-            (params, uri) <- textDocumentPosition(args)
+      case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>
+        CancelTokens.future { token =>
+          val data = ExtractMemberDefinitionData(textDocumentParams)
+          val future = for {
+            result <- codeActionProvider.executeCommands(data, token)
+            future <- languageClient.applyEdit(result.edits).asScala
           } yield {
-            val data = ExtractMemberDefinitionData(uri, params)
-            for {
-              result <- codeActionProvider.executeCommands(data, token)
-              future <- languageClient.applyEdit(result.edits).asScala
-            } yield {
-              result.goToLocation.foreach { location =>
-                languageClient.metalsExecuteClientCommand(
-                  new ExecuteCommandParams(
-                    ClientCommands.GotoLocation.id,
-                    List(location: Object).asJava
-                  )
+            result.goToLocation.foreach { location =>
+              languageClient.metalsExecuteClientCommand(
+                new ExecuteCommandParams(
+                  ClientCommands.GotoLocation.id,
+                  List(location: Object).asJava
                 )
-              }
+              )
             }
           }
 
-          futureOpt.getOrElse {
-            Future(
-              languageClient.showMessage(
-                Messages.ExtractMemberDefinitionFailed
-              )
-            )
-          }.withObjectValue
+          future.withObjectValue
         }
       case cmd =>
-        scribe.error(s"Unknown command '$cmd'")
+        ServerCommands.all
+          .find(command => command.id == cmd.getCommand())
+          .fold {
+            scribe.error(s"Unknown command '$cmd'")
+          } { foundCommand =>
+            scribe.error(
+              s"Expected '${foundCommand.arguments}', but got '${cmd.getArguments()}'"
+            )
+          }
         Future.successful(()).asJavaObject
     }
   }

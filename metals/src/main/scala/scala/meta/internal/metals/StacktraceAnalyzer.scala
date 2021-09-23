@@ -9,7 +9,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StacktraceAnalyzer._
 import scala.meta.io.AbsolutePath
 
-import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.Location
 import org.eclipse.{lsp4j => l}
 
@@ -22,10 +21,9 @@ class StacktraceAnalyzer(
 ) {
 
   def analyzeCommand(
-      commandParams: l.ExecuteCommandParams
+      stacktrace: String
   ): Option[l.ExecuteCommandParams] = {
-    parseJsonParams(commandParams)
-      .flatMap(analyzeStackTrace)
+    analyzeStackTrace(stacktrace)
   }
 
   def isStackTraceFile(path: AbsolutePath): Boolean =
@@ -189,17 +187,6 @@ class StacktraceAnalyzer(
   private def gotoLocationUsingUri(uri: String, line: Int): String = {
     val param = s"""["${uri}",${line},true]"""
     s"command:metals.goto-path-uri?${URLEncoder.encode(param)}"
-  }
-
-  private def parseJsonParams(
-      commandParams: l.ExecuteCommandParams
-  ): Option[String] = {
-    for {
-      args <- Option(commandParams.getArguments)
-      arg <- args.asScala.lift(0).collect { case js: JsonPrimitive => js }
-      if arg.isString()
-      stacktrace = arg.getAsString()
-    } yield stacktrace
   }
 }
 

@@ -5,15 +5,17 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 trait CodeActionCommandData {
-  val uri: String
-  val actionType: String
+  def uri: String
+  def actionType: String
 }
 
 case class ExtractMemberDefinitionData(
-    uri: String,
     params: TextDocumentPositionParams,
     actionType: String = ExtractRenameMember.extractDefCommandDataType
-) extends CodeActionCommandData
+) extends CodeActionCommandData {
+
+  override def uri: String = params.getTextDocument().getUri()
+}
 
 case class CodeActionCommandResult(
     edits: ApplyWorkspaceEditParams,

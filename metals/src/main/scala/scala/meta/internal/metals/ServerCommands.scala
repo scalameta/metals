@@ -3,9 +3,9 @@ package scala.meta.internal.metals
 import java.net.URI
 import javax.annotation.Nullable
 
-import scala.util.matching.Regex
-
 import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
  * LSP commands supported by the Metals language server.
@@ -58,7 +58,7 @@ object ServerCommands {
   )
 
   /** Decode a file e.g. javap, semanticdb */
-  val DecodeFile = new Command(
+  val DecodeFile = new ParametrizedCommand[String](
     "file-decode",
     "Decode file",
     """|Decode a file into a human readable format.
@@ -190,7 +190,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val AnalyzeStacktrace = new Command(
+  val AnalyzeStacktrace = new ParametrizedCommand[String](
     "analyze-stacktrace",
     "Analyze stacktrace",
     """|Converts provided stacktrace in the parameter to a format that contains links
@@ -215,7 +215,7 @@ object ServerCommands {
       error: String
   )
 
-  val ShowTasty = new Command(
+  val ShowTasty = new ParametrizedCommand[String](
     "show-tasty",
     "Show TASTy",
     """|If the file is a Scala 3 source, this command will try to find the relevant tasty file for it, 
@@ -224,7 +224,7 @@ object ServerCommands {
     "[string], where the string is a path to a Scala 3 source or a tasty file."
   )
 
-  val GotoSymbol = new Command(
+  val GotoSymbol = new ParametrizedCommand[String](
     "goto",
     "Goto location for symbol",
     """|Move the cursor to the definition of the argument symbol.
@@ -233,7 +233,7 @@ object ServerCommands {
     "[string], where the string is a SemanticDB symbol."
   )
 
-  val GotoPosition = new Command(
+  val GotoPosition = new ParametrizedCommand[Location](
     "goto-position",
     "Goto location for position",
     """|Move the cursor to the location provided in arguments.
@@ -243,7 +243,7 @@ object ServerCommands {
     "[location], where the location is a lsp location object."
   )
 
-  val GotoSuperMethod = new Command(
+  val GotoSuperMethod = new ParametrizedCommand[TextDocumentPositionParams](
     "goto-super-method",
     "Go to super method/field definition",
     """|Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
@@ -267,28 +267,29 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val SuperMethodHierarchy = new Command(
-    "super-method-hierarchy",
-    "Go to super method/field definition in hierarchy",
-    """|When user executes this command it will calculate inheritance hierarchy of a class that contains given method.
-       |Then it will filter out classes not overriding given method and a list using 'metalsQuickPick' will be
-       |displayed to which super method user would like to go to.
-       |Command has no effect on other symbols than method definition.
-       |QuickPick will show up only if more than one result is found.
-       |
-       |Note: document in json argument must be absolute path.
-       |""".stripMargin,
-    """|Object with `document` and `position`
-       |
-       |Example:
-       |```json
-       |{
-       |  document: "file:///home/dev/foo/Bar.scala",
-       |  position: {line: 5, character: 12}
-       |}
-       |```
-       |""".stripMargin
-  )
+  val SuperMethodHierarchy =
+    new ParametrizedCommand[TextDocumentPositionParams](
+      "super-method-hierarchy",
+      "Go to super method/field definition in hierarchy",
+      """|When user executes this command it will calculate inheritance hierarchy of a class that contains given method.
+         |Then it will filter out classes not overriding given method and a list using 'metalsQuickPick' will be
+         |displayed to which super method user would like to go to.
+         |Command has no effect on other symbols than method definition.
+         |QuickPick will show up only if more than one result is found.
+         |
+         |Note: document in json argument must be absolute path.
+         |""".stripMargin,
+      """|Object with `document` and `position`
+         |
+         |Example:
+         |```json
+         |{
+         |  document: "file:///home/dev/foo/Bar.scala",
+         |  position: {line: 5, character: 12}
+         |}
+         |```
+         |""".stripMargin
+    )
 
   val ResetChoicePopup = new Command(
     "reset-choice",
@@ -303,7 +304,7 @@ object ServerCommands {
     "[string?], where string is a choice value."
   )
 
-  val NewScalaFile = new Command(
+  val NewScalaFile = new ListParametrizedCommand[String](
     "new-scala-file",
     "Create new scala file",
     """|Create and open new file with either scala class, object, trait, package object or worksheet.
@@ -327,7 +328,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val CopyWorksheetOutput = new Command(
+  val CopyWorksheetOutput = new ParametrizedCommand[String](
     "copy-worksheet-output",
     "Copy Worksheet Output",
     """|Copy the contents of a worksheet to your local buffer.
@@ -338,33 +339,42 @@ object ServerCommands {
     "[uri], the uri of the worksheet that you'd like to copy the contents of."
   )
 
-  val ExtractMemberDefinition = new Command(
-    "extract-member-definition",
-    "Extract member definition",
-    """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
-       |command is later ran to extract the code and create a new file with it
-       |""".stripMargin,
-    """|[uri, line, character], uri of the document that the command needs to be invoked on
-       |together with line number and character/column where the definition is.
-       |""".stripMargin
-  )
+  val ExtractMemberDefinition =
+    new ParametrizedCommand[TextDocumentPositionParams](
+      "extract-member-definition",
+      "Extract member definition",
+      """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
+         |command is later ran to extract the code and create a new file with it
+         |""".stripMargin,
+      """|Object with `document` and `position`
+         |
+         |Example:
+         |```json
+         |{
+         |  document: "file:///home/dev/foo/Bar.scala",
+         |  position: {line: 5, character: 12}
+         |}
+         |```
+         |""".stripMargin
+    )
 
-  val InsertInferredType = new Command(
+  val InsertInferredType = new ParametrizedCommand[TextDocumentPositionParams](
     "insert-inferred-type",
     "Insert inferred type of a value",
     """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
        |calculate the type and insert it in the correct location.
        |""".stripMargin,
-    """|[uri, line, character], uri to the document that the command needs to be invoked on 
-       |together with line number and character/column.
+    """|Object with `document` and `position`
+       |
+       |Example:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
        |""".stripMargin
   )
-
-  /**
-   * Open the browser at the given url.
-   */
-  val OpenBrowser: Regex = "browser-open-url:(.*)".r
-  def OpenBrowser(url: String): String = s"browser-open-url:$url"
 
   val GotoLog = new Command(
     "goto-log",
@@ -372,50 +382,50 @@ object ServerCommands {
     "Open the Metals logs to troubleshoot issues."
   )
 
-  val OpenIssue = new Command(
-    OpenBrowser("https://github.com/scalameta/metals/issues/new/choose"),
+  val OpenIssue = new OpenBrowserCommand(
+    "https://github.com/scalameta/metals/issues/new/choose",
     "Open issue on GitHub",
     "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature."
   )
 
-  val MetalsGithub = new Command(
-    OpenBrowser("https://github.com/scalameta/metals"),
+  val MetalsGithub = new OpenBrowserCommand(
+    "https://github.com/scalameta/metals",
     "Metals on GitHub",
     "Open the Metals repository on GitHub"
   )
 
-  val BloopGithub = new Command(
-    OpenBrowser("https://github.com/scalacenter/bloop"),
+  val BloopGithub = new OpenBrowserCommand(
+    "https://github.com/scalacenter/bloop",
     "Bloop on GitHub",
     "Open the Metals repository on GitHub"
   )
 
-  val ChatOnGitter = new Command(
-    OpenBrowser("https://gitter.im/scalameta/metals"),
+  val ChatOnGitter = new OpenBrowserCommand(
+    "https://gitter.im/scalameta/metals",
     "Chat on Gitter",
     "Open the Metals channel on Gitter to discuss with other Metals users."
   )
 
-  val ChatOnDiscord = new Command(
-    OpenBrowser("https://discord.gg/RFpSVth"),
+  val ChatOnDiscord = new OpenBrowserCommand(
+    "https://discord.gg/RFpSVth",
     "Chat on Discord",
     "Open the Scalameta server on Discord to discuss with other Metals users."
   )
 
-  val ReadVscodeDocumentation = new Command(
-    OpenBrowser("https://scalameta.org/metals/docs/editors/vscode.html"),
+  val ReadVscodeDocumentation = new OpenBrowserCommand(
+    "https://scalameta.org/metals/docs/editors/vscode.html",
     "Read Metals documentation",
     "Open the Metals website to read the full instructions on how to use Metals with VS Code."
   )
 
-  val ReadBloopDocumentation = new Command(
-    OpenBrowser("https://scalacenter.github.io/bloop/"),
+  val ReadBloopDocumentation = new OpenBrowserCommand(
+    "https://scalacenter.github.io/bloop/",
     "Read Bloop documentation",
     "Open the Bloop website to read the full instructions on how to install and use Bloop."
   )
 
-  val ScalametaTwitter = new Command(
-    OpenBrowser("https://twitter.com/scalameta"),
+  val ScalametaTwitter = new OpenBrowserCommand(
+    "https://twitter.com/scalameta",
     "Scalameta on Twitter",
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks."
   )
@@ -432,7 +442,7 @@ object ServerCommands {
     "Stop Ammonite build server"
   )
 
-  def all: List[Command] =
+  def all: List[BaseCommand] =
     List(
       AnalyzeStacktrace,
       BspSwitch,

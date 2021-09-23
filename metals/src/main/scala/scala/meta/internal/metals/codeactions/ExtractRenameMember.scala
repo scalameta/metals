@@ -288,9 +288,10 @@ class ExtractRenameMember(
     codeAction.setCommand(
       ServerCommands.ExtractMemberDefinition.toLSP(
         List(
-          uri,
-          range.getStart.getLine(): java.lang.Integer,
-          range.getStart.getCharacter(): java.lang.Integer
+          new l.TextDocumentPositionParams(
+            new l.TextDocumentIdentifier(uri),
+            range.getStart()
+          )
         )
       )
     )

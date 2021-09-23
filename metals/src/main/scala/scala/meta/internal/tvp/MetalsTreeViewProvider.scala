@@ -179,7 +179,7 @@ class MetalsTreeViewProvider(
       }
     )
   }
-  def echoCommand(command: Command, icon: String): TreeViewNode =
+  def echoCommand(command: BaseCommand, icon: String): TreeViewNode =
     TreeViewNode(
       viewId = "help",
       nodeUri = s"help:${command.id}",

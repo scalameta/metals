@@ -26,7 +26,7 @@ case class TreeViewNode(
 
 object TreeViewNode {
   def fromCommand(
-      command: Command,
+      command: BaseCommand,
       icon: String = TreeViewNode.command
   ): TreeViewNode =
     TreeViewNode(
