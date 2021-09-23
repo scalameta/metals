@@ -413,7 +413,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
         _ <-
           server
             .executeCommand(
-              ServerCommands.NewScalaFile.id,
+              ServerCommands.NewScalaFile,
               args: _*
             )
         _ = {

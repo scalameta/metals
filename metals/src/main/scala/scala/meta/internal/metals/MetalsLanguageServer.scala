@@ -1677,12 +1677,9 @@ class MetalsLanguageServer(
       case ServerCommands.GotoPosition(location) =>
         Future {
           languageClient.metalsExecuteClientCommand(
-            new ExecuteCommandParams(
-              ClientCommands.GotoLocation.id,
-              List(
-                location.asInstanceOf[AnyRef],
-                java.lang.Boolean.TRUE // TRUE for otherWindow
-              ).asJava
+            ClientCommands.GotoLocation.toExecuteCommandParams(
+              location,
+              otherWindow = true
             )
           )
         }.asJavaObject
@@ -1696,10 +1693,7 @@ class MetalsLanguageServer(
               .headOption
           } {
             languageClient.metalsExecuteClientCommand(
-              new ExecuteCommandParams(
-                ClientCommands.GotoLocation.id,
-                List(location: Object).asJava
-              )
+              ClientCommands.GotoLocation.toExecuteCommandParams(location)
             )
           }
         }.asJavaObject
@@ -1708,16 +1702,12 @@ class MetalsLanguageServer(
           val log = workspace.resolve(Directories.log)
           val linesCount = log.readText.linesIterator.size
           val pos = new l.Position(linesCount, 0)
+          val location = new Location(
+            log.toURI.toString(),
+            new l.Range(pos, pos)
+          )
           languageClient.metalsExecuteClientCommand(
-            new ExecuteCommandParams(
-              ClientCommands.GotoLocation.id,
-              List(
-                new Location(
-                  log.toURI.toString(),
-                  new l.Range(pos, pos)
-                ): Object
-              ).asJava
-            )
+            ClientCommands.GotoLocation.toExecuteCommandParams(location)
           )
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
@@ -1840,10 +1830,7 @@ class MetalsLanguageServer(
           } yield {
             result.goToLocation.foreach { location =>
               languageClient.metalsExecuteClientCommand(
-                new ExecuteCommandParams(
-                  ClientCommands.GotoLocation.id,
-                  List(location: Object).asJava
-                )
+                ClientCommands.GotoLocation.toExecuteCommandParams(location)
               )
             }
           }

@@ -32,7 +32,7 @@ class CascadeLspSuite extends BaseLspSuite("cascade") {
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ <- server.executeCommand(ServerCommands.CascadeCompile.id)
+      _ <- server.executeCommand(ServerCommands.CascadeCompile)
       // Check that cascade compile triggers compile in dependent project "b"
       // but not independent project "c".
       _ = assertNoDiff(

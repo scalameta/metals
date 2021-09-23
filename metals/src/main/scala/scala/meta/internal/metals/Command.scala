@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.reflect.ClassTag
 import scala.util.matching.Regex
 
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.{lsp4j => l}
@@ -12,9 +13,6 @@ sealed trait BaseCommand {
   def title: String
   def description: String
   def arguments: String
-
-  def toLSP(arguments: List[AnyRef]): l.Command =
-    new l.Command(title, id, arguments.asJava)
 
   protected def isApplicableCommand(params: l.ExecuteCommandParams): Boolean =
     params.getCommand.stripPrefix("metals.") == id
@@ -28,6 +26,13 @@ case class Command(
 ) extends BaseCommand {
   def unapply(params: l.ExecuteCommandParams): Boolean = {
     isApplicableCommand(params)
+  }
+
+  def toExecuteCommandParams(): l.ExecuteCommandParams = {
+    new l.ExecuteCommandParams(
+      id,
+      List[Object]().asJava
+    )
   }
 
 }
@@ -74,6 +79,17 @@ case class ParametrizedCommand[T: ClassTag](
     }
   }
 
+  def toLSP(argument: T): l.Command =
+    new l.Command(title, id, List(argument.toJson.asInstanceOf[AnyRef]).asJava)
+
+  def toExecuteCommandParams(argument: T): l.ExecuteCommandParams = {
+    new l.ExecuteCommandParams(
+      id,
+      List[Object](
+        argument.toJson
+      ).asJava
+    )
+  }
 }
 
 case class ListParametrizedCommand[T: ClassTag](
@@ -84,6 +100,13 @@ case class ListParametrizedCommand[T: ClassTag](
 ) extends BaseCommand {
 
   private val parser = new JsonParser.Of[T]
+
+  def toLSP(arguments: T*): l.Command =
+    new l.Command(
+      title,
+      id,
+      arguments.map(_.toJson.asInstanceOf[AnyRef]).asJava
+    )
 
   def unapply(params: l.ExecuteCommandParams): Option[List[Option[T]]] = {
     if (!isApplicableCommand(params)) None
@@ -96,5 +119,12 @@ case class ListParametrizedCommand[T: ClassTag](
         }
       Some(args)
     }
+  }
+
+  def toExecuteCommandParams(argument: T*): l.ExecuteCommandParams = {
+    new l.ExecuteCommandParams(
+      id,
+      argument.map(_.toJson.asInstanceOf[AnyRef]).asJava
+    )
   }
 }

@@ -263,7 +263,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
       _ <- server.didChange("b/src/main/scala/b/B.scala")(
         _.replace("val b", "\n  val number")
       )
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = server.assertReferenceDefinitionDiff(
         """|        ^
            |+=============

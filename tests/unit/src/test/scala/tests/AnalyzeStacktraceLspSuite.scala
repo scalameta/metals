@@ -2,6 +2,9 @@ package tests
 
 import scala.collection.mutable
 
+import scala.meta.internal.metals.JsonParser
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import org.eclipse.{lsp4j => l}
 
 class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
@@ -82,6 +85,7 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
       code: String,
       stacktrace: String
   ): Unit = {
+    val locationParser = new JsonParser.Of[l.Location]
     test(name) {
       cleanWorkspace()
       for {
@@ -96,18 +100,13 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         lenses = server.analyzeStacktrace(stacktrace)
         output =
-          lenses
-            .map(cl =>
-              cl.getRange.getStart.getLine -> cl
-                .getCommand()
-                .getArguments()
-                .get(0)
-                .asInstanceOf[l.Location]
-                .getRange
-                .getStart
-                .getLine
-            )
-            .toMap
+          lenses.map { cl =>
+            val line = cl.getCommand().getArguments.asScala match {
+              case Seq(locationParser.Jsonized(location)) =>
+                location.getRange().getStart().getLine()
+            }
+            cl.getRange.getStart.getLine -> line
+          }.toMap
         _ = assertEquals(output, getExpected(code))
       } yield ()
     }

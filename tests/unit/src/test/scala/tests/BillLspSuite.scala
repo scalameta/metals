@@ -65,8 +65,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
           |true
         """.stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         val logs = workspace
           .resolve(Directories.log)
@@ -101,8 +101,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
           |true
         """.stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         val logs = workspace
           .resolve(Directories.log)

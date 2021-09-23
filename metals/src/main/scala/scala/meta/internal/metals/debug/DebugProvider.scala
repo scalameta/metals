@@ -52,7 +52,6 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
-import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -447,10 +446,7 @@ class DebugProvider(
         Messages.DebugErrorsPresent(clientConfig.icons())
       )
       languageClient.metalsExecuteClientCommand(
-        new ExecuteCommandParams(
-          ClientCommands.FocusDiagnostics.id,
-          Nil.asJava
-        )
+        ClientCommands.FocusDiagnostics.toExecuteCommandParams()
       )
     case t: ClassNotFoundException =>
       languageClient.showMessage(

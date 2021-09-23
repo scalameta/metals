@@ -252,14 +252,14 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |                  ^^
            |""".stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
       _ = assertNoDiagnostics()
       _ <- server.didSave("a/src/main/scala/a/B.scala")(
         _.replace("String", "Int")
       )
       _ <- server.didClose("a/src/main/scala/a/B.scala")
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = assertNoDiagnostics()
     } yield ()
   }

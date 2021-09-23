@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
 
 import scala.meta.internal.decorations.DecorationClient
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -44,8 +43,7 @@ trait MetalsLanguageClient
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
   final def refreshModel(): Unit = {
-    val command = ClientCommands.RefreshModel.id
-    val params = new ExecuteCommandParams(command, Nil.asJava)
+    val params = ClientCommands.RefreshModel.toExecuteCommandParams()
     metalsExecuteClientCommand(params)
   }
 

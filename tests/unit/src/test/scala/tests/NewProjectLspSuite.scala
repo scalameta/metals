@@ -286,7 +286,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         _ <-
           server
             .executeCommand(
-              ServerCommands.NewScalaProject.id
+              ServerCommands.NewScalaProject
             )
         output = directoryOutput(tmpDirectory)
       } yield {

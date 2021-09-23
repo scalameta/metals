@@ -109,7 +109,7 @@ class SbtBloopLspSuite
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
-      _ <- server.executeCommand(ServerCommands.ImportBuild.id)
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(

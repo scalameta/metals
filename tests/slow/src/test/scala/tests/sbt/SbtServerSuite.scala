@@ -52,7 +52,7 @@ class SbtServerSuite
       )
       _ = client.messageRequests.clear()
       // Attempt to create a .bsp/sbt.json file
-      _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
     } yield {
       assertNoDiff(
         client.workspaceShowMessages,
@@ -83,7 +83,7 @@ class SbtServerSuite
       _ = client.messageRequests.clear() // restart
       _ = assert(!sbtBspConfig.exists)
       // At this point, we want to use sbt server, so create the sbt.json file.
-      _ <- server.executeCommand(ServerCommands.GenerateBspConfig.id)
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
     } yield {
       assert(sbtLaunchJar.exists)
       assert(isBspConfigValid)

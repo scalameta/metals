@@ -287,11 +287,9 @@ class ExtractRenameMember(
     codeAction.setKind(l.CodeActionKind.RefactorExtract)
     codeAction.setCommand(
       ServerCommands.ExtractMemberDefinition.toLSP(
-        List(
-          new l.TextDocumentPositionParams(
-            new l.TextDocumentIdentifier(uri),
-            range.getStart()
-          )
+        new l.TextDocumentPositionParams(
+          new l.TextDocumentIdentifier(uri),
+          range.getStart()
         )
       )
     )

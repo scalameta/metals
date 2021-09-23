@@ -1,6 +1,12 @@
 package scala.meta.internal.metals
 
+import java.net.URI
+
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+
 import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.{lsp4j => l}
 
 /**
  * Optional commands that metals expects the client to implement.
@@ -19,7 +25,7 @@ object ClientCommands {
       """`string`, the command ID to execute on the client.""".stripMargin
   )
 
-  val RunDoctor = new Command(
+  val RunDoctor = new ParametrizedCommand[String](
     "metals-doctor-run",
     "Run doctor",
     """|Focus on a window displaying troubleshooting help from the Metals doctor.
@@ -76,7 +82,7 @@ object ClientCommands {
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
 
-  val ReloadDoctor = new Command(
+  val ReloadDoctor = new ParametrizedCommand[String](
     "metals-doctor-reload",
     "Reload doctor",
     """|Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.
@@ -155,30 +161,44 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val GotoLocation = new Command(
-    "metals-goto-location",
-    "Goto location",
-    "Move the cursor focus to the provided location",
-    """|First required parameter is LSP `Location` object with `uri` and `range` fields.
-       |Second parameter is optional and has signature `otherWindow: Boolean`. 
-       |It gives a hint to client that if possible it would be good to open location in
-       |another buffer/window.
-       |Example: 
-       |```json
-       |[{
-       |  "uri": "file://path/to/Definition.scala",
-       |  "range": {
-       |    "start": {"line": 194, "character": 0},
-       |    "end":   {"line": 194, "character": 1}
-       |  }
-       |},
-       |  false
-       |]
-       |```
-       |""".stripMargin
-  )
+  object GotoLocation
+      extends ParametrizedCommand[l.Location](
+        "metals-goto-location",
+        "Goto location",
+        "Move the cursor focus to the provided location",
+        """|First required parameter is LSP `Location` object with `uri` and `range` fields.
+           |Second parameter is optional and has signature `otherWindow: Boolean`. 
+           |It gives a hint to client that if possible it would be good to open location in
+           |another buffer/window.
+           |Example: 
+           |```json
+           |[{
+           |  "uri": "file://path/to/Definition.scala",
+           |  "range": {
+           |    "start": {"line": 194, "character": 0},
+           |    "end":   {"line": 194, "character": 1}
+           |  }
+           |},
+           |  false
+           |]
+           |```
+           |""".stripMargin
+      ) {
+    def toExecuteCommandParams(
+        argument: l.Location,
+        otherWindow: Boolean
+    ): l.ExecuteCommandParams = {
+      new l.ExecuteCommandParams(
+        id,
+        List[Object](
+          argument.toJson,
+          otherWindow: java.lang.Boolean
+        ).asJava
+      )
+    }
+  }
 
-  val OpenFolder = new Command(
+  val OpenFolder = new ParametrizedCommand[MetalsOpenWindowParams](
     "metals-open-folder",
     "Open a specified folder either in the same or new window",
     """Open a new window with the specified directory.""".stripMargin,
@@ -193,7 +213,7 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val CopyWorksheetOutput = new Command(
+  val CopyWorksheetOutput = new ParametrizedCommand[URI](
     "metals.copy-worksheet-output",
     "Copy Worksheet Output",
     s"""|Copy the contents of a worksheet to your local buffer.
@@ -204,6 +224,23 @@ object ClientCommands {
         |Server will attempt to create code lens with this command if `copyWorksheetOutputProvider` option is set.
         |""".stripMargin,
     "[uri], the uri of the worksheet that you'd like to copy the contents of."
+  )
+
+  val ShowStacktrace = new ParametrizedCommand[String](
+    "metals-show-stacktrace",
+    "Show the stacktrace in the client.",
+    s"""|Show the stacktrace modified with links to specific files.
+        |""".stripMargin,
+    "[string], the markdown representation of the stacktrace"
+  )
+
+  val ShowTasty = new ParametrizedCommand[DecoderResponse](
+    "metals-show-tasty",
+    "Show Tasty Scala 3 file in a human readable format",
+    s"""|Show Tasty Scala 3 file in a human readable format either as Json or HTML 
+        |depending on the editor capabilities.
+        |""".stripMargin,
+    "[string], html or json representation of the tasty file"
   )
 
   def all: List[BaseCommand] =

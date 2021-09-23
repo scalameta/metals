@@ -29,6 +29,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
@@ -37,9 +38,11 @@ import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -232,7 +235,7 @@ final class TestingServer(
             new TextDocumentIdentifier(document),
             position
           )
-          executeCommand(ServerCommands.GotoSuperMethod.id, command)
+          executeCommand(ServerCommands.GotoSuperMethod, command)
             .flatMap(_ =>
               exec(tl).map(rest => expectedPos.flatMap(context.get) +: rest)
             )
@@ -247,12 +250,10 @@ final class TestingServer(
       val expectedGotoPositions = expectedGotoPositionsOpts.collect {
         case Some(pos) => pos
       }
-      val gotoExecutedCommandPositions = client.clientCommands.asScala
-        .filter(_.getCommand == ClientCommands.GotoLocation.id)
-        .map(_.getArguments.asScala.head.asInstanceOf[l.Location])
-        .map(l => (l.getRange.getStart, l.getUri))
-        .toList
-
+      val gotoExecutedCommandPositions = client.clientCommands.asScala.collect {
+        case ClientCommands.GotoLocation(location) =>
+          (location.getRange.getStart, location.getUri)
+      }
       Assertions.assertEquals(
         gotoExecutedCommandPositions,
         expectedGotoPositions
@@ -263,7 +264,7 @@ final class TestingServer(
   def executeDecodeFileCommand(
       uri: String
   ): Future[DecoderResponse] = {
-    executeCommand(ServerCommands.DecodeFile.id, uri)
+    executeCommand(ServerCommands.DecodeFile, uri)
       .asInstanceOf[Future[DecoderResponse]]
   }
 
@@ -288,7 +289,7 @@ final class TestingServer(
             new TextDocumentIdentifier(uri),
             context(pos)
           )
-          executeCommand(ServerCommands.SuperMethodHierarchy.id, command)
+          executeCommand(ServerCommands.SuperMethodHierarchy, command)
             .flatMap(_ => exec(tl).map(rest => expected.toSet +: rest))
 
         case _ =>
@@ -468,7 +469,38 @@ final class TestingServer(
   def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
-  def executeCommand(command: String, params: Object*): Future[Any] = {
+  def executeCommand[T](
+      command: ParametrizedCommand[T],
+      param: T
+  ): Future[Any] = {
+    Debug.printEnclosing()
+    scribe.info(s"Executing command [${command.id}]")
+    server.executeCommand(command.toExecuteCommandParams(param)).asScala
+  }
+
+  def executeCommand[T](
+      command: ListParametrizedCommand[T],
+      param: T*
+  ): Future[Any] = {
+    Debug.printEnclosing()
+    scribe.info(s"Executing command [${command.id}]")
+    server.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
+  }
+
+  def executeCommand[T](command: Command): Future[Any] = {
+    Debug.printEnclosing()
+    scribe.info(s"Executing command [${command.id}]")
+    server.executeCommand(command.toExecuteCommandParams()).asScala
+  }
+
+  /**
+   * Operating on strings can be dangerous, but needed for running unknown commands
+   * and for the StartDebugAdapter command, which doesn't have a stable argument.
+   */
+  def executeCommandUnsafe(
+      command: String,
+      params: Seq[Object]
+  ): Future[Any] = {
     Debug.printEnclosing()
     scribe.info(s"Executing command [$command]")
     val args: java.util.List[Object] =
@@ -491,11 +523,11 @@ final class TestingServer(
     val params =
       new b.DebugSessionParams(targets.asJava, kind, parameter.toJson)
 
-    executeCommand(ServerCommands.StartDebugAdapter.id, params).collect {
-      case DebugSession(_, uri) =>
+    executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
+      .collect { case DebugSession(_, uri) =>
         scribe.info(s"Starting debug session for $uri")
         TestDebugger(URI.create(uri), stoppageHandler)
-    }
+      }
   }
 
   // note(@tgodzik) all test should have `System.exit(0)` added to avoid occasional issue due to:
@@ -529,10 +561,10 @@ final class TestingServer(
       params: AnyRef
   ): Future[TestDebugger] = {
     assertSystemExit(params)
-    executeCommand(ServerCommands.StartDebugAdapter.id, params).collect {
-      case DebugSession(_, uri) =>
+    executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
+      .collect { case DebugSession(_, uri) =>
         TestDebugger(URI.create(uri), Stoppage.Handler.Continue)
-    }
+      }
   }
 
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
