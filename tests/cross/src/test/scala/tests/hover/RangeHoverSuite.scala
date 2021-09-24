@@ -24,7 +24,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|B
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
+      "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
     )
   )
 
@@ -48,7 +48,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|B
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "val l: List[Int]".hoverRange
+      "3" -> "val l: List[Int]".hoverRange
     )
   )
 
@@ -75,7 +75,7 @@ class RangeHoverSuite extends BaseHoverSuite {
       "2.13" ->
         """|IndexedSeq[Int]
            |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
-      "3.0" -> "x: Int".hoverRange
+      "3" -> "x: Int".hoverRange
     )
   )
 
@@ -102,7 +102,7 @@ class RangeHoverSuite extends BaseHoverSuite {
       "2.13" ->
         """|List[Int]
            |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange,
-      "3.0" -> "def apply[A](elems: A*): Int".hoverRange
+      "3" -> "def apply[A](elems: A*): Int".hoverRange
     )
   )
 
@@ -126,7 +126,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|List[Int]
        |val l: List[Int]""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "val l: List[Int]".hoverRange
+      "3" -> "val l: List[Int]".hoverRange
     )
   )
 
@@ -151,7 +151,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |Int
        |```""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "def +(x: Int): Int".hoverRange
+      "3" -> "def +(x: Int): Int".hoverRange
     )
   )
 
@@ -171,7 +171,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|Int
        |val x: Int""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "val x: Int".hoverRange
+      "3" -> "val x: Int".hoverRange
     )
   )
 
@@ -191,7 +191,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|Int
        |b: Int""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "b: Int".hoverRange
+      "3" -> "b: Int".hoverRange
     )
   )
 
