@@ -22,13 +22,12 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|B
-       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoveRanger,
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoveRanger
+      "3.0" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
     )
   )
 
-  //TODO this IMHO actually is a bug, the resut should also conain the actual type -> Int
   check(
     "range-longer-expression",
     """|package helpers
@@ -47,9 +46,9 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|B
-       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoveRanger,
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "val l: List[Int]".hoveRanger
+      "3.0" -> "val l: List[Int]".hoverRange
     )
   )
 
@@ -71,12 +70,12 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|immutable.IndexedSeq[Int]
-       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoveRanger,
+       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange,
     compat = Map(
       "2.13" ->
         """|IndexedSeq[Int]
-           |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoveRanger,
-      "3.0" -> "x: Int".hoveRanger
+           |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
+      "3.0" -> "x: Int".hoverRange
     )
   )
 
@@ -98,12 +97,12 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|List[Int]
-       |override def apply[A](xs: A*): List[A]""".stripMargin.hoveRanger,
+       |override def apply[A](xs: A*): List[A]""".stripMargin.hoverRange,
     compat = Map(
       "2.13" ->
         """|List[Int]
-           |def apply[A](elems: A*): List[A]""".stripMargin.hoveRanger,
-      "3.0" -> "def apply[A](elems: A*): Int".hoveRanger
+           |def apply[A](elems: A*): List[A]""".stripMargin.hoverRange,
+      "3.0" -> "def apply[A](elems: A*): Int".hoverRange
     )
   )
 
@@ -125,9 +124,9 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|List[Int]
-       |val l: List[Int]""".stripMargin.hoveRanger,
+       |val l: List[Int]""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "val l: List[Int]".hoveRanger
+      "3.0" -> "val l: List[Int]".hoverRange
     )
   )
 
@@ -150,9 +149,9 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|```scala
        |Int
-       |```""".stripMargin.hoveRanger,
+       |```""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "def +(x: Int): Int".hoveRanger
+      "3.0" -> "def +(x: Int): Int".hoverRange
     )
   )
 
@@ -170,9 +169,9 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |val x: Int""".stripMargin.hoveRanger,
+       |val x: Int""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "val x: Int".hoveRanger
+      "3.0" -> "val x: Int".hoverRange
     )
   )
 
@@ -190,9 +189,9 @@ class RangeHoverSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|Int
-       |b: Int""".stripMargin.hoveRanger,
+       |b: Int""".stripMargin.hoverRange,
     compat = Map(
-      "3.0" -> "b: Int".hoveRanger
+      "3.0" -> "b: Int".hoverRange
     )
   )
 
