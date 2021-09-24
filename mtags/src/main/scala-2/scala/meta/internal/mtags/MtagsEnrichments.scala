@@ -111,6 +111,18 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
     }
   }
 
+  implicit class XtensionRangeLspInverse(range: l.Range) {
+    def toMeta(input: m.Input): m.Position = {
+      m.Position.Range(
+        input,
+        range.getStart.getLine,
+        range.getStart.getCharacter,
+        range.getEnd.getLine,
+        range.getEnd.getCharacter
+      )
+    }
+  }
+
   implicit class XtensionPositionLspInverse(pos: l.Position) {
     def toMeta(input: m.Input): m.Position = {
       m.Position.Range(

@@ -510,12 +510,13 @@ class SbtBloopLspSuite
          """.stripMargin
       )
       hoverRes <- assertHoverAtPos("build.sbt", 0, 2)
-      expectedHoverRes = """```scala
-                           |val scalaVersion: SettingKey[String]
-                           |```
-                           |```range
-                           |scalaVersion
-                           |```""".stripMargin
+      expectedHoverRes =
+        """|```scala
+           |val scalaVersion: SettingKey[String]
+           |```
+           |```range
+           |scalaVersion
+           |```""".stripMargin
       _ = assertNoDiff(hoverRes, expectedHoverRes)
     } yield ()
 

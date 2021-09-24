@@ -18,6 +18,21 @@ trait TestHovers {
         case _ =>
           string
       }
+
+    def hoverRange: String =
+      string.trim.linesIterator.toList match {
+        case List(symbolSignature) =>
+          HoverMarkup(symbolSignature)
+        case List(expressionType, symbolSignature) =>
+          HoverMarkup(
+            expressionType,
+            symbolSignature,
+            "",
+            forceExpressionType = true
+          )
+        case _ =>
+          string
+      }
   }
 
   def renderAsString(

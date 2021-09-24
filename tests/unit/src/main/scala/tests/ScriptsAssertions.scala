@@ -6,6 +6,7 @@ import java.nio.file.Paths
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.lsp4j.Position
@@ -82,7 +83,7 @@ trait ScriptsAssertions { self: BaseLspSuite =>
   ): Future[String] =
     server.server
       .hover(
-        new TextDocumentPositionParams(
+        new HoverExtParams(
           new TextDocumentIdentifier(
             server.toPath(path).toNIO.toUri.toASCIIString
           ),

@@ -13,6 +13,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
@@ -31,7 +32,6 @@ import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token.RightParen
 import scala.meta.tokens.{Token => T}
 
-import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
 
 final class SyntheticsDecorationProvider(
@@ -98,12 +98,12 @@ final class SyntheticsDecorationProvider(
   }
 
   def addSyntheticsHover(
-      params: TextDocumentPositionParams,
+      params: HoverExtParams,
       pcHover: Option[l.Hover]
   ): Option[l.Hover] =
     if (isSyntheticsEnabled) {
-      val path = params.getTextDocument().getUri().toAbsolutePath
-      val line = params.getPosition().getLine()
+      val path = params.textDocument.getUri().toAbsolutePath
+      val line = params.getPosition.getLine()
       val newHover = currentDocument(path) match {
         case Some(textDocument) =>
           val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
@@ -140,7 +140,7 @@ final class SyntheticsDecorationProvider(
                 path,
                 syntheticsAtLine,
                 pcHover,
-                params.getPosition()
+                params.getPosition
               )
             } else {
               createHoverAtLine(path, syntheticsAtLine, pcHover).orElse(

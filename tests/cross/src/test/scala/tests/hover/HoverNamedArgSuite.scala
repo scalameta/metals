@@ -67,5 +67,4 @@ class HoverNamedArgSuite extends BaseHoverSuite {
       "3" -> "name: String".hover
     )
   )
-
 }

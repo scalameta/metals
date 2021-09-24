@@ -8,6 +8,21 @@ import scala.meta.inputs.Position
 import scala.meta.internal.inputs.XtensionInputSyntaxStructure
 import scala.meta.pc.CancelToken
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
+
+trait OffsetParamsUtils {
+  protected def syntaxURI(pos: Position): URI = {
+    val syntax = pos.input.syntax
+    try {
+      val uri = URI.create(syntax)
+      Paths.get(uri)
+      uri
+    } catch {
+      case _: IllegalArgumentException | _: URISyntaxException =>
+        Paths.get(syntax).toUri
+    }
+  }
+}
 
 case class CompilerOffsetParams(
     uri: URI,
@@ -16,23 +31,44 @@ case class CompilerOffsetParams(
     token: CancelToken = EmptyCancelToken
 ) extends OffsetParams
 
-object CompilerOffsetParams {
+object CompilerOffsetParams extends OffsetParamsUtils {
 
   def fromPos(pos: Position, token: CancelToken): CompilerOffsetParams = {
-    val syntax = pos.input.syntax
-    val uri =
-      try {
-        val uri = URI.create(syntax)
-        Paths.get(uri)
-        uri
-      } catch {
-        case _: IllegalArgumentException | _: URISyntaxException =>
-          Paths.get(syntax).toUri
-      }
+    val uri = syntaxURI(pos)
     CompilerOffsetParams(
       uri,
       pos.input.text,
       pos.start,
+      token
+    )
+  }
+}
+
+case class CompilerRangeParams(
+    uri: URI,
+    text: String,
+    offset: Int,
+    endOffset: Int,
+    token: CancelToken = EmptyCancelToken
+) extends RangeParams {
+  def toCompilerOffsetParams: CompilerOffsetParams =
+    CompilerOffsetParams(
+      uri,
+      text,
+      offset,
+      token
+    )
+}
+
+object CompilerRangeParams extends OffsetParamsUtils {
+
+  def fromPos(pos: Position, token: CancelToken): CompilerRangeParams = {
+    val uri = syntaxURI(pos)
+    CompilerRangeParams(
+      uri,
+      pos.input.text,
+      pos.start,
+      pos.end,
       token
     )
   }

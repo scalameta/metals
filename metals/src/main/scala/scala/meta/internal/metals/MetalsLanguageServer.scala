@@ -1346,7 +1346,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/hover")
-  def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
+  def hover(params: HoverExtParams): CompletableFuture[Hover] = {
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
@@ -1355,14 +1355,15 @@ class MetalsLanguageServer(
         }
         .map(
           _.orElse {
-            val path = params.getTextDocument.getUri.toAbsolutePath
+            val path = params.textDocument.getUri.toAbsolutePath
             if (path.isWorksheet)
-              worksheetProvider.hover(path, params.getPosition())
+              worksheetProvider.hover(path, params.getPosition)
             else
               None
           }.orNull
         )
     }
+  }
 
   @JsonRequest("textDocument/documentHighlight")
   def documentHighlights(
