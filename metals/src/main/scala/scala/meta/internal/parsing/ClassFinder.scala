@@ -2,7 +2,9 @@ package scala.meta.internal.parsing
 
 import scala.annotation.tailrec
 
-import scala.meta._
+import scala.meta.Defn
+import scala.meta.Pkg
+import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath

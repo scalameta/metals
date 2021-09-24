@@ -9,6 +9,7 @@ import java.util.Collections
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
@@ -79,7 +80,8 @@ object MetalsHttpServer {
       languageServer: MetalsLanguageServer,
       render: () => String,
       complete: HttpServerExchange => Unit,
-      doctor: () => String
+      doctor: () => String,
+      tasty: (URI) => Future[Either[String, String]]
   )(implicit ec: ExecutionContext): MetalsHttpServer = {
     val port = freePort(host, preferredPort)
     scribe.info(s"Selected port $port")
@@ -131,7 +133,7 @@ object MetalsHttpServer {
         )
         .addPrefixPath(
           "/tasty",
-          tastyEndpointHandler(languageServer)
+          tastyEndpointHandler(tasty)
         )
         .addExactPath("/", textHtmlHandler(render))
         .addExactPath("/doctor", textHtmlHandler(doctor))
@@ -182,7 +184,7 @@ object MetalsHttpServer {
   }
 
   private def tastyEndpointHandler(
-      languageServer: MetalsLanguageServer
+      tasty: (URI) => Future[Either[String, String]]
   )(implicit ec: ExecutionContext) = new HttpHandler {
     override def handleRequest(exchange: HttpServerExchange): Unit = {
       exchange.dispatch { () =>
@@ -193,8 +195,7 @@ object MetalsHttpServer {
 
         uri match {
           case Some(uri) =>
-            languageServer.fileDecoderProvider
-              .getTastyForURI(uri)
+            tasty(uri)
               .onComplete {
                 case Success(response) =>
                   response match {

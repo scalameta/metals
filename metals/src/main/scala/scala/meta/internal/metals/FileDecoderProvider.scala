@@ -36,7 +36,7 @@ import org.eclipse.{lsp4j => l}
  * Moreover, we cannot use Option to indicate optional values, so instead every field is nullable.
  * */
 final case class DecoderResponse(
-    @Nullable requestedUri: String,
+    requestedUri: String,
     @Nullable value: String,
     @Nullable error: String
 )
@@ -281,7 +281,7 @@ final class FileDecoderProvider(
       oldExtension = sourceFile.extension
       relativePath = sourceFile
         .toRelative(sourceRoot)
-        .resolveSibling(_.stripSuffix(oldExtension) + "class")
+        .resolveSibling(_.stripSuffix(oldExtension) + newExtension)
     } yield PathInfo(Some(targetId), classDir.resolve(relativePath))
   }
 
@@ -412,7 +412,7 @@ final class FileDecoderProvider(
    * - dispatch request to the Presentation Compiler. It's worth noting that PC takes into account
    *   client configuration to determine proper response format (HTML, console or plain text)
    */
-  def executeShowTastyCommand(
+  def showTasty(
       params: l.TextDocumentPositionParams
   ): Future[Unit] = {
     val uri = new URI(params.getTextDocument().getUri())
@@ -424,8 +424,8 @@ final class FileDecoderProvider(
       val response = getTastyForURI(uri, Some(position)).map { result =>
         DecoderResponse(
           uri.toString(),
-          result.fold(_ => null, identity),
-          result.fold(identity, _ => null)
+          result.toOption.orNull,
+          result.swap.toOption.orNull
         )
       }
       response.map { tasty =>

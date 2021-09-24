@@ -251,7 +251,7 @@ class MetalsLanguageServer(
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
-  var fileDecoderProvider: FileDecoderProvider = _
+  private var fileDecoderProvider: FileDecoderProvider = _
   private var workspaceReload: WorkspaceReload = _
   private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
@@ -866,7 +866,8 @@ class MetalsLanguageServer(
           this,
           () => render(),
           e => completeCommand(e),
-          () => doctor.problemsHtmlPage(url)
+          () => doctor.problemsHtmlPage(url),
+          (uri) => fileDecoderProvider.getTastyForURI(uri)
         )
       )
       httpServer = Some(server)
@@ -1723,7 +1724,7 @@ class MetalsLanguageServer(
         }.asJavaObject
 
       case ServerCommands.ShowTasty(positionParams) =>
-        fileDecoderProvider.executeShowTastyCommand(positionParams).asJavaObject
+        fileDecoderProvider.showTasty(positionParams).asJavaObject
 
       case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         Future {

@@ -259,15 +259,17 @@ final class TestingServer(
     }
   }
 
-  def showTasty(
+  def executeShowTasty(
       filePath: String,
       position: l.Position
-  ): Future[Either[String, String]] =
-    server.fileDecoderProvider.getTastyForURI(
-      AbsolutePath(filePath).toURI,
-      Some(position)
+  ): Future[Unit] = {
+    val command = new TextDocumentPositionParams(
+      new TextDocumentIdentifier(filePath),
+      position
     )
-
+    executeCommand(ServerCommands.ShowTasty.id, command)
+      .asInstanceOf[Future[Unit]]
+  }
   def assertSuperMethodHierarchy(
       uri: String,
       expectations: List[(Int, List[String])],

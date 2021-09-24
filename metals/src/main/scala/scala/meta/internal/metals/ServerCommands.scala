@@ -210,7 +210,17 @@ object ServerCommands {
     """|If the file is a Scala 3 source, this command will try to find the relevant tasty file for it, 
        |read it and display it in a human readable format. If the argument already points to a TASTy file, 
        |it will be read directly.""".stripMargin,
-    "[string], where the string is a path to a Scala 3 source or a tasty file."
+    """|
+       |Object with `document` and `position`, where the document is a path to a Scala 3 source or a tasty file.
+       |
+       |Example:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin
   )
 
   val GotoSymbol = new ParametrizedCommand[String](
