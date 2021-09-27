@@ -26,7 +26,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Failure
 import scala.util.Properties
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
@@ -144,6 +146,13 @@ object MetalsEnrichments
         case Left(EmptyResult.Unchanged) => onUnchanged()
         case Left(EmptyResult.NoMatch) => onNoMatch()
       }
+  }
+
+  implicit class XtensionTry[A](t: Try[A]) {
+    def toEitherWith[B](f: Throwable => B): Either[B, A] = t match {
+      case Failure(exception) => Left(f(exception))
+      case Success(value) => Right(value)
+    }
   }
 
   implicit class XtensionJavaFuture[T](future: CompletionStage[T]) {

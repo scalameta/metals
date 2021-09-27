@@ -21,11 +21,9 @@ import org.eclipse.{lsp4j as l}
 object TastyUtils:
   def getTasty(
       tastyURI: URI,
-      isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
   ): String =
     if isHttpEnabled then getStandaloneHtmlTasty(tastyURI)
-    else if isHtmlSupported then htmlTasty(tastyURI)
     else normalTasty(tastyURI)
 
   def getStandaloneHtmlTasty(tastyURI: URI): String =

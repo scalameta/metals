@@ -1,12 +1,13 @@
 package tests
 
-import munit.FunSuite
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.Trees
+
+import munit.FunSuite
 
 abstract class BaseClassFinderSuite extends FunSuite {
   def init(scalaVersion: String): (Buffers, ClassFinder) = {

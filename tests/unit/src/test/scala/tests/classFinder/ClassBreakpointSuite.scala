@@ -4,17 +4,10 @@ package classFinder
 import java.nio.file.Paths
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.parsing.ClassFinder
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
-import munit.FunSuite
 import munit.TestOptions
 
 class ClassBreakpointSuite extends BaseClassFinderSuite {

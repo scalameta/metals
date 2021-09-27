@@ -78,7 +78,7 @@ public abstract class PresentationCompiler {
      * Return decoded and pretty printed TASTy content for .scala or .tasty file.
 
      */
-    public abstract CompletableFuture<String> getTasty(URI targetUri, boolean isHtmlSupported, boolean isHttpEnabled);
+    public abstract CompletableFuture<String> getTasty(URI targetUri, boolean isHttpEnabled);
 
     /**
      * Return the necessary imports for a symbol at the given position.
