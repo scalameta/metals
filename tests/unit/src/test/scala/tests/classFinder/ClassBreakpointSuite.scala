@@ -1,4 +1,5 @@
 package tests
+package classFinder
 
 import java.nio.file.Paths
 
@@ -16,7 +17,7 @@ import scala.meta.io.AbsolutePath
 import munit.FunSuite
 import munit.TestOptions
 
-class ClassBreakpointSuite extends FunSuite {
+class ClassBreakpointSuite extends BaseClassFinderSuite {
 
   check(
     "simple",
@@ -172,14 +173,8 @@ class ClassBreakpointSuite extends FunSuite {
       scalaVersion: String = V.scala213
   ): Unit =
     test(name) {
-      val buffers = Buffers()
-      val buildTargets = new BuildTargets(_ => None)
-      val selector = new ScalaVersionSelector(
-        () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
-        buildTargets
-      )
-      val trees = new Trees(buildTargets, buffers, selector)
-      val classFinder = new ClassFinder(trees)
+      val (buffers, classFinder) = init(scalaVersion)
+
       val filename: String = "Main.scala"
       val path = AbsolutePath(Paths.get(filename))
       val sourceText = original.replace(">>", "  ")
