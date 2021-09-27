@@ -109,6 +109,12 @@ private[debug] final class RemoteServer(
     sendRequest("stepOut", args)
   }
 
+  override def evaluate(
+      args: EvaluateArguments
+  ): CompletableFuture[EvaluateResponse] = {
+    sendRequest("evaluate", args)
+  }
+
   override def disconnect(
       args: DisconnectArguments
   ): CompletableFuture[Void] = {

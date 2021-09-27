@@ -11,6 +11,7 @@ import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
+import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArgumentsPathFormat
 import org.eclipse.lsp4j.debug.NextArguments
@@ -96,6 +97,15 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
         val args = new NextArguments()
         args.setThreadId(threadId)
         server.next(args).asScala.ignoreValue
+      case DebugStep.Evaluate(expression, frameId, callback, nextStep) =>
+        val args = new EvaluateArguments()
+        args.setFrameId(frameId)
+        args.setExpression(expression)
+        server
+          .evaluate(args)
+          .asScala
+          .map(callback)
+          .flatMap(_ => step(threadId, nextStep))
       case cause =>
         val error = s"Unsupported debug step $cause"
         Future.failed(new IllegalStateException(error))

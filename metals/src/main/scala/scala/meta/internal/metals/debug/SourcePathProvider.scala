@@ -6,22 +6,23 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.lsp4j.debug.Source
 
 final class SourcePathProvider(
     definitionProvider: DefinitionProvider,
     buildTargets: BuildTargets,
     targets: List[BuildTargetIdentifier]
 ) {
-  def findPathFor(source: Source): Option[AbsolutePath] = {
-    if (source == null) None
-    else {
-      searchAsClassPathSymbol(source).orElse(searchAsSourceFile(source))
-    }
+  def findPathFor(
+      sourcePath: String,
+      sourceName: String
+  ): Option[AbsolutePath] = {
+    searchAsClassPathSymbol(sourcePath).orElse(searchAsSourceFile(sourceName))
   }
 
-  private def searchAsClassPathSymbol(source: Source): Option[AbsolutePath] = {
-    val base = source.getPath
+  private def searchAsClassPathSymbol(
+      sourcePath: String
+  ): Option[AbsolutePath] = {
+    val base = sourcePath
       .stripSuffix(".scala")
       .stripSuffix(".java")
       .replace("\\", "/") // adapt windows paths to the expected format
@@ -39,15 +40,15 @@ final class SourcePathProvider(
     symbols.headOption
   }
 
-  private def searchAsSourceFile(source: Source): Option[AbsolutePath] = {
+  private def searchAsSourceFile(sourceName: String): Option[AbsolutePath] = {
     val files = for {
       target <- targets.view
       sourceFile <- buildTargets.buildTargetTransitiveSources(target)
-      if sourceFile.filename == source.getName
+      if sourceFile.filename == sourceName
     } yield sourceFile
 
     if (files.isEmpty) {
-      scribe.debug(s"no matching source file: $source")
+      scribe.debug(s"no matching source file: $sourceName")
     }
 
     files.headOption

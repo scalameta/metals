@@ -48,6 +48,7 @@ final class BuildTargets(
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
+  private val sourceJarNameToJarFile = TrieMap.empty[String, AbsolutePath]
   private val isSourceRoot =
     ConcurrentHashSet.empty[AbsolutePath]
   // if workspace contains symlinks, original source items are kept here and source items dealiased
@@ -89,6 +90,7 @@ final class BuildTargets(
     inverseDependencies.clear()
     buildTargetSources.clear()
     inverseDependencySources.clear()
+    sourceJarNameToJarFile.clear()
     isSourceRoot.clear()
   }
   def sourceItems: Iterable[AbsolutePath] =
@@ -305,11 +307,8 @@ final class BuildTargets(
         names match {
           case Directories.dependenciesName :: jarName :: _ =>
             // match build target by source jar name
-            inverseDependencySources
-              .collectFirst {
-                case (path, ids) if path.filename == jarName && ids.nonEmpty =>
-                  ids.head
-              }
+            sourceJarFile(jarName)
+              .flatMap(inverseDependencySource(_).headOption)
           case _ =>
             None
         }
@@ -449,8 +448,13 @@ final class BuildTargets(
       sourcesJar: AbsolutePath,
       target: BuildTargetIdentifier
   ): Unit = {
+    sourceJarNameToJarFile(sourcesJar.filename) = sourcesJar
     val acc = inverseDependencySources.getOrElse(sourcesJar, Set.empty)
     inverseDependencySources(sourcesJar) = acc + target
+  }
+
+  def sourceJarFile(sourceJarName: String): Option[AbsolutePath] = {
+    sourceJarNameToJarFile.get(sourceJarName)
   }
 
   def inverseDependencySource(

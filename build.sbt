@@ -198,7 +198,7 @@ lazy val V = new {
   val scalameta = "4.4.28"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.9"
+  val bloop = "1.4.9-16-ce6ffcb1"
   val scala3 = "3.0.2"
   val nextScala3RC = "3.1.0-RC2"
   val bloopNightly = bloop
@@ -508,7 +508,7 @@ lazy val `sbt-metals` = project
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
-    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "1.1.3")
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "2.0.3")
   )
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScalafixPlugin)

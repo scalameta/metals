@@ -22,18 +22,6 @@ final case class Variable(name: String, `type`: String, value: Variable.Value) {
     }
 }
 
-object Scope {
-  def local(variables: Variable*): (String, List[Variable]) = {
-    "Local" -> variables.toList
-  }
-}
-
-object Variables {
-  def apply(variables: (String, List[Variable])*): Variables = {
-    Variables(variables.toMap)
-  }
-}
-
 object Variable {
   sealed trait Value
   case object MemoryReference extends Value
@@ -48,25 +36,7 @@ object Variable {
       }
   }
 
-  private val stringified = "(.*):(.*)=(.*)".r
-  private val typed = "(.*):(.*)".r
-
-  def apply(value: String): Variable = {
-    value match {
-      case stringified(name, aType, value) =>
-        Variable(name.trim, aType.trim, value.trim)
-      case typed(name, aType) =>
-        Variable(name.trim, aType.trim, MemoryReference)
-      case _ =>
-        throw new IllegalStateException(s"Illegal variable string: $value")
-    }
-  }
-
-  def apply(name: String, `type`: String, value: String): Variable = {
-    new Variable(name, `type`, Value(value))
-  }
-
   def apply(v: dap.Variable): Variable = {
-    Variable(v.getName, v.getType, v.getValue)
+    Variable(v.getName, v.getType, Value(v.getValue))
   }
 }

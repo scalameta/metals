@@ -8,9 +8,9 @@ import scala.meta.internal.metals.debug.Stoppage.Handler
 final class StackFrameCollector extends Handler {
   private val stackFrames = mutable.Buffer.empty[StackFrame]
 
-  override def apply(stoppage: Stoppage): Future[DebugStep] = {
+  override def apply(stoppage: Stoppage): DebugStep = {
     stackFrames += stoppage.frame
-    Future.successful(DebugStep.Continue)
+    DebugStep.Continue
   }
 
   def variables: List[Variables] = this.stackFrames.map(_.variables).toList

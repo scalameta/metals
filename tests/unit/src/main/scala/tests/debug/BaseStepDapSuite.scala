@@ -18,6 +18,9 @@ abstract class BaseStepDapSuite(
     buildToolLayout: BuildToolLayout
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
+  private val scalaLibDependency = s"scala-library-$scalaVersion-sources.jar"
+  private val javaLibDependency = s"src.zip"
+
   assertSteps("step-out")(
     sources = """|/a/src/main/scala/Main.scala
                  |package a
@@ -101,7 +104,10 @@ abstract class BaseStepDapSuite(
     instrument = steps =>
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency("scala/Predef.scala", line = 404)(Continue)
+        .atDependency(
+          s"$scalaLibDependency/scala/Predef.scala",
+          line = 404
+        )(Continue)
   )
 
   assertSteps("step-into-java-lib")(
@@ -124,7 +130,7 @@ abstract class BaseStepDapSuite(
 
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(javaLibFile, javaLibLine)(Continue)
+        .atDependency(s"$javaLibDependency/$javaLibFile", javaLibLine)(Continue)
     }
   )
 

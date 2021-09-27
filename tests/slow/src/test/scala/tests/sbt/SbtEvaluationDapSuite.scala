@@ -2,11 +2,11 @@ package tests.sbt
 
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
-import tests.debug.BaseStackFrameDapSuite
+import tests.debug.BaseEvaluationDapSuite
 
-class SbtStackFrameDapSuite
-    extends BaseStackFrameDapSuite(
-      "sbt-debug-stack-frame",
+class SbtEvaluationDapSuite
+    extends BaseEvaluationDapSuite(
+      "sbt-debug-evaluation",
       SbtServerInitializer,
       SbtBuildLayout
     )

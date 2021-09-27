@@ -1,9 +1,7 @@
 package tests.debug
 
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
-import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.StackFrameCollector
-import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
 
 import munit.Location
@@ -30,8 +28,9 @@ abstract class BaseStackFrameDapSuite(
                 |}
                 |""".stripMargin,
     expectedFrames = List(
-      Variables(
-        Scope.local(Variable("this: Main$"), Variable("args: String[]"))
+      inScopeLocal(
+        assertNoDiff(_, "args: String[]"),
+        assertNoDiff(_, "this: Main$")
       )
     )
   )
@@ -58,18 +57,16 @@ abstract class BaseStackFrameDapSuite(
                 |}
                 |""".stripMargin,
     expectedFrames = List(
-      Variables(
-        Scope.local(
-          Variable("aByte: byte = 1"),
-          Variable("aShort: short = 1"),
-          Variable("anInt: int = 1"),
-          Variable("aLong: long = 1"),
-          Variable("aFloat: float = 1.000000"),
-          Variable("aDouble: double = 1.000000"),
-          Variable("bool: boolean = true"),
-          Variable("aChar: char = a"),
-          Variable("this: Main$")
-        )
+      inScopeLocal(
+        assertNoDiff(_, "aByte: byte = 1"),
+        assertNoDiff(_, "aShort: short = 1"),
+        assertNoDiff(_, "anInt: int = 1"),
+        assertNoDiff(_, "aLong: long = 1"),
+        assertNoDiff(_, "aFloat: float = 1.000000"),
+        assertNoDiff(_, "aDouble: double = 1.000000"),
+        assertNoDiff(_, "bool: boolean = true"),
+        assertNoDiff(_, "aChar: char = a"),
+        assertNoDiff(_, "this: Main$")
       )
     )
   )
@@ -89,12 +86,13 @@ abstract class BaseStackFrameDapSuite(
                 |}
                 |""".stripMargin,
     expectedFrames = List(
-      Variables(
-        Scope.local(
-          Variable("this: Main$"),
-          Variable("args: String[]"),
-          Variable("foo: Foo")
-        )
+      inScopeLocal(
+        assertNoDiff(_, "args: String[]"),
+        v => {
+          assert(v.contains("foo: Foo"))
+          assert(v.contains("\"foo\""))
+        },
+        assertNoDiff(_, "this: Main$")
       )
     )
   )
@@ -114,20 +112,88 @@ abstract class BaseStackFrameDapSuite(
                 |}
                 |""".stripMargin,
     expectedFrames = List(
-      Variables(
-        Scope.local(
-          Variable("this: Main$"),
-          Variable("args: String[]"),
-          Variable("list: $colon$colon")
-        )
+      inScopeLocal(
+        assertNoDiff(_, "args: String[]"),
+        v => {
+          assert(v.contains("list: $colon$colon"))
+          assert(v.contains("\"List(1, 2)\""))
+        },
+        assertNoDiff(_, "this: Main$")
       )
     )
   )
 
+  assertStackFrame("foreach")(
+    source = """|a/src/main/scala/Main.scala
+                |object Main {
+                |  def main(args: Array[String]) = {
+                |    List(1, 2).foreach { value =>
+                |>>      println(value)
+                |    }
+                |    System.exit(0)
+                |  }
+                |}""".stripMargin,
+    expectedFrames = List(
+      inScopeLocal(
+        assertNoDiff(_, "value: int = 1"),
+        assertNoDiff(_, "MODULE$: Main$")
+      ),
+      inScopeLocal(
+        assertNoDiff(_, "value: int = 2"),
+        assertNoDiff(_, "MODULE$: Main$")
+      )
+    )
+  )
+
+  assertStackFrame("for-comprehension")(
+    source = """|a/src/main/scala/Main.scala
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    for {
+                |      x <- List(1)
+                |>>    z = x + 2
+                |    } println(z)
+                |    System.exit(0)
+                |  }
+                |}
+                |""".stripMargin,
+    expectedFrames = List(
+      // before calculating `z`
+      inScopeLocal(
+        assertNoDiff(_, "x: int = 1"),
+        assertNoDiff(_, "MODULE$: Main$")
+      ),
+      // after calculating `z`
+      inScopeLocal(
+        assertNoDiff(_, "x: int = 1"),
+        assertNoDiff(_, "z: int = 3"),
+        assertNoDiff(_, "MODULE$: Main$")
+      ),
+      inScopeLocal(
+        v => {
+          assert(v.contains("x$1: Tuple2$mcII$sp"))
+          assert(v.contains("\"(1,3)\""))
+        },
+        assertNoDiff(_, "MODULE$: Main$")
+      )
+    )
+  )
+
+  def inScopeLocal(
+      expectedVariables: (String => Unit)*
+  )(variables: Variables): Unit = {
+    assertEquals(variables.scopes.size, 1)
+    val scopeLocal = variables.scopes("Local")
+    assertEquals(scopeLocal.size, expectedVariables.size)
+    scopeLocal
+      .zip(expectedVariables)
+      .foreach { case (variable, assert) => assert(variable.toString) }
+  }
+
   def assertStackFrame(
       name: TestOptions,
       disabled: Boolean = false
-  )(source: String, expectedFrames: List[Variables])(implicit
+  )(source: String, expectedFrames: List[Variables => Unit])(implicit
       loc: Location
   ): Unit = {
     if (disabled) return
@@ -147,12 +213,12 @@ abstract class BaseStackFrameDapSuite(
         _ <- setBreakpoints(debugger, debugLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
-        variables = stackFrameCollector.variables
+        frames = stackFrameCollector.variables
       } yield {
-        assertNoDiff(
-          variables.mkString("\n\n"),
-          expectedFrames.mkString("\n\n")
-        )
+        assertEquals(frames.size, expectedFrames.size)
+        frames
+          .zip(expectedFrames)
+          .foreach { case (frame, assert) => assert(frame) }
       }
     }
   }

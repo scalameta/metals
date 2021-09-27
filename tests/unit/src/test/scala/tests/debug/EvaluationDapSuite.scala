@@ -3,9 +3,9 @@ package tests.debug
 import tests.QuickBuildInitializer
 import tests.QuickBuildLayout
 
-class StackFrameDapSuite
-    extends BaseStackFrameDapSuite(
-      "debug-stack-frame",
+class EvaluationDapSuite
+    extends BaseEvaluationDapSuite(
+      "debug-evaluation",
       QuickBuildInitializer,
       QuickBuildLayout
     )

@@ -59,7 +59,7 @@ import org.eclipse.lsp4j.MessageType
 class DebugProvider(
     workspace: AbsolutePath,
     definitionProvider: DefinitionProvider,
-    buildServer: () => Option[BuildServerConnection],
+    buildServerConnect: () => Option[BuildServerConnection],
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
     compilations: Compilations,
@@ -83,67 +83,92 @@ class DebugProvider(
       parameters: b.DebugSessionParams,
       scalaVersionSelector: ScalaVersionSelector
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
-    Future.fromTry(parseSessionName(parameters)).flatMap { sessionName =>
-      val inetAddress = InetAddress.getByName("127.0.0.1")
-      val proxyServer = new ServerSocket(0, 50, inetAddress)
-      val host = InetAddresses.toUriString(proxyServer.getInetAddress)
-      val port = proxyServer.getLocalPort
-      proxyServer.setSoTimeout(10 * 1000)
-      val uri = URI.create(s"tcp://$host:$port")
-      val connectedToServer = Promise[Unit]()
-
-      val awaitClient =
-        () => Future(proxyServer.accept())
-
-      val jvmOptionsTranslatedParams = translateJvmParams(parameters)
-      // long timeout, since server might take a while to compile the project
-      val connectToServer = () => {
-        val targets = jvmOptionsTranslatedParams.getTargets().asScala
-
-        compilations.compilationFinished(targets).flatMap { _ =>
-          buildServer()
-            .map(_.startDebugSession(jvmOptionsTranslatedParams))
-            .getOrElse(BuildServerUnavailableError)
-            .withTimeout(60, TimeUnit.SECONDS)
-            .map { uri =>
-              val socket = connect(uri)
-              connectedToServer.trySuccess(())
-              socket
-            }
-            .recover { case exception =>
-              connectedToServer.tryFailure(exception)
-              throw exception
-            }
-        }
-      }
-
-      val proxyFactory = { () =>
-        val targets = parameters.getTargets.asScala
-          .map(_.getUri)
-          .map(new BuildTargetIdentifier(_))
-        val sourcePathProvider = new SourcePathProvider(
-          definitionProvider,
-          buildTargets,
-          targets.toList
+    for {
+      sessionName <- Future.fromTry(parseSessionName(parameters))
+      jvmOptionsTranslatedParams = translateJvmParams(parameters)
+      buildServer <- buildServerConnect()
+        .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
+          Future.successful
         )
-        DebugProxy
-          .open(
-            sessionName,
-            sourcePathProvider,
-            awaitClient,
-            connectToServer,
-            classFinder,
-            stacktraceAnalyzer,
-            scalaVersionSelector,
-            clientConfig.disableColorOutput()
-          )
+      debugServer <- start(
+        sessionName,
+        jvmOptionsTranslatedParams,
+        buildServer,
+        scalaVersionSelector
+      )
+    } yield debugServer
+  }
+
+  private def start(
+      sessionName: String,
+      parameters: b.DebugSessionParams,
+      buildServer: BuildServerConnection,
+      scalaVersionSelector: ScalaVersionSelector
+  )(implicit ec: ExecutionContext): Future[DebugServer] = {
+    val inetAddress = InetAddress.getByName("127.0.0.1")
+    val proxyServer = new ServerSocket(0, 50, inetAddress)
+    val host = InetAddresses.toUriString(proxyServer.getInetAddress)
+    val port = proxyServer.getLocalPort
+    proxyServer.setSoTimeout(10 * 1000)
+    val uri = URI.create(s"tcp://$host:$port")
+    val connectedToServer = Promise[Unit]()
+
+    val awaitClient =
+      () => Future(proxyServer.accept())
+
+    // long timeout, since server might take a while to compile the project
+    val connectToServer = () => {
+      val targets = parameters.getTargets().asScala
+
+      compilations.compilationFinished(targets).flatMap { _ =>
+        buildServer
+          .startDebugSession(parameters)
+          .withTimeout(60, TimeUnit.SECONDS)
+          .map { uri =>
+            val socket = connect(uri)
+            connectedToServer.trySuccess(())
+            socket
+          }
+          .recover { case exception =>
+            connectedToServer.tryFailure(exception)
+            throw exception
+          }
       }
-      val server = new DebugServer(sessionName, uri, proxyFactory)
-
-      server.listen.andThen { case _ => proxyServer.close() }
-
-      connectedToServer.future.map(_ => server)
     }
+
+    val proxyFactory = { () =>
+      val targets = parameters.getTargets.asScala
+        .map(_.getUri)
+        .map(new BuildTargetIdentifier(_))
+      val debugAdapter =
+        if (buildServer.usesScalaDebugAdapter2x) {
+          MetalsDebugAdapter.`2.x`(
+            buildTargets,
+            targets
+          )
+        } else {
+          MetalsDebugAdapter.`1.x`(
+            definitionProvider,
+            buildTargets,
+            classFinder,
+            scalaVersionSelector,
+            targets
+          )
+        }
+      DebugProxy.open(
+        sessionName,
+        awaitClient,
+        connectToServer,
+        debugAdapter,
+        stacktraceAnalyzer,
+        clientConfig.disableColorOutput()
+      )
+    }
+    val server = new DebugServer(sessionName, uri, proxyFactory)
+
+    server.listen.andThen { case _ => proxyServer.close() }
+
+    connectedToServer.future.map(_ => server)
   }
 
   /**

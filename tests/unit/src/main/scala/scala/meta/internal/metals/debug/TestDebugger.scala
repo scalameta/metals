@@ -148,8 +148,7 @@ final class TestDebugger(
     val nextStep = for {
       frame <- ifNotFailed(debugger.stackFrame(event.getThreadId))
       cause <- findStoppageCause(event, frame)
-      nextStep <- onStoppage(Stoppage(frame, cause))
-    } yield nextStep
+    } yield onStoppage(Stoppage(frame, cause))
 
     nextStep.onComplete {
       case Failure(error) =>
