@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.lsp4j.debug.Capabilities
+import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
@@ -106,6 +107,16 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
           .asScala
           .map(callback)
           .flatMap(_ => step(threadId, nextStep))
+      case DebugStep.Complete(expression, frameId, callback, line, character) =>
+        val args = new CompletionsArguments()
+        args.setFrameId(frameId)
+        args.setText(expression)
+        args.setLine(line)
+        args.setColumn(character)
+        server.completions(args).asScala.flatMap { completions =>
+          callback(completions)
+          step(threadId, DebugStep.Continue)
+        }
       case cause =>
         val error = s"Unsupported debug step $cause"
         Future.failed(new IllegalStateException(error))

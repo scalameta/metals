@@ -115,6 +115,12 @@ private[debug] final class RemoteServer(
     sendRequest("evaluate", args)
   }
 
+  override def completions(
+      args: CompletionsArguments
+  ): CompletableFuture[CompletionsResponse] = {
+    sendRequest("completions", args)
+  }
+
   override def disconnect(
       args: DisconnectArguments
   ): CompletableFuture[Void] = {
