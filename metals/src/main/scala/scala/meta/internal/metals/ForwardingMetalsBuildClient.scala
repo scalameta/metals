@@ -35,6 +35,7 @@ final class ForwardingMetalsBuildClient(
     statusBar: StatusBar,
     time: Time,
     didCompile: CompileReport => Unit,
+    onBuildChanged: Seq[b.BuildTargetEvent] => Unit,
     treeViewProvider: () => TreeViewProvider,
     worksheetProvider: () => WorksheetProvider,
     ammonite: () => Ammonite
@@ -109,16 +110,19 @@ final class ForwardingMetalsBuildClient(
   }
 
   def onBuildTargetDidChange(params: b.DidChangeBuildTarget): Unit = {
-    val ammoniteBuildChanged =
-      params.getChanges.asScala.exists(_.getTarget.getUri.isAmmoniteScript)
-    if (ammoniteBuildChanged)
+
+    val (ammoniteChanges, otherChanges) =
+      params.getChanges.asScala.partition(_.getTarget.getUri.isAmmoniteScript)
+
+    if (ammoniteChanges.nonEmpty)
       ammonite().importBuild().onComplete {
         case Success(()) =>
         case Failure(exception) =>
           scribe.error("Error re-importing Ammonite build", exception)
       }
-    else
-      scribe.info(params.toString)
+
+    if (otherChanges.nonEmpty)
+      onBuildChanged(otherChanges)
   }
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
