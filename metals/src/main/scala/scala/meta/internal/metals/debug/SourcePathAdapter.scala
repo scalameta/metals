@@ -29,7 +29,7 @@ private[debug] final class SourcePathAdapter(
         relativePath <- sourcePath.toRelativeInside(
           dependencies.resolve(jarName)
         )
-      } yield FileIO.withJarFileSystem(jarFile, true, true)(root =>
+      } yield FileIO.withJarFileSystem(jarFile, create = true)(root =>
         root.resolve(relativePath.toString).toURI
       )
     }
