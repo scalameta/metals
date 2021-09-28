@@ -31,10 +31,8 @@ final class SuperMethodCodeLens(
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
 
-    val search = implementationProvider.defaultSymbolSearchMemoize(
-      path,
-      textDocument
-    )
+    def search(query: String) = textDocument.symbols.find(_.symbol == query)
+
     val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
 
     for {

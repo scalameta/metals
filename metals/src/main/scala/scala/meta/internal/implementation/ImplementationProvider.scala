@@ -87,33 +87,6 @@ final class ImplementationProvider(
   }
 
   def defaultSymbolSearch(
-      textDocumentWithPath: TextDocumentWithPath
-  ): String => Option[SymbolInformation] =
-    defaultSymbolSearch(
-      textDocumentWithPath.filePath,
-      textDocumentWithPath.textDocument
-    )
-
-  def defaultSymbolSearchMemoize(
-      anyWorkspacePath: AbsolutePath,
-      textDocument: TextDocument
-  ): String => Option[SymbolInformation] = {
-    lazy val global =
-      globalTable.globalSymbolTableFor(anyWorkspacePath)
-    val textSymbolsMap = textDocument.symbols.map(s => s.symbol -> s).toMap
-    val memoized: mutable.Map[String, SymbolInformation] = mutable.Map.empty
-    symbol => {
-      val result = memoized
-        .get(symbol)
-        .orElse(textSymbolsMap.get(symbol))
-        .orElse(findSymbolInformation(symbol))
-        .orElse(global.flatMap(_.safeInfo(symbol)))
-      result.foreach(r => memoized.put(symbol, r))
-      result
-    }
-  }
-
-  def defaultSymbolSearch(
       anyWorkspacePath: AbsolutePath,
       textDocument: TextDocument
   ): String => Option[SymbolInformation] = {
