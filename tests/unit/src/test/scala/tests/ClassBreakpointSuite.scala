@@ -95,7 +95,8 @@ class ClassBreakpointSuite extends FunSuite {
 
   check(
     "trait",
-    """|package a.b
+    """|package a
+       |package b
        |trait B{
        |  class C
        |  def method() = {

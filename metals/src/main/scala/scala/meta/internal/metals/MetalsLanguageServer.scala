@@ -265,7 +265,6 @@ class MetalsLanguageServer(
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
-  var tastyHandler: TastyHandler = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -649,13 +648,6 @@ class MetalsLanguageServer(
           buildClient,
           interactiveSemanticdbs
         )
-        tastyHandler = new TastyHandler(
-          compilers,
-          buildTargets,
-          languageClient,
-          clientConfig,
-          () => httpServer
-        )
         codeActionProvider = new CodeActionProvider(
           compilers,
           buffers,
@@ -681,7 +673,11 @@ class MetalsLanguageServer(
           buildTargets,
           () => userConfig,
           shellRunner,
-          fileSystemSemanticdbs
+          fileSystemSemanticdbs,
+          languageClient,
+          clientConfig,
+          classFinder,
+          () => httpServer
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -870,7 +866,8 @@ class MetalsLanguageServer(
           this,
           () => render(),
           e => completeCommand(e),
-          () => doctor.problemsHtmlPage(url)
+          () => doctor.problemsHtmlPage(url),
+          (uri) => fileDecoderProvider.getTastyForURI(uri)
         )
       )
       httpServer = Some(server)
@@ -1727,8 +1724,8 @@ class MetalsLanguageServer(
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
 
-      case ServerCommands.ShowTasty(uri) =>
-        tastyHandler.executeShowTastyCommand(uri).asJavaObject
+      case ServerCommands.ShowTasty(positionParams) =>
+        fileDecoderProvider.showTasty(positionParams).asJavaObject
 
       case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         Future {
