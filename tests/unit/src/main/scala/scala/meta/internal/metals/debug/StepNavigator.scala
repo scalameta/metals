@@ -28,7 +28,11 @@ final class StepNavigator(
       val (expected, nextStep) = expectedSteps.dequeue()
 
       if (actualLine == expected.line && actualPath == expected.file) {
-        nextStep
+        if (expected.file.exists) {
+          nextStep
+        } else {
+          throw new Exception(s"${expected.file} does not exist")
+        }
       } else {
         val error =
           s"Obtained [$actualPath, $actualLine], expected [${expected.file}, ${expected.line}]"
