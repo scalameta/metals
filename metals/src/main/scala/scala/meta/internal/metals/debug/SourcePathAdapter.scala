@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.debug
 
 import java.net.URI
+import java.nio.file.Paths
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
@@ -39,14 +40,7 @@ private[debug] final class SourcePathAdapter(
     val sourceUri = URI.create(sourcePath)
     sourceUri.getScheme match {
       case "jar" =>
-        sourceUri.getRawSchemeSpecificPart.split("!/") match {
-          case Array(jarPath, relativeSourcePath) =>
-            val jarFile = jarPath.toAbsolutePath
-            Some(
-              dependencies.resolve(jarFile.filename).resolve(relativeSourcePath)
-            )
-          case _ => None
-        }
+        Option(AbsolutePath(Paths.get(sourceUri)).toFileOnDisk(workspace))
       case "file" => Some(sourcePath.toAbsolutePath)
       case _ => None
     }
