@@ -194,7 +194,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
     } yield ()
   }
 
-  check("go-to-super-method-lenses")(
+  check("go-to-super-method-lenses", printCommand = true)(
     """package gameofthrones
       |
       |abstract class Lannister {
@@ -203,51 +203,52 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
       |}
       |
       |trait Tywin extends Lannister{
-      |<< payTheirDebts>>
+      |<< payTheirDebts goto[gameofthrones/Lannister#payTheirDebts().]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Jamie extends Tywin {
-      |<< payTheirDebts>>
+      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Tyrion extends Tywin {
-      |<< payTheirDebts>>
+      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Cersei extends Tywin {
-      |<< payTheirDebts>>
+      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
       |override def payTheirDebts = false
-      |<< trueLannister>>
+      |<< trueLannister goto[gameofthrones/Lannister#trueLannister().]>>
       |override def trueLannister = false
       |}
       |
       |class Joffrey extends Lannister with Jamie with Cersei {
-      |<< payTheirDebts>>
+      |<< payTheirDebts goto[gameofthrones/Cersei#payTheirDebts().]>>
       |override def payTheirDebts = false
       |}
       |
       |class Tommen extends Lannister with Cersei with Jamie {
-      |<< payTheirDebts>>
+      |<< payTheirDebts goto[gameofthrones/Jamie#payTheirDebts().]>>
       |override def payTheirDebts = true
       |}
       |""".stripMargin
   )
 
-  check("go-to-super-method-lenses-anonymous-class")(
-    """package a
-      |
-      |class A { def afx(): Unit = ??? }
-      |object X {
-      |  val t = new A {
-      |<< afx>>
-      |override def afx(): Unit = ???
-      |  }
-      |}
-      |
-    """.stripMargin
+  check("go-to-super-method-lenses-anonymous-class", printCommand = true)(
+    s"""|package a
+        |
+        |object X {
+        |  def main = {
+        |    class A { def afx(): Unit = ??? } 
+        |    val t = new A {
+        |<< afx goto-position[${workspace.toURI}a/src/main/scala/a/Foo.scala:4:18]>>
+        |    override def afx(): Unit = ???
+        |    }
+        |  }
+        |}
+        |""".stripMargin
   )
 
 }
