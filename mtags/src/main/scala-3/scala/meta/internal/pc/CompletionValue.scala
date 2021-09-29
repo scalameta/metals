@@ -11,11 +11,10 @@ case class CompletionValue(
     kind: Kind
 )
 
-object CompletionValue {
+object CompletionValue:
 
-  enum Kind {
+  enum Kind:
     case NamedArg, Workspace, Compiler, Scope
-  }
 
   def fromCompiler(completion: Completion): List[CompletionValue] =
     completion.symbols.map(CompletionValue(completion.label, _, Kind.Compiler))
@@ -28,4 +27,5 @@ object CompletionValue {
 
   def scope(label: String, sym: Symbol): CompletionValue =
     CompletionValue(label, sym, Kind.Scope)
-}
+
+end CompletionValue

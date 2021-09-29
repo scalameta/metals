@@ -9,42 +9,37 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.HtmlBuilder
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonPrimitive
 import dotty.tools.dotc.core.tasty.TastyAnsiiPrinter
 import dotty.tools.dotc.core.tasty.TastyHTMLPrinter
 import dotty.tools.dotc.core.tasty.TastyPrinter
-import org.eclipse.{lsp4j => l}
+import org.eclipse.{lsp4j as l}
 
-object TastyUtils {
+object TastyUtils:
   def getTasty(
       tastyURI: URI,
       isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
   ): String =
-    if (isHttpEnabled)
-      getStandaloneHtmlTasty(tastyURI)
-    else if (isHtmlSupported)
-      htmlTasty(tastyURI)
-    else
-      normalTasty(tastyURI)
+    if isHttpEnabled then getStandaloneHtmlTasty(tastyURI)
+    else if isHtmlSupported then htmlTasty(tastyURI)
+    else normalTasty(tastyURI)
 
-  def getStandaloneHtmlTasty(tastyURI: URI): String = {
+  def getStandaloneHtmlTasty(tastyURI: URI): String =
     htmlTasty(tastyURI, List(standaloneHtmlStyles))
-  }
 
-  private def normalTasty(tastyURI: URI): String = {
+  private def normalTasty(tastyURI: URI): String =
     val tastyBytes = AbsolutePath.fromAbsoluteUri(tastyURI).readAllBytes
     new TastyPrinter(tastyBytes).showContents()
-  }
 
   private def htmlTasty(
       tastyURI: URI,
       headElems: List[String] = Nil,
       bodyAttributes: String = ""
-  ): String = {
+  ): String =
     val title = tastyHtmlPageTitle(tastyURI)
     val tastyBytes = AbsolutePath.fromAbsoluteUri(tastyURI).readAllBytes
     val tastyHtml = new TastyHTMLPrinter(tastyBytes).showContents()
@@ -54,12 +49,11 @@ object TastyUtils {
           .element("pre", "class='container is-dark'")(_.raw(tastyHtml))
       }
       .render
-  }
+  end htmlTasty
 
-  private def tastyHtmlPageTitle(file: URI) = {
+  private def tastyHtmlPageTitle(file: URI) =
     val filename = PathIO.basename(AbsolutePath.fromAbsoluteUri(file).toString)
     s"TASTy for $filename"
-  }
 
   private val standaloneHtmlStyles =
     """|<style>
@@ -86,4 +80,5 @@ object TastyUtils {
        |  }
        |</style>
        |""".stripMargin
-}
+
+end TastyUtils

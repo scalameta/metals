@@ -1,29 +1,28 @@
 package scala.meta.internal.pc
 
-import scala.meta.pc._
+import scala.meta.pc.*
 
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.SymDenotations._
-import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.SymDenotations.*
+import dotty.tools.dotc.core.Symbols.*
 
 class CompilerSearchVisitor(
     query: String,
     visitSymbol: Symbol => Boolean
 )(using ctx: Context)
-    extends SymbolSearchVisitor {
+    extends SymbolSearchVisitor:
 
-  private def isAccessible(sym: Symbol): Boolean = {
+  private def isAccessible(sym: Symbol): Boolean =
     sym != NoSymbol && sym.isPublic
-  }
 
   private def toSymbols(
       pkg: String,
       parts: List[String]
-  ): List[Symbol] = {
-    def loop(owners: List[Symbol], parts: List[String]): List[Symbol] = {
-      parts match {
+  ): List[Symbol] =
+    def loop(owners: List[Symbol], parts: List[String]): List[Symbol] =
+      parts match
         case head :: tl =>
           val next = owners.flatMap { sym =>
             val term = sym.info.member(termName(head))
@@ -36,14 +35,12 @@ class CompilerSearchVisitor(
           }
           loop(next, tl)
         case Nil => owners
-      }
-    }
 
     val pkgSym = requiredPackage(pkg)
     loop(List(pkgSym), parts)
-  }
+  end toSymbols
 
-  def visitClassfile(pkgPath: String, filename: String): Int = {
+  def visitClassfile(pkgPath: String, filename: String): Int =
     val pkg = normalizePackage(pkgPath)
 
     val innerPath = filename
@@ -53,21 +50,19 @@ class CompilerSearchVisitor(
 
     val added = toSymbols(pkg, innerPath.toList).filter(visitSymbol)
     added.size
-  }
 
   def visitWorkspaceSymbol(
       path: java.nio.file.Path,
       symbol: String,
       kind: org.eclipse.lsp4j.SymbolKind,
       range: org.eclipse.lsp4j.Range
-  ): Int = {
+  ): Int =
     val gsym = SemanticdbSymbols.inverseSemanticdbSymbol(symbol).headOption
     gsym
       .filter(isAccessible)
       .map(visitSymbol)
       .map(_ => 1)
       .getOrElse(0)
-  }
 
   def shouldVisitPackage(pkg: String): Boolean =
     isAccessible(requiredPackage(normalizePackage(pkg)))
@@ -76,4 +71,5 @@ class CompilerSearchVisitor(
 
   private def normalizePackage(pkg: String): String =
     pkg.replace("/", ".").stripSuffix(".")
-}
+
+end CompilerSearchVisitor

@@ -6,46 +6,44 @@ import java.lang.Character.isJavaIdentifierStart
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
-import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Definitions
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.transform.SymUtils._
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.transform.SymUtils.*
 
-object SemanticdbSymbols {
+object SemanticdbSymbols:
 
-  def inverseSemanticdbSymbol(sym: String)(using ctx: Context): List[Symbol] = {
-    import scala.meta.internal.semanticdb.Scala._
+  def inverseSemanticdbSymbol(sym: String)(using ctx: Context): List[Symbol] =
+    import scala.meta.internal.semanticdb.Scala.*
 
     val defns = ctx.definitions
-    import defns._
+    import defns.*
 
-    def loop(s: String): List[Symbol] = {
-      if (s.isNone || s.isRootPackage) RootPackage :: Nil
-      else if (s.isEmptyPackage) EmptyPackageVal :: Nil
-      else if (s.isPackage) {
-        try {
-          requiredPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
-        } catch {
+    def loop(s: String): List[Symbol] =
+      if s.isNone || s.isRootPackage then RootPackage :: Nil
+      else if s.isEmptyPackage then EmptyPackageVal :: Nil
+      else if s.isPackage then
+        try requiredPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
+        catch
           case NonFatal(_) =>
             Nil
-        }
-      } else {
+      else
         val (desc, parent) = DescriptorParser(s)
         val parentSymbol = loop(parent)
 
         def tryMember(sym: Symbol): List[Symbol] =
-          sym match {
+          sym match
             case NoSymbol =>
               Nil
             case owner =>
-              desc match {
+              desc match
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
                   val member = owner.info.decl(typeName(value)).symbol :: Nil
-                  if (sym.is(JavaDefined))
+                  if sym.is(JavaDefined) then
                     owner.info.decl(termName(value)).symbol :: member
                   else member
                 case Descriptor.Term(value) =>
@@ -69,17 +67,11 @@ object SemanticdbSymbols {
                   //   .filter(sym => semanticdbSymbol(sym) == s)
                   //   .toList
                   Nil
-              }
-          }
 
         parentSymbol.flatMap(tryMember)
-      }
-    }
     try loop(sym).filterNot(_ == NoSymbol)
-    catch {
-      case NonFatal(e) => Nil
-    }
-  }
+    catch case NonFatal(e) => Nil
+  end inverseSemanticdbSymbol
 
   /** The semanticdb name of the given symbol */
   def symbolName(sym: Symbol)(using Context): String =
@@ -93,7 +85,7 @@ object SemanticdbSymbols {
    */
   private def addSymName(b: StringBuilder, sym: Symbol)(using Context): Unit =
 
-    import dotty.tools.dotc.semanticdb.Scala3.{_, given}
+    import dotty.tools.dotc.semanticdb.Scala3.{*, given}
 
     def addName(name: Name) =
       val str = name.toString.unescapeUnicode
@@ -119,6 +111,7 @@ object SemanticdbSymbols {
       end find
       val sig = sym.signature
       find(_.signature == sig)
+    end addOverloadIdx
 
     def addDescriptor(sym: Symbol): Unit =
       if sym.is(ModuleClass) then addDescriptor(sym.sourceModule)
@@ -140,9 +133,8 @@ object SemanticdbSymbols {
           b.append('('); addOverloadIdx(sym); b.append(").")
         else b.append('.')
 
-    if (!sym.isRoot)
-      addOwner(sym.owner)
+    if !sym.isRoot then addOwner(sym.owner)
     addDescriptor(sym)
   end addSymName
 
-}
+end SemanticdbSymbols
