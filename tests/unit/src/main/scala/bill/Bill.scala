@@ -153,10 +153,20 @@ object Bill {
         }
         val capabilities = new BuildServerCapabilities
         capabilities.setCompileProvider(new CompileProvider(languages))
+        capabilities.setCanReload(true)
         new InitializeBuildResult("Bill", "1.0", "2.0.0-M2", capabilities)
       }.logError("initialize").asJava
     }
-    override def workspaceReload(): CompletableFuture[Object] = ???
+    override def workspaceReload(): CompletableFuture[Object] = {
+      Future {
+        val event = new BuildTargetEvent(target.getId)
+        event.setKind(BuildTargetEventKind.CHANGED)
+        client.onBuildTargetDidChange(
+          new DidChangeBuildTarget(List(event).asJava)
+        )
+        null: Object
+      }.logError("workspaceReload").asJava
+    }
     override def onBuildInitialized(): Unit = {}
     override def buildShutdown(): CompletableFuture[AnyRef] = {
       if (isShutdownTrace()) {

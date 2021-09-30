@@ -23,6 +23,7 @@ import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
+import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 
@@ -189,7 +190,7 @@ class MetalsLanguageServer(
     )
   )
   private val indexingPromise: Promise[Unit] = Promise[Unit]()
-  private val buildServerPromise: Promise[Unit] = Promise[Unit]()
+  var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(
       buildServerPromise.future
@@ -402,6 +403,14 @@ class MetalsLanguageServer(
           report => {
             didCompileTarget(report)
             compilers.didCompile(report)
+          },
+          changes => {
+            quickConnectToBuildServer().onComplete {
+              case Failure(e) =>
+                scribe.warn("Error refreshing build", e)
+              case Success(_) =>
+                scribe.info("Refreshed build after change")
+            }
           },
           () => treeView,
           () => worksheetProvider,

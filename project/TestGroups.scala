@@ -82,7 +82,7 @@ object TestGroups {
       "tests.DefinitionScala2Suite", "tests.AnalyzeStacktraceLspSuite",
       "tests.codeactions.ExtractRenameMemberLspSuite",
       "tests.debug.DotEnvFileParserSuite", "tests.SemanticdbScala3Suite",
-      "tests.troubleshoot.ProblemResolverSuite")
+      "tests.troubleshoot.ProblemResolverSuite", "tests.BspBuildChangedSuite")
   )
 
 }
