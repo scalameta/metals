@@ -344,12 +344,12 @@ val mtagsSettings = List(
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "org.jsoup" % "jsoup" % "1.14.3", // for extracting HTML from javadocs
       "com.lihaoyi" %% "geny" % V.genyVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",
+      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.1",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.0",
-      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
+      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.1")
         .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
         .cross(CrossVersion.for3Use2_13),
@@ -440,7 +440,7 @@ lazy val metals = project
       // ==================
       // Scala dependencies
       // ==================
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",
+      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.1",
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
