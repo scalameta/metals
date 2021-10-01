@@ -412,6 +412,10 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
+    val completionItemCapabilities = new l.CompletionItemCapabilities(true)
+    textDocumentCapabilities.setCompletion(
+      new l.CompletionCapabilities(completionItemCapabilities)
+    )
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
     documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
     textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)

@@ -206,7 +206,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.2.23"
-  val scalafmt = "3.0.3"
+  val scalafmt = "3.0.5"
   val munit = "0.7.29"
   val scalafix = "0.9.31"
   val lsp4jV = "0.12.0"
@@ -253,7 +253,7 @@ lazy val V = new {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  def guava = "com.google.guava" % "guava" % "30.1.1-jre"
+  def guava = "com.google.guava" % "guava" % "31.0.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
   val coursierInterfaces = "1.0.4"
@@ -342,14 +342,14 @@ val mtagsSettings = List(
     if2 = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "org.jsoup" % "jsoup" % "1.14.2", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.14.3", // for extracting HTML from javadocs
       "com.lihaoyi" %% "geny" % V.genyVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.1",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.12.5",
-      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.1")
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.0",
+      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
         .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
         .cross(CrossVersion.for3Use2_13),
@@ -414,16 +414,16 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.14",
+      "com.geirsson" %% "metaconfig-core" % "0.9.15",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.16",
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.7",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.10.Final",
+      "io.undertow" % "undertow-core" % "2.2.12.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "7.14.1",
+      "org.flywaydb" % "flyway-core" % "7.15.0",
       "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
@@ -737,7 +737,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.14.2"
+      "org.jsoup" % "jsoup" % "1.14.3"
     )
   )
   .dependsOn(metals)

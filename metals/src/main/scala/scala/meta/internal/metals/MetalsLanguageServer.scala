@@ -642,7 +642,8 @@ class MetalsLanguageServer(
           definitionIndex,
           stacktraceAnalyzer,
           clientConfig,
-          semanticdbs
+          semanticdbs,
+          compilers
         )
         scalafixProvider = ScalafixProvider(
           buffers,

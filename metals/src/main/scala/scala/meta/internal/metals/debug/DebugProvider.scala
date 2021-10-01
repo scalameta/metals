@@ -22,6 +22,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
@@ -70,7 +71,8 @@ class DebugProvider(
     index: OnDemandSymbolIndex,
     stacktraceAnalyzer: StacktraceAnalyzer,
     clientConfig: ClientConfiguration,
-    semanticdbs: Semanticdbs
+    semanticdbs: Semanticdbs,
+    compilers: Compilers
 ) {
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
@@ -161,6 +163,7 @@ class DebugProvider(
         connectToServer,
         debugAdapter,
         stacktraceAnalyzer,
+        compilers,
         clientConfig.disableColorOutput()
       )
     }
