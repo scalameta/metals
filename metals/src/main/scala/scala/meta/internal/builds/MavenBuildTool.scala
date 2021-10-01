@@ -22,6 +22,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
   def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     def command(versionToUse: String) =
       List(
+        "generate-sources",
         s"ch.epfl.scala:maven-bloop_2.13:$versionToUse:bloopInstall",
         "-DdownloadSources=true"
       )
