@@ -20,7 +20,6 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.util.Properties
 import scala.util.matching.Regex
 import scala.{meta => m}
 
@@ -135,8 +134,7 @@ final class TestingServer(
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
     time = time,
-    // relying on the macOS/Windows file watchers causes flaky test failures.
-    isReliableFileWatcher = Properties.isLinux
+    isReliableFileWatcher = System.getenv("CI") != "true"
   )
   server.connectToLanguageClient(client)
 
