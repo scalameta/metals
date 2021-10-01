@@ -8,6 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.LaunchRequestArguments
@@ -138,6 +139,13 @@ object DebugProtocol {
     def unapply(request: RequestMessage): Option[SetBreakpointsArguments] = {
       if (request.getMethod != "setBreakpoints") None
       else parse[SetBreakpointsArguments](request.getParams).toOption
+    }
+  }
+
+  object CompletionRequest {
+    def unapply(request: RequestMessage): Option[CompletionsArguments] = {
+      if (request.getMethod != "completions") None
+      else parse[CompletionsArguments](request.getParams).toOption
     }
   }
 

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.debug
 
+import org.eclipse.lsp4j.debug.CompletionsResponse
 import org.eclipse.lsp4j.debug.EvaluateResponse
 
 sealed trait DebugStep
@@ -13,5 +14,12 @@ object DebugStep {
       frameId: Int,
       callback: EvaluateResponse => Unit,
       nextStep: DebugStep
+  ) extends DebugStep
+  case class Complete(
+      expression: String,
+      frameId: Int,
+      callback: CompletionsResponse => Unit,
+      line: Int,
+      character: Int
   ) extends DebugStep
 }

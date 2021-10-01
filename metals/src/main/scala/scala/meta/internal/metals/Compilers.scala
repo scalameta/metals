@@ -32,6 +32,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
@@ -43,6 +44,7 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
+import org.eclipse.lsp4j.{debug => d}
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -257,12 +259,57 @@ class Compilers(
       Nil
     }
 
+  def debugCompletions(
+      path: AbsolutePath,
+      breakpointPosition: LspPosition,
+      token: CancelToken,
+      expression: d.CompletionsArguments
+  ): Future[Seq[d.CompletionItem]] = {
+
+    val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
+
+    val input = path.toInputFromBuffers(buffers)
+    val metaPos = breakpointPosition.toMeta(input)
+    val oldText = metaPos.input.text
+    val lineStart = oldText.indexWhere(
+      c => c != ' ' && c != '\t',
+      metaPos.start + 1
+    )
+
+    val indentation = lineStart - metaPos.start
+    // insert expression at the start of breakpoint's line and move the lines one down
+    val modified =
+      s"${oldText.substring(0, lineStart)}${expression
+        .getText()}\n${" " * indentation}${oldText.substring(lineStart)}"
+
+    val offsetParams = CompilerOffsetParams(
+      path.toURI,
+      modified,
+      lineStart + expression.getColumn() - 1,
+      token
+    )
+    compiler
+      .complete(offsetParams)
+      .asScala
+      .map(list =>
+        list.getItems.asScala
+          .map(
+            toDebugCompletionItem(
+              _,
+              indentation
+            )
+          )
+      )
+  }
+
   def completions(
       params: CompletionParams,
       token: CancelToken
   ): Future[CompletionList] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.complete(CompilerOffsetParams.fromPos(pos, token))
+      val offsetParams =
+        CompilerOffsetParams.fromPos(pos, token)
+      pc.complete(offsetParams)
         .asScala
         .map { list =>
           adjust.adjustCompletionListInPlace(list)
@@ -666,6 +713,74 @@ class Compilers(
       (log ++ filteredOptions).asJava
     )
   }
+
+  private def toDebugCompletionType(
+      kind: CompletionItemKind
+  ): d.CompletionItemType = {
+    kind match {
+      case CompletionItemKind.Constant => d.CompletionItemType.VALUE
+      case CompletionItemKind.Value => d.CompletionItemType.VALUE
+      case CompletionItemKind.Keyword => d.CompletionItemType.KEYWORD
+      case CompletionItemKind.Class => d.CompletionItemType.CLASS
+      case CompletionItemKind.TypeParameter => d.CompletionItemType.CLASS
+      case CompletionItemKind.Operator => d.CompletionItemType.FUNCTION
+      case CompletionItemKind.Field => d.CompletionItemType.FIELD
+      case CompletionItemKind.Method => d.CompletionItemType.METHOD
+      case CompletionItemKind.Unit => d.CompletionItemType.UNIT
+      case CompletionItemKind.Enum => d.CompletionItemType.ENUM
+      case CompletionItemKind.Interface => d.CompletionItemType.INTERFACE
+      case CompletionItemKind.Constructor => d.CompletionItemType.CONSTRUCTOR
+      case CompletionItemKind.Folder => d.CompletionItemType.FILE
+      case CompletionItemKind.Module => d.CompletionItemType.MODULE
+      case CompletionItemKind.EnumMember => d.CompletionItemType.ENUM
+      case CompletionItemKind.Snippet => d.CompletionItemType.SNIPPET
+      case CompletionItemKind.Function => d.CompletionItemType.FUNCTION
+      case CompletionItemKind.Color => d.CompletionItemType.COLOR
+      case CompletionItemKind.Text => d.CompletionItemType.TEXT
+      case CompletionItemKind.Property => d.CompletionItemType.PROPERTY
+      case CompletionItemKind.Reference => d.CompletionItemType.REFERENCE
+      case CompletionItemKind.Variable => d.CompletionItemType.VARIABLE
+      case CompletionItemKind.Struct => d.CompletionItemType.MODULE
+      case CompletionItemKind.File => d.CompletionItemType.FILE
+      case _ => d.CompletionItemType.TEXT
+    }
+  }
+
+  private def toDebugCompletionItem(
+      item: CompletionItem,
+      indentation: Int
+  ): d.CompletionItem = {
+    val debugItem = new d.CompletionItem()
+    debugItem.setLabel(item.getLabel())
+    val (newText, range) = item.getTextEdit().asScala match {
+      case Left(textEdit) =>
+        (textEdit.getNewText, textEdit.getRange)
+      case Right(insertReplace) =>
+        (insertReplace.getNewText, insertReplace.getReplace)
+    }
+    val start = range.getStart().getCharacter() - indentation
+    val end = range.getEnd().getCharacter() - indentation
+
+    val length = end - start
+    debugItem.setLength(length)
+
+    // remove snippets, since they are not supported in DAP
+    val fullText = newText.replaceAll("\\$[1-9]+", "")
+
+    val selection = fullText.indexOf("$0")
+
+    // Find the spot for the cursor
+    if (selection >= 0) {
+      debugItem.setSelectionStart(selection)
+    }
+
+    debugItem.setText(fullText.replace("$0", ""))
+    debugItem.setStart(start)
+    debugItem.setType(toDebugCompletionType(item.getKind()))
+    debugItem.setSortText(item.getFilterText())
+    debugItem
+  }
+
 }
 
 object Compilers {
