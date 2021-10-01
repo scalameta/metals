@@ -349,7 +349,7 @@ val mtagsSettings = List(
     ),
     if3 = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.0",
-      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
+      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.1")
         .cross(CrossVersion.for3Use2_13),
       ("com.lihaoyi" %% "geny" % V.genyVersion)
         .cross(CrossVersion.for3Use2_13),
