@@ -92,7 +92,7 @@ class StacktraceAnalyzer(
       new l.Command(
         s"${icons.findsuper} open",
         ServerCommands.GotoPosition.id,
-        List[Object](location: Object, java.lang.Boolean.TRUE).asJava
+        List[Object](location: Object).asJava
       ),
       null
     )
