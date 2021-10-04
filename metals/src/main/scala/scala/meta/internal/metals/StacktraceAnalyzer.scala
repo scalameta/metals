@@ -78,10 +78,10 @@ class StacktraceAnalyzer(
   /**
    * Strip out the `[E]` when the line is coming from bloop-cli.
    * Or
-   * Strip out the `[error]` when the line is coming from sbt
+   * Strip out the `[error]` or `[info]` when the line is coming from sbt
    */
   private def stripErrorSignifier(line: String) =
-    line.replaceFirst("""(\[E\]|\[error\])""", "").trim
+    line.replaceFirst("""(\[E\]|\[error\]|\[info\])""", "").trim
 
   private def makeGotoLocationCodeLens(
       location: l.Location,
