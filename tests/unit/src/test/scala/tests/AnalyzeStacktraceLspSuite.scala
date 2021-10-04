@@ -55,6 +55,28 @@ class AnalyzeStacktraceLspSuite extends BaseLspSuite("analyzestacktrace") {
        |""".stripMargin
   )
 
+  /**
+   * If you have a stack trace during test with sbt it won't actually be an
+   * `[error]` but rather `[info]` like in the case below... which I just ran
+   * into in real life.
+   *
+   * [info]   com.spotify.docker.client.exceptions.DockerException: java.util.concurrent.ExecutionException: javax.ws.rs.ProcessingException: java.lang.Abstract
+   * [info]   at com.spotify.docker.client.DefaultDockerClient.propagate(DefaultDockerClient.java:2812)
+   * [info]   at com.spotify.docker.client.DefaultDockerClient.request(DefaultDockerClient.java:2666)
+   * [info]   at com.spotify.docker.client.DefaultDockerClient.listImages(DefaultDockerClient.java:690)
+   */
+  check(
+    "sbt-info",
+    code,
+    """|[info] java.lang.Exception: error
+       |[info]         at a.b.ClassConstrError.<init>(Main.scala:24)
+       |[info]         at a.b.ObjectError$.raise(Main.scala:18)
+       |[info]         at a.b.ClassError.raise(Main.scala:12)
+       |[info]         at a.b.Main$.main(Main.scala:5)
+       |[info]         at a.b.Main.main(Main.scala)
+       |""".stripMargin
+  )
+
   def check(
       name: String,
       code: String,
