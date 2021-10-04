@@ -591,7 +591,7 @@ class Compilers(
       params: HoverExtParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val positionParams =
-      new TextDocumentPositionParams(params.textDocument, params.position)
+      new TextDocumentPositionParams(params.textDocument, params.getPosition)
     val path = params.textDocument.getUri.toAbsolutePath
     val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
 
