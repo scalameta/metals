@@ -1649,12 +1649,13 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.GotoPosition(location) =>
         Future {
-          // arguments are not checked but are of format:
-          // singletonList(location: Location, otherWindow: Boolean)
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
-              List(location.asInstanceOf[AnyRef]).asJava
+              List(
+                location.asInstanceOf[AnyRef],
+                java.lang.Boolean.TRUE // TRUE for otherWindow
+              ).asJava
             )
           )
         }.asJavaObject
