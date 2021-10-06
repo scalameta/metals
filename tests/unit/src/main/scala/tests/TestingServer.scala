@@ -35,7 +35,6 @@ import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.HoverExtParams
-import scala.meta.internal.metals.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
@@ -50,6 +49,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
+import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -1474,11 +1474,21 @@ final class TestingServer(
   }
 
   def findTextInDependencyJars(
-      mask: String,
-      content: String
+      include: String,
+      pattern: String
   ): Future[List[Location]] = {
     server
-      .findTextInDependencyJars(FindTextInDependencyJarsRequest(mask, content))
+      .findTextInDependencyJars(
+        FindTextInDependencyJarsRequest(
+          FindTextInFilesOptions(include = include, exclude = null),
+          TextSearchQuery(
+            pattern = pattern,
+            isRegExp = null,
+            isCaseSensitive = null,
+            isWordMatch = null
+          )
+        )
+      )
       .asScala
       .map(_.asScala.toList)
   }

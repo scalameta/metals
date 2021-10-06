@@ -57,6 +57,7 @@ import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -755,8 +756,11 @@ class MetalsLanguageServer(
             () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
           )
         }
-        findTextInJars =
-          new FindTextInDependencyJars(buildTargets, () => workspace)
+        findTextInJars = new FindTextInDependencyJars(
+          buildTargets,
+          () => workspace,
+          languageClient
+        )
     }
   }
 
@@ -1894,40 +1898,7 @@ class MetalsLanguageServer(
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[util.List[Location]] = {
-    def readMask: Future[String] = Option(params.mask) match {
-      case Some(mask) =>
-        Future.successful(mask)
-      case None =>
-        languageClient
-          .metalsInputBox(
-            MetalsInputBoxParams(value = ".conf", prompt = "Enter file mask")
-          )
-          .asScala
-          .map(result => result.value)
-    }
-
-    def readContent: Future[String] = Option(params.content) match {
-      case Some(content) =>
-        Future.successful(content)
-      case None =>
-        languageClient
-          .metalsInputBox(
-            MetalsInputBoxParams(
-              prompt = "Enter content to search for"
-            )
-          )
-          .asScala
-          .map(result => result.value)
-    }
-
-    (for {
-      mask <- readMask
-      content <- readContent
-      locations <-
-        if (mask == null || content == null) {
-          Future.successful(List.empty[Location])
-        } else Future(findTextInJars.find(mask, content))
-    } yield locations.asJava).asJava
+    findTextInJars.find(params).map(_.asJava).asJava
   }
 
   private def generateBspConfig(): Future[Unit] = {

@@ -39,8 +39,8 @@ class FindTextInDependencyJarsSuite
         """.stripMargin
       )
       locations <- server.findTextInDependencyJars(
-        ".conf",
-        "jvm-shutdown-hooks"
+        include = ".conf",
+        pattern = "jvm-shutdown-hooks"
       )
       _ = assertEquals(locations, expectedLocations)
     } yield ()
