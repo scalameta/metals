@@ -80,8 +80,8 @@ class FindTextInDependencyJars(
       exclude: Option[String]
   ): Boolean = {
     path.isFile &&
-    Nio(include).matches(path) &&
-    exclude.forall(e => !Nio(e).matches(path))
+    Nio(s"glob:**$include").matches(path) &&
+    exclude.forall(e => !Nio(s"glob:**$e").matches(path))
   }
 
   private def visitJar(
