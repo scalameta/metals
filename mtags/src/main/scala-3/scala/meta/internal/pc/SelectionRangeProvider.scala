@@ -1,11 +1,11 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Paths
-import java.{util => ju}
+import java.{util as ju}
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.*
 
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.core.Contexts.Context
@@ -23,14 +23,14 @@ import org.eclipse.lsp4j.SelectionRange
 class SelectionRangeProvider(
     driver: InteractiveDriver,
     params: ju.List[OffsetParams]
-) {
+):
 
   /**
    * Get the seletion ranges for the provider params
    *
    * @return selection ranges
    */
-  def selectionRange(): List[SelectionRange] = {
+  def selectionRange(): List[SelectionRange] =
     given ctx: Context = driver.currentCtx
 
     val selectionRanges = params.asScala.toList.map { param =>
@@ -54,12 +54,12 @@ class SelectionRangeProvider(
     }
 
     selectionRanges
-  }
+  end selectionRange
 
   private def setParent(
       child: SelectionRange,
       parent: SelectionRange
-  ): SelectionRange = {
+  ): SelectionRange =
     // If the parent and the child have the same exact range we just skip it.
     // This happens in a lot of various places. For example:
     //
@@ -79,12 +79,9 @@ class SelectionRangeProvider(
     //    )
     //  )
     //)
-    if (child.getRange() == parent.getRange()) {
-      parent
-    } else {
+    if child.getRange() == parent.getRange() then parent
+    else
       child.setParent(parent)
       child
-    }
-  }
 
-}
+end SelectionRangeProvider

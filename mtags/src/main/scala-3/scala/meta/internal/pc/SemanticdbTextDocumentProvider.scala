@@ -6,7 +6,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import dotty.tools.dotc.core.Contexts.Context
@@ -21,12 +21,12 @@ import dotty.tools.dotc.util.SourceFile
 class SemanticdbTextDocumentProvider(
     driver: InteractiveDriver,
     workspace: Option[Path]
-) extends WorksheetSemanticdbProvider {
+) extends WorksheetSemanticdbProvider:
 
   def textDocument(
       uri: URI,
       sourceCode: String
-  ): Array[Byte] = {
+  ): Array[Byte] =
     val filePath = Paths.get(uri)
     val validCode = removeMagicImports(sourceCode, AbsolutePath(filePath))
     driver.run(
@@ -60,5 +60,6 @@ class SemanticdbTextDocumentProvider(
     document.writeTo(out)
     out.flush()
     byteStream.toByteArray
-  }
-}
+  end textDocument
+
+end SemanticdbTextDocumentProvider

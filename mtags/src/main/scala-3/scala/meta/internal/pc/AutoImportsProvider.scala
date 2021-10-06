@@ -1,27 +1,27 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Paths
-import java.{util => ju}
+import java.{util as ju}
 
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc.AutoImports._
-import scala.meta.pc._
+import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.*
+import scala.meta.pc.*
 
-import dotty.tools.dotc.ast.tpd._
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Decorators._
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Decorators.*
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-import org.eclipse.{lsp4j => l}
+import org.eclipse.{lsp4j as l}
 
 final class AutoImportsProvider(
     search: SymbolSearch,
@@ -29,9 +29,9 @@ final class AutoImportsProvider(
     name: String,
     params: OffsetParams,
     config: PresentationCompilerConfig
-) {
+):
 
-  def autoImports(): List[AutoImportsResult] = {
+  def autoImports(): List[AutoImportsResult] =
     val uri = params.uri
     val filePath = Paths.get(uri)
     driver.run(
@@ -54,23 +54,21 @@ final class AutoImportsProvider(
 
     val isSeen = mutable.Set.empty[String]
     val symbols = List.newBuilder[Symbol]
-    def visit(sym: Symbol): Boolean = {
+    def visit(sym: Symbol): Boolean =
       val name = sym.denot.fullName.show
-      if (!isSeen(name)) {
+      if !isSeen(name) then
         isSeen += name
         symbols += sym
         true
-      } else false
-    }
-    def isExactMatch(sym: Symbol, query: String): Boolean = {
+      else false
+    def isExactMatch(sym: Symbol, query: String): Boolean =
       sym.name.show == query
-    }
 
     val visitor = new CompilerSearchVisitor(name, visit)
     search.search(name, "", visitor)
     val results = symbols.result.filter(isExactMatch(_, name))
 
-    if (results.nonEmpty) {
+    if results.nonEmpty then
       val correctedPos = CompletionPos.infer(pos, params.text, path).sourcePos
       val generator =
         AutoImports.generator(
@@ -81,17 +79,15 @@ final class AutoImportsProvider(
           config
         )
 
-      for {
+      for
         sym <- results
         edits <- generator.forSymbol(sym)
-      } yield AutoImportsResultImpl(
+      yield AutoImportsResultImpl(
         sym.owner.showFullName,
         edits.asJava
       )
+    else List.empty
+    end if
+  end autoImports
 
-    } else {
-      List.empty
-    }
-  }
-
-}
+end AutoImportsProvider

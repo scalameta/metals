@@ -10,9 +10,9 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
-import java.{util => ju}
+import java.{util as ju}
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
@@ -21,8 +21,8 @@ import scala.language.implicitConversions
 
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc.AutoImports._
+import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.semver.SemVer
@@ -35,23 +35,23 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
 import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.tpd._
-import dotty.tools.dotc.core.Contexts._
+import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.NameKinds._
-import dotty.tools.dotc.core.NameOps._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.SymDenotations._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.NameKinds.*
+import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.SymDenotations.*
+import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.printing.PlainPrinter
-import dotty.tools.dotc.printing.Texts._
+import dotty.tools.dotc.printing.Texts.*
 import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.transform.SymUtils._
+import dotty.tools.dotc.transform.SymUtils.*
 import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.ScriptSourceFile
@@ -91,16 +91,16 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
-) extends PresentationCompiler {
+) extends PresentationCompiler:
 
   def this() = this("", Nil, Nil)
 
-  import InteractiveDriver._
+  import InteractiveDriver.*
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
-  val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] = {
+  val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] =
     Scala3CompilerAccess(
       config,
       sh,
@@ -108,9 +108,8 @@ case class ScalaPresentationCompiler(
     )(
       using ec
     )
-  }
 
-  def newDriver: InteractiveDriver = {
+  def newDriver: InteractiveDriver =
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
     val filteredOptions = options.filterNot(forbiddenOptions)
@@ -120,7 +119,6 @@ case class ScalaPresentationCompiler(
           File.pathSeparator
         ) :: Nil
     new InteractiveDriver(settings)
-  }
 
   override def getTasty(
       targetUri: URI,
@@ -131,7 +129,7 @@ case class ScalaPresentationCompiler(
       TastyUtils.getTasty(targetUri, isHtmlSupported, isHttpEnabled)
     }
 
-  def complete(params: OffsetParams): CompletableFuture[CompletionList] = {
+  def complete(params: OffsetParams): CompletableFuture[CompletionList] =
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
       params.token
@@ -143,7 +141,7 @@ case class ScalaPresentationCompiler(
 
       val ctx = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
-      val (items, isIncomplete) = driver.compilationUnits.get(uri) match {
+      val (items, isIncomplete) = driver.compilationUnits.get(uri) match
         case Some(unit) =>
           val path =
             Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
@@ -189,22 +187,19 @@ case class ScalaPresentationCompiler(
               indexedCtx
             )(using newctx)
           }
-          val isIncomplete = searchResult match {
+          val isIncomplete = searchResult match
             case SymbolSearch.Result.COMPLETE => false
             case SymbolSearch.Result.INCOMPLETE => true
-          }
           (items, isIncomplete)
         case None => (Nil, false)
-      }
 
       new CompletionList(
         isIncomplete,
         items.asJava
       )
     }
-  }
 
-  def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
+  def definition(params: OffsetParams): CompletableFuture[DefinitionResult] =
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
@@ -212,15 +207,12 @@ case class ScalaPresentationCompiler(
       val driver = access.compiler()
       PcDefinitionProvider(driver, params, search).definitions()
     }
-  }
 
-  def shutdown(): Unit = {
+  def shutdown(): Unit =
     compilerAccess.shutdown()
-  }
 
-  def restart(): Unit = {
+  def restart(): Unit =
     compilerAccess.shutdownCurrentCompiler()
-  }
 
   def diagnosticsForDebuggingPurposes(): ju.List[String] =
     List[String]().asJava
@@ -228,7 +220,7 @@ case class ScalaPresentationCompiler(
   def semanticdbTextDocument(
       filename: URI,
       code: String
-  ): CompletableFuture[Array[Byte]] = {
+  ): CompletableFuture[Array[Byte]] =
     compilerAccess.withNonInterruptableCompiler(
       Array.empty[Byte],
       EmptyCancelToken
@@ -237,24 +229,22 @@ case class ScalaPresentationCompiler(
       val provider = SemanticdbTextDocumentProvider(driver, workspace)
       provider.textDocument(filename, code)
     }
-  }
 
   // TODO NOT IMPLEMENTED
   def completionItemResolve(
       item: CompletionItem,
       symbol: String
-  ): CompletableFuture[CompletionItem] = {
+  ): CompletableFuture[CompletionItem] =
     CompletableFuture.completedFuture(
       null
     )
-  }
 
   def autoImports(
       name: String,
       params: scala.meta.pc.OffsetParams
   ): CompletableFuture[
     ju.List[scala.meta.pc.AutoImportsResult]
-  ] = {
+  ] =
     compilerAccess.withNonInterruptableCompiler(
       List.empty[scala.meta.pc.AutoImportsResult].asJava,
       params.token
@@ -264,31 +254,28 @@ case class ScalaPresentationCompiler(
         .autoImports()
         .asJava
     }
-  }
 
   // TODO NOT IMPLEMENTED
   def implementAbstractMembers(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] = {
+  ): CompletableFuture[ju.List[TextEdit]] =
     CompletableFuture.completedFuture(
       List.empty[TextEdit].asJava
     )
-  }
 
   override def insertInferredType(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] = {
+  ): CompletableFuture[ju.List[TextEdit]] =
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new InferredTypeProvider(params, pc.compiler(), config)
         .inferredTypeEdits()
         .asJava
     }
-  }
 
   override def selectionRange(
       params: ju.List[OffsetParams]
-  ): CompletableFuture[ju.List[SelectionRange]] = {
+  ): CompletableFuture[ju.List[SelectionRange]] =
     CompletableFuture.completedFuture {
       compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
         pc =>
@@ -298,7 +285,6 @@ case class ScalaPresentationCompiler(
           ).selectionRange().asJava
       }
     }
-  }
 
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
     compilerAccess.withNonInterruptableCompiler(
@@ -317,10 +303,9 @@ case class ScalaPresentationCompiler(
       val tp = Interactive.enclosingType(trees, pos)
       val tpw = tp.widenTermRefExpr
 
-      if (tp.isError || tpw == NoType || tpw.isError)
-        ju.Optional.empty()
-      else {
-        Interactive.enclosingSourceSymbols(path, pos) match {
+      if tp.isError || tpw == NoType || tpw.isError then ju.Optional.empty()
+      else
+        Interactive.enclosingSourceSymbols(path, pos) match
           case Nil =>
             ju.Optional.empty()
           case symbols =>
@@ -328,7 +313,7 @@ case class ScalaPresentationCompiler(
             val docComments =
               symbols.flatMap(ParsedComment.docOf(_))
             val hoverString = symbols.headOption.map { symbol =>
-              tpw match {
+              tpw match
                 // https://github.com/lampepfl/dotty/issues/8891
                 case tpw: ImportType =>
                   val history = new ShortenedNames(IndexedContext(ctx))
@@ -338,7 +323,7 @@ case class ScalaPresentationCompiler(
                     symbol.paramRef
                   )
                 case _ =>
-                  driver.compilationUnits.get(uri) match {
+                  driver.compilationUnits.get(uri) match
                     case Some(unit) =>
                       val newctx =
                         ctx.fresh.setCompilationUnit(unit)
@@ -355,26 +340,22 @@ case class ScalaPresentationCompiler(
                     case None =>
                       val history = new ShortenedNames(IndexedContext(ctx))
                       printer.hoverDetailString(symbol, history, tpw)
-                  }
-              }
             }
             val content = hoverContent(hoverString, docComments)
             ju.Optional.of(new Hover(content))
-        }
-      }
+      end if
     }
 
   def newInstance(
       buildTargetIdentifier: String,
       classpath: ju.List[Path],
       options: ju.List[String]
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     copy(
       buildTargetIdentifier = buildTargetIdentifier,
       classpath = classpath.asScala.toSeq,
       options = options.asScala.toList
     )
-  }
 
   def signatureHelp(params: OffsetParams): CompletableFuture[SignatureHelp] =
     compilerAccess.withNonInterruptableCompiler(
@@ -414,50 +395,44 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[Diagnostic]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
-  override def didClose(uri: URI): Unit = {
+  override def didClose(uri: URI): Unit =
     compilerAccess.withNonInterruptableCompiler(
       (),
       EmptyCancelToken
     ) { access => access.compiler().close(uri) }
-  }
 
   override def withExecutorService(
       executorService: ExecutorService
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     copy(ec = ExecutionContext.fromExecutorService(executorService))
-  }
 
   override def withConfiguration(
       config: PresentationCompilerConfig
-  ): PresentationCompiler = {
+  ): PresentationCompiler =
     copy(config = config)
-  }
 
   override def withScheduledExecutorService(
       sh: ScheduledExecutorService
   ): PresentationCompiler =
     copy(sh = Some(sh))
 
-  def withSearch(search: SymbolSearch): PresentationCompiler = {
+  def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
-  }
 
-  def withWorkspace(workspace: Path): PresentationCompiler = {
+  def withWorkspace(workspace: Path): PresentationCompiler =
     copy(workspace = Some(workspace))
-  }
 
   private def sourcePosition(
       driver: InteractiveDriver,
       params: OffsetParams,
       uri: URI
-  ): SourcePosition = {
+  ): SourcePosition =
     val source = driver.openedFiles(uri)
     val p = Spans.Span(params.offset)
     new SourcePosition(source, p)
-  }
 
-  private def range(p: SourcePosition): Option[Range] = {
-    if (p.exists) {
+  private def range(p: SourcePosition): Option[Range] =
+    if p.exists then
       Some(
         new Range(
           new Position(
@@ -467,10 +442,7 @@ case class ScalaPresentationCompiler(
           new Position(p.endLine, p.endColumn)
         )
       )
-    } else {
-      None
-    }
-  }
+    else None
 
   private def completionItems(
       completion: CompletionValue,
@@ -480,25 +452,19 @@ case class ScalaPresentationCompiler(
       completionPos: CompletionPos,
       path: List[Tree],
       indexedContext: IndexedContext
-  )(using Context): CompletionItem = {
+  )(using Context): CompletionItem =
     val printer = SymbolPrinter()(using ctx)
 
     def completionItemKind(
         sym: Symbol
-    )(using ctx: Context): CompletionItemKind = {
-      if (sym.is(Package) || sym.is(Module))
+    )(using ctx: Context): CompletionItemKind =
+      if sym.is(Package) || sym.is(Module) then
         CompletionItemKind.Module // No CompletionItemKind.Package (https://github.com/Microsoft/language-server-protocol/issues/155)
-      else if (sym.isConstructor)
-        CompletionItemKind.Constructor
-      else if (sym.isClass)
-        CompletionItemKind.Class
-      else if (sym.is(Mutable))
-        CompletionItemKind.Variable
-      else if (sym.is(Method))
-        CompletionItemKind.Method
-      else
-        CompletionItemKind.Field
-    }
+      else if sym.isConstructor then CompletionItemKind.Constructor
+      else if sym.isClass then CompletionItemKind.Class
+      else if sym.is(Mutable) then CompletionItemKind.Variable
+      else if sym.is(Method) then CompletionItemKind.Method
+      else CompletionItemKind.Field
 
     val editRange = completionPos.toEditRange
     val sym = completion.symbol
@@ -515,22 +481,19 @@ case class ScalaPresentationCompiler(
         nameEdit: TextEdit,
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil
-    ): CompletionItem = {
+    ): CompletionItem =
 
       val label =
-        kind match {
+        kind match
           case CompletionItemKind.Method =>
             s"${ident}${description}"
           case CompletionItemKind.Variable | CompletionItemKind.Field =>
             s"${ident}: ${description}"
           case CompletionItemKind.Module | CompletionItemKind.Class =>
-            if (isFromWorkspace)
-              s"${ident} -${description}"
-            else
-              s"${ident}${description}"
+            if isFromWorkspace then s"${ident} -${description}"
+            else s"${ident}${description}"
           case _ =>
             ident
-        }
       val item = new CompletionItem(label)
 
       item.setSortText(f"${idx}%05d")
@@ -542,30 +505,27 @@ case class ScalaPresentationCompiler(
       item.setAdditionalTextEdits(additionalEdits.asJava)
 
       val documentation = ParsedComment.docOf(sym)
-      if (documentation.nonEmpty) {
+      if documentation.nonEmpty then
         item.setDocumentation(hoverContent(None, documentation.toList))
-      }
 
-      if (sym.isDeprecated) {
+      if sym.isDeprecated then
         item.setTags(List(CompletionItemTag.Deprecated).asJava)
-      }
 
       item.setKind(completionItemKind(sym))
       item
-    }
+    end mkItem0
 
     def mkItem(
         ident: String,
         value: String,
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil
-    ): CompletionItem = {
+    ): CompletionItem =
       val nameEdit = new TextEdit(
         editRange,
         value
       )
       mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
-    }
 
     def mkWorkspaceItem(
         ident: String,
@@ -575,18 +535,18 @@ case class ScalaPresentationCompiler(
       mkItem(ident, value, isFromWorkspace = true, additionalEdits)
 
     val ident = completion.label
-    completion.kind match {
+    completion.kind match
       case CompletionValue.Kind.Workspace =>
-        path match {
+        path match
           case (_: Ident) :: (_: Import) :: _ =>
             mkWorkspaceItem(
               ident,
               sym.fullNameBackticked
             )
           case _ =>
-            autoImports.editsForSymbol(sym) match {
+            autoImports.editsForSymbol(sym) match
               case Some(edits) =>
-                edits match {
+                edits match
                   case AutoImportEdits(Some(nameEdit), other) =>
                     mkItem0(
                       ident,
@@ -601,25 +561,21 @@ case class ScalaPresentationCompiler(
                       isFromWorkspace = true,
                       edits.edits
                     )
-                }
               case None =>
                 val r = indexedContext.lookupSym(sym)
-                r match {
+                r match
                   case IndexedContext.Result.InScope =>
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
-                }
-            }
-        }
       case CompletionValue.Kind.NamedArg => mkItem(ident, ident)
       case _ => mkItem(ident, ident.backticked)
-    }
-  }
+    end match
+  end completionItems
 
   private def hoverContent(
       typeInfo: Option[String],
       comments: List[ParsedComment]
-  )(using ctx: Context): MarkupContent = {
+  )(using ctx: Context): MarkupContent =
     val buf = new StringBuilder
     typeInfo.foreach { info =>
       buf.append(s"""```scala
@@ -630,32 +586,30 @@ case class ScalaPresentationCompiler(
     comments.foreach { comment => buf.append(comment.renderAsMarkdown) }
 
     markupContent(buf.toString)
-  }
+  end hoverContent
 
-  private def markupContent(content: String): MarkupContent = {
-    if (content.isEmpty) null
-    else {
+  private def markupContent(content: String): MarkupContent =
+    if content.isEmpty then null
+    else
       val markup = new MarkupContent
       markup.setKind("markdown")
       markup.setValue(content.trim)
       markup
-    }
-  }
 
   def signatureToSignatureInformation(
       signature: Signatures.Signature
-  ): SignatureInformation = {
+  ): SignatureInformation =
     val paramInfoss =
       signature.paramss.map(_.map(paramToParameterInformation))
     val paramLists = signature.paramss
       .map { paramList =>
         val labels = paramList.map(_.show)
-        val prefix = if (paramList.exists(_.isImplicit)) "implicit " else ""
+        val prefix = if paramList.exists(_.isImplicit) then "implicit " else ""
         labels.mkString(prefix, ", ", "")
       }
       .mkString("(", ")(", ")")
     val tparamsLabel =
-      if (signature.tparams.isEmpty) ""
+      if signature.tparams.isEmpty then ""
       else signature.tparams.mkString("[", ", ", "]")
     val returnTypeLabel = signature.returnType.map(t => s": $t").getOrElse("")
     val label = s"${signature.name}$tparamsLabel$paramLists$returnTypeLabel"
@@ -664,19 +618,19 @@ case class ScalaPresentationCompiler(
     sig.setParameters(paramInfoss.flatten.asJava)
     documentation.foreach(sig.setDocumentation(_))
     sig
-  }
+  end signatureToSignatureInformation
 
   /**
    * Convert `param` to `ParameterInformation`
    */
   private def paramToParameterInformation(
       param: Signatures.Param
-  ): ParameterInformation = {
+  ): ParameterInformation =
     val documentation = param.doc.map(markupContent)
     val info = new ParameterInformation(param.show)
     documentation.foreach(info.setDocumentation(_))
     info
-  }
 
   override def isLoaded() = compilerAccess.isLoaded()
-}
+
+end ScalaPresentationCompiler

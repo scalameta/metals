@@ -28,15 +28,14 @@ class Scala3CompilerAccess(
       config,
       sh,
       newCompiler
-    ) {
+    ):
 
   def newReporter = new StoreReporter(null)
 
   protected def handleSharedCompilerException(
       t: Throwable
-  ): Option[String] = {
+  ): Option[String] =
     throw t
-  }
 
   protected def ignoreException(t: Throwable): Boolean = false
-}
+end Scala3CompilerAccess

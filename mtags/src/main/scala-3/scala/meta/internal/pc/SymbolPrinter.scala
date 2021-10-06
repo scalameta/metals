@@ -2,29 +2,27 @@ package scala.meta.internal.pc
 
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameKinds.EvidenceParamName
-import dotty.tools.dotc.core.NameOps._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.printing.RefinedPrinter
 import org.eclipse.lsp4j.CompletionItemKind
 
-class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
+class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
 
   private val defaultWidth = 1000
 
-  override def nameString(name: Name): String = {
+  override def nameString(name: Name): String =
     super.nameString(name.stripModuleClassSuffix)
-  }
 
-  def typeString(tpw: Type): String = {
+  def typeString(tpw: Type): String =
     toText(tpw).mkString(defaultWidth, false)
-  }
 
   /**
    * for
@@ -37,20 +35,19 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
       sym: Symbol,
       history: ShortenedNames,
       info: Type
-  )(using Context): String = {
+  )(using Context): String =
     val typeSymbol = info.typeSymbol
 
-    def shortTypeString: String = {
+    def shortTypeString: String =
       val short = shortType(info, history)
       s"${typeString(short)}"
-    }
 
     def ownerTypeString: String =
       typeSymbol.owner.fullNameBackticked
 
     def name: String = nameString(sym)
 
-    sym match {
+    sym match
       case p if p.is(Flags.Package) =>
         s"package ${p.fullNameBackticked}"
       case c if c.is(Flags.EnumVal) =>
@@ -67,14 +64,14 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
         defaultMethodSignature(m, history, info)
       case _ =>
         val implicitKeyword =
-          if (sym.is(Flags.Implicit)) List("implicit") else Nil
-        val finalKeyword = if (sym.is(Flags.Final)) List("final") else Nil
+          if sym.is(Flags.Implicit) then List("implicit") else Nil
+        val finalKeyword = if sym.is(Flags.Final) then List("final") else Nil
         val keyOrEmpty = keyString(sym)
-        val keyword = if (keyOrEmpty.nonEmpty) List(keyOrEmpty) else Nil
+        val keyword = if keyOrEmpty.nonEmpty then List(keyOrEmpty) else Nil
         (implicitKeyword ::: finalKeyword ::: keyword ::: (s"$name:" :: shortTypeString :: Nil))
           .mkString(" ")
-    }
-  }
+    end match
+  end hoverDetailString
 
   /**
    * Calculate the string for "detail" field in CompletionItem.
@@ -88,21 +85,19 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
   def completionDetailString(
       sym: Symbol,
       history: ShortenedNames
-  ): String = {
+  ): String =
     val info = sym.info.widenTermRefExpr
     val typeSymbol = info.typeSymbol
 
-    if (sym.is(Flags.Package) || sym.isClass) " " + fullNameString(sym.owner)
-    else if (sym.is(Flags.Module) || typeSymbol.is(Flags.Module))
+    if sym.is(Flags.Package) || sym.isClass then " " + fullNameString(sym.owner)
+    else if sym.is(Flags.Module) || typeSymbol.is(Flags.Module) then
       " " + fullNameString(typeSymbol.owner)
-    else if (sym.is(Flags.Method))
+    else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, history, info, onlyMethodParams = true)
-    else {
+    else
       val short = shortType(info, history)
       typeString(short)
-    }
-
-  }
+  end completionDetailString
 
   /**
    * Compute method signature for the given (method) symbol.
@@ -116,7 +111,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
       shortenedNames: ShortenedNames,
       gtpe: Type,
       onlyMethodParams: Boolean = false
-  ): String = {
+  ): String =
     val (methodParams, extParams) = splitExtensionParamss(gsym)
     val paramss = methodParams ++ extParams
     lazy val implicitParams: List[Symbol] =
@@ -140,7 +135,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
           // e.g.
           // from [A: Ordering](a: A, b: A)(implicit evidence$1: Ordering[A])
           // to   [A: Ordering](a: A, b: A): A
-          if (implicitEvidenceParams.contains(param)) Nil
+          if implicitEvidenceParams.contains(param) then Nil
           else
             paramLabel(
               param,
@@ -149,7 +144,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
             ) :: Nil
         }
         // Remove empty params
-        if (labels.isEmpty) Nil
+        if labels.isEmpty then Nil
         else labels.iterator :: Nil
       }
     }.iterator
@@ -158,21 +153,20 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
 
     val returnType = typeString(shortType(gtpe.finalResultType, shortenedNames))
 
-    def extensionSignatureString = {
+    def extensionSignatureString =
       val extensionSignature = paramssString(extLabelss, extParams)
-      if (extParams.nonEmpty) extensionSignature.mkString("extension ", "", " ")
+      if extParams.nonEmpty then
+        extensionSignature.mkString("extension ", "", " ")
       else ""
-    }
     val paramssSignature = paramssString(paramLabelss, methodParams)
       .mkString("", "", s": ${returnType}")
 
-    if (onlyMethodParams) paramssSignature
+    if onlyMethodParams then paramssSignature
     else
       extensionSignatureString +
         s"def ${gsym.name}" +
         paramssSignature
-
-  }
+  end defaultMethodSignature
 
   /*
    * Check if a method is an extension method and in that case separate the parameters
@@ -180,13 +174,12 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
    */
   private def splitExtensionParamss(
       gsym: Symbol
-  ): (List[List[Symbol]], List[List[Symbol]]) = {
+  ): (List[List[Symbol]], List[List[Symbol]]) =
 
     def headHasFlag(params: List[Symbol], flag: Flags.Flag): Boolean =
-      params match {
+      params match
         case sym :: _ => sym.is(flag)
         case _ => false
-      }
     def isUsingClause(params: List[Symbol]): Boolean =
       headHasFlag(params, Flags.Given)
     def isTypeParamClause(params: List[Symbol]): Boolean =
@@ -195,22 +188,20 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
       isUsingClause(params) || isTypeParamClause(params)
 
     val paramss =
-      if (gsym.rawParamss.length != 0) gsym.rawParamss else gsym.paramSymss
-    if (gsym.is(Flags.ExtensionMethod)) {
+      if gsym.rawParamss.length != 0 then gsym.rawParamss else gsym.paramSymss
+    if gsym.is(Flags.ExtensionMethod) then
       val filteredParams =
-        if (gsym.name.isRightAssocOperatorName) {
+        if gsym.name.isRightAssocOperatorName then
           val (leadingTyParamss, rest1) = paramss.span(isTypeParamClause)
           val (leadingUsing, rest2) = rest1.span(isUsingClause)
           val (rightTyParamss, rest3) = rest2.span(isTypeParamClause)
           val (rightParamss, rest4) = rest3.splitAt(1)
           val (leftParamss, rest5) = rest4.splitAt(1)
           val (trailingUsing, rest6) = rest5.span(isUsingClause)
-          if (leftParamss.nonEmpty)
+          if leftParamss.nonEmpty then
             leadingTyParamss ::: leadingUsing ::: leftParamss ::: rightTyParamss ::: rightParamss ::: trailingUsing ::: rest6
           else paramss // it wasn't a binary operator, after all.
-        } else {
-          paramss
-        }
+        else paramss
       val trailingParamss = filteredParams
         .dropWhile(isUsingOrTypeParamClause)
         .drop(1)
@@ -218,20 +209,18 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
       val leadingParamss =
         filteredParams.take(paramss.length - trailingParamss.length)
       (trailingParamss, leadingParamss)
-
-    } else {
-      (paramss, Nil)
-    }
-  }
+    else (paramss, Nil)
+    end if
+  end splitExtensionParamss
 
   private def paramssString(
       paramLabels: Iterator[Iterator[String]],
       paramss: List[List[Symbol]]
-  )(using Context) = {
+  )(using Context) =
     paramLabels
       .zip(paramss)
       .map { case (params, syms) =>
-        Params.paramsKind(syms) match {
+        Params.paramsKind(syms) match
           case Params.Kind.TypeParameter =>
             params.mkString("[", ", ", "]")
           case Params.Kind.Normal =>
@@ -248,9 +237,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
               ", ",
               ")"
             )
-        }
       }
-  }
 
   /**
    * Construct param (both value params and type params) label string (e.g. "param1: TypeOfParam", "A: Ordering")
@@ -260,33 +247,32 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
       param: Symbol,
       implicitEvidences: Map[Symbol, List[String]],
       shortenedNames: ShortenedNames
-  )(using Context): String = {
+  )(using Context): String =
     val keywordName = nameString(param)
     val paramTypeString = typeString(
       shortType(param.info, shortenedNames)
     )
-    if (param.isTypeParam) {
+    if param.isTypeParam then
       // pretty context bounds
       // e.g. f[A](a: A, b: A)(implicit evidence$1: Ordering[A])
       // to   f[A: Ordering](a: A, b: A)(implicit evidence$1: Ordering[A])
-      val bounds = implicitEvidences.getOrElse(param, Nil) match {
+      val bounds = implicitEvidences.getOrElse(param, Nil) match
         case Nil => ""
         case head :: Nil => s": $head"
         case many => many.mkString(": ", ": ", "")
-      }
       s"$keywordName$paramTypeString$bounds"
-    } else if (param.is(Flags.Given) && param.name.toString.contains('$')) {
+    else if param.is(Flags.Given) && param.name.toString.contains('$') then
       // For Anonymous Context Parameters
       // print only type string
       // e.g. "using Ord[T]" instead of "using x$0: Ord[T]"
       paramTypeString
-    } else {
+    else
       val paramTypeString = typeString(
         shortType(param.info, shortenedNames)
       )
       s"${keywordName}: ${paramTypeString}"
-    }
-  }
+    end if
+  end paramLabel
 
   /**
    * Create a mapping from type parameter symbol to its context bound string representations.
@@ -297,7 +283,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
   private def constructImplicitEvidencesByTypeParam(
       implicitEvidenceParams: List[Symbol],
       shortenedNames: ShortenedNames
-  ): Map[Symbol, List[String]] = {
+  ): Map[Symbol, List[String]] =
     val result = collection.mutable.Map.empty[Symbol, ListBuffer[String]]
     implicitEvidenceParams.iterator
       .map(_.info)
@@ -312,5 +298,6 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx) {
         buf += typeString(shortType(tycon, shortenedNames))
       }
     result.map(kv => (kv._1, kv._2.toList)).toMap
-  }
-}
+  end constructImplicitEvidencesByTypeParam
+
+end SymbolPrinter

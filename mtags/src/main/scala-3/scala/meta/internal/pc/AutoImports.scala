@@ -1,26 +1,26 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.pc.PresentationCompilerConfig
 
-import dotty.tools.dotc.ast.tpd._
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Denotations._
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Denotations.*
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-import org.eclipse.{lsp4j => l}
+import org.eclipse.{lsp4j as l}
 
-object AutoImports {
+object AutoImports:
 
-  enum AutoImport {
+  enum AutoImport:
 
     /**
      * Trivial import: `Future -> (Future, import scala.concurrent.Future)`
@@ -38,17 +38,14 @@ object AutoImports {
      * `Map -> (mutable.Map, import scala.collection.mutable)`
      */
     case SpecifiedOwner(sym: Symbol)
+  end AutoImport
 
-  }
-
-  object AutoImport {
+  object AutoImport:
     def renamedOrSpecified(sym: Symbol, ownerRename: String)(using
         Context
-    ): AutoImport = {
-      if (sym.owner.showName == ownerRename) SpecifiedOwner(sym)
+    ): AutoImport =
+      if sym.owner.showName == ownerRename then SpecifiedOwner(sym)
       else Renamed(sym, ownerRename)
-    }
-  }
 
   def generator(
       pos: SourcePosition,
@@ -56,7 +53,7 @@ object AutoImports {
       tree: Tree,
       indexedContext: IndexedContext,
       config: PresentationCompilerConfig
-  ): AutoImportsGenerator = {
+  ): AutoImportsGenerator =
 
     import indexedContext.ctx
 
@@ -69,11 +66,10 @@ object AutoImports {
       }.toMap
 
     val renames =
-      (name: SimpleName) => {
+      (name: SimpleName) =>
         renameConfig
           .get(name)
           .orElse(indexedContext.rename(name))
-      }
 
     new AutoImportsGenerator(
       pos,
@@ -81,17 +77,16 @@ object AutoImports {
       indexedContext.importContext,
       renames
     )
-  }
+  end generator
 
   case class AutoImportEdits(
       nameEdit: Option[l.TextEdit],
       importEdit: Option[l.TextEdit]
-  ) {
+  ):
 
     def edits: List[l.TextEdit] = List(nameEdit, importEdit).flatten
-  }
 
-  object AutoImportEdits {
+  object AutoImportEdits:
 
     def apply(name: l.TextEdit, imp: l.TextEdit): AutoImportEdits =
       AutoImportEdits(Some(name), Some(imp))
@@ -99,24 +94,23 @@ object AutoImports {
       AutoImportEdits(None, Some(edit))
     def nameOnly(edit: l.TextEdit): AutoImportEdits =
       AutoImportEdits(Some(edit), None)
-  }
 
   class AutoImportsGenerator(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
       indexedContext: IndexedContext,
       renames: SimpleName => Option[String]
-  ) {
+  ):
 
     import indexedContext.ctx
 
     def forSymbol(symbol: Symbol): Option[List[l.TextEdit]] =
       editsForSymbol(symbol).map(_.edits)
 
-    def editsForSymbol(symbol: Symbol): Option[AutoImportEdits] = {
+    def editsForSymbol(symbol: Symbol): Option[AutoImportEdits] =
       inferAutoImport(symbol).map { ai =>
         def mkImportEdit = importEdit(List(ai), importPosition)
-        ai match {
+        ai match
           case _: AutoImport.Simple =>
             AutoImportEdits.importOnly(mkImportEdit)
           case AutoImport.SpecifiedOwner(sym)
@@ -132,37 +126,32 @@ object AutoImports {
             AutoImportEdits.nameOnly(specifyOwnerEdit(sym, ownerRename))
           case AutoImport.Renamed(sym, ownerRename) =>
             AutoImportEdits(specifyOwnerEdit(sym, ownerRename), mkImportEdit)
-        }
+        end match
       }
-    }
 
-    private def inferAutoImport(symbol: Symbol): Option[AutoImport] = {
-      indexedContext.lookupSym(symbol) match {
+    private def inferAutoImport(symbol: Symbol): Option[AutoImport] =
+      indexedContext.lookupSym(symbol) match
         case IndexedContext.Result.Missing => Some(AutoImport.Simple(symbol))
         case IndexedContext.Result.Conflict =>
           val owner = symbol.owner
           val simpleName = owner.name.toSimpleName
-          renames(simpleName) match {
+          renames(simpleName) match
             case Some(rename) =>
               Some(AutoImport.renamedOrSpecified(symbol, rename))
             case _ => None
-          }
         case IndexedContext.Result.InScope => None
-      }
-    }
 
-    private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit = {
+    private def specifyOwnerEdit(symbol: Symbol, owner: String): l.TextEdit =
       val line = pos.startLine
       new l.TextEdit(pos.toLSP, s"$owner.${symbol.nameBackticked}")
-    }
 
     private def importEdit(
         values: List[AutoImport],
         importPosition: AutoImportPosition
-    )(using Context): l.TextEdit = {
+    )(using Context): l.TextEdit =
       val indent = " " * importPosition.indent
       val topPadding =
-        if (importPosition.padTop) "\n"
+        if importPosition.padTop then "\n"
         else ""
 
       val formatted = values
@@ -177,37 +166,34 @@ object AutoImports {
 
       val editPos = pos.withSpan(Spans.Span(importPosition.offset)).toLSP
       new l.TextEdit(editPos, formatted)
-    }
+    end importEdit
 
-    private def importName(sym: Symbol): String = {
-      if (indexedContext.toplevelClashes(sym))
+    private def importName(sym: Symbol): String =
+      if indexedContext.toplevelClashes(sym) then
         s"_root_.${sym.fullNameBackticked}"
       else sym.fullNameBackticked
-    }
-  }
+  end AutoImportsGenerator
 
   private def autoImportPosition(
       pos: SourcePosition,
       text: String,
       tree: Tree
-  )(using Context): AutoImportPosition = {
+  )(using Context): AutoImportPosition =
 
     @tailrec
     def lastPackageDef(
         prev: Option[PackageDef],
         tree: Tree
-    ): Option[PackageDef] = {
-      tree match {
+    ): Option[PackageDef] =
+      tree match
         case curr @ PackageDef(_, (next: PackageDef) :: Nil)
             if !curr.symbol.isPackageObject =>
           lastPackageDef(Some(curr), next)
         case pkg: PackageDef if !pkg.symbol.isPackageObject => Some(pkg)
         case _ => prev
-      }
-    }
 
-    def ammoniteObjectBody(tree: Tree)(using Context): Option[Template] = {
-      tree match {
+    def ammoniteObjectBody(tree: Tree)(using Context): Option[Template] =
+      tree match
         case PackageDef(_, stats) =>
           stats.flatMap {
             case s: PackageDef => ammoniteObjectBody(s)
@@ -217,14 +203,12 @@ object AutoImports {
             case _ => None
           }.headOption
         case _ => None
-      }
-    }
 
-    def forScalaSource: Option[AutoImportPosition] = {
+    def forScalaSource: Option[AutoImportPosition] =
       lastPackageDef(None, tree).map { pkg =>
         val lastImportStatement =
           pkg.stats.takeWhile(_.isInstanceOf[Import]).lastOption
-        val (lineNumber, padTop) = lastImportStatement match {
+        val (lineNumber, padTop) = lastImportStatement match
           case Some(stm) => (stm.endPos.line + 1, false)
           case None if pkg.pid.symbol.isEmptyPackage =>
             (0, false)
@@ -232,35 +216,30 @@ object AutoImports {
             val pos = pkg.pid.endPos
             val line =
               // pos point at the last NL
-              if (pos.endColumn == 0)
-                math.max(0, pos.line - 1)
-              else
-                pos.line + 1
+              if pos.endColumn == 0 then math.max(0, pos.line - 1)
+              else pos.line + 1
             (line, true)
-        }
         val offset = pos.source.lineToOffset(lineNumber)
         new AutoImportPosition(offset, text, padTop)
       }
-    }
 
-    def forAmmoniteScript: Option[AutoImportPosition] = {
+    def forAmmoniteScript: Option[AutoImportPosition] =
       ammoniteObjectBody(tree).map { tmpl =>
         val lastImportStatement =
           tmpl.body.takeWhile(_.isInstanceOf[Import]).lastOption
-        val (lineNumber, padTop) = lastImportStatement match {
+        val (lineNumber, padTop) = lastImportStatement match
           case Some(stm) => (stm.endPos.line + 1, false)
           case None => (tmpl.self.srcPos.line, false)
-        }
         val offset = pos.source.lineToOffset(lineNumber)
         new AutoImportPosition(offset, text, padTop)
       }
-    }
 
     val path = pos.source.path
-    val ammonite = if (path.endsWith(".sc.scala")) forAmmoniteScript else None
+    val ammonite =
+      if path.endsWith(".sc.scala") then forAmmoniteScript else None
     ammonite
       .orElse(forScalaSource)
       .getOrElse(AutoImportPosition(0, 0, padTop = false))
-  }
+  end autoImportPosition
 
-}
+end AutoImports

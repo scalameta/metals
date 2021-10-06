@@ -9,7 +9,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Language
@@ -23,7 +23,7 @@ import scala.meta.pc.SymbolDocumentation
  *
  * Handles both javadoc and scaladoc. TODO Not implemented for Scala 3
  */
-class Docstrings(index: GlobalSymbolIndex) {
+class Docstrings(index: GlobalSymbolIndex):
   val cache = new TrieMap[String, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
@@ -37,9 +37,7 @@ class Docstrings(index: GlobalSymbolIndex) {
   private def indexSymbol(symbol: String): Unit = {}
 
   private def indexSymbolDefinition(defn: SymbolDefinition): Unit = {}
+end Docstrings
 
-}
-
-object Docstrings {
+object Docstrings:
   def empty: Docstrings = new Docstrings(null)
-}

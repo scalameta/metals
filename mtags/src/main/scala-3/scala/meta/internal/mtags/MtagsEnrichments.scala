@@ -8,17 +8,17 @@ import scala.meta.internal.pc.MetalsInteractive
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.Driver
-import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.NameOps._
-import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-import org.eclipse.{lsp4j => l}
+import org.eclipse.{lsp4j as l}
 
-object MtagsEnrichments extends CommonMtagsEnrichments {
+object MtagsEnrichments extends CommonMtagsEnrichments:
 
   extension (driver: InteractiveDriver)
     def sourcePosition(params: OffsetParams): SourcePosition =
@@ -29,8 +29,8 @@ object MtagsEnrichments extends CommonMtagsEnrichments {
       val p = Spans.Span(offset)
       new SourcePosition(source, p)
 
-    def localContext(params: OffsetParams): Context = {
-      if (driver.currentCtx.run.units.isEmpty)
+    def localContext(params: OffsetParams): Context =
+      if driver.currentCtx.run.units.isEmpty then
         throw new RuntimeException(
           "No source files were passed to the Scala 3 presentation compiler"
         )
@@ -48,50 +48,45 @@ object MtagsEnrichments extends CommonMtagsEnrichments {
           newctx
         )
       MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-    }
+    end localContext
+
+  end extension
 
   extension (pos: SourcePosition)
-    def toLSP: l.Range = {
+    def toLSP: l.Range =
       new l.Range(
         new l.Position(pos.startLine, pos.startColumn),
         new l.Position(pos.endLine, pos.endColumn)
       )
-    }
 
-    def toLocation: Option[l.Location] = {
-      for {
+    def toLocation: Option[l.Location] =
+      for
         uri <- InteractiveDriver.toUriOption(pos.source)
-        range <- if (pos.exists) Some(pos.toLSP) else None
-      } yield new l.Location(uri.toString, range)
-    }
+        range <- if pos.exists then Some(pos.toLSP) else None
+      yield new l.Location(uri.toString, range)
 
-  extension (sym: Symbol)(using Context) {
-    def fullNameBackticked: String = {
+  extension (sym: Symbol)(using Context)
+    def fullNameBackticked: String =
       @tailrec
-      def loop(acc: List[String], sym: Symbol): List[String] = {
-        if (sym == NoSymbol || sym.isRoot || sym.isEmptyPackage) acc
-        else if (sym.isPackageObject) loop(acc, sym.owner)
-        else {
+      def loop(acc: List[String], sym: Symbol): List[String] =
+        if sym == NoSymbol || sym.isRoot || sym.isEmptyPackage then acc
+        else if sym.isPackageObject then loop(acc, sym.owner)
+        else
           val v = KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
           loop(v :: acc, sym.owner)
-        }
-      }
       loop(Nil, sym).mkString(".")
-    }
 
     def decodedName: String = sym.name.decoded
 
     def nameBackticked: String =
       KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
-  }
+  end extension
 
-  extension (name: Name)(using Context) {
+  extension (name: Name)(using Context)
     def decoded: String = name.stripModuleClassSuffix.show
-  }
 
-  extension (s: String) {
+  extension (s: String)
     def backticked: String =
       KeywordWrapper.Scala3.backtickWrap(s)
-  }
 
-}
+end MtagsEnrichments
