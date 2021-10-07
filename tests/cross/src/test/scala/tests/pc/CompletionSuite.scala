@@ -59,7 +59,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  // TODO: scala3, compute type parameters based on the qualifier.
   check(
     "tparam",
     """
@@ -70,13 +69,9 @@ class CompletionSuite extends BaseCompletionSuite {
       |  new Foo[Int].ident@@
       |}""".stripMargin,
     """|identity[B >: Int](a: B): B
-       |""".stripMargin,
-    compat = Map(
-      "3" -> "identity[B >: A](a: B): B"
-    )
+       |""".stripMargin
   )
 
-  // TODO: scala3, compute type parameters based on the qualifier.
   check(
     "tparam1",
     """
@@ -87,13 +82,9 @@ class CompletionSuite extends BaseCompletionSuite {
       |  new Foo[Int].ident@@
       |}""".stripMargin,
     """|identity(a: Int): Int
-       |""".stripMargin,
-    compat = Map(
-      "3" -> "identity(a: A): A"
-    )
+       |""".stripMargin
   )
 
-  // TODO: scala3, compute type parameters based on the qualifier.
   check(
     "tparam2",
     """
@@ -104,8 +95,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|getOrElse[V1 >: String](key: Int, default: => V1): V1
        |""".stripMargin,
     compat = Map(
-      "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1",
-      "3" -> "getOrElse[V1 >: V](key: K, default: => V1): V1"
+      "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1"
     )
   )
 
@@ -241,23 +231,23 @@ class CompletionSuite extends BaseCompletionSuite {
         """|empty[A]: List[A]
            |from[B](coll: IterableOnce[B]): List[B]
            |newBuilder[A]: Builder[A, List[A]]
-           |apply[A](elems: A*): CC[A]
-           |concat[A](xss: Iterable[A]*): CC[A]
-           |fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
-           |fill[A](n: Int)(elem: => A): CC[A]
-           |iterate[A](start: A, len: Int)(f: A => A): CC[A]
-           |range[A: Integral](start: A, end: A): CC[A]
-           |range[A: Integral](start: A, end: A, step: A): CC[A]
-           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): CC[CC[CC[A]] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): CC[CC[CC[CC[A]]] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): CC[CC[CC[CC[CC[A]]]] @uncheckedVariance]
-           |tabulate[A](n: Int)(f: Int => A): CC[A]
-           |unapplySeq[A](x: CC[A] @uncheckedVariance): UnapplySeqWrapper[A]
-           |unfold[A, S](init: S)(f: S => Option[(A, S)]): CC[A]
+           |apply[A](elems: A*): List[A]
+           |concat[A](xss: Iterable[A]*): List[A]
+           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]] @uncheckedVariance]
+           |fill[A](n: Int)(elem: => A): List[A]
+           |iterate[A](start: A, len: Int)(f: A => A): List[A]
+           |range[A: Integral](start: A, end: A): List[A]
+           |range[A: Integral](start: A, end: A, step: A): List[A]
+           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]] @uncheckedVariance]
+           |tabulate[A](n: Int)(f: Int => A): List[A]
+           |unapplySeq[A](x: List[A] @uncheckedVariance): UnapplySeqWrapper[A]
+           |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
            |->[B](y: B): (A, B)
            |ensuring(cond: Boolean): A
            |ensuring(cond: A => Boolean): A
@@ -272,7 +262,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |iterableFactory[A]: Factory[A, CC[A]]
            |asInstanceOf[X0]: X0
            |equals(x$0: Any): Boolean
-           |getClass[X0 >: (Any.this : Any)]: Class[? <: X0]
+           |getClass[X0 >: List.type]: Class[? <: X0]
            |hashCode: Int
            |isInstanceOf[X0]: Boolean
            |synchronized[X0](x$0: X0): X0

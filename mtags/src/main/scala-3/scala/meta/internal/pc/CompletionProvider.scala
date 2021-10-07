@@ -7,6 +7,7 @@ import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
@@ -48,8 +49,7 @@ class CompletionProvider(
 
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
-
-    val values = all.sorted(ordering)
+    val values = application.postProcess(all.sorted(ordering))
     (values, result)
   end completions
 
@@ -102,6 +102,7 @@ class CompletionProvider(
               .mkString("(", ",", ")")
         sym.showFullName + sigString
       else sym.fullName.stripModuleClassSuffix.show
+
   extension (l: List[CompletionValue])
     def filterInteresting(): (List[CompletionValue], SymbolSearch.Result) =
       val isSeen = mutable.Set.empty[String]
@@ -218,28 +219,65 @@ class CompletionProvider(
     def isImplicitConversion(symbol: Symbol): Boolean
     def isMember(symbol: Symbol): Boolean
     def isInherited(symbol: Symbol): Boolean
+    def postProcess(items: List[CompletionValue]): List[CompletionValue]
 
   object CompletionApplication:
     val empty = new CompletionApplication:
       def isImplicitConversion(symbol: Symbol): Boolean = false
       def isMember(symbol: Symbol): Boolean = false
       def isInherited(symbol: Symbol): Boolean = false
+      def postProcess(items: List[CompletionValue]): List[CompletionValue] =
+        items
 
     def forSelect(sel: Select): CompletionApplication =
       val tpe = sel.qualifier.tpe
       val members = tpe.allMembers.map(_.symbol).toSet
+
       new CompletionApplication:
         def isImplicitConversion(symbol: Symbol): Boolean =
           !isMember(symbol)
         def isMember(symbol: Symbol): Boolean = members.contains(symbol)
         def isInherited(symbol: Symbol): Boolean =
           isMember(symbol) && symbol.owner != tpe.typeSymbol
+        def postProcess(items: List[CompletionValue]): List[CompletionValue] =
+          items.map { i =>
+            val sym = i.symbol
+            i.kind match
+              case CompletionValue.Kind.Compiler
+                  if sym.info.paramNamess.nonEmpty && isMember(sym) =>
+                i.copy(symbol = substituteTypeVars(sym))
+              case _ =>
+                i
+          }
+
+        private def substituteTypeVars(symbol: Symbol): Symbol =
+          val denot = symbol.asSeenFrom(tpe)
+          val upd = symbol.copy(info = denot.info)
+
+          // denotation from `asSeenFrom` loses flags for parameter syms
+          val paramsWithFlags =
+            symbol.paramSymss
+              .zip(upd.paramSymss)
+              .map((l1, l2) =>
+                l1.zip(l2)
+                  .map((s1, s2) =>
+                    s2.flags = s1.flags
+                    s2
+                  )
+              )
+          upd.rawParamss = paramsWithFlags
+          upd
+        end substituteTypeVars
+
+      end new
+    end forSelect
 
     def fromPath(path: List[Tree]): CompletionApplication =
       path.headOption match
         case Some(Select(qual @ This(_), _)) if qual.span.isSynthetic => empty
         case Some(select: Select) => forSelect(select)
         case _ => empty
+
   end CompletionApplication
 
   private def completionOrdering(
