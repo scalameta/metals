@@ -53,7 +53,6 @@ inThisBuild(
       "-Yrangepos"
     ) ::: scala212CompilerOptions,
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % V.organizeImportRule,
-    ScalafixConfig / bspEnabled := false,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
