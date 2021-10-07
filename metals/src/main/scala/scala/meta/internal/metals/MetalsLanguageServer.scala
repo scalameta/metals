@@ -995,11 +995,20 @@ class MetalsLanguageServer(
       .map(new ApplyWorkspaceEditParams(_))
       .foreach(languageClient.applyEdit)
 
-    // trigger compilation in preparation for definition requests for dependency sources and standalone files
-    val loadInteractive = Future {
+    /**
+     * Trigger compilation in preparation for definition requests for dependency
+     * sources and standalone files, but wait for build tool information, so
+     * that we don't try to generate it for project files
+     */
+    val interactive = buildServerPromise.future.map { _ =>
       interactiveSemanticdbs.textDocument(path)
     }
-    parseTrees(path).flatMap(_ => syntheticsDecorator.publishSynthetics(path))
+    // We need both parser and semanticdb for synthetic decorations
+    val publishSynthetics = for {
+      _ <- Future.sequence(List(parseTrees(path), interactive))
+      _ <- syntheticsDecorator.publishSynthetics(path)
+    } yield ()
+
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
         // publish diagnostics
@@ -1010,12 +1019,11 @@ class MetalsLanguageServer(
       if (path.isAmmoniteScript)
         ammonite.maybeImport(path)
       val loadFuture = compilers.load(List(path))
-      val compileFuture =
-        compilations.compileFile(path)
+      val compileFuture = compilations.compileFile(path)
       Future
         .sequence(
           List(
-            loadInteractive,
+            publishSynthetics,
             loadFuture,
             compileFuture
           )
@@ -1215,7 +1223,7 @@ class MetalsLanguageServer(
             userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
             userConfig.showInferredType != old.showInferredType
           ) {
-            syntheticsDecorator.refresh()
+            buildServerPromise.future.map(_ => syntheticsDecorator.refresh())
           }
 
           bspSession
