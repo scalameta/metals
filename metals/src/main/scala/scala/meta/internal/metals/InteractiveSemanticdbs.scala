@@ -4,6 +4,9 @@ import java.nio.charset.Charset
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.util.Success
+import scala.util.Try
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
@@ -85,12 +88,13 @@ final class InteractiveSemanticdbs(
           val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
           val sha = MD5.compute(text)
           if (existingDoc == null || existingDoc.md5 != sha) {
-            val compiled = compile(path, text)
-            Option(compiled).foreach(doc =>
-              if (!source.isDependencySource(workspace))
-                semanticdbIndexer().onChange(source, doc)
-            )
-            compiled
+            Try(compile(path, text)) match {
+              case Success(doc) if doc != null =>
+                if (!source.isDependencySource(workspace))
+                  semanticdbIndexer().onChange(source, doc)
+                doc
+              case _ => null
+            }
           } else
             existingDoc
         }
