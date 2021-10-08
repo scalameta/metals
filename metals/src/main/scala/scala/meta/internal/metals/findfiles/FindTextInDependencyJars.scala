@@ -48,26 +48,29 @@ class FindTextInDependencyJars(
           val excludeMatcher =
             req.options.flatMap(_.exclude).map(e => Nio(s"glob:**$e"))
 
-          buildTargets.allWorkspaceJars.foreach { classpathEntry =>
-            try {
-              val jarLocations: List[Location] =
-                if (classpathEntry.isFile && classpathEntry.isJar) {
-                  visitJar(
-                    path = classpathEntry,
-                    include = includeMatcher,
-                    exclude = excludeMatcher,
-                    pattern = pattern
-                  )
-                } else Nil
+          (buildTargets.allWorkspaceJars ++ JdkSources()).foreach {
+            classpathEntry =>
+              try {
+                val locations: List[Location] =
+                  if (
+                    classpathEntry.isFile && (classpathEntry.isJar || classpathEntry.isZip)
+                  ) {
+                    visitJar(
+                      path = classpathEntry,
+                      include = includeMatcher,
+                      exclude = excludeMatcher,
+                      pattern = pattern
+                    )
+                  } else Nil
 
-              allLocations ++= jarLocations
-            } catch {
-              case NonFatal(e) =>
-                scribe.error(
-                  s"Failed to find text in dependency files for $classpathEntry",
-                  e
-                )
-            }
+                allLocations ++= locations
+              } catch {
+                case NonFatal(e) =>
+                  scribe.error(
+                    s"Failed to find text in dependency files for $classpathEntry",
+                    e
+                  )
+              }
           }
 
           allLocations.toList
