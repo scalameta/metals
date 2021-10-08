@@ -49,6 +49,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
+import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -1470,6 +1471,26 @@ final class TestingServer(
       }
       .mkString("\n")
     Assertions.assertNoDiff(obtained, expected)
+  }
+
+  def findTextInDependencyJars(
+      include: String,
+      pattern: String
+  ): Future[List[Location]] = {
+    server
+      .findTextInDependencyJars(
+        FindTextInDependencyJarsRequest(
+          FindTextInFilesOptions(include = include, exclude = null),
+          TextSearchQuery(
+            pattern = pattern,
+            isRegExp = null,
+            isCaseSensitive = null,
+            isWordMatch = null
+          )
+        )
+      )
+      .asScala
+      .map(_.asScala.toList)
   }
 
   def textContents(filename: String): String =

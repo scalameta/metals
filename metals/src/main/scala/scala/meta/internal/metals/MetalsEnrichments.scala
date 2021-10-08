@@ -434,6 +434,11 @@ object MetalsEnrichments
       filename.endsWith(".jar") || filename.endsWith(".srcjar")
     }
 
+    def isZip: Boolean = {
+      val filename = path.toNIO.getFileName.toString
+      filename.endsWith(".zip")
+    }
+
     /**
      * Reads file contents from editor buffer with fallback to disk.
      */

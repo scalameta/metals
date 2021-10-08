@@ -57,6 +57,7 @@ import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -266,6 +267,7 @@ class MetalsLanguageServer(
   var worksheetProvider: WorksheetProvider = _
   var popupChoiceReset: PopupChoiceReset = _
   var stacktraceAnalyzer: StacktraceAnalyzer = _
+  var findTextInJars: FindTextInDependencyJars = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -754,6 +756,11 @@ class MetalsLanguageServer(
             () => bspSession.map(_.mainConnectionIsBloop).getOrElse(false)
           )
         }
+        findTextInJars = new FindTextInDependencyJars(
+          buildTargets,
+          () => workspace,
+          languageClient
+        )
     }
   }
 
@@ -1894,6 +1901,13 @@ class MetalsLanguageServer(
         )
         .orNull
     }.asJava
+
+  @JsonRequest("metals/findTextInDependencyJars")
+  def findTextInDependencyJars(
+      params: FindTextInDependencyJarsRequest
+  ): CompletableFuture[util.List[Location]] = {
+    findTextInJars.find(params).map(_.asJava).asJava
+  }
 
   private def generateBspConfig(): Future[Unit] = {
     val servers: List[BuildTool with BuildServerProvider] =
