@@ -44,6 +44,9 @@ class FindTextInDependencyJars(
         .zip(maybePattern)
         .map { case (include, pattern) =>
           val allLocations: ArrayBuffer[Location] = new ArrayBuffer[Location]()
+          val includeMatcher = Nio(s"glob:**$include")
+          val excludeMatcher =
+            req.options.flatMap(_.exclude).map(e => Nio(s"glob:**$e"))
 
           buildTargets.allWorkspaceJars.foreach { classpathEntry =>
             try {
@@ -51,8 +54,8 @@ class FindTextInDependencyJars(
                 if (classpathEntry.isFile && classpathEntry.isJar) {
                   visitJar(
                     path = classpathEntry,
-                    include = include,
-                    exclude = req.options.flatMap(_.exclude),
+                    include = includeMatcher,
+                    exclude = excludeMatcher,
                     pattern = pattern
                   )
                 } else Nil
@@ -76,18 +79,18 @@ class FindTextInDependencyJars(
 
   private def isSuitableFile(
       path: AbsolutePath,
-      include: String,
-      exclude: Option[String]
+      include: Nio,
+      exclude: Option[Nio]
   ): Boolean = {
     path.isFile &&
-    Nio(s"glob:**$include").matches(path) &&
-    exclude.forall(e => !Nio(s"glob:**$e").matches(path))
+    include.matches(path) &&
+    exclude.forall(matcher => !matcher.matches(path))
   }
 
   private def visitJar(
       path: AbsolutePath,
-      include: String,
-      exclude: Option[String],
+      include: Nio,
+      exclude: Option[Nio],
       pattern: String
   ): List[Location] = {
     FileIO
