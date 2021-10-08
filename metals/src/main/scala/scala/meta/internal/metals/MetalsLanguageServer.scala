@@ -1018,14 +1018,20 @@ class MetalsLanguageServer(
     } else {
       if (path.isAmmoniteScript)
         ammonite.maybeImport(path)
-      val loadFuture = compilers.load(List(path))
-      val compileFuture = compilations.compileFile(path)
+
+      val compileAndLoad = buildServerPromise.future.flatMap { _ =>
+        Future.sequence(
+          List(
+            compilers.load(List(path)),
+            compilations.compileFile(path)
+          )
+        )
+      }
       Future
         .sequence(
           List(
-            publishSynthetics,
-            loadFuture,
-            compileFuture
+            compileAndLoad,
+            publishSynthetics
           )
         )
         .ignoreValue
