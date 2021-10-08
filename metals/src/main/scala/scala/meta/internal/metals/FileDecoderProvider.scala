@@ -23,10 +23,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.parsing.ClassFinder
+import scala.meta.internal.parsing.ClassWithPos
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
 import scala.meta.metap.Settings
-import scala.meta.pc.PresentationCompiler
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
@@ -39,6 +39,26 @@ final case class DecoderResponse(
     @Nullable value: String,
     @Nullable error: String
 )
+
+object DecoderResponse {
+  def success(uri: URI, value: String): DecoderResponse =
+    DecoderResponse(uri.toString(), value, null)
+
+  def failed(uri: String, errorMsg: String): DecoderResponse =
+    DecoderResponse(uri, null, errorMsg)
+
+  def failed(uri: URI, errorMsg: String): DecoderResponse =
+    failed(uri.toString(), errorMsg)
+
+  def failed(uri: String, e: Throwable): DecoderResponse =
+    failed(uri.toString(), e.getMessage)
+
+  def failed(uri: URI, e: Throwable): DecoderResponse =
+    failed(uri, e.getMessage)
+
+  def cancelled(uri: URI): DecoderResponse =
+    DecoderResponse(uri.toString(), null, null)
+}
 
 final class FileDecoderProvider(
     workspace: AbsolutePath,
@@ -53,22 +73,8 @@ final class FileDecoderProvider(
 )(implicit ec: ExecutionContext) {
 
   private case class PathInfo(
-      targetId: Option[BuildTargetIdentifier],
+      targetId: BuildTargetIdentifier,
       path: AbsolutePath
-  )
-  private case class Finder(findFile: String => Future[Option[PathInfo]])
-
-  sealed trait DecoderError {
-    def toDecoderResponse(uri: String): DecoderResponse = this match {
-      case Cancelled => DecoderResponse(uri, null, null)
-      case Failed(error) => DecoderResponse(uri, null, error)
-    }
-  }
-  private case object Cancelled extends DecoderError
-  private case class Failed(error: String) extends DecoderError
-
-  private case class Decoder(
-      decode: PathInfo => Future[Either[DecoderError, String]]
   )
 
   /**
@@ -108,183 +114,153 @@ final class FileDecoderProvider(
    * metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
    */
   def decodedFileContents(uriAsStr: String): Future[DecoderResponse] = {
-    for {
-      check <- getDecodeInfo(uriAsStr)
-      output <- check match {
-        case Left(error) => Future.successful(Left(error))
-        case Right((decoder, path)) => decoder.decode(path)
-      }
-    } yield output match {
-      case Left(error) => error.toDecoderResponse(uriAsStr)
-      case Right(decoded) => DecoderResponse(uriAsStr, decoded, null)
-    }
-  }
-
-  def errorResponse(uriAsStr: String): DecoderResponse =
-    DecoderResponse(uriAsStr, null, errorMessage(uriAsStr))
-
-  private def errorMessage(input: String = ""): String =
-    s"""|$input
-        |
-        |Unexpected uri, Metals accepts ones such as:
-        |
-        |metalsDecode:file:///somedir/someFile.scala.javap-verbose
-        |
-        |Take a look at scala/meta/internal/metals/FileDecoderProvider for more information.
-        |
-        |Or wait for indexing/compiling to finish and re-try
-        |""".stripMargin
-
-  private def getDecodeInfo(
-      uriAsStr: String
-  ): Future[Either[DecoderError, (Decoder, PathInfo)]] =
     Try(URI.create(uriAsStr)) match {
       case Success(uri) =>
         uri.getScheme() match {
           case "jar" => Future { decodeJar(uri) }
           case "file" => decodeMetalsFile(uri)
-          case "metalsDecode" => getDecodeInfo(uri.getSchemeSpecificPart())
-          case _ => Future.successful(Left(Failed(errorMessage())))
+          case "metalsDecode" =>
+            decodedFileContents(uri.getSchemeSpecificPart())
+          case _ =>
+            Future.successful(
+              DecoderResponse.failed(
+                uri,
+                s"Unexpected scheme ${uri.getScheme()}"
+              )
+            )
         }
       case Failure(_) =>
         Future.successful(
-          Left(Failed(s"Couldn't create an URI from the $uriAsStr"))
+          DecoderResponse.failed(uriAsStr, s"$uriAsStr is an invalid URI")
         )
     }
+  }
 
-  private def decodeJar(uri: URI): Either[DecoderError, (Decoder, PathInfo)] =
+  private def decodeJar(uri: URI): DecoderResponse = {
     Try {
       // jar file system cannot cope with a heavily encoded uri
       // hence the roundabout way of creating an AbsolutePath
       // must have "jar:file:"" instead of "jar:file%3A"
       val decodedUriStr = URLDecoder.decode(uri.toString(), "UTF-8")
       val decodedUri = URI.create(decodedUriStr)
-      AbsolutePath(Paths.get(decodedUri))
-    }.toEitherWith(t => Failed(t.toString()))
-      .map(path =>
-        (
-          Decoder(path =>
-            Future {
-              Try(FileIO.slurp(path.path, StandardCharsets.UTF_8))
-                .toEitherWith(t => Failed(t.toString()))
-            }
-          ),
-          PathInfo(None, path)
-        )
-      )
+      val path = AbsolutePath(Paths.get(decodedUri))
+      FileIO.slurp(path, StandardCharsets.UTF_8)
+    } match {
+      case Failure(exception) => DecoderResponse.failed(uri, exception)
+      case Success(value) => DecoderResponse.success(uri, value)
+    }
+  }
 
   private def decodeMetalsFile(
       uri: URI
-  ): Future[Either[DecoderError, (Decoder, PathInfo)]] = {
-    val decoder: Option[(Finder, Decoder)] = {
-      val additionalExtension = uri.toString().split('.').toList.last
-      additionalExtension match {
-        case "javap" =>
-          Some(getJavapDecoder(isVerbose = false))
-        case "javap-verbose" =>
-          Some(getJavapDecoder(isVerbose = true))
-        case "tasty-decoded" =>
-          Some(getTastyDecoder())
-        case "semanticdb-compact" =>
-          Some(getSemanticdbDecoder(Format.Compact))
-        case "semanticdb-detailed" =>
-          Some(getSemanticdbDecoder(Format.Detailed))
-        case "semanticdb-proto" =>
-          Some(getSemanticdbDecoder(Format.Proto))
-        case _ => None
-      }
-    }
-
-    decoder match {
-      case Some((finder, decoder)) =>
-        finder
-          .findFile(uri.getPath())
-          .map {
-            _.toRight(Failed(s"Couldn't find ${uri.toString()}"))
-              .map(fileToDecode => (decoder, fileToDecode))
+  ): Future[DecoderResponse] = {
+    val supportedExtensions = Set("javap", "javap-verbose", "tasty-decoded",
+      "semanticdb-compact", "semanticdb-detailed", "semanticdb-proto")
+    val additionalExtension = uri.toString().split('.').toList.last
+    if (supportedExtensions(additionalExtension)) {
+      val stripped = toFile(uri, s".$additionalExtension")
+      stripped match {
+        case Left(value) => Future.successful(value)
+        case Right(path) =>
+          additionalExtension match {
+            case "javap" => decodeJavap(path, false)
+            case "javap-verbose" => decodeJavap(path, true)
+            case "tasty-decoded" => decodeTasty(path)
+            case "semanticdb-compact" =>
+              Future.successful(
+                decodeSemanticDb(path, Format.Compact)
+              )
+            case "semanticdb-detailed" =>
+              Future.successful(
+                decodeSemanticDb(path, Format.Detailed)
+              )
+            case "semanticdb-proto" =>
+              Future.successful(
+                decodeSemanticDb(path, Format.Proto)
+              )
           }
-      case None =>
-        Future.successful(Left(Failed(s"URI $uri has unsupported extension")))
-    }
+      }
+    } else
+      Future.successful(DecoderResponse.failed(uri, "Unsupported extension"))
   }
 
   private def toFile(
-      uriPath: String,
+      uri: URI,
       suffixToRemove: String
-  ): Option[AbsolutePath] = Try {
-    s"file://${uriPath}".stripSuffix(suffixToRemove).toAbsolutePath
-  }.toOption.filter(_.exists)
+  ): Either[DecoderResponse, AbsolutePath] = Try {
+    uri.toString.stripSuffix(suffixToRemove).toAbsolutePath
+  }.filter(_.exists)
+    .toOption
+    .toRight(DecoderResponse.failed(uri, s"File $uri doesn't exist"))
 
-  private def getJavapDecoder(
+  private def decodeJavap(
+      path: AbsolutePath,
       isVerbose: Boolean
-  ): (Finder, Decoder) = {
-    val suffix = if (isVerbose) ".javap-verbose" else ".javap"
-    val finder = Finder { uriPath =>
-      toFile(uriPath, suffix) match {
-        case Some(path) =>
-          if (path.isClassfile) Future { Some(PathInfo(None, path)) }
-          else if (path.isJava) Future {
-            findPathInfoFromSource(path, ".class")
-          }
-          else if (path.isScala)
-            findPathInfoForScalaFile(path, true).map(_.toOption)
-          else Future.successful(None)
-        case None => Future.successful(None)
+  ): Future[DecoderResponse] = {
+    if (path.isClassfile) decodeJavapFromClassFile(path, isVerbose)
+    else if (path.isJava) {
+      findPathInfoFromSource(path, ".class")
+        .map(p => decodeJavapFromClassFile(p.path, isVerbose)) match {
+        case Left(err) =>
+          Future.successful(DecoderResponse.failed(path.toURI, err))
+        case Right(response) => response
       }
-    }
-    val decoder = Decoder(decodeJavapFromClassFile(_, isVerbose))
-    (finder, decoder)
+    } else if (path.isScala)
+      selectClassFromScalaFileAndDecode(path.toURI, path, true)(p =>
+        decodeJavapFromClassFile(p.path, isVerbose)
+      )
+    else
+      Future.successful(DecoderResponse.failed(path.toURI, "Invalid extension"))
   }
 
-  private def getSemanticdbDecoder(
+  private def decodeSemanticDb(
+      path: AbsolutePath,
       format: Format
-  ): (Finder, Decoder) = {
-    val suffix = format match {
-      case Format.Detailed => ".semanticdb-detailed"
-      case Format.Compact => ".semanticdb-compact"
-      case Format.Proto => ".semanticdb-proto"
-    }
-    val finder = Finder(uriPath =>
-      Future {
-        toFile(uriPath, suffix).flatMap { path =>
-          if (path.isScalaOrJava) findSemanticDbPathInfo(path)
-          else Some(PathInfo(None, path))
-        }
-      }
-    )
-    val decoder = Decoder(decodeFromSemanticDBFile(_, format))
-    (finder, decoder)
+  ): DecoderResponse = {
+    if (path.isScalaOrJava)
+      findSemanticDbPathInfo(path)
+        .mapLeft(s => DecoderResponse.failed(path.toURI, s))
+        .map(decodeFromSemanticDBFile(_, format))
+        .fold(identity, identity)
+    else if (path.isSemanticdb) decodeFromSemanticDBFile(path, format)
+    else DecoderResponse.failed(path.toURI, "Unsupported extension")
   }
 
-  private def getTastyDecoder(): (Finder, Decoder) = {
-    val finder = Finder(uriPath =>
-      toFile(uriPath, ".tasty-decoded") match {
-        case Some(path) =>
-          if (path.isScala)
-            findPathInfoForScalaFile(path, false).map(_.toOption)
-          else if (path.isTasty) Future { findPathInfoForClassesPathFile(path) }
-          else Future.successful(None)
+  private def decodeTasty(
+      path: AbsolutePath
+  ): Future[DecoderResponse] = {
+    if (path.isScala)
+      selectClassFromScalaFileAndDecode(path.toURI, path, false)(
+        decodeFromTastyFile
+      )
+    else if (path.isTasty) {
+      findPathInfoForClassesPathFile(path) match {
+        case Some(pathInfo) => decodeFromTastyFile(pathInfo)
         case None =>
-          Future.successful(None)
+          Future.successful(
+            DecoderResponse.failed(
+              path.toURI,
+              "Cannot find build target for a given file"
+            )
+          )
       }
-    )
-    val decoder = Decoder(decodeFromTastyFile(_))
-    (finder, decoder)
+    } else
+      Future.successful(DecoderResponse.failed(path.toURI, "Invalid extension"))
   }
 
   private def findPathInfoFromSource(
       sourceFile: AbsolutePath,
       newExtension: String
-  ): Option[PathInfo] = {
-    for {
-      (targetId, target, sourceRoot) <- findBuildTargetMetadata(sourceFile)
-      classDir = target.classDirectory.toAbsolutePath
-      oldExtension = sourceFile.extension
-      relativePath = sourceFile
-        .toRelative(sourceRoot)
-        .resolveSibling(_.stripSuffix(oldExtension) + newExtension)
-    } yield PathInfo(Some(targetId), classDir.resolve(relativePath))
-  }
+  ): Either[String, PathInfo] =
+    findBuildTargetMetadata(sourceFile)
+      .map { case (targetId, target, sourceRoot) =>
+        val classDir = target.classDirectory.toAbsolutePath
+        val oldExtension = sourceFile.extension
+        val relativePath = sourceFile
+          .toRelative(sourceRoot)
+          .resolveSibling(_.stripSuffix(oldExtension) + newExtension)
+        PathInfo(targetId, classDir.resolve(relativePath))
+      }
 
   private def findPathInfoForClassesPathFile(
       path: AbsolutePath
@@ -293,7 +269,7 @@ final class FileDecoderProvider(
       scalaTarget <- buildTargets.all
       classPath = scalaTarget.classDirectory.toAbsolutePath
       if (path.isInside(classPath))
-    } yield PathInfo(Some(scalaTarget.id), path)
+    } yield PathInfo(scalaTarget.id, path)
     pathInfos.toList.headOption
   }
 
@@ -305,85 +281,103 @@ final class FileDecoderProvider(
    *
    * @param includeInnerClasses - if true searches for candidates which produce .class file, otherwise .tasty
    */
-  private def findPathInfoForScalaFile(
+  private def selectClassFromScalaFileAndDecode[T](
+      requestedURI: URI,
       path: AbsolutePath,
       includeInnerClasses: Boolean
-  ): Future[Either[DecoderError, PathInfo]] = {
-    val availableClasses = classFinder
-      .findAllClasses(path, includeInnerClasses)
+  )(decode: PathInfo => Future[DecoderResponse]): Future[DecoderResponse] = {
+    val availableClasses = classFinder.findAllClasses(path, includeInnerClasses)
     availableClasses match {
       case Some(classes) if classes.nonEmpty =>
-        val resourceToDecode =
-          if (classes.size > 1) {
-            val quickPickParams = MetalsQuickPickParams(
-              classes
-                .map(c =>
-                  MetalsQuickPickItem(c.path, c.friendlyName, c.description)
-                )
-                .asJava,
-              placeHolder = "Pick the class you want to decode"
+        val resourceToDecode = pickClass(classes)
+        resourceToDecode.flatMap { picked =>
+          val response = for {
+            resourcePath <- picked.toRight(
+              DecoderResponse.cancelled(path.toURI)
             )
-            languageClient.metalsQuickPick(quickPickParams).asScala.map {
-              result =>
-                if (result.cancelled != null && result.cancelled)
-                  Left(Cancelled)
-                else Right(result.itemId)
-            }
-          } else
-            Future.successful(Right(classes.head.path))
-        resourceToDecode.map { resource =>
-          resource.flatMap { resourcePath =>
-            val pathInfoOpt = for {
-              (targetId, target, sourceRoot) <- findBuildTargetMetadata(path)
-            } yield {
-              val classDir = target.classDirectory.toAbsolutePath
-              val pathToResource = classDir.resolve(resourcePath)
-              PathInfo(Some(targetId), pathToResource)
-            }
-            pathInfoOpt.toRight(
-              Failed(s"Cannot find a build target for ${path.toURI.toString}")
+            buildMetadata <- findBuildTargetMetadata(path).mapLeft(
+              DecoderResponse.failed(requestedURI, _)
             )
+          } yield {
+            val (targetId, target, _) = buildMetadata
+            val classDir = target.classDirectory.toAbsolutePath
+            val pathToResource = classDir.resolve(resourcePath)
+            PathInfo(targetId, pathToResource)
+          }
+          response match {
+            case Left(decoderResponse) => Future.successful(decoderResponse)
+            case Right(pathInfo) => decode(pathInfo)
           }
         }
       case _ =>
         Future.successful(
-          Left(Failed("File doesn't contain any toplevel definitions"))
+          DecoderResponse.failed(
+            requestedURI,
+            "File doesn't contain any definitions"
+          )
         )
     }
   }
 
+  private def pickClass(classes: List[ClassWithPos]): Future[Option[String]] =
+    if (classes.size > 1) {
+      val quickPickParams = MetalsQuickPickParams(
+        classes
+          .map(c => MetalsQuickPickItem(c.path, c.friendlyName, c.description))
+          .asJava,
+        placeHolder = "Pick the class you want to decode"
+      )
+      languageClient.metalsQuickPick(quickPickParams).asScala.map { result =>
+        if (result.cancelled != null && result.cancelled) None
+        else Some(result.itemId)
+      }
+    } else
+      Future.successful(Some(classes.head.path))
+
   private def findSemanticDbPathInfo(
       sourceFile: AbsolutePath
-  ): Option[PathInfo] =
+  ): Either[String, AbsolutePath] =
     for {
-      (targetId, target, sourceRoot) <- findBuildTargetMetadata(sourceFile)
+      metadata <- findBuildTargetMetadata(sourceFile)
+      (targetId, target, sourceRoot) = metadata
       foundSemanticDbPath <- {
         val targetRoot = target.targetroot
         val relativePath = SemanticdbClasspath.fromScala(
           sourceFile.toRelative(sourceRoot.dealias)
         )
-        fileSystemSemanticdbs.findSemanticDb(
-          relativePath,
-          targetRoot,
-          sourceFile,
-          workspace
-        )
+        fileSystemSemanticdbs
+          .findSemanticDb(
+            relativePath,
+            targetRoot,
+            sourceFile,
+            workspace
+          )
+          .toRight(
+            s"Cannot find semanticDB for ${sourceFile.toURI.toString}"
+          )
       }
-    } yield PathInfo(Some(targetId), foundSemanticDbPath.path)
+    } yield foundSemanticDbPath.path
 
   private def findBuildTargetMetadata(
       sourceFile: AbsolutePath
-  ): Option[(BuildTargetIdentifier, ScalaTarget, AbsolutePath)] =
-    for {
+  ): Either[
+    String,
+    (BuildTargetIdentifier, ScalaTarget, AbsolutePath)
+  ] = {
+    val metadata = for {
       targetId <- buildTargets.inverseSources(sourceFile)
       target <- buildTargets.scalaTarget(targetId)
       sourceRoot <- buildTargets.workspaceDirectory(targetId)
     } yield (targetId, target, sourceRoot)
+    metadata.toRight(
+      s"Cannot find build's metadata for ${sourceFile.toURI.toString()}"
+    )
+  }
 
   private def decodeJavapFromClassFile(
-      pathInfo: PathInfo,
+      path: AbsolutePath,
       verbose: Boolean
-  ): Future[Either[DecoderError, String]] = {
+  ): Future[DecoderResponse] = {
     try {
       val args = if (verbose) List("-verbose") else Nil
       val sb = new StringBuilder()
@@ -391,9 +385,9 @@ final class FileDecoderProvider(
         .run(
           "Decode using javap",
           JavaBinary(userConfig().javaHome, "javap") :: args ::: List(
-            pathInfo.path.filename
+            path.filename
           ),
-          pathInfo.path.parent,
+          path.parent,
           redirectErrorOutput = true,
           Map.empty,
           s => {
@@ -404,111 +398,84 @@ final class FileDecoderProvider(
           propagateError = true,
           logInfo = false
         )
-        .map(_ => Right(sb.toString))
+        .map(_ => DecoderResponse.success(path.toURI, sb.toString()))
     } catch {
       case NonFatal(e) =>
         scribe.error(e.toString())
-        Future.successful(
-          Left(Failed("Running the javap process failed."))
-        )
+        Future.successful(DecoderResponse.failed(path.toURI, e))
     }
   }
 
   private def decodeFromSemanticDBFile(
-      pathInfo: PathInfo,
+      path: AbsolutePath,
       format: Format
-  ): Future[Either[DecoderError, String]] =
-    Future {
-      Try {
-        val out = new ByteArrayOutputStream()
-        val err = new ByteArrayOutputStream()
-        val psOut = new PrintStream(out)
-        val psErr = new PrintStream(err)
-        try {
-          val reporter =
-            Reporter().withOut(psOut).withErr(psErr)
-          val settings =
-            Settings()
-              .withPaths(List(pathInfo.path.toNIO))
-              .withFormat(format)
-          val main = new Main(settings, reporter)
-          main.process()
-          val output = new String(out.toByteArray);
-          val error = new String(err.toByteArray);
-          if (error.isEmpty)
-            output
-          else
-            error
-        } finally {
-          psOut.close()
-          psErr.close()
-        }
-      }.toEitherWith(t => Failed(t.toString()))
+  ): DecoderResponse =
+    Try {
+      val out = new ByteArrayOutputStream()
+      val err = new ByteArrayOutputStream()
+      val psOut = new PrintStream(out)
+      val psErr = new PrintStream(err)
+      try {
+        val reporter =
+          Reporter().withOut(psOut).withErr(psErr)
+        val settings =
+          Settings()
+            .withPaths(List(path.toNIO))
+            .withFormat(format)
+        val main = new Main(settings, reporter)
+        main.process()
+        val output = new String(out.toByteArray);
+        val error = new String(err.toByteArray);
+        if (error.isEmpty)
+          output
+        else
+          error
+      } finally {
+        psOut.close()
+        psErr.close()
+      }
+    } match {
+      case Failure(exception) =>
+        DecoderResponse.failed(path.toString(), exception)
+      case Success(value) => DecoderResponse.success(path.toURI, value)
     }
 
   private def decodeFromTastyFile(
       pathInfo: PathInfo
-  ): Future[Either[DecoderError, String]] =
-    loadPresentationCompiler(pathInfo) match {
+  ): Future[DecoderResponse] =
+    compilers.loadCompiler(pathInfo.targetId) match {
       case Some(pc) =>
         pc.getTasty(
           pathInfo.path.toURI,
           clientConfig.isHttpEnabled()
         ).asScala
-          .map(Right(_))
+          .map(DecoderResponse.success(pathInfo.path.toURI, _))
       case None =>
-        Future.successful(Left(Failed(("Couldn't load presentation compiler"))))
+        Future.successful(
+          DecoderResponse.failed(
+            pathInfo.path.toURI,
+            "Cannot load presentation compiler"
+          )
+        )
     }
-
-  private def loadPresentationCompiler(
-      pathInfo: PathInfo
-  ): Option[PresentationCompiler] =
-    for {
-      targetId <- pathInfo.targetId
-      pc <- compilers.loadCompiler(targetId)
-    } yield pc
 
   def getTastyForURI(
       uri: URI
   ): Future[Either[String, String]] = {
-    val pathInfo =
-      for {
-        path <- Try(AbsolutePath.fromAbsoluteUri(uri)) match {
-          case Success(path) if !path.isFile => Left(s"$uri doesn't exist")
-          case Success(path) if !path.isTasty =>
-            Left(s"$uri doesn't point to tasty file")
-          case Success(path) if path.isFile => Right(path)
-          case Failure(_) => Left(s"$uri has to be absolute")
-        }
-        pathInfo <- findPathInfoForClassesPathFile(path).toRight(
-          s"Can't find existing build target for $uri"
-        )
-      } yield pathInfo
-
-    pathInfo match {
-      case Left(error) => Future.successful(Left(error))
-      case Right(pathInfo) =>
-        decodeFromTastyFile(pathInfo).map {
-          _.mapLeft {
-            case Cancelled => "Request was cancelled"
-            case Failed(error) => error
-          }
-        }
-    }
+    decodeTasty(AbsolutePath.fromAbsoluteUri(uri)).map(response =>
+      if (response.value != null) Right(response.value)
+      else Left(response.error)
+    )
   }
 
   def chooseClassFromFile(
       path: AbsolutePath,
       includeInnerClasses: Boolean
   ): Future[DecoderResponse] =
-    findPathInfoForScalaFile(path, includeInnerClasses).map {
-      case Right(PathInfo(_, resourcePath)) =>
-        DecoderResponse(
-          path.toURI.toString,
-          resourcePath.toURI.toString,
-          null
+    selectClassFromScalaFileAndDecode(path.toURI, path, includeInnerClasses) {
+      pathInfo =>
+        Future.successful(
+          DecoderResponse.success(path.toURI, pathInfo.path.toURI.toString())
         )
-      case Left(error) =>
-        error.toDecoderResponse(path.toURI.toString())
     }
 }
