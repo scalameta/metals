@@ -17,6 +17,17 @@ class FindTextInDependencyJarsSuite
         .toURI
         .toString()
 
+    val expectedJdkUri =
+      workspace
+        .resolve(Directories.dependencies)
+        .resolve("src.zip")
+        .resolve("java.base")
+        .resolve("java")
+        .resolve("lang")
+        .resolve("String.java")
+        .toURI
+        .toString()
+
     val expectedLocations: List[Location] = List(
       new Location(
         expectedUri,
@@ -27,6 +38,14 @@ class FindTextInDependencyJarsSuite
         new Range(new Position(1177, 40), new Position(1177, 58))
       )
     )
+
+    val expectedJdkLocation: List[Location] = List(
+      new Location(
+        expectedJdkUri,
+        new Range(new Position(625, 4), new Position(625, 40))
+      )
+    )
+
     for {
       _ <- initialize(
         s"""/metals.json
@@ -42,7 +61,12 @@ class FindTextInDependencyJarsSuite
         include = ".conf",
         pattern = "jvm-shutdown-hooks"
       )
+      jdkLocations <- server.findTextInDependencyJars(
+        include = ".java",
+        pattern = "public String(StringBuffer buffer) {"
+      )
       _ = assertEquals(locations, expectedLocations)
+      _ = assertEquals(jdkLocations, expectedJdkLocation)
     } yield ()
   }
 }
