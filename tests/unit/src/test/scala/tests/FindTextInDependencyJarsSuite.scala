@@ -10,6 +10,7 @@ class FindTextInDependencyJarsSuite
     extends BaseLspSuite("find-text-in-dependency-jars") {
   test("find exact string match in .conf file inside jar") {
     val isJavaAtLeast9 = scala.util.Properties.isJavaAtLeast(9.toString)
+    val isJavaAtLeast17 = scala.util.Properties.isJavaAtLeast(17.toString)
 
     val expectedUri =
       workspace
@@ -44,7 +45,7 @@ class FindTextInDependencyJarsSuite
     )
 
     val expectedJdkLocation: List[Location] = {
-      val line = if (isJavaAtLeast9) 625 else 577
+      val line = if (isJavaAtLeast17) 1443 else if (isJavaAtLeast9) 625 else 577
       List(
         new Location(
           expectedJdkUri,
