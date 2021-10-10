@@ -111,10 +111,7 @@ case class ScalafixProvider(
         case Success(results) if !scalafixSucceded(results) =>
           val scalafixError = getMessageErrorFromScalafix(results)
           val exception = ScalafixRunException(scalafixError)
-          reportScalafixError(
-            scalafixError,
-            exception
-          )
+          scribe.error(scalafixError, exception)
           if (!retried && hasStaleSemanticdb(results)) {
             // Retry, since the semanticdb might be stale
             organizeImports(file, scalaTarget, retried = true)
