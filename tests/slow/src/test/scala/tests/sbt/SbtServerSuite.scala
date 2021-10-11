@@ -22,6 +22,7 @@ class SbtServerSuite
     extends BaseImportSuite("sbt-server", SbtServerInitializer) {
 
   val preBspVersion = "1.3.13"
+  val supportedMetaBuildVersion = "1.6.0-M1"
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala212
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
@@ -156,7 +157,6 @@ class SbtServerSuite
             |}
             |""".stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.BspSwitch.id, "sbt")
       debugger <- server.startDebugging(
         "debug",
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
@@ -168,5 +168,42 @@ class SbtServerSuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "FooBarFoo")
+  }
+
+  // this test fails if semantidb is not enabled
+  // or not correctly configured in the meta-build target.
+  test("meta-build-target") {
+    cleanWorkspace()
+    val layout =
+      s"""|/project/build.properties
+          |sbt.version=$supportedMetaBuildVersion
+          |/build.sbt
+          |${SbtBuildLayout.commonSbtSettings}
+          |""".stripMargin
+    for {
+      _ <- initialize(layout)
+    } yield {
+      // assert no misconfiguration message
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          Messages.SelectBspServer.message
+        ).mkString("\n")
+      )
+      // assert contains the meta-build-target-build
+      assertNoDiff(
+        server.server.buildTargets.all
+          .map(_.displayName)
+          .toSeq
+          .sorted
+          .mkString("\n"),
+        Seq(
+          "meta-build-target",
+          "meta-build-target-build",
+          "meta-build-target-test"
+        ).mkString("\n")
+      )
+    }
   }
 }
