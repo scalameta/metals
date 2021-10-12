@@ -70,6 +70,11 @@ trait CommonMtagsEnrichments {
         case Left(value) => JEither.forLeft(value)
         case Right(value) => JEither.forRight(value)
       }
+
+    def mapLeft[C](f: A => C): Either[C, B] = either match {
+      case Left(value) => Left(f(value))
+      case Right(value) => Right(value)
+    }
   }
 
   implicit class XtensionMetaPosition(pos: m.Position) {
@@ -408,6 +413,12 @@ trait CommonMtagsEnrichments {
     }
     def isSbt: Boolean = {
       filename.endsWith(".sbt")
+    }
+    def isClassfile: Boolean = {
+      filename.endsWith(".class")
+    }
+    def isTasty: Boolean = {
+      filename.endsWith(".tasty")
     }
     def isScalaScript: Boolean = {
       filename.endsWith(".sc")

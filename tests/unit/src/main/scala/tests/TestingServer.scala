@@ -32,6 +32,7 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
+import scala.meta.internal.metals.DecoderResponse
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.HoverExtParams
@@ -259,17 +260,13 @@ final class TestingServer(
     }
   }
 
-  def executeShowTasty(
-      filePath: String,
-      position: l.Position
-  ): Future[Unit] = {
-    val command = new TextDocumentPositionParams(
-      new TextDocumentIdentifier(filePath),
-      position
-    )
-    executeCommand(ServerCommands.ShowTasty.id, command)
-      .asInstanceOf[Future[Unit]]
+  def executeDecodeFileCommand(
+      uri: String
+  ): Future[DecoderResponse] = {
+    executeCommand(ServerCommands.DecodeFile.id, uri)
+      .asInstanceOf[Future[DecoderResponse]]
   }
+
   def assertSuperMethodHierarchy(
       uri: String,
       expectations: List[(Int, List[String])],

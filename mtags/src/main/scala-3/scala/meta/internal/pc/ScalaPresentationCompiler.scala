@@ -122,11 +122,10 @@ case class ScalaPresentationCompiler(
 
   override def getTasty(
       targetUri: URI,
-      isHtmlSupported: Boolean,
       isHttpEnabled: Boolean
   ): CompletableFuture[String] =
     CompletableFuture.completedFuture {
-      TastyUtils.getTasty(targetUri, isHtmlSupported, isHttpEnabled)
+      TastyUtils.getTasty(targetUri, isHttpEnabled)
     }
 
   def complete(params: OffsetParams): CompletableFuture[CompletionList] =
