@@ -501,15 +501,15 @@ lazy val metals = project
 
 lazy val `sbt-metals` = project
   .settings(
-    sbtPlugin := true,
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
-    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "2.0.5")
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "2.0.5"),
+    scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}")
   )
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin, SbtPlugin)
   .disablePlugins(ScalafixPlugin)
 
 lazy val input = project

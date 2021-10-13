@@ -74,7 +74,7 @@ jobs:
             name: Gradle MacOS integration
             os: macOS-latest
           - type: sbt
-            command: bin/test.sh 'slow/testOnly -- tests.sbt.*'
+            command: bin/test.sh 'sbt-metals/scripted; slow/testOnly -- tests.sbt.*'
             name: Sbt integration
             os: ubuntu-latest
           - type: maven
