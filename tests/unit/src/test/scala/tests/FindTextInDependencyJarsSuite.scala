@@ -1,58 +1,22 @@
 package tests
 
+import java.net.URI
+
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
 
 class FindTextInDependencyJarsSuite
     extends BaseLspSuite("find-text-in-dependency-jars") {
+
+  val akkaVersion = "2.6.16"
+
   test("find exact string match in .conf file inside jar") {
     val isJavaAtLeast9 = scala.util.Properties.isJavaAtLeast(9.toString)
     val isJavaAtLeast17 = scala.util.Properties.isJavaAtLeast(17.toString)
-
-    val expectedUri =
-      workspace
-        .resolve(Directories.dependencies)
-        .resolve("akka-actor_2.12-2.6.16.jar")
-        .resolve("reference.conf")
-        .toURI
-        .toString()
-
-    val expectedJdkUri = {
-      val base = workspace.resolve(Directories.dependencies).resolve("src.zip")
-      val jdkDependent =
-        if (isJavaAtLeast9) base.resolve("java.base")
-        else base
-      jdkDependent
-        .resolve("java")
-        .resolve("lang")
-        .resolve("String.java")
-        .toURI
-        .toString()
-    }
-
-    val expectedLocations: List[Location] = List(
-      new Location(
-        expectedUri,
-        new Range(new Position(95, 2), new Position(95, 20))
-      ),
-      new Location(
-        expectedUri,
-        new Range(new Position(1177, 40), new Position(1177, 58))
-      )
-    )
-
-    val expectedJdkLocation: List[Location] = {
-      val line = if (isJavaAtLeast17) 1443 else if (isJavaAtLeast9) 625 else 577
-      List(
-        new Location(
-          expectedJdkUri,
-          new Range(new Position(line, 4), new Position(line, 40))
-        )
-      )
-    }
 
     for {
       _ <- initialize(
@@ -65,7 +29,7 @@ class FindTextInDependencyJarsSuite
            |}
         """.stripMargin
       )
-      locations <- server.findTextInDependencyJars(
+      akkaLocations <- server.findTextInDependencyJars(
         include = ".conf",
         pattern = "jvm-shutdown-hooks"
       )
@@ -73,8 +37,66 @@ class FindTextInDependencyJarsSuite
         include = ".java",
         pattern = "public String(StringBuffer buffer) {"
       )
-      _ = assertEquals(locations, expectedLocations)
-      _ = assertEquals(jdkLocations, expectedJdkLocation)
-    } yield ()
+    } yield {
+
+      assertLocations(
+        akkaLocations,
+        s"""|
+            |akka-actor_2.12-${akkaVersion}.jar/reference.conf:96:3: info: result
+            |  jvm-shutdown-hooks = on
+            |  ^^^^^^^^^^^^^^^^^^
+            |akka-actor_2.12-${akkaVersion}.jar/reference.conf:1178:41: info: result
+            |    # This property is related to `akka.jvm-shutdown-hooks` above.
+            |                                        ^^^^^^^^^^^^^^^^^^
+            |akka-actor_2.12-${akkaVersion}-sources.jar/reference.conf:96:3: info: result
+            |  jvm-shutdown-hooks = on
+            |  ^^^^^^^^^^^^^^^^^^
+            |akka-actor_2.12-${akkaVersion}-sources.jar/reference.conf:1178:41: info: result
+            |    # This property is related to `akka.jvm-shutdown-hooks` above.
+            |                                        ^^^^^^^^^^^^^^^^^^
+            |""".stripMargin
+      )
+
+      assertLocations(
+        jdkLocations, {
+          val line =
+            if (isJavaAtLeast17) 1444
+            else if (isJavaAtLeast9) 626
+            else 578
+
+          val pathPrefix =
+            if (isJavaAtLeast9) "/java.base/"
+            else "/"
+
+          s"""|src.zip${pathPrefix}java/lang/String.java:$line:5: info: result
+              |    public String(StringBuffer buffer) {
+              |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              |""".stripMargin
+        }
+      )
+    }
+  }
+
+  private def assertLocations(
+      locations: List[Location],
+      expected: String
+  ): Unit = {
+    val rendered = locations
+      .map { loc =>
+        val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
+        val relativePath =
+          path
+            .toRelative(workspace.resolve(Directories.dependencies))
+            .toString()
+            .replace("\\", "/")
+
+        val input = path.toInput.copy(path = relativePath.toString)
+        loc
+          .getRange()
+          .toMeta(input)
+          .formatMessage("info", "result")
+      }
+      .mkString("\n")
+    assertNoDiff(rendered, expected)
   }
 }

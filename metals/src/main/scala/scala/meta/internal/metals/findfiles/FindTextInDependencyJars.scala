@@ -4,7 +4,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.file.Files
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -43,34 +43,38 @@ class FindTextInDependencyJars(
       maybeInclude
         .zip(maybePattern)
         .map { case (include, pattern) =>
-          val allLocations: ArrayBuffer[Location] = new ArrayBuffer[Location]()
+          val allLocations = mutable.ArrayBuffer.empty[Location]
           val includeMatcher = Nio(s"glob:**$include")
           val excludeMatcher =
             req.options.flatMap(_.exclude).map(e => Nio(s"glob:**$e"))
 
-          (buildTargets.allWorkspaceJars ++ JdkSources()).foreach {
-            classpathEntry =>
-              try {
-                val locations: List[Location] =
-                  if (
-                    classpathEntry.isFile && (classpathEntry.isJar || classpathEntry.isZip)
-                  ) {
-                    visitJar(
-                      path = classpathEntry,
-                      include = includeMatcher,
-                      exclude = excludeMatcher,
-                      pattern = pattern
-                    )
-                  } else Nil
+          val allJars =
+            buildTargets.allWorkspaceJars.map((_, false)) ++
+              buildTargets.allSourceJars.map((_, true))
 
-                allLocations ++= locations
-              } catch {
-                case NonFatal(e) =>
-                  scribe.error(
-                    s"Failed to find text in dependency files for $classpathEntry",
-                    e
+          allJars.foreach { case (classpathEntry, isSourceJar) =>
+            try {
+              val locations: List[Location] =
+                if (
+                  classpathEntry.isFile && (classpathEntry.isJar || classpathEntry.isZip)
+                ) {
+                  visitJar(
+                    path = classpathEntry,
+                    include = includeMatcher,
+                    exclude = excludeMatcher,
+                    pattern = pattern,
+                    isSource = isSourceJar
                   )
-              }
+                } else Nil
+
+              allLocations ++= locations
+            } catch {
+              case NonFatal(e) =>
+                scribe.error(
+                  s"Failed to find text in dependency files for $classpathEntry",
+                  e
+                )
+            }
           }
 
           allLocations.toList
@@ -94,10 +98,11 @@ class FindTextInDependencyJars(
       path: AbsolutePath,
       include: Nio,
       exclude: Option[Nio],
-      pattern: String
+      pattern: String,
+      isSource: Boolean
   ): List[Location] = {
     FileIO
-      .withJarFileSystem(path, create = false, close = true) { root =>
+      .withJarFileSystem(path, create = false, close = !isSource) { root =>
         FileIO
           .listAllFilesRecursively(root)
           .filter(isSuitableFile(_, include, exclude))
@@ -118,8 +123,8 @@ class FindTextInDependencyJars(
       pattern: String
   ): List[Range] = {
     var reader: BufferedReader = null
-    val positions: ArrayBuffer[Int] = new ArrayBuffer[Int]()
-    val results: ArrayBuffer[Range] = new ArrayBuffer[Range]()
+    val positions = mutable.ArrayBuffer.empty[Int]
+    val results = mutable.ArrayBuffer.empty[Range]
     val contentLength: Int = pattern.length()
 
     try {

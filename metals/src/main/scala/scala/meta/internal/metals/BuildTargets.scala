@@ -144,6 +144,9 @@ final class BuildTargets(
     ).flatten
   }
 
+  def allSourceJars: Iterator[AbsolutePath] =
+    inverseDependencySources.keysIterator
+
   def addSourceItem(
       sourceItem: AbsolutePath,
       buildTarget: BuildTargetIdentifier
