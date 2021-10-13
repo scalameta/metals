@@ -5,9 +5,11 @@ import scala.concurrent.Future
 import scala.util.Properties
 
 import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -89,7 +91,11 @@ object SbtServerInitializer extends BuildServerInitializer {
       layout: String,
       expectError: Boolean
   )(implicit ec: ExecutionContext): Future[Unit] = {
-    generateBspConfig(workspace)
+    val sbtVersion =
+      SbtBuildTool
+        .loadVersion(workspace)
+        .getOrElse(V.sbtVersion)
+    generateBspConfig(workspace, sbtVersion)
     for {
       _ <- server.initialize()
       _ <- server.initialized()
@@ -103,7 +109,10 @@ object SbtServerInitializer extends BuildServerInitializer {
     }
   }
 
-  private def generateBspConfig(workspace: AbsolutePath): Unit = {
+  private def generateBspConfig(
+      workspace: AbsolutePath,
+      sbtVersion: String
+  ): Unit = {
     val bspFolder = workspace.resolve(".bsp")
     val sbtJson = bspFolder.resolve("sbt.json")
     // don't overwrite existing BSP config
@@ -124,7 +133,7 @@ object SbtServerInitializer extends BuildServerInitializer {
       val connectionDetails = new BspConnectionDetails(
         "sbt",
         argv.asJava,
-        "1.5.5",
+        sbtVersion,
         "2.0.0-M5",
         List("scala").asJava
       )

@@ -163,7 +163,7 @@ case class SbtBuildTool(
       val mainMeta = workspace.resolve("project")
       val metaMeta = workspace.resolve("project").resolve("project")
       sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
-        writeSinglePlugin(dir, plugin)
+        writePlugins(dir, plugin)
       )
     }
   }
@@ -185,13 +185,16 @@ object SbtBuildTool {
   /**
    * Write the sbt plugin in the sbt project directory
    */
-  def writeSinglePlugin(
+  def writePlugins(
       projectDir: AbsolutePath,
-      plugin: PluginDetails
+      plugins: PluginDetails*
   ): Unit = {
-    val bytes =
-      sbtPlugin(plugin).getBytes(StandardCharsets.UTF_8)
-
+    val content =
+      s"""|// DO NOT EDIT! This file is auto-generated.
+          |
+          |${plugins.map(sbtPlugin).mkString("\n")}
+          |""".stripMargin
+    val bytes = content.getBytes(StandardCharsets.UTF_8)
     projectDir.toFile.mkdirs()
     val metalsPluginFile = projectDir.resolve("metals.sbt")
     val pluginFileShouldChange = !metalsPluginFile.isFile ||
@@ -207,13 +210,11 @@ object SbtBuildTool {
    * - the sbt-metals plugin in the project directory
    * - the sbt-jdi-tools plugin in the project/project directory
    */
-  def writeSbtMetalsPlugins(
-      workspace: AbsolutePath
-  ): Unit = {
+  def writeSbtMetalsPlugins(workspace: AbsolutePath): Unit = {
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
-    writeSinglePlugin(mainMeta, metalsPluginDetails)
-    writeSinglePlugin(metaMeta, jdiToolsPluginDetails)
+    writePlugins(mainMeta, metalsPluginDetails)
+    writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
   }
 
   private case class PluginDetails private (
@@ -252,7 +253,7 @@ object SbtBuildTool {
 
     PluginDetails(
       Seq(
-        "This file enables semantic information to be produced by sbt.",
+        "This plugin enables semantic information to be produced by sbt.",
         "It also adds support for debugging using the Debug Adapter Protocol"
       ),
       s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
@@ -266,7 +267,7 @@ object SbtBuildTool {
   private def jdiToolsPluginDetails: PluginDetails =
     PluginDetails(
       Seq(
-        "This file makes sure that the JDI tools are in the sbt classpath.",
+        "This plugin makes sure that the JDI tools are in the sbt classpath.",
         "JDI tools are used by the debug adapter server."
       ),
       s""""org.scala-debugger" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
@@ -283,8 +284,7 @@ object SbtBuildTool {
     val resolvers = plugin.resolver.map(r => s"resolvers += $r").getOrElse("")
     val description = plugin.description.mkString("// ", "\n// ", "")
 
-    s"""|// DO NOT EDIT! This file is auto-generated.
-        |$description
+    s"""|$description
         |$resolvers
         |addSbtPlugin(${plugin.artifact})
         |""".stripMargin
