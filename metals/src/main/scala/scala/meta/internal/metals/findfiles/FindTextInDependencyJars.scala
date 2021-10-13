@@ -11,7 +11,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalafmtConfig.PathMatcher.Nio
+import scala.meta.internal.metals.PathMatcher.Nio
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 

@@ -883,9 +883,4 @@ object MetalsEnrichments
     def toLSP = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
   }
 
-  object PathMatcher {
-    def unapplySeq(path: Path): Option[Seq[String]] = {
-      Some(path.iterator.asScala.toList.map(_.filename))
-    }
-  }
 }
