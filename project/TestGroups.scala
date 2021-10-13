@@ -35,7 +35,9 @@ object TestGroups {
       "tests.FilenameLength", "tests.PrettyPrintTreeSuite",
       "tests.decorations.SyntheticDecorationsLspSuite",
       "tests.codeactions.BracesParensLspSuite",
-      "tests.debug.CompletionDapSuite", "tests.debug.EvaluationDapSuite"),
+      "tests.debug.CompletionDapSuite", "tests.debug.EvaluationDapSuite",
+      "tests.FindTextInDependencyJarsSuite",
+      "tests.classFinder.FindAllClassesSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -83,7 +85,9 @@ object TestGroups {
       "tests.DefinitionScala2Suite", "tests.AnalyzeStacktraceLspSuite",
       "tests.codeactions.ExtractRenameMemberLspSuite",
       "tests.debug.DotEnvFileParserSuite", "tests.SemanticdbScala3Suite",
-      "tests.troubleshoot.ProblemResolverSuite", "tests.BspBuildChangedSuite")
+      "tests.troubleshoot.ProblemResolverSuite", "tests.BspBuildChangedSuite",
+      "tests.classFinder.ClassBreakpointSuite",
+      "tests.classFinder.ClassNameResolverSuite")
   )
 
 }
