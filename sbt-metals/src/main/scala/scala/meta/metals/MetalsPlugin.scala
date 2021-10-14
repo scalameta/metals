@@ -3,88 +3,45 @@ package metals
 import scala.meta.internal.sbtmetals.BuildInfo
 
 import sbt._
+import sbt.Keys
 import sbt.Keys._
 import sbt.internal.inc.ScalaInstance
-import sbt.plugins.JvmPlugin
+import sbt.plugins.SemanticdbPlugin
 
 object MetalsPlugin extends AutoPlugin {
-  override def requires = JvmPlugin
+  override def requires = SemanticdbPlugin
   override def trigger = allRequirements
 
-  val supportedScala2Versions = BuildInfo.supportedScala2Versions.toList
-
-  val semanticdbVersion = BuildInfo.semanticdbVersion
-
-  override lazy val projectSettings: Seq[Def.Setting[_]] = Seq(
-    semanticdbCompilerPlugin := {
-      if (supportedScala2Versions.contains(scalaVersion.value))
-        ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion)
-          .cross(CrossVersion.full)
-      else {
-        semanticdbCompilerPlugin.value
-      }
-    },
-    allDependencies ++= {
-      val versionOfScala = scalaVersion.value
-      if (
-        ScalaInstance.isDotty(versionOfScala) || !supportedScala2Versions
-          .contains(versionOfScala)
-      )
-        Nil
-      else
-        List(
-          compilerPlugin(
-            "org.scalameta" % s"semanticdb-scalac_${versionOfScala}" % semanticdbVersion
-          )
-        )
-    }
-  ) ++ inConfig(Compile)(configurationSettings) ++ inConfig(Test)(
-    configurationSettings
-  )
-
-  lazy val configurationSettings: Seq[Def.Setting[_]] = List(
-    scalacOptions := {
-      val versionOfScala = scalaVersion.value
-      val old = scalacOptions.value
-      if (!supportedScala2Versions.contains(versionOfScala)) {
-        old
-      } else {
-        val sdbOptions = semanticdbOptions.value
-        (old.toVector ++ sdbOptions ++
-          (if (ScalaInstance.isDotty(versionOfScala)) {
-             Some("-Xsemanticdb")
-           } else None)).distinct
-      }
+  override lazy val projectSettings: Seq[Def.Setting[_]] = Def.settings(
+    Keys.semanticdbVersion := {
+      if (requiresSemanticdb.value && !isScala3.value)
+        BuildInfo.semanticdbVersion
+      else Keys.semanticdbVersion.value
     },
     semanticdbEnabled := {
-      val old = semanticdbEnabled.value
-      if (ScalaInstance.isDotty(scalaVersion.value)) true
-      else old
+      semanticdbEnabled.value || requiresSemanticdb.value
     },
-    semanticdbTargetRoot := {
-      val in = semanticdbIncludeInJar.value
-      if (in) classDirectory.value
-      else semanticdbTargetRoot.value
-    },
-    semanticdbOptions := {
-      val old = semanticdbOptions.value
-      val targetRoot = semanticdbTargetRoot.value
-      val versionOfScala = scalaVersion.value
-      if (
-        ScalaInstance.isDotty(versionOfScala) || !supportedScala2Versions
-          .contains(versionOfScala)
-      )
-        old
+    semanticdbOptions ++= {
+      if (isScala3.value || !requiresSemanticdb.value) Seq()
       else
-        (Seq(
-          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}",
-          s"-P:semanticdb:targetroot:$targetRoot",
-          "-Yrangepos",
+        Seq(
           // Needed for "find references" on implicits and `apply` methods.
-          s"-P:semanticdb:synthetics:on",
+          "-P:semanticdb:synthetics:on",
           // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
-          s"-P:semanticdb:failures:warning"
-        ) ++ old).distinct
+          "-P:semanticdb:failures:warning",
+          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}"
+        )
     }
   )
+
+  def requiresSemanticdb: Def.Initialize[Boolean] = Def.setting {
+    bspEnabled.value &&
+    (isScala3.value || BuildInfo.supportedScala2Versions.contains(
+      scalaVersion.value
+    ))
+  }
+
+  def isScala3: Def.Initialize[Boolean] = Def.setting {
+    ScalaInstance.isDotty(scalaVersion.value)
+  }
 }
