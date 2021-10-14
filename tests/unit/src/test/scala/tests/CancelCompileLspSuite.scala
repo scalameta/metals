@@ -27,10 +27,13 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
           |object C { val x: String = b.B.x }
           |""".stripMargin
       )
-      didOpen = server.didOpen("c/src/main/scala/c/C.scala")
+      _ <- server.server.buildServerPromise.future
+      compile = server.server.compilations.compileFile(
+        workspace.resolve("c/src/main/scala/c/C.scala")
+      )
       _ <- server.executeCommand(ServerCommands.CancelCompile.id)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-      isCancelled <- didOpen.map(_ => false).recover {
+      isCancelled <- compile.map(_ => false).recover {
         case _: CancellationException => true
       }
       _ = Predef.assert(
