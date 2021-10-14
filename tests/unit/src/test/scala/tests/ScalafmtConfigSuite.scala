@@ -3,6 +3,7 @@ package tests
 import scala.util.Failure
 import scala.util.Success
 
+import scala.meta.internal.metals.PathMatcher
 import scala.meta.internal.metals.ScalafmtConfig
 import scala.meta.internal.metals.ScalafmtDialect
 import scala.meta.internal.semver.SemVer
@@ -169,9 +170,9 @@ class ScalafmtConfigSuite extends BaseSuite {
 
   private def fileOverrides(
       values: (String, ScalafmtDialect)*
-  ): List[(ScalafmtConfig.PathMatcher, ScalafmtDialect)] =
+  ): List[(PathMatcher, ScalafmtDialect)] =
     values.map { case (pattern, dialect) =>
-      ScalafmtConfig.PathMatcher.Nio(pattern) -> dialect
+      PathMatcher.Nio(pattern) -> dialect
     }.toList
 
 }

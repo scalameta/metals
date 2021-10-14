@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.FileSystems
-
 import scala.collection.JavaConverters._
 import scala.util.Success
 import scala.util.Try
@@ -23,9 +21,9 @@ import com.typesafe.config.parser.ConfigDocumentFactory
 case class ScalafmtConfig(
     version: Option[SemVer.Version],
     runnerDialect: Option[ScalafmtDialect],
-    fileOverrides: List[(ScalafmtConfig.PathMatcher, ScalafmtDialect)],
-    includeFilters: List[ScalafmtConfig.PathMatcher],
-    excludeFilters: List[ScalafmtConfig.PathMatcher]
+    fileOverrides: List[(PathMatcher, ScalafmtDialect)],
+    includeFilters: List[PathMatcher],
+    excludeFilters: List[PathMatcher]
 ) {
 
   def overrideFor(path: AbsolutePath): Option[ScalafmtDialect] = {
@@ -45,22 +43,6 @@ object ScalafmtConfig {
 
   val empty: ScalafmtConfig =
     ScalafmtConfig(None, None, List.empty, List.empty, List.empty)
-
-  sealed trait PathMatcher {
-    def matches(path: AbsolutePath): Boolean
-  }
-  object PathMatcher {
-    final case class Nio(pattern: String) extends PathMatcher {
-      private val matcher = FileSystems.getDefault().getPathMatcher(pattern)
-      def matches(path: AbsolutePath): Boolean = matcher.matches(path.toNIO)
-    }
-
-    final case class Regex(regex: String) extends PathMatcher {
-      private val pattern = java.util.regex.Pattern.compile(regex)
-      def matches(path: AbsolutePath): Boolean =
-        pattern.matcher(path.toString).find()
-    }
-  }
 
   /**
    * Notice: due to problems with config library there is no  way to merge `fileOverride`.
