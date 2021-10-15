@@ -19,6 +19,6 @@ jobs:
           mkdir -p bin
           curl -L https://sourcegraph.com/.api/src-cli/src_linux_amd64 -o bin/src
           chmod +x bin/src
-          ./bin/src lsif upload -github-token $GITHUB_TOKEN
+          ./bin/src lsif upload -trace=3 -ignore-upload-failure -github-token $GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
