@@ -36,7 +36,10 @@ final class EndpointLogger(endpoint: RemoteEndpoint, logger: PrintWriter)
     }
   }
 
-  override def cancel(): Unit = endpoint.cancel()
+  override def cancel(): Unit = {
+    endpoint.cancel()
+    logger.close()
+  }
 
   private def log(direction: Direction, message: Message): Unit =
     synchronized {
