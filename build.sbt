@@ -197,7 +197,7 @@ lazy val V = new {
   val scalameta = "4.4.28"
   val semanticdb = scalameta
   val bsp = "2.0.0-M13"
-  val bloop = "1.4.9-31-1df4194d"
+  val bloop = "1.4.9-33-c93326ba"
   val scala3 = "3.0.2"
   val nextScala3RC = "3.1.0-RC3"
   val bloopNightly = bloop
@@ -447,9 +447,9 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.5.5",
-      "com.outr" %% "scribe-file" % "3.5.5",
-      "com.outr" %% "scribe-slf4j" % "3.5.5", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "3.6.0",
+      "com.outr" %% "scribe-file" % "3.6.0",
+      "com.outr" %% "scribe-slf4j" % "3.6.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.6.2",
       // for JSON formatted doctor
@@ -506,7 +506,7 @@ lazy val `sbt-metals` = project
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
-    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "2.0.5"),
+    addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "2.0.6"),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}")
   )
   .enablePlugins(BuildInfoPlugin, SbtPlugin)

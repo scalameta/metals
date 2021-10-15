@@ -96,6 +96,10 @@ object MetalsLogger {
 
   def silent: LoggerSupport =
     new LoggerSupport {
+      // Since this is a  noop the includes doesn't really do anything since
+      // our log method isn't actually doing anything. So we just set it to
+      // false.
+      override def includes(level: Level): Boolean = false
       override def log[M](record: LogRecord[M]): Unit = ()
     }
   def default: LoggerSupport = scribe.Logger.root
