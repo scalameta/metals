@@ -67,20 +67,23 @@ class BuildServerConnection private (
 
   def isSbt: Boolean = name == SbtBuildTool.name
 
-  // hasDebug is not yet available in BSP capabilities
-  // https://github.com/build-server-protocol/build-server-protocol/pull/161
-  def hasDebug: Boolean = isBloop || isSbt
+  // although hasDebug is already available in BSP capabilities
+  // see https://github.com/build-server-protocol/build-server-protocol/pull/161
+  // most of the bsp servers such as bloop and sbt don't support it.
+  def isBloopOrSbt: Boolean = isBloop || isSbt
 
   /* Some users may still use an old version of Bloop that relies on scala-debug-adapter 1.x.
    * This method is used to do the switch between MetalsDebugAdapter1x and MetalsDebugAdapter2x.
    * At some point we should drop the support for those old versions of Bloop and remove
    * this method, also the MetalsDebugAdapter1x and the ClassFinder classes
    */
-  def usesScalaDebugAdapter2x: Boolean =
-    isSbt || (isBloop && (
-      SemVer.isCompatibleVersion("1.4.10", version) ||
-        BuildInfo.bloopVersion == version
-    ))
+  def usesScalaDebugAdapter2x: Boolean = {
+    def supportNewDebugAdapter = SemVer.isCompatibleVersion(
+      "1.4.10",
+      version
+    ) || BuildInfo.bloopVersion == version
+    isSbt || (isBloop && supportNewDebugAdapter)
+  }
 
   def workspaceDirectory: AbsolutePath = workspace
 

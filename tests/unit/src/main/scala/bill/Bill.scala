@@ -367,6 +367,11 @@ object Bill {
     override def buildTargetScalaMainClasses(
         params: ScalaMainClassesParams
     ): CompletableFuture[ScalaMainClassesResult] = ???
+
+    override def buildTargetDependencyModules(
+        params: DependencyModulesParams
+    ): CompletableFuture[DependencyModulesResult] = ???
+
   }
 
   def myClassLoader: ClassLoader =
