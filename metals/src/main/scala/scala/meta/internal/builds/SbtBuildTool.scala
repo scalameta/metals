@@ -213,7 +213,7 @@ object SbtBuildTool {
   def writeSbtMetalsPlugins(workspace: AbsolutePath): Unit = {
     val mainMeta = workspace.resolve("project")
     val metaMeta = workspace.resolve("project").resolve("project")
-    writePlugins(mainMeta, metalsPluginDetails)
+    writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
     writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
   }
 
@@ -260,6 +260,19 @@ object SbtBuildTool {
       resolver
     )
   }
+
+  /**
+   * The sbt-debug-adpater plugin needs sbt-jdi-tool in its meta-build
+   * (in project/project/metals.sbt)
+   */
+  private def debugAdapterPluginDetails: PluginDetails =
+    PluginDetails(
+      Seq(
+        "This plugin adds the BSP debug capability to sbt server."
+      ),
+      s""""ch.epfl.scala" % "sbt-debug-adapter" % "${BuildInfo.debugAdapterVersion}"""",
+      resolver = None
+    )
 
   /**
    * Short description and artifact for the sbt-jdi-tools plugin
