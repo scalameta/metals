@@ -24,24 +24,22 @@ import org.eclipse.{lsp4j => l}
 /**
  * Class to generate the Run and Test code lenses to trigger debugging.
  *
- * NOTE: (ckipp01) the buildServerCanDebug param is really only checking to
- * see if the build server connection is bloop, which supports DAP. In the
- * case of sbt, it doesn't so we don't want to generate these.  In the future,
- * if this becomes part of the BSP spec, we should be able to somply check to
- * see if the build server is a DAP provider, and then generate these based
- * off that.
+ * NOTE: (ckipp01) the isBloopOrSbt param is really only checking to
+ * see if the build server connection is bloop or sbt, which support debugging.
+ * Despite the fact, that canDebug capability is already a part of the BSP spec,
+ * bloop and sbt doesn't support this option, so we have to add additional if
+ * in order to generate lenses for them.
  */
 final class RunTestCodeLens(
     buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
     buildTargets: BuildTargets,
     clientConfig: ClientConfiguration,
-    buildServerCanDebug: () => Boolean,
+    isBloopOrSbt: () => Boolean,
     trees: Trees
 ) extends CodeLens {
 
-  override def isEnabled: Boolean =
-    clientConfig.isDebuggingProvider && buildServerCanDebug()
+  override def isEnabled: Boolean = clientConfig.isDebuggingProvider()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
@@ -53,14 +51,16 @@ final class RunTestCodeLens(
     } else {
       val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
 
-      buildTargets
-        .inverseSources(path)
-        .map { buildTarget =>
-          val classes = buildTargetClasses.classesOf(buildTarget)
-          codeLenses(textDocument, buildTarget, classes, distance)
-        }
-        .getOrElse(Seq.empty)
+      val lenses = for {
+        buildTargetId <- buildTargets.inverseSources(path)
+        buildTarget <- buildTargets.info(buildTargetId)
+        if buildTarget.getCapabilities.getCanDebug || isBloopOrSbt(),
+      } yield {
+        val classes = buildTargetClasses.classesOf(buildTargetId)
+        codeLenses(textDocument, buildTargetId, classes, distance)
+      }
 
+      lenses.getOrElse(Seq.empty)
     }
   }
 
