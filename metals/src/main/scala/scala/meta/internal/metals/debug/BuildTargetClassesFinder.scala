@@ -31,8 +31,7 @@ class BuildTargetClassesFinder(
       buildTargetClasses.findMainClassByName(_),
       buildTargetClasses
         .classesOf(_)
-        .mainClasses
-        .values,
+        .allMainClasses,
       { clazz: b.ScalaMainClass => clazz.getClassName }
     ).recoverWith { case ex =>
       val found = ex match {

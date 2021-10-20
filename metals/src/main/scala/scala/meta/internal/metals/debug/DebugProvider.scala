@@ -288,7 +288,7 @@ class DebugProvider(
     val buildTargetO = buildTargets.inverseSources(path)
 
     lazy val mainClasses = (bti: BuildTargetIdentifier) =>
-      buildTargetClasses.classesOf(bti).mainClasses.values.toList
+      buildTargetClasses.classesOf(bti).allMainClasses.toList
 
     lazy val testClasses = (bti: BuildTargetIdentifier) =>
       buildTargetClasses.classesOf(bti).testClasses

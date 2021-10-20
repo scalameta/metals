@@ -75,8 +75,8 @@ final class RunTestCodeLens(
       if occurrence.role.isDefinition
       symbol = occurrence.symbol
       commands = {
-        val main = classes.mainClasses
-          .get(symbol)
+        val main = classes
+          .getMainClass(symbol)
           .map(mainCommand(target, _))
           .getOrElse(Nil)
         val tests = classes.testClasses
