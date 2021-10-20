@@ -619,21 +619,19 @@ object FileDecoderProviderLspSuite {
         |Text => empty
         |Language => Scala
         |Symbols => 4 entries
-        |Occurrences => 7 entries
+        |Occurrences => 5 entries
         |
         |Symbols:
-        |foo/bar/example/Bar# => class Bar
-        |foo/bar/example/Bar#`<init>`(). => primary ctor <init>
-        |foo/bar/example/Foo# => class Foo
-        |foo/bar/example/Foo#`<init>`(). => primary ctor <init>
+        |foo/bar/example/Bar# => class Bar extends Object { self: Bar => +1 decls }
+        |foo/bar/example/Bar#`<init>`(). => primary ctor <init>(): Bar
+        |foo/bar/example/Foo# => class Foo extends Object { self: Foo => +1 decls }
+        |foo/bar/example/Foo#`<init>`(). => primary ctor <init>(): Foo
         |
         |Occurrences:
         |[0:8..0:11) => foo/
         |[0:12..0:15) => foo/bar/
         |[0:16..0:23) <= foo/bar/example/
-        |[1:0..1:0) <= foo/bar/example/Foo#`<init>`().
         |[1:6..1:9) <= foo/bar/example/Foo#
-        |[2:0..2:0) <= foo/bar/example/Bar#`<init>`().
         |[2:6..2:9) <= foo/bar/example/Bar#
         |""".stripMargin
 
@@ -647,23 +645,28 @@ object FileDecoderProviderLspSuite {
         |Text => empty
         |Language => Scala
         |Symbols => 5 entries
-        |Occurrences => 9 entries
+        |Occurrences => 7 entries
         |
         |Symbols:
-        |foo/bar/example/Bar# => class Bar
-        |foo/bar/example/Bar#`<init>`(). => primary ctor <init>
-        |foo/bar/example/Bar#foo(). => method foo
-        |foo/bar/example/Foo# => class Foo
-        |foo/bar/example/Foo#`<init>`(). => primary ctor <init>
+        |foo/bar/example/Bar# => class Bar extends Object { self: Bar => +2 decls }
+        |  Object => java/lang/Object#
+        |  Bar => foo/bar/example/Bar#
+        |foo/bar/example/Bar#`<init>`(). => primary ctor <init>(): Bar
+        |  Bar => foo/bar/example/Bar#
+        |foo/bar/example/Bar#foo(). => method foo(): Unit
+        |  Unit => scala/Unit#
+        |foo/bar/example/Foo# => class Foo extends Object { self: Foo => +1 decls }
+        |  Object => java/lang/Object#
+        |  Foo => foo/bar/example/Foo#
+        |foo/bar/example/Foo#`<init>`(). => primary ctor <init>(): Foo
+        |  Foo => foo/bar/example/Foo#
         |
         |Occurrences:
         |[0:8..0:11) => foo/
         |[0:12..0:15) => foo/bar/
         |[0:16..0:23) <= foo/bar/example/
-        |[1:0..1:0) <= foo/bar/example/Foo#`<init>`().
         |[1:6..1:9) <= foo/bar/example/Foo#
         |[2:6..2:9) <= foo/bar/example/Bar#
-        |[3:2..3:2) <= foo/bar/example/Bar#`<init>`().
         |[3:6..3:9) <= foo/bar/example/Bar#foo().
         |[3:13..3:17) => scala/Unit#
         |""".stripMargin
