@@ -81,7 +81,7 @@ class BuildServerConnection private (
     def supportNewDebugAdapter = SemVer.isCompatibleVersion(
       "1.4.10",
       version
-    ) || BuildInfo.bloopVersion == version
+    )
     isSbt || (isBloop && supportNewDebugAdapter)
   }
 
