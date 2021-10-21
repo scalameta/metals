@@ -9,8 +9,6 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
-import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 
@@ -125,10 +123,8 @@ final class BuildTargetClasses(
       buildTarget: b.BuildTargetIdentifier
   ): List[String => Descriptor] = {
     buildTargets.scalaTarget(buildTarget) match {
-      case Some(scalaBuildTarget) =>
-        if (ScalaVersions.isScala3Version(scalaBuildTarget.scalaVersion))
-          List(Descriptor.Term, Descriptor.Type)
-        else List(Descriptor.Term)
+      case Some(_) =>
+        List(Descriptor.Term)
       case None =>
         List(Descriptor.Type)
     }
@@ -164,35 +160,12 @@ object BuildTargetClasses {
     def getMainClass(symbol: String): Option[b.ScalaMainClass] = {
       mainClasses
         .get(symbol)
-        .orElse(dropSourceFromToplevelSymbol(symbol).flatMap(getMainClass))
     }
 
     def putMainClass(symbol: String, clazz: b.ScalaMainClass): Unit =
       mainClasses.put(symbol, clazz)
 
     def allMainClasses: List[b.ScalaMainClass] = mainClasses.values.toList
-
-    /**
-     * Converts Scala3 sorceToplevelSymbol into a plain one that corresponds to class name.
-     * From `3.1.0` plain names were removed from occurrences because they are synthetic.
-     * Example:
-     *   `foo/Foo$package.mainMethod().` -> `foo/mainMethod#`
-     */
-    private def dropSourceFromToplevelSymbol(symbol: String): Option[String] = {
-      Symbol(symbol) match {
-        case GlobalSymbol(
-              GlobalSymbol(
-                owner,
-                Descriptor.Term(sourceOwner)
-              ),
-              Descriptor.Method(name, _)
-            ) if sourceOwner.endsWith("$package") =>
-          val converted = GlobalSymbol(owner, Descriptor.Type(name))
-          Some(converted.value)
-        case _ =>
-          None
-      }
-    }
 
   }
 }
