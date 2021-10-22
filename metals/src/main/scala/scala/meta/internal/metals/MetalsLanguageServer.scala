@@ -2179,6 +2179,7 @@ class MetalsLanguageServer(
       }
       _ <- profiledIndexWorkspace(() => doctor.check())
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
+      _ = diagnostics.reset()
     } yield {
       BuildChange.Reconnected
     }
