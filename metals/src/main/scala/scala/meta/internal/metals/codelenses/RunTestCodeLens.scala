@@ -12,18 +12,18 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.Scala._
 
 /**
  * Class to generate the Run and Test code lenses to trigger debugging.
@@ -78,10 +78,9 @@ final class RunTestCodeLens(
       occurrence <- textDocument.occurrences
       if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
       symbol = occurrence.symbol
-      _ = pprint.log(occurrence)
       commands = {
-        val main = classes
-          .getMainClass(symbol)
+        val main = classes.mainClasses
+          .get(symbol)
           .map(mainCommand(target, _))
           .getOrElse(Nil)
         val tests = classes.testClasses
@@ -90,8 +89,8 @@ final class RunTestCodeLens(
           .getOrElse(Nil)
         val fromAnnot = mainAnnot(occurrence, textDocument)
           .flatMap { symbol =>
-            classes
-              .getMainClass(symbol)
+            classes.mainClasses
+              .get(symbol)
               .map(mainCommand(target, _))
           }
           .getOrElse(Nil)

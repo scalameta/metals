@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -36,7 +35,7 @@ final class BuildTargetClasses(
   def findMainClassByName(
       name: String
   ): List[(b.ScalaMainClass, b.BuildTargetIdentifier)] =
-    findClassesBy(_.allMainClasses.find(_.getClassName() == name))
+    findClassesBy(_.mainClasses.values.find(_.getClassName() == name))
 
   def findTestClassByName(
       name: String
@@ -100,7 +99,7 @@ final class BuildTargetClasses(
         descriptors
       )
     } {
-      classes(target).putMainClass(symbol, aClass)
+      classes(target).mainClasses.put(symbol, aClass)
     }
   }
 
@@ -149,23 +148,13 @@ final class BuildTargetClasses(
 }
 
 object BuildTargetClasses {
+  type Symbol = String
   type ClassName = String
 
   final class Classes {
-    private val mainClasses = new TrieMap[String, b.ScalaMainClass]()
-    val testClasses = new TrieMap[String, ClassName]()
+    val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
+    val testClasses = new TrieMap[Symbol, ClassName]()
 
     def isEmpty: Boolean = mainClasses.isEmpty && testClasses.isEmpty
-
-    def getMainClass(symbol: String): Option[b.ScalaMainClass] = {
-      mainClasses
-        .get(symbol)
-    }
-
-    def putMainClass(symbol: String, clazz: b.ScalaMainClass): Unit =
-      mainClasses.put(symbol, clazz)
-
-    def allMainClasses: List[b.ScalaMainClass] = mainClasses.values.toList
-
   }
 }
