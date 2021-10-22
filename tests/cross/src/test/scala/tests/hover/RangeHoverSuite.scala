@@ -21,10 +21,31 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|B
+    """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
       "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
+    )
+  )
+
+  check(
+    "range-sum-method-generic",
+    """|package helpers
+       |
+       |class XDClass[T] {
+       |  def xd: T = {
+       |    val l: List[T] = ???
+       |    <<l.%<%head%>%>>
+       |  }
+       |}
+       |""".stripMargin,
+    """|T
+       |override def head: T""".stripMargin.hoverRange,
+    compat = Map(
+      "3" -> "def head: T".hoverRange,
+      "2.13" ->
+        """|T
+           |def head: T""".stripMargin.hoverRange
     )
   )
 
@@ -45,7 +66,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|B
+    """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
       "3" -> "val l: List[Int]".hoverRange
@@ -212,7 +233,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|B
+    """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
       "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
@@ -236,7 +257,7 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|B
+    """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
       "3" -> "def xd: Int".hoverRange

@@ -635,7 +635,15 @@ trait Completions { this: MetalsGlobal =>
       }
     }
 
-    protected def isEligible(t: Tree): Boolean = !t.pos.isTransparent
+    protected def isEligible(t: Tree): Boolean = {
+      !t.pos.isTransparent || {
+        t match {
+          // new User(age = 42, name = "") becomes transparent, which doesn't happen with normal methods
+          case Apply(Select(_: New, _), _) => true
+          case _ => false
+        }
+      }
+    }
     override def traverse(t: Tree): Unit = {
       t match {
         case tt: TypeTree

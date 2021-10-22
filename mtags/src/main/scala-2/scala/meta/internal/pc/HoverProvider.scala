@@ -40,11 +40,11 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           params.offset(),
           params.endOffset()
         )
-        val tree = typedHoverTreeAt(pos)
+        val tree = typedHoverTreeAt(pos, unit)
         (pos, tree)
       case params: OffsetParams =>
         val pos = unit.position(params.offset())
-        val tree = typedHoverTreeAt(pos)
+        val tree = typedHoverTreeAt(pos, unit)
         (pos, tree)
     }
     tree match {
@@ -183,12 +183,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       }
     lastVisitedParentTrees match {
       case head :: tail =>
-        tryTail(tail) match {
-          case Some(value) =>
-            typedTreeAt(value.pos)
-          case None =>
-            head
-        }
+        tryTail(tail).getOrElse(head)
       case _ =>
         EmptyTree
     }
@@ -287,8 +282,12 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     sym.flagString(mask)
   }
 
-  private def typedHoverTreeAt(pos: Position): Tree = {
-    val typedTree = typedTreeAt(pos)
+  private def typedHoverTreeAt(
+      pos: Position,
+      unit: RichCompilationUnit
+  ): Tree = {
+    typeCheck(unit)
+    val typedTree = locateTree(pos)
     typedTree match {
       case Import(qual, _) if qual.pos.includes(pos) =>
         qual.findSubtree(pos)

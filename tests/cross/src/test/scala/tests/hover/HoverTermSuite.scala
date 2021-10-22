@@ -203,15 +203,12 @@ class HoverTermSuite extends BaseHoverSuite {
     """
       |class Foo(name: String, age: Int)
       |object a {
-      |  new Fo@@o("", 42) {
+      |  new <<Fo@@o>>("", 42) {
       |    val x = 2
       |  }
       |}
       |""".stripMargin,
-    "",
-    compat = Map(
-      "3" -> "class Foo: Foo".hover
-    )
+    "class Foo: Foo".hover
   )
 
   check(
