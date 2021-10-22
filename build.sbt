@@ -198,13 +198,13 @@ lazy val V = new {
   val semanticdb = scalameta
   val bsp = "2.0.0-M15"
   val bloop = "1.4.10"
-  val scala3 = "3.0.2"
-  val nextScala3RC = "3.1.0-RC3"
+  val scala3 = "3.1.0"
+  val nextScala3RC = "3.1.1-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
-  val mdoc = "2.2.23"
+  val mdoc = "2.2.24"
   val scalafmt = "3.0.5"
   val munit = "0.7.29"
   val scalafix = "0.9.31"
@@ -243,8 +243,8 @@ lazy val V = new {
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions = Seq(nextScala3RC, scala3, "3.0.1", "3.0.0")
-  def deprecatedScala3Versions = Seq()
+  def nonDeprecatedScala3Versions = Seq(nextScala3RC, scala3, "3.0.2")
+  def deprecatedScala3Versions = Seq("3.0.1", "3.0.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions

@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -123,10 +122,8 @@ final class BuildTargetClasses(
       buildTarget: b.BuildTargetIdentifier
   ): List[String => Descriptor] = {
     buildTargets.scalaTarget(buildTarget) match {
-      case Some(scalaBuildTarget) =>
-        if (ScalaVersions.isScala3Version(scalaBuildTarget.scalaVersion))
-          List(Descriptor.Term, Descriptor.Type)
-        else List(Descriptor.Term)
+      case Some(_) =>
+        List(Descriptor.Term)
       case None =>
         List(Descriptor.Type)
     }
