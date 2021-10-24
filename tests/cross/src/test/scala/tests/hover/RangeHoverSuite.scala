@@ -218,4 +218,28 @@ class RangeHoverSuite extends BaseHoverSuite {
       "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
     )
   )
+
+  check(
+    "range-wider2",
+    """|package helpers
+       |
+       |class XDClass {
+       |  def xd: Int = {
+       |    val l = List(1,2,3)
+       |%<% <<l.map { x =>
+       |      x.to(x*x)
+       |        .flatMap { y =>
+       |          List(y + 2137)
+       |        }
+       |      .sum
+       |    }.sum>>  %>%
+       |  }
+       |}
+       |""".stripMargin,
+    """|B
+       |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
+    compat = Map(
+      "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
+    )
+  )
 }

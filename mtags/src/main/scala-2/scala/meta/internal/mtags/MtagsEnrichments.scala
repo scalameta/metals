@@ -10,7 +10,6 @@ import scala.{meta => m}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.RangeParams
 
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -39,28 +38,10 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         case _ => false
       })
     }
-    def isWhitespace: Boolean = {
-      def isIncorrectOffset(offset: Int) =
-        offset < 0 || offset >= params.text().length
-      def isAtWhitespaceCharacter =
-        isIncorrectOffset(params.offset()) || params
-          .text()
-          .charAt(params.offset())
-          .isWhitespace
-      params match {
-        case range: RangeParams if range.offset == range.endOffset =>
-          isAtWhitespaceCharacter
-        case range: RangeParams =>
-          def allWhitespace = params
-            .text()
-            .substring(range.offset(), range.endOffset())
-            .forall(_.isWhitespace)
-          isIncorrectOffset(params.offset()) ||
-          isIncorrectOffset(range.endOffset()) ||
-          allWhitespace
-        case _: OffsetParams => isAtWhitespaceCharacter
-      }
-    }
+    def isWhitespace: Boolean =
+      params.offset() < 0 ||
+        params.offset() >= params.text().length ||
+        params.text().charAt(params.offset()).isWhitespace
   }
   implicit class XtensionIterableOps[T](lst: Iterable[T]) {
     def distinctBy[B](fn: T => B): List[T] = {
