@@ -211,7 +211,7 @@ lazy val V = new {
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
   val genyVersion = "0.6.10"
-  val debugAdapter = "2.0.7"
+  val debugAdapter = "2.0.8"
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
