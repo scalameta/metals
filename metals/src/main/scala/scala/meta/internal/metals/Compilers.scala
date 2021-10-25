@@ -534,7 +534,7 @@ class Compilers(
           }
         }
       )
-      Some(out)
+      Option(out)
     }
   }
 
