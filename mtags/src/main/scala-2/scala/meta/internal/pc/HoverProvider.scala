@@ -1,10 +1,14 @@
 package scala.meta.internal.pc
 
+import java.net.URI
+
+import scala.annotation.tailrec
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.pc.CancelToken
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 
@@ -16,6 +20,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
 
   def hover(): Option[Hover] = params match {
+    case range: RangeParams =>
+      trimWhitespaceInRange(range).flatMap(hoverOffset)
     case _ if params.isWhitespace => None
     case _ => hoverOffset(params)
   }
@@ -319,6 +325,28 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case TypeApply(fun, _) => isForSynthetic(fun)
       case gtree: Select if isForComprehensionSyntheticName(gtree) => true
       case _ => false
+    }
+  }
+
+  private def trimWhitespaceInRange(range: RangeParams): Option[RangeParams] = {
+    def isWhitespace(i: Int): Boolean =
+      range.text.charAt(i).isWhitespace
+
+    @tailrec
+    def trim(start: Int, end: Int): Option[(Int, Int)] =
+      if (start == end) Some((start, start)).filter(_ => !isWhitespace(start))
+      else if (isWhitespace(start)) trim(start + 1, end)
+      else if (isWhitespace(end - 1)) trim(start, end - 1)
+      else Some((start, end))
+
+    trim(range.offset, range.endOffset()).map { case (start, end) =>
+      new RangeParams {
+        override def uri(): URI = params.uri()
+        override def text(): String = params.text()
+        override def token(): CancelToken = params.token()
+        override def offset(): Int = start
+        override def endOffset(): Int = end
+      }
     }
   }
 }
