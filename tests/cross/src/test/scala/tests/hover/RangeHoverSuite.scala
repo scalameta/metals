@@ -239,7 +239,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|B
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange,
     compat = Map(
-      "3" -> "def sum[B >: A](implicit num: Numeric[B]): B".hoverRange
+      "3" -> "def xd: Int".hoverRange
     )
   )
 }

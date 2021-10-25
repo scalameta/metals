@@ -38,10 +38,11 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         case _ => false
       })
     }
-    def isWhitespace: Boolean =
+    def isWhitespace: Boolean = {
       params.offset() < 0 ||
-        params.offset() >= params.text().length ||
-        params.text().charAt(params.offset()).isWhitespace
+      params.offset() >= params.text().length ||
+      params.text().charAt(params.offset()).isWhitespace
+    }
   }
   implicit class XtensionIterableOps[T](lst: Iterable[T]) {
     def distinctBy[B](fn: T => B): List[T] = {
