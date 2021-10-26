@@ -90,7 +90,7 @@ title: Making a release
 
   - https://github.com/scalameta/metals-vscode:
     - generate metals website with `sbt docs/run`
-    - open `website/target/docs/editor/vscode.md` and copy everything from
+    - open `website/target/docs/editors/vscode.md` and copy everything from
       "Requirements" over to the scalameta/metals-vscode README
       - remove "Using latest SNAPSHOT" section, this table is only up-to-date on
         the website
