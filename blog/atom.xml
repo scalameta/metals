@@ -2,11 +2,18 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/blog</id>
     <title>Metals Blog</title>
-    <updated>2021-09-16T00:00:00.000Z</updated>
+    <updated>2021-10-26T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/blog"/>
     <subtitle>Metals Blog</subtitle>
     <icon>http://scalameta.org/img/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.10.8 - Tungsten]]></title>
+        <id>Metals v0.10.8 - Tungsten</id>
+        <link href="http://scalameta.org/metals/blog/2021/10/26/tungsten"/>
+        <updated>2021-10-26T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.10.8, which brings a lot of new features in addition to Scala 3.1.0 support!]]></summary>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.10.7 - Tungsten]]></title>
         <id>Metals v0.10.7 - Tungsten</id>
