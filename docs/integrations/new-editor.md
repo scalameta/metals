@@ -504,6 +504,22 @@ that is declared in `.scalafmt.conf`.
   a message in the status bar via `metals/status` and detailed download progress
   information is logged to `.metals/metals.log`.
 
+### `textDocument/hover`
+
+Returns `Hover` for specified text document and position - [lsp spec](https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover).
+
+Metals also support an extended version of this method that supports hover for selection range.
+The extended stucture of request params is the following:
+```ts
+interface HoverExtParams {
+  textDocument: TextDocumentIdentifier;
+  /** Either `position` or `range` should be specified */
+  position?: Position;
+  range?: Range;
+}
+```
+
+
 ### `workspace/didChangeWatchedFiles`
 
 Optional. Metals uses a built-in file watcher for critical functionality such as
@@ -979,3 +995,57 @@ interface MetalsOpenWindowParams {
   openNewWindow: boolean;
 }
 ```
+
+### `metals/findTextInDependencyJars`
+
+The `FindTextInDependencyJars` request is sent from the client to the server to perform a search though files in the classpath
+including binary and sources jars. In response it returns a standard list of `Location` from the [LSP spec](https://microsoft.github.io/language-server-protocol/specification#location).
+
+In case if this enpoint was called with empty `query.pattern` or empty `options.include` server sends [`metals/inputBox`](https://scalameta.org/metals/docs/integrations/new-editor#metalsinputbox)
+request to the client to obtain these values.
+
+_Request_:
+
+- method: `metals/findTextInDependecyJars`
+- params: `FindTextInDependencyJarsRequest` defined as follows.
+
+```ts
+/**
+ * Currenly, only `pattern` field is used for search.
+ * See: https://github.com/scalameta/metals/issues/3234
+ */ 
+interface TextSearchQuery {
+    /**
+		 * The text pattern to search for.
+		 */
+    pattern?: string;
+    /**
+		 * Whether or not `pattern` should be interpreted as a regular expression.
+		 */
+    isRegExp?: boolean;
+    /**
+		 * Whether or not the search should be case-sensitive.
+		 */
+    isCaseSensitive?: boolean;
+    /**
+		 * Whether or not to search for whole word matches only.
+		 */
+    isWordMatch?: boolean;
+}
+
+interface FindTextInFilesOptions {
+    /** Include file filter. Example: `*.conf` */
+    include?: string;
+    /** Exclude file filter. Example: `*.conf` */
+    exclude?: string;
+}
+
+interface FindTextInDependencyJarsRequest(
+    options?: FindTextInFilesOptions;
+    query: TextSearchQuery
+)
+```
+
+_Response_:
+
+- result: `Location[]`

@@ -81,6 +81,14 @@ functionality.
     <td align="center">✅</td>
   </tr>
   <tr>
+    <td>Hover for selection</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">❌</td>
+    <td align="center">❌</td>
+    <td align="center">❌</td>
+  </tr>
+  <tr>
     <td>Parameter hints</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -199,6 +207,22 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">Shown in hover</td>
+  </tr>
+  <tr>
+     <td>Source file analyzer</td>
+     <td align="center">✅</td>
+     <td align="center">✅</td>
+     <td align="center">❌</td>
+     <td align="center">❌</td>
+     <td align="center">❌</td>
+  </tr>
+  <tr>
+     <td>Find text in dependency JAR files</td>
+     <td align="center">✅</td>
+     <td align="center">✅</td>
+     <td align="center">❌</td>
+     <td align="center">❌</td>
+     <td align="center">❌</td>
   </tr>
 </tbody>
 </table>
