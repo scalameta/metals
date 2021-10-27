@@ -5,8 +5,10 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
@@ -28,7 +30,8 @@ class BspConnector(
     client: LanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    shellRunner: ShellRunner
 )(implicit ec: ExecutionContext) {
 
   def resolve(): BspResolvedResult = {
@@ -71,6 +74,10 @@ class BspConnector(
           statusBar
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)
             .map(Some(_))
+        case ResolvedBspOne(details) if details.getName == "bazelbsp" =>
+          BazelBuildTool
+            .writeBazelConfig(shellRunner, workspace)
+            .flatMap(_ => bspServers.newServer(workspace, details).map(Some(_)))
         case ResolvedBspOne(details) =>
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedMultiple(_, availableServers) =>

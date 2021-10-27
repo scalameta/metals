@@ -16,7 +16,7 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.MessageActionItem
 
 /**
- * Runs a process to create a .bsp entry for a givev buildtool.
+ * Runs a process to create a .bsp entry for a given buildtool.
  */
 final class BspConfigGenerator(
     workspace: AbsolutePath,

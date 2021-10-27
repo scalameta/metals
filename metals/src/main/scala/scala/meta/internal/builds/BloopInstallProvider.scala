@@ -7,11 +7,14 @@ import scala.meta.io.AbsolutePath
 /**
  * Helper trait for build tools that have a Bloop plugin
  */
-trait BloopInstallProvider { this: BuildTool =>
+trait BloopInstallProvider extends BuildTool { this: BuildTool =>
 
   /**
-   * Method used to generate the necesary .bloop files for the
-   * build tool.
+   * Export the build to Bloop
+   *
+   * This operation should be roughly equivalent to running `sbt bloopInstall`
+   * and should work for both updating an existing Bloop build or creating a new
+   * Bloop build.
    */
   def bloopInstall(
       workspace: AbsolutePath,

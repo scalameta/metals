@@ -34,7 +34,7 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(
-      buildTool: BuildTool
+      buildTool: BloopInstallProvider
   ): Future[WorkspaceLoadedStatus] = {
     buildTool.bloopInstall(
       workspace,
@@ -54,7 +54,7 @@ final class BloopInstall(
   }
 
   private def runArgumentsUnconditionally(
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       args: List[String]
   ): Future[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
@@ -104,7 +104,7 @@ final class BloopInstall(
   // notifications. This method is synchronized to prevent asking the user
   // twice whether to import the build.
   def runIfApproved(
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       digest: String
   ): Future[WorkspaceLoadedStatus] =
     synchronized {
@@ -135,7 +135,7 @@ final class BloopInstall(
 
   private def persistChecksumStatus(
       status: Status,
-      buildTool: BuildTool
+      buildTool: BloopInstallProvider
   ): Unit = {
     buildTool.digest(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -144,7 +144,7 @@ final class BloopInstall(
 
   private def requestImport(
       buildTools: BuildTools,
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       languageClient: MetalsLanguageClient,
       digest: String
   )(implicit ec: ExecutionContext): Future[Confirmation] = {

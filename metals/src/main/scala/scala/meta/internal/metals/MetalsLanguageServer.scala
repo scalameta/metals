@@ -34,6 +34,7 @@ import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BloopInstall
+import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
@@ -469,7 +470,8 @@ class MetalsLanguageServer(
           languageClient,
           tables,
           () => userConfig,
-          statusBar
+          statusBar,
+          shellRunner
         )
         semanticdbs = AggregateSemanticdbs(
           List(
@@ -2005,13 +2007,12 @@ class MetalsLanguageServer(
         }
         Future(None)
       }
-      case buildTool :: Nil => Future(isCompatibleVersion(buildTool))
+      case buildTool :: Nil =>
+        Future(isCompatibleVersion(buildTool))
       case buildTools =>
         for {
-          Some(buildTool) <- buildToolSelector.checkForChosenBuildTool(
-            buildTools
-          )
-        } yield isCompatibleVersion(buildTool)
+          buildTool <- buildToolSelector.checkForChosenBuildTool(buildTools)
+        } yield buildTool.flatMap(isCompatibleVersion)
     }
   }
 
@@ -2021,17 +2022,23 @@ class MetalsLanguageServer(
     for {
       possibleBuildTool <- supportedBuildTool
       chosenBuildServer = tables.buildServers.selectedServer()
-      isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
-        _ == BspConnector.BLOOP_SELECTED
+      isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.contains(
+        BspConnector.BLOOP_SELECTED
       )
       buildChange <- possibleBuildTool match {
+        case Some(buildTool: BloopInstallProvider) if isBloopOrEmpty =>
+          buildTool.digest(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping build import, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) =>
+              slowConnectToBloopServer(forceImport, buildTool, digest)
+          }
         case Some(buildTool) =>
           buildTool.digest(workspace) match {
             case None =>
               scribe.warn(s"Skipping build import, no checksum.")
               Future.successful(BuildChange.None)
-            case Some(digest) if isBloopOrEmpty =>
-              slowConnectToBloopServer(forceImport, buildTool, digest)
             case Some(digest) =>
               reloadWorkspaceAndIndex(forceImport, buildTool, digest)
           }
@@ -2043,7 +2050,7 @@ class MetalsLanguageServer(
 
   private def slowConnectToBloopServer(
       forceImport: Boolean,
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       checksum: String
   ): Future[BuildChange] =
     for {

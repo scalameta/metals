@@ -4,25 +4,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
-import scala.concurrent.Future
-
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 trait BuildTool {
-
-  /**
-   * Export the build to Bloop
-   *
-   * This operation should be roughly equivalent to running `sbt bloopInstall`
-   * and should work for both updating an existing Bloop build or creating a new
-   * Bloop build.
-   */
-  def bloopInstall(
-      workspace: AbsolutePath,
-      languageClient: MetalsLanguageClient,
-      systemProcess: List[String] => Future[WorkspaceLoadedStatus]
-  ): Future[WorkspaceLoadedStatus]
 
   def digest(workspace: AbsolutePath): Option[String]
 
