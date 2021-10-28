@@ -216,7 +216,7 @@ class NewFileProvider(
   private def openFile(path: AbsolutePath, cursorRange: Range): Unit = {
     val location = new Location(path.toURI.toString(), cursorRange)
     client.metalsExecuteClientCommand(
-      ClientCommands.GotoLocation.toExecuteCommandParams(location)
+      ClientCommands.GotoLocation.toExecuteCommandParams(location, false)
     )
   }
 

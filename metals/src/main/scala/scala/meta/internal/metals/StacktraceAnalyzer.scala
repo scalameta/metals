@@ -125,7 +125,7 @@ class StacktraceAnalyzer(
   ): l.ExecuteCommandParams = {
     ClientCommands.GotoLocation.toExecuteCommandParams(
       location,
-      otherWindow = true
+      true
     )
   }
 

@@ -1679,7 +1679,7 @@ class MetalsLanguageServer(
           languageClient.metalsExecuteClientCommand(
             ClientCommands.GotoLocation.toExecuteCommandParams(
               location,
-              otherWindow = true
+              true
             )
           )
         }.asJavaObject
@@ -1693,7 +1693,10 @@ class MetalsLanguageServer(
               .headOption
           } {
             languageClient.metalsExecuteClientCommand(
-              ClientCommands.GotoLocation.toExecuteCommandParams(location)
+              ClientCommands.GotoLocation.toExecuteCommandParams(
+                location,
+                false
+              )
             )
           }
         }.asJavaObject
@@ -1707,7 +1710,7 @@ class MetalsLanguageServer(
             new l.Range(pos, pos)
           )
           languageClient.metalsExecuteClientCommand(
-            ClientCommands.GotoLocation.toExecuteCommandParams(location)
+            ClientCommands.GotoLocation.toExecuteCommandParams(location, false)
           )
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
@@ -1830,7 +1833,8 @@ class MetalsLanguageServer(
           } yield {
             result.goToLocation.foreach { location =>
               languageClient.metalsExecuteClientCommand(
-                ClientCommands.GotoLocation.toExecuteCommandParams(location)
+                ClientCommands.GotoLocation
+                  .toExecuteCommandParams(location, false)
               )
             }
           }

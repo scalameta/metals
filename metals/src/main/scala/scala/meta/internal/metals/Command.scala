@@ -92,6 +92,52 @@ case class ParametrizedCommand[T: ClassTag](
   }
 }
 
+case class ParametrizedCommand2[T1: ClassTag, T2: ClassTag](
+    id: String,
+    title: String,
+    description: String,
+    arguments: String
+) extends BaseCommand {
+
+  private val parser1 = new JsonParser.Of[T1]
+  private val parser2 = new JsonParser.Of[T2]
+
+  def unapply(params: l.ExecuteCommandParams): Option[(T1, T2)] = {
+    val args = Option(params.getArguments()).toList.flatMap(_.asScala)
+    if (args.size != 2 || !isApplicableCommand(params)) None
+    else {
+      (args(0), args(1)) match {
+        case (parser1.Jsonized(t1), parser2.Jsonized(t2)) =>
+          Option((t1, t2))
+        case _ => None
+      }
+    }
+  }
+
+  def toLSP(argument1: T1, argument2: T2): l.Command =
+    new l.Command(
+      title,
+      id,
+      List(
+        argument1.toJson.asInstanceOf[AnyRef],
+        argument2.toJson.asInstanceOf[AnyRef]
+      ).asJava
+    )
+
+  def toExecuteCommandParams(
+      argument1: T1,
+      argument2: T2
+  ): l.ExecuteCommandParams = {
+    new l.ExecuteCommandParams(
+      id,
+      List[Object](
+        argument1.toJson,
+        argument2.toJson
+      ).asJava
+    )
+  }
+}
+
 case class ListParametrizedCommand[T: ClassTag](
     id: String,
     title: String,

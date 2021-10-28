@@ -2,9 +2,6 @@ package scala.meta.internal.metals
 
 import java.net.URI
 
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
-
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.{lsp4j => l}
 
@@ -162,7 +159,7 @@ object ClientCommands {
   )
 
   object GotoLocation
-      extends ParametrizedCommand[l.Location](
+      extends ParametrizedCommand2[l.Location, Boolean](
         "metals-goto-location",
         "Goto location",
         "Move the cursor focus to the provided location",
@@ -183,20 +180,7 @@ object ClientCommands {
            |]
            |```
            |""".stripMargin
-      ) {
-    def toExecuteCommandParams(
-        argument: l.Location,
-        otherWindow: Boolean
-    ): l.ExecuteCommandParams = {
-      new l.ExecuteCommandParams(
-        id,
-        List[Object](
-          argument.toJson,
-          otherWindow: java.lang.Boolean
-        ).asJava
       )
-    }
-  }
 
   val OpenFolder = new ParametrizedCommand[MetalsOpenWindowParams](
     "metals-open-folder",
@@ -232,15 +216,6 @@ object ClientCommands {
     s"""|Show the stacktrace modified with links to specific files.
         |""".stripMargin,
     "[string], the markdown representation of the stacktrace"
-  )
-
-  val ShowTasty = new ParametrizedCommand[DecoderResponse](
-    "metals-show-tasty",
-    "Show Tasty Scala 3 file in a human readable format",
-    s"""|Show Tasty Scala 3 file in a human readable format either as Json or HTML 
-        |depending on the editor capabilities.
-        |""".stripMargin,
-    "[string], html or json representation of the tasty file"
   )
 
   def all: List[BaseCommand] =
