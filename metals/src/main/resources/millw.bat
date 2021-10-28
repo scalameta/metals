@@ -5,6 +5,7 @@ rem You can give the required mill version with --mill-version parameter
 rem If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 rem
 rem Project page: https://github.com/lefou/millw
+rem Script Version: 0.3.8
 rem
 rem If you want to improve this script, please also contribute your changes back!
 rem
@@ -14,7 +15,7 @@ rem setlocal seems to be unavailable on Windows 95/98/ME
 rem but I don't think we need to support them in 2019
 setlocal enabledelayedexpansion
 
-set "DEFAULT_MILL_VERSION=0.9.5"
+set "DEFAULT_MILL_VERSION=0.9.9"
 
 set "MILL_REPO_URL=https://github.com/com-lihaoyi/mill"
 
@@ -25,9 +26,9 @@ if [%~1%]==[--mill-version] (
         set MILL_VERSION=%~2%
         set "STRIP_VERSION_PARAMS=true"
     ) else (
-        echo You specified --mill-version without a version.
-        echo Please provide a version that matches one provided on
-        echo %MILL_REPO_URL%/releases
+        echo You specified --mill-version without a version. 1>&2
+        echo Please provide a version that matches one provided on 1>&2
+        echo %MILL_REPO_URL%/releases 1>&2
         exit /b 1
     )
 )
@@ -57,16 +58,21 @@ if not exist "%MILL%" (
     if [!VERSION_PREFIX!]==[0.4.] set DOWNLOAD_SUFFIX=
     set VERSION_PREFIX=
 
-    for /F "delims=-" %%A in ("!MILL_VERSION!") do (
-        set MILL_BASE_VERSION=%%A
+    for /F "delims=- tokens=1" %%A in ("!MILL_VERSION!") do set MILL_VERSION_BASE=%%A
+    for /F "delims=- tokens=2" %%A in ("!MILL_VERSION!") do set MILL_VERSION_MILESTONE=%%A
+	set VERSION_MILESTONE_START=!MILL_VERSION_MILESTONE:~0,1!
+    if [!VERSION_MILESTONE_START!]==[M] (
+        set MILL_VERSION_TAG="!MILL_VERSION_BASE!-!MILL_VERSION_MILESTONE!"
+    ) else (
+        set MILL_VERSION_TAG=!MILL_VERSION_BASE!
     )
 
     rem there seems to be no way to generate a unique temporary file path (on native Windows)
     set DOWNLOAD_FILE=%MILL%.tmp
 
-    set DOWNLOAD_URL=%MILL_REPO_URL%/releases/download/!MILL_BASE_VERSION!/!MILL_VERSION!!DOWNLOAD_SUFFIX!
+    set DOWNLOAD_URL=%MILL_REPO_URL%/releases/download/!MILL_VERSION_TAG!/!MILL_VERSION!!DOWNLOAD_SUFFIX!
 
-    echo Downloading mill %MILL_VERSION% from %MILL_REPO_URL%/releases ...
+    echo Downloading mill %MILL_VERSION% from %MILL_REPO_URL%/releases ... 1>&2
 
     if not exist "%MILL_DOWNLOAD_PATH%" mkdir "%MILL_DOWNLOAD_PATH%"
     rem curl is bundled with recent Windows 10
@@ -81,7 +87,7 @@ if not exist "%MILL%" (
         bitsadmin /transfer millDownloadJob /dynamic /priority foreground "!DOWNLOAD_URL!" "!DOWNLOAD_FILE!"
     )
     if not exist "!DOWNLOAD_FILE!" (
-        echo Could not download mill %MILL_VERSION%
+        echo Could not download mill %MILL_VERSION% 1>&2
         exit /b 1
     )
 

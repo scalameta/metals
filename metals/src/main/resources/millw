@@ -5,13 +5,14 @@
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
 # Project page: https://github.com/lefou/millw
+# Script Version: 0.3.8
 #
 # If you want to improve this script, please also contribute your changes back!
 #
 # Licensed under the Apache License, Version 2.0
 
 
-DEFAULT_MILL_VERSION=0.9.5
+DEFAULT_MILL_VERSION=0.9.9
 
 set -e
 
@@ -24,9 +25,9 @@ if [ "x$1" = "x--mill-version" ] ; then
     MILL_VERSION="$1"
     shift
   else
-    echo "You specified --mill-version without a version."
-    echo "Please provide a version that matches one provided on"
-    echo "${MILL_REPO_URL}/releases"
+    echo "You specified --mill-version without a version." 1>&2
+    echo "Please provide a version that matches one provided on" 1>&2
+    echo "${MILL_REPO_URL}/releases" 1>&2
     false
   fi
 fi
@@ -50,11 +51,20 @@ fi
 # If not already set, try to fetch newest from Github
 if [ "x${MILL_VERSION}" = "x" ] ; then
   # TODO: try to load latest version from release page
-  echo "No mill version specified."
-  echo "You should provide a version via '.mill-version' file or --mill-version option."
+  echo "No mill version specified." 1>&2
+  echo "You should provide a version via '.mill-version' file or --mill-version option." 1>&2
 
   mkdir -p "${MILL_DOWNLOAD_PATH}"
-  LANG=C touch -d '1 hour ago' "${MILL_DOWNLOAD_PATH}/.expire_latest"
+  LANG=C touch -d '1 hour ago' "${MILL_DOWNLOAD_PATH}/.expire_latest" 2>/dev/null || (
+    # we might be on OSX or BSD which don't have -d option for touch
+    # but probably a -A [-][[hh]mm]SS
+    touch "${MILL_DOWNLOAD_PATH}/.expire_latest"; touch -A -010000 "${MILL_DOWNLOAD_PATH}/.expire_latest"
+  ) || (
+    # in case we still failed, we retry the first touch command with the intention
+    # to show the (previously suppressed) error message
+    LANG=C touch -d '1 hour ago' "${MILL_DOWNLOAD_PATH}/.expire_latest"
+  )
+  
   if [ "${MILL_DOWNLOAD_PATH}/.latest" -nt "${MILL_DOWNLOAD_PATH}/.expire_latest" ] ; then
     # we know a current latest version
     MILL_VERSION="$(head -n 1 ${MILL_DOWNLOAD_PATH}/.latest 2> /dev/null)"
@@ -62,7 +72,7 @@ if [ "x${MILL_VERSION}" = "x" ] ; then
 
   if [ "x${MILL_VERSION}" = "x" ] ; then
     # we don't know a current latest version
-    echo "Retrieving latest mill version ..."
+    echo "Retrieving latest mill version ..." 1>&2
     LANG=C curl -s -i -f -I ${MILL_REPO_URL}/releases/latest 2> /dev/null  | grep --ignore-case Location: | sed s'/^.*tag\///' | tr -d '\r\n' > "${MILL_DOWNLOAD_PATH}/.latest" 
     MILL_VERSION="$(head -n 1 ${MILL_DOWNLOAD_PATH}/.latest 2> /dev/null)"
   fi
@@ -70,9 +80,9 @@ if [ "x${MILL_VERSION}" = "x" ] ; then
   if [ "x${MILL_VERSION}" = "x" ] ; then
     # Last resort
     MILL_VERSION="${DEFAULT_MILL_VERSION}"
-    echo "Falling back to hardcoded mill version ${MILL_VERSION}"
+    echo "Falling back to hardcoded mill version ${MILL_VERSION}" 1>&2
   else
-    echo "Using mill version ${MILL_VERSION}"
+    echo "Using mill version ${MILL_VERSION}" 1>&2
   fi
 fi
 
@@ -98,10 +108,11 @@ if [ ! -s "${MILL}" ] ; then
     esac
     unset VERSION_PREFIX
 
-    DOWNLOAD_FILE=$(mktemp mill.XXXX)
+    DOWNLOAD_FILE=$(mktemp mill.XXXXXX)
     # TODO: handle command not found
-    echo "Downloading mill ${MILL_VERSION} from ${MILL_REPO_URL}/releases ..."
-    curl -L -o "${DOWNLOAD_FILE}" "${MILL_REPO_URL}/releases/download/${MILL_VERSION%%-*}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
+    echo "Downloading mill ${MILL_VERSION} from ${MILL_REPO_URL}/releases ..." 1>&2
+    MILL_VERSION_TAG=$(echo $MILL_VERSION | sed 's/\([^-]+\)\(-M[0-9]+\)?\(-.*\)?/\1\2/')
+    curl -L -o "${DOWNLOAD_FILE}" "${MILL_REPO_URL}/releases/download/${MILL_VERSION_TAG}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
     chmod +x "${DOWNLOAD_FILE}"
     mkdir -p "${MILL_DOWNLOAD_PATH}"
     mv "${DOWNLOAD_FILE}" "${MILL}"
@@ -115,6 +126,7 @@ unset MILL_DOWNLOAD_PATH
 unset MILL_OLD_DOWNLOAD_PATH
 unset OLD_MILL
 unset MILL_VERSION
+unset MILL_VERSION_TAG
 unset MILL_REPO_URL
 
 exec $MILL "$@"
