@@ -34,11 +34,9 @@ class InsertInferredType(trees: Trees, compilers: Compilers)
       val range = params.getRange().getStart()
       codeAction.setCommand(
         ServerCommands.InsertInferredType.toLSP(
-          List(
-            new l.TextDocumentPositionParams(
-              params.getTextDocument(),
-              range
-            )
+          new l.TextDocumentPositionParams(
+            params.getTextDocument(),
+            range
           )
         )
       )

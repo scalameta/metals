@@ -87,13 +87,11 @@ class StacktraceAnalyzer(
       location: l.Location,
       range: l.Range
   ): l.CodeLens = {
+    val command = ServerCommands.GotoPosition.toLSP(location)
+    command.setTitle(s"${icons.findsuper} open")
     new l.CodeLens(
       range,
-      new l.Command(
-        s"${icons.findsuper} open",
-        ServerCommands.GotoPosition.id,
-        List[Object](location: Object).asJava
-      ),
+      command,
       null
     )
   }
@@ -125,9 +123,9 @@ class StacktraceAnalyzer(
   private def makeGotoCommandParams(
       location: Location
   ): l.ExecuteCommandParams = {
-    new l.ExecuteCommandParams(
-      ClientCommands.GotoLocation.id,
-      List[Object](location, java.lang.Boolean.TRUE).asJava
+    ClientCommands.GotoLocation.toExecuteCommandParams(
+      location,
+      true
     )
   }
 
@@ -178,10 +176,8 @@ class StacktraceAnalyzer(
       .element("h3")(_.text(s"Stacktrace"))
       .call(htmlStack)
       .render
-    new l.ExecuteCommandParams(
-      "metals-show-stacktrace",
-      List[Object](output).asJava
-    )
+
+    ClientCommands.ShowStacktrace.toExecuteCommandParams(output)
   }
 
   private def gotoLocationUsingUri(uri: String, line: Int): String = {

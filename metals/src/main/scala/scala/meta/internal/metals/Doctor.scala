@@ -18,8 +18,6 @@ import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.ExecuteCommandParams
-
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
  *
@@ -96,7 +94,7 @@ final class Doctor(
   }
 
   private def executeDoctor(
-      clientCommand: BaseCommand,
+      clientCommand: ParametrizedCommand[String],
       onServer: MetalsHttpServer => Unit
   ): Unit = {
     if (
@@ -106,10 +104,7 @@ final class Doctor(
         case DoctorFormat.Json => buildTargetsJson()
         case DoctorFormat.Html => buildTargetsHtml()
       }
-      val params = new ExecuteCommandParams(
-        clientCommand.id,
-        List(output: AnyRef).asJava
-      )
+      val params = clientCommand.toExecuteCommandParams(output)
       languageClient.metalsExecuteClientCommand(params)
     } else {
       httpServer() match {

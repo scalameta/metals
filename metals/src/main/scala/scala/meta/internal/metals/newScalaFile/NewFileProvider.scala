@@ -18,7 +18,6 @@ import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.pc.Identifier
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Range
@@ -215,13 +214,9 @@ class NewFileProvider(
   }
 
   private def openFile(path: AbsolutePath, cursorRange: Range): Unit = {
+    val location = new Location(path.toURI.toString(), cursorRange)
     client.metalsExecuteClientCommand(
-      new ExecuteCommandParams(
-        ClientCommands.GotoLocation.id,
-        List(
-          new Location(path.toURI.toString(), cursorRange): Object
-        ).asJava
-      )
+      ClientCommands.GotoLocation.toExecuteCommandParams(location, false)
     )
   }
 

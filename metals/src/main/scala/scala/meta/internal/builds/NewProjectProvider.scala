@@ -10,7 +10,6 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsInputBoxParams
@@ -23,7 +22,6 @@ import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 import coursierapi._
-import org.eclipse.lsp4j.ExecuteCommandParams
 
 class NewProjectProvider(
     client: MetalsLanguageClient,
@@ -132,12 +130,7 @@ class NewProjectProvider(
         projectPath.toURI.toString(),
         new java.lang.Boolean(newWindow)
       )
-      val command = new ExecuteCommandParams(
-        ClientCommands.OpenFolder.id,
-        List[Object](
-          params.toJsonObject
-        ).asJava
-      )
+      val command = ClientCommands.OpenFolder.toExecuteCommandParams(params)
       client.metalsExecuteClientCommand(command)
     }
 

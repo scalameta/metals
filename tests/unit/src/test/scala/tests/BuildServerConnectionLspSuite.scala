@@ -25,7 +25,7 @@ class BuildServerConnectionLspSuite
       _ = assertNoDiagnostics()
       _ = server.server.bspSession.get.cancel()
       _ = assertNoDiagnostics()
-      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
         _.replace("val n = 42", "val n: String = 42")
       )

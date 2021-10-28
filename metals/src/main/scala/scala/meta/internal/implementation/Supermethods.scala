@@ -29,7 +29,7 @@ class Supermethods(
       commandParams: TextDocumentPositionParams
   ): Option[ExecuteCommandParams] = {
     getGoToSuperMethodLocation(commandParams)
-      .map(makeCommandParams)
+      .map(ClientCommands.GotoLocation.toExecuteCommandParams(_, false))
   }
 
   def jumpToSelectedSuperMethod(
@@ -42,7 +42,7 @@ class Supermethods(
       askUserToSelectSuperMethod(methodSymbols)
         .map(
           _.flatMap(findDefinitionLocation(_, path))
-            .map(makeCommandParams)
+            .map(ClientCommands.GotoLocation.toExecuteCommandParams(_, false))
             .foreach(client.metalsExecuteClientCommand)
         )
     }
@@ -139,12 +139,6 @@ class Supermethods(
     definitionProvider.fromSymbol(symbol, Some(source)).asScala.headOption
   }
 
-  private def makeCommandParams(location: Location): ExecuteCommandParams = {
-    new ExecuteCommandParams(
-      ClientCommands.GotoLocation.id,
-      List[Object](location).asJava
-    )
-  }
 }
 
 object Supermethods {

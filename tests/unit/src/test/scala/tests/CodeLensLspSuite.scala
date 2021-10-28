@@ -203,34 +203,34 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
       |}
       |
       |trait Tywin extends Lannister{
-      |<< payTheirDebts goto[gameofthrones/Lannister#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Lannister#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Jamie extends Tywin {
-      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Tywin#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Tyrion extends Tywin {
-      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Tywin#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |
       |trait Cersei extends Tywin {
-      |<< payTheirDebts goto[gameofthrones/Tywin#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Tywin#payTheirDebts()."]>>
       |override def payTheirDebts = false
-      |<< trueLannister goto[gameofthrones/Lannister#trueLannister().]>>
+      |<< trueLannister goto["gameofthrones/Lannister#trueLannister()."]>>
       |override def trueLannister = false
       |}
       |
       |class Joffrey extends Lannister with Jamie with Cersei {
-      |<< payTheirDebts goto[gameofthrones/Cersei#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Cersei#payTheirDebts()."]>>
       |override def payTheirDebts = false
       |}
       |
       |class Tommen extends Lannister with Cersei with Jamie {
-      |<< payTheirDebts goto[gameofthrones/Jamie#payTheirDebts().]>>
+      |<< payTheirDebts goto["gameofthrones/Jamie#payTheirDebts()."]>>
       |override def payTheirDebts = true
       |}
       |""".stripMargin
@@ -243,7 +243,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |  def main = {
         |    class A { def afx(): Unit = ??? } 
         |    val t = new A {
-        |<< afx goto-position[${workspace.toURI}a/src/main/scala/a/Foo.scala:4:18]>>
+        |<< afx goto-position[{"uri":"${workspace.toURI}a/src/main/scala/a/Foo.scala","range":{"start":{"line":4,"character":18},"end":{"line":4,"character":21}}}]>>
         |    override def afx(): Unit = ???
         |    }
         |  }

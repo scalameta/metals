@@ -4,6 +4,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -56,7 +57,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       // via Ammonite-generated Semantic DB
       _ <- assertDefinitionAtLocation(
@@ -109,7 +110,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
     } yield {
       assertNoDiff(
         client.workspaceErrorShowMessages,
@@ -149,7 +150,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       expectedHoverRes = """```scala
                            |val foo: Foo
@@ -226,7 +227,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- server.didOpen("b/otherScript.sc")
       _ <- server.didOpen("b/others/Script.sc")
       _ <- server.didOpen("b/notThis.sc")
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       _ <- server.didSave("b/otherMain.sc")(identity)
       _ <- server.didSave("b/other.sc")(identity)
       _ <- server.didSave("b/otherScript.sc")(identity)
@@ -265,7 +266,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("foo.sc")
       _ <- server.didOpen("foos/Script.sc")
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       _ <- server.didSave("foo.sc")(identity)
       _ <- server.didSave("foos/Script.sc")(identity)
 
@@ -309,7 +310,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       expectedCompletionList = """noSpaces: String
                                  |noSpacesSortKeys: String""".stripMargin
@@ -343,7 +344,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       completionList <- server.completion("main.sc", "test.a@@")
       _ = assert(completionList.startsWith("aaa: Int\n"))
       completionList <- server.completion("main.sc", "Other.name@@")
@@ -390,7 +391,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       diagnostics = server.client.pathDiagnostics("main.sc")
       _ = assertNoDiff(diagnostics, expectedDiagnostics)
@@ -440,7 +441,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.didSave("main.sc")(identity)
-      _ <- server.executeCommand("ammonite-start")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       // via Ammonite-generated Semantic DB
       _ <- assertDefinitionAtLocation(

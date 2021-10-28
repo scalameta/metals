@@ -101,7 +101,7 @@ object SbtServerInitializer extends BuildServerInitializer {
       _ <- server.initialized()
       // choose sbt as the Bsp Server
       _ = client.selectBspServer = { _ => new MessageActionItem("sbt") }
-      _ <- server.executeCommand(ServerCommands.BspSwitch.id)
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()

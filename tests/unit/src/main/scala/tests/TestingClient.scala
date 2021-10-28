@@ -32,7 +32,6 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeAction
-import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -418,16 +417,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       .mkString("----\n")
   }
 
-  private def executeServerCommand(
-      command: Command,
-      server: TestingServer
-  ): Future[Any] = {
-    server.executeCommand(
-      command.getCommand(),
-      command.getArguments().asScala: _*
-    )
-  }
-
   def applyCodeAction(
       selectedActionIndex: Int,
       codeActions: List[CodeAction],
@@ -446,7 +435,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         applyWorkspaceEdit(edit)
       }
       if (command != null) {
-        executeServerCommand(command, server)
+        server.executeCommandUnsafe(
+          command.getCommand(),
+          command.getArguments().asScala
+        )
       } else Future.unit
 
     } else Future.unit

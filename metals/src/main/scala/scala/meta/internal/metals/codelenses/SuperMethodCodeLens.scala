@@ -1,7 +1,5 @@
 package scala.meta.internal.metals.codelenses
 
-import java.util.Collections.singletonList
-
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.TextDocumentWithPath
@@ -89,19 +87,16 @@ final class SuperMethodCodeLens(
               `symbol`,
               SymbolOccurrence.Role.DEFINITION
             ) =>
-          new l.Command(
-            s"${clientConfig.icons.findsuper} ${name}",
-            ServerCommands.GotoPosition.id,
-            singletonList(new l.Location(path.toURI.toString(), range.toLSP))
-          )
+          val location = new l.Location(path.toURI.toString(), range.toLSP)
+          val command = ServerCommands.GotoPosition.toLSP(location)
+          command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+          command
       }
     else
       Some {
-        new l.Command(
-          s"${clientConfig.icons.findsuper} ${name}",
-          ServerCommands.GotoSymbol.id,
-          singletonList(symbol)
-        )
+        val command = ServerCommands.GotoSymbol.toLSP(symbol)
+        command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+        command
       }
   }
 
