@@ -19,6 +19,11 @@ object NewFileTypes {
     override val label: String = "Case Class"
   }
 
+  case object Enum extends NewFileType {
+    override val id: String = "enum"
+    override val label: String = "Enum"
+  }
+
   case object Object extends NewFileType {
     override val id: String = "object"
     override val label: String = "Object"
@@ -48,6 +53,7 @@ object NewFileTypes {
     id match {
       case Class.id => Some(Class)
       case CaseClass.id => Some(CaseClass)
+      case Enum.id => Some(Enum)
       case Object.id => Some(Object)
       case Trait.id => Some(Trait)
       case PackageObject.id => Some(PackageObject)

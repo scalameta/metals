@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
@@ -326,6 +327,20 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedException = List(classOf[FileAlreadyExistsException])
   )
 
+  check("scala3-enum")(
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(Enum),
+    fileName = Right("Color"),
+    expectedFilePath = "a/src/main/scala/foo/Color.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |enum Color {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3)
+  )
+
   private lazy val indent = "  "
 
   type ProvidedFileType = NewFileType
@@ -340,9 +355,11 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedFilePath: String,
       expectedContent: String,
       existingFiles: String = "",
-      expectedException: List[Class[_]] = Nil
+      expectedException: List[Class[_]] = Nil,
+      scalaVersion: Option[String] = None
   ): Unit =
     test(testName) {
+      val localScalaVersion = scalaVersion.getOrElse(V.scala212)
       val directoryUri = directory.fold(null.asInstanceOf[String])(
         workspace.resolve(_).toURI.toString()
       )
@@ -405,7 +422,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
         _ <- initialize(
           s"""/metals.json
              |{
-             |  "a": { }
+             |  "a": { "scalaVersion" : "$localScalaVersion" }
              |}
              |$existingFiles
           """.stripMargin

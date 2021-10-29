@@ -505,7 +505,8 @@ class MetalsLanguageServer(
           workspace,
           languageClient,
           packageProvider,
-          () => focusedDocument
+          () => focusedDocument,
+          scalaVersionSelector
         )
         referencesProvider = new ReferenceProvider(
           workspace,
