@@ -3,6 +3,8 @@ package scala.meta.internal.metals.debug
 import java.net.URI
 import java.nio.file.Paths
 
+import scala.util.Try
+
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Directories
@@ -37,7 +39,8 @@ private[debug] final class SourcePathAdapter(
   }
 
   def toMetalsPath(sourcePath: String): Option[AbsolutePath] = {
-    val sourceUri = URI.create(sourcePath)
+    val sourceUri =
+      Try(URI.create(sourcePath)).getOrElse(Paths.get(sourcePath).toUri())
     sourceUri.getScheme match {
       case "jar" =>
         Option(AbsolutePath(Paths.get(sourceUri)).toFileOnDisk(workspace))
