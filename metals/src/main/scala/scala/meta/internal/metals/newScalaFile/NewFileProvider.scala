@@ -156,6 +156,7 @@ class NewFileProvider(
     )
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
+      case Enum => enumTemplate(kind.id, className)
       case _ => classTemplate(kind.id, className)
     }
     val editText = template.map { s =>
@@ -239,6 +240,14 @@ class NewFileProvider(
     val indent = "  "
     NewFileTemplate(s"""|$kind $name {
                         |$indent@@
+                        |}
+                        |""".stripMargin)
+  }
+
+  private def enumTemplate(kind: String, name: String): NewFileTemplate = {
+    val indent = "  "
+    NewFileTemplate(s"""|$kind $name {
+                        |${indent}case@@
                         |}
                         |""".stripMargin)
   }
