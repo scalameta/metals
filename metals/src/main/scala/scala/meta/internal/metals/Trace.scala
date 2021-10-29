@@ -16,23 +16,29 @@ import dev.dirs.ProjectDirectories
  */
 object Trace {
 
-  /**
-   * Returns a printer to trace JSON messages if the user opts into it.
-   */
-  def setup(protocolName: String): PrintWriter = {
+  def protocolTracePath(
+      protocolName: String,
+      workspace: AbsolutePath = PathIO.workingDirectory
+  ): AbsolutePath = {
+    val traceFilename = s"${protocolName.toLowerCase}.trace.json"
+    globalDirectory.resolve(".metals").resolve(traceFilename)
+  }
+
+  def setup(
+      protocolName: String,
+      workspace: AbsolutePath = PathIO.workingDirectory
+  ): Option[PrintWriter] = {
     MetalsLogger.redirectSystemOut(globalLog)
-    setupTracePrinter(protocolName)
+    setupTracePrinter(protocolName, workspace)
   }
 
   def globalLog: AbsolutePath = globalDirectory.resolve("global.log")
 
-  def protocolTracePath(protocolName: String): AbsolutePath = {
-    val traceFilename = s"${protocolName.toLowerCase}.trace.json"
-    globalDirectory.resolve(traceFilename)
-  }
-
-  def setupTracePrinter(protocolName: String): PrintWriter = {
-    val tracePath = protocolTracePath(protocolName)
+  def setupTracePrinter(
+      protocolName: String,
+      workspace: AbsolutePath
+  ): Option[PrintWriter] = {
+    val tracePath = protocolTracePath(protocolName, workspace)
     val path = tracePath.toString()
     if (tracePath.isFile) {
       scribe.info(s"tracing is enabled: $path")
@@ -41,13 +47,13 @@ object Trace {
         StandardOpenOption.CREATE,
         StandardOpenOption.TRUNCATE_EXISTING // don't append infinitely to existing file
       )
-      new PrintWriter(fos)
+      Some(new PrintWriter(fos))
     } else {
       scribe.info(
         s"tracing is disabled for protocol $protocolName, to enable tracing of incoming " +
           s"and outgoing JSON messages create an empty file at $path"
       )
-      null
+      None
     }
   }
 

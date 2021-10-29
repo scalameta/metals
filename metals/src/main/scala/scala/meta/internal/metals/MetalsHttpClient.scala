@@ -193,11 +193,11 @@ final class MetalsHttpClient(
   // =======
   // Helpers
   // =======
-  private val lspTrace = GlobalTrace.protocolTracePath("LSP")
+  private val lspTrace = Trace.protocolTracePath("LSP")
   private val isLspTraceEnabled = lspTrace.isFile
-  private val bspTrace = GlobalTrace.protocolTracePath("BSP")
+
+  private val bspTrace = Trace.protocolTracePath("BSP")
   private val isBspTraceEnabled = bspTrace.isFile
-  private val globalLog = GlobalTrace.globalLog
 
   private def serverCommands(html: HtmlBuilder): HtmlBuilder = {
     ServerCommands.all.foreach { command =>
@@ -250,11 +250,10 @@ final class MetalsHttpClient(
         )
         .section(
           "Log files",
-          _.element("p")(_.text("Global log: ").path(globalLog))
-            .element("p")(
-              _.text(s"LSP trace (enabled=$isLspTraceEnabled):")
-                .path(lspTrace)
-            )
+          _.element("p")(
+            _.text(s"LSP trace (enabled=$isLspTraceEnabled):")
+              .path(lspTrace)
+          )
             .element("p")(
               _.text(s"BSP trace (enabled=$isBspTraceEnabled):")
                 .path(bspTrace)

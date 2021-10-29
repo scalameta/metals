@@ -280,9 +280,9 @@ object BuildServerConnection {
 
     def setupServer(): Future[LauncherConnection] = {
       connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
-        val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
+        val tracePrinter = Trace.setupTracePrinter("BSP", workspace)
         val launcher = new Launcher.Builder[MetalsBuildServer]()
-          .traceMessages(tracePrinter)
+          .traceMessages(tracePrinter.orNull)
           .setOutput(output)
           .setInput(input)
           .setLocalService(localClient)

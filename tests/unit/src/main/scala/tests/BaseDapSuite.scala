@@ -6,8 +6,8 @@ import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 
-import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
@@ -28,10 +28,8 @@ abstract class BaseDapSuite(
     buildToolLayout: BuildToolLayout
 ) extends BaseLspSuite(suiteName, initializer) {
 
-  private val dapClient =
-    GlobalTrace.protocolTracePath(DebugProtocol.clientName)
-  private val dapServer =
-    GlobalTrace.protocolTracePath(DebugProtocol.serverName)
+  private val dapClient = Trace.protocolTracePath(DebugProtocol.clientName)
+  private val dapServer = Trace.protocolTracePath(DebugProtocol.serverName)
 
   override def beforeEach(context: GenericBeforeEach[Future[Any]]): Unit = {
     super.beforeEach(context)
