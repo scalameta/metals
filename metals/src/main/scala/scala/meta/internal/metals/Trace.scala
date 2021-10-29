@@ -14,7 +14,7 @@ import dev.dirs.ProjectDirectories
 /**
  * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.
  */
-object GlobalTrace {
+object Trace {
 
   /**
    * Returns a printer to trace JSON messages if the user opts into it.
