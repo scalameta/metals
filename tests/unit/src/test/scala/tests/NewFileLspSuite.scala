@@ -335,7 +335,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = s"""|package foo
                           |
                           |enum Color {
-                          |$indent
+                          |${indent}case
                           |}
                           |""".stripMargin,
     scalaVersion = Some(V.scala3)
