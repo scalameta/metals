@@ -10,6 +10,12 @@ class ScalaVersionSelector(
     buildTargets: BuildTargets
 ) {
 
+  def scalaVersionForPath(path: AbsolutePath): String = {
+    buildTargets
+      .scalaVersion(path)
+      .getOrElse(fallbackScalaVersion(path.isAmmoniteScript))
+  }
+
   def fallbackScalaVersion(isAmmonite: Boolean): String = {
     val selected = userConfig().fallbackScalaVersion match {
       case Some(v) => v

@@ -14,6 +14,8 @@ import scala.meta.internal.metals.MetalsInputBoxParams
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.PackageProvider
+import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.pc.Identifier
 import scala.meta.io.AbsolutePath
@@ -26,7 +28,8 @@ class NewFileProvider(
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
-    focusedDocument: () => Option[AbsolutePath]
+    focusedDocument: () => Option[AbsolutePath],
+    selector: ScalaVersionSelector
 )(implicit
     ec: ExecutionContext
 ) {
@@ -50,7 +53,11 @@ class NewFileProvider(
       fileType.flatMap(getFromString) match {
         case Some(ft) => createFile(directory, ft, name)
         case None =>
-          askForKind
+          askForKind(
+            directory.forall(dir =>
+              ScalaVersions.isScala3Version(selector.scalaVersionForPath(dir))
+            )
+          )
             .flatMapOption(createFile(directory, _, name))
       }
     }
@@ -68,7 +75,7 @@ class NewFileProvider(
       name: Option[String]
   ) = {
     fileType match {
-      case kind @ (Class | CaseClass | Object | Trait) =>
+      case kind @ (Class | CaseClass | Object | Trait | Enum) =>
         getName(kind, name)
           .mapOption(
             createClass(directory, _, kind)
@@ -88,19 +95,22 @@ class NewFileProvider(
     }
   }
 
-  private def askForKind: Future[Option[NewFileType]] = {
+  private def askForKind(isScala3: Boolean): Future[Option[NewFileType]] = {
+    val allFileTypes = List(
+      Class.toQuickPickItem,
+      CaseClass.toQuickPickItem,
+      Object.toQuickPickItem,
+      Trait.toQuickPickItem,
+      PackageObject.toQuickPickItem,
+      Worksheet.toQuickPickItem,
+      AmmoniteScript.toQuickPickItem
+    )
+    val withEnum =
+      if (isScala3) allFileTypes :+ Enum.toQuickPickItem else allFileTypes
     client
       .metalsQuickPick(
         MetalsQuickPickParams(
-          List(
-            Class.toQuickPickItem,
-            CaseClass.toQuickPickItem,
-            Object.toQuickPickItem,
-            Trait.toQuickPickItem,
-            PackageObject.toQuickPickItem,
-            Worksheet.toQuickPickItem,
-            AmmoniteScript.toQuickPickItem
-          ).asJava,
+          withEnum.asJava,
           placeHolder = NewScalaFile.selectTheKindOfFileMessage
         )
       )
