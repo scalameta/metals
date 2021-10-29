@@ -38,7 +38,7 @@ yarn install # only the first time, to install the dependencies
 yarn start
 ```
 
-Now visit http://localhost:3000 and you should see a local version of the
+Now visit [localhost:3000](http://localhost:3000) and you should see a local version of the
 website. New changes should trigger a reload in the browser.
 
 ## Adding a new page

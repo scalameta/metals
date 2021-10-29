@@ -232,7 +232,9 @@ output of the debuggee interferes with that.
 This property will make your server run in debug mode on port 5005 without
 waiting for the debugger to connect:
 
-`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y`
+```sh
+-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y
+```
 
 ### Updating sbt-launcher
 
