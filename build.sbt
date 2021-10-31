@@ -204,6 +204,7 @@ lazy val V = new {
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
+  val cfr = "0.151"
   val mdoc = "2.2.24"
   val scalafmt = "3.0.5"
   val munit = "0.7.29"
@@ -435,6 +436,8 @@ lazy val metals = project
       V.dap4j,
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0.0",
+      // for decompiling class files
+      "org.benf" % "cfr" % V.cfr,
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // ==================
@@ -475,6 +478,7 @@ lazy val metals = project
       "sbtBloopVersion" -> V.sbtBloop,
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,
+      "cfrVersion" -> V.cfr,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,

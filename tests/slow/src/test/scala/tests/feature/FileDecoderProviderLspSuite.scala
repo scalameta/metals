@@ -65,6 +65,45 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
   )
 
   check(
+    "cfr",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |class Foo
+        |class Bar
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    Some("foo/bar/example/Foo.class"),
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfr)
+  )
+
+  check(
+    "cfr-toplevel",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |class Foo
+        |class Bar
+        |def foo(): Unit = ()
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    Some("foo/bar/example/Main$package.class"),
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfrToplevel)
+  )
+
+  check(
     "javap",
     s"""|/metals.json
         |{
@@ -543,6 +582,31 @@ object FileDecoderProviderLspSuite {
         |
         |
         | 0 comment bytes:
+        |""".stripMargin
+
+  private val cfr =
+    s"""|/*
+        | * Decompiled with CFR ${V.cfrVersion}.
+        | */
+        |package foo.bar.example;
+        |
+        |public class Foo {
+        |}
+        |""".stripMargin
+
+  private val cfrToplevel =
+    s"""|/*
+        | * Decompiled with CFR ${V.cfrVersion}.
+        | */
+        |package foo.bar.example;
+        |
+        |import foo.bar.example.Main$$package$$;
+        |
+        |public final class Main$$package {
+        |    public static void foo() {
+        |        Main$$package$$.MODULE$$.foo();
+        |    }
+        |}
         |""".stripMargin
 
   private val javap =
