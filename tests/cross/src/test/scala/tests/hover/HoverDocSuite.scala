@@ -12,12 +12,7 @@ class HoverDocSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     // Assert that the docstring is extracted.
-    """|**Expression type**:
-       |```scala
-       |java.util.List[Int]
-       |```
-       |**Symbol signature**:
-       |```scala
+    """|```scala
        |final def emptyList[T](): java.util.List[T]
        |```
        |Returns an empty list (immutable).  This list is serializable.
@@ -30,12 +25,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |""".stripMargin,
     compat = Map(
       "2.13" ->
-        """|**Expression type**:
-           |```scala
-           |java.util.List[Int]
-           |```
-           |**Symbol signature**:
-           |```scala
+        """|```scala
            |final def emptyList[T <: Object](): java.util.List[T]
            |```
            |Returns an empty list (immutable).  This list is serializable.
@@ -46,7 +36,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |List<String> s = Collections.emptyList();
            |```
            |""".stripMargin,
-      "3" -> "def emptyList[T]: java.util.List[T]".hover
+      "3" -> "def emptyList[T]: java.util.List[Int]".hover
     )
   )
 

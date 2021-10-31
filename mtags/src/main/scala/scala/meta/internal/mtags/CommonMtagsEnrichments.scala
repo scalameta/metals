@@ -20,12 +20,16 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
@@ -91,6 +95,27 @@ trait CommonMtagsEnrichments {
         new l.Position(pos.startLine, pos.startColumn),
         new l.Position(pos.endLine, pos.endColumn)
       )
+    }
+  }
+  implicit class XtensionRangeParams(params: RangeParams) {
+
+    def trimWhitespaceInRange: Option[OffsetParams] = {
+      def isWhitespace(i: Int): Boolean =
+        params.text.charAt(i).isWhitespace
+
+      @tailrec
+      def trim(start: Int, end: Int): Option[(Int, Int)] =
+        if (start == end) Some((start, start)).filter(_ => !isWhitespace(start))
+        else if (isWhitespace(start)) trim(start + 1, end)
+        else if (isWhitespace(end - 1)) trim(start, end - 1)
+        else Some((start, end))
+
+      trim(params.offset, params.endOffset()).map { case (start, end) =>
+        if (start == end)
+          CompilerOffsetParams(params.uri, params.text, start, params.token)
+        else
+          CompilerRangeParams(params.uri, params.text, start, end, params.token)
+      }
     }
   }
 

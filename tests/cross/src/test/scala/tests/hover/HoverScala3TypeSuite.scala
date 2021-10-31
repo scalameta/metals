@@ -164,7 +164,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |  <<ap@@ply("test")>>
       |}
       |""".stripMargin,
-    """|def apply[T](a: T)(using Int): T
+    """|def apply[T](a: T)(using Int): String
        |""".stripMargin.hover
   )
 }

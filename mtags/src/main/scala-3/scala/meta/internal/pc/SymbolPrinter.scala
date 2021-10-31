@@ -24,6 +24,19 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
   def typeString(tpw: Type): String =
     toText(tpw).mkString(defaultWidth, false)
 
+  def expressionTypeString(tpw: Type, history: ShortenedNames): String =
+    tpw match
+      case t: PolyType =>
+        expressionTypeString(t.resType, history)
+      case t: MethodType =>
+        expressionTypeString(t.resType, history)
+      case i: ImportType =>
+        expressionTypeString(i.expr.typeOpt, history)
+      case c: ConstantType =>
+        typeString(shortType(c.underlying, history))
+      case _ =>
+        typeString(shortType(tpw, history))
+
   /**
    * for
    * - method: method signature
