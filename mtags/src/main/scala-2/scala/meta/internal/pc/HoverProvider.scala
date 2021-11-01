@@ -1,14 +1,13 @@
 package scala.meta.internal.pc
 
-import java.net.URI
-
 import scala.annotation.tailrec
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.pc.CancelToken
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 
@@ -218,7 +217,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         hover.setRange(range.toLSP)
       }
       Some(hover)
-    } else if (tpe.typeSymbol.isAnonymousClass) None
+    } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
     else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
       Some(
         new Hover(
@@ -327,7 +326,9 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  private def trimWhitespaceInRange(range: RangeParams): Option[RangeParams] = {
+  private def trimWhitespaceInRange(
+      range: RangeParams
+  ): Option[OffsetParams] = {
     def isWhitespace(i: Int): Boolean =
       range.text.charAt(i).isWhitespace
 
@@ -339,13 +340,10 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       else Some((start, end))
 
     trim(range.offset, range.endOffset()).map { case (start, end) =>
-      new RangeParams {
-        override def uri(): URI = params.uri()
-        override def text(): String = params.text()
-        override def token(): CancelToken = params.token()
-        override def offset(): Int = start
-        override def endOffset(): Int = end
-      }
+      if (start == end)
+        CompilerOffsetParams(params.uri, params.text, start, params.token)
+      else
+        CompilerRangeParams(params.uri, params.text, start, end, params.token)
     }
   }
 }

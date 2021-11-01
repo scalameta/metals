@@ -62,6 +62,13 @@ case class CompilerRangeParams(
 
 object CompilerRangeParams extends OffsetParamsUtils {
 
+  def offsetOrRange(pos: Position, token: CancelToken): OffsetParams = {
+    if (pos.start == pos.end)
+      CompilerOffsetParams.fromPos(pos, token)
+    else
+      CompilerRangeParams.fromPos(pos, token)
+  }
+
   def fromPos(pos: Position, token: CancelToken): CompilerRangeParams = {
     val uri = syntaxURI(pos)
     CompilerRangeParams(

@@ -363,7 +363,7 @@ class Compilers(
       token: CancelToken
   ): Future[Option[Hover]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.hover(CompilerRangeParams.fromPos(pos, token))
+      pc.hover(CompilerRangeParams.offsetOrRange(pos, token))
         .asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
