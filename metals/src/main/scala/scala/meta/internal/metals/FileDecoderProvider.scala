@@ -10,6 +10,7 @@ import java.util.Collection
 import java.{util => ju}
 import javax.annotation.Nullable
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -56,11 +57,23 @@ object DecoderResponse {
   def failed(uri: URI, errorMsg: String): DecoderResponse =
     failed(uri.toString(), errorMsg)
 
+  private def getAllMessages(e: Throwable): String = {
+    @tailrec
+    def getAllMessages(e: Throwable, msgs: Vector[String]): Vector[String] = {
+      val cause = e.getCause
+      val newMsgs = msgs :+ e.getMessage
+      if (cause == e || cause == null)
+        newMsgs
+      else
+        getAllMessages(cause, newMsgs)
+    }
+    getAllMessages(e, Vector.empty[String]).mkString(Properties.lineSeparator)
+  }
   def failed(uri: String, e: Throwable): DecoderResponse =
-    failed(uri.toString(), e.getMessage)
+    failed(uri.toString(), getAllMessages(e))
 
   def failed(uri: URI, e: Throwable): DecoderResponse =
-    failed(uri, e.getMessage)
+    failed(uri, getAllMessages(e))
 
   def cancelled(uri: URI): DecoderResponse =
     DecoderResponse(uri.toString(), null, null)
@@ -399,7 +412,8 @@ final class FileDecoderProvider(
   )(path: AbsolutePath): Future[DecoderResponse] = {
     try {
       val args = if (verbose) List("-verbose") else Nil
-      val sb = new StringBuilder()
+      val sbOut = new StringBuilder()
+      val sbErr = new StringBuilder()
       shellRunner
         .run(
           "Decode using javap",
@@ -407,17 +421,25 @@ final class FileDecoderProvider(
             path.filename
           ),
           path.parent,
-          redirectErrorOutput = true,
+          redirectErrorOutput = false,
           Map.empty,
           s => {
-            sb.append(s)
-            sb.append(Properties.lineSeparator)
+            sbOut.append(s)
+            sbOut.append(Properties.lineSeparator)
           },
-          s => (),
+          s => {
+            sbErr.append(s)
+            sbErr.append(Properties.lineSeparator)
+          },
           propagateError = true,
           logInfo = false
         )
-        .map(_ => DecoderResponse.success(path.toURI, sb.toString()))
+        .map(_ => {
+          if (sbErr.nonEmpty)
+            DecoderResponse.failed(path.toURI, sbErr.toString)
+          else
+            DecoderResponse.success(path.toURI, sbOut.toString)
+        })
     } catch {
       case NonFatal(e) =>
         scribe.error(e.toString())
@@ -430,57 +452,48 @@ final class FileDecoderProvider(
   ): Future[DecoderResponse] = {
     Future {
       Try {
-        val out = new ByteArrayOutputStream()
-        val err = new ByteArrayOutputStream()
         val exceptions = new ListBuffer[Exception]()
-        val psOut = new PrintStream(out)
-        val psErr = new PrintStream(err)
-        try {
-          val sink = new OutputSinkFactory() {
-
-            override def getSupportedSinks(
-                sinkType: OutputSinkFactory.SinkType,
-                sinkClasses: Collection[OutputSinkFactory.SinkClass]
-            ): ju.List[OutputSinkFactory.SinkClass] =
-              List(
-                OutputSinkFactory.SinkClass.EXCEPTION_MESSAGE,
-                OutputSinkFactory.SinkClass.STRING
-              ).asJava
-
-            override def getSink[T](
-                sinkType: OutputSinkFactory.SinkType,
-                sinkClass: OutputSinkFactory.SinkClass
-            ): OutputSinkFactory.Sink[T] =
-              sinkType match {
-                case OutputSinkFactory.SinkType.JAVA => psOut.print(_)
-                case OutputSinkFactory.SinkType.EXCEPTION =>
-                  _ match {
-                    case msg: SinkReturns.ExceptionMessage =>
-                      exceptions += msg.getThrownException()
-                    case f => psErr.print(f)
-                  }
-                case _ => f => {}
-              }
+        val out = List.newBuilder[String]
+        def appendToOut[A](a: A): Unit =
+          a match {
+            case s: String => out += s
+            case _ =>
           }
-          val options = Map("analyseas" -> "CLASS")
-          val driver = new CfrDriver.Builder()
-            .withOptions(options.asJava)
-            .withOutputSink(sink)
-            .build()
-          // must be a mutable java list as it gets sorted
-          driver.analyse(ju.Collections.singletonList(path.toNIO.toString))
-          if (exceptions.nonEmpty)
-            throw exceptions.head
-          val output = new String(out.toByteArray)
-          val error = new String(err.toByteArray)
-          if (error.isEmpty)
-            output
-          else
-            error
-        } finally {
-          psOut.close()
-          psErr.close()
+        val sink = new OutputSinkFactory() {
+
+          override def getSupportedSinks(
+              sinkType: OutputSinkFactory.SinkType,
+              sinkClasses: Collection[OutputSinkFactory.SinkClass]
+          ): ju.List[OutputSinkFactory.SinkClass] =
+            List(
+              OutputSinkFactory.SinkClass.EXCEPTION_MESSAGE,
+              OutputSinkFactory.SinkClass.STRING
+            ).asJava
+
+          override def getSink[T](
+              sinkType: OutputSinkFactory.SinkType,
+              sinkClass: OutputSinkFactory.SinkClass
+          ): OutputSinkFactory.Sink[T] =
+            sinkType match {
+              case OutputSinkFactory.SinkType.JAVA => appendToOut
+              case OutputSinkFactory.SinkType.EXCEPTION =>
+                _ match {
+                  case msg: SinkReturns.ExceptionMessage =>
+                    exceptions += msg.getThrownException()
+                }
+              case _ => f => {}
+            }
         }
+        val options = Map("analyseas" -> "CLASS")
+        val driver = new CfrDriver.Builder()
+          .withOptions(options.asJava)
+          .withOutputSink(sink)
+          .build()
+        // must be a mutable java list as it gets sorted
+        driver.analyse(ju.Collections.singletonList(path.toNIO.toString))
+        if (exceptions.nonEmpty)
+          throw exceptions.head
+        out.result().mkString
       } match {
         case Failure(exception) =>
           DecoderResponse.failed(path.toString(), exception)
