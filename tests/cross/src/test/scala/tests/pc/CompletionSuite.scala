@@ -116,6 +116,84 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  val dot213: String =
+    """|empty[A]: List[A]
+       |from[B](coll: IterableOnce[B]): List[B]
+       |newBuilder[A]: Builder[A,List[A]]
+       |apply[A](elems: A*): List[A]
+       |concat[A](xss: Iterable[A]*): List[A]
+       |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
+       |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
+       |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
+       |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
+       |fill[A](n: Int)(elem: => A): List[A]
+       |iterableFactory[A]: Factory[A,List[A]]
+       |iterate[A](start: A, len: Int)(f: A => A): List[A]
+       |range[A: Integral](start: A, end: A): List[A]
+       |range[A: Integral](start: A, end: A, step: A): List[A]
+       |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
+       |tabulate[A](n: Int)(f: Int => A): List[A]
+       |unapplySeq[A](x: List[A]): SeqFactory.UnapplySeqWrapper[A]
+       |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
+       |+(other: String): String
+       |formatted(fmtstr: String): String
+       |fromSpecific(from: Any)(it: IterableOnce[A]): List[A]
+       |fromSpecific(it: IterableOnce[A]): List[A]
+       |newBuilder(from: Any): Builder[A,List[A]]
+       |newBuilder: Builder[A,List[A]]
+       |toFactory(from: Any): Factory[A,List[A]]
+       |apply(from: Any): Builder[A,List[A]]
+       |asInstanceOf[T0]: T0
+       |equals(obj: Object): Boolean
+       |getClass(): Class[_ <: Object]
+       |hashCode(): Int
+       |isInstanceOf[T0]: Boolean
+       |synchronized[T0](x$1: T0): T0
+       |toString(): String
+       |""".stripMargin
+
+  val dot2137: String =
+    """|empty[A]: List[A]
+       |from[B](coll: IterableOnce[B]): List[B]
+       |newBuilder[A]: Builder[A,List[A]]
+       |apply[A](elems: A*): List[A]
+       |concat[A](xss: Iterable[A]*): List[A]
+       |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
+       |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
+       |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
+       |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
+       |fill[A](n: Int)(elem: => A): List[A]
+       |iterableFactory[A]: Factory[A,List[A]]
+       |iterate[A](start: A, len: Int)(f: A => A): List[A]
+       |range[A: Integral](start: A, end: A): List[A]
+       |range[A: Integral](start: A, end: A, step: A): List[A]
+       |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
+       |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
+       |tabulate[A](n: Int)(f: Int => A): List[A]
+       |unapplySeq[A](x: List[A]): SeqFactory.UnapplySeqWrapper[A]
+       |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
+       |+(other: String): String
+       |fromSpecific(from: Any)(it: IterableOnce[A]): List[A]
+       |fromSpecific(it: IterableOnce[A]): List[A]
+       |newBuilder(from: Any): Builder[A,List[A]]
+       |newBuilder: Builder[A,List[A]]
+       |toFactory(from: Any): Factory[A,List[A]]
+       |apply(from: Any): Builder[A,List[A]]
+       |formatted(fmtstr: String): String
+       |asInstanceOf[T0]: T0
+       |equals(obj: Object): Boolean
+       |getClass(): Class[_ <: Object]
+       |hashCode(): Int
+       |isInstanceOf[T0]: Boolean
+       |synchronized[T0](x$1: T0): T0
+       |toString(): String
+       |""".stripMargin
+
   check(
     // before 3.0.1 completions with the same name were included in one completion in a random order
     "dot".tag(
@@ -157,44 +235,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |toString(): String
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|empty[A]: List[A]
-           |from[B](coll: IterableOnce[B]): List[B]
-           |newBuilder[A]: Builder[A,List[A]]
-           |apply[A](elems: A*): List[A]
-           |concat[A](xss: Iterable[A]*): List[A]
-           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
-           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
-           |fill[A](n: Int)(elem: => A): List[A]
-           |iterableFactory[A]: Factory[A,List[A]]
-           |iterate[A](start: A, len: Int)(f: A => A): List[A]
-           |range[A: Integral](start: A, end: A): List[A]
-           |range[A: Integral](start: A, end: A, step: A): List[A]
-           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
-           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
-           |tabulate[A](n: Int)(f: Int => A): List[A]
-           |unapplySeq[A](x: List[A]): SeqFactory.UnapplySeqWrapper[A]
-           |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
-           |+(other: String): String
-           |formatted(fmtstr: String): String
-           |fromSpecific(from: Any)(it: IterableOnce[A]): List[A]
-           |fromSpecific(it: IterableOnce[A]): List[A]
-           |newBuilder(from: Any): Builder[A,List[A]]
-           |newBuilder: Builder[A,List[A]]
-           |toFactory(from: Any): Factory[A,List[A]]
-           |apply(from: Any): Builder[A,List[A]]
-           |asInstanceOf[T0]: T0
-           |equals(obj: Object): Boolean
-           |getClass(): Class[_ <: Object]
-           |hashCode(): Int
-           |isInstanceOf[T0]: Boolean
-           |synchronized[T0](x$1: T0): T0
-           |toString(): String
-           |""".stripMargin,
+      "2.13.7" -> dot2137,
+      "2.13" -> dot213,
       "2.11" ->
         """|apply[A](xs: A*): List[A]
            |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
@@ -253,11 +295,11 @@ class CompletionSuite extends BaseCompletionSuite {
            |ensuring(cond: A => Boolean): A
            |ensuring(cond: Boolean, msg: => Any): A
            |ensuring(cond: A => Boolean, msg: => Any): A
-           |formatted(fmtstr: String): String
            |fromSpecific(from: From)(it: IterableOnce[A]): C
            |fromSpecific(it: IterableOnce[A]): C
            |nn: x.type & T
            |toFactory(from: From): Factory[A, C]
+           |formatted(fmtstr: String): String
            |→[B](y: B): (A, B)
            |iterableFactory[A]: Factory[A, CC[A]]
            |asInstanceOf[X0]: X0
@@ -481,7 +523,8 @@ class CompletionSuite extends BaseCompletionSuite {
        * https://github.com/scalameta/metals/issues/2546
        */
       "2.13.5" -> "Inner a.Outer",
-      "2.13.6" -> "Inner a.Outer"
+      "2.13.6" -> "Inner a.Outer",
+      "2.13.7" -> "Inner a.Outer"
     )
   )
 
@@ -700,7 +743,8 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> "DelayedLazyVal scala.concurrent",
       "2.13.5" -> "DelayedLazyVal - scala.concurrent",
-      "2.13.6" -> "DelayedLazyVal - scala.concurrent"
+      "2.13.6" -> "DelayedLazyVal - scala.concurrent",
+      "2.13.7" -> "DelayedLazyVal - scala.concurrent"
     )
   )
 
