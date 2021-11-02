@@ -158,8 +158,10 @@ final class FormattingProvider(
     askScalafmtVersion().map {
       case Some(version) =>
         val text = config.toInputFromBuffers(buffers).text
+        val dialect =
+          buildTargets.all.map(_.fmtDialect).toList.sorted.lastOption
         val newText =
-          ScalafmtConfig.update(text, Some(version), None, Map.empty)
+          ScalafmtConfig.update(text, Some(version), dialect, Map.empty)
         Files.write(config.toNIO, newText.getBytes(StandardCharsets.UTF_8))
         clearDiagnostics(config)
         client.showMessage(
@@ -229,7 +231,9 @@ final class FormattingProvider(
       ScalafmtConfig.empty
         .copy(version = Some(SemVer.Version.fromString(version)))
 
-    val versionText = s"""version = "${BuildInfo.scalafmtVersion}""""
+    val versionText =
+      s"""|version = "${BuildInfo.scalafmtVersion}"
+          |runner.dialect = ${ScalafmtDialect.Scala213.value}""".stripMargin
     inspectDialectRewrite(initialConfig) match {
       case Some(rewrite) => rewrite.rewrite(versionText)
       case None => versionText
@@ -289,18 +293,38 @@ final class FormattingProvider(
     val itemsRequiresUpgrade =
       buildTargets.sourceItemsToBuildTargets.toList.flatMap {
         case (path, ids) =>
-          inferDialectForSourceItem(path, ids.asScala.toList, default).map(d =>
-            (path, d)
-          )
+          inferDialectForSourceItem(path, ids.asScala.toList, default)
+            .map(d => (path, d))
       }
-
     if (itemsRequiresUpgrade.nonEmpty) {
-      val (items, dialects) = itemsRequiresUpgrade.unzip
-      val directories = items.map(_.toRelative(workspace))
-
       val nonSbtTargets = buildTargets.all.toList.filter(!_.isSbt)
+      val minDialect =
+        config.runnerDialect match {
+          case Some(d) => d
+          case None =>
+            val allPossibleDialects =
+              nonSbtTargets.map(_.fmtDialect)
+            if (allPossibleDialects.nonEmpty)
+              allPossibleDialects.min
+            else
+              ScalafmtDialect.Scala213
+        }
+
       val needFileOverride =
         nonSbtTargets.map(_.fmtDialect).distinct.size > 1
+
+      val maxDialect = itemsRequiresUpgrade.map(_._2).max
+
+      val allDirs = itemsRequiresUpgrade.map { case (item, _) =>
+        item.toRelative(workspace)
+      }
+
+      val fileOverrideDirs = itemsRequiresUpgrade
+        .collect {
+          case (item, dialect) if dialect != minDialect =>
+            item.toRelative(workspace)
+        }
+
       val upgradeType =
         if (needFileOverride && config.fileOverrides.nonEmpty)
           RewriteType.Manual
@@ -310,8 +334,10 @@ final class FormattingProvider(
           RewriteType.GlobalDialect
 
       val out = DialectRewrite(
-        directories,
-        dialects.max,
+        allDirs,
+        fileOverrideDirs,
+        minDialect,
+        maxDialect,
         upgradeType,
         config
       )
@@ -322,7 +348,6 @@ final class FormattingProvider(
   private def checkIfDialectUpgradeRequired(
       config: ScalafmtConfig
   ): Future[Unit] = {
-
     if (tables.dismissedNotifications.UpdateScalafmtConf.isDismissed)
       Future.unit
     else {
@@ -334,7 +359,7 @@ final class FormattingProvider(
 
           scribe.info(
             s"Required scalafmt dialect rewrite to '${rewrite.maxDialect.value}'." +
-              s" Directories:\n${rewrite.directories.mkString("- ", "\n- ", "")}"
+              s" Directories:\n${rewrite.allDirs.mkString("- ", "\n- ", "")}"
           )
 
           client.showMessageRequest(params).asScala.map { item =>
@@ -466,7 +491,9 @@ object FormattingProvider {
   }
 
   case class DialectRewrite(
-      directories: List[RelativePath],
+      allDirs: List[RelativePath],
+      fileOverrideDirs: List[RelativePath],
+      minDialect: ScalafmtDialect,
       maxDialect: ScalafmtDialect,
       rewriteType: RewriteType,
       config: ScalafmtConfig
@@ -489,7 +516,7 @@ object FormattingProvider {
           )
         case RewriteType.FileOverrideDialect =>
           val fileOverride =
-            directories.map { path =>
+            fileOverrideDirs.map { path =>
               // globs should work with `/` on all platforms
               val unifiedPath =
                 if (scala.util.Properties.isWin)
@@ -505,6 +532,7 @@ object FormattingProvider {
           ScalafmtConfig.update(
             text,
             version = updVersion,
+            runnerDialect = Some(minDialect),
             fileOverride = fileOverride
           )
         case RewriteType.Manual => text
