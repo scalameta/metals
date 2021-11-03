@@ -38,7 +38,7 @@ private[debug] final class SourcePathAdapter(
     }
   }
 
-  def toMetalsPath(sourcePath: String): Option[AbsolutePath] = {
+  def toMetalsPath(sourcePath: String): Option[AbsolutePath] = try {
     val sourceUri =
       Try(URI.create(sourcePath)).getOrElse(Paths.get(sourcePath).toUri())
     sourceUri.getScheme match {
@@ -47,6 +47,10 @@ private[debug] final class SourcePathAdapter(
       case "file" => Some(AbsolutePath(Paths.get(sourceUri)))
       case _ => None
     }
+  } catch {
+    case e: Throwable =>
+      scribe.error(s"Could not resolve $sourcePath", e)
+      None
   }
 }
 
