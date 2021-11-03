@@ -31,7 +31,7 @@ Steps to reproduce the behavior:
 
 - Operating system: macOS/Windows/Linux
 - Editor: Visual Studio Code/Atom/Vim/Sublime/Emacs
-- Metals version: v0.10.8
+- Metals version: v0.10.9
 
 **Additional context**
 
