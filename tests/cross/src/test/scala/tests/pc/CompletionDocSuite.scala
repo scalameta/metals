@@ -216,16 +216,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13.2" ->
-        s"""
-           |${predefDocString(commonlyUsedTypesPre2134)}
-           |Predef scala
-           |""".stripMargin,
-      "2.13.3" ->
-        s"""
-           |${predefDocString(commonlyUsedTypesPre2134)}
-           |Predef scala
-           |""".stripMargin,
       "2.13.4" ->
         s"""
            |${predefDocString(commonlyUsedTypesPost2134)}
@@ -237,6 +227,11 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |Predef scala
            |""".stripMargin,
       "2.13.6" ->
+        s"""
+           |${predefDocString(commonlyUsedTypesPost2134)}
+           |Predef scala
+           |""".stripMargin,
+      "2.13.7" ->
         s"""
            |${predefDocString(commonlyUsedTypesPost2134)}
            |Predef scala
@@ -385,11 +380,11 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13.3" -> iteratorDocs213(),
       "2.13.4" -> iteratorDocs213(),
       // LinearSeqIterator should actually not be added since it's private and it's fixed in 2.13.5
       "2.13.5" -> iteratorDocs213(withLinearSeqIterator = false),
-      "2.13.6" -> iteratorDocs213(withLinearSeqIterator = false)
+      "2.13.6" -> iteratorDocs213(withLinearSeqIterator = false),
+      "2.13.7" -> iteratorDocs213(withLinearSeqIterator = false)
     )
   )
 
@@ -429,6 +424,9 @@ class CompletionDocSuite extends BaseCompletionSuite {
                       |global: ExecutionContext
                       |""".stripMargin,
       "2.13.6" -> s"""|$executionDocstringPost2134
+                      |global: ExecutionContext
+                      |""".stripMargin,
+      "2.13.7" -> s"""|$executionDocstringPost2134
                       |global: ExecutionContext
                       |""".stripMargin
     )
@@ -531,6 +529,19 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |section on `StringBuilders` for more information.
            |StringBuilder scala.collection.mutable
            |""".stripMargin,
+      "2.13.7" ->
+        """|> A builder for mutable sequence of characters.  This class provides an API
+           |mostly compatible with `java.lang.StringBuilder`, except where there are
+           |conflicts with the Scala collections API (such as the `reverse` method.)
+           |
+           |$multipleResults
+           |
+           |
+           |**See**
+           |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+           |section on `StringBuilders` for more information.
+           |StringBuilder scala.collection.mutable
+           |""".stripMargin,
       "2.13" ->
         """|> A builder for mutable sequence of characters.  This class provides an API
            |mostly compatible with `java.lang.StringBuilder`, except where there are
@@ -606,11 +617,10 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13.2" -> vectorDocs213,
-      "2.13.3" -> vectorDocs213,
       "2.13.4" -> vectorDocs213,
       "2.13.5" -> vectorDocs213,
-      "2.13.6" -> vectorDocs213
+      "2.13.6" -> vectorDocs213,
+      "2.13.7" -> vectorDocs213
     )
   )
   check(

@@ -191,13 +191,13 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val sbtScala = "2.12.14"
   val scala212 = "2.12.15"
-  val scala213 = "2.13.6"
+  val scala213 = "2.13.7"
   val ammonite212Version = "2.12.13"
-  val ammonite213Version = scala213
-  val scalameta = "4.4.29"
+  val ammonite213Version = "2.13.6"
+  val scalameta = "4.4.30"
   val semanticdb = scalameta
   val bsp = "2.0.0-M15"
-  val bloop = "1.4.10-14-f51f591b"
+  val bloop = "1.4.11"
   val scala3 = "3.1.0"
   val nextScala3RC = "3.1.1-RC1"
   val bloopNightly = bloop
@@ -227,7 +227,16 @@ lazy val V = new {
 
   // Scala 2
   def deprecatedScala2Versions =
-    Seq(scala211, "2.12.8", "2.12.9", "2.12.10", "2.13.0", "2.13.1", "2.13.2")
+    Seq(
+      scala211,
+      "2.12.8",
+      "2.12.9",
+      "2.12.10",
+      "2.13.0",
+      "2.13.1",
+      "2.13.2",
+      "2.13.3"
+    )
   def nonDeprecatedScala2Versions =
     Seq(
       scala213,
@@ -236,9 +245,9 @@ lazy val V = new {
       "2.12.13",
       "2.12.12",
       "2.12.11",
-      "2.13.3",
       "2.13.4",
-      "2.13.5"
+      "2.13.5",
+      "2.13.6"
     )
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
