@@ -251,4 +251,72 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |""".stripMargin
   )
 
+  test("no-stale-supermethod-lenses") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |trait X {
+            |  def foo: Int
+            |}
+            |case class Y(foo: Int) extends X
+            |
+            |trait Z {
+            |  def bar: Int
+            |}
+            |case class W(bar: Int) extends Z
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- assertCodeLenses(
+        "a/src/main/scala/a/A.scala",
+        """|package a
+           |trait X {
+           |  def foo: Int
+           |}
+           |<< foo>>
+           |case class Y(foo: Int) extends X
+           |
+           |trait Z {
+           |  def bar: Int
+           |}
+           |<< bar>>
+           |case class W(bar: Int) extends Z
+           |""".stripMargin
+      )
+      _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
+        s"""|package a
+            |trait X {
+            |  def foo: Int
+            |}
+            |//case class Y(foo: Int) extends X
+            |
+            |trait Z {
+            |  def bar: Int
+            |}
+            |case class W(bar: Int) extends Z
+            |""".stripMargin
+      }
+      _ <- assertCodeLenses(
+        "a/src/main/scala/a/A.scala",
+        """|package a
+           |trait X {
+           |  def foo: Int
+           |}
+           |//case class Y(foo: Int) extends X
+           |
+           |trait Z {
+           |  def bar: Int
+           |}
+           |<< bar>>
+           |case class W(bar: Int) extends Z
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }
