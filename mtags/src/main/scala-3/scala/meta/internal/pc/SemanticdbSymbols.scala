@@ -89,7 +89,7 @@ object SemanticdbSymbols:
 
     def addName(name: Name) =
       val str = name.toString.unescapeUnicode
-      if str.isJavaIdent then b append str
+      if str.nonEmpty && str.isJavaIdent then b append str
       else b append '`' append str append '`'
 
     def addOwner(owner: Symbol): Unit =
