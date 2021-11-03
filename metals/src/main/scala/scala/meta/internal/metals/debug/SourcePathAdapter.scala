@@ -44,7 +44,7 @@ private[debug] final class SourcePathAdapter(
     sourceUri.getScheme match {
       case "jar" =>
         Option(AbsolutePath(Paths.get(sourceUri)).toFileOnDisk(workspace))
-      case "file" => Some(sourcePath.toAbsolutePath)
+      case "file" => Some(AbsolutePath(Paths.get(sourceUri)))
       case _ => None
     }
   }
