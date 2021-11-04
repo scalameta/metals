@@ -22,6 +22,7 @@ class DebugDiscoverySuite
   private val mainPath = "a/src/main/scala/a/Main.scala"
   private val fooPath = "a/src/main/scala/a/Foo.scala"
   private val barPath = "a/src/main/scala/a/Bar.scala"
+  private val altTargetPath = "b/src/main/scala/b/Main.scala"
 
   test("run") {
     for {
@@ -155,6 +156,46 @@ class DebugDiscoverySuite
       result.toString,
       WorkspaceErrorsException.toString()
     )
+  }
+
+  test("other-target-error") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {},
+           |  "b": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print("oranges are nice")
+           |    System.exit(0)
+           |  }
+           |}
+           |/${altTargetPath}
+           |package b
+           |object Stuff {
+           |  val stuff = "fail :(
+           |  System.exit(0)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(mainPath).toURI.toString,
+          "run"
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
   }
 
   test("invalid-env") {

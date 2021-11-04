@@ -294,7 +294,7 @@ class DebugProvider(
       buildTargetClasses.classesOf(bti).testClasses
 
     val result: Future[DebugSessionParams] = (runTypeO, buildTargetO) match {
-      case _ if buildClient.buildHasErrors =>
+      case (_, Some(buildTarget)) if buildClient.buildHasErrors(buildTarget) =>
         Future.failed(WorkspaceErrorsException)
       case (_, None) =>
         Future.failed(BuildTargetNotFoundForPathException(path))
