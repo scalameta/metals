@@ -49,7 +49,7 @@ final class SuperMethodCodeLens(
       ).toIterable
       range <-
         occurrence.range
-          .flatMap(r => distance.toRevised(r.toLSP))
+          .flatMap(r => distance.toRevisedStrict(r).map(_.toLSP))
           .toList
     } yield new l.CodeLens(range, gotoSuperMethod, null)
   }
