@@ -69,15 +69,17 @@ object ServerCommands {
        |""".stripMargin,
     """|[uri], uri of the file with any parameters required for decoding.
        |Examples:
-       |
-       |javap:
+       |- javap:
+       |  ```
        |  metalsDecode:file:///somePath/someFile.java.javap
        |  metalsDecode:file:///somePath/someFile.scala.javap
        |  metalsDecode:file:///somePath/someFile.class.javap
        |  metalsDecode:file:///somePath/someFile.java.javap-verbose
        |  metalsDecode:file:///somePath/someFile.scala.javap-verbose
        |  metalsDecode:file:///somePath/someFile.class.javap-verbose
-       |semanticdb:
+       |  ```
+       |- semanticdb:
+       |  ```
        |  metalsDecode:file:///somePath/someFile.java.semanticdb-compact
        |  metalsDecode:file:///somePath/someFile.java.semanticdb-detailed
        |  metalsDecode:file:///somePath/someFile.scala.semanticdb-compact
@@ -86,11 +88,25 @@ object ServerCommands {
        |  metalsDecode:file:///somePath/someFile.java.semanticdb.semanticdb-detailed
        |  metalsDecode:file:///somePath/someFile.scala.semanticdb.semanticdb-compact
        |  metalsDecode:file:///somePath/someFile.scala.semanticdb.semanticdb-detailed
-       |tasty:
+       |  ```
+       |- tasty:
+       |  ```
        |  metalsDecode:file:///somePath/someFile.scala.tasty-decoded
        |  metalsDecode:file:///somePath/someFile.tasty.tasty-decoded
-       |jar:
-       |  metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
+       |  ```
+       |- jar:
+       |  ```
+       |   metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
+       |  ```
+       |
+       |Response:
+       |```ts
+       |interface DecoderResponse {
+       |  requestedUri: string;
+       |  value?: string;
+       |  error?: string
+       |}
+       |```
        |""".stripMargin
   )
 
@@ -487,10 +503,12 @@ object ServerCommands {
       InsertInferredType,
       NewScalaFile,
       NewScalaProject,
+      PresentationCompilerRestart,
       ResetChoicePopup,
       RestartBuildServer,
       RunDoctor,
       DecodeFile,
+      DisconnectBuildServer,
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,
