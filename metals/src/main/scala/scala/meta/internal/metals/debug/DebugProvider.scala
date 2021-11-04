@@ -163,6 +163,7 @@ class DebugProvider(
         debugAdapter,
         stacktraceAnalyzer,
         compilers,
+        workspace,
         clientConfig.disableColorOutput()
       )
     }

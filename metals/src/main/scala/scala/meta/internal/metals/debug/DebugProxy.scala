@@ -8,13 +8,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
+import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StacktraceAnalyzer
+import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
@@ -23,6 +24,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
+import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.CompletionsResponse
@@ -222,17 +224,22 @@ private[debug] object DebugProxy {
       debugAdapter: MetalsDebugAdapter,
       stackTraceAnalyzer: StacktraceAnalyzer,
       compilers: Compilers,
+      workspace: AbsolutePath,
       stripColor: Boolean
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
         .map(new SocketEndpoint(_))
-        .map(endpoint => withLogger(endpoint, DebugProtocol.serverName))
+        .map(endpoint =>
+          withLogger(workspace, endpoint, DebugProtocol.serverName)
+        )
         .map(new MessageIdAdapter(_))
         .map(new ServerAdapter(_))
       client <- awaitClient()
         .map(new SocketEndpoint(_))
-        .map(endpoint => withLogger(endpoint, DebugProtocol.clientName))
+        .map(endpoint =>
+          withLogger(workspace, endpoint, DebugProtocol.clientName)
+        )
         .map(new MessageIdAdapter(_))
     } yield new DebugProxy(
       name,
@@ -246,11 +253,12 @@ private[debug] object DebugProxy {
   }
 
   private def withLogger(
+      workspace: AbsolutePath,
       endpoint: RemoteEndpoint,
       name: String
-  ): RemoteEndpoint = {
-    val trace = GlobalTrace.setupTracePrinter(name)
-    if (trace == null) endpoint
-    else new EndpointLogger(endpoint, trace)
-  }
+  ): RemoteEndpoint =
+    Trace.setupTracePrinter(name, PathIO.workingDirectory) match {
+      case Some(trace) => new EndpointLogger(endpoint, trace)
+      case None => endpoint
+    }
 }

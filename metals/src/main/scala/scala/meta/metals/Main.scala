@@ -6,12 +6,14 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
+import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.Trace
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
@@ -44,7 +46,8 @@ object Main {
     }
     val systemIn = System.in
     val systemOut = System.out
-    val tracePrinter = GlobalTrace.setup("LSP")
+    MetalsLogger.redirectSystemOut(Trace.metalsLog)
+    val tracePrinter = Trace.setupTracePrinter("LSP", PathIO.workingDirectory)
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
     val initialConfig = MetalsServerConfig.default
@@ -55,9 +58,8 @@ object Main {
       initialConfig = initialConfig
     )
     try {
-      scribe.info(s"Starting Metals server with configuration: $initialConfig")
       val launcher = new Launcher.Builder[MetalsLanguageClient]()
-        .traceMessages(tracePrinter)
+        .traceMessages(tracePrinter.orNull)
         .setExecutorService(exec)
         .setInput(systemIn)
         .setOutput(systemOut)
