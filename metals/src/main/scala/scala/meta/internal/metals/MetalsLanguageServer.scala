@@ -106,7 +106,8 @@ class MetalsLanguageServer(
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
     sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
-    isReliableFileWatcher: Boolean = true
+    isReliableFileWatcher: Boolean = true,
+    allSupportedMtagsRequired: Boolean = true
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -159,6 +160,7 @@ class MetalsLanguageServer(
   val excludedPackageHandler: ExcludedPackagesHandler =
     new ExcludedPackagesHandler(userConfig.excludedPackages)
   var ammonite: Ammonite = _
+  private val mtagsResolver = new MtagsResolver
   val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
@@ -299,6 +301,7 @@ class MetalsLanguageServer(
       new Embedded(
         clientConfig.icons,
         statusBar,
+        mtagsResolver,
         () => userConfig
       )
     )
@@ -628,7 +631,8 @@ class MetalsLanguageServer(
             diagnostics,
             excludedPackageHandler.isExcludedPackage,
             scalaVersionSelector,
-            trees
+            trees,
+            mtagsResolver
           )
         )
         debugProvider = new DebugProvider(
@@ -678,7 +682,8 @@ class MetalsLanguageServer(
           () => bspConnector.resolve(),
           () => httpServer,
           tables,
-          clientConfig
+          clientConfig,
+          mtagsResolver
         )
         fileDecoderProvider = new FileDecoderProvider(
           workspace,
@@ -1218,7 +1223,9 @@ class MetalsLanguageServer(
           }
 
           userConfig.fallbackScalaVersion.foreach { version =>
-            if (!ScalaVersions.isSupportedScalaVersion(version)) {
+            if (
+              !ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)
+            ) {
               val params =
                 Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
                   version

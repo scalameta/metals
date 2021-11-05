@@ -45,7 +45,7 @@ class ScalaVersionSelector(
       )
     )
       BuildInfo.ammonite213
-    else if (ScalaVersions.isSupportedScalaVersion(selected))
+    else if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(selected))
       selected
     else
       ScalaVersions.recommendedVersion(selected)

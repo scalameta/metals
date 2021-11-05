@@ -4,6 +4,7 @@ import java.nio.file.Files
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.troubleshoot.DeprecatedSbtVersion
@@ -113,6 +114,7 @@ class ProblemResolverSuite extends FunSuite {
       workspace.toFile().deleteOnExit()
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
+        new MtagsResolver(),
         () => None,
         isClientCommandSupported = true
       )

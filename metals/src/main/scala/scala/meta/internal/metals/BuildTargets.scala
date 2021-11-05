@@ -62,7 +62,9 @@ final class BuildTargets(
       var score = 1
 
       val isSupportedScalaVersion = scalaInfo(t).exists(t =>
-        ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
+        ScalaVersions.isSupportedAtReleaseMomentScalaVersion(
+          t.getScalaVersion()
+        )
       )
       if (isSupportedScalaVersion) score <<= 2
 

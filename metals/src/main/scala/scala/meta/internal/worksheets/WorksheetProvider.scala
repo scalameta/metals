@@ -408,7 +408,7 @@ class WorksheetProvider(
 
     def isSupportedScala2Version(scalaVersion: String) = {
       !ScalaVersions.isScala3Version(scalaVersion) && ScalaVersions
-        .isSupportedScalaVersion(scalaVersion)
+        .isSupportedAtReleaseMomentScalaVersion(scalaVersion)
     }
 
     val key = MdocKey.BuildTarget(target)

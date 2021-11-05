@@ -31,12 +31,14 @@ final class Doctor(
     calculateNewBuildServer: () => BspResolvedResult,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
-    clientConfig: ClientConfiguration
+    clientConfig: ClientConfiguration,
+    mtagsResolver: MtagsResolver
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
     new ProblemResolver(
       workspace,
+      mtagsResolver,
       currentBuildServer,
       clientConfig.isCommandInHtmlSupported()
     )
@@ -352,7 +354,7 @@ final class Doctor(
   private def extractTargetInfo(target: ScalaTarget) = {
     val scalaVersion = target.scalaVersion
     val definition: String =
-      if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
+      if (mtagsResolver.isSupportedScalaVersion(scalaVersion)) {
         Icons.unicode.check
       } else {
         Icons.unicode.alert

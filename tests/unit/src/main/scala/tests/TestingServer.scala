@@ -139,7 +139,8 @@ final class TestingServer(
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
     time = time,
-    isReliableFileWatcher = System.getenv("CI") != "true"
+    isReliableFileWatcher = System.getenv("CI") != "true",
+    allSupportedMtagsRequired = false
   )
   server.connectToLanguageClient(client)
 

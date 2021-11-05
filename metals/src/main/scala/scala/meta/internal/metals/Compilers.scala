@@ -67,7 +67,8 @@ class Compilers(
     diagnostics: Diagnostics,
     isExcludedPackage: String => Boolean,
     scalaVersionSelector: ScalaVersionSelector,
-    trees: Trees
+    trees: Trees,
+    mtagsResolver: MtagsResolver
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -98,11 +99,14 @@ class Compilers(
       standaloneSearch: SymbolSearch,
       name: String
   ): PresentationCompiler = {
+    val mtags =
+      mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
+
     scribe.info(
-      s"no build target: using presentation compiler with only scala-library: $scalaVersion"
+      s"no build target: using presentation compiler with only scala-library: ${mtags.scalaVersion}"
     )
     newCompiler(
-      scalaVersion,
+      mtags,
       List.empty,
       classpath ++ Embedded.scalaLibrary(scalaVersion),
       standaloneSearch,
@@ -452,14 +456,14 @@ class Compilers(
     val created: Option[Unit] = for {
       targetId <- buildTargets.inverseSources(path)
       scalaTarget <- buildTargets.scalaTarget(targetId)
-      isSupported =
-        ScalaVersions.isSupportedScalaVersion(scalaTarget.scalaVersion)
-      _ = {
-        if (!isSupported) {
-          scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
+      scalaVersion = scalaTarget.scalaVersion
+      mtags <- {
+        val result = mtagsResolver.resolve(scalaVersion)
+        if (result.isEmpty) {
+          scribe.warn(s"unsupported Scala ${scalaVersion}")
         }
+        result
       }
-      if isSupported
       scalac <- buildTargets.scalacOptions(targetId)
     } yield {
       jworksheetsCache.put(
@@ -477,7 +481,7 @@ class Compilers(
             buildTargets,
             workspaceFallback = Some(search)
           )
-          newCompiler(scalac, scalaTarget, classpath, worksheetSearch)
+          newCompiler(scalac, scalaTarget, mtags, classpath, worksheetSearch)
         }
       )
     }
@@ -518,23 +522,23 @@ class Compilers(
   def loadCompilerForTarget(
       scalaTarget: ScalaTarget
   ): Option[PresentationCompiler] = {
-    val isSupported =
-      ScalaVersions.isSupportedScalaVersion(scalaTarget.scalaVersion)
-    if (!isSupported) {
-      scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
-      None
-    } else {
-      val out = jcache.computeIfAbsent(
-        PresentationCompilerKey.BuildTarget(scalaTarget.info.getId),
-        { _ =>
-          statusBar.trackBlockingTask(
-            s"${config.icons.sync}Loading presentation compiler"
-          ) {
-            newCompiler(scalaTarget.scalac, scalaTarget, search)
+    val scalaVersion = scalaTarget.scalaVersion
+    mtagsResolver.resolve(scalaVersion) match {
+      case Some(mtags) =>
+        val out = jcache.computeIfAbsent(
+          PresentationCompilerKey.BuildTarget(scalaTarget.info.getId),
+          { _ =>
+            statusBar.trackBlockingTask(
+              s"${config.icons.sync}Loading presentation compiler"
+            ) {
+              newCompiler(scalaTarget.scalac, scalaTarget, mtags, search)
+            }
           }
-        }
-      )
-      Option(out)
+        )
+        Option(out)
+      case None =>
+        scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
+        None
     }
   }
 
@@ -667,20 +671,22 @@ class Compilers(
   def newCompiler(
       scalac: ScalacOptionsItem,
       target: ScalaTarget,
+      mtags: MtagsBinaries,
       search: SymbolSearch
   ): PresentationCompiler = {
     val classpath = scalac.classpath.map(_.toNIO).toSeq
-    newCompiler(scalac, target, classpath, search)
+    newCompiler(scalac, target, mtags, classpath, search)
   }
 
   def newCompiler(
       scalac: ScalacOptionsItem,
       target: ScalaTarget,
+      mtags: MtagsBinaries,
       classpath: Seq[Path],
       search: SymbolSearch
   ): PresentationCompiler = {
     newCompiler(
-      target.scalaInfo.getScalaVersion(),
+      mtags,
       scalac.getOptions().asScala,
       classpath,
       search,
@@ -689,21 +695,18 @@ class Compilers(
   }
 
   def newCompiler(
-      scalaVersion: String,
+      mtags: MtagsBinaries,
       options: Seq[String],
       classpath: Seq[Path],
       search: SymbolSearch,
       name: String
   ): PresentationCompiler = {
-    // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
-    // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
-    // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
-    // skip fetching the mtags module from Maven.
     val pc: PresentationCompiler =
-      if (ScalaVersions.isCurrentScalaCompilerVersion(scalaVersion)) {
-        new ScalaPresentationCompiler()
-      } else {
-        embedded.presentationCompiler(scalaVersion, classpath)
+      mtags match {
+        case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
+        case artifacts: MtagsBinaries.Artifacts =>
+          embedded.presentationCompiler(artifacts, classpath)
+
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)

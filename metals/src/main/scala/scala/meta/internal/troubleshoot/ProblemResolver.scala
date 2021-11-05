@@ -7,6 +7,7 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.semver.SemVer
@@ -14,6 +15,7 @@ import scala.meta.io.AbsolutePath
 
 class ProblemResolver(
     workspace: AbsolutePath,
+    mtagsResolver: MtagsResolver,
     currentBuildServer: () => Option[BspSession],
     isClientCommandSupported: Boolean
 ) {
@@ -141,19 +143,21 @@ class ProblemResolver(
   private def findProblem(
       scalaTarget: ScalaTarget
   ): Option[ScalaProblem] = {
+
+    def isSupportedScalaVersion(version: String): Boolean =
+      mtagsResolver.isSupportedScalaVersion(version)
+
     scalaTarget.scalaVersion match {
-      case version
-          if ScalaVersions.isFutureVersion(version) && scalaTarget.isSbt =>
-        Some(FutureSbtVersion)
-      case version if ScalaVersions.isFutureVersion(version) =>
-        Some(FutureScalaVersion(version))
-      case version
-          if !ScalaVersions.isSupportedScalaVersion(
-            version
-          ) && scalaTarget.isSbt =>
-        Some(UnsupportedSbtVersion)
-      case version if !ScalaVersions.isSupportedScalaVersion(version) =>
-        Some(UnsupportedScalaVersion(version))
+      case version if !isSupportedScalaVersion(version) && scalaTarget.isSbt =>
+        if (ScalaVersions.isFutureVersion(version))
+          Some(FutureSbtVersion)
+        else
+          Some(UnsupportedSbtVersion)
+      case version if !isSupportedScalaVersion(version) =>
+        if (ScalaVersions.isFutureVersion(version))
+          Some(FutureScalaVersion(version))
+        else
+          Some(UnsupportedScalaVersion(version))
       case version if !scalaTarget.isSemanticdbEnabled =>
         Some(
           SemanticDBDisabled(
