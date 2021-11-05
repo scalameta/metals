@@ -286,9 +286,7 @@ val sharedSettings = List(
     if3 = List(
       "-language:implicitConversions",
       "-Xtarget:8",
-      "-Xsemanticdb",
-      // used only to supress validation error from scalafix-sbt
-      "-Ywarn-unused-import"
+      "-Xsemanticdb"
     ),
     if211 = List("-Xexperimental", "-Ywarn-unused-import")
   ),
