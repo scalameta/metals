@@ -55,6 +55,7 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
+import scala.meta.internal.metals.testProvider.TestDiscovery
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -797,6 +798,42 @@ final class TestingServer(
     } yield {
       Assertions.assertNoDiff(format, expected)
     }
+  }
+
+  def discoverTestSuites(filename: String): Future[List[TestDiscovery]] = {
+    val path = toPath(filename)
+    var retries = 5
+    val testClasses = Promise[List[TestDiscovery]]()
+    val handler = { refreshCount: Int =>
+      if (refreshCount > 0)
+        Thread.sleep(300)
+      executeCommand(ServerCommands.DiscoverTestSuites)
+        .asInstanceOf[Future[ju.List[TestDiscovery]]]
+        .map(_.asScala.toList)
+        .foreach { r =>
+          if (r.exists(_.discovered.asScala.exists(_.nonEmpty))) {
+            testClasses.trySuccess(r)
+          } else if (retries > 0) {
+            retries -= 1
+            server.compilations.compileFile(path)
+          } else {
+            val error =
+              s"Could not fetch any test classes in $refreshCount tries"
+            testClasses.tryFailure(new NoSuchElementException(error))
+          }
+        }
+    }
+
+    Thread.sleep(300)
+    for {
+      _ <- server
+        .didFocus(path.toURI.toString)
+        .asScala // model is refreshed only for focused document
+      _ = client.refreshModelHandler = handler
+      // first compilation, to trigger the handler
+      _ <- server.compilations.compileFile(path)
+      classes <- testClasses.future
+    } yield classes
   }
 
   def codeLenses(filename: String, printCommand: Boolean = false)(

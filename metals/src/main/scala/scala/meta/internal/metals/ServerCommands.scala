@@ -110,6 +110,12 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val DiscoverTestSuites = new Command(
+    "discover-test-suites",
+    "Discover test suites",
+    "Discovers test suites in project"
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",

@@ -270,7 +270,10 @@ case class QuickBuild(
 object QuickBuild {
   val supportedTestFrameworks: Map[String, C.TestFramework] = Map(
     "org.scalatest::scalatest" -> Config.TestFramework.ScalaTest,
-    "com.lihaoyi::utest" -> Config.TestFramework(List("utest.runner.Framework"))
+    "com.lihaoyi::utest" -> Config.TestFramework(
+      List("utest.runner.Framework")
+    ),
+    "org.scalameta::munit" -> Config.TestFramework.munit
   )
 
   /**

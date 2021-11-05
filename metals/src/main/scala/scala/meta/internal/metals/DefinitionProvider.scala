@@ -119,6 +119,13 @@ final class DefinitionProvider(
     }
   }
 
+  def toPath(
+      sym: String,
+      targets: List[BuildTargetIdentifier]
+  ): Option[DefinitionDestination] = {
+    destinationProvider.fromSymbol(sym, targets.toSet)
+  }
+
   /**
    * Returns VirtualFile that contains the definition of
    * the given symbol (of semanticdb).
