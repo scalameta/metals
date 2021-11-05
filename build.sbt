@@ -269,7 +269,7 @@ lazy val V = new {
   val coursier = "2.0.16"
   val ammonite = "2.3.8-124-2da846d2"
   val mill = "0.9.9"
-  val organizeImportRule = "0.5.0"
+  val organizeImportRule = "0.6.0"
 }
 
 val sharedSettings = List(
