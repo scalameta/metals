@@ -38,7 +38,11 @@ class ShellRunner(
       dependency: Dependency,
       main: String,
       dir: AbsolutePath,
-      arguments: List[String]
+      arguments: List[String],
+      redirectErrorOutput: Boolean = false,
+      processOut: String => Unit = scribe.info(_),
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
@@ -55,7 +59,15 @@ class ShellRunner(
       classpath,
       main
     ) ::: arguments
-    run(main, cmd, dir, redirectErrorOutput = false)
+    run(
+      main,
+      cmd,
+      dir,
+      redirectErrorOutput,
+      processOut = processOut,
+      processErr = processErr,
+      propagateError = propagateError
+    )
   }
 
   def run(

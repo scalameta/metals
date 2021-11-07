@@ -6,12 +6,9 @@ import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
-import java.util.Collection
-import java.{util => ju}
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Failure
@@ -33,9 +30,7 @@ import scala.meta.metap.Format
 import scala.meta.metap.Settings
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.benf.cfr.reader.api.CfrDriver
-import org.benf.cfr.reader.api.OutputSinkFactory
-import org.benf.cfr.reader.api.SinkReturns
+import coursierapi._
 
 /* Response which is sent to the lsp client. Because of java serialization we cannot use
  * sealed hierarchy to model union type of success and error.
@@ -450,55 +445,40 @@ final class FileDecoderProvider(
   private def decodeCFRFromClassFile(
       path: AbsolutePath
   ): Future[DecoderResponse] = {
-    Future {
-      Try {
-        val exceptions = new ListBuffer[Exception]()
-        val out = List.newBuilder[String]
-        def appendToOut[A](a: A): Unit =
-          a match {
-            case s: String => out += s
-            case _ =>
-          }
-        val sink = new OutputSinkFactory() {
+    val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
+    val cfrMain = "org.benf.cfr.reader.Main"
+    val args = List("--analyseas", "CLASS", s"""${path.toNIO.toString}""")
+    val sbOut = new StringBuilder()
+    val sbErr = new StringBuilder()
 
-          override def getSupportedSinks(
-              sinkType: OutputSinkFactory.SinkType,
-              sinkClasses: Collection[OutputSinkFactory.SinkClass]
-          ): ju.List[OutputSinkFactory.SinkClass] =
-            List(
-              OutputSinkFactory.SinkClass.EXCEPTION_MESSAGE,
-              OutputSinkFactory.SinkClass.STRING
-            ).asJava
-
-          override def getSink[T](
-              sinkType: OutputSinkFactory.SinkType,
-              sinkClass: OutputSinkFactory.SinkClass
-          ): OutputSinkFactory.Sink[T] =
-            sinkType match {
-              case OutputSinkFactory.SinkType.JAVA => appendToOut
-              case OutputSinkFactory.SinkType.EXCEPTION =>
-                _ match {
-                  case msg: SinkReturns.ExceptionMessage =>
-                    exceptions += msg.getThrownException()
-                }
-              case _ => f => {}
-            }
-        }
-        val options = Map("analyseas" -> "CLASS")
-        val driver = new CfrDriver.Builder()
-          .withOptions(options.asJava)
-          .withOutputSink(sink)
-          .build()
-        // must be a mutable java list as it gets sorted
-        driver.analyse(ju.Collections.singletonList(path.toNIO.toString))
-        if (exceptions.nonEmpty)
-          throw exceptions.head
-        out.result().mkString
-      } match {
-        case Failure(exception) =>
-          DecoderResponse.failed(path.toString(), exception)
-        case Success(value) => DecoderResponse.success(path.toURI, value)
-      }
+    try {
+      shellRunner
+        .runJava(
+          cfrDependency,
+          cfrMain,
+          path.parent,
+          args,
+          redirectErrorOutput = false,
+          s => {
+            sbOut.append(s)
+            sbOut.append(Properties.lineSeparator)
+          },
+          s => {
+            sbErr.append(s)
+            sbErr.append(Properties.lineSeparator)
+          },
+          propagateError = true
+        )
+        .map(_ => {
+          if (sbErr.nonEmpty)
+            DecoderResponse.failed(path.toURI, sbErr.toString)
+          else
+            DecoderResponse.success(path.toURI, sbOut.toString)
+        })
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(e.toString())
+        Future.successful(DecoderResponse.failed(path.toURI, e))
     }
   }
 

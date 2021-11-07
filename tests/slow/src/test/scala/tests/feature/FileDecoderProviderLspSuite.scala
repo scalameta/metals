@@ -80,7 +80,13 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Foo.class"),
     "cfr",
-    Right(FileDecoderProviderLspSuite.cfr)
+    Right(FileDecoderProviderLspSuite.cfr),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION."
+        )
   )
 
   check(
@@ -98,7 +104,13 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/java/foo/bar/example/Main.java",
     None,
     "cfr",
-    Right(FileDecoderProviderLspSuite.cfrJava)
+    Right(FileDecoderProviderLspSuite.cfrJava),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION."
+        )
   )
 
   check(
@@ -110,7 +122,7 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         |  }
         |}
         |/app/src/main/java/foo/bar/example/Main.java
-        |package not.here;
+        |package foo.bar.example.not.here;
         |class Main {}
         |""".stripMargin,
     "app/src/main/java/foo/bar/example/Main.java",
@@ -121,7 +133,11 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
       str
         .replace("\\", "/")
         .replaceAll(
-          "(No such file\\s|).*(\\/foo\\/bar\\/example\\/Main.class)",
+          "(No such file ).*(\\/foo\\/bar\\/example\\/Main\\.class)",
+          "$1$2"
+        )
+        .replaceAll(
+          "(CannotLoadClassException: ).*(\\/foo\\/bar\\/example\\/Main\\.class )",
           "$1$2"
         )
   )
@@ -143,7 +159,13 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "app/src/main/scala/Main.scala",
     Some("foo/bar/example/Main$package.class"),
     "cfr",
-    Right(FileDecoderProviderLspSuite.cfrToplevel)
+    Right(FileDecoderProviderLspSuite.cfrToplevel),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION."
+        )
   )
 
   check(
@@ -664,7 +686,7 @@ object FileDecoderProviderLspSuite {
 
   private val cfr =
     s"""|/*
-        | * Decompiled with CFR ${V.cfrVersion}.
+        | * Decompiled with CFR VERSION.
         | */
         |package foo.bar.example;
         |
@@ -674,7 +696,7 @@ object FileDecoderProviderLspSuite {
 
   private val cfrJava =
     s"""|/*
-        | * Decompiled with CFR ${V.cfrVersion}.
+        | * Decompiled with CFR VERSION.
         | */
         |package foo.bar.example;
         |
@@ -685,12 +707,13 @@ object FileDecoderProviderLspSuite {
         |""".stripMargin
 
   private val cfrMissing =
-    s"""|/foo/bar/example/Main.class
-        |No such file /foo/bar/example/Main.class""".stripMargin
+    s"""|Can't load the class specified:
+        |org.benf.cfr.reader.util.CannotLoadClassException: /foo/bar/example/Main.class - java.io.IOException: No such file /foo/bar/example/Main.class
+        |""".stripMargin
 
   private val cfrToplevel =
     s"""|/*
-        | * Decompiled with CFR ${V.cfrVersion}.
+        | * Decompiled with CFR VERSION.
         | */
         |package foo.bar.example;
         |
