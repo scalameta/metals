@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import java.io.ByteArrayInputStream
+import java.io.OutputStream
+import java.io.PrintStream
 import java.nio.channels.Channels
 import java.nio.channels.Pipe
 import java.nio.charset.StandardCharsets
@@ -138,11 +140,19 @@ final class BloopServers(
     val launcherOut = Channels.newOutputStream(clientInOutPipe.sink())
 
     val serverStarted = Promise[Unit]()
+    val bloopLogs = new OutputStream {
+      private lazy val b = new StringBuilder
+      override def write(byte: Int): Unit = byte.toChar match {
+        case c => b.append(c)
+      }
+      def logs = b.lines.toList
+    }
+
     val launcher =
       new LauncherMain(
         launcherIn,
         launcherOut,
-        System.err,
+        new PrintStream(bloopLogs, true),
         StandardCharsets.UTF_8,
         Shell.default,
         userNailgunHost = None,
@@ -162,21 +172,26 @@ final class BloopServers(
       }
     })
 
-    serverStarted.future.map { _ =>
-      SocketConnection(
-        name,
-        clientOut,
-        clientIn,
-        List(
-          Cancelable { () =>
-            clientOut.flush()
-            clientOut.close()
-          },
-          Cancelable(() => job.cancel(true))
-        ),
-        finished
-      )
-    }
+    serverStarted.future
+      .map { _ =>
+        SocketConnection(
+          name,
+          clientOut,
+          clientIn,
+          List(
+            Cancelable { () =>
+              clientOut.flush()
+              clientOut.close()
+            },
+            Cancelable(() => job.cancel(true))
+          ),
+          finished
+        )
+      }
+      .recover { case t: Throwable =>
+        bloopLogs.logs.foreach(scribe.error(_))
+        throw t
+      }
   }
 }
 
