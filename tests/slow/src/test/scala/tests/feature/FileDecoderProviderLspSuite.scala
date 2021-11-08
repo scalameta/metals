@@ -65,6 +65,146 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
   )
 
   check(
+    "cfr",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |class Foo
+        |class Bar
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    Some("foo/bar/example/Foo.class"),
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfr),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION."
+        )
+  )
+
+  check(
+    "cfr-java",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfrJava),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION."
+        )
+  )
+
+  check(
+    "cfr-missing",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example.not.here;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "cfr",
+    Left(FileDecoderProviderLspSuite.cfrMissing),
+    str =>
+      str
+        .replace("\\", "/")
+        .replaceAll(
+          "(No such file ).*(\\/foo\\/bar\\/example\\/Main\\.class)",
+          "$1$2"
+        )
+        .replaceAll(
+          "(CannotLoadClassException: ).*(\\/foo\\/bar\\/example\\/Main\\.class )",
+          "$1$2"
+        )
+  )
+
+  check(
+    "cfr-toplevel",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |class Foo
+        |class Bar
+        |def foo(): Unit = ()
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    Some("foo/bar/example/Main$package.class"),
+    "cfr",
+    Right(FileDecoderProviderLspSuite.cfrToplevel),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION."
+        )
+  )
+
+  check(
+    "javap-java",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "javap",
+    Right(FileDecoderProviderLspSuite.javapJava)
+  )
+
+  check(
+    "javap-missing",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala3}"
+        |  }
+        |}
+        |/app/src/main/java/foo/bar/example/Main.java
+        |package foo.bar.example.not.here;
+        |class Main {}
+        |""".stripMargin,
+    "app/src/main/java/foo/bar/example/Main.java",
+    None,
+    "javap",
+    Left(FileDecoderProviderLspSuite.javapMissing)
+  )
+
+  check(
     "javap",
     s"""|/metals.json
         |{
@@ -187,13 +327,12 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
       } yield {
         assertEquals(
           if (result.value != null) Right(transformResult(result.value))
-          else Left(result.error),
+          else Left(transformResult(result.error)),
           expected
         )
       }
     }
   }
-
 }
 
 object FileDecoderProviderLspSuite {
@@ -545,6 +684,59 @@ object FileDecoderProviderLspSuite {
         | 0 comment bytes:
         |""".stripMargin
 
+  private val cfr =
+    s"""|/*
+        | * Decompiled with CFR VERSION.
+        | */
+        |package foo.bar.example;
+        |
+        |public class Foo {
+        |}
+        |""".stripMargin
+
+  private val cfrJava =
+    s"""|/*
+        | * Decompiled with CFR VERSION.
+        | */
+        |package foo.bar.example;
+        |
+        |class Main {
+        |    Main() {
+        |    }
+        |}
+        |""".stripMargin
+
+  private val cfrMissing =
+    s"""|Can't load the class specified:
+        |org.benf.cfr.reader.util.CannotLoadClassException: /foo/bar/example/Main.class - java.io.IOException: No such file /foo/bar/example/Main.class
+        |""".stripMargin
+
+  private val cfrToplevel =
+    s"""|/*
+        | * Decompiled with CFR VERSION.
+        | */
+        |package foo.bar.example;
+        |
+        |import foo.bar.example.Main$$package$$;
+        |
+        |public final class Main$$package {
+        |    public static void foo() {
+        |        Main$$package$$.MODULE$$.foo();
+        |    }
+        |}
+        |""".stripMargin
+
+  private val javapMissing =
+    s"""|Error: class not found: Main.class
+        |""".stripMargin
+
+  private val javapJava =
+    s"""|Compiled from "Main.java"
+        |class foo.bar.example.Main {
+        |  foo.bar.example.Main();
+        |}
+        |""".stripMargin
+
   private val javap =
     s"""|Compiled from "Main.scala"
         |public class foo.bar.example.Foo {
@@ -670,5 +862,4 @@ object FileDecoderProviderLspSuite {
         |[3:6..3:9) <= foo/bar/example/Bar#foo().
         |[3:13..3:17) => scala/Unit#
         |""".stripMargin
-
 }
