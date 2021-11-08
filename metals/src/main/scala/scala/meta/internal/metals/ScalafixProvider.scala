@@ -202,8 +202,23 @@ case class ScalafixProvider(
       .getOrElse("Unexpected error while running Scalafix.")
   }
 
-  private def scalafixConf: Option[Path] = {
+  private lazy val scala3DefaultConfig = {
+    val path = Files.createTempFile(".scalafix", ".conf")
+    AbsolutePath(path).writeText(
+      s"""|rules = [
+          |  OrganizeImports
+          |]
+          |OrganizeImports.removeUnused = false
+          |
+          |""".stripMargin
+    )
+    path.toFile().deleteOnExit()
+    path
+  }
+
+  private def scalafixConf(isScala3: Boolean): Option[Path] = {
     val defaultLocation = workspace.resolve(".scalafix.conf")
+    val defaultConfig = if (isScala3) Some(scala3DefaultConfig) else None
     userConfig().scalafixConfigPath match {
       case Some(path) if !path.isFile && defaultLocation.isFile =>
         languageClient.showMessage(
@@ -216,11 +231,11 @@ case class ScalafixProvider(
           MessageType.Warning,
           s"No configuration at $path, using Scalafix defaults."
         )
-        None
+        defaultConfig
       case Some(path) => Some(path.toNIO)
       case None if defaultLocation.isFile =>
         Some(defaultLocation.toNIO)
-      case _ => None
+      case _ => defaultConfig
     }
   }
 
@@ -241,10 +256,9 @@ case class ScalafixProvider(
       inBuffers: String,
       produceSemanticdb: Boolean
   ): Try[ScalafixEvaluation] = {
-    val defaultScalaVersion = scalaTarget.scalaBinaryVersion
+    val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val scalaBinaryVersion =
-      if (defaultScalaVersion.startsWith("3")) "2.13" else defaultScalaVersion
-
+      if (isScala3) "2.13" else scalaTarget.scalaBinaryVersion
     val targetRoot =
       if (produceSemanticdb) createTemporarySemanticdb(file, inBuffers)
       else
@@ -293,7 +307,7 @@ case class ScalafixProvider(
         .withScalaVersion(scalaVersion)
         .withClasspath(classpath)
         .withToolClasspath(urlClassLoaderWithExternalRule)
-        .withConfig(scalafixConf.asJava)
+        .withConfig(scalafixConf(isScala3).asJava)
         .withRules(List(organizeImportRuleName).asJava)
         .withPaths(List(diskFilePath.toNIO).asJava)
         .withSourceroot(sourceroot.toNIO)
