@@ -195,6 +195,19 @@ guide them. In the end users should end up with something like this:
       // full name of the class to run
       "testClass": "com.example.Test"
     }
+    // Attach debugger when running via:
+    // `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=localhost:5005`
+    {
+      "type": "scala",
+      "request": "attach",
+      "name": "Attach debugger",
+      // name of the module that is being debugging
+      "buildTarget": "root",
+      // Host of the jvm to connect to
+      "hostName": "localhost",
+      // Port to connect to
+      "port": 5005
+    }
   ]
 }
 ```
