@@ -255,6 +255,8 @@ lazy val V = new {
   def nonDeprecatedScala3Versions = Seq(nextScala3RC, scala3, "3.0.2")
   def deprecatedScala3Versions = Seq("3.0.1", "3.0.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
+  lazy val nigthtlyScala3Versions =
+    Scala3NightlyVersions.nightlyReleasesAfter(nextScala3RC)
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions
   def nonDeprecatedScalaVersions =
@@ -333,7 +335,9 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
 }
 
 val mtagsSettings = List(
-  crossScalaVersions := V.supportedScalaVersions,
+  crossScalaVersions := {
+    V.supportedScalaVersions ++ V.nigthtlyScala3Versions
+  },
   crossTarget := target.value / s"scala-${scalaVersion.value}",
   crossVersion := CrossVersion.full,
   Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
@@ -626,7 +630,7 @@ lazy val mtest = project
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scala2Versions" -> V.scala2Versions,
-      "scala3Versions" -> V.scala3Versions,
+      "scala3Versions" -> (V.scala3Versions ++ V.nigthtlyScala3Versions),
       "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value
     ),
@@ -644,7 +648,8 @@ lazy val cross = project
   .settings(
     testSettings,
     sharedSettings,
-    crossScalaVersions := V.nonDeprecatedScalaVersions
+    crossScalaVersions :=
+      V.nonDeprecatedScalaVersions ++ V.nigthtlyScala3Versions.lastOption.toList
   )
   .dependsOn(mtest, mtags)
 
