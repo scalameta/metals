@@ -269,7 +269,7 @@ lazy val V = new {
   val coursier = "2.0.16"
   val ammonite = "2.3.8-124-2da846d2"
   val mill = "0.9.9"
-  val organizeImportRule = "0.5.0"
+  val organizeImportRule = "0.6.0"
 }
 
 val sharedSettings = List(
@@ -286,9 +286,7 @@ val sharedSettings = List(
     if3 = List(
       "-language:implicitConversions",
       "-Xtarget:8",
-      "-Xsemanticdb",
-      // used only to supress validation error from scalafix-sbt
-      "-Ywarn-unused-import"
+      "-Xsemanticdb"
     ),
     if211 = List("-Xexperimental", "-Ywarn-unused-import")
   ),
