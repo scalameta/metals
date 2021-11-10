@@ -1,0 +1,32 @@
+name: "Mtags auto release"
+on:
+  workflow_dispatch:
+    inputs:
+      scala_version:
+        description: "Scala Version"
+        required: true
+      metals_version:
+        description: "Metals Version"
+        required: true
+        default: "v0.10.9"
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.metals_version }}
+      - uses: olafurpg/setup-scala@v13
+      - uses: coursier/cache-action@v6.3
+      - name: "Test and push tag"
+        run: |
+          sbt test-mtags-dyn ${{ github.event.inputs.scala_version }}
+          if [ $? == 0]; then
+            git commit --allow-empty -m "Release mtags-${{ github.event.inputs.scala_version }} for ${{github.event.inputs.metals_version}}"
+            TAG_NAME="mtags_${{ github.event.inputs.metals_version }}_${{ github.event.inputs.scala_version }}"
+            git tag $TAG_NAME
+            git push origin $TAG_NAME 
+          fi
+        env:
+          GIT_USER: scalameta@scalameta.org

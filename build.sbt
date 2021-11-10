@@ -196,6 +196,51 @@ commands ++= Seq(
         println("No nightly versions was found. Skipping cross/test")
         s
     }
+  },
+  Command.single("test-mtags-dyn") { (s, scalaV) =>
+    crossTestDyn(s, scalaV)
+  },
+  Command.args("publish-mtags-dyn", "<scala-version> <version>") {
+    (state, args) =>
+      val configured =
+        configureMtagsScalaVersionDynamically(state, args(0), Some(args(1)))
+      val (out, _) =
+        Project
+          .extract(configured)
+          .runTask(mtags / PgpKeys.publishSigned, configured)
+      out
+  },
+  /**
+   * In case if this command was called from tag that matches
+   * "mtags_v$metalsVersion_$scalaVersion" then publish only mtags with these parameters
+   * Otherwise, call std `ci-release` and publish docs
+   */
+  Command.command("gh-actions-release") { s =>
+    val isTag = Option(System.getenv("GITHUB_REF"))
+      .exists(_.startsWith("refs/tags"))
+
+    val metalsTagRegex = "^v\\d+\\.\\d+\\.\\d+.*".r
+    val mtagsTagRegex = "^mtags_v(\\d+\\.\\d+\\.\\d+)_(.+)".r
+
+    val defaultCommands = "ci-release" :: "docs/docusaurusPublishGhpages" :: s
+
+    if (isTag) {
+      Option(System.getenv("GITHUB_REF_NAME")) match {
+        case Some(mtagsTagRegex(metalsVersion, scalaV)) =>
+          s"publish-mtags-dyn $scalaV $metalsVersion" :: s
+        case Some(metalsTagRegex()) =>
+          defaultCommands
+        case _ =>
+          val message =
+            s"""|Skip release. Invalid tag name.
+                |It should be either: 
+                | - "v$$num.$$num.$$num" - usual Metals release
+                | - "mtags_v$${existing-metals-release}_$${scala-version}" - mtags artifact release
+                |""".stripMargin
+          println(message)
+          s
+      }
+    } else defaultCommands
   }
 )
 
