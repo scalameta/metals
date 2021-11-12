@@ -295,18 +295,8 @@ object ServerCommands {
        |If symbol is a reference of a method it will jump to a definition.
        |If symbol under cursor is invalid or does not override anything then command is ignored.
        |
-       |Note: document in json argument must be absolute path.
        |""".stripMargin,
-    """|
-       |Object with `document` and `position`
-       |
-       |Example:
-       |```json
-       |{
-       |  document: "file:///home/dev/foo/Bar.scala",
-       |  position: {line: 5, character: 12}
-       |}
-       |```
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin
   )
 
@@ -320,17 +310,8 @@ object ServerCommands {
          |Command has no effect on other symbols than method definition.
          |QuickPick will show up only if more than one result is found.
          |
-         |Note: document in json argument must be absolute path.
          |""".stripMargin,
-      """|Object with `document` and `position`
-         |
-         |Example:
-         |```json
-         |{
-         |  document: "file:///home/dev/foo/Bar.scala",
-         |  position: {line: 5, character: 12}
-         |}
-         |```
+      """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
          |""".stripMargin
     )
 
@@ -389,15 +370,7 @@ object ServerCommands {
       """|Whenever a user chooses a code action to extract a definition of a Class/Trait/Object/Enum this
          |command is later ran to extract the code and create a new file with it
          |""".stripMargin,
-      """|Object with `document` and `position`
-         |
-         |Example:
-         |```json
-         |{
-         |  document: "file:///home/dev/foo/Bar.scala",
-         |  position: {line: 5, character: 12}
-         |}
-         |```
+      """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
          |""".stripMargin
     )
 
@@ -407,15 +380,7 @@ object ServerCommands {
     """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
        |calculate the type and insert it in the correct location.
        |""".stripMargin,
-    """|Object with `document` and `position`
-       |
-       |Example:
-       |```json
-       |{
-       |  document: "file:///home/dev/foo/Bar.scala",
-       |  position: {line: 5, character: 12}
-       |}
-       |```
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin
   )
 
