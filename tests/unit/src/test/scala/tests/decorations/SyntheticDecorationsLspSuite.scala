@@ -107,7 +107,12 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  \"foo\".map@@(c => c.toUpper)",
-        """|```scala
+        """|**Expression type**:
+           |```scala
+           |String
+           |```
+           |**Symbol signature**:
+           |```scala
            |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
            |```
            |
@@ -121,7 +126,12 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "  \"foo\".m@@ap(c => c.toUpper)",
-        """|```scala
+        """|**Expression type**:
+           |```scala
+           |String
+           |```
+           |**Symbol signature**:
+           |```scala
            |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
            |```
            |""".stripMargin

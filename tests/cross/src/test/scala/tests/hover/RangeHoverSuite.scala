@@ -26,7 +26,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     compat = Map(
       "3" ->
         """|Int
-           |def sum[B >: A](implicit num: Numeric[B]): Int""".stripMargin.hoverRange
+           |def sum[B >: A](implicit num: Numeric[B]): B""".stripMargin.hoverRange
     )
   )
 
@@ -75,7 +75,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     compat = Map(
       "3" ->
         """|Int
-           |def sum[B >: A](implicit num: Numeric[B]): Int""".stripMargin.hoverRange
+           |def sum[B >: A](implicit num: Numeric[B]): B""".stripMargin.hoverRange
     )
   )
 
@@ -240,7 +240,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     compat = Map(
       "3" ->
         """|Int
-           |def sum[B >: A](implicit num: Numeric[B]): Int""".stripMargin.hoverRange
+           |def sum[B >: A](implicit num: Numeric[B]): B""".stripMargin.hoverRange
     )
   )
 
@@ -266,7 +266,7 @@ class RangeHoverSuite extends BaseHoverSuite {
     compat = Map(
       "3" ->
         """|Int
-           |def sum[B >: A](implicit num: Numeric[B]): Int""".stripMargin.hoverRange
+           |def sum[B >: A](implicit num: Numeric[B]): B""".stripMargin.hoverRange
     )
   )
 }

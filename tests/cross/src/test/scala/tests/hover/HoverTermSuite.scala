@@ -14,7 +14,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |final override def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |""".stripMargin.hover,
     compat = Map(
-      "3" -> "def map[B](f: A => B): List[String]".hover
+      "3" -> "def map[B](f: A => B): List[B]".hover
     )
   )
 
@@ -42,7 +42,7 @@ class HoverTermSuite extends BaseHoverSuite {
         """|List[Int]
            |def apply[A](elems: A*): List[A]
            |""".stripMargin.hover,
-      "3" -> "def apply[A](elems: A*): List[Int]".hover
+      "3" -> "def apply[A](elems: A*): Int".hover
     )
   )
 
@@ -178,7 +178,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |def this(name: String, age: T): Foo[T]
        |""".stripMargin.hover,
     compat = Map(
-      "3" -> "class Foo: Foo[Int]".hover
+      "3" -> "class Foo: Int".hover
     )
   )
 

@@ -328,12 +328,20 @@ case class ScalaPresentationCompiler(
       given ctx: Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
-      val path = Interactive.pathTo(trees, pos)
-      val enclosing = expandRangeToEnclosingApply(path, pos)
-      val tp = enclosing.head.tpe
-      val tpw = tp.widenTermRefExpr
 
-      if tp.isError || tpw == NoType || tpw.isError then ju.Optional.empty()
+      def typeFromPath(path: List[Tree]) =
+        if path.isEmpty then NoType else path.head.tpe
+
+      val path = Interactive.pathTo(trees, pos)
+      val tp = typeFromPath(path)
+      val tpw = tp.widenTermRefExpr
+      // For expression we need to find all enclosing applies to get the exact generic type
+      val enclosing = expandRangeToEnclosingApply(path, pos)
+      val exprTp = typeFromPath(enclosing)
+      val exprTpw = exprTp.widenTermRefExpr
+
+      if tp.isError || tpw == NoType || tpw.isError || path.isEmpty then
+        ju.Optional.empty()
       else
         Interactive.enclosingSourceSymbols(enclosing, pos) match
           case Nil =>
@@ -365,15 +373,12 @@ case class ScalaPresentationCompiler(
 
             val docString =
               docComments.map(_.renderAsMarkdown).mkString("\n")
-            val expressionType = printer.expressionTypeString(tpw, history)
-            val includeExpression = params match
-              case p: RangeParams => p.offset != p.endOffset
-              case _ => false
+            val expressionType = printer.expressionTypeString(exprTpw, history)
             val content = HoverMarkup(
               expressionType,
               hoverString,
               docString,
-              includeExpression
+              !pos.span.isZeroExtent
             )
             ju.Optional.of(new Hover(content.toMarkupContent))
 

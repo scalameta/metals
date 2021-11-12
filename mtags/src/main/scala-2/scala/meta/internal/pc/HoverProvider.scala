@@ -261,7 +261,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         prettyType,
         prettySignature,
         docstring,
-        pos.start != pos.end
+        pos.start != pos.end || !prettySignature.endsWith(prettyType)
       )
       val hover = new Hover(markdown.toMarkupContent)
       if (range.isRange) {
