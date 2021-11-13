@@ -37,15 +37,40 @@ class CreateNewSymbol() extends CodeAction {
       )
     }
 
+    def createNewMethod(
+        diagnostic: l.Diagnostic,
+        name: String,
+    ): l.CodeAction = {
+      val codeAction = new l.CodeAction()
+      codeAction.setTitle(CreateNewSymbol.method(name))
+      codeAction.setKind(l.CodeActionKind.QuickFix)
+      codeAction.setDiagnostics(List(diagnostic).asJava)
+      codeAction.setCommand(
+        ServerCommands.InsertInferredMethod.toLSP(
+          new l.TextDocumentPositionParams(
+            params.getTextDocument(),
+            params.getRange().getStart(),
+          )
+        )
+      )
+      codeAction
+    }
+
     val codeActions = params
       .getContext()
       .getDiagnostics()
       .asScala
       .groupBy {
-        case ScalacDiagnostic.SymbolNotFound(name) => Some(name)
+        case ScalacDiagnostic.SymbolNotFound(name) if name.nonEmpty =>
+          Some(name)
         case _ => None
       }
       .collect {
+        case (Some(name), diags)
+            if name.head.isLower && params
+              .getRange()
+              .overlapsWith(diags.head.getRange()) =>
+          createNewMethod(diags.head, name)
         case (Some(name), diags)
             if params.getRange().overlapsWith(diags.head.getRange()) =>
           createNewSymbol(diags.head, name)
@@ -59,4 +84,5 @@ class CreateNewSymbol() extends CodeAction {
 
 object CreateNewSymbol {
   def title(name: String): String = s"Create new symbol '$name'..."
+  def method(name: String): String = s"Create new method 'def $name'..."
 }

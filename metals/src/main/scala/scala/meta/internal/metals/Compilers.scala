@@ -918,6 +918,19 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
+  def insertInferredMethod(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.insertInferredMethod(CompilerOffsetParams.fromPos(pos, token))
+        .asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
+  }
+
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken,

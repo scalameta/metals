@@ -140,7 +140,7 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Return decoded and pretty printed TASTy content for .scala or .tasty file.
-	 * 
+	 *
 	 */
 	public abstract CompletableFuture<String> getTasty(URI targetUri, boolean isHttpEnabled);
 
@@ -173,7 +173,7 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Extract method in selected range
-	 * 
+	 *
 	 * @param range         range to extract from
 	 * @param extractionPos position in file to extract to
 	 */
@@ -350,7 +350,7 @@ public abstract class PresentationCompiler {
 	/**
 	 * Returns false if the presentation compiler has not been used since the last
 	 * reset.
-	 * 
+	 *
 	 * NOTE(olafur) This method was added for testing purposes. It's critical that
 	 * we correctly reset the presentation compiler when build compilation complete
 	 * to prevent the presentatin compiler from returning stale results. It's
