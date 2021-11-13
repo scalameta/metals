@@ -131,7 +131,7 @@ object ServerCommands {
   val DiscoverMainClasses = new ParametrizedCommand[DebugDiscoveryParams](
     "discover-jvm-run-command",
     "Discover main classes to run and return the object",
-    """|Gets the DebugSession object that also contains a command to run in shell based 
+    """|Gets the DebugSession object that also contains a command to run in shell based
        |on JVM environment including classpath, jvmOptions and environment parameters.
        |""".stripMargin,
     """|DebugUnresolvedTestClassParams object
@@ -267,7 +267,7 @@ object ServerCommands {
     "Clean compile",
     """|Recompile all build targets in this workspace.
        |
-       |By default, Metals compiles the files incrementally. In case of any compile artifacts corruption 
+       |By default, Metals compiles the files incrementally. In case of any compile artifacts corruption
        |this command might be run to make sure everything is recompiled correctly.
        |""".stripMargin,
   )
@@ -448,7 +448,7 @@ object ServerCommands {
     "Choose class",
     """|Exists only because of how vscode virtual documents work. Usage of this command is discouraged, it'll be removed in the future,
        |when metals-vscode will implement custom editor for .tasty and .class files.
-       |Shows toplevel definitions such as classes, traits, objects and toplevel methods which are defined in a given scala file. 
+       |Shows toplevel definitions such as classes, traits, objects and toplevel methods which are defined in a given scala file.
        |Then, returns an URI pointing to the .tasty or .class file for class picked by user""".stripMargin,
     """|Object with `textDocument` and `includeInnerClasses`
        |
@@ -580,11 +580,11 @@ object ServerCommands {
   val NewScalaProject = new Command(
     "new-scala-project",
     "New Scala Project",
-    """|Create a new Scala project using one of the available g8 templates. 
+    """|Create a new Scala project using one of the available g8 templates.
        |This includes simple projects as well as samples for most of the popular Scala frameworks.
-       |The command reuses the Metals quick pick extension to work and can function with `window/showMessageRequest`, 
+       |The command reuses the Metals quick pick extension to work and can function with `window/showMessageRequest`,
        |however the experience will not be optimal in that case. Some editors might also offer to open the newly created
-       |project via `openNewWindowProvider`, but it is not necessary for the main functionality to work. 
+       |project via `openNewWindowProvider`, but it is not necessary for the main functionality to work.
        |""".stripMargin,
   )
 
@@ -613,7 +613,7 @@ object ServerCommands {
   val InsertInferredType = new ParametrizedCommand[TextDocumentPositionParams](
     "insert-inferred-type",
     "Insert inferred type of a value",
-    """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
+    """|Whenever a user chooses code action to insert the inferred type this command is later ran to
        |calculate the type and insert it in the correct location.
        |""".stripMargin,
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
@@ -641,7 +641,7 @@ object ServerCommands {
     """|Whenever a user chooses code action to extract method, this command is later ran to
        |calculate parameters for the newly created method and create its definition.
        |""".stripMargin,
-    """|LSP [`TextDocumentIdentifier`], (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentIdentifier), 
+    """|LSP [`TextDocumentIdentifier`], (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentIdentifier),
        |LSP [`Range`], range of the code you'd like to extract as method,
        |LSP [`Position`], position where the definition of extracted method will be created.
        |""".stripMargin,
@@ -655,10 +655,28 @@ object ServerCommands {
     new ParametrizedCommand[ConvertToNamedArgsRequest](
       "convert-to-named-arguments",
       "Convert positional arguments to named ones",
-      """|Whenever a user chooses code action to convert to named arguments, this command is later run to 
+      """|Whenever a user chooses code action to convert to named arguments, this command is later run to
          |determine the parameter names of all unnamed arguments and insert names at the correct locations.
          |""".stripMargin,
       """|Object with [TextDocumentPositionParams](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams) of the target Apply and `numUnnamedArgs` (int)
+         |""".stripMargin,
+    )
+
+  val InsertInferredMethod =
+    new ParametrizedCommand[TextDocumentPositionParams](
+      "insert-inferred-method",
+      "Insert inferred method",
+      """|
+         |""".stripMargin,
+      """|Object with `document` and `position`
+         |
+         |Example:
+         |```json
+         |{
+         |  document: "file:///home/dev/foo/Bar.scala",
+         |  position: {line: 5, character: 12}
+         |}
+         |```
          |""".stripMargin,
     )
 
@@ -759,6 +777,7 @@ object ServerCommands {
       GotoSymbol,
       ImportBuild,
       InsertInferredType,
+      InsertInferredMethod,
       InlineValue,
       NewScalaFile,
       NewJavaFile,
