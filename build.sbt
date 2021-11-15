@@ -268,7 +268,7 @@ lazy val V = new {
   val coursierInterfaces = "1.0.4"
   val coursier = "2.0.16"
   val ammonite = "2.3.8-124-2da846d2"
-  val mill = "0.9.9"
+  val mill = "0.9.10"
   val organizeImportRule = "0.6.0"
 }
 
