@@ -343,7 +343,7 @@ val mtagsSettings = List(
   // @note needed to deal with issues with dottyDoc
   Compile / doc / sources := Seq.empty,
   libraryDependencies +=
-    "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
+    "com.thoughtworks.qdox" % "qdox" % "2.0.1", // for java mtags
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -441,7 +441,7 @@ lazy val metals = project
       // for DAP
       V.dap4j,
       // for producing SemanticDB from Java source files
-      "com.thoughtworks.qdox" % "qdox" % "2.0.0",
+      "com.thoughtworks.qdox" % "qdox" % "2.0.1",
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // ==================
