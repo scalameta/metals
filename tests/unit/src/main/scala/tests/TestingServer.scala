@@ -42,6 +42,7 @@ import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
@@ -126,7 +127,8 @@ final class TestingServer(
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
     time: Time,
-    initializationOptions: Option[InitializationOptions]
+    initializationOptions: Option[InitializationOptions],
+    mtagsResolver: MtagsResolver
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
@@ -140,7 +142,7 @@ final class TestingServer(
     sh = sh,
     time = time,
     isReliableFileWatcher = System.getenv("CI") != "true",
-    allSupportedMtagsRequired = false
+    mtagsResolver = mtagsResolver
   )
   server.connectToLanguageClient(client)
 

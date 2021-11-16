@@ -107,7 +107,7 @@ class MetalsLanguageServer(
       BspServers.globalInstallDirectories,
     sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     isReliableFileWatcher: Boolean = true,
-    allSupportedMtagsRequired: Boolean = true
+    mtagsResolver: MtagsResolver = MtagsResolver.default()
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -160,7 +160,6 @@ class MetalsLanguageServer(
   val excludedPackageHandler: ExcludedPackagesHandler =
     new ExcludedPackagesHandler(userConfig.excludedPackages)
   var ammonite: Ammonite = _
-  private val mtagsResolver = new MtagsResolver
   val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
