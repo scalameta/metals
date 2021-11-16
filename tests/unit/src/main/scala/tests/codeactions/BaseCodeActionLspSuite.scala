@@ -19,7 +19,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       input: String,
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val fileContent = input.replace("<<", "").replace(">>", "")
     check(
       name,

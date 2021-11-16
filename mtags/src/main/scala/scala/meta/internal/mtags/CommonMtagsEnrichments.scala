@@ -96,6 +96,23 @@ trait CommonMtagsEnrichments {
         new l.Position(pos.endLine, pos.endColumn)
       )
     }
+    def encloses(other: m.Position): Boolean = {
+      pos.start <= other.start && pos.end >= other.end
+    }
+
+    def encloses(other: l.Range): Boolean = {
+      val start = other.getStart()
+      val end = other.getEnd()
+      val isBefore =
+        pos.startLine < start.getLine ||
+          (pos.startLine == start.getLine && pos.startColumn <= start
+            .getCharacter())
+
+      val isAfter = pos.endLine > end.getLine() ||
+        (pos.endLine >= end.getLine() && pos.endColumn >= end.getCharacter())
+
+      isBefore && isAfter
+    }
   }
   implicit class XtensionRangeParams(params: RangeParams) {
 

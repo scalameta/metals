@@ -2,6 +2,7 @@ package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports.kind
@@ -115,6 +116,111 @@ class Scala3CodeActionLspSuite
        |
        |object A:
        |  var alpha: Buffer[Int] = List(123).toBuffer
+       |""".stripMargin
+  )
+
+  check(
+    "single-def",
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |  def main = {
+       |    def inner(i : Int) = method2(i + 23 + <<123>>)
+       |  }
+       |}
+       |""".stripMargin,
+    ExtractValueCodeAction.title,
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |  def main = {
+       |    def inner(i : Int) = {
+       |      val newValue = i + 23 + 123
+       |      method2(newValue)
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "single-def-optional",
+    """|object Main:
+       |  def method2(i: Int) = ???
+       |  def main =
+       |    def inner(i : Int) = method2(i + 23 + <<123>>)
+       |
+       |""".stripMargin,
+    ExtractValueCodeAction.title,
+    """|object Main:
+       |  def method2(i: Int) = ???
+       |  def main =
+       |    def inner(i : Int) =
+       |      val newValue = i + 23 + 123
+       |      method2(newValue)
+       |""".stripMargin
+  )
+
+  check(
+    "single-def-split",
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |  
+       |  def main(i : Int) =
+       |    method2(i + 23 + <<123>>)
+       |}
+       |""".stripMargin,
+    ExtractValueCodeAction.title,
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |  
+       |  def main(i : Int) = {
+       |    val newValue = i + 23 + 123
+       |    method2(newValue)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "single-def-split-optional",
+    """|object Main:
+       |  def method2(i: Int) = ???
+       |  
+       |  def main(i : Int) =
+       |  method2(i + 23 + <<123>>)
+       |
+       |""".stripMargin,
+    ExtractValueCodeAction.title,
+    """|object Main:
+       |  def method2(i: Int) = ???
+       |  
+       |  def main(i : Int) =
+       |    val newValue = i + 23 + 123
+       |    method2(newValue)
+       |
+       |""".stripMargin
+  )
+
+  check(
+    "single-toplevel-optional",
+    """|
+       |def method2(i: Int) = {
+       |  val a = 1
+       |  a + 2
+       |}
+       |  
+       |def main(i : Int) = method2(i + 23 + <<123>>)
+       |
+       |""".stripMargin,
+    ExtractValueCodeAction.title,
+    """|def method2(i: Int) = {
+       |  val a = 1
+       |  a + 2
+       |}
+       |  
+       |def main(i : Int) = {
+       |  val newValue = i + 23 + 123
+       |  method2(newValue)
+       |}
        |""".stripMargin
   )
 

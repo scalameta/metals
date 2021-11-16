@@ -1,8 +1,8 @@
 package scala.meta.internal.metals.formatting
 import scala.util.matching.Regex
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
@@ -15,12 +15,6 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
 
   private def codeStartPosition(line: String): Option[Int] =
     indentRegex.findFirstMatchIn(line).map(_.start)
-
-  private def stringRepeat(s: Char, n: Int): String = {
-    if (n > 0)
-      ("%0" + n + "d").format(0).replace("0", s.toString)
-    else ""
-  }
 
   // converts spaces into tabs and vice-versa, normalizing the lengths of indentations
   private def normalizeSpacesAndTabs(
@@ -38,9 +32,9 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
           case _ if pastedBlank == blank => line
           case '\t' if pastedBlank == ' ' =>
             val tabNum = math.ceil(indentation.length.toDouble / 2).toInt
-            prePasted + stringRepeat(blank, tabNum) + code
+            prePasted + blank.stringRepeat(tabNum) + code
           case ' ' if pastedBlank == '\t' =>
-            prePasted + stringRepeat(blank, tabSize * indentation.length) + code
+            prePasted + blank.stringRepeat(tabSize * indentation.length) + code
           case _ => line
         }
       case None => line
@@ -205,8 +199,8 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
         val identToStart = codeStartPosition(full).getOrElse(0)
 
         if (identToStart != expectedIdent) {
-          def currentIndent = stringRepeat(opts.blank, identToStart)
-          stringRepeat(opts.blank, expectedIdent) + {
+          def currentIndent = opts.blank.stringRepeat(identToStart)
+          opts.blank.stringRepeat(expectedIdent) + {
             if (identToStart != 0)
               full.stripPrefix(currentIndent)
             else full
@@ -225,7 +219,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       def reformat(expected: Int, overIndent: Int, opts: FmtOptions): String = {
         if (line.trim.isEmpty()) ""
         else
-          stringRepeat(opts.blank, expected) + line.substring(
+          opts.blank.stringRepeat(expected) + line.substring(
             overIndent,
             line.length
           )

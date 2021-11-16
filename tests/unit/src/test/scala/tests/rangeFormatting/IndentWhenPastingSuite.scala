@@ -412,12 +412,12 @@ class IndentWhenPastingSuite
     """|if (cond)
        |  def double = s * 2
        |  double""".stripMargin,
-    """|object Main:
-       |\tif (cond)
-       |\t\tdef double = s * 2
-       |\t\tdouble
-       |end Main
-       |""".stripMargin,
+    s"""|object Main:
+        |\tif (cond)
+        |\t\tdef double = s * 2
+        |\t\tdouble
+        |end Main
+        |""".stripMargin,
     scalaVersion,
     tabsFormattingOptions
   )
