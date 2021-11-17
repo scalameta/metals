@@ -5,7 +5,7 @@ rem You can give the required mill version with --mill-version parameter
 rem If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 rem
 rem Project page: https://github.com/lefou/millw
-rem Script Version: 0.3.8
+rem Script Version: 0.3.9
 rem
 rem If you want to improve this script, please also contribute your changes back!
 rem
@@ -15,12 +15,12 @@ rem setlocal seems to be unavailable on Windows 95/98/ME
 rem but I don't think we need to support them in 2019
 setlocal enabledelayedexpansion
 
-set "DEFAULT_MILL_VERSION=0.9.9"
+set "DEFAULT_MILL_VERSION=0.9.10"
 
 set "MILL_REPO_URL=https://github.com/com-lihaoyi/mill"
 
 rem %~1% removes surrounding quotes
-if [%~1%]==[--mill-version] (
+if [%~1%]==[--mil-version] (
     rem shift command doesn't work within parentheses
     if not [%~2%]==[] (
         set MILL_VERSION=%~2%
