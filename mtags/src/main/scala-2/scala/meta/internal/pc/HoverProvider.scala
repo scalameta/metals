@@ -1,12 +1,9 @@
 package scala.meta.internal.pc
 
-import scala.annotation.tailrec
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
@@ -20,7 +17,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
 
   def hover(): Option[Hover] = params match {
     case range: RangeParams =>
-      trimWhitespaceInRange(range).flatMap(hoverOffset)
+      range.trimWhitespaceInRange.flatMap(hoverOffset)
     case _ if params.isWhitespace => None
     case _ => hoverOffset(params)
   }
@@ -264,7 +261,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         prettyType,
         prettySignature,
         docstring,
-        pos.start != pos.end
+        pos.start != pos.end || !prettySignature.endsWith(prettyType)
       )
       val hover = new Hover(markdown.toMarkupContent)
       if (range.isRange) {
@@ -326,24 +323,4 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  private def trimWhitespaceInRange(
-      range: RangeParams
-  ): Option[OffsetParams] = {
-    def isWhitespace(i: Int): Boolean =
-      range.text.charAt(i).isWhitespace
-
-    @tailrec
-    def trim(start: Int, end: Int): Option[(Int, Int)] =
-      if (start == end) Some((start, start)).filter(_ => !isWhitespace(start))
-      else if (isWhitespace(start)) trim(start + 1, end)
-      else if (isWhitespace(end - 1)) trim(start, end - 1)
-      else Some((start, end))
-
-    trim(range.offset, range.endOffset()).map { case (start, end) =>
-      if (start == end)
-        CompilerOffsetParams(params.uri, params.text, start, params.token)
-      else
-        CompilerRangeParams(params.uri, params.text, start, end, params.token)
-    }
-  }
 }

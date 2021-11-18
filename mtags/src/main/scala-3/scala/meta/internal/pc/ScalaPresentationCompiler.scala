@@ -31,6 +31,7 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -284,6 +285,35 @@ case class ScalaPresentationCompiler(
           ).selectionRange().asJava
       }
     }
+  end selectionRange
+
+  def expandRangeToEnclosingApply(
+      path: List[Tree],
+      pos: SourcePosition
+  )(using Context): List[Tree] =
+    def tryTail(enclosing: List[Tree]): Option[List[Tree]] =
+      enclosing match
+        case Nil => None
+        case head :: tail =>
+          head match
+            case t: GenericApply
+                if t.fun.srcPos.span.contains(pos.span) && !t.tpe.isErroneous =>
+              tryTail(tail).orElse(Some(enclosing))
+            case New(_) =>
+              tail match
+                case Nil => None
+                case Select(_, _) :: next =>
+                  tryTail(next)
+                case _ =>
+                  None
+            case _ =>
+              None
+    path match
+      case head :: tail =>
+        tryTail(tail).getOrElse(path)
+      case _ =>
+        List(EmptyTree)
+  end expandRangeToEnclosingApply
 
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
     compilerAccess.withNonInterruptableCompiler(
@@ -298,52 +328,63 @@ case class ScalaPresentationCompiler(
       given ctx: Context = driver.currentCtx
       val pos = sourcePosition(driver, params, uri)
       val trees = driver.openedTrees(uri)
-      val path = Interactive.pathTo(trees, pos)
-      val tp = Interactive.enclosingType(trees, pos)
-      val tpw = tp.widenTermRefExpr
 
-      if tp.isError || tpw == NoType || tpw.isError then ju.Optional.empty()
+      def typeFromPath(path: List[Tree]) =
+        if path.isEmpty then NoType else path.head.tpe
+
+      val path = Interactive.pathTo(trees, pos)
+      val tp = typeFromPath(path)
+      val tpw = tp.widenTermRefExpr
+      // For expression we need to find all enclosing applies to get the exact generic type
+      val enclosing = expandRangeToEnclosingApply(path, pos)
+      val exprTp = typeFromPath(enclosing)
+      val exprTpw = exprTp.widenTermRefExpr
+
+      if tp.isError || tpw == NoType || tpw.isError || path.isEmpty then
+        ju.Optional.empty()
       else
-        Interactive.enclosingSourceSymbols(path, pos) match
+        Interactive.enclosingSourceSymbols(enclosing, pos) match
           case Nil =>
             ju.Optional.empty()
-          case symbols =>
+          case symbols @ (symbol :: _) =>
             val printer = SymbolPrinter()
             val docComments =
               symbols.flatMap(ParsedComment.docOf(_))
-            val hoverString = symbols.headOption.map { symbol =>
+            val history = driver.compilationUnits.get(uri) match
+              case Some(unit) =>
+                val newctx =
+                  ctx.fresh.setCompilationUnit(unit)
+                val context =
+                  MetalsInteractive.contextOfPath(enclosing)(using newctx)
+                new ShortenedNames(IndexedContext(context))
+              case None => new ShortenedNames(IndexedContext(ctx))
+            val hoverString =
               tpw match
                 // https://github.com/lampepfl/dotty/issues/8891
                 case tpw: ImportType =>
-                  val history = new ShortenedNames(IndexedContext(ctx))
                   printer.hoverDetailString(
                     symbol,
                     history,
                     symbol.paramRef
                   )
                 case _ =>
-                  driver.compilationUnits.get(uri) match
-                    case Some(unit) =>
-                      val newctx =
-                        ctx.fresh.setCompilationUnit(unit)
-                      val tpdPath = Interactive.pathTo(
-                        newctx.compilationUnit.tpdTree,
-                        pos.span
-                      )(using newctx)
-                      val context =
-                        MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-                      val history = new ShortenedNames(IndexedContext(context))
-                      printer.hoverDetailString(symbol, history, tpw)(using
-                        context
-                      )
-                    case None =>
-                      val history = new ShortenedNames(IndexedContext(ctx))
-                      printer.hoverDetailString(symbol, history, tpw)
-            }
-            val content = hoverContent(hoverString, docComments)
-            ju.Optional.of(new Hover(content))
+                  printer.hoverDetailString(symbol, history, tpw)
+              end match
+
+            val docString =
+              docComments.map(_.renderAsMarkdown).mkString("\n")
+            val expressionType = printer.expressionTypeString(exprTpw, history)
+            val content = HoverMarkup(
+              expressionType,
+              hoverString,
+              docString,
+              !pos.span.isZeroExtent
+            )
+            ju.Optional.of(new Hover(content.toMarkupContent))
+
       end if
     }
+  end hover
 
   def newInstance(
       buildTargetIdentifier: String,
@@ -427,8 +468,20 @@ case class ScalaPresentationCompiler(
       uri: URI
   ): SourcePosition =
     val source = driver.openedFiles(uri)
-    val p = Spans.Span(params.offset)
-    new SourcePosition(source, p)
+    val span = params match
+      case p: RangeParams if p.offset != p.endOffset =>
+        p.trimWhitespaceInRange.fold {
+          Spans.Span(p.offset, p.endOffset)
+        } {
+          case trimmed: RangeParams =>
+            Spans.Span(trimmed.offset, trimmed.endOffset)
+          case offset =>
+            Spans.Span(p.offset, p.offset)
+        }
+      case _ => Spans.Span(params.offset)
+
+    new SourcePosition(source, span)
+  end sourcePosition
 
   private def range(p: SourcePosition): Option[Range] =
     if p.exists then
@@ -583,7 +636,6 @@ case class ScalaPresentationCompiler(
                     |""".stripMargin)
     }
     comments.foreach { comment => buf.append(comment.renderAsMarkdown) }
-
     markupContent(buf.toString)
   end hoverContent
 

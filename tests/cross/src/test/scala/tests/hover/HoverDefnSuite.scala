@@ -60,10 +60,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<def @@empty[T:Ordering] = Option.empty[T]>>
       |}
       |""".stripMargin,
-    """
-      |Option[T]
-      |def empty[T: Ordering]: Option[T]
-      |""".stripMargin.hover
+    "def empty[T: Ordering]: Option[T]".hover
   )
 
   check(
