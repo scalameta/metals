@@ -6,7 +6,6 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
@@ -47,7 +46,7 @@ object Main {
     val systemIn = System.in
     val systemOut = System.out
     MetalsLogger.redirectSystemOut(Trace.metalsLog)
-    val tracePrinter = Trace.setupTracePrinter("LSP", PathIO.workingDirectory)
+    val tracePrinter = Trace.setupTracePrinter("LSP")
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
     val initialConfig = MetalsServerConfig.default

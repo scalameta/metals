@@ -186,24 +186,18 @@ These logs contain information that may be relevant for regular users.
 
 ### JSON-RPC trace
 
-**Important notice**  
-Since Metals 0.10.10 version log files should be placed in `$WORKSPACE` rather than your machine cache directory.
-
-To see trace of incoming/outgoing JSON communication with the text editor or build server, create empty files in `$WORKSPACE/.metals/` directory.
+To see the trace of incoming/outgoing JSON communication with the text editor or build server, create empty files in `$WORKSPACE/.metals/` or your machine cache directory.  
+Files created in `$WORKSPACE/.metals/` contains traces only from the Metals instance associated with the `$WORKSPACE`, while files in the cache directory are common for all Metals instances.
 
 ```sh
-# macOS
-touch -f $WORKSPACE/.metals/lsp.trace.json # text editor
-touch -f $WORKSPACE/.metals/bsp.trace.json # build server
-touch $WORKSPACE/.metals/dap-server.trace.json # debug adapter
-touch $WORKSPACE/.metals/dap-client.trace.json # debug adapter
-
-# Linux
+# Linux and macOS
 touch $WORKSPACE/.metals/lsp.trace.json # text editor
 touch $WORKSPACE/.metals/bsp.trace.json # build server
 touch $WORKSPACE/.metals/dap-server.trace.json # debug adapter
 touch $WORKSPACE/.metals/dap-client.trace.json # debug adapter
+```
 
+```sh
 # Windows
 type nul > $WORKSPACE/.metals/lsp.trace.json # text editor
 type nul > $WORKSPACE/.metals/bsp.trace.json # build server
@@ -214,9 +208,7 @@ type nul > $WORKSPACE/.metals/dap-client.trace.json # debug adapter
 Next when you start Metals, watch the logs with `tail -f`.
 
 ```sh
-# macOS
-tail -f $WORKSPACE/.metals/lsp.trace.json
-# Linux
+# Linux and macOS
 tail -f $WORKSPACE/.metals/lsp.trace.json
 ```
 

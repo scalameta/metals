@@ -8,7 +8,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
@@ -257,7 +256,7 @@ private[debug] object DebugProxy {
       endpoint: RemoteEndpoint,
       name: String
   ): RemoteEndpoint =
-    Trace.setupTracePrinter(name, PathIO.workingDirectory) match {
+    Trace.setupTracePrinter(name, workspace) match {
       case Some(trace) => new EndpointLogger(endpoint, trace)
       case None => endpoint
     }
