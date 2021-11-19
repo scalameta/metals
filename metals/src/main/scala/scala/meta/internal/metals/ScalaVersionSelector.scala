@@ -30,7 +30,7 @@ class ScalaVersionSelector(
     val binary = ScalaVersions.scalaBinaryVersionFromFullVersion(selected)
     // ammonite doesn't support Scala3 yet
     if (isAmmonite && ScalaVersions.isScala3Version(selected))
-      BuildInfo.scala213
+      BuildInfo.ammonite213
     else if (
       isAmmonite && binary == "2.12" && SemVer.isLaterVersion(
         BuildInfo.ammonite212,

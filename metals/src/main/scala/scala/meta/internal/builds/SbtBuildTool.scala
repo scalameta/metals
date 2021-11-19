@@ -343,9 +343,8 @@ object SbtBuildTool {
   def sbtInputPosAdjustment(
       originInput: Input.VirtualFile,
       autoImports: Seq[String],
-      uri: String,
-      position: Position
-  ): (Input.VirtualFile, Position, AdjustLspData) = {
+      uri: String
+  ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
 
     val appendLineSize = autoImports.size
 
@@ -353,7 +352,7 @@ object SbtBuildTool {
       originInput.copy(value =
         prependAutoImports(originInput.value, autoImports)
       )
-    val pos = new Position(
+    def adjustRequest(position: Position) = new Position(
       appendLineSize + position.getLine(),
       position.getCharacter()
     )
@@ -363,7 +362,7 @@ object SbtBuildTool {
       },
       filterOutLocations = { loc => !loc.getUri().isSbt }
     )
-    (modifiedInput, pos, adjustLspData)
+    (modifiedInput, adjustRequest, adjustLspData)
   }
 
   def prependAutoImports(text: String, autoImports: Seq[String]): String = {
