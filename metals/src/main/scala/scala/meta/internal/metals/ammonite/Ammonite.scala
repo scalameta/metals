@@ -304,9 +304,8 @@ final class Ammonite(
 
   def generatedScalaInputForPc(
       targetId: BuildTargetIdentifier,
-      source: AbsolutePath,
-      position: Position
-  ): Option[(Input.VirtualFile, Position)] =
+      source: AbsolutePath
+  ): Option[(Input.VirtualFile, Position => Position)] =
     generatedScalaPath(targetId, source)
       .map { scalaPath =>
         val scInput = source.toInputFromBuffers(buffers)
@@ -357,7 +356,7 @@ final class Ammonite(
         val scriptStartIdx =
           updatedContent.indexOf(Ammonite.startTag) + Ammonite.startTag.length
         val addedLineCount = updatedContent.lineAtIndex(scriptStartIdx)
-        val updatedPos =
+        def updatedPos(position: Position) =
           new Position(addedLineCount + position.getLine, position.getCharacter)
         (updatedInput, updatedPos)
       }

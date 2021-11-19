@@ -44,6 +44,7 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
+import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
 
 /**
@@ -539,9 +540,8 @@ class Compilers(
   }
 
   private def ammoniteInputPosOpt(
-      path: AbsolutePath,
-      position: LspPosition
-  ): Option[(Input.VirtualFile, LspPosition)] =
+      path: AbsolutePath
+  ): Option[(Input.VirtualFile, LspPosition => LspPosition)] =
     if (path.isAmmoniteScript)
       for {
         target <-
@@ -549,8 +549,7 @@ class Compilers(
             .inverseSources(path)
         res <- ammonite().generatedScalaInputForPc(
           target,
-          path,
-          position
+          path
         )
       } yield res
     else
@@ -590,38 +589,65 @@ class Compilers(
   private def withPCAndAdjustLsp[T](
       params: HoverExtParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
-    val positionParams =
-      new TextDocumentPositionParams(params.textDocument, params.getPosition)
+
     val path = params.textDocument.getUri.toAbsolutePath
     val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
 
-    val (input, pos, adjust) =
-      sourceAdjustments(
+    if (params.range != null) {
+      val (input, range, adjust) = sourceAdjustments(
+        params,
+        compiler.scalaVersion()
+      )
+      fn(compiler, range.toMeta(input), adjust)
+
+    } else {
+      val positionParams =
+        new TextDocumentPositionParams(params.textDocument, params.getPosition)
+      val (input, pos, adjust) = sourceAdjustments(
         positionParams,
         compiler.scalaVersion()
       )
-
-    if (params.range != null)
-      fn(compiler, params.range.toMeta(input), adjust)
-    else
       fn(compiler, pos.toMeta(input), adjust)
+    }
   }
 
   private def sourceAdjustments(
       params: TextDocumentPositionParams,
       scalaVersion: String
   ): (Input.VirtualFile, LspPosition, AdjustLspData) = {
+    val (input, adjustRequest, adjustResponse) = sourceAdjustments(
+      params.getTextDocument().getUri(),
+      scalaVersion
+    )
+    (input, adjustRequest(params.getPosition()), adjustResponse)
+  }
 
-    val uri = params.getTextDocument.getUri
+  private def sourceAdjustments(
+      params: HoverExtParams,
+      scalaVersion: String
+  ): (Input.VirtualFile, LspRange, AdjustLspData) = {
+    val (input, adjustRequest, adjustResponse) = sourceAdjustments(
+      params.textDocument.getUri(),
+      scalaVersion
+    )
+    val start = params.range.getStart()
+    val end = params.range.getEnd()
+    val newRange = new LspRange(adjustRequest(start), adjustRequest(end))
+    (input, newRange, adjustResponse)
+  }
+
+  private def sourceAdjustments(
+      uri: String,
+      scalaVersion: String
+  ): (Input.VirtualFile, LspPosition => LspPosition, AdjustLspData) = {
     val path = uri.toAbsolutePath
-    val position = params.getPosition
-
     def input = path.toInputFromBuffers(buffers)
-    def default = (input, position, AdjustedLspData.default)
+    def default =
+      (input, (position: LspPosition) => position, AdjustedLspData.default)
 
     val forScripts =
       if (path.isAmmoniteScript) {
-        ammoniteInputPosOpt(path, position)
+        ammoniteInputPosOpt(path)
           .map { case (input, pos) =>
             (input, pos, Ammonite.adjustLspData(input.text))
           }
@@ -629,12 +655,12 @@ class Compilers(
         buildTargets
           .sbtAutoImports(path)
           .map(
-            SbtBuildTool.sbtInputPosAdjustment(input, _, uri, position)
+            SbtBuildTool.sbtInputPosAdjustment(input, _, uri)
           )
       } else if (
         path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)
       ) {
-        WorksheetProvider.worksheetScala3Adjustments(input, uri, position)
+        WorksheetProvider.worksheetScala3Adjustments(input, uri)
       } else None
 
     forScripts.getOrElse(default)
