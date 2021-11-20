@@ -355,7 +355,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   test("simple errored script") {
     val expectedDiagnostics =
-      """main.sc:15:25: error: not found: type Fooz
+      """errored.sc:15:25: error: not found: type Fooz
         |val decodedFoo = decode[Fooz](json)
         |                        ^^^^
         |""".stripMargin
@@ -368,7 +368,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |    "scalaVersion": "$scalaVersion"
            |  }
            |}
-           |/main.sc
+           |/errored.sc
            | // scala $scalaVersion
            |import $$ivy.`io.circe::circe-core:0.12.3`
            |import $$ivy.`io.circe::circe-generic:0.12.3`
@@ -389,11 +389,11 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |decode[Foozz](json)
            |""".stripMargin
       )
-      _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didOpen("errored.sc")
+      _ <- server.didSave("errored.sc")(identity)
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
-      diagnostics = server.client.pathDiagnostics("main.sc")
+      diagnostics = server.client.pathDiagnostics("errored.sc")
       _ = assertNoDiff(diagnostics, expectedDiagnostics)
 
     } yield ()
