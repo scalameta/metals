@@ -2,9 +2,13 @@ package scala.meta.internal.bsp
 
 import java.nio.file.Files
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.builds.BuildServerProvider
+import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.BloopServers
@@ -28,7 +32,8 @@ class BspConnector(
     client: LanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    bspConfigGenerator: BspConfigGenerator
 )(implicit ec: ExecutionContext) {
 
   def resolve(): BspResolvedResult = {
@@ -80,7 +85,9 @@ class BspConnector(
             Some(item) <- client
               .showMessageRequest(query.params)
               .asScala
-              .map(item => query.details.get(item.getTitle))
+              .map(item =>
+                Option(item).flatMap(item => query.details.get(item.getTitle))
+              )
             conn <- bspServers.newServer(workspace, item)
           } yield Some(conn)
       }
@@ -119,22 +126,30 @@ class BspConnector(
     recursive(root, List.empty)
   }
 
+  /**
+   * Have the user choose what server they'd like to use out of a list of
+   * possible servers that are available to them in the workspace.
+   *
+   * @param possibleServers This could be servers that already have a bsp
+   * entry or just build tools that the user is using that can also be a build
+   * server. This is why we're working with strings instead of
+   * bspConnectionDetails.
+   * @param currentBsp a possible current choice they've made to explicit use
+   * this server in the past.
+   * @return
+   */
   private def askUser(
-      availableBspConnections: List[BspConnectionDetails],
-      currentBsp: Option[String]
-  ): Future[BspResolvedResult] = {
-    val query = Messages.SelectBspServer.request(
-      availableBspConnections,
-      currentBsp
+      possibleServers: List[String],
+      currentSelectedServer: Option[String]
+  ): Future[Option[String]] = {
+    val params = Messages.ChooseBspServer.request(
+      possibleServers,
+      currentSelectedServer
     )
+
     for {
-      item <- client.showMessageRequest(query.params).asScala
-    } yield {
-      val chosenMaybe = Option(item).flatMap(i => query.details.get(i.getTitle))
-      chosenMaybe
-        .map(BspResolvedResult.fromDetails)
-        .getOrElse(ResolvedNone)
-    }
+      item <- client.showMessageRequest(params.params).asScala
+    } yield Option(item).map(_.getTitle()).map(params.mapping(_))
   }
 
   /**
@@ -144,10 +159,36 @@ class BspConnector(
       workspace: AbsolutePath,
       createBloopAndConnect: () => Future[BuildChange]
   ): Future[Boolean] = {
-    val bloopPresent = buildTools.isBloop
 
+    val foundServers = bspServers.findAvailableServers()
+    val bloopPresent: Boolean = buildTools.isBloop
+
+    // TODO do we want this type or not
+    val possibleServerMapping = mutable.Map.empty[String, Either[
+      BuildTool with BuildServerProvider,
+      BspConnectionDetails
+    ]]
+
+    // These are buildTools in the workspace that can serve as a build servers
+    // and don't already have a .bsp entry
+    val possibleServers = buildTools
+      .loadSupported()
+      .collect {
+        case buildTool: BuildServerProvider
+            if !foundServers
+              .exists(details =>
+                details.getName() == buildTool.executableName
+              ) =>
+          buildTool
+      }
+      .map { possible =>
+        possibleServerMapping(possible.executableName) = Left(possible)
+        possible.executableName
+      }
+
+    // These are build servers that already have a .bsp entry plus bloop if
+    // it's an option.
     val availableServers = {
-      val found = bspServers.findAvailableServers()
       if (bloopPresent || buildTools.loadSupported().nonEmpty)
         new BspConnectionDetails(
           BloopServers.name,
@@ -155,48 +196,107 @@ class BspConnector(
           userConfig().currentBloopVersion,
           "",
           ImmutableList.of()
-        ) :: found
-      else found
+        ) :: foundServers
+      else foundServers
+    }.map { details =>
+      possibleServerMapping(details.getName) = Right(details)
+      details.getName()
     }
 
-    availableServers match {
+    /**
+     * Handles showing the user what they need to know after an attempt to
+     * generate a bsp config has happened.
+     */
+    def handleGenerationStatus(
+        buildTool: BuildTool,
+        status: BspConfigGenerationStatus
+    ): Boolean = status match {
+      case BspConfigGenerationStatus.Generated =>
+        tables.buildServers.chooseServer(buildTool.executableName)
+        true
+      case Cancelled => false
+      case Failed(exit) =>
+        exit match {
+          case Left(exitCode) =>
+            scribe.error(
+              s"Creation of .bsp/${buildTool.executableName} failed with exit code: $exitCode"
+            )
+            client.showMessage(
+              Messages.BspProvider.genericUnableToCreateConfig
+            )
+          case Right(message) =>
+            client.showMessage(
+              Messages.BspProvider.unableToCreateConfigFromMessage(
+                message
+              )
+            )
+        }
+        false
+    }
+
+    def handleServerChoice(
+        possibleChoice: Option[String],
+        currentSelectedServer: Option[String]
+    ) = {
+      possibleChoice match {
+        case Some(choice) =>
+          possibleServerMapping(choice) match {
+            case Left(buildTool) =>
+              buildTool
+                .generateBspConfig(
+                  workspace,
+                  args => bspConfigGenerator.runUnconditionally(buildTool, args)
+                )
+                .map(status => handleGenerationStatus(buildTool, status))
+            case Right(connectionDetails)
+                if connectionDetails.getName == BloopServers.name && currentSelectedServer
+                  .contains(
+                    BspConnector.BLOOP_SELECTED
+                  ) =>
+              Future.successful(false)
+            case Right(details) if details.getName == BloopServers.name =>
+              tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
+              if (bloopPresent) {
+                Future.successful(true)
+              } else {
+                createBloopAndConnect().ignoreValue
+                Future.successful(false)
+              }
+            case Right(details)
+                if !currentSelectedServer.contains(details.getName) =>
+              tables.buildServers.chooseServer(details.getName)
+              Future.successful(true)
+          }
+        case _ =>
+          Future.successful(false)
+      }
+    }
+
+    (possibleServers ::: availableServers) match {
       case Nil =>
         client.showMessage(BspSwitch.noInstalledServer)
         Future.successful(false)
       case singleServer :: Nil =>
-        client.showMessage(
-          BspSwitch.onlyOneServer(name = singleServer.getName())
-        )
-        Future.successful(false)
+        possibleServerMapping(singleServer) match {
+          case Left(buildTool) =>
+            buildTool
+              .generateBspConfig(
+                workspace,
+                args => bspConfigGenerator.runUnconditionally(buildTool, args)
+              )
+              .map(status => handleGenerationStatus(buildTool, status))
+          case Right(connectionDetails) =>
+            client.showMessage(
+              BspSwitch.onlyOneServer(name = connectionDetails.getName())
+            )
+            Future.successful(false)
+        }
+
       case multipleServers =>
         val currentSelectedServer = tables.buildServers.selectedServer()
-        askUser(multipleServers, currentSelectedServer).map {
-          case ResolvedBloop
-              if currentSelectedServer.contains(
-                BspConnector.BLOOP_SELECTED
-              ) =>
-            false
-          case ResolvedBloop =>
-            tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
-            // If a .bloop/ is already in the workspace, then we can just
-            // return true for a build change and let the bsp connection be
-            // made. However, if not, then we do a createBloopAndConnect()
-            // instead to first generate the .bloop/ to ensure a connection can
-            // be made. We return false since the the method will take care of
-            // connecting after the .bloop/ dir is made
-            if (bloopPresent) {
-              true
-            } else {
-              createBloopAndConnect().ignoreValue
-              false
-            }
-          case ResolvedBspOne(details)
-              if !currentSelectedServer.contains(details.getName) =>
-            tables.buildServers.chooseServer(details.getName)
-            true
-          case _ =>
-            false
-        }
+        askUser(multipleServers, currentSelectedServer).flatMap(choice =>
+          handleServerChoice(choice, currentSelectedServer)
+        )
     }
   }
 }

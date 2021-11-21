@@ -67,7 +67,7 @@ object Messages {
     )
     val genericUnableToCreateConfig = new MessageParams(
       MessageType.Error,
-      "Unable to create bsp config."
+      "Unable to create bsp config. Please check your log for more details."
     )
 
     def unableToCreateConfigFromMessage(message: String) = new MessageParams(
@@ -370,6 +370,39 @@ object Messages {
     }
   }
 
+  // TODO what extra stuff do we maybe need to pull from SelectBspServer later
+  object ChooseBspServer {
+    case class Request(
+        params: ShowMessageRequestParams,
+        mapping: Map[String, String]
+    )
+
+    def request(
+        possibleBuildServers: List[String],
+        currentBsp: Option[String]
+    ): Request = {
+      val mapping = mutable.Map.empty[String, String]
+      val messageActionItems =
+        possibleBuildServers.map { bs =>
+          val title = if (currentBsp.exists(_ == bs)) {
+            bs + " (currently selected)"
+          } else {
+            bs
+          }
+          mapping(title) = bs
+          new MessageActionItem(title)
+        }
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        "Multiple build servers detected, which one do you want to use?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(messageActionItems.asJava)
+      Request(params, mapping.toMap)
+    }
+  }
+
+  // TODO can we just get rid of all of this and simplify
   // Don't confuse this with the "multiple build tools that can be servers"
   // message up above.  That one focuses not on multiple .bsp/<tool>.json
   // entries, but rather having multiple build tools in a workspace that could

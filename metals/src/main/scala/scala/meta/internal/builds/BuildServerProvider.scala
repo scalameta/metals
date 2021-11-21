@@ -4,7 +4,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 /**
@@ -18,7 +17,6 @@ trait BuildServerProvider { this: BuildTool =>
    */
   def generateBspConfig(
       workspace: AbsolutePath,
-      languageClient: MetalsLanguageClient,
       systemProcess: List[String] => Future[BspConfigGenerationStatus]
   ): Future[BspConfigGenerationStatus] =
     if (workspaceSupportsBsp(workspace)) {

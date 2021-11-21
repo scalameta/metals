@@ -48,7 +48,6 @@ final class BspConfigGenerator(
       Some(buildTool) <- chooseBuildServerProvider(buildTools)
       status <- buildTool.generateBspConfig(
         workspace,
-        languageClient,
         args => runUnconditionally(buildTool, args)
       )
     } yield (buildTool, status)

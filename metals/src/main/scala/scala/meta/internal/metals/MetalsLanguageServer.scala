@@ -471,7 +471,8 @@ class MetalsLanguageServer(
           languageClient,
           tables,
           () => userConfig,
-          statusBar
+          statusBar,
+          bspConfigGenerator
         )
         semanticdbs = AggregateSemanticdbs(
           List(
@@ -1960,7 +1961,6 @@ class MetalsLanguageServer(
         buildTool
           .generateBspConfig(
             workspace,
-            languageClient,
             args =>
               bspConfigGenerator.runUnconditionally(
                 buildTool,
