@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import scala.meta.Dialect
 import scala.meta.dialects._
-import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 
 object ScalaVersions {
@@ -21,7 +20,7 @@ object ScalaVersions {
   private val _isSupportedScalaVersion: Set[String] =
     BuildInfo.supportedScalaVersions.toSet
 
-  def isSupportedScalaVersion(version: String): Boolean =
+  def isSupportedAtReleaseMomentScalaVersion(version: String): Boolean =
     _isSupportedScalaVersion(dropVendorSuffix(version))
 
   def isDeprecatedScalaVersion(version: String): Boolean =
@@ -75,11 +74,6 @@ object ScalaVersions {
       }
     !supportedScala3Versions(scalaVersion) && isFuture
   }
-
-  def isCurrentScalaCompilerVersion(version: String): Boolean =
-    ScalaVersions.dropVendorSuffix(
-      version
-    ) == mtags.BuildInfo.scalaCompilerVersion
 
   def scalaBinaryVersionFromFullVersion(scalaVersion: String): String = {
     if (scalaVersion.startsWith("3"))

@@ -25,6 +25,7 @@ import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import munit.FunSuite
 import munit.TestOptions
+import tests.TestMtagsResolver
 
 class ProblemResolverSuite extends FunSuite {
 
@@ -113,6 +114,7 @@ class ProblemResolverSuite extends FunSuite {
       workspace.toFile().deleteOnExit()
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
+        new TestMtagsResolver,
         () => None,
         isClientCommandSupported = true
       )

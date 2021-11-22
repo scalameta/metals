@@ -106,7 +106,8 @@ class MetalsLanguageServer(
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
     sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
-    isReliableFileWatcher: Boolean = true
+    isReliableFileWatcher: Boolean = true,
+    mtagsResolver: MtagsResolver = MtagsResolver.default()
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -299,6 +300,7 @@ class MetalsLanguageServer(
       new Embedded(
         clientConfig.icons,
         statusBar,
+        mtagsResolver,
         () => userConfig
       )
     )
@@ -628,7 +630,8 @@ class MetalsLanguageServer(
             diagnostics,
             excludedPackageHandler.isExcludedPackage,
             scalaVersionSelector,
-            trees
+            trees,
+            mtagsResolver
           )
         )
         debugProvider = new DebugProvider(
@@ -678,7 +681,8 @@ class MetalsLanguageServer(
           () => bspConnector.resolve(),
           () => httpServer,
           tables,
-          clientConfig
+          clientConfig,
+          mtagsResolver
         )
         fileDecoderProvider = new FileDecoderProvider(
           workspace,
@@ -1220,7 +1224,9 @@ class MetalsLanguageServer(
           }
 
           userConfig.fallbackScalaVersion.foreach { version =>
-            if (!ScalaVersions.isSupportedScalaVersion(version)) {
+            if (
+              !ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)
+            ) {
               val params =
                 Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
                   version

@@ -16,6 +16,7 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.Time
@@ -47,6 +48,9 @@ abstract class BaseLspSuite(
   var workspace: AbsolutePath = _
 
   protected def initializationOptions: Option[InitializationOptions] = None
+
+  protected def mtagsResolver: MtagsResolver =
+    new TestMtagsResolver
 
   override def afterAll(): Unit = {
     if (server != null) {
@@ -90,7 +94,8 @@ abstract class BaseLspSuite(
       bspGlobalDirectories,
       sh,
       time,
-      initializationOptions
+      initializationOptions,
+      mtagsResolver
     )(ex)
     server.server.userConfig = this.userConfig
   }

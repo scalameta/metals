@@ -55,7 +55,9 @@ case class SemanticDBDisabled(
     if (unsupportedBloopVersion) {
       s"""|The installed Bloop server version is $bloopVersion while Metals requires at least Bloop version ${BuildInfo.bloopVersion},
           |To fix this problem please update your Bloop server.""".stripMargin
-    } else if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
+    } else if (
+      ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion)
+    ) {
       hint.capitalize
     } else {
       "Semanticdb is required for code navigation to work correctly in your project," +

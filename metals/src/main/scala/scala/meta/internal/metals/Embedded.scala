@@ -28,6 +28,7 @@ import mdoc.interfaces.Mdoc
 final class Embedded(
     icons: Icons,
     statusBar: StatusBar,
+    mtagsResolver: MtagsResolver,
     userConfig: () => UserConfiguration
 ) extends Cancelable {
 
@@ -45,7 +46,7 @@ final class Embedded(
     val classloader = mdocs.getOrElseUpdate(
       scalaBinaryVersion,
       statusBar.trackSlowTask("Preparing worksheets") {
-        Embedded.newMdocClassLoader(scalaVersion, scalaBinaryVersion)
+        newMdocClassLoader(scalaVersion, scalaBinaryVersion)
       }
     )
     serviceLoader(
@@ -56,13 +57,13 @@ final class Embedded(
   }
 
   def presentationCompiler(
-      scalaVersion: String,
+      mtags: MtagsBinaries.Artifacts,
       classpath: Seq[Path]
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
-      ScalaVersions.dropVendorSuffix(scalaVersion),
+      ScalaVersions.dropVendorSuffix(mtags.scalaVersion),
       statusBar.trackSlowTask("Preparing presentation compiler") {
-        Embedded.newPresentationCompilerClassLoader(scalaVersion, classpath)
+        newPresentationCompilerClassLoader(mtags, classpath)
       }
     )
     serviceLoader(
@@ -90,23 +91,7 @@ final class Embedded(
     }
   }
 
-}
-
-object Embedded {
-  lazy val repositories: List[Repository] =
-    Repository.defaults().asScala.toList ++
-      List(
-        Repository.central(),
-        Repository.ivy2Local(),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/public/"
-        ),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/snapshots/"
-        )
-      )
-
-  def newMdocClassLoader(
+  private def newMdocClassLoader(
       scalaVersion: String,
       scalaBinaryVersion: String
   ): URLClassLoader = {
@@ -117,7 +102,8 @@ object Embedded {
      * load coursierapi.Logger and instead will use the already loaded one
      */
     resolutionParams.addExclusion("io.get-coursier", "interface")
-    val jars = downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
+    val jars =
+      Embedded.downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
 
     val parent = new MdocClassLoader(this.getClass.getClassLoader)
 
@@ -137,6 +123,35 @@ object Embedded {
     val urls = runtimeClasspath.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
   }
+
+  private def newPresentationCompilerClassLoader(
+      mtags: MtagsBinaries.Artifacts,
+      classpath: Seq[Path]
+  ): URLClassLoader = {
+    val allJars = Iterator(mtags.jars, classpath).flatten
+    val allURLs = allJars.map(_.toUri.toURL).toArray
+    // Share classloader for a subset of types.
+    val parent =
+      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
+    new URLClassLoader(allURLs, parent)
+  }
+
+}
+
+object Embedded {
+
+  lazy val repositories: List[Repository] =
+    Repository.defaults().asScala.toList ++
+      List(
+        Repository.central(),
+        Repository.ivy2Local(),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/public/"
+        ),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/snapshots/"
+        )
+      )
 
   def fetchSettings(
       dep: Dependency,
@@ -259,25 +274,6 @@ object Embedded {
       BuildInfo.organizeImportVersion
     )
     downloadDependency(dep, scalaBinaryVersion)
-  }
-
-  def newPresentationCompilerClassLoader(
-      fullScalaVersion: String,
-      classpath: Seq[Path]
-  ): URLClassLoader = {
-    val scalaVersion = ScalaVersions
-      .dropVendorSuffix(fullScalaVersion)
-    val dep = mtagsDependency(scalaVersion)
-    val jars = fetchSettings(dep, fullScalaVersion)
-      .fetch()
-      .asScala
-      .map(_.toPath)
-    val allJars = Iterator(jars, classpath).flatten
-    val allURLs = allJars.map(_.toUri.toURL).toArray
-    // Share classloader for a subset of types.
-    val parent =
-      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
-    new URLClassLoader(allURLs, parent)
   }
 
   def toClassLoader(
