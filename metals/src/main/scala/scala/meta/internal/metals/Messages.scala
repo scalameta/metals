@@ -370,7 +370,6 @@ object Messages {
     }
   }
 
-  // TODO what extra stuff do we maybe need to pull from SelectBspServer later
   object ChooseBspServer {
     case class Request(
         params: ShowMessageRequestParams,
@@ -385,7 +384,7 @@ object Messages {
       val messageActionItems =
         possibleBuildServers.map { bs =>
           val title = if (currentBsp.exists(_ == bs)) {
-            bs + " (currently selected)"
+            bs + " (currently using)"
           } else {
             bs
           }

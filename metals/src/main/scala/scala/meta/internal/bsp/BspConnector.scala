@@ -2,7 +2,6 @@ package scala.meta.internal.bsp
 
 import java.nio.file.Files
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -36,6 +35,10 @@ class BspConnector(
     bspConfigGenerator: BspConfigGenerator
 )(implicit ec: ExecutionContext) {
 
+  /**
+   * Resolves the current build servers that either have a bsp entry or if the
+   * workspace can support Bloop, it will also resolve Bloop.
+   */
   def resolve(): BspResolvedResult = {
     resolveExplicit().getOrElse {
       if (buildTools.loadSupported().nonEmpty || buildTools.isBloop)
@@ -55,6 +58,13 @@ class BspConnector(
     }
   }
 
+  /**
+   * Handles the connection to the build server. This assumes that all
+   * inforamtion that it needs is already in place by either having a
+   * workspace that can work with Bloop or a workspace that already has a bsp
+   * entry. In the case that a user is switching build servers the generation
+   * of the bsp entry has already happened at this point.
+   */
   def connect(
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration
@@ -153,7 +163,12 @@ class BspConnector(
   }
 
   /**
-   * Runs "Switch build server" command, returns true if build server was changed
+   * Runs "Switch build server" command, returns true if build server choice
+   * was changed.
+   *
+   * NOTE: that in most cases this doesn't actaully change your build server
+   * and connect to it, but stores that you want to chage it unless you are
+   * choosing Bloop, since in that case it's special cased and does start it.
    */
   def switchBuildServer(
       workspace: AbsolutePath,
@@ -163,15 +178,12 @@ class BspConnector(
     val foundServers = bspServers.findAvailableServers()
     val bloopPresent: Boolean = buildTools.isBloop
 
-    // TODO do we want this type or not
-    val possibleServerMapping = mutable.Map.empty[String, Either[
-      BuildTool with BuildServerProvider,
-      BspConnectionDetails
-    ]]
-
     // These are buildTools in the workspace that can serve as a build servers
     // and don't already have a .bsp entry
-    val possibleServers = buildTools
+    val possibleServers: Map[String, Either[
+      BuildTool with BuildServerProvider,
+      BspConnectionDetails
+    ]] = buildTools
       .loadSupported()
       .collect {
         case buildTool: BuildServerProvider
@@ -182,13 +194,16 @@ class BspConnector(
           buildTool
       }
       .map { possible =>
-        possibleServerMapping(possible.executableName) = Left(possible)
-        possible.executableName
+        possible.executableName -> Left(possible)
       }
+      .toMap
 
     // These are build servers that already have a .bsp entry plus bloop if
     // it's an option.
-    val availableServers = {
+    val availableServers: Map[String, Either[
+      BuildTool with BuildServerProvider,
+      BspConnectionDetails
+    ]] = {
       if (bloopPresent || buildTools.loadSupported().nonEmpty)
         new BspConnectionDetails(
           BloopServers.name,
@@ -199,9 +214,10 @@ class BspConnector(
         ) :: foundServers
       else foundServers
     }.map { details =>
-      possibleServerMapping(details.getName) = Right(details)
-      details.getName()
-    }
+      details.getName() -> Right(details)
+    }.toMap
+
+    val allPossibleServers = possibleServers ++ availableServers
 
     /**
      * Handles showing the user what they need to know after an attempt to
@@ -240,7 +256,7 @@ class BspConnector(
     ) = {
       possibleChoice match {
         case Some(choice) =>
-          possibleServerMapping(choice) match {
+          allPossibleServers(choice) match {
             case Left(buildTool) =>
               buildTool
                 .generateBspConfig(
@@ -272,12 +288,12 @@ class BspConnector(
       }
     }
 
-    (possibleServers ::: availableServers) match {
+    allPossibleServers.keys.toList match {
       case Nil =>
         client.showMessage(BspSwitch.noInstalledServer)
         Future.successful(false)
       case singleServer :: Nil =>
-        possibleServerMapping(singleServer) match {
+        allPossibleServers(singleServer) match {
           case Left(buildTool) =>
             buildTool
               .generateBspConfig(
