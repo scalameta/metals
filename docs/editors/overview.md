@@ -212,7 +212,7 @@ functionality.
      <td>Source file analyzer</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">❌</td>
+     <td align="center">✅</td>
      <td align="center">❌</td>
      <td align="center">❌</td>
   </tr>
