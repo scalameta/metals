@@ -287,7 +287,12 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             }
           nameOpt.foreach { name =>
             withFileOwner {
-              term(name, t.name.pos, Kind.METHOD, Property.IMPLICIT.value)
+              if (t.tparams.nonEmpty || t.sparams.nonEmpty) {
+                method(name, "()", t.name.pos, Property.IMPLICIT.value)
+                enterTypeParameters(t.tparams)
+              } else {
+                term(name, t.name.pos, Kind.METHOD, Property.IMPLICIT.value)
+              }
               continue()
             }
           }
@@ -306,7 +311,12 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
           namePos.foreach { case (name, pos) =>
             withFileOwner {
               withOwner(owner) {
-                term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+                if (t.tparams.nonEmpty || t.sparams.nonEmpty) {
+                  method(name, "()", pos, Property.IMPLICIT.value)
+                  enterTypeParameters(t.tparams)
+                } else {
+                  term(name, t.name.pos, Kind.METHOD, Property.IMPLICIT.value)
+                }
                 continue()
               }
             }
@@ -329,12 +339,22 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
   private def isPackageOwner: Boolean = currentOwner.endsWith("/")
 
   private def givenTpeName(t: Type): Option[String] = {
-    t match {
-      case t: Type.Name => Some(t.value)
-      case t: Type.Apply =>
-        val out = List(t.tpe, t.args.head).flatMap(givenTpeName).mkString("_")
-        Some(out)
-      case _ => None
+
+    def extract(t: Type, level: Int): Option[String] = {
+      if (level > 1) None
+      else {
+        t match {
+          case t: Type.Name => Some(t.value)
+          case t: Type.Apply =>
+            val out =
+              (t.tpe :: t.args)
+                .flatMap(extract(_, level + 1))
+                .mkString("_")
+            Some(out)
+          case _ => None
+        }
+      }
     }
+    extract(t, 0)
   }
 }
