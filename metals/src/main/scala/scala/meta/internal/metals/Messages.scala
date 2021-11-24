@@ -7,7 +7,6 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BspConnectionDetails
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
@@ -370,13 +369,16 @@ object Messages {
     }
   }
 
-  object ChooseBspServer {
+  object BspSwitch {
     case class Request(
         params: ShowMessageRequestParams,
         mapping: Map[String, String]
     )
 
-    def request(
+    val message: String =
+      "Multiple build servers detected, which one do you want to use?"
+
+    def chooseServerRequest(
         possibleBuildServers: List[String],
         currentBsp: Option[String]
     ): Request = {
@@ -392,92 +394,27 @@ object Messages {
           new MessageActionItem(title)
         }
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        "Multiple build servers detected, which one do you want to use?"
-      )
+      params.setMessage(message)
       params.setType(MessageType.Info)
       params.setActions(messageActionItems.asJava)
       Request(params, mapping.toMap)
     }
-  }
 
-  // TODO can we just get rid of all of this and simplify
-  // Don't confuse this with the "multiple build tools that can be servers"
-  // message up above.  That one focuses not on multiple .bsp/<tool>.json
-  // entries, but rather having multiple build tools in a workspace that could
-  // potentially be a build server, whereas this one focuses on existing .bsp
-  // files that already exist.
-  object SelectBspServer {
-    case class Request(
-        params: ShowMessageRequestParams,
-        details: Map[String, BspConnectionDetails]
-    )
-    def message: String =
-      "Multiple build servers detected, which one do you want to use?"
-    def isSelectBspServer(params: ShowMessageRequestParams): Boolean =
-      params.getMessage == message
-    def request(
-        candidates: List[BspConnectionDetails],
-        currentBsp: Option[String]
-    ): Request = {
-      val params = new ShowMessageRequestParams()
-      params.setMessage(message)
-      params.setType(MessageType.Warning)
-      val details = mutable.Map.empty[String, BspConnectionDetails]
-      // The logic for choosing item names is a bit tricky because we want
-      // the following characteristics:
-      // - all options must be unique, we get a title string back from the
-      //   editor for which server the user chose.
-      // - happy path: title is build server name without noisy version number.
-      // - name conflicts: disambiguate conflicting names by version number
-      // - name+version conflicts: append random characters to the title.
-      val items = candidates.map { candidate =>
-        val currentlyUsing =
-          if (
-            currentBsp.exists(
-              _.toLowerCase == candidate.getName().toLowerCase()
-            )
-          )
-            " (currently using)"
-          else ""
-        val nameConflicts = candidates.count(_.getName == candidate.getName)
-        val title: String = if (nameConflicts < 2) {
-          candidate.getName + currentlyUsing
-        } else {
-          val versionConflicts = candidates.count { c =>
-            c.getName == candidate.getName &&
-            c.getVersion == candidate.getVersion
-          }
-          if (versionConflicts < 2) {
-            s"${candidate.getName} v${candidate.getVersion}"
-          } else {
-            val stream = Stream.from(0).map { i =>
-              val ch = ('a'.toInt + i).toChar
-              s"${candidate.getName} v${candidate.getVersion} ($ch)"
-            }
-            stream.find(!details.contains(_)).get
-          }
-        }
-        details(title) = candidate
-        new MessageActionItem(title)
-      }
-      params.setActions(items.asJava)
-      Request(params, details.toMap)
-    }
-  }
-
-  object BspSwitch {
     def noInstalledServer: MessageParams =
       new MessageParams(
         MessageType.Error,
         "Unable to switch build server since there are no installed build servers on this computer. " +
           "To fix this problem, install a build server first."
       )
+
     def onlyOneServer(name: String): MessageParams =
       new MessageParams(
         MessageType.Warning,
         s"Unable to switch build server since there is only one supported build server '$name' detected for this workspace."
       )
+
+    def isSelectBspServer(params: ShowMessageRequestParams): Boolean =
+      params.getMessage == message
   }
 
   object MissingScalafmtVersion {

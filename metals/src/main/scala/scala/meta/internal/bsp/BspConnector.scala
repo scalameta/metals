@@ -18,6 +18,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -60,7 +61,7 @@ class BspConnector(
 
   /**
    * Handles the connection to the build server. This assumes that all
-   * inforamtion that it needs is already in place by either having a
+   * information that it needs is already in place by either having a
    * workspace that can work with Bloop or a workspace that already has a bsp
    * entry. In the case that a user is switching build servers the generation
    * of the bsp entry has already happened at this point.
@@ -89,14 +90,34 @@ class BspConnector(
         case ResolvedBspOne(details) =>
           bspServers.newServer(workspace, details).map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
+          val distinctServers = availableServers
+            .groupBy(_.getName())
+            .mapValues {
+              case singleVersion :: Nil => singleVersion
+              case multipleVersions =>
+                multipleVersions.reduceLeft[BspConnectionDetails] {
+                  case (a, b) =>
+                    if (
+                      SemVer.Version.fromString(a.getVersion()) > SemVer.Version
+                        .fromString(b.getVersion())
+                    ) a
+                    else b
+                }
+            }
+
           val query =
-            Messages.SelectBspServer.request(availableServers, None)
+            Messages.BspSwitch.chooseServerRequest(
+              distinctServers.keySet.toList,
+              None
+            )
           for {
             Some(item) <- client
               .showMessageRequest(query.params)
               .asScala
               .map(item =>
-                Option(item).flatMap(item => query.details.get(item.getTitle))
+                Option(item).map(item =>
+                  distinctServers(query.mapping(item.getTitle))
+                )
               )
             conn <- bspServers.newServer(workspace, item)
           } yield Some(conn)
@@ -152,7 +173,7 @@ class BspConnector(
       possibleServers: List[String],
       currentSelectedServer: Option[String]
   ): Future[Option[String]] = {
-    val params = Messages.ChooseBspServer.request(
+    val params = Messages.BspSwitch.chooseServerRequest(
       possibleServers,
       currentSelectedServer
     )
