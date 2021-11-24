@@ -384,13 +384,13 @@ object Messages {
     ): Request = {
       val mapping = mutable.Map.empty[String, String]
       val messageActionItems =
-        possibleBuildServers.map { bs =>
-          val title = if (currentBsp.exists(_ == bs)) {
-            bs + " (currently using)"
+        possibleBuildServers.map { buildServer =>
+          val title = if (currentBsp.exists(_ == buildServer)) {
+            buildServer + " (currently using)"
           } else {
-            bs
+            buildServer
           }
-          mapping(title) = bs
+          mapping(title) = buildServer
           new MessageActionItem(title)
         }
       val params = new ShowMessageRequestParams()

@@ -9,7 +9,7 @@ import scala.meta.io.AbsolutePath
 /**
  * Helper trait for build tools that also impliment bsp
  */
-trait BuildServerProvider { this: BuildTool =>
+trait BuildServerProvider extends BuildTool {
 
   /**
    * Method used to generate a bsp config file for the build

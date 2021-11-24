@@ -202,7 +202,7 @@ class BspConnector(
     // These are buildTools in the workspace that can serve as a build servers
     // and don't already have a .bsp entry
     val possibleServers: Map[String, Either[
-      BuildTool with BuildServerProvider,
+      BuildServerProvider,
       BspConnectionDetails
     ]] = buildTools
       .loadSupported()
@@ -212,17 +212,14 @@ class BspConnector(
               .exists(details =>
                 details.getName() == buildTool.executableName
               ) =>
-          buildTool
-      }
-      .map { possible =>
-        possible.executableName -> Left(possible)
+          buildTool.executableName -> Left(buildTool)
       }
       .toMap
 
     // These are build servers that already have a .bsp entry plus bloop if
     // it's an option.
     val availableServers: Map[String, Either[
-      BuildTool with BuildServerProvider,
+      BuildServerProvider,
       BspConnectionDetails
     ]] = {
       if (bloopPresent || buildTools.loadSupported().nonEmpty)

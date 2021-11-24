@@ -42,7 +42,7 @@ final class BspConfigGenerator(
    * choose the desired build server and then connect to it.
    */
   def chooseAndGenerate(
-      buildTools: List[BuildTool with BuildServerProvider]
+      buildTools: List[BuildServerProvider]
   ): Future[(BuildTool, BspConfigGenerationStatus)] = {
     for {
       Some(buildTool) <- chooseBuildServerProvider(buildTools)
@@ -54,8 +54,8 @@ final class BspConfigGenerator(
   }
 
   private def chooseBuildServerProvider(
-      buildTools: List[BuildTool with BuildServerProvider]
-  ): Future[Option[BuildTool with BuildServerProvider]] = {
+      buildTools: List[BuildServerProvider]
+  ): Future[Option[BuildServerProvider]] = {
     languageClient
       .showMessageRequest(BspProvider.params(buildTools))
       .asScala

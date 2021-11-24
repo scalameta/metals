@@ -53,16 +53,4 @@ class SelectBspServerSuite extends BaseSuite {
       |Mill
       |""".stripMargin
   )
-
-  check(
-    "default-newest",
-    None,
-    List(
-      name("Bloop", "1.0"),
-      name("Bloop", "2.0")
-    ),
-    """
-      |Bloop
-      |""".stripMargin
-  )
 }
