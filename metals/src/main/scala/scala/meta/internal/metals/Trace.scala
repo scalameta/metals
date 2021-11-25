@@ -46,11 +46,9 @@ object Trace {
    */
   def setupTracePrinter(
       protocolName: String,
-      workspace: AbsolutePath = localDirectory
+      workspace: AbsolutePath = PathIO.workingDirectory
   ): Option[PrintWriter] = {
-    val metalsDir =
-      if (workspace.toNIO.endsWith(".metals")) workspace
-      else workspace.resolve(".metals")
+    val metalsDir = workspace.resolve(".metals")
     val tracePaths = (metalsDir :: globalDirectory.toList).map(dir =>
       protocolTracePath(protocolName, dir)
     )

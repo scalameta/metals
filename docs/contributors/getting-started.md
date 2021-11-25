@@ -20,7 +20,7 @@ You will need the following applications installed:
 
 - `metals` the main project with sources of the Metals language server.
 - `sbt-metals` the sbt plugin used when users are using the BSP support from
-    sbt to ensure semanticDB is being produced by sbt.
+  sbt to ensure semanticDB is being produced by sbt.
 - `mtags` Scala version specific module used to interact with the Scala
   presentation compiler. It's a dependency of the `metals` project and can
   additionally be used by via `mtags-interfaces` to support multiple Scala
@@ -140,13 +140,13 @@ a full cross publish with `sbt +publishLocal`.
 First, follow the [`vim` installation instruction](../editors/vim.md).
 
 If you're using coc-metals:
-  - run `sbt publishLocal`
-  - open `:CocConfig` and put your new snapshot version in
-      `metals.serverVersion`.
-  - you will then be prompted to reload, which will restart the server.
 
-If you publish again, you then just need to execute the `metals.restartServer
-command`.
+- run `sbt publishLocal`
+- open `:CocConfig` and put your new snapshot version in
+  `metals.serverVersion`.
+- you will then be prompted to reload, which will restart the server.
+
+If you publish again, you then just need to execute the `metals.restartServer command`.
 
 If you are using another Vim client, write a `new-metals-vim` script that builds
 a new `metals-vim` bootstrap script using the locally published version.
@@ -186,8 +186,15 @@ These logs contain information that may be relevant for regular users.
 
 ### JSON-RPC trace
 
-To see the trace of incoming/outgoing JSON communication with the text editor or build server, create empty files in `$WORKSPACE/.metals/` or your machine cache directory.  
-Files created in `$WORKSPACE/.metals/` contains traces only from the Metals instance associated with the `$WORKSPACE`, while files in the cache directory are common for all Metals instances.
+To see the trace of incoming/outgoing JSON communication with the text editor 
+or build server, create empty files in `$WORKSPACE/.metals/` or your machine cache 
+directory. 
+
+However, we do not recommend using your machine cache directory because 
+trace files located there are shared between all Metals instances, hence multiple 
+servers can override the same file. Using `$WORKSPACE/.metals/` solves this issue and 
+also allows user to have more precise control over which metals instances log 
+their JSON-RPC communication.
 
 ```sh
 # Linux and macOS
