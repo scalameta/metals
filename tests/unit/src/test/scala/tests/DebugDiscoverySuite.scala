@@ -57,6 +57,72 @@ class DebugDiscoverySuite
     } yield assertNoDiff(output, "oranges are nice")
   }
 
+  test("run-file-main") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print("oranges are nice")
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(mainPath).toURI.toString,
+          "runOrTestFile"
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("run-file-test") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |class Foo extends org.scalatest.FunSuite {
+           |  test("foo") {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)(identity)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runOrTestFile"
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(output.contains("All tests in a.Foo passed"))
+  }
+
   test("run-multiple") {
     for {
       _ <- initialize(

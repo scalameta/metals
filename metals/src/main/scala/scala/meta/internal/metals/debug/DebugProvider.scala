@@ -9,6 +9,7 @@ import java.util.Collections.singletonList
 import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -275,6 +276,51 @@ class DebugProvider(
     }
   }
 
+  private def resolveInFile(
+      buildTarget: BuildTargetIdentifier,
+      classes: TrieMap[
+        BuildTargetClasses.Symbol,
+        ScalaMainClass
+      ],
+      testClasses: TrieMap[
+        BuildTargetClasses.Symbol,
+        BuildTargetClasses.ClassName
+      ],
+      params: DebugDiscoveryParams
+  )(implicit ec: ExecutionContext) = {
+    val path = params.path.toAbsolutePath
+    semanticdbs
+      .textDocument(path)
+      .documentIncludingStale
+      .fold[Future[DebugSessionParams]] {
+        Future.failed(SemanticDbNotFoundException)
+      } { textDocument =>
+        lazy val tests = for {
+          symbolInfo <- textDocument.symbols
+          symbol = symbolInfo.symbol
+          testClass <- testClasses.get(symbol)
+        } yield testClass
+        val mains = for {
+          symbolInfo <- textDocument.symbols
+          symbol = symbolInfo.symbol
+          mainClass <- classes.get(symbol)
+        } yield mainClass
+        if (mains.nonEmpty) {
+          verifyMain(buildTarget, mains.toList, params)
+        } else if (tests.nonEmpty) {
+          Future(
+            new b.DebugSessionParams(
+              singletonList(buildTarget),
+              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+              tests.asJava.toJson
+            )
+          )
+        } else {
+          Future.failed(NoRunOptionException)
+        }
+      }
+  }
+
   /**
    * Given fully unresolved params this figures out the runType that was passed
    * in and then discovers either the main methods for the build target the
@@ -288,7 +334,7 @@ class DebugProvider(
     val buildTargetO = buildTargets.inverseSources(path)
 
     lazy val mainClasses = (bti: BuildTargetIdentifier) =>
-      buildTargetClasses.classesOf(bti).mainClasses.values.toList
+      buildTargetClasses.classesOf(bti).mainClasses
 
     lazy val testClasses = (bti: BuildTargetIdentifier) =>
       buildTargetClasses.classesOf(bti).testClasses
@@ -301,7 +347,9 @@ class DebugProvider(
       case (None, _) =>
         Future.failed(RunType.UnknownRunTypeException(params.runType))
       case (Some(Run), Some(target)) =>
-        verifyMain(target, mainClasses(target), params)
+        verifyMain(target, mainClasses(target).values.toList, params)
+      case (Some(RunOrTestFile), Some(target)) =>
+        resolveInFile(target, mainClasses(target), testClasses(target), params)
       case (Some(TestFile), Some(target)) if testClasses(target).isEmpty =>
         Future.failed(
           NoTestsFoundException("file", path.toString())
@@ -628,6 +676,10 @@ object DebugParametersJsonParsers {
 case object WorkspaceErrorsException
     extends Exception(
       s"Cannot run class, since the workspace has errors."
+    )
+case object NoRunOptionException
+    extends Exception(
+      s"There is nothing to run or test in the current file."
     )
 case object SemanticDbNotFoundException
     extends Exception(

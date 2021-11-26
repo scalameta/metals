@@ -92,14 +92,15 @@ a-b-key9=value 9   # will be ignored
 
 This option works a bit different than the other two param shapes as you don't
 specify a test or main class, but rather a `runType` of either `"run"`,
-`"testFile"`, or `"testTarget"` and a file URI representing your current location.
-`"run"` will automatically find any main method in the build target that belongs
-to the URI that was sent in. If multiple are found, you will be given the choice
-of which to run. The `"testFile"` option will check for any test classes in your
-current file and run them. Similarly, `"testTarget"` will run all test classes
-found in the build target that the URI belongs to. The `"args"`, `"jvmOptions"`,
-`"env"`, and `"envFile"` are all valid keys that can be sent as well with the
-same format as above.
+`"runOrTestFile"`, `"testFile"`, or `"testTarget"` and a file URI representing
+your current location. `"run"` will automatically find any main method in the
+build target that belongs to the URI that was sent in. If multiple are found,
+you will be given the choice of which to run. `"runOrTestFile"` will try to find
+a main or test class in your current file and run them. The `"testFile"` option
+will check for any test classes in your current file and run them. Similarly,
+`"testTarget"` will run all test classes found in the build target that the URI
+belongs to. The `"args"`, `"jvmOptions"`, `"env"`, and `"envFile"` are all valid
+keys that can be sent as well with the same format as above.
 
 ```json
 {
