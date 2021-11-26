@@ -181,10 +181,53 @@ addCommandAlias(
   "+publishLocal; metals/runMain scala.meta.metals.DownloadDependencies "
 )
 
-commands += Command.command("save-expect") { s =>
-  "unit/test:runMain tests.SaveExpect" ::
-    s
+def isNightliesEnabled: Boolean =
+  isCI || sys.env.get("NIGHTLIES").isDefined
+
+def configureMtagsScalaVersionDynamically(
+    state: State,
+    scalaV: String,
+    projectV: Option[String] = None
+): State = {
+  val scalaVersionSettings =
+    List(
+      mtest / scalaVersion := scalaV,
+      mtags / scalaVersion := scalaV,
+      cross / scalaVersion := scalaV
+    )
+  val versionSettings =
+    projectV.map(v => mtags / version := v)
+
+  val extracted = Project.extract(state)
+  extracted
+    .appendWithSession(
+      scalaVersionSettings ++ versionSettings,
+      state
+    )
 }
+
+def crossTestDyn(state: State, scalaV: String): State = {
+  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
+  val (out, _) =
+    Project
+      .extract(configured)
+      .runTask(cross / Test / test, configured)
+  out
+}
+
+commands ++= Seq(
+  Command.command("save-expect") { s =>
+    "unit/test:runMain tests.SaveExpect" :: s
+  },
+  Command.command("cross-test-latest-nightly") { s =>
+    V.nightlyScala3Versions.lastOption match {
+      case Some(latest) => crossTestDyn(s, latest)
+      case None =>
+        println("No nightly versions was found. Skipping cross/test")
+        s
+    }
+  }
+)
 
 lazy val V = new {
   val scala210 = "2.10.7"
@@ -255,6 +298,12 @@ lazy val V = new {
   def nonDeprecatedScala3Versions = Seq(nextScala3RC, scala3, "3.0.2")
   def deprecatedScala3Versions = Seq("3.0.1", "3.0.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
+  lazy val nightlyScala3Versions = {
+    if (isNightliesEnabled)
+      Scala3NightlyVersions.nightlyReleasesAfter(nextScala3RC)
+    else
+      Nil
+  }
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions
   def nonDeprecatedScalaVersions =
@@ -333,7 +382,9 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
 }
 
 val mtagsSettings = List(
-  crossScalaVersions := V.supportedScalaVersions,
+  crossScalaVersions := {
+    V.supportedScalaVersions ++ V.nightlyScala3Versions
+  },
   crossTarget := target.value / s"scala-${scalaVersion.value}",
   crossVersion := CrossVersion.full,
   Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
@@ -626,7 +677,7 @@ lazy val mtest = project
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scala2Versions" -> V.scala2Versions,
-      "scala3Versions" -> V.scala3Versions,
+      "scala3Versions" -> (V.scala3Versions ++ V.nightlyScala3Versions),
       "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value
     ),

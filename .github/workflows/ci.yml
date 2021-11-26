@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - main 
+      - main
   pull_request:
 jobs:
   unit:
@@ -12,20 +12,20 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macOS-latest, ubuntu-latest]
-        java: ['adopt@1.11']
+        java: ["adopt@1.11"]
         shard: [1, 2]
         include:
           - os: ubuntu-latest
-            java: 'adopt@1.8'
+            java: "adopt@1.8"
             shard: 1
           - os: ubuntu-latest
-            java: 'adopt@1.8'
+            java: "adopt@1.8"
             shard: 2
           - os: ubuntu-latest
-            java: '17'
+            java: "17"
             shard: 1
           - os: ubuntu-latest
-            java: '17'
+            java: "17"
             shard: 2
           - os: ubuntu-latest
             CACHE_PATH: ~/.cache/coursier/v1
@@ -43,12 +43,9 @@ jobs:
         run: |
           bin/test.sh unit/test
         env:
-          TEST_SHARD:
-            ${{ matrix.shard }}
-          GOOGLE_APPLICATION_CREDENTIALS:
-            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON:
-            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          TEST_SHARD: ${{ matrix.shard }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
         shell: bash
   integration:
     name: ${{ matrix.name }}
@@ -97,6 +94,10 @@ jobs:
             command: sbt +cross/test
             name: Scala cross tests
             os: ubuntu-latest
+          - type: cross-latest-nightly
+            command: sbt cross-test-latest-nightly
+            name: Scala3 latest NIGHTLY cross test
+            os: ubuntu-latest
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs
@@ -114,10 +115,8 @@ jobs:
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:
-          GOOGLE_APPLICATION_CREDENTIALS:
-            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON:
-            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
       - name: "test download dependencies"
         run: sbt downloadDependencies
         if: matrix.type == 'cross'
