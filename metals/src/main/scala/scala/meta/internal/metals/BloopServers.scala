@@ -19,6 +19,8 @@ import bloop.bloopgun.BloopgunCli
 import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
 import org.eclipse.lsp4j.services.LanguageClient
+import java.nio.file.Path
+import scala.util.Try
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -71,7 +73,7 @@ final class BloopServers(
         workspace,
         client,
         languageClient,
-        () => connectToLauncher(bloopVersion, config.bloopPort),
+        () => connectToLauncher(bloopVersion, config.daemonDir),
         tables.dismissedNotifications.ReconnectBsp,
         config,
         name
@@ -123,7 +125,7 @@ final class BloopServers(
 
   private def connectToLauncher(
       bloopVersion: String,
-      bloopPort: Option[Int]
+      daemonDir: Option[Path]
   ): Future[SocketConnection] = {
     val launcherInOutPipe = Pipe.open()
     val launcherIn = new QuietInputStream(
@@ -155,20 +157,22 @@ final class BloopServers(
         new PrintStream(bloopLogs, true),
         StandardCharsets.UTF_8,
         Shell.default,
-        userNailgunHost = None,
-        userNailgunPort = bloopPort,
+        Right(daemonDir),
         serverStarted
       )
 
     val finished = Promise[Unit]()
     val job = ec.submit(new Runnable {
       override def run(): Unit = {
-        launcher.runLauncher(
-          bloopVersion,
-          skipBspConnection = false,
-          Nil
-        )
-        finished.success(())
+        val res = Try {
+          launcher.runLauncher(
+            bloopVersion,
+            skipBspConnection = false,
+            Nil
+          )
+          ()
+        }
+        finished.complete(res)
       }
     })
 

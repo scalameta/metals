@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Configuration parameters for the Metals language server.
@@ -91,9 +93,10 @@ final case class MetalsServerConfig(
       "metals.allow-multiline-string-formatting",
       default = true
     ),
-    bloopPort: Option[Int] = Option(System.getProperty("metals.bloop-port"))
-      .filter(_.forall(Character.isDigit(_)))
-      .map(_.toInt)
+    daemonDir: Option[Path] =
+      Option(System.getProperty("metals.bloop-daemon-dir"))
+        .filter(_.nonEmpty)
+        .map(Paths.get(_))
 ) {
   override def toString: String =
     List[String](
@@ -109,7 +112,7 @@ final case class MetalsServerConfig(
       s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
       s"statistics=$statistics",
-      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}"
+      s"bloop-daemon-dir=${daemonDir.getOrElse("[default]")}"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

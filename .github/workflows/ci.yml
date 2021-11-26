@@ -41,6 +41,7 @@ jobs:
       - uses: coursier/cache-action@v6.3
       - name: Run unit tests
         run: |
+          .github/bloop-publish-local.sh
           bin/test.sh unit/test
         env:
           TEST_SHARD: ${{ matrix.shard }}
@@ -112,6 +113,9 @@ jobs:
         with:
           java-version: "adopt@1.11"
       - uses: coursier/cache-action@v6.3
+      - name: publish local bloop
+        run: .github/bloop-publish-local.sh
+        shell: bash
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:

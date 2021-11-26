@@ -157,7 +157,7 @@ case class SbtBuildTool(
         // from 1.4.6 Bloop is not compatible with sbt < 1.3.0
         if (SemVer.isLaterVersion(version, "1.3.0"))
           "1.4.6"
-        else userConfig().currentBloopVersion
+        else "1.4.11"
 
       val plugin = bloopPluginDetails(pluginVersion)
       val mainMeta = workspace.resolve("project")

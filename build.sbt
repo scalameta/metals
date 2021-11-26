@@ -240,13 +240,13 @@ lazy val V = new {
   val scalameta = "4.4.30"
   val semanticdb = scalameta
   val bsp = "2.0.0-M15"
-  val bloop = "1.4.11"
+  val bloop = "1.4.11-13-3c4c41cd"
   val scala3 = "3.1.0"
   val nextScala3RC = "3.1.1-RC1"
   val bloopNightly = bloop
-  val sbtBloop = bloop
-  val gradleBloop = bloop
-  val mavenBloop = bloop
+  val sbtBloop = "1.4.11"
+  val gradleBloop = "1.4.11"
+  val mavenBloop = "1.4.11"
   val mdoc = "2.2.24"
   val scalafmt = "3.0.5"
   val munit = "0.7.29"
@@ -486,7 +486,7 @@ lazy val metals = project
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher" % V.bloopNightly,
+      "ch.epfl.scala" %% "bloop-launcher-core" % V.bloopNightly,
       // for LSP
       V.lsp4j,
       // for DAP
@@ -519,7 +519,9 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2",
+      // For thing
+      "io.github.alexarchambault.libdaemon" %% "libdaemon" % "0.0.2"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
