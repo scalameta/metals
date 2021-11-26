@@ -14,7 +14,10 @@ class SelectBspServerSuite extends BaseSuite {
       expected: String
   )(implicit loc: Location): Unit = {
     test(name) {
-      val query = Messages.SelectBspServer.request(candidates, currentlyUsing)
+      val query = Messages.BspSwitch.chooseServerRequest(
+        candidates.map(_.getName()),
+        currentlyUsing
+      )
       val obtained =
         query.params.getActions.asScala.map(_.getTitle).mkString("\n")
       assertNoDiff(obtained, expected)
@@ -48,32 +51,6 @@ class SelectBspServerSuite extends BaseSuite {
     """
       |Bloop (currently using)
       |Mill
-      |""".stripMargin
-  )
-
-  check(
-    "version",
-    None,
-    List(
-      name("Bloop", "1.0"),
-      name("Bloop", "2.0")
-    ),
-    """
-      |Bloop v1.0
-      |Bloop v2.0
-      |""".stripMargin
-  )
-
-  check(
-    "conflict",
-    None,
-    List(
-      name("Bloop", "1.0"),
-      name("Bloop", "1.0")
-    ),
-    """
-      |Bloop v1.0 (a)
-      |Bloop v1.0 (b)
       |""".stripMargin
   )
 }

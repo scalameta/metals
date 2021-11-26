@@ -35,7 +35,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
         assertConnectedToBuildServer("Bob")
         assertNoDiff(
           client.workspaceMessageRequests,
-          SelectBspServer.message
+          BspSwitch.message
         )
         assertNoDiff(client.workspaceShowMessages, "")
 

@@ -188,7 +188,7 @@ class SbtServerSuite
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          Messages.SelectBspServer.message
+          Messages.BspSwitch.message
         ).mkString("\n")
       )
       // assert contains the meta-build-target-build

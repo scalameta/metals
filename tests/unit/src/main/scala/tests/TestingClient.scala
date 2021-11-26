@@ -294,7 +294,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           restartBloop
         } else if (CheckDoctor.isDoctor(params)) {
           getDoctorInformation
-        } else if (SelectBspServer.isSelectBspServer(params)) {
+        } else if (BspSwitch.isSelectBspServer(params)) {
           selectBspServer(params.getActions.asScala)
         } else if (isSameMessageFromList(ChooseBuildTool.params)) {
           chooseBuildTool(params.getActions.asScala)

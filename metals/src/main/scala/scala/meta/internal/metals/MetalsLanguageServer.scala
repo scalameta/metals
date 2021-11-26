@@ -471,7 +471,8 @@ class MetalsLanguageServer(
           languageClient,
           tables,
           () => userConfig,
-          statusBar
+          statusBar,
+          bspConfigGenerator
         )
         semanticdbs = AggregateSemanticdbs(
           List(
@@ -1919,7 +1920,7 @@ class MetalsLanguageServer(
   }
 
   private def generateBspConfig(): Future[Unit] = {
-    val servers: List[BuildTool with BuildServerProvider] =
+    val servers: List[BuildServerProvider] =
       buildTools.loadSupported().collect {
         case buildTool: BuildServerProvider => buildTool
       }
@@ -1960,7 +1961,6 @@ class MetalsLanguageServer(
         buildTool
           .generateBspConfig(
             workspace,
-            languageClient,
             args =>
               bspConfigGenerator.runUnconditionally(
                 buildTool,
