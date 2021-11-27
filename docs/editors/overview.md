@@ -84,7 +84,7 @@ functionality.
     <td>Hover for selection</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">❌</td>
+    <td align="center">✅</td>
     <td align="center">❌</td>
     <td align="center">❌</td>
   </tr>
