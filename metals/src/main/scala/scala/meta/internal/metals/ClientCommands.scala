@@ -124,7 +124,8 @@ object ClientCommands {
         |   data: {
         |      className: "com.foo.App"
         |   }
-        |}```
+        |}
+        |```
     """.stripMargin
   )
 
@@ -146,7 +147,8 @@ object ClientCommands {
         |   data: {
         |      className: "com.foo.App"
         |   }
-        |}```
+        |}
+        |```
     """.stripMargin
   )
 
