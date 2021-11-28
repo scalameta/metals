@@ -5,7 +5,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
@@ -16,7 +15,7 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.MessageActionItem
 
 /**
- * Runs a process to create a .bsp entry for a givev buildtool.
+ * Runs a process to create a .bsp entry for a given buildtool.
  */
 final class BspConfigGenerator(
     workspace: AbsolutePath,
@@ -25,12 +24,12 @@ final class BspConfigGenerator(
     shellRunner: ShellRunner
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
-      buildTool: BuildTool,
+      buildTool: BuildServerProvider,
       args: List[String]
   ): Future[BspConfigGenerationStatus] =
     shellRunner
       .run(
-        s"${buildTool.executableName} bspConfig",
+        s"${buildTool.getBuildServerName} bspConfig",
         args,
         workspace,
         buildTool.redirectErrorOutput
@@ -43,7 +42,7 @@ final class BspConfigGenerator(
    */
   def chooseAndGenerate(
       buildTools: List[BuildServerProvider]
-  ): Future[(BuildTool, BspConfigGenerationStatus)] = {
+  ): Future[(BuildServerProvider, BspConfigGenerationStatus)] = {
     for {
       Some(buildTool) <- chooseBuildServerProvider(buildTools)
       status <- buildTool.generateBspConfig(
@@ -61,7 +60,7 @@ final class BspConfigGenerator(
       .asScala
       .map { choice =>
         buildTools.find(buildTool =>
-          new MessageActionItem(buildTool.executableName) == choice
+          new MessageActionItem(buildTool.getBuildServerName) == choice
         )
       }
   }

@@ -74,7 +74,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def toString(): String = "Mill"
 
-  def executableName = "mill"
+  override def executableName = "mill"
 
   private def predefScript =
     "import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`".getBytes()
@@ -89,22 +89,23 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   }
 
   override def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
-    val minimVersionForBsp = "0.10.0-M4"
+    val minimumVersionForBsp = "0.10.0-M4"
     val millVersion = getMillVersion(workspace)
 
-    if (SemVer.isCompatibleVersion(minimVersionForBsp, millVersion)) {
+    if (SemVer.isCompatibleVersion(minimumVersionForBsp, millVersion)) {
       scribe.info(
         s"mill version ${millVersion} detected to use as a bsp server."
       )
       true
     } else {
       scribe.warn(
-        s"Unable to start mill bsp server. Make sure you are using >= mill $minimVersionForBsp."
+        s"Unable to start mill bsp server. Make sure you are using >= mill $minimumVersionForBsp."
       )
       false
     }
   }
 
+  override val buildServerName: Option[String] = Some("mill-bsp")
 }
 
 object MillBuildTool {

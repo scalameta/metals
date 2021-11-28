@@ -160,6 +160,7 @@ object ServerCommands {
        |
        |The build servers that Metals knows how to detect and start:
        | - sbt
+       | - mill-bsp
        |
        |Note: while Metals does know how to start Bloop, Bloop will be started when you trigger a build
        |import or when you use `bsp-switch` to switch to Bloop.

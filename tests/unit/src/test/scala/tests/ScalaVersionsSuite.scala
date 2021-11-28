@@ -137,6 +137,18 @@ class ScalaVersionsSuite extends BaseSuite {
     )
   }
 
+  test("0.9.10-not-compatible-with-0.10.0-M4") {
+    assert(
+      !SemVer.isCompatibleVersion("0.10.0-M4", "0.9.10")
+    )
+  }
+
+  test("0.9.10-not-compatible-with-0.10.0-RC2") {
+    assert(
+      !SemVer.isCompatibleVersion("0.10.0-RC2", "0.9.10")
+    )
+  }
+
   test("recommended-3") {
     assert(
       ScalaVersions.recommendedVersion("3.0.0-M1") ==

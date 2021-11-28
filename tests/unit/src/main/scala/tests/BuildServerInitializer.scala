@@ -142,3 +142,26 @@ object SbtServerInitializer extends BuildServerInitializer {
     }
   }
 }
+
+object MillServerInitializer extends BuildServerInitializer {
+  this: BaseLspSuite =>
+  override def initialize(
+      workspace: AbsolutePath,
+      server: TestingServer,
+      client: TestingClient,
+      layout: String,
+      expectError: Boolean
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      // choose mill-bsp as the Bsp Server
+      _ = client.selectBspServer = { _ => new MessageActionItem("mill-bsp") }
+      _ <- server.executeCommand(ServerCommands.BspSwitch)
+    } yield {
+      if (!expectError) {
+        server.assertBuildServerConnection()
+      }
+    }
+  }
+}

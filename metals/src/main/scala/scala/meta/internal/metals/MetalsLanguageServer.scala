@@ -1926,12 +1926,12 @@ class MetalsLanguageServer(
       }
 
     def ensureAndConnect(
-        buildTool: BuildTool,
+        buildTool: BuildServerProvider,
         status: BspConfigGenerationStatus
     ): Unit =
       status match {
         case Generated =>
-          tables.buildServers.chooseServer(buildTool.executableName)
+          tables.buildServers.chooseServer(buildTool.getBuildServerName)
           quickConnectToBuildServer().ignoreValue
         case Cancelled => ()
         case Failed(exit) =>
@@ -1973,7 +1973,7 @@ class MetalsLanguageServer(
           .chooseAndGenerate(buildTools)
           .map {
             case (
-                  buildTool: BuildTool,
+                  buildTool: BuildServerProvider,
                   status: BspConfigGenerationStatus
                 ) =>
               ensureAndConnect(buildTool, status)
@@ -2022,7 +2022,7 @@ class MetalsLanguageServer(
       possibleBuildTool <- supportedBuildTool
       chosenBuildServer = tables.buildServers.selectedServer()
       isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
-        _ == BspConnector.BLOOP_SELECTED
+        _ == BloopServers.name
       )
       buildChange <- possibleBuildTool match {
         case Some(buildTool) =>
