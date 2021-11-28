@@ -227,6 +227,10 @@ object ClientCommands {
       FocusDiagnostics,
       GotoLocation,
       EchoCommand,
-      RefreshModel
+      RefreshModel,
+      ShowStacktrace,
+      CopyWorksheetOutput,
+      StartRunSession,
+      StartDebugSession
     )
 }
