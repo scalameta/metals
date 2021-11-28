@@ -2,7 +2,7 @@ package example
 
 given intValue/*example.GivenAlias$package.intValue.*/: Int/*scala.Int#*/ = 4
 given String/*scala.Predef.String#*/ = "str"
-given (using Int/*scala.Int#*/): Double/*scala.Double#*/ = 4.0
+given (using i/*example.GivenAlias$package.given_Double().(i)*/: Int/*scala.Int#*/): Double/*scala.Double#*/ = 4.0
 given [T/*example.GivenAlias$package.given_List_T().[T]*/]: List/*scala.package.List#*/[T/*example.GivenAlias$package.given_List_T().[T]*/] = Nil/*scala.package.Nil.*/
 given given_Char/*example.GivenAlias$package.given_Char.*/: Char/*scala.Char#*/ = '?'
 given `given_Float/*example.GivenAlias$package.given_Float.*/`: Float/*scala.Float#*/ = 3.0

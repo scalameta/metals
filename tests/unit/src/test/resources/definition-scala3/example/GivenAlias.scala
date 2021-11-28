@@ -2,7 +2,7 @@ package example
 
 given intValue/*GivenAlias.scala*/: Int/*Int.scala*/ = 4
 given String/*Predef.scala*/ = "str"
-given (using/*<no symbol>*/ Int/*Int.scala*/): Double/*Double.scala*/ = 4.0
+given (using/*<no symbol>*/ i/*GivenAlias.scala*/: Int/*Int.scala*/): Double/*Double.scala*/ = 4.0
 given [T/*GivenAlias.scala*/]: List/*package.scala*/[T/*GivenAlias.scala*/] = Nil/*package.scala*/
 given given_Char/*GivenAlias.scala*/: Char/*Char.scala*/ = '?'
 given `given_Float`/*<no symbol>*/: Float/*Float.scala*/ = 3.0
@@ -30,10 +30,10 @@ given Xg/*GivenAlias.scala*/ with
   def doX/*GivenAlias.scala*/ = 7
 
 given (using/*<no symbol>*/ Xg/*GivenAlias.scala*/): Yg/*GivenAlias.scala*/ with
-  def doY/*<no file>*/ = "7"
+  def doY/*GivenAlias.scala*/ = "7"
 
-given [T/*<no file>*/]: Zg/*GivenAlias.scala*/[T/*<no file>*/] with
-  def doZ/*<no file>*/: List/*package.scala*/[T/*<no file>*/] = Nil/*package.scala*/
+given [T/*GivenAlias.scala*/]: Zg/*GivenAlias.scala*/[T/*GivenAlias.scala*/] with
+  def doZ/*GivenAlias.scala*/: List/*package.scala*/[T/*GivenAlias.scala*/] = Nil/*package.scala*/
 
 
 val a/*GivenAlias.scala*/ = intValue/*GivenAlias.scala*/

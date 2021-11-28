@@ -120,6 +120,53 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
         }
         myCurrentTree = old
       }
+      def enterGivenAlias(
+          name: String,
+          pos: Position,
+          tparams: List[Type.Param],
+          paramss: List[List[Term.Param]]
+      ): Unit = {
+        withFileOwner {
+          if (tparams.nonEmpty || paramss.nonEmpty) {
+            method(name, "()", pos, Property.IMPLICIT.value)
+            enterTypeParameters(tparams)
+            enterTermParameters(paramss, isPrimaryCtor = false)
+
+          } else {
+            term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+          }
+        }
+      }
+      def enterGiven(
+          name: String,
+          pos: Position,
+          tparams: List[Type.Param],
+          paramss: List[List[Term.Param]]
+      ): Unit = {
+        withFileOwner {
+          val ownerKind: String =
+            if (tparams.nonEmpty || paramss.nonEmpty) {
+              withOwner(owner)(
+                method(name, "()", pos, Property.IMPLICIT.value)
+              )
+
+              "#"
+            } else {
+              withOwner(owner)(
+                term(name, pos, Kind.METHOD, Property.IMPLICIT.value)
+              )
+
+              "."
+            }
+
+          val nextOwner = s"${currentOwner}${name}${ownerKind}"
+          withOwner(nextOwner) {
+            enterTypeParameters(tparams)
+            enterTermParameters(paramss, isPrimaryCtor = false)
+            continue()
+          }
+        }
+      }
       myCurrentTree = tree
       tree match {
         case _: Source => continue()
@@ -286,15 +333,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
               case _ => Some(t.name.value)
             }
           nameOpt.foreach { name =>
-            withFileOwner {
-              if (t.tparams.nonEmpty || t.sparams.nonEmpty) {
-                method(name, "()", t.name.pos, Property.IMPLICIT.value)
-                enterTypeParameters(t.tparams)
-              } else {
-                term(name, t.name.pos, Kind.METHOD, Property.IMPLICIT.value)
-              }
-              continue()
-            }
+            enterGivenAlias(name, t.name.pos, t.tparams, t.sparams)
           }
         case t: Defn.Given =>
           val namePos =
@@ -308,18 +347,9 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
                 Some((t.name.value, t.name.pos))
             }
 
+          owner
           namePos.foreach { case (name, pos) =>
-            withFileOwner {
-              withOwner(owner) {
-                if (t.tparams.nonEmpty || t.sparams.nonEmpty) {
-                  method(name, "()", pos, Property.IMPLICIT.value)
-                  enterTypeParameters(t.tparams)
-                } else {
-                  term(name, t.name.pos, Kind.METHOD, Property.IMPLICIT.value)
-                }
-                continue()
-              }
-            }
+            enterGiven(name, pos, t.tparams, t.sparams)
           }
         case _ => stop()
       }

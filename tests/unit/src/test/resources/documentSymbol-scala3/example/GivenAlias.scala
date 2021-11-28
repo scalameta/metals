@@ -2,7 +2,7 @@
 
 /*example.intValue(Constant):3*/given intValue: Int = 4
 /*example. (Constant):4*/given String = "str"
-/*example. (Constant):5*/given (using Int): Double = 4.0
+/*example. (Constant):5*/given (using i: Int): Double = 4.0
 /*example. (Constant):6*/given [T]: List[T] = Nil
 /*example.given_Char(Constant):7*/given given_Char: Char = '?'
 /*example.given_Float(Constant):8*/given `given_Float`: Float = 3.0

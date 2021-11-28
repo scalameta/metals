@@ -2,7 +2,7 @@ package example
 
 given intValue: Int = 4
 given String = "str"
-given (using Int): Double = 4.0
+given (using i: Int): Double = 4.0
 given [T]: List[T] = Nil
 given given_Char: Char = '?'
 given `given_Float`: Float = 3.0
