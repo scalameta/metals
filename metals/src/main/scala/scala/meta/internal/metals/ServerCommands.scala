@@ -235,7 +235,7 @@ object ServerCommands {
     """|Converts provided stacktrace in the parameter to a format that contains links
        |to locations of places where the exception was raised.
        |
-       |If the configuration parameter of the client (support-commands-in-html) is true
+       |If the configuration parameter of the client `isCommandInHtmlSupported` is true
        |then client is requested to display html with links
        |already pointing to proper locations in user codebase.
        |Otherwise client will display simple scala file
