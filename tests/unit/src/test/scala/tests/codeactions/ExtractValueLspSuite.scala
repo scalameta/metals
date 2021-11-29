@@ -58,6 +58,34 @@ class ExtractValueLspSuite
   )
 
   check(
+    "for-comprehension-head",
+    """|object Main {
+       |  def method2(i: Int): Option[String]  = ???
+       |  
+       |  def main() = {
+       |    val i = 0
+       |    for {
+       |       res <- method2(i + 23 + <<123>>)      
+       |    } yield res
+       |  }
+       |}
+       |""".stripMargin,
+    ExtractValueCodeAction.title,
+    """|object Main {
+       |  def method2(i: Int): Option[String]  = ???
+       |  
+       |  def main() = {
+       |    val i = 0
+       |    val newValue = i + 23 + 123
+       |    for {
+       |       res <- method2(newValue)      
+       |    } yield res
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "single-def",
     """|object Main {
        |  def method2(param: Int) = ???

@@ -285,7 +285,9 @@ class ExtractValueCodeAction(
       tree.parent match {
         case Some(t: Template) => Some(t.stats)
         case Some(b: Term.Block) => Some(b.stats)
-        case Some(fy: Term.ForYield) => Some(fy.enums)
+        case Some(fy: Term.ForYield)
+            if !fy.enums.headOption.exists(_.pos.encloses(apply.pos)) =>
+          Some(fy.enums)
         case Some(f: Term.For) => Some(f.enums)
         case Some(df: Defn.Def) => Some(List(df.body))
         case Some(other) => loop(other)
