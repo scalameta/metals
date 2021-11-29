@@ -6,11 +6,27 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 case class MillBuildTool(userConfig: () => UserConfiguration)
     extends BuildTool
-    with BloopInstallProvider {
+    with BloopInstallProvider
+    with BuildServerProvider {
+
+  private def getMillVersion(workspace: AbsolutePath): String = {
+    import scala.meta.internal.jdk.CollectionConverters._
+    val millVersionPath = workspace.resolve(".mill-version")
+    if (millVersionPath.isFile) {
+      Files
+        .readAllLines(millVersionPath.toNIO)
+        .asScala
+        .headOption
+        .getOrElse(version)
+    } else {
+      version
+    }
+  }
 
   private val predefScriptName = "predef.sc"
 
@@ -25,31 +41,26 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def redirectErrorOutput: Boolean = true
 
-  override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
-
-    import scala.meta.internal.jdk.CollectionConverters._
-    val millVersionPath = workspace.resolve(".mill-version")
-    val millVersion = if (millVersionPath.isFile) {
-      Files
-        .readAllLines(millVersionPath.toNIO)
-        .asScala
-        .headOption
-        .getOrElse(version)
-    } else {
-      version
-    }
+  private def putTogetherArgs(cmd: List[String], workspace: AbsolutePath) = {
+    val millVersion = getMillVersion(workspace)
 
     // In some environments (such as WSL or cygwin), mill must be run using interactive mode (-i)
-    val iOption = if (Properties.isWin) List("-i") else Nil
-    val cmd =
-      iOption ::: "--predef" :: predefScriptPath.toString :: "mill.contrib.Bloop/install" :: Nil
+    val fullcmd = if (Properties.isWin) "-i" :: cmd else cmd
 
     userConfig().millScript match {
       case Some(script) =>
         script :: cmd
       case None =>
-        embeddedMillWrapper.toString() :: "--mill-version" :: millVersion :: cmd
+        embeddedMillWrapper
+          .toString() :: "--mill-version" :: millVersion :: fullcmd
     }
+
+  }
+
+  override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
+    val cmd =
+      "--predef" :: predefScriptPath.toString :: "mill.contrib.Bloop/install" :: Nil
+    putTogetherArgs(cmd, workspace)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -63,7 +74,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def toString(): String = "Mill"
 
-  def executableName = "mill"
+  override def executableName = "mill"
 
   private def predefScript =
     "import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`".getBytes()
@@ -72,6 +83,29 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
     Files.write(tempDir.resolve(predefScriptName), predefScript)
   }
 
+  override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
+    val cmd = "mill.bsp.BSP/install" :: Nil
+    putTogetherArgs(cmd, workspace)
+  }
+
+  override def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
+    val minimumVersionForBsp = "0.10.0-M4"
+    val millVersion = getMillVersion(workspace)
+
+    if (SemVer.isCompatibleVersion(minimumVersionForBsp, millVersion)) {
+      scribe.info(
+        s"mill version ${millVersion} detected to use as a bsp server."
+      )
+      true
+    } else {
+      scribe.warn(
+        s"Unable to start mill bsp server. Make sure you are using >= mill $minimumVersionForBsp."
+      )
+      false
+    }
+  }
+
+  override val buildServerName: Option[String] = Some("mill-bsp")
 }
 
 object MillBuildTool {

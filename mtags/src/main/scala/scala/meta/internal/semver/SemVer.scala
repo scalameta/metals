@@ -12,17 +12,23 @@ object SemVer {
       milestone: Option[Int]
   ) {
     def >(that: Version): Boolean = {
+      lazy val baseVersionEqual =
+        this.major == this.major && this.minor == that.minor && this.patch == that.patch
+
       this.major > that.major ||
       (this.major == that.major && this.minor > that.minor) ||
       (this.major == that.major && this.minor == that.minor && this.patch > that.patch) ||
       // 3.0.0-RC1 > 3.0.0-M1
-      this.releaseCandidate.isDefined && that.milestone.isDefined ||
+      baseVersionEqual && this.releaseCandidate.isDefined && that.milestone.isDefined ||
       // 3.0.0 > 3.0.0-M2 and 3.0.0 > 3.0.0-RC1
-      (this.milestone.isEmpty && this.releaseCandidate.isEmpty && (that.milestone.isDefined || that.releaseCandidate.isDefined)) ||
+      baseVersionEqual && (this.milestone.isEmpty && this.releaseCandidate.isEmpty && (that.milestone.isDefined || that.releaseCandidate.isDefined)) ||
       // 3.0.0-RC2 > 3.0.0-RC1
-      comparePreRelease(that, (v: Version) => v.releaseCandidate) ||
+      baseVersionEqual && comparePreRelease(
+        that,
+        (v: Version) => v.releaseCandidate
+      ) ||
       // 3.0.0-M2 > 3.0.0-M1
-      comparePreRelease(that, (v: Version) => v.milestone)
+      baseVersionEqual && comparePreRelease(that, (v: Version) => v.milestone)
 
     }
 

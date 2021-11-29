@@ -41,3 +41,25 @@ object SbtBuildLayout extends BuildToolLayout {
         |""".stripMargin
   }
 }
+
+object MillBuildLayout extends BuildToolLayout {
+  override def apply(sourceLayout: String, scalaVersion: String): String =
+    s"""|/build.sc
+        |import mill._, scalalib._
+        |
+        |object MillMinimal extends ScalaModule {
+        |  def scalaVersion = "${scalaVersion}"
+        |}
+        |$sourceLayout
+        |""".stripMargin
+
+  def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+      millVersion: String
+  ): String =
+    s"""|/.mill-version
+        |$millVersion
+        |${apply(sourceLayout, scalaVersion)}
+        |""".stripMargin
+}

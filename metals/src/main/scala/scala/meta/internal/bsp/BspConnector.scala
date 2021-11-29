@@ -7,7 +7,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.BloopServers
@@ -50,7 +49,7 @@ class BspConnector(
 
   private def resolveExplicit(): Option[BspResolvedResult] = {
     tables.buildServers.selectedServer().flatMap { sel =>
-      if (sel == BspConnector.BLOOP_SELECTED) Some(ResolvedBloop)
+      if (sel == BloopServers.name) Some(ResolvedBloop)
       else
         bspServers
           .findAvailableServers()
@@ -210,9 +209,9 @@ class BspConnector(
         case buildTool: BuildServerProvider
             if !foundServers
               .exists(details =>
-                details.getName() == buildTool.executableName
+                details.getName() == buildTool.getBuildServerName
               ) =>
-          buildTool.executableName -> Left(buildTool)
+          buildTool.getBuildServerName -> Left(buildTool)
       }
       .toMap
 
@@ -242,18 +241,18 @@ class BspConnector(
      * generate a bsp config has happened.
      */
     def handleGenerationStatus(
-        buildTool: BuildTool,
+        buildTool: BuildServerProvider,
         status: BspConfigGenerationStatus
     ): Boolean = status match {
       case BspConfigGenerationStatus.Generated =>
-        tables.buildServers.chooseServer(buildTool.executableName)
+        tables.buildServers.chooseServer(buildTool.getBuildServerName)
         true
       case Cancelled => false
       case Failed(exit) =>
         exit match {
           case Left(exitCode) =>
             scribe.error(
-              s"Creation of .bsp/${buildTool.executableName} failed with exit code: $exitCode"
+              s"Creation of .bsp/${buildTool.getBuildServerName} failed with exit code: $exitCode"
             )
             client.showMessage(
               Messages.BspProvider.genericUnableToCreateConfig
@@ -282,14 +281,8 @@ class BspConnector(
                   args => bspConfigGenerator.runUnconditionally(buildTool, args)
                 )
                 .map(status => handleGenerationStatus(buildTool, status))
-            case Right(connectionDetails)
-                if connectionDetails.getName == BloopServers.name && currentSelectedServer
-                  .contains(
-                    BspConnector.BLOOP_SELECTED
-                  ) =>
-              Future.successful(false)
             case Right(details) if details.getName == BloopServers.name =>
-              tables.buildServers.chooseServer(BspConnector.BLOOP_SELECTED)
+              tables.buildServers.chooseServer(details.getName)
               if (bloopPresent) {
                 Future.successful(true)
               } else {
@@ -300,6 +293,7 @@ class BspConnector(
                 if !currentSelectedServer.contains(details.getName) =>
               tables.buildServers.chooseServer(details.getName)
               Future.successful(true)
+            case _ => Future.successful(false)
           }
         case _ =>
           Future.successful(false)
@@ -333,8 +327,4 @@ class BspConnector(
         )
     }
   }
-}
-
-object BspConnector {
-  final val BLOOP_SELECTED = "BLOOP"
 }
