@@ -14,7 +14,9 @@ class HoverTermSuite extends BaseHoverSuite {
        |final override def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |""".stripMargin.hover,
     compat = Map(
-      "3" -> "def map[B](f: A => B): List[B]".hover
+      "3" ->
+        """|List[String]
+           |def map[B](f: Int => B): List[B]""".stripMargin.hover
     )
   )
 
@@ -42,7 +44,9 @@ class HoverTermSuite extends BaseHoverSuite {
         """|List[Int]
            |def apply[A](elems: A*): List[A]
            |""".stripMargin.hover,
-      "3" -> "def apply[A](elems: A*): Int".hover
+      "3" ->
+        """|List[Int]
+           |def apply[A](elems: A*): List[A]""".stripMargin.hover
     )
   )
 
@@ -56,7 +60,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """|def apply(name: String): Person
        |""".stripMargin.hover,
     compat = Map(
-      "3" -> "case class Person: `case-apply`".hover
+      "3" -> "case class Person: Person".hover
     )
   )
 
@@ -122,10 +126,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Int
        |def apply[T](a: T)(implicit ev: Int): T
-       |""".stripMargin.hover,
-    compat = Map(
-      "3" -> "def apply[T](a: T)(implicit ev: Int): Int".hover
-    )
+       |""".stripMargin.hover
   )
 
   check(
@@ -178,7 +179,8 @@ class HoverTermSuite extends BaseHoverSuite {
        |def this(name: String, age: T): Foo[T]
        |""".stripMargin.hover,
     compat = Map(
-      "3" -> "class Foo: Int".hover
+      "3" ->
+        "class Foo: Foo".hover
     )
   )
 
@@ -276,10 +278,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Option[String]
        |def flatMap[B](f: Int => Option[B]): Option[B]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3" -> "def flatMap[B](f: A => Option[B]): Option[String]".hover
-    )
+       |""".stripMargin.hover
   )
 
   check(

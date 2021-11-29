@@ -152,7 +152,8 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |    "" <<%@@:>> 11
        |end Foo
        |""".stripMargin,
-    "extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): Int".hover
+    """|Int
+       |extension [T](using A)(main: T) def %:[R](res: R)(using B)(using C): R""".stripMargin.hover
   )
 
   check(
@@ -164,7 +165,8 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |  <<ap@@ply("test")>>
       |}
       |""".stripMargin,
-    """|def apply[T](a: T)(using Int): T
+    """|String
+       |def apply[T](a: T)(using Int): T
        |""".stripMargin.hover
   )
 }
