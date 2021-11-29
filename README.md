@@ -29,6 +29,7 @@ The current maintainers (people who can merge pull requests) are:
 - Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 - Johan Mudsam - [`@mudsam`](https://github.com/mudsam)
 - Krzysztof Bochenek - [`@kpbochenek`](https://github.com/kpbochenek)
+- Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
 - Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
 - Marek Żarnowski - [`@marek1840`](https://github.com/marek1840)
 - Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)

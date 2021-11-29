@@ -102,6 +102,12 @@ inThisBuild(
         url("https://github.com/kpbochenek")
       ),
       Developer(
+        "kpodsiad",
+        "Kamil Podsiadło",
+        "kpodsiadlo@virtuslab.com ",
+        url("https://github.com/kpodsiad)")
+      ),
+      Developer(
         "marek1840",
         "Marek Żarnowski",
         "mzarnowski@virtuslab.com",
