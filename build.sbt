@@ -66,12 +66,6 @@ inThisBuild(
         url("https://github.com/adpi2")
       ),
       Developer(
-        "laughedelic",
-        "Alexey Alekhin",
-        "laughedelic@gmail.com",
-        url("https://github.com/laughedelic")
-      ),
-      Developer(
         "ckipp01",
         "Chris Kipp",
         "ckipp@pm.me",
@@ -84,46 +78,16 @@ inThisBuild(
         url("https://github.com/gabro")
       ),
       Developer(
-        "mudsam",
-        "Johan Mudsam",
-        "johan@mudsam.com",
-        url("https://github.com/mudsam")
-      ),
-      Developer(
-        "jvican",
-        "Jorge Vicente Cantero",
-        "jorgevc@fastmail.es",
-        url("https://jvican.github.io/")
-      ),
-      Developer(
-        "kpbochenek",
-        "Krzysztof Bochenek",
-        "kbochenek@virtuslab.com ",
-        url("https://github.com/kpbochenek")
-      ),
-      Developer(
         "kpodsiad",
         "Kamil Podsiadło",
         "kpodsiadlo@virtuslab.com ",
         url("https://github.com/kpodsiad)")
       ),
       Developer(
-        "marek1840",
-        "Marek Żarnowski",
-        "mzarnowski@virtuslab.com",
-        url("https://github.com/marek1840")
-      ),
-      Developer(
         "olafurpg",
         "Ólafur Páll Geirsson",
         "olafurpg@gmail.com",
         url("https://geirsson.com")
-      ),
-      Developer(
-        "ShaneDelmore",
-        "Shane Delmore",
-        "sdelmore@twitter.com",
-        url("http://delmore.io")
       ),
       Developer(
         "tgodzik",
