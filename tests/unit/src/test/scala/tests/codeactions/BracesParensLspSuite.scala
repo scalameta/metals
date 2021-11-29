@@ -1,5 +1,6 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
@@ -13,7 +14,8 @@ class BracesParensLspSuite
        |  foo(<<>>5)
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toBraces,
+    s"""|${RewriteBracesParensCodeAction.toBraces}
+        |${ExtractValueCodeAction.title}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
        |  foo{5}
@@ -64,7 +66,8 @@ class BracesParensLspSuite
        |  foo{<<>>5}
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toParens,
+    s"""|${RewriteBracesParensCodeAction.toParens}
+        |${ExtractValueCodeAction.title}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
        |  foo(5)

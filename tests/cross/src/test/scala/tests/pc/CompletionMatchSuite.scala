@@ -69,21 +69,21 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |""".stripMargin,
     // Tab characters are used to indicate user-configured indentation in the editor.
     // For example, in VS Code, the tab characters become 2 space indent by default.
-    """|package stale
-       |import stale.Weekday.Workday
-       |import stale.Weekday.Weekend
-       |sealed abstract class Weekday
-       |object Weekday {
-       |  case object Workday extends Weekday
-       |  case object Weekend extends Weekday
-       |}
-       |object App {
-       |  null.asInstanceOf[Weekday] match {
-       |\tcase Workday => $0
-       |\tcase Weekend =>
-       |}
-       |}
-       |""".stripMargin,
+    s"""|package stale
+        |import stale.Weekday.Workday
+        |import stale.Weekday.Weekend
+        |sealed abstract class Weekday
+        |object Weekday {
+        |  case object Workday extends Weekday
+        |  case object Weekend extends Weekday
+        |}
+        |object App {
+        |  null.asInstanceOf[Weekday] match {
+        |\tcase Workday => $$0
+        |\tcase Weekend =>
+        |}
+        |}
+        |""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
@@ -97,17 +97,17 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  null.asInstanceOf[Weekday] matc@@
       |}
       |""".stripMargin,
-    """|package stale
-       |sealed abstract class Weekday
-       |case object Workday extends Weekday
-       |case object Weekend extends Weekday
-       |object App {
-       |  null.asInstanceOf[Weekday] match {
-       |\tcase Workday => $0
-       |\tcase Weekend =>
-       |}
-       |}
-       |""".stripMargin,
+    s"""|package stale
+        |sealed abstract class Weekday
+        |case object Workday extends Weekday
+        |case object Weekend extends Weekday
+        |object App {
+        |  null.asInstanceOf[Weekday] match {
+        |\tcase Workday => $$0
+        |\tcase Weekend =>
+        |}
+        |}
+        |""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
@@ -122,19 +122,19 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  null.asInstanceOf[TestTree] matc@@
       |}
       |""".stripMargin,
-    """|package sort
-       |sealed abstract class TestTree
-       |case class Branch1(t1: TestTree) extends TestTree
-       |case class Leaf(v: Int) extends TestTree
-       |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
-       |object App {
-       |  null.asInstanceOf[TestTree] match {
-       |\tcase Branch1(t1) => $0
-       |\tcase Leaf(v) =>
-       |\tcase Branch2(t1, t2) =>
-       |}
-       |}
-       |""".stripMargin,
+    s"""|package sort
+        |sealed abstract class TestTree
+        |case class Branch1(t1: TestTree) extends TestTree
+        |case class Leaf(v: Int) extends TestTree
+        |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
+        |object App {
+        |  null.asInstanceOf[TestTree] match {
+        |\tcase Branch1(t1) => $$0
+        |\tcase Leaf(v) =>
+        |\tcase Branch2(t1, t2) =>
+        |}
+        |}
+        |""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
@@ -145,14 +145,14 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  Option(1) matc@@
       |}
       |""".stripMargin,
-    """package sort
-      |object App {
-      |  Option(1) match {
-      |\tcase Some(value) => $0
-      |\tcase None =>
-      |}
-      |}
-      |""".stripMargin,
+    s"""package sort
+       |object App {
+       |  Option(1) match {
+       |\tcase Some(value) => $$0
+       |\tcase None =>
+       |}
+       |}
+       |""".stripMargin,
     compat = Map(
       "2.11.12" ->
         """package sort
@@ -200,21 +200,21 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |object Main {
       |  (null: AccessMode) match@@
       |}""".stripMargin,
-    """
-      |package example
-      |
-      |import java.nio.file.AccessMode
-      |import java.nio.file.AccessMode.READ
-      |import java.nio.file.AccessMode.WRITE
-      |import java.nio.file.AccessMode.EXECUTE
-      |
-      |object Main {
-      |  (null: AccessMode) match {
-      |\tcase READ => $0
-      |\tcase WRITE =>
-      |\tcase EXECUTE =>
-      |}
-      |}""".stripMargin,
+    s"""
+       |package example
+       |
+       |import java.nio.file.AccessMode
+       |import java.nio.file.AccessMode.READ
+       |import java.nio.file.AccessMode.WRITE
+       |import java.nio.file.AccessMode.EXECUTE
+       |
+       |object Main {
+       |  (null: AccessMode) match {
+       |\tcase READ => $$0
+       |\tcase WRITE =>
+       |\tcase EXECUTE =>
+       |}
+       |}""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
@@ -228,17 +228,17 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |object Main {
       |  Option(1) match@@
       |}""".stripMargin,
-    """
-      |package example
-      |
-      |object None
-      |
-      |object Main {
-      |  Option(1) match {
-      |\tcase Some(value) => $0
-      |\tcase scala.None =>
-      |}
-      |}""".stripMargin,
+    s"""
+       |package example
+       |
+       |object None
+       |
+       |object Main {
+       |  Option(1) match {
+       |\tcase Some(value) => $$0
+       |\tcase scala.None =>
+       |}
+       |}""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
@@ -255,20 +255,20 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  def testExhaustive[T <: Test](test: T): Boolean =
       |    test m@@
       |}""".stripMargin,
-    """
-      |package example
-      |
-      |sealed trait Test
-      |case object Foo extends Test
-      |case object Bar extends Test
-      |
-      |object Main {
-      |  def testExhaustive[T <: Test](test: T): Boolean =
-      |    test match {
-      |\tcase Foo => $0
-      |\tcase Bar =>
-      |}
-      |}""".stripMargin,
+    s"""
+       |package example
+       |
+       |sealed trait Test
+       |case object Foo extends Test
+       |case object Bar extends Test
+       |
+       |object Main {
+       |  def testExhaustive[T <: Test](test: T): Boolean =
+       |    test match {
+       |\tcase Foo => $$0
+       |\tcase Bar =>
+       |}
+       |}""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
@@ -288,25 +288,25 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
       |    test m@@
       |}""".stripMargin,
-    """
-      |package example
-      |
-      |sealed trait TestA
-      |case object Foo extends TestA
-      |case object Bar extends TestA
-      |sealed trait TestB
-      |case object Baz extends TestB
-      |case object Goo extends TestB
-      |
-      |object Main {
-      |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
-      |    test match {
-      |\tcase Foo => $0
-      |\tcase Bar =>
-      |\tcase Baz =>
-      |\tcase Goo =>
-      |}
-      |}""".stripMargin,
+    s"""
+       |package example
+       |
+       |sealed trait TestA
+       |case object Foo extends TestA
+       |case object Bar extends TestA
+       |sealed trait TestB
+       |case object Baz extends TestB
+       |case object Goo extends TestB
+       |
+       |object Main {
+       |  def testExhaustive[T <: TestA with TestB](test: T): Boolean =
+       |    test match {
+       |\tcase Foo => $$0
+       |\tcase Bar =>
+       |\tcase Baz =>
+       |\tcase Goo =>
+       |}
+       |}""".stripMargin,
     filter = _.contains("exhaustive")
   )
 }

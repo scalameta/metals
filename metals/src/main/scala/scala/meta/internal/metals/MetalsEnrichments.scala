@@ -779,6 +779,14 @@ object MetalsEnrichments
 
   }
 
+  implicit class XtensionChar(ch: Char) {
+    def stringRepeat(n: Int): String = {
+      if (n > 0)
+        ch.toString * n
+      else ""
+    }
+  }
+
   implicit class XtensionClientCapabilities(
       initializeParams: Option[l.InitializeParams]
   ) {
