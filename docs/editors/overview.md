@@ -220,7 +220,7 @@ functionality.
      <td>Find text in dependency JAR files</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">❌</td>
+     <td align="center">✅</td>
      <td align="center">❌</td>
      <td align="center">❌</td>
   </tr>
