@@ -43,27 +43,32 @@ class ExtractValueCodeAction(
     val textEdits = for {
       apply <- applyOpt
       stats <- lastEnclosingStatsList(apply)
-      argument <- apply.args.find { arg => arg.pos.encloses(range) }
+      argumentOpt <- apply.args.find { arg => arg.pos.encloses(range) }
+      argument = argumentOpt match {
+        // named paramaeter
+        case Term.Assign(_, rhs) => rhs
+        case other => other
+      }
       // avoid extracting lambdas (this needs actual type information)
       if isNotLambda(argument)
       stat <- stats.find(stat => stat.pos.encloses(apply.pos))
       name = createNewName(stats)
       source <- buffers.get(path)
-      blank =
+    } yield {
+      val blank =
         if (source(stat.pos.start - stat.pos.startColumn) == '\t') '\t' else ' '
-      lineStart = stat.pos.start - stat.pos.startColumn
-      indent = blank.stringRepeat(indentationLength(source, lineStart))
-      keyword = if (stat.isInstanceOf[Enumerator]) "" else "val "
-      // we will inset `val newValue = ???` before the existing statement containing apply
-      valueText = s"${indent}$keyword$name = ${argument.toString()}"
-      valueTextWithBraces = withBraces(stat, source, valueText, blank)
+      val indent = blank.stringRepeat(indentationLength(source, stat.pos))
+      val keyword = if (stat.isInstanceOf[Enumerator]) "" else "val "
+      // we will insert `val newValue = ???` before the existing statement containing apply
+      val valueText = s"${indent}$keyword$name = ${argument.toString()}"
+      val valueTextWithBraces = withBraces(stat, source, valueText, blank)
       // we need to add additional () in case of  `apply{}`
-      replacementText =
+      val replacementText =
         if (argument.is[Term.Block] && !applyHasParens(apply)) s"($name)"
         else name
-      replacedArgument = new l.TextEdit(argument.pos.toLSP, replacementText)
-    } yield valueTextWithBraces :+ replacedArgument
-
+      val replacedArgument = new l.TextEdit(argument.pos.toLSP, replacementText)
+      valueTextWithBraces :+ replacedArgument
+    }
     textEdits match {
       case Some(edits) =>
         val codeAction = new l.CodeAction()
@@ -104,14 +109,13 @@ class ExtractValueCodeAction(
     val edits = for {
       defn <- stat.parent.collect { case defn: Defn.Def => defn }
       equalsPos <- defnEqualsPos(defn)
-      defnLineIndentation = blank.stringRepeat(
-        indentationLength(source, defn.pos.start - defn.pos.startColumn)
-      )
-      additionalIndent =
-        if (defnLineIndentation.headOption.exists(_ == '\t')) "\t"
-        else "  "
-      innerIndentation = defnLineIndentation + additionalIndent
     } yield {
+      val defnLineIndentation =
+        blank.stringRepeat(indentationLength(source, defn.pos))
+      val additionalIndent =
+        if (defnLineIndentation.headOption.contains('\t')) "\t"
+        else "  "
+      val innerIndentation = defnLineIndentation + additionalIndent
       val statStart = stat.pos.toLSP
       statStart.setEnd(statStart.getStart())
 
@@ -136,8 +140,7 @@ class ExtractValueCodeAction(
         }
         // make sure existing indentation after `=` is correct
         else {
-          val statIndentation =
-            indentationLength(source, stat.pos.start - stat.pos.startColumn)
+          val statIndentation = indentationLength(source, stat.pos)
           val statAdditionalIndentation =
             if (statIndentation <= defnLineIndentation.size)
               (defnLineIndentation.size - statIndentation) + additionalIndent.size
@@ -152,7 +155,7 @@ class ExtractValueCodeAction(
             )
           )
         }
-        // Scala 2
+        // Scala 2 and Scala 3 non signification whitespace syntax
       } else {
         val startBlockText =
           // we should indent the stat
@@ -176,8 +179,8 @@ class ExtractValueCodeAction(
       }
     }
 
-    // no braces are needed
     edits.getOrElse {
+      // otherwise, no braces are needed
       val range = stat.pos.toLSP
       val start = range.getStart()
       start.setCharacter(0)
@@ -198,7 +201,8 @@ class ExtractValueCodeAction(
     }
   }
 
-  private def indentationLength(text: String, lineStart: Int): Int = {
+  private def indentationLength(text: String, pos: Position): Int = {
+    val lineStart = pos.start - pos.startColumn
     var i = lineStart
     while (i < text.length() && (text(i) == '\t' || text(i) == ' ')) {
       i += 1
@@ -207,8 +211,8 @@ class ExtractValueCodeAction(
   }
 
   /**
-   * Check if it's possible to use braceless syntax and whther
-   * it's the preffered style in the file.
+   * Check if it's possible to use braceless syntax and whether
+   * it's the preferred style in the file.
    */
   private def canUseBracelessSyntax(stat: Tree, source: String) = {
 
@@ -217,29 +221,36 @@ class ExtractValueCodeAction(
       case _ => false
     }
 
+    def isNotInBraces(t: Tree): Boolean = {
+      t match {
+        case _: Template | _: Term.Block => source(t.pos.start) != '{'
+        case _ => false
+      }
+    }
+
     // Let's try to use the style of any existing parent.
+    @tailrec
     def existsBracelessParent(tree: Tree): Boolean = {
       tree.parent match {
-        case Some(t @ (_: Template | _: Term.Block)) =>
-          source(t.pos.start) != '{'
-        case Some(other) => existsBracelessParent(other)
+        case Some(t) =>
+          if (isNotInBraces(t)) true
+          else existsBracelessParent(t)
         case None => existsBracelessChild(tree)
       }
     }
 
     // If we are at the top, let's check also the siblings
     def existsBracelessChild(tree: Tree): Boolean = {
-      tree.children.exists {
-        case t @ (_: Template | _: Term.Block) =>
-          source(t.pos.start) != '{'
-        case other =>
-          existsBracelessChild(other)
+      tree.children.exists { t =>
+        if (isNotInBraces(t)) true
+        else existsBracelessChild(t)
       }
     }
 
     allowBracelessSyntax(stat) && existsBracelessParent(stat)
   }
 
+  @tailrec
   private def isNotLambda(tree: Tree): Boolean = {
 
     def hasPlaceholder(tree: Tree): Boolean = {

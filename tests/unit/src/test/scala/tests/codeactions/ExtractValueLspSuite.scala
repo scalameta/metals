@@ -60,19 +60,19 @@ class ExtractValueLspSuite
   check(
     "single-def",
     """|object Main {
-       |  def method2(i: Int) = ???
+       |  def method2(param: Int) = ???
        |  def main = {
-       |    def inner(i : Int) = method2(i + 23 + <<123>>)
+       |    def inner(i : Int) = method2(param = i + 23 + <<123>>)
        |  }
        |}
        |""".stripMargin,
     ExtractValueCodeAction.title,
     """|object Main {
-       |  def method2(i: Int) = ???
+       |  def method2(param: Int) = ???
        |  def main = {
        |    def inner(i : Int) = {
        |      val newValue = i + 23 + 123
-       |      method2(newValue)
+       |      method2(param = newValue)
        |    }
        |  }
        |}

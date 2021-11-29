@@ -782,7 +782,7 @@ object MetalsEnrichments
   implicit class XtensionChar(ch: Char) {
     def stringRepeat(n: Int): String = {
       if (n > 0)
-        ("%0" + n + "d").format(0).replace('0', ch)
+        ch.toString * n
       else ""
     }
   }
