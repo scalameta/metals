@@ -24,18 +24,21 @@ https://scalameta.org/metals/docs/contributors/getting-started.html
 The current maintainers (people who can merge pull requests) are:
 
 - Adrien Piquerez - [`@adpi2`](https://github.com/adpi2)
-- Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
 - Chris Kipp - [`@ckipp01`](https://github.com/ckipp01)
 - Gabriele Petronella - [`@gabro`](https://github.com/gabro)
+- Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
+- Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
+- Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
+- Vadim Chelyshov - [`@dos65`](https://github.com/dos65)
+
+Past maintainers:
+
+- Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
 - Johan Mudsam - [`@mudsam`](https://github.com/mudsam)
 - Krzysztof Bochenek - [`@kpbochenek`](https://github.com/kpbochenek)
-- Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
 - Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
 - Marek Żarnowski - [`@marek1840`](https://github.com/marek1840)
-- Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 - Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
-- Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
-- Vadim Chelyshov- [`@dos65`](https://github.com/dos65)
 
 ## Acknowledgement
 
