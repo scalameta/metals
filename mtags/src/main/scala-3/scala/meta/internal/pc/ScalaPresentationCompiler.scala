@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.io.Codec
 import scala.language.implicitConversions
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
@@ -316,6 +317,21 @@ case class ScalaPresentationCompiler(
   end expandRangeToEnclosingApply
 
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
+    def qual(tree: Tree): Tree =
+      tree match
+        case Apply(q, _) => qual(q)
+        case TypeApply(q, _) => qual(q)
+        case AppliedTypeTree(q, _) => qual(q)
+        case Select(q, _) => q
+        case _ => tree
+
+    def seenFrom(tree: Tree, sym: Symbol)(using Context): (Type, Symbol) =
+      try
+        val pre = qual(tree)
+        val denot = sym.denot.asSeenFrom(pre.tpe.widenTermRefExpr)
+        (denot.info, sym.withUpdatedTpe(denot.info))
+      catch case NonFatal(e) => (sym.info, sym)
+
     compilerAccess.withNonInterruptableCompiler(
       ju.Optional.empty[Hover](),
       params.token
@@ -368,17 +384,32 @@ case class ScalaPresentationCompiler(
                     symbol.paramRef
                   )
                 case _ =>
-                  printer.hoverDetailString(symbol, history, tpw)
+                  val (tpe, sym) =
+                    if symbol.isType then (symbol.typeRef, symbol)
+                    else seenFrom(enclosing.head, symbol)
+
+                  val finalTpe =
+                    if tpe != NoType then tpe
+                    else tpw
+
+                  printer.hoverDetailString(sym, history, finalTpe)
               end match
+            end hoverString
 
             val docString =
               docComments.map(_.renderAsMarkdown).mkString("\n")
             val expressionType = printer.expressionTypeString(exprTpw, history)
+            val forceExpressionType =
+              !pos.span.isZeroExtent || (
+                !hoverString.endsWith(
+                  expressionType
+                ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
+              )
             val content = HoverMarkup(
               expressionType,
               hoverString,
               docString,
-              !pos.span.isZeroExtent
+              forceExpressionType
             )
             ju.Optional.of(new Hover(content.toMarkupContent))
 

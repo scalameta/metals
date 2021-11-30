@@ -252,22 +252,7 @@ class CompletionProvider(
 
         private def substituteTypeVars(symbol: Symbol): Symbol =
           val denot = symbol.asSeenFrom(tpe)
-          val upd = symbol.copy(info = denot.info)
-
-          // denotation from `asSeenFrom` loses flags for parameter syms
-          val paramsWithFlags =
-            symbol.paramSymss
-              .zip(upd.paramSymss)
-              .map((l1, l2) =>
-                l1.zip(l2)
-                  .map((s1, s2) =>
-                    s2.flags = s1.flags
-                    s2
-                  )
-              )
-          upd.rawParamss = paramsWithFlags
-          upd
-        end substituteTypeVars
+          symbol.withUpdatedTpe(denot.info)
 
       end new
     end forSelect

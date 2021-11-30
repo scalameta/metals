@@ -12,6 +12,7 @@ import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
@@ -80,6 +81,22 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
 
     def nameBackticked: String =
       KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
+
+    def withUpdatedTpe(tpe: Type): Symbol =
+      val upd = sym.copy(info = tpe)
+      val paramsWithFlags =
+        sym.paramSymss
+          .zip(upd.paramSymss)
+          .map((l1, l2) =>
+            l1.zip(l2)
+              .map((s1, s2) =>
+                s2.flags = s1.flags
+                s2
+              )
+          )
+      upd.rawParamss = paramsWithFlags
+      upd
+    end withUpdatedTpe
   end extension
 
   extension (name: Name)(using Context)
