@@ -347,7 +347,6 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
                 Some((t.name.value, t.name.pos))
             }
 
-          owner
           namePos.foreach { case (name, pos) =>
             enterGiven(name, pos, t.tparams, t.sparams)
           }
