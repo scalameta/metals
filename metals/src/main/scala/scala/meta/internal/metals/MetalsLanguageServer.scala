@@ -298,7 +298,6 @@ class MetalsLanguageServer(
     )
     embedded = register(
       new Embedded(
-        clientConfig.icons,
         statusBar,
         mtagsResolver,
         () => userConfig
@@ -586,7 +585,6 @@ class MetalsLanguageServer(
           languageClient,
           fingerprints,
           charset,
-          diagnostics,
           () => focusedDocument,
           clientConfig,
           () => userConfig,
@@ -605,7 +603,6 @@ class MetalsLanguageServer(
         )
         workspaceSymbols = new WorkspaceSymbolProvider(
           workspace,
-          clientConfig.initialConfig.statistics,
           buildTargets,
           definitionIndex,
           excludedPackageHandler.isExcludedPackage
@@ -628,7 +625,6 @@ class MetalsLanguageServer(
             statusBar,
             sh,
             Option(params),
-            diagnostics,
             excludedPackageHandler.isExcludedPackage,
             scalaVersionSelector,
             trees,
@@ -644,7 +640,6 @@ class MetalsLanguageServer(
           compilations,
           languageClient,
           buildClient,
-          statusBar,
           classFinder,
           definitionIndex,
           stacktraceAnalyzer,
@@ -656,10 +651,8 @@ class MetalsLanguageServer(
           buffers,
           () => userConfig,
           workspace,
-          embedded,
           statusBar,
           compilations,
-          clientConfig.icons(),
           languageClient,
           buildTargets,
           buildClient,

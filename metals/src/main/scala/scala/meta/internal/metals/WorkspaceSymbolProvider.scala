@@ -22,7 +22,6 @@ import org.eclipse.{lsp4j => l}
  */
 final class WorkspaceSymbolProvider(
     val workspace: AbsolutePath,
-    statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: GlobalSymbolIndex,
     isExcludedPackage: String => Boolean,

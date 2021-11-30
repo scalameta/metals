@@ -342,8 +342,7 @@ object SbtBuildTool {
 
   def sbtInputPosAdjustment(
       originInput: Input.VirtualFile,
-      autoImports: Seq[String],
-      uri: String
+      autoImports: Seq[String]
   ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
 
     val appendLineSize = autoImports.size
