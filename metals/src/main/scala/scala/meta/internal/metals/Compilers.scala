@@ -65,7 +65,6 @@ class Compilers(
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
     initializeParams: Option[InitializeParams],
-    diagnostics: Diagnostics,
     isExcludedPackage: String => Boolean,
     scalaVersionSelector: ScalaVersionSelector,
     trees: Trees,
@@ -659,7 +658,7 @@ class Compilers(
         buildTargets
           .sbtAutoImports(path)
           .map(
-            SbtBuildTool.sbtInputPosAdjustment(input, _, uri)
+            SbtBuildTool.sbtInputPosAdjustment(input, _)
           )
       } else if (
         path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)

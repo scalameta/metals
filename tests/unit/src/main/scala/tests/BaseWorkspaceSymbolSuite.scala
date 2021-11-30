@@ -2,7 +2,6 @@ package tests
 
 import scala.meta.Dialect
 import scala.meta.dialects
-import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 
@@ -11,11 +10,10 @@ import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath
-  def statistics: StatisticsConfig = StatisticsConfig.default
   def libraries: List[Library] = Nil
   def dialect: Dialect = dialects.Scala213
   lazy val symbols: WorkspaceSymbolProvider = {
-    val p = TestingWorkspaceSymbolProvider(workspace, statistics = statistics)
+    val p = TestingWorkspaceSymbolProvider(workspace)
     p.indexWorkspace(dialect)
     p.indexLibraries(libraries)
     p.indexClasspath()
