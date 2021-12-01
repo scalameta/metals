@@ -20,7 +20,7 @@ You will need the following applications installed:
 
 - `metals` the main project with sources of the Metals language server.
 - `sbt-metals` the sbt plugin used when users are using the BSP support from
-    sbt to ensure semanticDB is being produced by sbt.
+  sbt to ensure semanticDB is being produced by sbt.
 - `mtags` Scala version specific module used to interact with the Scala
   presentation compiler. It's a dependency of the `metals` project and can
   additionally be used by via `mtags-interfaces` to support multiple Scala
@@ -140,13 +140,13 @@ a full cross publish with `sbt +publishLocal`.
 First, follow the [`vim` installation instruction](../editors/vim.md).
 
 If you're using coc-metals:
-  - run `sbt publishLocal`
-  - open `:CocConfig` and put your new snapshot version in
-      `metals.serverVersion`.
-  - you will then be prompted to reload, which will restart the server.
 
-If you publish again, you then just need to execute the `metals.restartServer
-command`.
+- run `sbt publishLocal`
+- open `:CocConfig` and put your new snapshot version in
+  `metals.serverVersion`.
+- you will then be prompted to reload, which will restart the server.
+
+If you publish again, you then just need to execute the `metals.restartServer command`.
 
 If you are using another Vim client, write a `new-metals-vim` script that builds
 a new `metals-vim` bootstrap script using the locally published version.
@@ -186,36 +186,37 @@ These logs contain information that may be relevant for regular users.
 
 ### JSON-RPC trace
 
-To see trace of incoming/outgoing JSON communication with the text editor or
-build server, create empty files in your machine cache directory.
+To see the trace of incoming/outgoing JSON communication with the text editor 
+or build server, create empty files in `$WORKSPACE/.metals/` or your machine cache 
+directory. 
+
+However, we do not recommend using your machine cache directory because 
+trace files located there are shared between all Metals instances, hence multiple 
+servers can override the same file. Using `$WORKSPACE/.metals/` solves this issue and 
+also allows user to have more precise control over which metals instances log 
+their JSON-RPC communication.
 
 ```sh
-# macOS
-touch -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json # text editor
-touch -f ~/Library/Caches/org.scalameta.metals/bsp.trace.json # build server
-touch ~/Library/Caches/org.scalameta.metals/dap-server.trace.json # debug adapter
-touch ~/Library/Caches/org.scalameta.metals/dap-client.trace.json # debug adapter
+# Linux and macOS
+touch $WORKSPACE/.metals/lsp.trace.json # text editor
+touch $WORKSPACE/.metals/bsp.trace.json # build server
+touch $WORKSPACE/.metals/dap-server.trace.json # debug adapter
+touch $WORKSPACE/.metals/dap-client.trace.json # debug adapter
+```
 
-# Linux
-touch ~/.cache/metals/lsp.trace.json # text editor
-touch ~/.cache/metals/bsp.trace.json # build server
-touch ~/.cache/metals/dap-server.trace.json # debug adapter
-touch ~/.cache/metals/dap-client.trace.json # debug adapter
-
+```sh
 # Windows
-type nul > %LOCALAPPDATA%/scalameta/metals/cache/lsp.trace.json # text editor
-type nul > %LOCALAPPDATA%/scalameta/metals/cache/bsp.trace.json # build server
-type nul > %LOCALAPPDATA%/scalameta/metals/cache/dap-server.trace.json # debug adapter
-type nul > %LOCALAPPDATA%/scalameta/metals/cache/dap-client.trace.json # debug adapter
+type nul > $WORKSPACE/.metals/lsp.trace.json # text editor
+type nul > $WORKSPACE/.metals/bsp.trace.json # build server
+type nul > $WORKSPACE/.metals/dap-server.trace.json # debug adapter
+type nul > $WORKSPACE/.metals/dap-client.trace.json # debug adapter
 ```
 
 Next when you start Metals, watch the logs with `tail -f`.
 
 ```sh
-# macOS
-tail -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json
-# Linux
-tail -f ~/.cache/metals/lsp.trace.json
+# Linux and macOS
+tail -f $WORKSPACE/.metals/lsp.trace.json
 ```
 
 The traces are very verbose so it's recommended to delete the files if you are

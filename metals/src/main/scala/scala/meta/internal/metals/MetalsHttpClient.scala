@@ -13,6 +13,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -193,11 +194,20 @@ final class MetalsHttpClient(
   // =======
   // Helpers
   // =======
-  private val lspTrace = Trace.protocolTracePath("LSP")
-  private val isLspTraceEnabled = lspTrace.isFile
+  def tracePath(
+      protocolName: String,
+      workspace: AbsolutePath,
+      description: String
+  ): Option[(String, AbsolutePath)] =
+    Some((description, Trace.protocolTracePath(protocolName, workspace)))
 
-  private val bspTrace = Trace.protocolTracePath("BSP")
-  private val isBspTraceEnabled = bspTrace.isFile
+  def globalTracePath(
+      protocolName: String,
+      description: String
+  ): Option[(String, AbsolutePath)] =
+    Trace.globalDirectory.flatMap(dir =>
+      tracePath(protocolName, dir, description)
+    )
 
   private def serverCommands(html: HtmlBuilder): HtmlBuilder = {
     ServerCommands.all.foreach { command =>
@@ -250,14 +260,22 @@ final class MetalsHttpClient(
         )
         .section(
           "Log files",
-          _.element("p")(
-            _.text(s"LSP trace (enabled=$isLspTraceEnabled):")
-              .path(lspTrace)
-          )
-            .element("p")(
-              _.text(s"BSP trace (enabled=$isBspTraceEnabled):")
-                .path(bspTrace)
-            )
+          builder => {
+            val traces = List(
+              tracePath("LSP", PathIO.workingDirectory, "LSP trace"),
+              globalTracePath("LSP", "LSP global trace"),
+              tracePath("BSP", PathIO.workingDirectory, "BSP trace"),
+              globalTracePath("BSP", "BSP global trace")
+            ).flatten
+
+            traces.foreach { case (description, path) =>
+              builder
+                .element("p")(
+                  _.text(s"$description (enabled=${path.isFile}):")
+                    .path(path)
+                )
+            }
+          }
         )
     }
     result.render
