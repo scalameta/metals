@@ -223,7 +223,7 @@ lazy val V = new {
   val scalafix = "0.9.32"
   val lsp4jV = "0.12.0"
   val sbtJdiTools = "1.1.1"
-  val genyVersion = "0.6.10"
+  val genyVersion = "0.6.11"
   val debugAdapter = "2.0.8"
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
@@ -448,11 +448,11 @@ lazy val metals = project
       // for file watching
       "com.swoval" % "file-tree-views" % "2.1.7",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.12.Final",
+      "io.undertow" % "undertow-core" % "2.2.13.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "8.0.4",
-      "com.h2database" % "h2" % "2.0.202",
+      "org.flywaydb" % "flyway-core" % "8.0.5",
+      "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
