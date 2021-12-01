@@ -18,6 +18,9 @@ example/FooEnum.scala -> example/FooEnum.
 example/ForComprehensions.scala -> example/ForComprehensions#
 example/GivenAlias.scala -> example/GivenAlias$package.
 example/GivenAlias.scala -> example/X.
+example/GivenAlias.scala -> example/Xg#
+example/GivenAlias.scala -> example/Yg#
+example/GivenAlias.scala -> example/Zg#
 example/ImplicitClasses.scala -> example/ImplicitClasses.
 example/ImplicitConversions.scala -> example/ImplicitConversions#
 example/Imports.scala -> example/Imports#
