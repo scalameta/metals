@@ -11,7 +11,7 @@ jobs:
     name: "Upload LSIF"
     steps:
       - uses: actions/checkout@v2
-      - uses: coursier/setup-action@v1.1.1
+      - uses: coursier/setup-action@v1.1.2
       - run: cs install --contrib lsif-java
       - run: lsif-java index
       - name: src lsif upload
