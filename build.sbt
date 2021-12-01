@@ -449,7 +449,7 @@ lazy val metals = project
       "com.swoval" % "file-tree-views" % "2.1.7",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.12.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.8.4.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.5.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "8.0.4",
       "com.h2database" % "h2" % "1.4.200",
