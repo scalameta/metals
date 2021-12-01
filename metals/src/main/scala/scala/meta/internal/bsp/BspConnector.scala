@@ -32,7 +32,8 @@ class BspConnector(
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
-    bspConfigGenerator: BspConfigGenerator
+    bspConfigGenerator: BspConfigGenerator,
+    currentConnection: () => Option[BuildServerConnection]
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -319,9 +320,11 @@ class BspConnector(
             )
             Future.successful(false)
         }
-
       case multipleServers =>
-        val currentSelectedServer = tables.buildServers.selectedServer()
+        val currentSelectedServer =
+          tables.buildServers
+            .selectedServer()
+            .orElse(currentConnection().map(_.name))
         askUser(multipleServers, currentSelectedServer).flatMap(choice =>
           handleServerChoice(choice, currentSelectedServer)
         )

@@ -471,7 +471,8 @@ class MetalsLanguageServer(
           tables,
           () => userConfig,
           statusBar,
-          bspConfigGenerator
+          bspConfigGenerator,
+          () => bspSession.map(_.mainConnection)
         )
         semanticdbs = AggregateSemanticdbs(
           List(
