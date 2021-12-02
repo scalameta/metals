@@ -102,7 +102,11 @@ final class Embedded(
      */
     resolutionParams.addExclusion("io.get-coursier", "interface")
     val jars =
-      Embedded.downloadMdoc(scalaVersion, scalaBinaryVersion, resolutionParams)
+      Embedded.downloadMdoc(
+        scalaVersion,
+        scalaBinaryVersion,
+        Some(resolutionParams)
+      )
 
     val parent = new MdocClassLoader(this.getClass.getClassLoader)
 
@@ -154,20 +158,22 @@ object Embedded {
 
   def fetchSettings(
       dep: Dependency,
-      scalaVersion: String
+      scalaVersion: Option[String],
+      resolution: Option[ResolutionParams] = None
   ): Fetch = {
 
-    val resolutionParams = ResolutionParams
-      .create()
+    val resolutionParams = resolution.getOrElse(ResolutionParams.create())
 
-    if (!ScalaVersions.isScala3Version(scalaVersion))
-      resolutionParams.forceVersions(
-        List(
-          Dependency.of("org.scala-lang", "scala-library", scalaVersion),
-          Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
-          Dependency.of("org.scala-lang", "scala-reflect", scalaVersion)
-        ).map(d => (d.getModule, d.getVersion)).toMap.asJava
-      )
+    scalaVersion.foreach { scalaVersion =>
+      if (!ScalaVersions.isScala3Version(scalaVersion))
+        resolutionParams.forceVersions(
+          List(
+            Dependency.of("org.scala-lang", "scala-library", scalaVersion),
+            Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
+            Dependency.of("org.scala-lang", "scala-reflect", scalaVersion)
+          ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+        )
+    }
 
     Fetch
       .create()
@@ -224,45 +230,48 @@ object Embedded {
 
   private def downloadDependency(
       dep: Dependency,
-      scalaVersion: String,
+      scalaVersion: Option[String],
       classfiers: Seq[String] = Seq.empty,
-      resolution: ResolutionParams = ResolutionParams.create()
-  ): List[Path] =
-    fetchSettings(dep, scalaVersion)
+      resolution: Option[ResolutionParams] = None
+  ): List[Path] = {
+    fetchSettings(dep, scalaVersion, resolution)
       .addClassifiers(classfiers: _*)
-      .withResolutionParams(resolution)
       .fetch()
       .asScala
       .toList
       .map(_.toPath())
+  }
 
   def downloadScalaSources(scalaVersion: String): List[Path] =
     downloadDependency(
       scalaDependency(scalaVersion),
-      scalaVersion,
+      Some(scalaVersion),
       classfiers = Seq("sources")
     )
 
   def downloadScala3Sources(scalaVersion: String): List[Path] =
     downloadDependency(
       scala3Dependency(scalaVersion),
-      scalaVersion,
+      Some(scalaVersion),
       classfiers = Seq("sources")
     )
 
   def downloadSemanticdbScalac(scalaVersion: String): List[Path] =
-    downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
+    downloadDependency(
+      semanticdbScalacDependency(scalaVersion),
+      Some(scalaVersion)
+    )
   def downloadMtags(scalaVersion: String): List[Path] =
-    downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
+    downloadDependency(mtagsDependency(scalaVersion), Some(scalaVersion))
 
   def downloadMdoc(
       scalaVersion: String,
       scalaBinaryVersion: String,
-      resolutionParams: ResolutionParams = ResolutionParams.create()
+      resolutionParams: Option[ResolutionParams] = None
   ): List[Path] =
     downloadDependency(
       mdocDependency(scalaVersion, scalaBinaryVersion),
-      scalaVersion,
+      scalaVersion = None,
       resolution = resolutionParams
     )
 
@@ -272,7 +281,7 @@ object Embedded {
       s"organize-imports_$scalaBinaryVersion",
       BuildInfo.organizeImportVersion
     )
-    downloadDependency(dep, scalaBinaryVersion)
+    downloadDependency(dep, scalaVersion = None)
   }
 
   def toClassLoader(
@@ -292,7 +301,7 @@ object Embedded {
         scala3Dependency(scalaVersion)
       else
         scalaDependency(scalaVersion)
-    downloadDependency(dependency, scalaVersion)
+    downloadDependency(dependency, Some(scalaVersion))
   }
 
 }
