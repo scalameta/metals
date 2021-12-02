@@ -15,8 +15,7 @@ jobs:
       - uses: coursier/cache-action@v6.3
       - name: Publish
         run: |
-          sbt ci-release
-          sbt docs/docusaurusPublishGhpages
+          sbt gh-actions-release
         env:
           GIT_USER: scalameta@scalameta.org
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
