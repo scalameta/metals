@@ -61,8 +61,8 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
-import scala.meta.internal.metals.testProvider.TestFinder
-import scala.meta.internal.metals.testProvider.TestFinderImpl
+import scala.meta.internal.metals.testProvider.TestSuitesFinder
+import scala.meta.internal.metals.testProvider.TestSuitesFinderImpl
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
@@ -257,7 +257,7 @@ class MetalsLanguageServer(
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
   private var fileDecoderProvider: FileDecoderProvider = _
-  private var testProvider: TestFinder = _
+  private var testProvider: TestSuitesFinder = _
   private var workspaceReload: WorkspaceReload = _
   private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
@@ -693,7 +693,7 @@ class MetalsLanguageServer(
           clientConfig,
           classFinder
         )
-        testProvider = new TestFinderImpl(
+        testProvider = new TestSuitesFinderImpl(
           buildTargets,
           buildTargetClasses,
           definitionProvider,

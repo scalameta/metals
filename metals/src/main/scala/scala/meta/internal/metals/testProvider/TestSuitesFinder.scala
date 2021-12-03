@@ -8,16 +8,16 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 
 import ch.epfl.scala.bsp4j.BuildTarget
 
-trait TestFinder {
+trait TestSuitesFinder {
   def findTestSuites(): Seq[TestDiscovery]
 }
 
-final class TestFinderImpl(
+final class TestSuitesFinderImpl(
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider
-) extends TestFinder {
+) extends TestSuitesFinder {
 
   override def findTestSuites(): Seq[TestDiscovery] = {
     buildTargets.allBuildTargetIds.toList
