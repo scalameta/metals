@@ -26,7 +26,7 @@ functionality.
     <td />
     <td align="center">Visual Studio Code</td>
     <td align="center">Vim</td>
-    <td align="center">Sublime Text 3</td>
+    <td align="center">Sublime Text</td>
     <td align="center">Emacs</td>
     <td align="center">Eclipse</td>
   </tr>
