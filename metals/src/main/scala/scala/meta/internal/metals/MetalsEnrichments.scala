@@ -76,15 +76,10 @@ object MetalsEnrichments
     def isSbtBuild: Boolean =
       dataKind == "sbt"
 
-    def baseDirectory: String = {
-      val baseDir = buildTarget.getBaseDirectory()
-      if (baseDir != null) baseDir else ""
-    }
+    def baseDirectory: String =
+      Option(buildTarget.getBaseDirectory()).getOrElse("")
 
-    def dataKind: String = {
-      val dataking = buildTarget.getDataKind()
-      if (dataking != null) dataking else ""
-    }
+    def dataKind: String = Option(buildTarget.getDataKind()).getOrElse("")
 
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       if (isSbtBuild) {
@@ -742,12 +737,16 @@ object MetalsEnrichments
       item.getOptions.asScala
         .find(_.startsWith("-Xplugin:semanticdb"))
         .map(arg => {
-          val targetrootPos = arg.indexOf("-targetroot:")
-          val sourcerootPos = arg.indexOf("-sourceroot:")
-          if (targetrootPos > sourcerootPos)
-            arg.substring(targetrootPos + 12).trim()
+          val targetRootOpt = "-targetroot:"
+          val sourceRootOpt = "-sourceroot:"
+          val targetRootPos = arg.indexOf(targetRootOpt)
+          val sourceRootPos = arg.indexOf(sourceRootOpt)
+          if (targetRootPos > sourceRootPos)
+            arg.substring(targetRootPos + targetRootOpt.size).trim()
           else
-            arg.substring(sourcerootPos + 12, targetrootPos - 1).trim()
+            arg
+              .substring(sourceRootPos + sourceRootOpt.size, targetRootPos - 1)
+              .trim()
         })
         .filter(_ != "javac-classes-directory")
         .map(AbsolutePath(_))

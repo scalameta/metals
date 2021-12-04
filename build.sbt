@@ -540,7 +540,7 @@ lazy val metals = project
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // for Java formatting
-      "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.26.0",
+      "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.25.0",
       // ==================
       // Scala dependencies
       // ==================

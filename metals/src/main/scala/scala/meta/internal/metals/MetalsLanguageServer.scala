@@ -1817,7 +1817,7 @@ class MetalsLanguageServer(
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         newFileProvider
-          .handleFileCreation(directoryURI, name, fileType, true)
+          .handleFileCreation(directoryURI, name, fileType, isScala = true)
           .asJavaObject
 
       case ServerCommands.NewJavaFile(args) =>
@@ -1825,7 +1825,7 @@ class MetalsLanguageServer(
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         newFileProvider
-          .handleFileCreation(directoryURI, name, fileType, false)
+          .handleFileCreation(directoryURI, name, fileType, isScala = false)
           .asJavaObject
 
       case ServerCommands.StartAmmoniteBuildServer() =>
@@ -2480,7 +2480,6 @@ class MetalsLanguageServer(
     val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
-      // TODO(arthurm1) add java sources?  What dialect?
       scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       path = sourceUri.toAbsolutePath

@@ -5,6 +5,7 @@ import java.nio.file.FileAlreadyExistsException
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.ClientCommands
@@ -143,14 +144,15 @@ class NewFileProvider(
   }
 
   private def askForJavaKind: Future[Option[NewFileType]] = {
-    askForKind(
-      List(
-        JavaClass,
-        JavaInterface,
-        JavaEnum,
-        JavaRecord
-      )
+    val allFileTypes = List(
+      JavaClass,
+      JavaInterface,
+      JavaEnum
     )
+    val withRecord =
+      if (Properties.isJavaAtLeast("14")) allFileTypes :+ JavaRecord
+      else allFileTypes
+    askForKind(withRecord)
   }
 
   private def askForName(kind: String): Future[Option[String]] = {
@@ -187,7 +189,7 @@ class NewFileProvider(
       case CaseClass => caseClassTemplate(className)
       case Enum => enumTemplate(kind.id, className)
       case JavaRecord => javaRecordTemplate(className)
-      case _ => classTemplate(kind.syntax, className)
+      case _ => classTemplate(kind.syntax.getOrElse(""), className)
     }
     val editText = template.map { s =>
       packageProvider

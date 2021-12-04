@@ -31,10 +31,6 @@ final class JavaFormattingProvider(
 )(implicit
     ec: ExecutionContext
 ) {
-  // TODO cache formatting file and reload on change?
-  // TODO progress monitor?
-  // TODO onTypeFormatting - wait until presentation compiler is integrated
-
   private def decodeProfile(node: Node): Map[String, String] = {
     val settings = for {
       child <- node.child
@@ -112,16 +108,7 @@ final class JavaFormattingProvider(
     }
   }
 
-  private def fromLSP(input: Input, range: l.Range): m.Position.Range =
-    m.Position.Range(
-      input,
-      range.getStart().getLine(),
-      range.getStart().getCharacter(),
-      range.getEnd().getLine(),
-      range.getEnd().getCharacter()
-    )
-
-  private def fromLSP(input: Input): m.Position.Range =
+  private def fromLSP(input: Input): Position.Range =
     m.Position.Range(input, 0, input.chars.length)
 
   def format(
@@ -131,7 +118,7 @@ final class JavaFormattingProvider(
     val range = params.getRange
     val path = params.getTextDocument.getUri.toAbsolutePath
     val input = path.toInputFromBuffers(buffers)
-    runFormat(path, input, options, fromLSP(input, range)).asJava
+    runFormat(path, input, options, range.toMeta(input)).asJava
   }
 
   def format(
@@ -144,7 +131,7 @@ final class JavaFormattingProvider(
       path: AbsolutePath,
       input: Input,
       formattingOptions: l.FormattingOptions,
-      range: m.Position.Range
+      range: m.Position
   ): List[l.TextEdit] = {
     // if source/target/compliance versions aren't defined by the user then fallback on the build target info
     var options = loadEclipseFormatConfig
@@ -161,8 +148,7 @@ final class JavaFormattingProvider(
         targetVersion <- java.targetVersion
       } yield ((sourceVersion, targetVersion))
 
-      version
-        .take(1)
+      version.headOption
         .foreach(version => {
           val (sourceVersion, targetVersion) = version
           val complianceVersion =
@@ -189,11 +175,8 @@ final class JavaFormattingProvider(
 
     val codeFormatter = ToolFactory.createCodeFormatter(options.asJava)
 
-    val kind = {
-      if (userConfig().enableFormatJavaComments)
-        CodeFormatter.F_INCLUDE_COMMENTS
-      else 0
-    } | CodeFormatter.K_COMPILATION_UNIT
+    val kind =
+      CodeFormatter.F_INCLUDE_COMMENTS | CodeFormatter.K_COMPILATION_UNIT
     val code = input.text
     val doc = new Document(code)
     val codeOffset = range.start

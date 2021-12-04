@@ -45,7 +45,6 @@ case class UserConfiguration(
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     eclipseFormatConfigPath: Option[AbsolutePath] = None,
-    enableFormatJavaComments: Boolean = true,
     eclipseFormatProfile: Option[String] = None
 ) {
 
@@ -451,8 +450,6 @@ object UserConfiguration {
     }
     val eclipseFormatConfigPath =
       getStringKey("eclipse-format-config-path").map(AbsolutePath(_))
-    val shouldFormatJavaComments =
-      getBooleanKey("enable-format-java-comments").getOrElse(false)
     val eclipseFormatProfile = getStringKey("eclipse-format-profile")
 
     if (errors.isEmpty) {
@@ -482,7 +479,6 @@ object UserConfiguration {
           defaultScalaVersion,
           disableTestCodeLenses,
           eclipseFormatConfigPath,
-          shouldFormatJavaComments,
           eclipseFormatProfile
         )
       )
