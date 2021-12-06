@@ -42,7 +42,8 @@ case class UserConfiguration(
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
-    fallbackScalaVersion: Option[String] = None
+    fallbackScalaVersion: Option[String] = None,
+    testUI: TestUIKind = TestUIKind.CodeLenses
 ) {
 
   def currentBloopVersion: String =
@@ -241,11 +242,19 @@ object UserConfiguration {
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
         """.stripMargin
+      ),
+      UserConfigurationOption(
+        "test-ui",
+        "Code Lenses",
+        "Test Explorer",
+        "Test UI used for tests and test suites",
+        "Default way of handling tests and test suites."
       )
     )
 
   def fromJson(
       json: JsonObject,
+      clientConfiguration: ClientConfiguration,
       properties: Properties = System.getProperties
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
@@ -402,6 +411,15 @@ object UserConfiguration {
     // It was added only to have a meaningful option value in vscode
     val defaultScalaVersion =
       getStringKey("fallback-scala-version").filter(_ != "automatic")
+    val testUIKind = {
+      val isTextExplorerEnabled = clientConfiguration.isTestExplorerProvider()
+      getStringKey("test-ui") match {
+        case Some("Text Explorer") if isTextExplorerEnabled =>
+          TestUIKind.TextExplorer
+        case _ =>
+          TestUIKind.CodeLenses
+      }
+    }
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -426,7 +444,8 @@ object UserConfiguration {
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
           excludedPackages,
-          defaultScalaVersion
+          defaultScalaVersion,
+          testUIKind
         )
       )
     } else {
@@ -439,4 +458,10 @@ object UserConfiguration {
     s"""{"metals": $config}""".parseJson.getAsJsonObject
   }
 
+}
+
+sealed abstract class TestUIKind(val enableCodeLenses: Boolean)
+object TestUIKind {
+  object TextExplorer extends TestUIKind(false)
+  object CodeLenses extends TestUIKind(true)
 }
