@@ -2,12 +2,11 @@ package tests.pc
 
 import munit.Location
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class PrettyPrintSuite extends BaseCompletionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   def checkSignature(
       name: String,

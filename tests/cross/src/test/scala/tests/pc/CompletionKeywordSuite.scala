@@ -1,12 +1,11 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   check(
     "super-template",
@@ -409,7 +408,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "topLevel".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "topLevel".tag(IgnoreScala3),
     "@@",
     """|abstract class
        |case class

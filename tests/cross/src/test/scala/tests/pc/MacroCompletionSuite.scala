@@ -6,7 +6,6 @@ import scala.collection.Seq
 
 import coursierapi.Dependency
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class MacroCompletionSuite extends BaseCompletionSuite {
 
@@ -39,8 +38,8 @@ class MacroCompletionSuite extends BaseCompletionSuite {
   }
 
   // @tgodzik macros will not work in Dotty
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   override def scalacOptions(classpath: Seq[Path]): Seq[String] =
     classpath

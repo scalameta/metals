@@ -1,7 +1,6 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionSuite extends BaseCompletionSuite {
 
@@ -926,7 +925,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "type2".tag(IgnoreScala3),
     s"""|object Main {
         |  new scala.Iterable@@
         |}

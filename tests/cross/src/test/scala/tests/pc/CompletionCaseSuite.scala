@@ -4,12 +4,11 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionCaseSuite extends BaseCompletionSuite {
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   def paramHint: Option[String] = Some("param-hint")
 

@@ -1,7 +1,6 @@
 package tests.pc
 
 import tests.BaseSignatureHelpSuite
-import tests.BuildInfoVersions
 
 class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
 
@@ -10,8 +9,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
   override def requiresScalaLibrarySources: Boolean = true
 
   // @tgodzik docs not yet supported for Scala 3
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   val foldLatestDocs: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
