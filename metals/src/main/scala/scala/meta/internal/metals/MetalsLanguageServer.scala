@@ -546,6 +546,7 @@ class MetalsLanguageServer(
             buffers,
             buildTargets,
             clientConfig,
+            () => userConfig,
             () => bspSession.exists(_.main.isBloopOrSbt),
             trees
           )

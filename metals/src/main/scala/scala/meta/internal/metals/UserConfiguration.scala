@@ -43,7 +43,7 @@ case class UserConfiguration(
     enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
-    testUI: TestUIKind = TestUIKind.CodeLenses
+    disableTestCodeLenses: Boolean = false
 ) {
 
   def currentBloopVersion: String =
@@ -244,9 +244,9 @@ object UserConfiguration {
         """.stripMargin
       ),
       UserConfigurationOption(
-        "test-ui",
+        "test-user-interface",
         "Code Lenses",
-        "Test Explorer",
+        """{ "testUserInterface" : "Test explorer" } """,
         "Test UI used for tests and test suites",
         "Default way of handling tests and test suites."
       )
@@ -411,13 +411,12 @@ object UserConfiguration {
     // It was added only to have a meaningful option value in vscode
     val defaultScalaVersion =
       getStringKey("fallback-scala-version").filter(_ != "automatic")
-    val testUIKind = {
+    val disableTestCodeLenses = {
       val isTextExplorerEnabled = clientConfiguration.isTestExplorerProvider()
-      getStringKey("test-ui") match {
-        case Some("Text Explorer") if isTextExplorerEnabled =>
-          TestUIKind.TextExplorer
-        case _ =>
-          TestUIKind.CodeLenses
+      getStringKey("test-user-interface") match {
+        case Some("Test Explorer") if isTextExplorerEnabled =>
+          true
+        case _ => false
       }
     }
     if (errors.isEmpty) {
@@ -445,7 +444,7 @@ object UserConfiguration {
           enableIndentOnPaste,
           excludedPackages,
           defaultScalaVersion,
-          testUIKind
+          disableTestCodeLenses
         )
       )
     } else {
@@ -458,10 +457,4 @@ object UserConfiguration {
     s"""{"metals": $config}""".parseJson.getAsJsonObject
   }
 
-}
-
-sealed abstract class TestUIKind(val enableCodeLenses: Boolean)
-object TestUIKind {
-  object TextExplorer extends TestUIKind(false)
-  object CodeLenses extends TestUIKind(true)
 }

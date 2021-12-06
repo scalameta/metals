@@ -148,7 +148,7 @@ object InitializationOptions {
       slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
-      testExplorerProvider = jsonObj.getBooleanOption("textExplorerProvider"),
+      testExplorerProvider = jsonObj.getBooleanOption("testExplorerProvider"),
       openNewWindowProvider = jsonObj.getBooleanOption("openNewWindowProvider"),
       copyWorksheetOutputProvider =
         jsonObj.getBooleanOption("copyWorksheetOutputProvider"),
