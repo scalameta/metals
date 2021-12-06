@@ -55,7 +55,7 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
-import scala.meta.internal.metals.testProvider.TestDiscovery
+import scala.meta.internal.metals.testProvider.TestSuiteDiscoveryResult
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -800,15 +800,15 @@ final class TestingServer(
     }
   }
 
-  def discoverTestSuites(filename: String): Future[List[TestDiscovery]] = {
+  def discoverTestSuites(
+      filename: String
+  ): Future[List[TestSuiteDiscoveryResult]] = {
     val path = toPath(filename)
     var retries = 5
-    val testClasses = Promise[List[TestDiscovery]]()
+    val testClasses = Promise[List[TestSuiteDiscoveryResult]]()
     val handler = { refreshCount: Int =>
-      if (refreshCount > 0)
-        Thread.sleep(300)
       executeCommand(ServerCommands.DiscoverTestSuites)
-        .asInstanceOf[Future[ju.List[TestDiscovery]]]
+        .asInstanceOf[Future[ju.List[TestSuiteDiscoveryResult]]]
         .map(_.asScala.toList)
         .foreach { r =>
           if (r.exists(_.discovered.asScala.exists(_.nonEmpty))) {
@@ -824,7 +824,6 @@ final class TestingServer(
         }
     }
 
-    Thread.sleep(300)
     for {
       _ <- server
         .didFocus(path.toURI.toString)

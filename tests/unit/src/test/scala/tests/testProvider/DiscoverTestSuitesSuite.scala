@@ -1,10 +1,12 @@
 package tests
 
+import java.util.concurrent.TimeUnit
+
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.testProvider.TestDiscovery
+import scala.meta.internal.metals.testProvider.TestSuiteDiscoveryResult
 
 import tests.TestDiscoveryWrapper._
 
@@ -36,6 +38,7 @@ class DiscoverTestSuitesSuite extends BaseLspSuite("discoverTestSuites") {
       _ <- server.didSave("app/src/main/scala/foo/bar/MyTestSuite.scala")(
         identity
       )
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       res <- server.discoverTestSuites(
         "app/src/main/scala/foo/bar/MyTestSuite.scala"
       )
@@ -73,7 +76,7 @@ final case class TestDiscoveryWrapper(
     discovered: List[ResultWrapper]
 )
 object TestDiscoveryWrapper {
-  def apply(discovery: TestDiscovery): TestDiscoveryWrapper =
+  def apply(discovery: TestSuiteDiscoveryResult): TestDiscoveryWrapper =
     TestDiscoveryWrapper(
       discovery.targetName,
       discovery.discovered.asScala
@@ -83,10 +86,10 @@ object TestDiscoveryWrapper {
 
   sealed trait ResultWrapper
   object ResultWrapper {
-    def apply(result: TestDiscovery.Result): ResultWrapper =
+    def apply(result: TestSuiteDiscoveryResult.Discovered): ResultWrapper =
       result match {
-        case pkg: TestDiscovery.Package => PackageWrapper(pkg)
-        case test: TestDiscovery.TestSuite => SuiteWrapper(test)
+        case pkg: TestSuiteDiscoveryResult.Package => PackageWrapper(pkg)
+        case test: TestSuiteDiscoveryResult.TestSuite => SuiteWrapper(test)
       }
   }
 
@@ -95,7 +98,7 @@ object TestDiscoveryWrapper {
       children: List[ResultWrapper]
   ) extends ResultWrapper
   object PackageWrapper {
-    def apply(pkg: TestDiscovery.Package): PackageWrapper =
+    def apply(pkg: TestSuiteDiscoveryResult.Package): PackageWrapper =
       PackageWrapper(
         pkg.prefix,
         pkg.children.asScala.map(ResultWrapper(_)).toList
@@ -107,7 +110,7 @@ object TestDiscoveryWrapper {
       className: String
   ) extends ResultWrapper
   object SuiteWrapper {
-    def apply(test: TestDiscovery.TestSuite): SuiteWrapper =
+    def apply(test: TestSuiteDiscoveryResult.TestSuite): SuiteWrapper =
       SuiteWrapper(test.fullyQualifiedName, test.className)
   }
 }

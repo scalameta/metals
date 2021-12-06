@@ -9,7 +9,7 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 import ch.epfl.scala.bsp4j.BuildTarget
 
 trait TestSuitesFinder {
-  def findTestSuites(): Seq[TestDiscovery]
+  def findTestSuites(): Seq[TestSuiteDiscoveryResult]
 }
 
 final class TestSuitesFinderImpl(
@@ -19,7 +19,7 @@ final class TestSuitesFinderImpl(
     implementationProvider: ImplementationProvider
 ) extends TestSuitesFinder {
 
-  override def findTestSuites(): Seq[TestDiscovery] = {
+  override def findTestSuites(): Seq[TestSuiteDiscoveryResult] = {
     buildTargets.allBuildTargetIds.toList
       .flatMap(buildTargets.info)
       .filterNot(_.getDisplayName.endsWith("build"))
@@ -35,11 +35,11 @@ final class TestSuitesFinderImpl(
       // filter out symbols which don't represent classes
       .filter { case (symbol, _) => symbol.endsWith("#") }
       .toList
-      .map { case (symbol, className) =>
-        createTestEntry(buildTarget, symbol, className)
+      .map { case (symbol, fullyQualifiedClassName) =>
+        createTestEntry(buildTarget, symbol, fullyQualifiedClassName)
       }
 
-    TestDiscovery(
+    TestSuiteDiscoveryResult(
       buildTarget.getDisplayName,
       buildTarget.getId.getUri,
       TestProviderImpl.groupTestsByPackage(classes).asJava
@@ -49,7 +49,7 @@ final class TestSuitesFinderImpl(
   private def createTestEntry(
       buildTarget: BuildTarget,
       symbol: String,
-      className: String
+      fullyQualifiedClassName: String
   ): TestEntry = {
     val location = for {
       definition <- definitionProvider
@@ -60,9 +60,10 @@ final class TestSuitesFinderImpl(
           .headOption
       )
     } yield location
-    val fullyQualifiedName = className.split('.').toList
-    val testClass = TestDiscovery.TestSuite(
-      className,
+    // fullyQualifiedClassName always contains at least one element - class name
+    val fullyQualifiedName = fullyQualifiedClassName.split('.').toList
+    val testClass = TestSuiteDiscoveryResult.TestSuite(
+      fullyQualifiedClassName,
       fullyQualifiedName.takeRight(1).head,
       location.orNull
     )
@@ -75,7 +76,7 @@ final class TestSuitesFinderImpl(
 
 private case class TestEntry(
     packageParts: List[String],
-    testClass: TestDiscovery.TestSuite
+    testClass: TestSuiteDiscoveryResult.TestSuite
 ) {
   def stripPackage(): TestEntry =
     this.copy(packageParts = this.packageParts.drop(1))
@@ -84,7 +85,9 @@ private case class TestEntry(
 object TestProviderImpl {
   def groupTestsByPackage(
       testEntries: List[TestEntry]
-  ): List[TestDiscovery.Result] = groupTestsByPackageImpl(testEntries)
+  ): List[TestSuiteDiscoveryResult.Discovered] = groupTestsByPackageImpl(
+    testEntries
+  )
 
   /**
    * Partitions the given testEntries depending on whether entry has nonempty package or not.
@@ -92,17 +95,20 @@ object TestProviderImpl {
    */
   private def groupTestsByPackageImpl(
       testEntries: List[TestEntry]
-  ): List[TestDiscovery.Result] = {
+  ): List[TestSuiteDiscoveryResult.Discovered] = {
     val (withPackage, withoutPackage) =
-      testEntries.partition(e => e.packageParts.nonEmpty)
+      testEntries.partition(entry => entry.packageParts.nonEmpty)
     val currentTestClasses = withoutPackage.map(_.testClass)
-    val testClassesInPackages: Iterable[TestDiscovery.Result] = withPackage
-      .groupBy(p => p.packageParts.head)
-      .mapValues(_.map(p => p.copy(packageParts = p.packageParts.drop(1))))
-      .map { case (prefix, entries) =>
-        val children = groupTestsByPackageImpl(entries)
-        TestDiscovery.Package(prefix, children.asJava)
-      }
+    val testClassesInPackages: Iterable[TestSuiteDiscoveryResult.Discovered] =
+      withPackage
+        .groupBy(entry => entry.packageParts.head)
+        .mapValues(
+          _.map(entry => entry.copy(packageParts = entry.packageParts.drop(1)))
+        )
+        .map { case (prefix, entries) =>
+          val children = groupTestsByPackageImpl(entries)
+          TestSuiteDiscoveryResult.Package(prefix, children.asJava)
+        }
     val result = currentTestClasses ++ testClassesInPackages
     result
   }

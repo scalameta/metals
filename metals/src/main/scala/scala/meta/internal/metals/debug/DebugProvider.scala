@@ -282,7 +282,7 @@ class DebugProvider(
       ],
       testClasses: TrieMap[
         BuildTargetClasses.Symbol,
-        BuildTargetClasses.ClassName
+        BuildTargetClasses.FullyQualifiedClassName
       ],
       params: DebugDiscoveryParams
   )(implicit ec: ExecutionContext) = {
@@ -360,7 +360,7 @@ class DebugProvider(
         semanticdbs
           .textDocument(path)
           .documentIncludingStale
-          .fold[Future[Seq[BuildTargetClasses.ClassName]]] {
+          .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
             Future.failed(SemanticDbNotFoundException)
           } { textDocument =>
             Future {

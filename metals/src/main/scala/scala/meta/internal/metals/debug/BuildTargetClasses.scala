@@ -149,11 +149,11 @@ final class BuildTargetClasses(
 
 object BuildTargetClasses {
   type Symbol = String
-  type ClassName = String
+  type FullyQualifiedClassName = String
 
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
-    val testClasses = new TrieMap[Symbol, ClassName]()
+    val testClasses = new TrieMap[Symbol, FullyQualifiedClassName]()
 
     def isEmpty: Boolean = mainClasses.isEmpty && testClasses.isEmpty
   }

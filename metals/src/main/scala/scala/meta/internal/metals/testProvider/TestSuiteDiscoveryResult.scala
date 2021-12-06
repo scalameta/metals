@@ -6,14 +6,14 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.{lsp4j => l}
 
-final case class TestDiscovery(
+final case class TestSuiteDiscoveryResult(
     targetName: String,
     targetUri: String,
-    discovered: java.util.List[TestDiscovery.Result]
+    discovered: java.util.List[TestSuiteDiscoveryResult.Discovered]
 )
 
-object TestDiscovery {
-  sealed trait Result {
+object TestSuiteDiscoveryResult {
+  sealed trait Discovered {
     def nonEmpty: Boolean = this match {
       case p: Package => p.children.asScala.nonEmpty
       case _: TestSuite => true
@@ -23,11 +23,11 @@ object TestDiscovery {
   final class Package private (
       val kind: String,
       val prefix: String,
-      val children: java.util.List[Result]
-  ) extends Result
+      val children: java.util.List[Discovered]
+  ) extends Discovered
 
   object Package {
-    def apply(prefix: String, children: java.util.List[Result]) =
+    def apply(prefix: String, children: java.util.List[Discovered]) =
       new Package("package", prefix, children)
   }
 
@@ -36,7 +36,7 @@ object TestDiscovery {
       val fullyQualifiedName: String,
       val className: String,
       @Nullable val location: l.Location
-  ) extends Result
+  ) extends Discovered
 
   object TestSuite {
     def apply(pkg: String, testName: String, @Nullable location: l.Location) =
