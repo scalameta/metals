@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.util.zip.ZipError
 
 import scala.collection.concurrent.TrieMap
+import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.internal.io.{ListFiles => _}
@@ -41,18 +42,28 @@ final class OnDemandSymbolIndex(
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
     try findSymbolDefinition(symbol).headOption
-    catch onErrorOption
+    catch {
+      case NonFatal(e) =>
+        onErrorOption(
+          IndexingExceptions.InvalidSymbolException(symbol.value, e)
+        )
+    }
   }
 
   override def definitions(symbol: Symbol): List[SymbolDefinition] =
     try findSymbolDefinition(symbol)
-    catch onError.andThen(_ => List.empty)
+    catch {
+      case NonFatal(e) =>
+        onError(IndexingExceptions.InvalidSymbolException(symbol.value, e))
+        List.empty
+    }
 
   override def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect
   ): List[(String, AbsolutePath)] =
     tryRun(
+      dir,
       List.empty,
       getOrCreateBucket(dialect).addSourceDirectory(dir)
     )
@@ -64,12 +75,13 @@ final class OnDemandSymbolIndex(
       dialect: Dialect
   ): List[(String, AbsolutePath)] =
     tryRun(
+      jar,
       List.empty, {
         try {
           getOrCreateBucket(dialect).addSourceJar(jar)
         } catch {
           case e: ZipError =>
-            onError(InvalidJarException(jar, e))
+            onError(IndexingExceptions.InvalidJarException(jar, e))
             List.empty
         }
       }
@@ -92,6 +104,7 @@ final class OnDemandSymbolIndex(
       dialect: Dialect
   ): List[String] =
     tryRun(
+      source,
       List.empty, {
         indexedSources += 1
         getOrCreateBucket(dialect).addSourceFile(source, sourceDirectory)
@@ -106,9 +119,13 @@ final class OnDemandSymbolIndex(
   ): Unit =
     getOrCreateBucket(dialect).addToplevelSymbol(path, source, toplevel)
 
-  private def tryRun[A](fallback: => A, thunk: => A): A =
+  private def tryRun[A](path: AbsolutePath, fallback: => A, thunk: => A): A =
     try thunk
-    catch onError.andThen(_ => fallback)
+    catch {
+      case NonFatal(e) =>
+        onError(IndexingExceptions.PathIndexingException(path, e))
+        fallback
+    }
 
   private def findSymbolDefinition(
       querySymbol: Symbol
