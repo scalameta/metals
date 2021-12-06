@@ -21,8 +21,8 @@ jobs:
       - uses: coursier/cache-action@v6.3
       - name: "Test and push tag"
         run: |
-          sbt test-mtags-dyn ${{ github.event.inputs.scala_version }}
-          if [ $? == 0]; then
+          sbt 'test-mtags-dyn ${{ github.event.inputs.scala_version }}'
+          if [ $? == 0 ]; then
             git commit --allow-empty -m "Release mtags-${{ github.event.inputs.scala_version }} for ${{github.event.inputs.metals_version}}"
             TAG_NAME="mtags_${{ github.event.inputs.metals_version }}_${{ github.event.inputs.scala_version }}"
             git tag $TAG_NAME
