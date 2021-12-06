@@ -111,7 +111,7 @@ abstract class BasePCSuite extends BaseSuite {
 
   protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Nil
 
-  protected def excludedScalaVersions: Set[String] = Set.empty
+  protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = None
 
   protected def requiresJdkSources: Boolean = false
 
@@ -163,7 +163,8 @@ abstract class BasePCSuite extends BaseSuite {
     executorService.shutdown()
   }
 
-  override def munitIgnore: Boolean = excludedScalaVersions(scalaVersion)
+  override def munitIgnore: Boolean =
+    ignoreScalaVersion.exists(_.ignored(scalaVersion))
 
   override def munitTestTransforms: List[TestTransform] =
     super.munitTestTransforms ++ List(
@@ -262,11 +263,8 @@ abstract class BasePCSuite extends BaseSuite {
       extends Tag("NoScalaVersion")
 
   object IgnoreScalaVersion {
-    def apply(versions: Seq[String]): IgnoreScalaVersion =
-      IgnoreScalaVersion(versions.toSet)
-
     def apply(version: String): IgnoreScalaVersion = {
-      IgnoreScalaVersion(Set(version))
+      IgnoreScalaVersion(_ == version)
     }
 
     def for3LessThan(version: String): IgnoreScalaVersion = {
@@ -279,11 +277,9 @@ abstract class BasePCSuite extends BaseSuite {
 
   }
 
-  object IgnoreScala2
-      extends IgnoreScalaVersion(BuildInfoVersions.scala2Versions.toSet)
+  object IgnoreScala2 extends IgnoreScalaVersion(_.startsWith("2."))
 
-  object IgnoreScala3
-      extends IgnoreScalaVersion(BuildInfoVersions.scala3Versions.toSet)
+  object IgnoreScala3 extends IgnoreScalaVersion(_.startsWith("3."))
 
   case class RunForScalaVersion(versions: Set[String])
       extends Tag("RunScalaVersion")

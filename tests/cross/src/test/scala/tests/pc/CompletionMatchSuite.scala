@@ -1,14 +1,13 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import tests.BuildInfoVersions
 
 class CompletionMatchSuite extends BaseCompletionSuite {
 
   override def requiresScalaLibrarySources: Boolean = true
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   check(
     "match",

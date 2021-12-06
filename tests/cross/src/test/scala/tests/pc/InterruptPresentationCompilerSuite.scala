@@ -15,7 +15,6 @@ import scala.meta.pc.PresentationCompiler
 
 import munit.Location
 import tests.BasePCSuite
-import tests.BuildInfoVersions
 import tests.DelegatingGlobalSymbolIndex
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
@@ -34,8 +33,8 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
   }
 
   // @tgodzik currently not handled for Dotty
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   override def beforeEach(context: BeforeEach): Unit = {
     index.asInstanceOf[InterruptSymbolIndex].reset()

@@ -1,12 +1,11 @@
 package tests.hover
 
-import tests.BuildInfoVersions
 import tests.pc.BaseHoverSuite
 
 class HoverScala3TypeSuite extends BaseHoverSuite {
 
-  override protected def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala2Versions.toSet
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala2)
 
   check(
     "union",

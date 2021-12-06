@@ -2,7 +2,6 @@ package tests.pc
 
 import coursierapi._
 import tests.BaseSignatureHelpSuite
-import tests.BuildInfoVersions
 
 class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
 
@@ -14,8 +13,8 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
     }
   }
 
-  override def excludedScalaVersions: Set[String] =
-    BuildInfoVersions.scala3Versions.toSet
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
 
   check(
     "foldmap",

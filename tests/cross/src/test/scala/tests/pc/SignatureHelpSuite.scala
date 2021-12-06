@@ -1,7 +1,6 @@
 package tests.pc
 
 import tests.BaseSignatureHelpSuite
-import tests.BuildInfoVersions
 
 class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
@@ -309,7 +308,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "tparam2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "tparam2".tag(IgnoreScala3),
     """
       |object a {
       |  Option.empty[I@@]
@@ -339,7 +338,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     )
   )
   check(
-    "tparam4".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "tparam4".tag(IgnoreScala3),
     """
       |object a {
       |  Map.empty[I@@]
@@ -778,7 +777,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "type".tag(IgnoreScala3),
     """
       |object a {
       |  val x: Map[Int, Stri@@ng]
@@ -790,7 +789,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "type1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "type1".tag(IgnoreScala3),
     """
       |object a {
       |  val x: Map[Int, Stri@@]
@@ -802,7 +801,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "pat".tag(IgnoreScala3),
     """
       |case class Person(name: String, age: Int)
       |object a {
@@ -816,7 +815,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "pat1".tag(IgnoreScala3),
     """
       |class Person(name: String, age: Int)
       |object Person {
@@ -834,7 +833,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "pat2".tag(IgnoreScala3),
     """
       |object a {
       |  val Number = "$a, $b".r
@@ -860,7 +859,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat3".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "pat3".tag(IgnoreScala3),
     """
       |object And {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
@@ -876,7 +875,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat4".tag(IgnoreScalaVersion(BuildInfoVersions.scala3Versions)),
+    "pat4".tag(IgnoreScala3),
     """
       |object & {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
