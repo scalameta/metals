@@ -341,7 +341,7 @@ final class ImplementationProvider(
     }
   }
 
-  def findSymbolInformation(
+  private def findSymbolInformation(
       symbol: String
   ): Option[SymbolInformation] = {
     findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))

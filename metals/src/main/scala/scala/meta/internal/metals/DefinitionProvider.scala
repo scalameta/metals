@@ -119,12 +119,21 @@ final class DefinitionProvider(
     }
   }
 
-  def toPath(
-      sym: String,
+  def toLocation(
+      symbol: String,
       targets: List[BuildTargetIdentifier]
-  ): Option[DefinitionDestination] = {
-    destinationProvider.fromSymbol(sym, targets.toSet)
-  }
+  ): Option[Location] =
+    for {
+      definitionDestination <- destinationProvider.fromSymbol(
+        symbol,
+        targets.toSet
+      )
+      if (symbol == definitionDestination.symbol)
+      definitionResult <- definitionDestination.toResult
+      location <- definitionResult.locations.asScala.toList
+        .filter(_.getUri == definitionDestination.uri)
+        .headOption
+    } yield location
 
   /**
    * Returns VirtualFile that contains the definition of

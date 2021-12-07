@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.testProvider
 
-import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -8,41 +7,38 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 
 import ch.epfl.scala.bsp4j.BuildTarget
 
-trait TestSuitesFinder {
-  def findTestSuites(): Seq[TestSuiteDiscoveryResult]
-}
-
-final class TestSuitesFinderImpl(
+final class TestSuitesFinder(
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
-    definitionProvider: DefinitionProvider,
-    implementationProvider: ImplementationProvider
-) extends TestSuitesFinder {
+    definitionProvider: DefinitionProvider
+) {
 
-  override def findTestSuites(): Seq[TestSuiteDiscoveryResult] = {
+  /**
+   * Find test suites for all build targets in current projects.
+   */
+  def findTestSuites(): Seq[TestSuiteDiscoveryResult] = {
     buildTargets.allBuildTargetIds.toList
       .flatMap(buildTargets.info)
-      .filterNot(_.getDisplayName.endsWith("build"))
+      .filterNot(_.isSbtBuild)
       .map(buildTarget => createTestDiscoveryFor(buildTarget))
       // don't send empty results
-      .filter(_.discovered.asScala.exists(_.nonEmpty))
+      .filter(_.discovered.asScala.nonEmpty)
   }
 
   private def createTestDiscoveryFor(buildTarget: BuildTarget) = {
     val classes = buildTargetClasses
       .classesOf(buildTarget.getId)
       .testClasses
-      // filter out symbols which don't represent classes
-      .filter { case (symbol, _) => symbol.endsWith("#") }
       .toList
-      .map { case (symbol, fullyQualifiedClassName) =>
+      .flatMap { case (symbol, fullyQualifiedClassName) =>
         createTestEntry(buildTarget, symbol, fullyQualifiedClassName)
       }
+    val grouped = groupTestsByPackage(classes)
 
     TestSuiteDiscoveryResult(
       buildTarget.getDisplayName,
       buildTarget.getId.getUri,
-      TestProviderImpl.groupTestsByPackage(classes).asJava
+      grouped.asJava
     )
   }
 
@@ -50,40 +46,24 @@ final class TestSuitesFinderImpl(
       buildTarget: BuildTarget,
       symbol: String,
       fullyQualifiedClassName: String
-  ): TestEntry = {
-    val location = for {
-      definition <- definitionProvider
-        .toPath(symbol, List(buildTarget.getId))
-      location <- definition.toResult.flatMap(
-        _.locations.asScala.toList
-          .filter(_.getUri == definition.uri)
-          .headOption
-      )
-    } yield location
-    // fullyQualifiedClassName always contains at least one element - class name
-    val fullyQualifiedName = fullyQualifiedClassName.split('.').toList
-    val testClass = TestSuiteDiscoveryResult.TestSuite(
-      fullyQualifiedClassName,
-      fullyQualifiedName.takeRight(1).head,
-      location.orNull
-    )
-    TestEntry(
-      fullyQualifiedName.dropRight(1),
-      testClass
-    )
+  ): Option[TestEntry] = {
+    definitionProvider.toLocation(symbol, List(buildTarget.getId)).map {
+      location =>
+        // fullyQualifiedClassName always contains at least one element - class name
+        val fullyQualifiedName = fullyQualifiedClassName.split('.').toList
+        val testClass = TestSuiteDiscoveryResult.TestSuite(
+          fullyQualifiedClassName,
+          fullyQualifiedName.takeRight(1).head,
+          location
+        )
+        TestEntry(
+          fullyQualifiedName.dropRight(1),
+          testClass
+        )
+    }
   }
-}
 
-private case class TestEntry(
-    packageParts: List[String],
-    testClass: TestSuiteDiscoveryResult.TestSuite
-) {
-  def stripPackage(): TestEntry =
-    this.copy(packageParts = this.packageParts.drop(1))
-}
-
-object TestProviderImpl {
-  def groupTestsByPackage(
+  private def groupTestsByPackage(
       testEntries: List[TestEntry]
   ): List[TestSuiteDiscoveryResult.Discovered] = groupTestsByPackageImpl(
     testEntries
@@ -112,4 +92,12 @@ object TestProviderImpl {
     val result = currentTestClasses ++ testClassesInPackages
     result
   }
+}
+
+private case class TestEntry(
+    packageParts: List[String],
+    testClass: TestSuiteDiscoveryResult.TestSuite
+) {
+  def stripPackage(): TestEntry =
+    this.copy(packageParts = this.packageParts.drop(1))
 }

@@ -11,6 +11,7 @@ import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -105,20 +106,20 @@ final class RunTestCodeLens(
   }
 
   /**
-   * Return code lenses for a given symbol only if test code lenses aren't disabled
+   * Do not return test code lenses if user declared text explorer as a test interface.
    */
   private def testClasses(
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
       symbol: String
   ): List[l.Command] =
-    if (userConfig().disableTestCodeLenses)
-      Nil
-    else
+    if (userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses)
       classes.testClasses
         .get(symbol)
         .toList
         .flatMap(className => testCommand(target, className))
+    else
+      Nil
 
   private def mainAnnot(
       occurrence: SymbolOccurrence,

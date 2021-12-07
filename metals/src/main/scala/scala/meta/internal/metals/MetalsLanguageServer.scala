@@ -62,7 +62,6 @@ import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.testProvider.TestSuitesFinder
-import scala.meta.internal.metals.testProvider.TestSuitesFinderImpl
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
@@ -694,11 +693,10 @@ class MetalsLanguageServer(
           clientConfig,
           classFinder
         )
-        testProvider = new TestSuitesFinderImpl(
+        testProvider = new TestSuitesFinder(
           buildTargets,
           buildTargetClasses,
-          definitionProvider,
-          implementationProvider
+          definitionProvider
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,

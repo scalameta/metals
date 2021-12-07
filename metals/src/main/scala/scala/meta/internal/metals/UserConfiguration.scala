@@ -43,7 +43,7 @@ case class UserConfiguration(
     enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
-    disableTestCodeLenses: Boolean = false
+    testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses
 ) {
 
   def currentBloopVersion: String =
@@ -413,10 +413,12 @@ object UserConfiguration {
       getStringKey("fallback-scala-version").filter(_ != "automatic")
     val disableTestCodeLenses = {
       val isTextExplorerEnabled = clientConfiguration.isTestExplorerProvider()
+      pprint.log(isTextExplorerEnabled)
       getStringKey("test-user-interface") match {
         case Some("Test Explorer") if isTextExplorerEnabled =>
-          true
-        case _ => false
+          TestUserInterfaceKind.TestExplorer
+        case _ =>
+          TestUserInterfaceKind.CodeLenses
       }
     }
     if (errors.isEmpty) {
@@ -457,4 +459,10 @@ object UserConfiguration {
     s"""{"metals": $config}""".parseJson.getAsJsonObject
   }
 
+}
+
+sealed trait TestUserInterfaceKind
+object TestUserInterfaceKind {
+  object CodeLenses extends TestUserInterfaceKind
+  object TestExplorer extends TestUserInterfaceKind
 }

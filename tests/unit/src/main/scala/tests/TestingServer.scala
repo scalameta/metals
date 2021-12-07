@@ -811,7 +811,7 @@ final class TestingServer(
         .asInstanceOf[Future[ju.List[TestSuiteDiscoveryResult]]]
         .map(_.asScala.toList)
         .foreach { r =>
-          if (r.exists(_.discovered.asScala.exists(_.nonEmpty))) {
+          if (r.exists(_.discovered.asScala.nonEmpty)) {
             testClasses.trySuccess(r)
           } else if (retries > 0) {
             retries -= 1
