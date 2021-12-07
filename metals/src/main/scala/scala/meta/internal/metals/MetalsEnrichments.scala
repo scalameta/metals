@@ -853,9 +853,12 @@ object MetalsEnrichments
     def mapOptionInside[B](
         f: A => B
     )(implicit ec: ExecutionContext): Future[Option[B]] =
-      state.map(
-        _.map(f)
-      )
+      state.map(_.map(f))
+
+    def flatMapOptionInside[B](
+        f: A => Option[B]
+    )(implicit ec: ExecutionContext): Future[Option[B]] =
+      state.map(_.flatMap(f))
   }
 
   implicit class XtensionTreeTokenStream(tree: m.Tree) {

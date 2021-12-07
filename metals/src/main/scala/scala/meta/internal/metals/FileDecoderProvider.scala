@@ -354,10 +354,10 @@ final class FileDecoderProvider(
           .asJava,
         placeHolder = "Pick the class you want to decode"
       )
-      languageClient.metalsQuickPick(quickPickParams).asScala.map { result =>
-        if (result.cancelled != null && result.cancelled) None
-        else Some(result.itemId)
-      }
+      languageClient
+        .metalsQuickPick(quickPickParams)
+        .asScala
+        .mapOptionInside(_.itemId)
     } else
       Future.successful(Some(classes.head.path))
 

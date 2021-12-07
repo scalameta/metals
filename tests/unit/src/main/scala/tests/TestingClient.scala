@@ -332,13 +332,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   override def metalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult] = {
+  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.prompt)
-      inputBoxHandler(params) match {
-        case Some(result) => result
-        case None => MetalsInputBoxResult(cancelled = true)
-      }
+      inputBoxHandler(params)
     }
   }
 

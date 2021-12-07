@@ -180,7 +180,7 @@ final class FormattingProvider(
         client
           .metalsInputBox(MissingScalafmtVersion.inputBox())
           .asScala
-          .map(response => Option(response.value))
+          .mapOptionInside(_.value)
       } else {
         client
           .showMessageRequest(MissingScalafmtVersion.messageRequest())

@@ -56,7 +56,7 @@ trait MetalsLanguageClient
   @JsonRequest("metals/inputBox")
   def metalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult]
+  ): CompletableFuture[Option[MetalsInputBoxResult]]
 
   /**
    * Opens an menu to ask the user to pick one of the suggested options.
@@ -67,7 +67,7 @@ trait MetalsLanguageClient
   @JsonRequest("metals/quickPick")
   def metalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[MetalsQuickPickResult]
+  ): CompletableFuture[Option[MetalsQuickPickResult]]
 
   final def showMessage(messageType: MessageType, message: String): Unit = {
     val params = new MessageParams(messageType, message)
@@ -118,11 +118,7 @@ case class MetalsInputBoxParams(
     @Nullable valueSelection: Array[Int] = null
 )
 
-case class MetalsInputBoxResult(
-    // value=null when cancelled=true
-    @Nullable value: String = null,
-    @Nullable cancelled: java.lang.Boolean = null
-)
+case class MetalsInputBoxResult(value: String) extends AnyVal
 
 case class MetalsQuickPickParams(
     items: java.util.List[MetalsQuickPickItem],
@@ -136,11 +132,7 @@ case class MetalsQuickPickParams(
     @Nullable ignoreFocusOut: java.lang.Boolean = null
 )
 
-case class MetalsQuickPickResult(
-    // value=null when cancelled=true
-    @Nullable itemId: String = null,
-    @Nullable cancelled: java.lang.Boolean = null
-)
+case class MetalsQuickPickResult(itemId: String) extends AnyVal
 
 case class MetalsOpenWindowParams(
     uri: String,

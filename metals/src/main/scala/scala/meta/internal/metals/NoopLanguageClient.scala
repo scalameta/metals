@@ -36,13 +36,13 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
     ()
   override def metalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult] = {
-    CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
+    CompletableFuture.completedFuture(None)
   }
   override def metalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[MetalsQuickPickResult] = {
-    CompletableFuture.completedFuture(MetalsQuickPickResult(cancelled = true))
+  ): CompletableFuture[Option[MetalsQuickPickResult]] = {
+    CompletableFuture.completedFuture(None)
   }
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams

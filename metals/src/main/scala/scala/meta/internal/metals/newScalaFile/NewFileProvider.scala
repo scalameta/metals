@@ -115,10 +115,7 @@ class NewFileProvider(
         )
       )
       .asScala
-      .map {
-        case kind if !kind.cancelled => getFromString(kind.itemId)
-        case _ => None
-      }
+      .flatMapOptionInside(kind => getFromString(kind.itemId))
   }
 
   private def askForName(kind: String): Future[Option[String]] = {
@@ -127,10 +124,7 @@ class NewFileProvider(
         MetalsInputBoxParams(prompt = NewScalaFile.enterNameMessage(kind))
       )
       .asScala
-      .map {
-        case name if !name.cancelled => Some(name.value)
-        case _ => None
-      }
+      .mapOptionInside(_.value)
   }
 
   private def getName(
