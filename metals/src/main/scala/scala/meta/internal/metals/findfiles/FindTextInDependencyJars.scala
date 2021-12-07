@@ -168,15 +168,11 @@ class FindTextInDependencyJars(
         languageClient
           .metalsInputBox(input)
           .asScala
-          .map(checkResult)
+          .flatMapOptionInside {
+            case name if name.value.nonEmpty => Some(name.value)
+            case _ => None
+          }
     }
-  }
-
-  private def checkResult(result: MetalsInputBoxResult) = result match {
-    case name if !name.cancelled && name.value.nonEmpty =>
-      Some(name.value)
-    case _ =>
-      None
   }
 }
 

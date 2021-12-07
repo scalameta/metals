@@ -82,13 +82,13 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
 
   override def metalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult] = {
+  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
     underlying.metalsInputBox(params)
   }
 
   override def metalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[MetalsQuickPickResult] = {
+  ): CompletableFuture[Option[MetalsQuickPickResult]] = {
     underlying.metalsQuickPick(params)
   }
 

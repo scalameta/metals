@@ -98,10 +98,7 @@ class Supermethods(
         )
       )
       .asScala
-      .map {
-        case pickResult if !pickResult.cancelled => Some(pickResult.itemId)
-        case _ => None
-      }
+      .mapOptionInside(_.itemId)
   }
 
   def getSuperMethodHierarchySymbols(

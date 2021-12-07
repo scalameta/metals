@@ -98,25 +98,27 @@ final class ConfiguredLanguageClient(
 
   override def metalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[MetalsInputBoxResult] = {
+  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
     if (clientConfig.isInputBoxEnabled) {
       underlying.metalsInputBox(params)
     } else {
-      CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+      CompletableFuture.completedFuture(None)
     }
   }
 
   override def metalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[MetalsQuickPickResult] = {
+  ): CompletableFuture[Option[MetalsQuickPickResult]] = {
     if (clientConfig.isQuickPickProvider) {
       underlying.metalsQuickPick(params)
     } else {
       showMessageRequest(
         toShowMessageRequestParams(params)
-      ).asScala
-        .map(item => MetalsQuickPickResult(itemId = item.getTitle()))
-        .asJava
+      ).asScala.map { itemOrNull =>
+        Option(itemOrNull).map(item =>
+          MetalsQuickPickResult(itemId = item.getTitle)
+        )
+      }.asJava
     }
   }
 

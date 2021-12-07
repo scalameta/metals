@@ -163,7 +163,7 @@ class NewProjectProvider(
         )
       )
       .asScala
-      .flatMap {
+      .flatMapOption {
         case kind if kind.itemId == NewProjectProvider.more.id =>
           askForTemplate(allTemplatesFromWeb)
         case kind if kind.itemId == NewProjectProvider.back.id =>
@@ -177,12 +177,11 @@ class NewProjectProvider(
                 NewProjectProvider.custom.description
               )
             }
-        case kind if !kind.cancelled =>
+        case kind =>
           Future.successful(
             templates
               .find(_.id == kind.itemId)
           )
-        case _ => Future.successful(None)
       }
   }
 
@@ -199,11 +198,9 @@ class NewProjectProvider(
           )
         )
         .asScala
-        .flatMap {
-          case name if !name.cancelled && name.value.nonEmpty =>
+        .flatMapOption {
+          case name if name.value.nonEmpty =>
             Future.successful(Some(name.value))
-          case name if name.cancelled =>
-            Future.successful(None)
           // reask if empty
           case _ => askForName(default, prompt)
         }
@@ -246,9 +243,7 @@ class NewProjectProvider(
         )
       )
       .asScala
-      .flatMap {
-        case path if path.cancelled =>
-          Future.successful(None)
+      .flatMapOption {
         case path if path.itemId == currentDir.id =>
           Future.successful(from)
         case path if path.itemId == parentDir.id =>
