@@ -35,45 +35,46 @@ class TestSuitesFinderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     } yield {
       val obtained = gson.toJson(discovered.asJava)
       val classUri = getUriFor("app/src/main/scala/foo/bar/MyTestSuite.scala")
-      val expected = s"""|[
-                         |  {
-                         |    "targetName": "app",
-                         |    "targetUri": "file:$workspace/app/?id=app",
-                         |    "discovered": [
-                         |      {
-                         |        "prefix": "foo",
-                         |        "children": [
-                         |          {
-                         |            "prefix": "bar",
-                         |            "children": [
-                         |              {
-                         |                "fullyQualifiedName": "foo.bar.MunitTestSuite",
-                         |                "className": "MunitTestSuite",
-                         |                "location": {
-                         |                  "uri": "$classUri",
-                         |                  "range": {
-                         |                    "start": {
-                         |                      "line": 3,
-                         |                      "character": 6
-                         |                    },
-                         |                    "end": {
-                         |                      "line": 3,
-                         |                      "character": 20
-                         |                    }
-                         |                  }
-                         |                },
-                         |                "kind": "suite"
-                         |              }
-                         |            ],
-                         |            "kind": "package"
-                         |          }
-                         |        ],
-                         |        "kind": "package"
-                         |      }
-                         |    ]
-                         |  }
-                         |]
-                         |""".stripMargin
+      val expected =
+        s"""|[
+            |  {
+            |    "targetName": "app",
+            |    "targetUri": "file:$workspace/app/?id=app",
+            |    "discovered": [
+            |      {
+            |        "prefix": "foo",
+            |        "children": [
+            |          {
+            |            "prefix": "bar",
+            |            "children": [
+            |              {
+            |                "fullyQualifiedName": "foo.bar.MunitTestSuite",
+            |                "className": "MunitTestSuite",
+            |                "location": {
+            |                  "uri": "$classUri",
+            |                  "range": {
+            |                    "start": {
+            |                      "line": 3,
+            |                      "character": 6
+            |                    },
+            |                    "end": {
+            |                      "line": 3,
+            |                      "character": 20
+            |                    }
+            |                  }
+            |                },
+            |                "kind": "suite"
+            |              }
+            |            ],
+            |            "kind": "package"
+            |          }
+            |        ],
+            |        "kind": "package"
+            |      }
+            |    ]
+            |  }
+            |]
+            |""".stripMargin
       assertNoDiff(obtained, expected)
     }
   }

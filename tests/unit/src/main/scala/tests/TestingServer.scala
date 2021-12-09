@@ -804,22 +804,27 @@ final class TestingServer(
       filename: String
   ): Future[List[TestSuiteDiscoveryResult]] = {
     val path = toPath(filename)
-    var retries = 5
-    val testClasses = Promise[List[TestSuiteDiscoveryResult]]()
-    val handler = { refreshCount: Int =>
+    val maxRetries = 6
+    def askServer(
+        retries: Int,
+        backoff: Int
+    ): Future[List[TestSuiteDiscoveryResult]] = {
       executeCommand(ServerCommands.DiscoverTestSuites)
         .asInstanceOf[Future[ju.List[TestSuiteDiscoveryResult]]]
         .map(_.asScala.toList)
-        .foreach { r =>
+        .flatMap { r =>
           if (r.exists(_.discovered.asScala.nonEmpty)) {
-            testClasses.trySuccess(r)
+            Future.successful(r)
           } else if (retries > 0) {
-            retries -= 1
-            server.compilations.compileFile(path)
+            scribe.info(
+              s"Fetched empty test discovery, wait for $backoff and try again"
+            )
+            Thread.sleep(backoff)
+            askServer(retries - 1, backoff * 2)
           } else {
             val error =
-              s"Could not fetch any test classes in $refreshCount tries"
-            testClasses.tryFailure(new NoSuchElementException(error))
+              s"Could not fetch any test classes in 5 tries"
+            Future.failed(new NoSuchElementException(error))
           }
         }
     }
@@ -828,11 +833,9 @@ final class TestingServer(
       _ <- server
         .didFocus(path.toURI.toString)
         .asScala // model is refreshed only for focused document
-      _ <- waitFor(50)
-      _ = client.refreshModelHandler = handler
-      // first compilation, to trigger the handler
       _ <- server.compilations.compileFile(path)
-      classes <- testClasses.future
+      _ <- waitFor(util.concurrent.TimeUnit.SECONDS.toMillis(1))
+      classes <- askServer(maxRetries, backoff = 100)
     } yield classes
   }
 
