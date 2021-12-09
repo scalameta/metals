@@ -513,7 +513,7 @@ final class TestingServer(
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
-  def waitFor(sec: Long): Future[Unit] = Future { Thread.sleep(sec) }
+  def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
   def startDebugging(
       target: String,
@@ -828,6 +828,7 @@ final class TestingServer(
       _ <- server
         .didFocus(path.toURI.toString)
         .asScala // model is refreshed only for focused document
+      _ <- waitFor(50)
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFile(path)
