@@ -63,17 +63,11 @@ final class TestSuitesFinder(
     }
   }
 
-  private def groupTestsByPackage(
-      testEntries: List[TestEntry]
-  ): List[TestSuiteDiscoveryResult.Discovered] = groupTestsByPackageImpl(
-    testEntries
-  )
-
   /**
    * Partitions the given testEntries depending on whether entry has nonempty package or not.
    * Mapped those empty ones into TestClass, strip package for nonempty ones and repeat process for them.
    */
-  private def groupTestsByPackageImpl(
+  private def groupTestsByPackage(
       testEntries: List[TestEntry]
   ): List[TestSuiteDiscoveryResult.Discovered] = {
     val (withPackage, withoutPackage) =
@@ -86,7 +80,7 @@ final class TestSuitesFinder(
           _.map(entry => entry.copy(packageParts = entry.packageParts.drop(1)))
         )
         .map { case (prefix, entries) =>
-          val children = groupTestsByPackageImpl(entries)
+          val children = groupTestsByPackage(entries)
           TestSuiteDiscoveryResult.Package(prefix, children.asJava)
         }
     val result = currentTestClasses ++ testClassesInPackages

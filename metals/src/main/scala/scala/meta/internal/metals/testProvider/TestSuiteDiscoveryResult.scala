@@ -11,25 +11,22 @@ final case class TestSuiteDiscoveryResult(
 )
 
 object TestSuiteDiscoveryResult {
-  sealed abstract trait Discovered {
-    def nonEmpty: Boolean = this match {
-      case p: Package => p.children.asScala.nonEmpty
-      case _: TestSuite => true
-    }
+  sealed abstract class Discovered(val kind: String) {
+    def nonEmpty: Boolean
   }
 
   final case class Package(
       prefix: String,
       children: java.util.List[Discovered]
-  ) extends Discovered {
-    val kind = "package"
+  ) extends Discovered("package") {
+    def nonEmpty: Boolean = children.asScala.nonEmpty
   }
 
   final case class TestSuite private (
       fullyQualifiedName: String,
       className: String,
       location: l.Location
-  ) extends Discovered {
-    val kind = "suite",
+  ) extends Discovered("suite") {
+    def nonEmpty: Boolean = true
   }
 }

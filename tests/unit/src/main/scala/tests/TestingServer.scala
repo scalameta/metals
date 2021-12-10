@@ -801,9 +801,9 @@ final class TestingServer(
   }
 
   def discoverTestSuites(
-      filename: String
+      files: List[String]
   ): Future[List[TestSuiteDiscoveryResult]] = {
-    val path = toPath(filename)
+    val paths = files.map(filename => toPath(filename))
     val maxRetries = 6
     def askServer(
         retries: Int,
@@ -829,11 +829,9 @@ final class TestingServer(
         }
     }
 
+    val compilations = paths.map(path => server.compilations.compileFile(path))
     for {
-      _ <- server
-        .didFocus(path.toURI.toString)
-        .asScala // model is refreshed only for focused document
-      _ <- server.compilations.compileFile(path)
+      _ <- Future.sequence(compilations)
       _ <- waitFor(util.concurrent.TimeUnit.SECONDS.toMillis(1))
       classes <- askServer(maxRetries, backoff = 100)
     } yield classes
