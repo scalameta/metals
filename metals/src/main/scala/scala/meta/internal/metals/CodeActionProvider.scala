@@ -4,6 +4,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions._
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken

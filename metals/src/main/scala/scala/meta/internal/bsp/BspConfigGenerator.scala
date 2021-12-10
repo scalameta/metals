@@ -9,7 +9,7 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem

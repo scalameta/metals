@@ -19,13 +19,13 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsInputBoxParams
-import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.MetalsSlowTaskParams
-import scala.meta.internal.metals.MetalsSlowTaskResult
-import scala.meta.internal.metals.MetalsStatusParams
-import scala.meta.internal.metals.NoopLanguageClient
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
+import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 

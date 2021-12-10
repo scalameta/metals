@@ -6,10 +6,10 @@ import java.nio.file.Files
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsInputBoxParams
-import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsInputBoxResult
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.metals.{BuildInfo => V}
 

@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.config.StatusBarState
 

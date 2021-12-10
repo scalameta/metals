@@ -1,9 +1,10 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
 
 import scala.meta.internal.decorations.DecorationClient
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams

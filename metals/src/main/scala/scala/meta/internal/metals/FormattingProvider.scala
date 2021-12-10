@@ -25,6 +25,7 @@ import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.Messages.UpdateScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.semver.SemVer
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
