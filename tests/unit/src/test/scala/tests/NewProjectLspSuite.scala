@@ -16,6 +16,7 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.io.AbsolutePath
 
+import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.ShowMessageRequestParams
@@ -176,7 +177,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
       expectedContent: String,
       customTemplate: Option[String] = None,
       templateFromg8Site: Option[String] = None
-  ): Unit =
+  )(implicit loc: Location): Unit =
     test(testName) {
 
       val tmpDirectory =
@@ -246,15 +247,11 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
 
       client.inputBoxHandler = { params =>
         if (isChooseName(params)) {
-          Some(
-            new MetalsInputBoxResult(value = name.getOrElse(params.value))
-          )
+          RawMetalsInputBoxResult(value = name.getOrElse(params.value))
         } else if (isEnterTemplate(params)) {
-          Some(
-            new MetalsInputBoxResult(value = customTemplate.get)
-          )
+          RawMetalsInputBoxResult(value = customTemplate.get)
         } else {
-          None
+          RawMetalsInputBoxResult()
         }
       }
 

@@ -9,7 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
-import scala.meta.internal.metals.clients.language.MetalsInputBoxResult
+import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -391,9 +391,9 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
         case Right(value) =>
           client.inputBoxHandler = { params =>
             if (isEnterName(params, ft)) {
-              Some(new MetalsInputBoxResult(value = value))
+              RawMetalsInputBoxResult(value = value)
             } else {
-              None
+              RawMetalsInputBoxResult(cancelled = true)
             }
           }
       }

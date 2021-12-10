@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
 
 import scala.meta.internal.decorations.DecorationClient
-import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -46,26 +45,54 @@ trait MetalsLanguageClient
   def refreshModel(): CompletableFuture[Unit]
 
   /**
-   * Opens an input box to ask the user for input.
-   *
-   * @return the user provided input. The future can be cancelled, meaning
-   *         the input box should be dismissed in the editor.
+   * Opens an input box to ask the user for input. This method is used to deal with gson and existing extension protocol.
+   * @return the user provided input.
    */
   @JsonRequest("metals/inputBox")
-  def metalsInputBox(
+  private[clients] def rawMetalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[Option[MetalsInputBoxResult]]
+  ): CompletableFuture[RawMetalsInputBoxResult]
+
+  /**
+   * Opens an input box to ask the user for input.
+   *
+   * @return the user provided input or None if request was cancelled.
+   * The future can be cancelled, meaning the input box should be dismissed in the editor.
+   */
+  final def metalsInputBox(
+      params: MetalsInputBoxParams
+  ): CompletableFuture[Option[MetalsInputBoxResult]] =
+    rawMetalsInputBox(params).thenApply { result =>
+      if (result.cancelled != null && result.cancelled)
+        None
+      else
+        Option(result.value).map(MetalsInputBoxResult(_))
+    }
+
+  /**
+   * Opens an menu to ask the user to pick one of the suggested options. This method is used to deal with gson and existing extension protocol.
+   * @return the user provided pick.
+   */
+  @JsonRequest("metals/quickPick")
+  private[clients] def rawMetalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[RawMetalsQuickPickResult]
 
   /**
    * Opens an menu to ask the user to pick one of the suggested options.
    *
-   * @return the user provided pick. The future can be cancelled, meaning
-   *         the input box should be dismissed in the editor.
+   * @return the user provided pick or None if request was cancelled.
+   * The future can be cancelled, meaning the input box should be dismissed in the editor.
    */
-  @JsonRequest("metals/quickPick")
-  def metalsQuickPick(
+  final def metalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[Option[MetalsQuickPickResult]]
+  ): CompletableFuture[Option[MetalsQuickPickResult]] =
+    rawMetalsQuickPick(params).thenApply { result =>
+      if (result.cancelled != null && result.cancelled)
+        None
+      else
+        Option(result.itemId).map(MetalsQuickPickResult(_))
+    }
 
   final def showMessage(messageType: MessageType, message: String): Unit = {
     val params = new MessageParams(messageType, message)
@@ -75,6 +102,21 @@ trait MetalsLanguageClient
   def shutdown(): Unit = {}
 
 }
+
+/**
+ * These Raw classes below are used in communication between Metals server and clients.
+ * They're gson-friendly, however because of nulls we don't want to use them in metals
+ */
+case class RawMetalsInputBoxResult(
+    // value=null when cancelled=true
+    @Nullable value: String = null,
+    @Nullable cancelled: java.lang.Boolean = null
+)
+case class RawMetalsQuickPickResult(
+    // value=null when cancelled=true
+    @Nullable itemId: String = null,
+    @Nullable cancelled: java.lang.Boolean = null
+)
 
 /**
  * Arguments for the metals/status notification.

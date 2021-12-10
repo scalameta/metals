@@ -97,8 +97,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       : ShowMessageRequestParams => Option[MessageActionItem] = {
     _: ShowMessageRequestParams => None
   }
-  var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = {
-    _: MetalsInputBoxParams => None
+  var inputBoxHandler: MetalsInputBoxParams => RawMetalsInputBoxResult = {
+    _: MetalsInputBoxParams => RawMetalsInputBoxResult(cancelled = true)
   }
 
   private val refreshCount = new AtomicInteger
@@ -330,9 +330,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   }
 
-  override def metalsInputBox(
+  override def rawMetalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
+  ): CompletableFuture[RawMetalsInputBoxResult] = {
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.prompt)
       inputBoxHandler(params)
