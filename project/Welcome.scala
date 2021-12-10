@@ -54,6 +54,11 @@ object Welcome {
     ),
     UsefulTask(
       "",
+      "quick-publish-local",
+      "publish Metals artifacts but with only limited set of Scala versions"
+    ),
+    UsefulTask(
+      "",
       "++3.0.0 mtags/publishLocal",
       "publish changes for a single Scala version, especially useful if working on a feature inside mtags module." +
         " `publishLocal` will still need to be run before at least once."
