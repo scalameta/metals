@@ -3,11 +3,11 @@ package tests
 import java.util.Properties
 
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.JavaFormatConfig
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.io.AbsolutePath
 
 import munit.Location
-import scala.meta.internal.metals.JavaFormatConfig
-import scala.meta.io.AbsolutePath
 
 class UserConfigurationSuite extends BaseSuite {
   def check(
