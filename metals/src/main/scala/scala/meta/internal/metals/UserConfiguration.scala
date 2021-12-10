@@ -16,6 +16,11 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 
+case class JavaFormatConfig(
+    eclipseFormatConfigPath: AbsolutePath,
+    eclipseFormatProfile: Option[String]
+)
+
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
  */
@@ -44,8 +49,7 @@ case class UserConfiguration(
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
-    eclipseFormatConfigPath: Option[AbsolutePath] = None,
-    eclipseFormatProfile: Option[String] = None
+    javaFormatConfig: Option[JavaFormatConfig] = None
 ) {
 
   def currentBloopVersion: String =
@@ -253,28 +257,19 @@ object UserConfiguration {
         "Default way of handling tests and test suites."
       ),
       UserConfigurationOption(
-        "eclipse-format-config-path",
+        "java-format.eclipse-config-path",
         """empty string `""`.""",
         """"formatters/eclipse-formatter.xml"""",
-        "Eclipse formatter config path",
+        "Eclipse Java formatter config path",
         """Optional custom path to the eclipse-formatter.xml file.
           |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
           |""".stripMargin
       ),
       UserConfigurationOption(
-        "format-java-comments",
-        "false",
-        "false",
-        "Should format Java comments as well as code",
-        """|Default formatting of Java files only formats code.
-           |Select this to also format comments.
-           |""".stripMargin
-      ),
-      UserConfigurationOption(
-        "eclipse-format-profile",
+        "java-format.eclipse-profile",
         """empty string `""`.""",
         """"GoogleStyle"""",
-        "Eclipse formatting profile",
+        "Eclipse Java formatting profile",
         """|If the Eclipse formatter file contains more than one profile then specify the required profile name.
            |""".stripMargin
       )
@@ -448,9 +443,13 @@ object UserConfiguration {
           TestUserInterfaceKind.CodeLenses
       }
     }
-    val eclipseFormatConfigPath =
-      getStringKey("eclipse-format-config-path").map(AbsolutePath(_))
-    val eclipseFormatProfile = getStringKey("eclipse-format-profile")
+    val javaFormatConfig =
+      getStringKey("java-format.eclipse-config-path").map(f =>
+        JavaFormatConfig(
+          AbsolutePath(f),
+          getStringKey("java-format.eclipse-profile")
+        )
+      )
 
     if (errors.isEmpty) {
       Right(
@@ -478,8 +477,7 @@ object UserConfiguration {
           excludedPackages,
           defaultScalaVersion,
           disableTestCodeLenses,
-          eclipseFormatConfigPath,
-          eclipseFormatProfile
+          javaFormatConfig
         )
       )
     } else {

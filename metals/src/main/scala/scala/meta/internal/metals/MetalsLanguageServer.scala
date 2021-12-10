@@ -2403,16 +2403,10 @@ class MetalsLanguageServer(
       workspaceSymbols.indexClasspath()
     }
     timerProvider.timedThunk(
-      "indexed workspace Scala SemanticDBs",
+      "indexed workspace SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex
     ) {
-      semanticDBIndexer.onScalacOptions(i.scalacOptions)
-    }
-    timerProvider.timedThunk(
-      "indexed workspace Java SemanticDBs",
-      clientConfig.initialConfig.statistics.isIndex
-    ) {
-      semanticDBIndexer.onJavacOptions(i.javacOptions)
+      semanticDBIndexer.onTargetRoots()
     }
     timerProvider.timedThunk(
       "indexed workspace sources",

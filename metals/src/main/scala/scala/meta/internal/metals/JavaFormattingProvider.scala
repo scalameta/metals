@@ -41,9 +41,9 @@ final class JavaFormattingProvider(
   }
 
   private def parseEclipseFormatFile(
-      text: String
+      text: String,
+      profileName: Option[String]
   ): Try[Map[String, String]] = {
-    val profileName = userConfig().eclipseFormatProfile
     import scala.xml.XML
     Try {
       val node = XML.loadString(text)
@@ -73,11 +73,15 @@ final class JavaFormattingProvider(
     DefaultCodeFormatterOptions.getEclipseDefaultSettings.getMap.asScala.toMap
 
   private def loadEclipseFormatConfig: Map[String, String] = {
-    userConfig().eclipseFormatConfigPath
-      .map(eclipseFormatFile => {
+    userConfig().javaFormatConfig
+      .map(javaFormatConfig => {
+        val eclipseFormatFile = javaFormatConfig.eclipseFormatConfigPath
         if (eclipseFormatFile.exists) {
           val text = eclipseFormatFile.toInputFromBuffers(buffers).text
-          parseEclipseFormatFile(text) match {
+          parseEclipseFormatFile(
+            text,
+            javaFormatConfig.eclipseFormatProfile
+          ) match {
             case Failure(e) =>
               scribe.error(
                 s"Failed to parse $eclipseFormatFile. Using default formatting",

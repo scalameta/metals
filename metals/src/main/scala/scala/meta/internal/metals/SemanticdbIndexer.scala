@@ -26,22 +26,11 @@ class SemanticdbIndexer(
     workspace: AbsolutePath
 ) {
 
-  def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
+  def onTargetRoots(): Unit = {
     for {
-      item <- scalacOptions.getItems.asScala
-      scalaInfo <- buildTargets.scalaInfo(item.getTarget)
+      targetRoot <- buildTargets.allTargetRoots
     } {
-      val targetroot = item.targetroot(scalaInfo.getScalaVersion)
-      onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
-    }
-  }
-
-  def onJavacOptions(javacOptions: JavacOptionsResult): Unit = {
-    for {
-      item <- javacOptions.getItems.asScala
-    } {
-      val targetroot = item.targetroot
-      onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
+      onChangeDirectory(targetRoot.resolve(Directories.semanticdb).toNIO)
     }
   }
 
