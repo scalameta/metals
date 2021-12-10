@@ -35,11 +35,14 @@ class TestSuitesFinderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     } yield {
       val obtained = gson.toJson(discovered.asJava)
       val classUri = getUriFor("app/src/main/scala/foo/bar/MyTestSuite.scala")
+      // build target identifier uri has format file:/ instead of file:///
+      val targetUri =
+        s"${workspace.toURI.toString}app/?id=app".replace("///", "/")
       val expected =
         s"""|[
             |  {
             |    "targetName": "app",
-            |    "targetUri": "file:$workspace/app/?id=app",
+            |    "targetUri": "$targetUri",
             |    "discovered": [
             |      {
             |        "prefix": "foo",

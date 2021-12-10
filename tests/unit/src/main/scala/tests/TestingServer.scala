@@ -823,7 +823,7 @@ final class TestingServer(
             askServer(retries - 1, backoff * 2)
           } else {
             val error =
-              s"Could not fetch any test classes in 5 tries"
+              s"Could not fetch any test classes in $maxRetries tries"
             Future.failed(new NoSuchElementException(error))
           }
         }

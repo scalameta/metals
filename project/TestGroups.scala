@@ -36,7 +36,7 @@ object TestGroups {
       "tests.decorations.SyntheticDecorationsLspSuite",
       "tests.codeactions.BracesParensLspSuite",
       "tests.debug.CompletionDapSuite", "tests.debug.EvaluationDapSuite",
-      "tests.FindTextInDependencyJarsSuite",
+      "tests.FindTextInDependencyJarsSuite", "tests.TestSuitesFinderSuite",
       "tests.classFinder.FindAllClassesSuite",
       "tests.codeactions.ExtractValueLspSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
