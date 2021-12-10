@@ -14,8 +14,6 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.JavacOptionsResult
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import com.google.protobuf.InvalidProtocolBufferException
 
 class SemanticdbIndexer(

@@ -187,7 +187,7 @@ class NewFileProvider(
     )
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
-      case Enum => enumTemplate(kind.id, className)
+      case Enum => enumTemplate(className)
       case JavaRecord => javaRecordTemplate(className)
       case _ => classTemplate(kind.syntax.getOrElse(""), className)
     }
@@ -286,9 +286,9 @@ class NewFileProvider(
                         |""".stripMargin)
   }
 
-  private def enumTemplate(kind: String, name: String): NewFileTemplate = {
+  private def enumTemplate(name: String): NewFileTemplate = {
     val indent = "  "
-    NewFileTemplate(s"""|$kind $name {
+    NewFileTemplate(s"""|enum $name {
                         |${indent}case@@
                         |}
                         |""".stripMargin)

@@ -29,7 +29,7 @@ object NewFileTypes {
   }
 
   case object Enum extends NewFileType {
-    override val id: String = "enum"
+    override val id: String = "scala-enum"
     override val syntax: Option[String] = None
     override val label: String = "Enum"
   }
