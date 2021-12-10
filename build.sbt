@@ -189,6 +189,12 @@ commands ++= Seq(
   Command.command("save-expect") { s =>
     "unit/test:runMain tests.SaveExpect" :: s
   },
+  Command.command("quick-publish-local") { s =>
+    val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
+      runMtagsPublishLocal(st, v, localSnapshotVersion)
+    }
+    "interfaces/publishLocal" :: "metals/publishLocal" :: publishMtags
+  },
   Command.command("cross-test-latest-nightly") { s =>
     V.nightlyScala3Versions.lastOption match {
       case Some(latest) => crossTestDyn(s, latest)
@@ -334,6 +340,17 @@ lazy val V = new {
   val ammonite = "2.4.1"
   val mill = "0.10.0-M4"
   val organizeImportRule = "0.6.0"
+
+  val quickPublishScalaVersions =
+    Set(
+      scala211,
+      sbtScala,
+      scala212,
+      ammonite212Version,
+      scala213,
+      ammonite213Version,
+      scala3
+    ).toList
 }
 
 val sharedSettings = List(
@@ -627,23 +644,32 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   }
 )
 
+def runMtagsPublishLocal(
+    state: State,
+    scalaV: String,
+    projectV: String
+): State = {
+  val newState = Project
+    .extract(state)
+    .appendWithSession(
+      List(
+        mtags / scalaVersion := scalaV,
+        ThisBuild / version := projectV,
+        ThisBuild / useSuperShell := false
+      ),
+      state
+    )
+  val (s, _) = Project
+    .extract(newState)
+    .runTask(mtags / publishLocal, newState)
+  s
+}
+
 def crossPublishLocal(scalaV: String) =
   Def.task[Unit] {
     val versionValue = (ThisBuild / version).value
     // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
-    val newState = Project
-      .extract(state.value)
-      .appendWithSession(
-        List(
-          mtags / scalaVersion := scalaV,
-          ThisBuild / version := versionValue,
-          ThisBuild / useSuperShell := false
-        ),
-        state.value
-      )
-    val (s, _) = Project
-      .extract(newState)
-      .runTask(mtags / publishLocal, newState)
+    runMtagsPublishLocal(state.value, scalaV, versionValue)
   }
 
 def publishAllMtags(
@@ -662,17 +688,7 @@ def publishAllMtags(
 def publishBinaryMtags =
   (interfaces / publishLocal)
     .dependsOn(
-      publishAllMtags(
-        Set(
-          V.scala211,
-          V.sbtScala,
-          V.scala212,
-          V.ammonite212Version,
-          V.scala213,
-          V.ammonite213Version,
-          V.scala3
-        ).toList
-      )
+      publishAllMtags(V.quickPublishScalaVersions)
     )
 
 lazy val mtest = project
