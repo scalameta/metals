@@ -2,6 +2,7 @@ package tests
 
 import java.util.Properties
 
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.UserConfiguration
 
 import munit.Location
@@ -19,7 +20,8 @@ class UserConfigurationSuite extends BaseSuite {
       val jprops = new Properties()
       // java11 ambiguous .putAll via Properties/Hashtable, use .put
       props.foreach { case (k, v) => jprops.put(k, v) }
-      val obtained = UserConfiguration.fromJson(json, jprops)
+      val obtained =
+        UserConfiguration.fromJson(json, ClientConfiguration.Default(), jprops)
       fn(obtained)
     }
   }

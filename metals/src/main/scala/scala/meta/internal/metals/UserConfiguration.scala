@@ -42,7 +42,8 @@ case class UserConfiguration(
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
-    fallbackScalaVersion: Option[String] = None
+    fallbackScalaVersion: Option[String] = None,
+    testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses
 ) {
 
   def currentBloopVersion: String =
@@ -241,11 +242,19 @@ object UserConfiguration {
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
         """.stripMargin
+      ),
+      UserConfigurationOption(
+        "test-user-interface",
+        "Code Lenses",
+        """{ "testUserInterface" : "Test explorer" } """,
+        "Test UI used for tests and test suites",
+        "Default way of handling tests and test suites."
       )
     )
 
   def fromJson(
       json: JsonObject,
+      clientConfiguration: ClientConfiguration,
       properties: Properties = System.getProperties
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
@@ -402,6 +411,16 @@ object UserConfiguration {
     // It was added only to have a meaningful option value in vscode
     val defaultScalaVersion =
       getStringKey("fallback-scala-version").filter(_ != "automatic")
+    val disableTestCodeLenses = {
+      val isTextExplorerEnabled = clientConfiguration.isTestExplorerProvider()
+      pprint.log(isTextExplorerEnabled)
+      getStringKey("test-user-interface") match {
+        case Some("Test Explorer") if isTextExplorerEnabled =>
+          TestUserInterfaceKind.TestExplorer
+        case _ =>
+          TestUserInterfaceKind.CodeLenses
+      }
+    }
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -426,7 +445,8 @@ object UserConfiguration {
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
           excludedPackages,
-          defaultScalaVersion
+          defaultScalaVersion,
+          disableTestCodeLenses
         )
       )
     } else {
@@ -439,4 +459,10 @@ object UserConfiguration {
     s"""{"metals": $config}""".parseJson.getAsJsonObject
   }
 
+}
+
+sealed trait TestUserInterfaceKind
+object TestUserInterfaceKind {
+  object CodeLenses extends TestUserInterfaceKind
+  object TestExplorer extends TestUserInterfaceKind
 }

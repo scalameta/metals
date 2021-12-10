@@ -119,6 +119,22 @@ final class DefinitionProvider(
     }
   }
 
+  def toLocation(
+      symbol: String,
+      targets: List[BuildTargetIdentifier]
+  ): Option[Location] =
+    for {
+      definitionDestination <- destinationProvider.fromSymbol(
+        symbol,
+        targets.toSet
+      )
+      if (symbol == definitionDestination.symbol)
+      definitionResult <- definitionDestination.toResult
+      location <- definitionResult.locations.asScala.toList
+        .filter(_.getUri == definitionDestination.uri)
+        .headOption
+    } yield location
+
   /**
    * Returns VirtualFile that contains the definition of
    * the given symbol (of semanticdb).

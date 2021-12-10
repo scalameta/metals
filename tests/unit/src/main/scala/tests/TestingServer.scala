@@ -55,6 +55,7 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
+import scala.meta.internal.metals.testProvider.TestSuiteDiscoveryResult
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -512,7 +513,7 @@ final class TestingServer(
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
-  def waitFor(sec: Long): Future[Unit] = Future { Thread.sleep(sec) }
+  def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
   def startDebugging(
       target: String,
@@ -797,6 +798,43 @@ final class TestingServer(
     } yield {
       Assertions.assertNoDiff(format, expected)
     }
+  }
+
+  def discoverTestSuites(
+      files: List[String]
+  ): Future[List[TestSuiteDiscoveryResult]] = {
+    val paths = files.map(filename => toPath(filename))
+    val maxRetries = 6
+    def askServer(
+        retries: Int,
+        backoff: Int
+    ): Future[List[TestSuiteDiscoveryResult]] = {
+      executeCommand(ServerCommands.DiscoverTestSuites)
+        .asInstanceOf[Future[ju.List[TestSuiteDiscoveryResult]]]
+        .map(_.asScala.toList)
+        .flatMap { r =>
+          if (r.exists(_.discovered.asScala.nonEmpty)) {
+            Future.successful(r)
+          } else if (retries > 0) {
+            scribe.info(
+              s"Fetched empty test discovery, wait for $backoff and try again"
+            )
+            Thread.sleep(backoff)
+            askServer(retries - 1, backoff * 2)
+          } else {
+            val error =
+              s"Could not fetch any test classes in $maxRetries tries"
+            Future.failed(new NoSuchElementException(error))
+          }
+        }
+    }
+
+    val compilations = paths.map(path => server.compilations.compileFile(path))
+    for {
+      _ <- Future.sequence(compilations)
+      _ <- waitFor(util.concurrent.TimeUnit.SECONDS.toMillis(1))
+      classes <- askServer(maxRetries, backoff = 100)
+    } yield classes
   }
 
   def codeLenses(filename: String, printCommand: Boolean = false)(

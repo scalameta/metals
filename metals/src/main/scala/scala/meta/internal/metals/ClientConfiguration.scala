@@ -135,6 +135,9 @@ class ClientConfiguration(
       false
     )
 
+  def isTestExplorerProvider(): Boolean =
+    initializationOptions.testExplorerProvider.getOrElse(false)
+
   def isDidFocusProvider(): Boolean =
     extract(
       initializationOptions.didFocusProvider,

@@ -11,6 +11,8 @@ import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TestUserInterfaceKind
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Symbol
@@ -39,6 +41,7 @@ final class RunTestCodeLens(
     buffers: Buffers,
     buildTargets: BuildTargets,
     clientConfig: ClientConfiguration,
+    userConfig: () => UserConfiguration,
     isBloopOrSbt: () => Boolean,
     trees: Trees
 ) extends CodeLens {
@@ -83,10 +86,7 @@ final class RunTestCodeLens(
           .get(symbol)
           .map(mainCommand(target, _))
           .getOrElse(Nil)
-        val tests = classes.testClasses
-          .get(symbol)
-          .map(testCommand(target, _))
-          .getOrElse(Nil)
+        val tests = testClasses(target, classes, symbol)
         val fromAnnot = mainAnnot(occurrence, textDocument)
           .flatMap { symbol =>
             classes.mainClasses
@@ -104,6 +104,22 @@ final class RunTestCodeLens(
       command <- commands
     } yield new l.CodeLens(range, command, null)
   }
+
+  /**
+   * Do not return test code lenses if user declared text explorer as a test interface.
+   */
+  private def testClasses(
+      target: BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes,
+      symbol: String
+  ): List[l.Command] =
+    if (userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses)
+      classes.testClasses
+        .get(symbol)
+        .toList
+        .flatMap(className => testCommand(target, className))
+    else
+      Nil
 
   private def mainAnnot(
       occurrence: SymbolOccurrence,
