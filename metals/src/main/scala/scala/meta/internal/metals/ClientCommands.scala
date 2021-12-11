@@ -157,6 +157,8 @@ object ClientCommands {
     "Refresh model",
     """|Notifies the client that the model has been updated and it 
        |should be refreshed (e.g. by resending code lens request)
+       |
+       |Note: Metals will favor instead [Code Lens Refresh Request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#codeLens_refresh) if the client has the capability.
        |""".stripMargin
   )
 
