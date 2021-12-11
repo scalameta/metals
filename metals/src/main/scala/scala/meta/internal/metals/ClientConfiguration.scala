@@ -4,21 +4,33 @@ import scala.meta.internal.metals.Configs.GlobSyntaxConfig
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
 
+import org.eclipse.lsp4j.InitializeParams
+
 /**
  * This class provides a uniform way to know how the client is configured
  * using a combination of server properties, `clientExperimentalCapabilities`
  * and `initializationOptions`.
  *
  * @param initalConfig Initial server properties
- * @param experimentalCapabilities clientExperimentalCapabilities
- * @param initializationOptions initializationOptions
  */
-class ClientConfiguration(
-    var initialConfig: MetalsServerConfig,
-    var experimentalCapabilities: ClientExperimentalCapabilities,
-    var initializationOptions: InitializationOptions,
-    var codeLenseRefreshSupport: Boolean
-) {
+case class ClientConfiguration(initialConfig: MetalsServerConfig) {
+
+  private var experimentalCapabilities = ClientExperimentalCapabilities.Default
+  private var initializationOptions = InitializationOptions.Default
+  private var refreshSupport = false
+
+  def update(params: InitializeParams) = {
+    experimentalCapabilities =
+      ClientExperimentalCapabilities.from(params.getCapabilities)
+    initializationOptions = InitializationOptions.from(params)
+    val capabilities = params.getCapabilities()
+    val codeLenseRefreshSupport: Option[Boolean] = for {
+      workspace <- Option(capabilities.getWorkspace())
+      codeLens <- Option(workspace.getCodeLens())
+      refreshSupport <- Option(codeLens.getRefreshSupport())
+    } yield refreshSupport
+    refreshSupport = codeLenseRefreshSupport.getOrElse(false)
+  }
 
   def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
     primary.orElse(secondary).getOrElse(default)
@@ -154,14 +166,10 @@ class ClientConfiguration(
 
   def disableColorOutput(): Boolean =
     initializationOptions.disableColorOutput.getOrElse(false)
+
+  def codeLenseRefreshSupport(): Boolean = refreshSupport
 }
 
 object ClientConfiguration {
-  def Default() =
-    new ClientConfiguration(
-      MetalsServerConfig(),
-      ClientExperimentalCapabilities.Default,
-      InitializationOptions.Default,
-      false
-    )
+  def Default() = ClientConfiguration(MetalsServerConfig())
 }
