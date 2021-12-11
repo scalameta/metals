@@ -19,7 +19,7 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
   private var initializationOptions = InitializationOptions.Default
   private var refreshSupport = false
 
-  def update(params: InitializeParams) = {
+  def update(params: InitializeParams): Unit = {
     experimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
     initializationOptions = InitializationOptions.from(params)
@@ -171,5 +171,5 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
 }
 
 object ClientConfiguration {
-  def Default() = ClientConfiguration(MetalsServerConfig())
+  def Default(): ClientConfiguration = ClientConfiguration(MetalsServerConfig())
 }
