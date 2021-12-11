@@ -82,6 +82,15 @@ final class ConfiguredLanguageClient(
     }
   }
 
+  override def refreshModel(): CompletableFuture[Unit] = {
+    if (clientConfig.codeLenseRefreshSupport)
+      this.refreshCodeLenses.thenApply(_ => ())
+    else {
+      val params = ClientCommands.RefreshModel.toExecuteCommandParams()
+      CompletableFuture.completedFuture(metalsExecuteClientCommand(params))
+    }
+  }
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {

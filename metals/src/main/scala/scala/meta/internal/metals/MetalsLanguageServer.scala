@@ -181,7 +181,6 @@ class MetalsLanguageServer(
     buildTargetClasses,
     () => workspace,
     languageClient,
-    () => clientConfig.codeLenseRefreshSupport,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -2417,9 +2416,7 @@ class MetalsLanguageServer(
     val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
-      .foreach(_ =>
-        languageClient.refreshModel(clientConfig.codeLenseRefreshSupport)
-      )
+      .foreach(_ => languageClient.refreshModel())
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {

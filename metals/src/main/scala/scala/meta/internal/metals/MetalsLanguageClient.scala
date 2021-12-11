@@ -42,19 +42,7 @@ trait MetalsLanguageClient
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
-  final def refreshModel(
-      codeLensRefreshSupport: Boolean
-  ): CompletableFuture[Void] = {
-    if (codeLensRefreshSupport) this.refreshCodeLenses
-    else {
-      val params = ClientCommands.RefreshModel.toExecuteCommandParams()
-      CompletableFuture.runAsync(
-        new Runnable {
-          def run(): Unit = metalsExecuteClientCommand(params)
-        }
-      )
-    }
-  }
+  def refreshModel(): CompletableFuture[Unit]
 
   /**
    * Opens an input box to ask the user for input.

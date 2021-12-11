@@ -50,6 +50,9 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = ()
+
+  override def refreshModel(): CompletableFuture[Unit] =
+    CompletableFuture.completedFuture(())
 }
 
 object NoopLanguageClient extends NoopLanguageClient

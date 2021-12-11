@@ -104,4 +104,6 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.metalsPublishDecorations(params)
   }
 
+  override def refreshModel(): CompletableFuture[Unit] =
+    underlying.refreshModel()
 }
