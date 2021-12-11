@@ -41,9 +41,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def redirectErrorOutput: Boolean = true
 
-  private def putTogetherArgs(cmd: List[String], workspace: AbsolutePath) = {
-    val millVersion = getMillVersion(workspace)
-
+  private def putTogetherArgs(cmd: List[String], millVersion: String) = {
     // In some environments (such as WSL or cygwin), mill must be run using interactive mode (-i)
     val fullcmd = if (Properties.isWin) "-i" :: cmd else cmd
 
@@ -57,10 +55,23 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   }
 
+  private def bloopImportArgs(millVersion: String) = {
+    val isImportSupported = SemVer.isCompatibleVersion(
+      "0.9.10",
+      millVersion
+    ) && (SemVer.isLaterVersion(millVersion, "0.10.0-M1") || SemVer
+      .isCompatibleVersion("0.10.0-M4", millVersion))
+
+    if (isImportSupported)
+      "--import" :: "ivy:com.lihaoyi::mill-contrib-bloop:" :: Nil
+    else "--predef" :: predefScriptPath.toString :: Nil
+  }
+
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
+    val millVersion = getMillVersion(workspace)
     val cmd =
-      "--predef" :: predefScriptPath.toString :: "mill.contrib.Bloop/install" :: Nil
-    putTogetherArgs(cmd, workspace)
+      bloopImportArgs(millVersion) ::: "mill.contrib.Bloop/install" :: Nil
+    putTogetherArgs(cmd, millVersion)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -85,7 +96,7 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
   override def createBspFileArgs(workspace: AbsolutePath): List[String] = {
     val cmd = "mill.bsp.BSP/install" :: Nil
-    putTogetherArgs(cmd, workspace)
+    putTogetherArgs(cmd, getMillVersion(workspace))
   }
 
   override def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
