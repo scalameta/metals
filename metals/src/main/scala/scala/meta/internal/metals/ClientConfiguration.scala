@@ -16,7 +16,8 @@ import scala.meta.internal.metals.config.StatusBarState
 class ClientConfiguration(
     var initialConfig: MetalsServerConfig,
     var experimentalCapabilities: ClientExperimentalCapabilities,
-    var initializationOptions: InitializationOptions
+    var initializationOptions: InitializationOptions,
+    var codeLenseRefreshSupport: Boolean
 ) {
 
   def extract[T](primary: Option[T], secondary: Option[T], default: T): T = {
@@ -160,6 +161,7 @@ object ClientConfiguration {
     new ClientConfiguration(
       MetalsServerConfig(),
       ClientExperimentalCapabilities.Default,
-      InitializationOptions.Default
+      InitializationOptions.Default,
+      false
     )
 }

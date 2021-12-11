@@ -181,6 +181,7 @@ class MetalsLanguageServer(
     buildTargetClasses,
     () => workspace,
     languageClient,
+    () => clientConfig.codeLenseRefreshSupport,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -276,7 +277,8 @@ class MetalsLanguageServer(
     new ClientConfiguration(
       initialConfig,
       ClientExperimentalCapabilities.Default,
-      InitializationOptions.Default
+      InitializationOptions.Default,
+      false
     )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Seq[Unit]] = {
@@ -343,6 +345,11 @@ class MetalsLanguageServer(
         clientConfig.experimentalCapabilities =
           ClientExperimentalCapabilities.from(params.getCapabilities)
         clientConfig.initializationOptions = InitializationOptions.from(params)
+        clientConfig.codeLenseRefreshSupport = params
+          .getCapabilities()
+          .getWorkspace()
+          .getCodeLens()
+          .getRefreshSupport()
 
         foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
         documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(
@@ -2410,7 +2417,9 @@ class MetalsLanguageServer(
     val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
-      .foreach(_ => languageClient.refreshModel())
+      .foreach(_ =>
+        languageClient.refreshModel(clientConfig.codeLenseRefreshSupport)
+      )
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
