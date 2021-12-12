@@ -413,7 +413,6 @@ object UserConfiguration {
       getStringKey("fallback-scala-version").filter(_ != "automatic")
     val disableTestCodeLenses = {
       val isTextExplorerEnabled = clientConfiguration.isTestExplorerProvider()
-      pprint.log(isTextExplorerEnabled)
       getStringKey("test-user-interface") match {
         case Some("Test Explorer") if isTextExplorerEnabled =>
           TestUserInterfaceKind.TestExplorer
