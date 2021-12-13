@@ -155,10 +155,10 @@ object ClientCommands {
   val RefreshModel = new Command(
     "metals-model-refresh",
     "Refresh model",
-    """|Notifies the client that the model has been updated and it 
-       |should be refreshed (e.g. by resending code lens request)
+    """|**Note**: This request is deprecated and Metals will favor [Code Lens Refresh Request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#codeLens_refresh) if supported by the client.
        |
-       |Note: Metals will favor instead [Code Lens Refresh Request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#codeLens_refresh) if the client has the capability.
+       |Notifies the client that the model has been updated and it
+       |should be refreshed (e.g. by resending code lens request)
        |""".stripMargin
   )
 
