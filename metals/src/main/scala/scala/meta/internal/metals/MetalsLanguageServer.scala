@@ -2699,8 +2699,12 @@ class MetalsLanguageServer(
       onError = {
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)
-        case e: InvalidJarException =>
+        case e: IndexingExceptions.InvalidJarException =>
           scribe.warn(s"invalid jar: ${e.path}")
+        case e: IndexingExceptions.PathIndexingException =>
+          scribe.error(s"issues while parsing: ${e.path}", e)
+        case e: IndexingExceptions.InvalidSymbolException =>
+          scribe.error(s"searching for `${e.symbol}` failed", e)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.
         case NonFatal(e) =>
