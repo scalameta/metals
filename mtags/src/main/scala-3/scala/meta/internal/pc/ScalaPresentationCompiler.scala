@@ -251,7 +251,14 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      new AutoImportsProvider(search, driver, name, params, config)
+      new AutoImportsProvider(
+        search,
+        driver,
+        name,
+        params,
+        config,
+        buildTargetIdentifier
+      )
         .autoImports()
         .asJava
     }

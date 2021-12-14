@@ -28,7 +28,8 @@ final class AutoImportsProvider(
     driver: InteractiveDriver,
     name: String,
     params: OffsetParams,
-    config: PresentationCompilerConfig
+    config: PresentationCompilerConfig,
+    buildTargetIdentifier: String
 ):
 
   def autoImports(): List[AutoImportsResult] =
@@ -65,7 +66,7 @@ final class AutoImportsProvider(
       sym.name.show == query
 
     val visitor = new CompilerSearchVisitor(name, visit)
-    search.search(name, "", visitor)
+    search.search(name, buildTargetIdentifier, visitor)
     val results = symbols.result.filter(isExactMatch(_, name))
 
     if results.nonEmpty then
