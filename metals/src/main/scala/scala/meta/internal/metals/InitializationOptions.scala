@@ -57,6 +57,7 @@ final case class InitializationOptions(
     isExitOnShutdown: Option[Boolean],
     isHttpEnabled: Option[Boolean],
     isCommandInHtmlSupported: Option[Boolean],
+    commandInHtmlFormat: Option[CommandHTMLFormat],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     renameFileThreshold: Option[Int],
@@ -80,6 +81,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -141,6 +143,9 @@ object InitializationOptions {
       isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled"),
       isCommandInHtmlSupported =
         jsonObj.getBooleanOption("isCommandInHtmlSupported"),
+      commandInHtmlFormat = jsonObj
+        .getStringOption("commandInHtmlFormat")
+        .flatMap(CommandHTMLFormat.fromString),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
@@ -189,4 +194,18 @@ object InitializationOptions {
     )
   }
 
+}
+
+sealed trait CommandHTMLFormat
+object CommandHTMLFormat {
+  object Sublime extends CommandHTMLFormat
+  object VSCode extends CommandHTMLFormat
+
+  def fromString(str: String): Option[CommandHTMLFormat] = {
+    str.toLowerCase match {
+      case "sublime" => Some(Sublime)
+      case "vscode" => Some(VSCode)
+      case _ => None
+    }
+  }
 }

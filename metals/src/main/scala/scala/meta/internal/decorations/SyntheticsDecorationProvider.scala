@@ -12,6 +12,7 @@ import scala.{meta => m}
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -291,8 +292,12 @@ final class SyntheticsDecorationProvider(
   private def toHoverString(textDoc: TextDocument, uri: String)(
       symbol: String
   ): String = {
-    gotoLink(symbol, textDoc, uri) match {
-      case Some(link) if clientConfig.isCommandInHtmlSupported() =>
+    val link =
+      clientConfig
+        .commandInHtmlFormat()
+        .flatMap(gotoLink(symbol, textDoc, uri, _))
+    link match {
+      case Some(link) =>
         val simpleName =
           if (symbol.isLocal) localSymbolName(symbol, textDoc)
           else symbol.desc.name.value
@@ -304,29 +309,34 @@ final class SyntheticsDecorationProvider(
   private def gotoLink(
       symbol: String,
       textDocument: s.TextDocument,
-      uri: String
+      uri: String,
+      format: CommandHTMLFormat
   ): Option[String] = {
     if (symbol.isLocal) {
       textDocument.occurrences.collectFirst {
         case s.SymbolOccurrence(Some(range), `symbol`, role)
             if role.isDefinition =>
-          gotoLocationUsingUri(uri, range)
+          gotoLocationUsingUri(uri, range, format)
       }
     } else {
-      Some(gotoSymbolUsingUri(symbol))
+      Some(gotoSymbolUsingUri(symbol, format))
     }
   }
 
   private def gotoLocationUsingUri(
       uri: String,
-      range: s.Range
+      range: s.Range,
+      format: CommandHTMLFormat
   ): String = {
     val location = new l.Location(uri, range.toLSP)
-    ServerCommands.GotoPosition.toCommandLink(location)
+    ServerCommands.GotoPosition.toCommandLink(location, format)
   }
 
-  private def gotoSymbolUsingUri(symbol: String): String = {
-    ServerCommands.GotoSymbol.toCommandLink(symbol)
+  private def gotoSymbolUsingUri(
+      symbol: String,
+      format: CommandHTMLFormat
+  ): String = {
+    ServerCommands.GotoSymbol.toCommandLink(symbol, format)
   }
 
   private def toDecorationString(
@@ -524,3 +534,4 @@ final class SyntheticsDecorationProvider(
     typeDecorations.flatten
   }
 }
+

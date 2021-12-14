@@ -562,7 +562,7 @@ class MetalsLanguageServer(
           buffers,
           definitionProvider,
           clientConfig.icons,
-          clientConfig.isCommandInHtmlSupported
+          clientConfig
         )
         val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
         codeLensProvider = new CodeLensProvider(

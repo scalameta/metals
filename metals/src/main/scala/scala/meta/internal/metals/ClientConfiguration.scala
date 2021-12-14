@@ -52,11 +52,10 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
     )
 
   def isCommandInHtmlSupported(): Boolean =
-    extract(
-      initializationOptions.isCommandInHtmlSupported,
-      experimentalCapabilities.isCommandInHtmlSupported,
-      initialConfig.isCommandInHtmlSupported
-    )
+    commandInHtmlFormat().isDefined
+
+  def commandInHtmlFormat(): Option[CommandHTMLFormat] =
+    initializationOptions.commandInHtmlFormat
 
   def icons(): Icons =
     initializationOptions.icons

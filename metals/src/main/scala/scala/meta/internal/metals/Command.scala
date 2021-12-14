@@ -37,7 +37,13 @@ case class Command(
     )
   }
 
-  def toCommandLink: String = s"command:metals.$id"
+  def toCommandLink(
+      commandInHtmlFormat: CommandHTMLFormat
+  ): String =
+    commandInHtmlFormat match {
+      case CommandHTMLFormat.VSCode => s"command:metals.$id"
+      case CommandHTMLFormat.Sublime => s"href='subl:$id {}'"
+    }
 
 }
 
@@ -83,11 +89,18 @@ case class ParametrizedCommand[T: ClassTag](
     }
   }
 
-  def toCommandLink(argument: T): String = {
+  def toCommandLink(
+      argument: T,
+      commandInHtmlFormat: CommandHTMLFormat
+  ): String = {
     val param = s"[${argument.toJson.toString()}]"
-    s"command:metals.$id?${URLEncoder.encode(param)}"
+    commandInHtmlFormat match {
+      case CommandHTMLFormat.VSCode =>
+        s"command:metals.$id?${URLEncoder.encode(param)}"
+      case CommandHTMLFormat.Sublime =>
+        s"href='subl:$id {${URLEncoder.encode(param)}}'"
+    }
   }
-
   def toLSP(argument: T): l.Command =
     new l.Command(title, id, List(argument.toJson.asInstanceOf[AnyRef]).asJava)
 
@@ -146,10 +159,19 @@ case class ParametrizedCommand2[T1: ClassTag, T2: ClassTag](
     )
   }
 
-  def toCommandLink(argument1: T1, argument2: T2): String = {
+  def toCommandLink(
+      argument1: T1,
+      argument2: T2,
+      commandInHtmlFormat: CommandHTMLFormat
+  ): String = {
     val param =
       s"[${argument1.toJson.toString()}, ${argument2.toJson.toString()}]"
-    s"command:metals.$id?${URLEncoder.encode(param)}"
+    commandInHtmlFormat match {
+      case CommandHTMLFormat.VSCode =>
+        s"command:metals.$id?${URLEncoder.encode(param)}"
+      case CommandHTMLFormat.Sublime =>
+        s"href='subl:$id {${URLEncoder.encode(param)}}'"
+    }
   }
 }
 
