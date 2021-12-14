@@ -63,7 +63,7 @@ private[debug] object ClientConfigurationAdapter {
   private val defaultLinesStartAt1 = false
 
   def default: ClientConfigurationAdapter = {
-    new ClientConfigurationAdapter(defautlPathFormat, defaultLinesStartAt1)
+    ClientConfigurationAdapter(defautlPathFormat, defaultLinesStartAt1)
   }
 
   def initialize(
@@ -74,6 +74,6 @@ private[debug] object ClientConfigurationAdapter {
     val linesStartAt1 = Option(initRequest.getLinesStartAt1)
       .map(_.booleanValue)
       .getOrElse(defaultLinesStartAt1)
-    new ClientConfigurationAdapter(pathFormat, linesStartAt1)
+    ClientConfigurationAdapter(pathFormat, linesStartAt1)
   }
 }

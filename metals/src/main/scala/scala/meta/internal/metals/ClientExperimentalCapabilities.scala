@@ -7,7 +7,7 @@ import org.eclipse.{lsp4j => l}
 
 /**
  * While all these values can be set here, they are here only for
- * compatablity with clients that were setting them this way. From
+ * compatibility with clients that were setting them this way. From
  * a client perspective it's preferable and recommended to use
  * InitializationOptions instead. From a development perspective
  * don't add something here unless it's truly a more "experimental"

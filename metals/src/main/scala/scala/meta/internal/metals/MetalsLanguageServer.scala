@@ -272,12 +272,9 @@ class MetalsLanguageServer(
   var stacktraceAnalyzer: StacktraceAnalyzer = _
   var findTextInJars: FindTextInDependencyJars = _
 
-  private val clientConfig: ClientConfiguration =
-    new ClientConfiguration(
-      initialConfig,
-      ClientExperimentalCapabilities.Default,
-      InitializationOptions.Default
-    )
+  private val clientConfig: ClientConfiguration = ClientConfiguration(
+    initialConfig
+  )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Seq[Unit]] = {
     Future.traverse(paths.distinct) { path =>
@@ -339,10 +336,7 @@ class MetalsLanguageServer(
         scribe.info(
           s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
         )
-
-        clientConfig.experimentalCapabilities =
-          ClientExperimentalCapabilities.from(params.getCapabilities)
-        clientConfig.initializationOptions = InitializationOptions.from(params)
+        clientConfig.update(params)
 
         foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)
         documentSymbolProvider.setSupportsHierarchicalDocumentSymbols(

@@ -82,19 +82,21 @@ final class ConfiguredLanguageClient(
     }
   }
 
+  override def refreshModel(): CompletableFuture[Unit] = {
+    if (clientConfig.codeLenseRefreshSupport)
+      underlying.refreshCodeLenses.thenApply(_ => ())
+    else if (
+      clientConfig.isExecuteClientCommandProvider && clientConfig.isDebuggingProvider
+    ) {
+      val params = ClientCommands.RefreshModel.toExecuteCommandParams()
+      CompletableFuture.completedFuture(metalsExecuteClientCommand(params))
+    } else CompletableFuture.completedFuture(())
+  }
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
-  ): Unit = {
-    if (clientConfig.isExecuteClientCommandProvider) {
-      params match {
-        case ClientCommands.RefreshModel()
-            if !clientConfig.isDebuggingProvider =>
-          () // ignore
-        case _ =>
-          underlying.metalsExecuteClientCommand(params)
-      }
-    }
-  }
+  ): Unit =
+    underlying.metalsExecuteClientCommand(params)
 
   override def metalsInputBox(
       params: MetalsInputBoxParams
