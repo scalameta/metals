@@ -13,6 +13,7 @@ import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
@@ -341,6 +342,16 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     scalaVersion = Some(V.scala3)
   )
 
+  check("empty-file-with-package")(
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(ScalaFile),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |""".stripMargin
+  )
+
   private lazy val indent = "  "
 
   type ProvidedFileType = NewFileType
@@ -348,6 +359,10 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
   type Provided = String
   type Picked = String
 
+  /**
+   * NewScalaFile request may include @param fileType and @param fileName (2 x Left) in arguments.
+   * When one of them missing Metals will use quickpick in order to ask the user about lacking information
+   */
   private def check(testName: TestOptions)(
       directory: Option[String],
       fileType: Either[ProvidedFileType, PickedFileType],
@@ -357,7 +372,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
       scalaVersion: Option[String] = None
-  ): Unit =
+  )(implicit loc: Location): Unit =
     test(testName) {
       val localScalaVersion = scalaVersion.getOrElse(V.scala212)
       val directoryUri = directory.fold(null.asInstanceOf[String])(

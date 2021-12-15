@@ -80,6 +80,10 @@ class NewFileProvider(
           .mapOption(
             createClass(directory, _, kind)
           )
+      case ScalaFile =>
+        getName(ScalaFile, name).mapOption(
+          createEmptyFileWithPackage(directory, _)
+        )
       case Worksheet =>
         getName(Worksheet, name)
           .mapOption(
@@ -97,6 +101,7 @@ class NewFileProvider(
 
   private def askForKind(isScala3: Boolean): Future[Option[NewFileType]] = {
     val allFileTypes = List(
+      ScalaFile.toQuickPickItem,
       Class.toQuickPickItem,
       CaseClass.toQuickPickItem,
       Object.toQuickPickItem,
@@ -159,6 +164,20 @@ class NewFileProvider(
         .getOrElse("") + s
     }
     createFileAndWriteText(path, editText)
+  }
+
+  private def createEmptyFileWithPackage(
+      directory: Option[AbsolutePath],
+      name: String
+  ): Future[(AbsolutePath, Range)] = {
+    val path = directory.getOrElse(workspace).resolve(name + ".scala")
+    val pkg = packageProvider
+      .packageStatement(path)
+      .map(_.fileContent)
+      .getOrElse("")
+    val template = s"""|$pkg
+                       |@@""".stripMargin
+    createFileAndWriteText(path, NewFileTemplate(template))
   }
 
   private def createPackageObject(
