@@ -546,7 +546,7 @@ lazy val metals = project
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "1.4.2",
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.6.9",
+      "com.lihaoyi" %% "requests" % "0.7.0",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
