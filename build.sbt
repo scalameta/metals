@@ -456,7 +456,7 @@ val mtagsSettings = List(
     // NOTE(olafur) pprint is indispensable for me while developing, I can't
     // use println anymore for debugging because pprint.log is 100 times better.
     else {
-      List("com.lihaoyi" %% "pprint" % "0.6.6")
+      List("com.lihaoyi" %% "pprint" % "0.7.1")
     }
   },
   buildInfoPackage := "scala.meta.internal.mtags",
