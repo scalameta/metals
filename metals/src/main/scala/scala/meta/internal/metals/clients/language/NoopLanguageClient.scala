@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 
@@ -34,15 +34,17 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def logMessage(message: MessageParams): Unit = ()
   override def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit =
     ()
-  override def metalsInputBox(
+  override def rawMetalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
-    CompletableFuture.completedFuture(None)
+  ): CompletableFuture[RawMetalsInputBoxResult] = {
+    CompletableFuture.completedFuture(RawMetalsInputBoxResult(cancelled = true))
   }
-  override def metalsQuickPick(
+  override def rawMetalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[Option[MetalsQuickPickResult]] = {
-    CompletableFuture.completedFuture(None)
+  ): CompletableFuture[RawMetalsQuickPickResult] = {
+    CompletableFuture.completedFuture(
+      RawMetalsQuickPickResult(cancelled = true)
+    )
   }
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams

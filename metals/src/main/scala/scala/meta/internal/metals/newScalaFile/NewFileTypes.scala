@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.newScalaFile
 
-import scala.meta.internal.metals.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 
 object NewFileTypes {
   sealed trait NewFileType {

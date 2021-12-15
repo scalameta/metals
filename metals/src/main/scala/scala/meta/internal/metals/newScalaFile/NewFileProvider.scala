@@ -10,12 +10,12 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsInputBoxParams
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.pc.Identifier
 import scala.meta.io.AbsolutePath

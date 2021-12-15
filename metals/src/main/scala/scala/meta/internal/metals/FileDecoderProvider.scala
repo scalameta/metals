@@ -21,6 +21,9 @@ import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.parsing.ClassFinder

@@ -4,6 +4,9 @@ import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 

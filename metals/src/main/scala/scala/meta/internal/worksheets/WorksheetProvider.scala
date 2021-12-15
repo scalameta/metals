@@ -26,8 +26,6 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -35,6 +33,8 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException

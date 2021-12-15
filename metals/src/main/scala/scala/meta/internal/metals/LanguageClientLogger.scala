@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import scribe.LogRecord

@@ -50,6 +50,11 @@ import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
+import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.codeactions.ExtractMemberDefinitionData
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens

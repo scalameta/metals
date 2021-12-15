@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 
@@ -80,16 +80,16 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.metalsExecuteClientCommand(params)
   }
 
-  override def metalsInputBox(
+  override def rawMetalsInputBox(
       params: MetalsInputBoxParams
-  ): CompletableFuture[Option[MetalsInputBoxResult]] = {
-    underlying.metalsInputBox(params)
+  ): CompletableFuture[RawMetalsInputBoxResult] = {
+    underlying.rawMetalsInputBox(params)
   }
 
-  override def metalsQuickPick(
+  override def rawMetalsQuickPick(
       params: MetalsQuickPickParams
-  ): CompletableFuture[Option[MetalsQuickPickResult]] = {
-    underlying.metalsQuickPick(params)
+  ): CompletableFuture[RawMetalsQuickPickResult] = {
+    underlying.rawMetalsQuickPick(params)
   }
 
   override def metalsTreeViewDidChange(

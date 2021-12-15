@@ -23,6 +23,8 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.ammonite.Ammonite.AmmoniteMetalsException
+import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import ammrunner.AmmoniteFetcher

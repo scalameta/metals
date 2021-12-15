@@ -12,12 +12,12 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsInputBoxParams
-import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.MetalsOpenWindowParams
-import scala.meta.internal.metals.MetalsQuickPickItem
-import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsOpenWindowParams
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 

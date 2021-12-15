@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.clients.language
 
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
@@ -10,7 +10,18 @@ import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Success
 
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.ConcurrentHashSet
+import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.TaskProgress
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.tvp._

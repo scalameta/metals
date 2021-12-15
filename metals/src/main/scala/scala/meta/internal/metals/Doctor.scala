@@ -14,6 +14,7 @@ import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.io.AbsolutePath
