@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.net.URLEncoder
+
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.pc.CompilerInitializationOptions
@@ -196,10 +198,45 @@ object InitializationOptions {
 
 }
 
-sealed trait CommandHTMLFormat
+sealed trait CommandHTMLFormat {
+  import scala.meta.internal.metals.JsonParser._
+
+  def createLink[T](commandId: String, arguments: List[T]): String
+  def toEncodedValues[T](arguments: List[T]): Seq[String] =
+    arguments.map(_.toJson.toString())
+}
 object CommandHTMLFormat {
-  object Sublime extends CommandHTMLFormat
-  object VSCode extends CommandHTMLFormat
+  object Sublime extends CommandHTMLFormat {
+    override def createLink[T](
+        commandId: String,
+        arguments: List[T]
+    ): String = {
+      // sublime expect commands to follow the under_scores format
+      val id = commandId.replaceAll("-", "_")
+      val encoded = toEncodedValues(arguments)
+      val encodedArguments =
+        if (encoded.isEmpty) "{}"
+        else s"""{"parameters": [${encoded.mkString(",")}]}"""
+
+      s"subl:lsp_metals_$id $encodedArguments"
+    }
+  }
+  object VSCode extends CommandHTMLFormat {
+
+    override def createLink[T](
+        commandId: String,
+        arguments: List[T]
+    ): String = {
+      val encoded = toEncodedValues(arguments)
+      val encodedArguments =
+        if (encoded.isEmpty) ""
+        else {
+          val values = s"""[${encoded.mkString(", ")}]"""
+          s"?${URLEncoder.encode(values)}"
+        }
+      s"command:metals.$commandId$encodedArguments"
+    }
+  }
 
   def fromString(str: String): Option[CommandHTMLFormat] = {
     str.toLowerCase match {
