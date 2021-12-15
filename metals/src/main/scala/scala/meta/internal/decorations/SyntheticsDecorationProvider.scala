@@ -310,7 +310,7 @@ final class SyntheticsDecorationProvider(
       textDocument.occurrences.collectFirst {
         case s.SymbolOccurrence(Some(range), `symbol`, role)
             if role.isDefinition =>
-          gotoLocationUsingUri(uri, range.startLine, range.startCharacter)
+          gotoLocationUsingUri(uri, range)
       }
     } else {
       Some(gotoSymbolUsingUri(symbol))
@@ -319,11 +319,9 @@ final class SyntheticsDecorationProvider(
 
   private def gotoLocationUsingUri(
       uri: String,
-      line: Int,
-      character: Int
+      range: s.Range
   ): String = {
-    val pos = new l.Position(line, character)
-    val location = new l.Location(uri, new l.Range(pos, pos))
+    val location = new l.Location(uri, range.toLSP)
     ServerCommands.GotoPosition.toCommandLink(location)
   }
 
