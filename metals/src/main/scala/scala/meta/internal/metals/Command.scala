@@ -85,7 +85,7 @@ case class ParametrizedCommand[T: ClassTag](
       argument: T,
       commandInHtmlFormat: CommandHTMLFormat
   ): String =
-    commandInHtmlFormat.createLink(id, List(argument))
+    commandInHtmlFormat.createLink(id, List(argument.toJson.toString()))
 
   def toLSP(argument: T): l.Command =
     new l.Command(title, id, List(argument.toJson.asInstanceOf[AnyRef]).asJava)
@@ -149,7 +149,10 @@ case class ParametrizedCommand2[T1: ClassTag, T2: ClassTag](
       argument1: T1,
       argument2: T2,
       commandInHtmlFormat: CommandHTMLFormat
-  ): String = commandInHtmlFormat.createLink(id, List(argument1, argument2))
+  ): String = commandInHtmlFormat.createLink(
+    id,
+    List(argument1, argument2).map(_.toJson.toString())
+  )
 }
 
 case class ListParametrizedCommand[T: ClassTag](

@@ -199,40 +199,34 @@ object InitializationOptions {
 }
 
 sealed trait CommandHTMLFormat {
-  import scala.meta.internal.metals.JsonParser._
-
-  def createLink[T](commandId: String, arguments: List[T]): String
-  def toEncodedValues[T](arguments: List[T]): Seq[String] =
-    arguments.map(_.toJson.toString())
+  def createLink(commandId: String, arguments: List[String]): String
 }
 object CommandHTMLFormat {
   object Sublime extends CommandHTMLFormat {
-    override def createLink[T](
+    override def createLink(
         commandId: String,
-        arguments: List[T]
+        arguments: List[String]
     ): String = {
       // sublime expect commands to follow the under_scores format
       val id = commandId.replaceAll("-", "_")
-      val encoded = toEncodedValues(arguments)
       val encodedArguments =
-        if (encoded.isEmpty) "{}"
-        else s"""{"parameters": [${encoded.mkString(",")}]}"""
+        if (arguments.isEmpty) "{}"
+        else s"""{"parameters": [${arguments.mkString(",")}]}"""
 
       s"subl:lsp_metals_$id $encodedArguments"
     }
   }
   object VSCode extends CommandHTMLFormat {
 
-    override def createLink[T](
+    override def createLink(
         commandId: String,
-        arguments: List[T]
+        arguments: List[String]
     ): String = {
-      val encoded = toEncodedValues(arguments)
       val encodedArguments =
-        if (encoded.isEmpty) ""
+        if (arguments.isEmpty) ""
         else {
-          val values = s"""[${encoded.mkString(", ")}]"""
-          s"?${URLEncoder.encode(values)}"
+          val asArray = s"""[${arguments.mkString(", ")}]"""
+          s"?${URLEncoder.encode(asArray)}"
         }
       s"command:metals.$commandId$encodedArguments"
     }
