@@ -1,10 +1,12 @@
 package tests.clients
 
-import tests.BaseSuite
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.CommandHTMLFormat
-import org.eclipse.{lsp4j => l}
 import java.net.URLEncoder
+
+import scala.meta.internal.metals.CommandHTMLFormat
+import scala.meta.internal.metals.ServerCommands
+
+import org.eclipse.{lsp4j => l}
+import tests.BaseSuite
 
 class ScalaVersionsSuite extends BaseSuite {
 
@@ -15,27 +17,26 @@ class ScalaVersionsSuite extends BaseSuite {
   val location = new l.Location(uri, new l.Range(pos, pos))
   val symbol = "a/Main."
 
-  val expectedParamsLocation = URLEncoder.encode(
+  val locationJson =
     s"""[{"uri":"$uri","range":{"start":{"line":0,"character":0},"end":{"line":0,"character":0}}}]"""
-  )
-  val expectedParamsSymbol = URLEncoder.encode(
-    s"""["$symbol"]"""
-  )
+  val symbolJson = s"""["$symbol"]"""
 
   test("sublime") {
     val format = CommandHTMLFormat.Sublime
     assertNoDiff(
       ServerCommands.GotoPosition.toCommandLink(location, format),
-      s"href='subl:goto-position {$expectedParamsLocation}'"
+      s"""subl:lsp_metals_goto_position {"parameters": $locationJson}"""
     )
     assertNoDiff(
       ServerCommands.GotoSymbol.toCommandLink(symbol, format),
-      s"href='subl:goto {$expectedParamsSymbol}'"
+      s"""subl:lsp_metals_goto {"parameters": $symbolJson}"""
     )
   }
 
   test("vscode") {
     val format = CommandHTMLFormat.VSCode
+    val expectedParamsLocation = URLEncoder.encode(locationJson)
+    val expectedParamsSymbol = URLEncoder.encode(symbolJson)
     assertNoDiff(
       ServerCommands.GotoPosition.toCommandLink(location, format),
       s"command:metals.goto-position?$expectedParamsLocation"
