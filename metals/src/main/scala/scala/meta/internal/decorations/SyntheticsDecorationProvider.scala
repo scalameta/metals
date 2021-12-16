@@ -293,9 +293,7 @@ final class SyntheticsDecorationProvider(
       symbol: String
   ): String = {
     val link =
-      clientConfig
-        .commandInHtmlFormat()
-        .flatMap(gotoLink(symbol, textDoc, uri, _))
+      clientConfig.commandInHtmlFormat().map(gotoLink(symbol, textDoc, uri, _))
     link match {
       case Some(link) =>
         val simpleName =
@@ -316,7 +314,12 @@ final class SyntheticsDecorationProvider(
       textDocument.occurrences.collectFirst {
         case s.SymbolOccurrence(Some(range), `symbol`, role)
             if role.isDefinition =>
-          gotoLocationUsingUri(uri, range, format)
+          gotoLocationUsingUri(
+            uri,
+            range.startLine,
+            range.startCharacter,
+            format
+          )
       }
     } else {
       Some(gotoSymbolUsingUri(symbol, format))
@@ -325,10 +328,12 @@ final class SyntheticsDecorationProvider(
 
   private def gotoLocationUsingUri(
       uri: String,
-      range: s.Range,
+      line: Int,
+      character: Int,
       format: CommandHTMLFormat
   ): String = {
-    val location = new l.Location(uri, range.toLSP)
+    val pos = new l.Position(line, character)
+    val location = new l.Location(uri, new l.Range(pos, pos))
     ServerCommands.GotoPosition.toCommandLink(location, format)
   }
 
@@ -534,4 +539,3 @@ final class SyntheticsDecorationProvider(
     typeDecorations.flatten
   }
 }
-
