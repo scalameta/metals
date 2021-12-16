@@ -9,6 +9,11 @@ object NewFileTypes {
     def toQuickPickItem: MetalsQuickPickItem = MetalsQuickPickItem(id, label)
   }
 
+  case object ScalaFile extends NewFileType {
+    override val id: String = "scala-file"
+    override val label: String = "Scala file with automatically added package"
+  }
+
   case object Class extends NewFileType {
     override val id: String = "class"
     override val label: String = "Class"
@@ -56,6 +61,7 @@ object NewFileTypes {
       case Enum.id => Some(Enum)
       case Object.id => Some(Object)
       case Trait.id => Some(Trait)
+      case ScalaFile.id => Some(ScalaFile)
       case PackageObject.id => Some(PackageObject)
       case Worksheet.id => Some(Worksheet)
       case AmmoniteScript.id => Some(AmmoniteScript)
