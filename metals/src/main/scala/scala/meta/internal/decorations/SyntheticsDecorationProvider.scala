@@ -293,7 +293,9 @@ final class SyntheticsDecorationProvider(
       symbol: String
   ): String = {
     val link =
-      clientConfig.commandInHtmlFormat().map(gotoLink(symbol, textDoc, uri, _))
+      clientConfig
+        .commandInHtmlFormat()
+        .flatMap(gotoLink(symbol, textDoc, uri, _))
     link match {
       case Some(link) =>
         val simpleName =
