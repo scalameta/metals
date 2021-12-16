@@ -26,10 +26,12 @@ class ScalaVersionsSuite extends BaseSuite {
     assertNoDiff(
       ServerCommands.GotoPosition.toCommandLink(location, format),
       s"""subl:lsp_metals_goto_position {"parameters": $locationJson}"""
+        .replaceAll("\"", "&#x22;")
     )
     assertNoDiff(
       ServerCommands.GotoSymbol.toCommandLink(symbol, format),
       s"""subl:lsp_metals_goto {"parameters": $symbolJson}"""
+        .replaceAll("\"", "&#x22;")
     )
   }
 

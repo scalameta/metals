@@ -207,13 +207,18 @@ object CommandHTMLFormat {
         commandId: String,
         arguments: List[String]
     ): String = {
+      def escape(args: String): String = {
+        // The lib used to convert markdown to html in sublime doesn't properly
+        // recognize URL encoding so we have to use hexadecimal html encoding
+        args.replaceAll("\"", "&#x22;")
+      }
       // sublime expect commands to follow the under_scores format
       val id = commandId.replaceAll("-", "_")
       val encodedArguments =
         if (arguments.isEmpty) "{}"
         else s"""{"parameters": [${arguments.mkString(",")}]}"""
-
-      s"subl:lsp_metals_$id $encodedArguments"
+      val escapedArguments = escape(encodedArguments)
+      s"subl:lsp_metals_$id $escapedArguments"
     }
   }
   object VSCode extends CommandHTMLFormat {
