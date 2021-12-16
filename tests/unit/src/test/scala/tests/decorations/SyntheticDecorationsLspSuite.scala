@@ -93,7 +93,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         .toURI
         .toString()
       expectedParamsBoston = URLEncoder.encode(
-        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":17}}}]"""
+        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}}}]"""
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
