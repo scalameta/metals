@@ -16,7 +16,7 @@ class StacktraceAnalyzer(
     buffers: Buffers,
     definitionProvider: DefinitionProvider,
     icons: Icons,
-    clientConfig: ClientConfiguration
+    commandInHtmlFormat: Option[CommandHTMLFormat]
 ) {
 
   def analyzeCommand(
@@ -97,10 +97,9 @@ class StacktraceAnalyzer(
 
   private def analyzeStackTrace(
       stacktrace: String
-  ): Option[l.ExecuteCommandParams] = {
-    clientConfig.commandInHtmlFormat() match {
-      case Some(format) =>
-        Some(makeHtmlCommandParams(stacktrace, format))
+  ): Option[l.ExecuteCommandParams] =
+    commandInHtmlFormat match {
+      case Some(format) => Some(makeHtmlCommandParams(stacktrace, format))
       case None =>
         val path = workspace.resolve(Directories.stacktrace)
         val pathFile = path.toFile
@@ -118,7 +117,6 @@ class StacktraceAnalyzer(
         val stackTraceLocation = new l.Location(path.toURI.toString(), range)
         Some(makeGotoCommandParams(stackTraceLocation))
     }
-  }
 
   private def makeGotoCommandParams(
       location: Location
