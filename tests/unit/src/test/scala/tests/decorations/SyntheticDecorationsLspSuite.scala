@@ -2,10 +2,10 @@ package tests.decorations
 
 import java.net.URLEncoder
 
+import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.InitializationOptions
 
 import tests.BaseLspSuite
-import scala.meta.internal.metals.CommandHTMLFormat
 
 class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
