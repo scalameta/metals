@@ -14,7 +14,8 @@ case class TreeViewNode(
     @Nullable icon: String = null,
     @Nullable tooltip: String = null,
     // One of "collapsed", "expanded" or "none"
-    @Nullable collapseState: String = null
+    @Nullable collapseState: String = null,
+    @Nullable contextValue: String = null
 ) {
   def isDirectory: Boolean = label.endsWith("/")
   def isCollapsed: Boolean =

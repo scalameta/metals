@@ -73,8 +73,7 @@ object MetalsEnrichments
 
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
 
-    def isSbtBuild: Boolean =
-      dataKind == "sbt"
+    def isSbtBuild: Boolean = dataKind == "sbt"
 
     def baseDirectory: String =
       Option(buildTarget.getBaseDirectory()).getOrElse("")

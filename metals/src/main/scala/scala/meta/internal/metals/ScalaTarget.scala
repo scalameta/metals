@@ -8,7 +8,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.JvmBuildTarget
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 
 case class ScalaTarget(
@@ -43,6 +46,8 @@ case class ScalaTarget(
 
   def baseDirectory: String = info.baseDirectory
 
+  def options: List[String] = scalac.getOptions().asScala.toList
+
   def fmtDialect: ScalafmtDialect =
     ScalaVersions.fmtDialectForScalaVersion(scalaVersion, containsSource3)
 
@@ -60,9 +65,23 @@ case class ScalaTarget(
 
   def scalaVersion: String = scalaInfo.getScalaVersion()
 
+  def id: BuildTargetIdentifier = info.getId()
+
   def scalaBinaryVersion: String = scalaInfo.getScalaBinaryVersion()
 
   private def containsSource3 = scalac.getOptions().contains("-Xsource:3")
 
   def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
+
+  def scalaPlatform: ScalaPlatform = scalaInfo.getPlatform()
+
+  private def jvmBuildTarget: Option[JvmBuildTarget] = Option(
+    scalaInfo.getJvmBuildTarget()
+  )
+
+  def jvmVersion: Option[String] =
+    jvmBuildTarget.flatMap(f => Option(f.getJavaVersion()))
+
+  def jvmHome: Option[String] =
+    jvmBuildTarget.flatMap(f => Option(f.getJavaHome()))
 }
