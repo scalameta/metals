@@ -206,7 +206,7 @@ sealed trait CommandHTMLFormat {
 object CommandHTMLFormat {
   object Sublime extends CommandHTMLFormat {
     override val value = "sublime"
-    val toEscape = Set('"', '<', '>', '&', '\'')
+    val toEscape: Set[Char] = Set('"', '<', '>', '&', '\'')
     def escape(args: String): String = {
       // The lib used to convert markdown to html in sublime doesn't properly
       // recognize URL encoding so we have to use hexadecimal html encoding

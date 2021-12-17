@@ -17,9 +17,9 @@ class ScalaVersionsSuite extends BaseSuite {
   val location = new l.Location(uri, new l.Range(pos, pos))
   val symbol = "a/Main."
 
-  val locationJson =
+  val locationJson: String =
     s"""[{"uri":"$uri","range":{"start":{"line":0,"character":0},"end":{"line":0,"character":0}}}]"""
-  val symbolJson = s"""["$symbol"]"""
+  val symbolJson: String = s"""["$symbol"]"""
 
   test("sublime") {
     val format = CommandHTMLFormat.Sublime
