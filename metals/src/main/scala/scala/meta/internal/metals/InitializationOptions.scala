@@ -203,15 +203,19 @@ sealed trait CommandHTMLFormat {
 }
 object CommandHTMLFormat {
   object Sublime extends CommandHTMLFormat {
+    val toEscape = Set('"', '<', '>', '&', '\'')
+    def escape(args: String): String = {
+      // The lib used to convert markdown to html in sublime doesn't properly
+      // recognize URL encoding so we have to use hexadecimal html encoding
+      args.flatMap {
+        case char if toEscape.contains(char) => s"&#x${char.toHexString};"
+        case char => char.toString
+      }
+    }
     override def createLink(
         commandId: String,
         arguments: List[String]
     ): String = {
-      def escape(args: String): String = {
-        // The lib used to convert markdown to html in sublime doesn't properly
-        // recognize URL encoding so we have to use hexadecimal html encoding
-        args.replaceAll("\"", "&#x22;")
-      }
       // sublime expect commands to follow the under_scores format
       val id = commandId.replaceAll("-", "_")
       val encodedArguments =
