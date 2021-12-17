@@ -445,6 +445,14 @@ val mtagsSettings = List(
         .cross(CrossVersion.for3Use2_13)
         .exclude("org.scala-lang", "scala-reflect")
         .exclude("org.scala-lang", "scala-compiler")
+        .exclude(
+          "com.lihaoyi",
+          "geny_2.13"
+        ) // avoid 2.13 and 3 on the classpath since we rely on it directly
+        .exclude(
+          "com.lihaoyi",
+          "sourcecode_2.13"
+        ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.8.0"),
