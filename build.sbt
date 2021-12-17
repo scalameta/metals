@@ -425,24 +425,21 @@ val mtagsSettings = List(
   ),
   // @note needed to deal with issues with dottyDoc
   Compile / doc / sources := Seq.empty,
-  libraryDependencies +=
+  libraryDependencies ++= Seq(
+    "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % "2.0.1", // for java mtags
+    "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
+  ),
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "org.jsoup" % "jsoup" % "1.14.3", // for extracting HTML from javadocs
-      "com.lihaoyi" %% "geny" % V.genyVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.0",
-      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2")
-        .cross(CrossVersion.for3Use2_13),
-      ("com.lihaoyi" %% "geny" % V.genyVersion)
-        .cross(CrossVersion.for3Use2_13),
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .cross(CrossVersion.for3Use2_13)
