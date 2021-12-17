@@ -199,10 +199,13 @@ object InitializationOptions {
 }
 
 sealed trait CommandHTMLFormat {
+  val value: String
   def createLink(commandId: String, arguments: List[String]): String
+  override def toString(): String = value
 }
 object CommandHTMLFormat {
   object Sublime extends CommandHTMLFormat {
+    override val value = "sublime"
     val toEscape = Set('"', '<', '>', '&', '\'')
     def escape(args: String): String = {
       // The lib used to convert markdown to html in sublime doesn't properly
@@ -226,7 +229,7 @@ object CommandHTMLFormat {
     }
   }
   object VSCode extends CommandHTMLFormat {
-
+    override val value = "vscode"
     override def createLink(
         commandId: String,
         arguments: List[String]
@@ -243,8 +246,8 @@ object CommandHTMLFormat {
 
   def fromString(str: String): Option[CommandHTMLFormat] = {
     str.toLowerCase match {
-      case "sublime" => Some(Sublime)
-      case "vscode" => Some(VSCode)
+      case Sublime.value => Some(Sublime)
+      case VSCode.value => Some(VSCode)
       case _ => None
     }
   }
