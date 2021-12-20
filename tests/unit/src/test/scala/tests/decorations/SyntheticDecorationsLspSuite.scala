@@ -2,6 +2,7 @@ package tests.decorations
 
 import java.net.URLEncoder
 
+import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.InitializationOptions
 
 import tests.BaseLspSuite
@@ -13,7 +14,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       InitializationOptions.Default.copy(
         inlineDecorationProvider = Some(true),
         decorationProvider = Some(true),
-        isCommandInHtmlSupported = Some(true)
+        commandInHtmlFormat = Some(CommandHTMLFormat.VSCode)
       )
     )
 

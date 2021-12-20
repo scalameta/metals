@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.net.URLEncoder
+
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.pc.CompilerInitializationOptions
@@ -56,7 +58,7 @@ final case class InitializationOptions(
     inputBoxProvider: Option[Boolean],
     isExitOnShutdown: Option[Boolean],
     isHttpEnabled: Option[Boolean],
-    isCommandInHtmlSupported: Option[Boolean],
+    commandInHtmlFormat: Option[CommandHTMLFormat],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     renameFileThreshold: Option[Int],
@@ -139,8 +141,9 @@ object InitializationOptions {
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
       isExitOnShutdown = jsonObj.getBooleanOption("isExitOnShutdown"),
       isHttpEnabled = jsonObj.getBooleanOption("isHttpEnabled"),
-      isCommandInHtmlSupported =
-        jsonObj.getBooleanOption("isCommandInHtmlSupported"),
+      commandInHtmlFormat = jsonObj
+        .getStringOption("commandInHtmlFormat")
+        .flatMap(CommandHTMLFormat.fromString),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
@@ -189,4 +192,64 @@ object InitializationOptions {
     )
   }
 
+}
+
+sealed trait CommandHTMLFormat {
+  val value: String
+  def createLink(commandId: String, arguments: List[String]): String
+  override def toString(): String = value
+}
+
+object CommandHTMLFormat {
+  object Sublime extends CommandHTMLFormat {
+    override val value = "sublime"
+    val toEscape: Set[Char] = Set('"', '<', '>', '&', '\'')
+
+    def escape(args: String): String = {
+      // The lib used to convert markdown to html in sublime doesn't properly
+      // recognize URL encoding so we have to use hexadecimal html encoding
+      args.flatMap {
+        case char if toEscape.contains(char) => s"&#x${char.toHexString};"
+        case char => char.toString
+      }
+    }
+
+    override def createLink(
+        commandId: String,
+        arguments: List[String]
+    ): String = {
+      // sublime expect commands to follow the under_scores format
+      val id = commandId.replaceAll("-", "_")
+      val encodedArguments =
+        if (arguments.isEmpty) "{}"
+        else s"""{"parameters": [${arguments.mkString(",")}]}"""
+      val escapedArguments = escape(encodedArguments)
+      s"subl:lsp_metals_$id $escapedArguments"
+    }
+  }
+
+  object VSCode extends CommandHTMLFormat {
+    override val value = "vscode"
+
+    override def createLink(
+        commandId: String,
+        arguments: List[String]
+    ): String = {
+      val encodedArguments =
+        if (arguments.isEmpty) ""
+        else {
+          val asArray = s"""[${arguments.mkString(", ")}]"""
+          s"?${URLEncoder.encode(asArray)}"
+        }
+      s"command:metals.$commandId$encodedArguments"
+    }
+  }
+
+  def fromString(str: String): Option[CommandHTMLFormat] = {
+    str.toLowerCase match {
+      case Sublime.value => Some(Sublime)
+      case VSCode.value => Some(VSCode)
+      case _ => None
+    }
+  }
 }

@@ -125,7 +125,7 @@ The currently available settings for `InitializationOptions` are listed below.
       "inputBoxProvider": boolean,
       "isExitOnShutdown" : boolean,
       "isHttpEnabled": boolean,
-      "isCommandInHtmlSupported": boolean,
+      "commandInHtmlFormat": "vscode" | "sublime",
       "openFilesOnRenameProvider": boolean,
       "openNewWindowProvider": boolean,
       "quickPickProvider": boolean,

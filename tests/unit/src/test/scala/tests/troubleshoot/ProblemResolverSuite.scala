@@ -115,8 +115,7 @@ class ProblemResolverSuite extends FunSuite {
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
         new TestMtagsResolver,
-        () => None,
-        isClientCommandSupported = true
+        () => None
       )
 
       val target = scalaTarget(name.name, scalaVersion, scalacOpts, isSbt)

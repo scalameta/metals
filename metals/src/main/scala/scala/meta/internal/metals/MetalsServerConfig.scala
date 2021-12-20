@@ -58,10 +58,6 @@ final case class MetalsServerConfig(
       "metals.http",
       default = false
     ),
-    isCommandInHtmlSupported: Boolean = MetalsServerConfig.binaryOption(
-      "metals.commands-in-html",
-      default = false
-    ),
     isInputBoxEnabled: Boolean = MetalsServerConfig.binaryOption(
       "metals.input-box",
       default = false
@@ -137,7 +133,6 @@ object MetalsServerConfig {
         base.copy(
           icons = Icons.vscode,
           globSyntax = GlobSyntaxConfig.vscode,
-          isCommandInHtmlSupported = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand =
               Some("editor.action.triggerParameterHints"),
