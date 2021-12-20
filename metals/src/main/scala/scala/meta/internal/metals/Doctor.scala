@@ -40,8 +40,7 @@ final class Doctor(
     new ProblemResolver(
       workspace,
       mtagsResolver,
-      currentBuildServer,
-      clientConfig.isCommandInHtmlSupported()
+      currentBuildServer
     )
 
   /**

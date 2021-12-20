@@ -16,8 +16,7 @@ import scala.meta.io.AbsolutePath
 class ProblemResolver(
     workspace: AbsolutePath,
     mtagsResolver: MtagsResolver,
-    currentBuildServer: () => Option[BspSession],
-    isClientCommandSupported: Boolean
+    currentBuildServer: () => Option[BspSession]
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
