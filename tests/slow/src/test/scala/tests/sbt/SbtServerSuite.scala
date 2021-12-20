@@ -64,9 +64,8 @@ class SbtServerSuite
   test("generate") {
     def sbtLaunchJar = workspace.resolve(".bsp/sbt-launch.jar")
     def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
-    def isBspConfigValid = sbtBspConfig.readText.contains(
-      s"--sbt-launch-jar=${sbtLaunchJar.toString()}"
-    )
+    def isBspConfigValid =
+      sbtBspConfig.readText.contains(sbtLaunchJar.toString())
     def sbtBspPlugin = workspace.resolve("project/metals.sbt")
     def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
