@@ -30,6 +30,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspConnector
+import scala.meta.internal.bsp.BspExtra
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
@@ -197,8 +198,26 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
-  private val indexingPromise: Promise[Unit] = Promise[Unit]()
-  var buildServerPromise: Promise[Unit] = Promise[Unit]()
+  private val indexingPromise: Promise[Unit] = Promise()
+  private val bspScala2VersionsFuture: Future[BspExtra] = {
+    val future = Future {
+      val actual = BspExtra.discoverNewReleases()
+      val knownAtReleaseMoment = BspExtra.knownAtReleaseMoment.semanticdbVersion
+      val wasUpdated = actual.semanticdbVersion != knownAtReleaseMoment
+      if (wasUpdated)
+        scribe.info(
+          s"Found new semanticdb release. ${actual.semanticdbVersion} will be used in BSP instead of ${knownAtReleaseMoment}"
+        )
+
+      actual
+    }
+
+    future.recover { case e: Throwable =>
+      scribe.error("Discovering new scala2 releases failed", e)
+      BspExtra.knownAtReleaseMoment
+    }
+  }
+  var buildServerPromise: Promise[Unit] = Promise()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(
       buildServerPromise.future
@@ -2109,8 +2128,9 @@ class MetalsLanguageServer(
 
     (for {
       _ <- disconnectOldBuildServer()
+      bspExtra <- bspScala2VersionsFuture
       maybeSession <- timerProvider.timed("Connected to build server", true) {
-        bspConnector.connect(workspace, userConfig)
+        bspConnector.connect(workspace, userConfig, bspExtra)
       }
       result <- maybeSession match {
         case Some(session) =>

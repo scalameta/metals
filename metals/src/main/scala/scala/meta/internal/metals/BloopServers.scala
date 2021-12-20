@@ -11,6 +11,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
+import scala.meta.internal.bsp.BspExtra
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -63,7 +64,8 @@ final class BloopServers(
 
   def newServer(
       workspace: AbsolutePath,
-      userConfiguration: UserConfiguration
+      userConfiguration: UserConfiguration,
+      bspExtra: BspExtra
   ): Future[BuildServerConnection] = {
     val bloopVersion = userConfiguration.currentBloopVersion
     BuildServerConnection
@@ -74,7 +76,8 @@ final class BloopServers(
         () => connectToLauncher(bloopVersion, config.bloopPort),
         tables.dismissedNotifications.ReconnectBsp,
         config,
-        name
+        name,
+        bspExtra
       )
   }
 

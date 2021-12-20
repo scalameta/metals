@@ -17,6 +17,7 @@ import scala.concurrent.Promise
 import scala.reflect.ClassTag
 import scala.util.Try
 
+import scala.meta.internal.bsp.BspExtra
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
@@ -273,6 +274,7 @@ object BuildServerConnection {
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
+      bspExtra: BspExtra,
       retry: Int = 5
   )(implicit
       ec: ExecutionContextExecutorService
@@ -295,7 +297,12 @@ object BuildServerConnection {
           Cancelable(() => listening.cancel(false))
         val result =
           try {
-            BuildServerConnection.initialize(workspace, server, serverName)
+            BuildServerConnection.initialize(
+              workspace,
+              server,
+              serverName,
+              bspExtra
+            )
           } catch {
             case e: TimeoutException =>
               conn.cancelables.foreach(_.cancel())
@@ -336,6 +343,7 @@ object BuildServerConnection {
             reconnectNotification,
             config,
             serverName,
+            bspExtra,
             retry - 1
           )
         } else {
@@ -344,24 +352,15 @@ object BuildServerConnection {
       }
   }
 
-  final case class BspExtraBuildParams(
-      semanticdbVersion: String,
-      supportedScalaVersions: java.util.List[String]
-  )
-
   /**
    * Run build/initialize handshake
    */
   private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer,
-      serverName: String
+      serverName: String,
+      bspExtra: BspExtra
   ): InitializeBuildResult = {
-    val extraParams = BspExtraBuildParams(
-      BuildInfo.scalametaVersion,
-      BuildInfo.supportedScala2Versions.asJava
-    )
-
     val initializeResult = server.buildInitialize {
       val params = new InitializeBuildParams(
         "Metals",
@@ -373,7 +372,7 @@ object BuildServerConnection {
         )
       )
       val gson = new Gson
-      val data = gson.toJsonTree(extraParams)
+      val data = gson.toJsonTree(bspExtra)
       params.setData(data)
       params
     }

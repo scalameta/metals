@@ -68,7 +68,8 @@ class BspConnector(
    */
   def connect(
       workspace: AbsolutePath,
-      userConfiguration: UserConfiguration
+      userConfiguration: UserConfiguration,
+      bspExtra: BspExtra
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     def connect(
         workspace: AbsolutePath
@@ -79,16 +80,18 @@ class BspConnector(
           scribe.info("No build server found")
           Future.successful(None)
         case ResolvedBloop =>
-          bloopServers.newServer(workspace, userConfiguration).map(Some(_))
+          bloopServers
+            .newServer(workspace, userConfiguration, bspExtra)
+            .map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           SbtBuildTool.writeSbtMetalsPlugins(workspace)
-          val connectionF = bspServers.newServer(workspace, details)
+          val connectionF = bspServers.newServer(workspace, details, bspExtra)
           statusBar
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)
             .map(Some(_))
         case ResolvedBspOne(details) =>
-          bspServers.newServer(workspace, details).map(Some(_))
+          bspServers.newServer(workspace, details, bspExtra).map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
             .groupBy(_.getName())
@@ -119,7 +122,7 @@ class BspConnector(
                   distinctServers(query.mapping(item.getTitle))
                 )
               )
-            conn <- bspServers.newServer(workspace, item)
+            conn <- bspServers.newServer(workspace, item, bspExtra)
           } yield Some(conn)
       }
     }

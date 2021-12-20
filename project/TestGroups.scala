@@ -38,7 +38,7 @@ object TestGroups {
       "tests.debug.CompletionDapSuite", "tests.debug.EvaluationDapSuite",
       "tests.FindTextInDependencyJarsSuite", "tests.TestSuitesFinderSuite",
       "tests.classFinder.FindAllClassesSuite",
-      "tests.codeactions.ExtractValueLspSuite"),
+      "tests.codeactions.ExtractValueLspSuite", "tests.bsp.BspExtraSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",

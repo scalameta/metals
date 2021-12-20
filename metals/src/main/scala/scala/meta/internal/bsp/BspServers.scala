@@ -61,7 +61,8 @@ final class BspServers(
 
   def newServer(
       projectDirectory: AbsolutePath,
-      details: BspConnectionDetails
+      details: BspConnectionDetails,
+      bspExtra: BspExtra
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
@@ -104,7 +105,8 @@ final class BspServers(
       newConnection,
       tables.dismissedNotifications.ReconnectBsp,
       config,
-      details.getName()
+      details.getName(),
+      bspExtra
     )
   }
 

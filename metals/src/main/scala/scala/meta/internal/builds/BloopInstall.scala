@@ -6,7 +6,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.Digest.Status
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -64,11 +63,7 @@ final class BloopInstall(
         args,
         workspace,
         buildTool.redirectErrorOutput,
-        Map(
-          "COURSIER_PROGRESS" -> "disable",
-          "METALS_ENABLED" -> "true",
-          "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion
-        )
+        Map("COURSIER_PROGRESS" -> "disable")
       )
       .map {
         case ExitCodes.Success => WorkspaceLoadedStatus.Installed

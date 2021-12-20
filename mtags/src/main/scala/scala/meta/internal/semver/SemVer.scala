@@ -46,6 +46,8 @@ object SemVer {
         .exists { case (a, b) => a > b }
     }
 
+    def isStable: Boolean = releaseCandidate.isEmpty && milestone.isEmpty
+
     override def toString: String =
       List(
         Some(s"$major.$minor.$patch"),

@@ -18,6 +18,7 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.BspExtra
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -267,7 +268,8 @@ final class Ammonite(
               ),
           tables().dismissedNotifications.ReconnectAmmonite,
           config,
-          "Ammonite"
+          "Ammonite",
+          BspExtra.knownAtReleaseMoment
         )
         for {
           conn <- futureConn
