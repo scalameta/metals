@@ -17,6 +17,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.metals_version }}
+          token: ${{ secrets.GH_TOKEN }}
       - uses: olafurpg/setup-scala@v13
         with:
           java-version: adopt@1.11
@@ -25,6 +26,8 @@ jobs:
         run: |
           sbt 'test-mtags-dyn ${{ github.event.inputs.scala_version }}'
           if [ $? == 0 ]; then
+            git config --global user.name "Metals/Github Actions"
+            git config --global user.email "metals@scalameta.org"
             git commit --allow-empty -m "Release mtags-${{ github.event.inputs.scala_version }} for ${{github.event.inputs.metals_version}}"
             TAG_NAME="mtags_${{ github.event.inputs.metals_version }}_${{ github.event.inputs.scala_version }}"
             git tag $TAG_NAME
