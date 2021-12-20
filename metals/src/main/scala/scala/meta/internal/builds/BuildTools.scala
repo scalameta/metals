@@ -64,8 +64,12 @@ final class BuildTools(
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
   def isGradle: Boolean = {
-    val defaultGradlePaths = List("settings.gradle", "settings.gradle.kts",
-                                  "build.gradle", "build.gradle.kts")
+    val defaultGradlePaths = List(
+      "settings.gradle",
+      "settings.gradle.kts",
+      "build.gradle",
+      "build.gradle.kts"
+    )
     defaultGradlePaths.exists(workspace.resolve(_).isFile)
   }
   def isMaven: Boolean = workspace.resolve("pom.xml").isFile
