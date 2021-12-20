@@ -97,13 +97,14 @@ class Compilers(
       scalaVersion: String,
       classpath: Seq[Path],
       standaloneSearch: SymbolSearch,
-      name: String
+      name: String,
+      path: AbsolutePath
   ): PresentationCompiler = {
     val mtags =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
 
     scribe.info(
-      s"no build target: using presentation compiler with only scala-library: ${mtags.scalaVersion}"
+      s"no build target found for $path. Using presentation compiler with project's scala-library version: ${mtags.scalaVersion}"
     )
     newCompiler(
       mtags,
@@ -115,7 +116,7 @@ class Compilers(
   }
 
   // The "fallback" compiler is used for source files that don't belong to a build target.
-  def fallbackCompiler: PresentationCompiler = {
+  def fallbackCompiler(path: AbsolutePath): PresentationCompiler = {
     jcache.compute(
       PresentationCompilerKey.Default,
       (_, value) => {
@@ -146,7 +147,8 @@ class Compilers(
                   buildTargets
                 )
               ).getOrElse(EmptySymbolSearch),
-              "default"
+              "default",
+              path
             )
         }
       }
@@ -191,7 +193,7 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    val pc = loadCompiler(path).getOrElse(fallbackCompiler)
+    val pc = loadCompiler(path).getOrElse(fallbackCompiler(path))
     pc.didClose(path.toNIO.toUri())
   }
 
@@ -201,7 +203,7 @@ class Compilers(
       path
         .toInputFromBuffers(buffers)
 
-    val pc = loadCompiler(path).getOrElse(fallbackCompiler)
+    val pc = loadCompiler(path).getOrElse(fallbackCompiler(path))
     val inputAndAdjust =
       if (
         path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
@@ -270,7 +272,7 @@ class Compilers(
       expression: d.CompletionsArguments
   ): Future[Seq[d.CompletionItem]] = {
 
-    val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
+    val compiler = loadCompiler(path).getOrElse(fallbackCompiler(path))
 
     val input = path.toInputFromBuffers(buffers)
     val metaPos = breakpointPosition.toMeta(input)
@@ -432,7 +434,7 @@ class Compilers(
         .inverseSources(path)
       target match {
         case None =>
-          if (path.isScalaFilename) Some(fallbackCompiler)
+          if (path.isScalaFilename) Some(fallbackCompiler(path))
           else None
         case Some(value) => loadCompiler(value)
       }
@@ -505,7 +507,8 @@ class Compilers(
               trees,
               buildTargets
             ),
-            path.toString()
+            path.toString(),
+            path
           )
         }
       )
@@ -563,7 +566,7 @@ class Compilers(
   )(fn: (PresentationCompiler, ju.List[Position]) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val compiler =
-      loadCompiler(path).getOrElse(fallbackCompiler)
+      loadCompiler(path).getOrElse(fallbackCompiler(path))
 
     val input = path
       .toInputFromBuffers(buffers)
@@ -578,7 +581,7 @@ class Compilers(
       params: TextDocumentPositionParams
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
+    val compiler = loadCompiler(path).getOrElse(fallbackCompiler(path))
 
     val (input, pos, adjust) =
       sourceAdjustments(
@@ -594,7 +597,7 @@ class Compilers(
   )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
 
     val path = params.textDocument.getUri.toAbsolutePath
-    val compiler = loadCompiler(path).getOrElse(fallbackCompiler)
+    val compiler = loadCompiler(path).getOrElse(fallbackCompiler(path))
 
     if (params.range != null) {
       val (input, range, adjust) = sourceAdjustments(
