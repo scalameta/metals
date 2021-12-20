@@ -8,7 +8,7 @@ import scala.meta.internal.metals.ServerCommands
 import org.eclipse.{lsp4j => l}
 import tests.BaseSuite
 
-class ScalaVersionsSuite extends BaseSuite {
+class CommandSuite extends BaseSuite {
 
   val line = 0
   val character = 0
