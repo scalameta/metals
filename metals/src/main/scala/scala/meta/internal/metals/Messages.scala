@@ -10,7 +10,6 @@ import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -168,18 +167,6 @@ object Messages {
 
   object MainClass {
     val message = "Multiple main classes found. Which would you like to run?"
-    def params(
-        mainClasses: List[ScalaMainClass]
-    ): ShowMessageRequestParams = {
-      val messageActionItems =
-        mainClasses
-          .map(mc => new MessageActionItem(mc.getClassName()))
-      val params = new ShowMessageRequestParams()
-      params.setMessage(message)
-      params.setType(MessageType.Info)
-      params.setActions(messageActionItems.asJava)
-      params
-    }
   }
 
   object ChooseBuildTool {
