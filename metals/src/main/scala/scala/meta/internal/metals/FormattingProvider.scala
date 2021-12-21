@@ -291,14 +291,18 @@ final class FormattingProvider(
 
     val default = config.runnerDialect.getOrElse(ScalafmtDialect.Scala213)
 
+    val allTargets = buildTargets.allScala.toList
+    val sbtTargetsIds = allTargets.filter(_.isSbt).map(_.info.getId).toSet
+
     val itemsRequiresUpgrade =
       buildTargets.sourceItemsToBuildTargets.toList.flatMap {
-        case (path, ids) =>
+        case (path, ids) if !ids.asScala.exists(sbtTargetsIds.contains(_)) =>
           inferDialectForSourceItem(path, ids.asScala.toList, default)
             .map(d => (path, d))
+        case _ => Nil
       }
     if (itemsRequiresUpgrade.nonEmpty) {
-      val nonSbtTargets = buildTargets.allScala.toList.filter(!_.isSbt)
+      val nonSbtTargets = allTargets.filter(!_.isSbt)
       val minDialect =
         config.runnerDialect match {
           case Some(d) => d

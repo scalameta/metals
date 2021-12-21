@@ -333,7 +333,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
           server.textContents(".scalafmt.conf"),
           s"""|version = "${V.scalafmtVersion}"
               |maxColumn=40
-              |runner.dialect = scala213
+              |runner.dialect = scala212
               |""".stripMargin
         )
       }
@@ -409,6 +409,50 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         server.textContents(".scalafmt.conf"),
         s"""|version = "${V.scalafmtVersion}"
             |runner.dialect = scala213source3
+            |""".stripMargin
+      )
+
+    } yield ()
+  }
+
+  test("rewrite-dialect-ignore-sbt") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      if (
+        params.getMessage().startsWith(Messages.UpdateScalafmtConf.beginning)
+      ) {
+        params.getActions.asScala
+          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
+      } else {
+        None
+      }
+    }
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |     "scalaVersion": "2.12.15"
+            |  },
+            |  "b": {
+            |     "scalaVersion": "2.12.15",
+            |     "scalacOptions": ["-Xsource:3"],
+            |     "sbtVersion": "1.6.0-RC2"
+            |  }
+            |}
+            |/.scalafmt.conf
+            |version = "${V.scalafmtVersion}"
+            |runner.dialect = scala211
+            |/a/src/main/scala/A.scala
+            |object A
+            |/b/src/main/scala/B.scala
+            |object B
+            |""".stripMargin
+      )
+      _ = assertNoDiff(
+        server.textContents(".scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |runner.dialect = scala212
             |""".stripMargin
       )
 
