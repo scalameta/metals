@@ -165,10 +165,16 @@ class BuildServerConnection private (
     val resultOnJavacOptionsUnsupported = new JavacOptionsResult(
       List.empty[JavacOptionsItem].asJava
     )
-    val onFail = Some(
-      (resultOnJavacOptionsUnsupported, "Java targets not supported by server")
-    )
-    register(server => server.buildTargetJavacOptions(params), onFail).asScala
+    if (isSbt) Future.successful(resultOnJavacOptionsUnsupported)
+    else {
+      val onFail = Some(
+        (
+          resultOnJavacOptionsUnsupported,
+          "Java targets not supported by server"
+        )
+      )
+      register(server => server.buildTargetJavacOptions(params), onFail).asScala
+    }
   }
 
   def buildTargetScalacOptions(
