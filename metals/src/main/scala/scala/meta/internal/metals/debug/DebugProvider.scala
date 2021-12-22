@@ -38,6 +38,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
@@ -52,7 +54,6 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
-import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
@@ -187,13 +188,19 @@ class DebugProvider(
       mainClasses: List[ScalaMainClass]
   )(implicit ec: ExecutionContext): Future[ScalaMainClass] = {
     languageClient
-      .showMessageRequest(
-        Messages.MainClass.params(mainClasses)
+      .metalsQuickPick(
+        new MetalsQuickPickParams(
+          mainClasses.map { m =>
+            val cls = m.getClassName()
+            new MetalsQuickPickItem(cls, cls)
+          }.asJava,
+          placeHolder = Messages.MainClass.message
+        )
       )
       .asScala
-      .map { choice =>
+      .collect { case Some(choice) =>
         mainClasses.find { clazz =>
-          new MessageActionItem(clazz.getClassName()) == choice
+          clazz.getClassName() == choice.itemId
         }
       }
       .collect { case Some(main) => main }
