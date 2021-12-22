@@ -1316,6 +1316,15 @@ class MetalsLanguageServer(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
     val isScalaOrJava = path.isScalaOrJava
+    event.eventType match {
+      case EventType.Create =>
+        scribe.info(s"Created file: ${event.path}")
+      case EventType.Modify =>
+        scribe.info(s"Modified file: ${event.path}")
+      case EventType.Delete =>
+        scribe.info(s"Deleted file: ${event.path}")
+    }
+
     if (isScalaOrJava && event.eventType == EventType.Delete) {
       Future {
         diagnostics.didDelete(path)
