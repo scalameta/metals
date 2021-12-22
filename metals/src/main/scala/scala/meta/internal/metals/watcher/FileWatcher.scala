@@ -146,9 +146,9 @@ object FileWatcher {
       // and run some tests with `-Dswoval.log.level=debug` to see which files are registered
       // and which file events are received.
       val directoriesToCreate =
-        filesToWatch.sourceDirectories ++ filesToWatch.sourceFiles.map(
-          _.getParent()
-        )
+        filesToWatch.sourceDirectories ++
+          filesToWatch.semanticdDirectories ++
+          filesToWatch.sourceFiles.map(_.getParent())
 
       val createdDirectories = directoriesToCreate.flatMap(path =>
         AbsolutePath(path).createAndGetDirectories()
