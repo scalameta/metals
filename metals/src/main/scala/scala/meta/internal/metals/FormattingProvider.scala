@@ -160,7 +160,7 @@ final class FormattingProvider(
       case Some(version) =>
         val text = config.toInputFromBuffers(buffers).text
         val dialect =
-          buildTargets.all.map(_.fmtDialect).toList.sorted.lastOption
+          buildTargets.allScala.map(_.fmtDialect).toList.sorted.lastOption
         val newText =
           ScalafmtConfig.update(text, Some(version), dialect, Map.empty)
         Files.write(config.toNIO, newText.getBytes(StandardCharsets.UTF_8))
@@ -298,7 +298,7 @@ final class FormattingProvider(
             .map(d => (path, d))
       }
     if (itemsRequiresUpgrade.nonEmpty) {
-      val nonSbtTargets = buildTargets.all.toList.filter(!_.isSbt)
+      val nonSbtTargets = buildTargets.allScala.toList.filter(!_.isSbt)
       val minDialect =
         config.runnerDialect match {
           case Some(d) => d

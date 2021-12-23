@@ -19,20 +19,22 @@ final case class SemanticdbClasspath(
   val loader = new ClasspathLoader()
   loader.addClasspath(classpath)
 
-  def getSemanticdbPath(scalaPath: AbsolutePath): AbsolutePath = {
-    semanticdbPath(scalaPath).getOrElse(
-      throw new NoSuchElementException(scalaPath.toString())
+  def getSemanticdbPath(scalaOrJavaPath: AbsolutePath): AbsolutePath = {
+    semanticdbPath(scalaOrJavaPath).getOrElse(
+      throw new NoSuchElementException(scalaOrJavaPath.toString())
     )
   }
-  def resourcePath(scalaPath: AbsolutePath): RelativePath = {
-    mtags.SemanticdbClasspath.fromScala(scalaPath.toRelative(sourceroot))
+  def resourcePath(scalaOrJavaPath: AbsolutePath): RelativePath = {
+    mtags.SemanticdbClasspath.fromScalaOrJava(
+      scalaOrJavaPath.toRelative(sourceroot)
+    )
   }
-  def semanticdbPath(scalaPath: AbsolutePath): Option[AbsolutePath] = {
-    loader.load(resourcePath(scalaPath))
+  def semanticdbPath(scalaOrJavaPath: AbsolutePath): Option[AbsolutePath] = {
+    loader.load(resourcePath(scalaOrJavaPath))
   }
-  def textDocument(scalaPath: AbsolutePath): TextDocumentLookup = {
+  def textDocument(scalaOrJavaPath: AbsolutePath): TextDocumentLookup = {
     Semanticdbs.loadTextDocument(
-      scalaPath,
+      scalaOrJavaPath,
       sourceroot,
       charset,
       fingerprints,
@@ -60,8 +62,8 @@ object SemanticdbClasspath {
         .dealias
     }
   }
-  def fromScala(path: RelativePath): RelativePath = {
-    require(path.isScalaFilename, path.toString)
+  def fromScalaOrJava(path: RelativePath): RelativePath = {
+    require(path.isScalaOrJavaFilename, path.toString)
     val semanticdbSibling = path.resolveSibling(_ + ".semanticdb")
     val semanticdbPrefix = RelativePath("META-INF").resolve("semanticdb")
     semanticdbPrefix.resolve(semanticdbSibling)

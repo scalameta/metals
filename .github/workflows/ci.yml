@@ -43,6 +43,7 @@ jobs:
         run: |
           bin/test.sh unit/test
         env:
+          JAVA_VERSION: ${{ matrix.java }}
           TEST_SHARD: ${{ matrix.shard }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}

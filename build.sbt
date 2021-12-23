@@ -112,6 +112,23 @@ inThisBuild(
     resolvers += Resolver.sonatypeRepo("public"),
     resolvers += Resolver.sonatypeRepo("snapshot"),
     dependencyOverrides += V.guava,
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.ant.core" % "3.5.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.compare.core" % "3.6.600",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.commands" % "3.9.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.contenttype" % "3.7.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.expressions" % "3.6.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.filesystem" % "1.7.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.jobs" % "3.10.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.resources" % "3.13.500",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.runtime" % "3.16.0",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.core.variables" % "3.4.600",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.equinox.app" % "1.4.300",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.equinox.common" % "3.10.600",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.7.600",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.equinox.registry" % "3.8.600",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.osgi" % "3.15.0",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.team.core" % "3.8.700",
+    dependencyOverrides += "org.eclipse.platform" % "org.eclipse.text" % "3.9.0",
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
@@ -270,6 +287,7 @@ lazy val V = new {
   val bloop = "1.4.11-19-93ebe2c6"
   val scala3 = "3.1.0"
   val nextScala3RC = "3.1.1-RC2"
+  val javaSemanticdb = "0.7.2"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -538,6 +556,8 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0.1",
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
+      // for Java formatting
+      "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.25.0",
       // ==================
       // Scala dependencies
       // ==================
@@ -578,6 +598,7 @@ lazy val metals = project
       "mavenBloopVersion" -> V.mavenBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
+      "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
       "organizeImportVersion" -> V.organizeImportRule,

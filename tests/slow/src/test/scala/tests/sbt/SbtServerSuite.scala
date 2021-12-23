@@ -192,7 +192,7 @@ class SbtServerSuite
       )
       // assert contains the meta-build-target-build
       assertNoDiff(
-        server.server.buildTargets.all
+        server.server.buildTargets.allCommon
           .map(_.displayName)
           .toSeq
           .sorted

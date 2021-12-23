@@ -74,7 +74,12 @@ object MetalsEnrichments
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
 
     def isSbtBuild: Boolean =
-      buildTarget.getDataKind == "sbt"
+      dataKind == "sbt"
+
+    def baseDirectory: String =
+      Option(buildTarget.getBaseDirectory()).getOrElse("")
+
+    def dataKind: String = Option(buildTarget.getDataKind()).getOrElse("")
 
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       if (isSbtBuild) {
@@ -272,7 +277,10 @@ object MetalsEnrichments
   }
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
-    def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
+    def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
+
+    def javaSourcerootOption: String =
+      s""""-Xplugin:semanticdb -sourceroot:$path""""
 
     /**
      * Resolve each path segment individually to prevent FileSystem mismatch errors.
@@ -717,12 +725,82 @@ object MetalsEnrichments
     def getQuery(key: String): Option[String] =
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
-  implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
-    def classpath: Iterator[AbsolutePath] = {
-      item.getClasspath.asScala.iterator
+  implicit class XtensionClasspath(classpath: List[String]) {
+    def toAbsoluteClasspath: Iterator[AbsolutePath] = {
+      classpath.iterator
         .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
         .filter(p => Files.exists(p.toNIO))
     }
+  }
+  implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
+    def targetroot: AbsolutePath = {
+      item.getOptions.asScala
+        .find(_.startsWith("-Xplugin:semanticdb"))
+        .map(arg => {
+          val targetRootOpt = "-targetroot:"
+          val sourceRootOpt = "-sourceroot:"
+          val targetRootPos = arg.indexOf(targetRootOpt)
+          val sourceRootPos = arg.indexOf(sourceRootOpt)
+          if (targetRootPos > sourceRootPos)
+            arg.substring(targetRootPos + targetRootOpt.size).trim()
+          else
+            arg
+              .substring(sourceRootPos + sourceRootOpt.size, targetRootPos - 1)
+              .trim()
+        })
+        .filter(_ != "javac-classes-directory")
+        .map(AbsolutePath(_))
+        .getOrElse(item.getClassDirectory.toAbsolutePath)
+    }
+
+    def isSemanticdbEnabled: Boolean = {
+      item.getOptions.asScala.exists { opt =>
+        opt.startsWith("-Xplugin:semanticdb")
+      }
+    }
+
+    def isSourcerootDeclared: Boolean = {
+      item.getOptions.asScala
+        .find(_.startsWith("-Xplugin:semanticdb"))
+        .map(_.contains("-sourceroot:"))
+        .getOrElse(false)
+    }
+
+    def isTargetrootDeclared: Boolean = {
+      item.getOptions.asScala
+        .find(_.startsWith("-Xplugin:semanticdb"))
+        .map(_.contains("-targetroot:"))
+        .getOrElse(false)
+    }
+
+    def classpath: List[String] =
+      item.getClasspath.asScala.toList
+
+    def jarClasspath: List[AbsolutePath] =
+      classpath
+        .filter(_.endsWith(".jar"))
+        .map(_.toAbsolutePath)
+
+    def releaseVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(_ != "--release")
+        .drop(1)
+        .headOption
+
+    def sourceVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(f => f != "--source" && f != "-source" && f != "--release")
+        .drop(1)
+        .headOption
+
+    def targetVersion: Option[String] =
+      item.getOptions.asScala
+        .dropWhile(f => f != "--target" && f != "-target" && f != "--release")
+        .drop(1)
+        .headOption
+  }
+
+  implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
     def targetroot(scalaVersion: String): AbsolutePath = {
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         val options = item.getOptions.asScala
@@ -777,6 +855,13 @@ object MetalsEnrichments
         .map(_.stripPrefix(flag))
     }
 
+    def classpath: List[String] =
+      item.getClasspath.asScala.toList
+
+    def jarClasspath: List[AbsolutePath] =
+      classpath
+        .filter(_.endsWith(".jar"))
+        .map(_.toAbsolutePath)
   }
 
   implicit class XtensionChar(ch: Char) {

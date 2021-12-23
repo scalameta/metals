@@ -26,7 +26,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |${ImportMissingSymbol.title("Location", docToolName)}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 4,
-    pickedKind = "case-class",
+    pickedKind = "scala-case-class",
     newFile = "a/src/main/scala/a/Location.scala" ->
       """|package a
          |
@@ -46,7 +46,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |${ImportMissingSymbol.title("Location", docToolName)}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 4,
-    pickedKind = "trait",
+    pickedKind = "scala-trait",
     newFile = "a/src/main/scala/a/Location.scala" ->
       s"""|package a
           |
@@ -74,7 +74,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
     )}
         |""".stripMargin,
     selectedActionIndex = 4,
-    pickedKind = "class",
+    pickedKind = "scala-class",
     newFile = "a/src/main/scala/a/Missing.scala" ->
       s"""|package a
           |
