@@ -514,6 +514,7 @@ object Messages {
   object UpdateScalafmtConf {
 
     def letUpdate = new MessageActionItem("Let Metals update .scalafmt.conf")
+
     def createMessage(dialect: ScalafmtDialect): String = {
       s"Some source directories can't be formatted by scalafmt " +
         s"because they require the `runner.dialect = ${dialect.value}` setting." +

@@ -6,7 +6,6 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
-import scala.meta.internal.metals.ScalafmtDialect
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import com.google.gson.JsonObject
@@ -333,7 +332,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
           server.textContents(".scalafmt.conf"),
           s"""|version = "${V.scalafmtVersion}"
               |maxColumn=40
-              |runner.dialect = scala213
+              |runner.dialect = scala212
               |""".stripMargin
         )
       }
@@ -343,14 +342,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("rewrite-dialect-global") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      val expected =
-        Messages.UpdateScalafmtConf.createMessage(ScalafmtDialect.Scala3)
-      if (params.getMessage() == expected) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
@@ -379,16 +372,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("rewrite-dialect-global-xsource3") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      val expected =
-        Messages.UpdateScalafmtConf.createMessage(
-          ScalafmtDialect.Scala213Source3
-        )
-      if (params.getMessage() == expected) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
@@ -415,17 +400,49 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
+  test("rewrite-dialect-ignore-sbt") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
+    }
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |     "scalaVersion": "2.12.15"
+            |  },
+            |  "b": {
+            |     "scalaVersion": "2.12.15",
+            |     "scalacOptions": ["-Xsource:3"],
+            |     "sbtVersion": "1.6.0-RC2"
+            |  }
+            |}
+            |/.scalafmt.conf
+            |version = "${V.scalafmtVersion}"
+            |runner.dialect = scala211
+            |/a/src/main/scala/A.scala
+            |object A
+            |/b/src/main/scala/B.scala
+            |object B
+            |""".stripMargin
+      )
+      _ = assertNoDiff(
+        server.textContents(".scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |runner.dialect = scala212
+            |""".stripMargin
+      )
+
+    } yield ()
+  }
+
   test("rewrite-dialect-file-override") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      val expected =
-        Messages.UpdateScalafmtConf.createMessage(ScalafmtDialect.Scala3)
-      if (params.getMessage() == expected) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
