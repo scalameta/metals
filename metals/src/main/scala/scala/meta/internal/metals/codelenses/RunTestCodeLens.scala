@@ -18,9 +18,15 @@ import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scope
+import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.ValueSignature
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
@@ -57,25 +63,91 @@ final class RunTestCodeLens(
       Seq.empty
     } else {
       val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
-
       val lenses = for {
         buildTargetId <- buildTargets.inverseSources(path)
         buildTarget <- buildTargets.info(buildTargetId)
         if buildTarget.getCapabilities.getCanDebug || isBloopOrSbt(),
       } yield {
         val classes = buildTargetClasses.classesOf(buildTargetId)
-        codeLenses(textDocument, buildTargetId, classes, distance)
+        codeLenses(textDocument, buildTargetId, classes, distance, path)
       }
 
       lenses.getOrElse(Seq.empty)
     }
   }
 
+  /**
+   * Java main method: public static void main(String[] args)
+   */
+  private def isMainMethod(signature: Signature, textDocument: TextDocument) = {
+    signature match {
+      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType) =>
+        def isVoid = returnType match {
+          case TypeRef(_, symbol, _) => symbol == "scala/Unit#"
+          case _ => false
+        }
+
+        def isStringArray(sym: String) = {
+          textDocument.symbols.find(
+            _.symbol == sym
+          ) match {
+            case Some(info) =>
+              info.signature match {
+                case ValueSignature(
+                      TypeRef(
+                        _,
+                        "scala/Array#",
+                        Vector(TypeRef(_, "java/lang/String#", _))
+                      )
+                    ) =>
+                  true
+                case _ => false
+              }
+            case None => false
+          }
+        }
+
+        isVoid && isStringArray(param)
+      case _ => false
+    }
+  }
+
+  private def javaLenses(
+      occurence: SymbolOccurrence,
+      textDocument: TextDocument,
+      target: BuildTargetIdentifier
+  ): Seq[l.Command] = {
+    if (occurence.symbol.endsWith("#main().")) {
+      textDocument.symbols
+        .find(_.symbol == occurence.symbol)
+        .toSeq
+        .flatMap { a =>
+          val isMain =
+            a.isPublic && a.isStatic && isMainMethod(a.signature, textDocument)
+          if (isMain)
+            mainCommand(
+              target,
+              new b.ScalaMainClass(
+                occurence.symbol.stripSuffix("#main().").replace("/", "."),
+                Nil.asJava,
+                Nil.asJava
+              )
+            )
+          else
+            Nil
+        }
+    } else {
+      Nil
+    }
+
+  }
+
   private def codeLenses(
       textDocument: TextDocument,
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
-      distance: TokenEditDistance
+      distance: TokenEditDistance,
+      path: AbsolutePath
   ): Seq[l.CodeLens] = {
     for {
       occurrence <- textDocument.occurrences
@@ -94,7 +166,9 @@ final class RunTestCodeLens(
               .map(mainCommand(target, _))
           }
           .getOrElse(Nil)
-        main ++ tests ++ fromAnnot
+        val javaMains =
+          if (path.isJava) javaLenses(occurrence, textDocument, target) else Nil
+        main ++ tests ++ fromAnnot ++ javaMains
       }
       if commands.nonEmpty
       range <-
