@@ -1318,11 +1318,17 @@ class MetalsLanguageServer(
     val isScalaOrJava = path.isScalaOrJava
     event.eventType match {
       case EventType.Create =>
-        scribe.info(s"Created file: ${event.path}")
+        scribe.debug(
+          s"[File watcher] Detected creation of the file: ${event.path}"
+        )
       case EventType.Modify =>
-        scribe.info(s"Modified file: ${event.path}")
+        scribe.debug(
+          s"[File watcher] Detected modification of the file: ${event.path}"
+        )
       case EventType.Delete =>
-        scribe.info(s"Deleted file: ${event.path}")
+        scribe.debug(
+          s"[File watcher] Detected deletion of the file: ${event.path}"
+        )
     }
 
     if (isScalaOrJava && event.eventType == EventType.Delete) {
