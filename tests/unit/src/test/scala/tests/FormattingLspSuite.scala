@@ -6,7 +6,6 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
-import scala.meta.internal.metals.ScalafmtDialect
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import com.google.gson.JsonObject
@@ -343,14 +342,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("rewrite-dialect-global") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      val expected =
-        Messages.UpdateScalafmtConf.createMessage(ScalafmtDialect.Scala3)
-      if (params.getMessage() == expected) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
@@ -379,16 +372,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("rewrite-dialect-global-xsource3") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      val expected =
-        Messages.UpdateScalafmtConf.createMessage(
-          ScalafmtDialect.Scala213Source3
-        )
-      if (params.getMessage() == expected) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
@@ -418,14 +403,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("rewrite-dialect-ignore-sbt") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      if (
-        params.getMessage().startsWith(Messages.UpdateScalafmtConf.beginning)
-      ) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
@@ -462,14 +441,8 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
   test("rewrite-dialect-file-override") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
-      val expected =
-        Messages.UpdateScalafmtConf.createMessage(ScalafmtDialect.Scala3)
-      if (params.getMessage() == expected) {
-        params.getActions.asScala
-          .find(_ == Messages.UpdateScalafmtConf.letUpdate)
-      } else {
-        None
-      }
+      params.getActions.asScala
+        .find(_ == Messages.UpdateScalafmtConf.letUpdate)
     }
     for {
       _ <- initialize(
