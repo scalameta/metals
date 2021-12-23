@@ -6,6 +6,7 @@ import java.security.MessageDigest
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
+
 object MD5 {
   def compute(path: AbsolutePath, string: String): String = {
     if (path.isJava) MD5Java.digest(string)

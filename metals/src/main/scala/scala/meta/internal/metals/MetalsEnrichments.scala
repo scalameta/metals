@@ -668,7 +668,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionPositionRange(range: s.Range) {
-    def inString(text: String): String = {
+    def inString(text: String): Option[String] = {
       var i = 0
       var max = 0
       while (max < range.startLine) {
@@ -677,7 +677,10 @@ object MetalsEnrichments
       }
       val start = i + range.startCharacter
       val end = i + range.endCharacter
-      text.substring(start, end)
+      if (start < text.size && end <= text.size)
+        Some(text.substring(start, end))
+      else
+        None
     }
   }
 
