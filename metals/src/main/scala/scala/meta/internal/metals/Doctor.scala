@@ -35,14 +35,16 @@ final class Doctor(
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration,
-    mtagsResolver: MtagsResolver
+    mtagsResolver: MtagsResolver,
+    javaHome: () => Option[String]
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
     new ProblemResolver(
       workspace,
       mtagsResolver,
-      currentBuildServer
+      currentBuildServer,
+      javaHome
     )
 
   /**

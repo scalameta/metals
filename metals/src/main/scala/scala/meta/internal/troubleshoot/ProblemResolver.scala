@@ -6,6 +6,7 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaTarget
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
@@ -17,7 +18,8 @@ import scala.meta.io.AbsolutePath
 class ProblemResolver(
     workspace: AbsolutePath,
     mtagsResolver: MtagsResolver,
-    currentBuildServer: () => Option[BspSession]
+    currentBuildServer: () => Option[BspSession],
+    javaHome: () => Option[String]
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
@@ -71,6 +73,7 @@ class ProblemResolver(
         case UnsupportedSbtVersion => unsupportedSbt = true
         case DeprecatedSbtVersion => deprecatedSbt = true
         case FutureSbtVersion => futureSbt = true
+        case MissingJdkSources => misconfiguredProjects += 1
       }
     }
     for {
@@ -171,7 +174,7 @@ class ProblemResolver(
     def isSupportedScalaVersion(version: String): Boolean =
       mtagsResolver.isSupportedScalaVersion(version)
 
-    scalaTarget.scalaVersion match {
+    val scalaVersionProblem = scalaTarget.scalaVersion match {
       case version if !isSupportedScalaVersion(version) && scalaTarget.isSbt =>
         if (ScalaVersions.isFutureVersion(version))
           Some(FutureSbtVersion)
@@ -203,6 +206,11 @@ class ProblemResolver(
         Some(DeprecatedScalaVersion(version))
       case _ => None
     }
+    val javaSourcesProblem =
+      if (JdkSources(javaHome()).isDefined) None
+      else Some(MissingJdkSources)
+
+    scalaVersionProblem.orElse(javaSourcesProblem)
   }
 
   private def findProblem(
