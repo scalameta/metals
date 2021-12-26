@@ -262,7 +262,7 @@ commands ++= Seq(
         case _ =>
           val message =
             s"""|Skip release. Invalid tag name.
-                |It should be either: 
+                |It should be either:
                 | - "v$$num.$$num.$$num" - usual Metals release
                 | - "mtags_v$${existing-metals-release}_$${scala-version}" - mtags artifact release
                 |""".stripMargin
@@ -537,7 +537,7 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.16",
       // for file watching
-      "com.swoval" % "file-tree-views" % "2.1.7",
+      "com.swoval" % "file-tree-views" % "2.1.8",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.14.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.5.Final",
