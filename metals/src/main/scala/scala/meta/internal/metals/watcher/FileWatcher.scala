@@ -69,7 +69,7 @@ object FileWatcher {
   private case class FilesToWatch(
       sourceFiles: Set[Path],
       sourceDirectories: Set[Path],
-      semanticdDirectories: Set[Path]
+      semanticdbDirectories: Set[Path]
   )
 
   private def collectFilesToWatch(buildTargets: BuildTargets): FilesToWatch = {
@@ -124,7 +124,7 @@ object FileWatcher {
       // and also to hash only revelevant files when watching for changes
 
       val trie = PathTrie(
-        filesToWatch.sourceFiles ++ filesToWatch.sourceDirectories ++ filesToWatch.semanticdDirectories
+        filesToWatch.sourceFiles ++ filesToWatch.sourceDirectories ++ filesToWatch.semanticdbDirectories
       )
       val isWatched = trie.containsPrefixOf _
 
@@ -138,29 +138,27 @@ object FileWatcher {
       // Other OSes register all the files and directories individually
       val repo = initFileTreeRepository(watchFilter, callback)
 
-      // TODO(@pvid) swoval's FileTreeRepository should be able to create watch
-      // for files/directories that do not exist yet. However, there is an issue
-      // with watching **semanticdb** files when not creating source directories.
-      // I was not able to diagnose the issue.
-      // If you'd like to dive deeper into, try to remove the file creation and deletion
-      // and run some tests with `-Dswoval.log.level=debug` to see which files are registered
-      // and which file events are received.
-      val directoriesToCreate =
-        filesToWatch.sourceDirectories ++ filesToWatch.sourceFiles.map(
-          _.getParent()
-        )
+      val dirs =
+        filesToWatch.sourceFiles.map(_.getParent()) ++
+          filesToWatch.sourceDirectories ++
+          filesToWatch.semanticdbDirectories
 
-      val createdDirectories = directoriesToCreate.flatMap(path =>
-        AbsolutePath(path).createAndGetDirectories()
-      )
+      // Length of the longest existing prefix of a path.
+      def prefLen(path: Path): Int =
+        if (Files.exists(path)) {
+          path.getNameCount()
+        } else {
+          prefLen(path.getParent())
+        }
 
-      filesToWatch.sourceDirectories.foreach(repo.register(_, Int.MaxValue))
-      filesToWatch.semanticdDirectories.foreach(repo.register(_, Int.MaxValue))
-      filesToWatch.sourceFiles.foreach(repo.register(_, -1))
+      // Ordered by descending length of the longest existing prefix.
+      // Workaround, see #3379 for details.
+      val sortedDirs = dirs.toSeq
+        .map(path => (path, prefLen(path)))
+        .sortBy({ case (_, len) => -len })
+        .map({ case (path, _) => path })
 
-      createdDirectories.toSeq.sortBy(_.toNIO).reverse.foreach { dir =>
-        if (dir.isEmptyDirectory) dir.delete()
-      }
+      sortedDirs.foreach(repo.register(_, Int.MaxValue))
 
       () => repo.close()
     }
