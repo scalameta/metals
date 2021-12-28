@@ -1,5 +1,9 @@
 package scala.meta.internal.metals
 
+import java.net.URI
+import java.nio.file.FileSystemNotFoundException
+import java.nio.file.FileSystems
+import java.nio.file.Paths
 import java.util.Collections
 import java.{util => ju}
 
@@ -246,21 +250,36 @@ case class DefinitionDestination(
    * Converts snapshot position to dirty buffer position in the destination file
    */
   def toResult: Option[DefinitionResult] =
-    for {
-      location <- snapshot.definition(uri, symbol)
-      revisedPosition = distance.toRevised(
-        location.getRange.getStart.getLine,
-        location.getRange.getStart.getCharacter
+    if (uri.endsWith(".class")) {
+      val decodeURI = s"metalsDecode:$uri.cfr"
+      val location = new Location(
+        decodeURI,
+        new org.eclipse.lsp4j.Range(new Position(0, 0), new Position(0, 0))
       )
-      result <- revisedPosition.toLocation(location)
-    } yield {
-      DefinitionResult(
-        Collections.singletonList(result),
-        symbol,
-        path,
-        Some(snapshot)
+      Some(
+        DefinitionResult(
+          Collections.singletonList(location),
+          symbol,
+          path,
+          Some(snapshot)
+        )
       )
-    }
+    } else
+      for {
+        location <- snapshot.definition(uri, symbol)
+        revisedPosition = distance.toRevised(
+          location.getRange.getStart.getLine,
+          location.getRange.getStart.getCharacter
+        )
+        result <- revisedPosition.toLocation(location)
+      } yield {
+        DefinitionResult(
+          Collections.singletonList(result),
+          symbol,
+          path,
+          Some(snapshot)
+        )
+      }
 }
 
 class DestinationProvider(
@@ -310,11 +329,39 @@ class DestinationProvider(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier]
   ): Option[SymbolDefinition] = {
-    val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
+    val querySymbol: Symbol = Symbol(symbol)
+    val definitions = index.definitions(querySymbol).filter(_.path.exists)
+    val extraDefinitions = if (definitions.isEmpty) {
+      // search in all classpath, i.e. jars with no source
+      buildTargets
+        .inferBuildTarget(List(querySymbol))
+        .map(f => {
+          val uri = f.jar.toURI.toString()
+          val fullURI =
+            URI.create(s"jar:${uri}!/${symbol.stripSuffix("#")}.class")
+          val fullJarPath =
+            try {
+              AbsolutePath(Paths.get(fullURI))
+            } catch {
+              case _: FileSystemNotFoundException =>
+                FileSystems
+                  .newFileSystem(fullURI, new ju.HashMap[String, Any]())
+                AbsolutePath(Paths.get(fullURI))
+            }
+
+          SymbolDefinition(
+            querySymbol,
+            querySymbol,
+            fullJarPath,
+            scala.meta.dialects.Scala212Source3
+          )
+        })
+        .toList
+    } else definitions
     if (allowedBuildTargets.isEmpty)
-      definitions.headOption
+      extraDefinitions.headOption
     else {
-      val matched = definitions.find { defn =>
+      val matched = extraDefinitions.find { defn =>
         sourceBuildTargets(defn.path).exists(id =>
           allowedBuildTargets.contains(id)
         )
@@ -322,7 +369,7 @@ class DestinationProvider(
       // Fallback to any definition - it's needed for worksheets
       // They might have dynamic `import $dep` and these sources jars
       // aren't registered in buildTargets
-      matched.orElse(definitions.headOption)
+      matched.orElse(extraDefinitions.headOption)
     }
   }
 

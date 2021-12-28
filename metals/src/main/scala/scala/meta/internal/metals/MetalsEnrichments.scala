@@ -2,8 +2,11 @@ package scala.meta.internal.metals
 
 import java.io.IOException
 import java.net.URI
+import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystemNotFoundException
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -266,6 +269,19 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionURI(uri: URI) {
+    def toAbsolutePath: AbsolutePath =
+      if (uri.getScheme().equalsIgnoreCase("JAR"))
+        try {
+          AbsolutePath(Paths.get(uri))
+        } catch {
+          case _: FileSystemNotFoundException =>
+            FileSystems.newFileSystem(uri, new util.HashMap[String, Any]())
+            AbsolutePath(Paths.get(uri))
+        }
+      else AbsolutePath(Paths.get(uri))
+  }
+
   implicit class XtensionPath(path: Path) {
     def toUriInput: Input.VirtualFile = {
       val uri = path.toUri.toString
@@ -301,6 +317,8 @@ object MetalsEnrichments
 
     def isLocalFileSystem(workspace: AbsolutePath): Boolean =
       workspace.toNIO.getFileSystem == path.toNIO.getFileSystem
+
+    def isJarFileSystem: Boolean = path.toURI.getScheme() == "jar"
 
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
@@ -582,13 +600,19 @@ object MetalsEnrichments
         case _ => None
       }
 
+    def toURI: URI = {
+      // jar file system cannot cope with a heavily encoded uri
+      // hence the roundabout way of creating an AbsolutePath
+      // must have "jar:file:"" instead of "jar:file%3A"
+      val decodedUriStr = URLDecoder.decode(value, "UTF-8")
+      URI.create(decodedUriStr)
+    }
+
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
-      val path = AbsolutePath(
-        Paths.get(URI.create(value.stripPrefix("metals:")))
-      )
+      val path = value.stripPrefix("metals:").toURI.toAbsolutePath
       if (followSymlink)
         path.dealias
       else

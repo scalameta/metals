@@ -3,9 +3,7 @@ package scala.meta.internal.metals
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.net.URI
-import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
-import java.nio.file.Paths
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
@@ -141,13 +139,18 @@ final class FileDecoderProvider(
    *
    * jar:
    * metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
+   *
+   * jar + cfr:
+   * metalsDecode:jar:file:///somePath/someFile.jar!/somePackage/someFile.class.cfr
+   *
+   * build target:
+   * metalsDecode:file:///workspacePath/buildTargetName.metals-buildtarget
    */
   def decodedFileContents(uriAsStr: String): Future[DecoderResponse] = {
     Try(URI.create(uriAsStr)) match {
       case Success(uri) =>
         uri.getScheme() match {
-          case "jar" => Future { decodeJar(uri) }
-          case "file" => decodeMetalsFile(uri)
+          case "jar" | "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
           case _ =>
@@ -162,21 +165,6 @@ final class FileDecoderProvider(
         Future.successful(
           DecoderResponse.failed(uriAsStr, s"$uriAsStr is an invalid URI")
         )
-    }
-  }
-
-  private def decodeJar(uri: URI): DecoderResponse = {
-    Try {
-      // jar file system cannot cope with a heavily encoded uri
-      // hence the roundabout way of creating an AbsolutePath
-      // must have "jar:file:"" instead of "jar:file%3A"
-      val decodedUriStr = URLDecoder.decode(uri.toString(), "UTF-8")
-      val decodedUri = URI.create(decodedUriStr)
-      val path = AbsolutePath(Paths.get(decodedUri))
-      FileIO.slurp(path, StandardCharsets.UTF_8)
-    } match {
-      case Failure(exception) => DecoderResponse.failed(uri, exception)
-      case Success(value) => DecoderResponse.success(uri, value)
     }
   }
 
@@ -213,20 +201,41 @@ final class FileDecoderProvider(
           }
       }
     } else
-      Future.successful(DecoderResponse.failed(uri, "Unsupported extension"))
+      additionalExtension match {
+        case "java" | "scala" =>
+          Future.successful(
+            toFile(uri.toString).map(strippedURI => {
+              FileIO.slurp(strippedURI, StandardCharsets.UTF_8)
+            }) match {
+              case Left(value) => value
+              case Right(value) => DecoderResponse.success(uri, value)
+            }
+          )
+        case _ =>
+          Future.successful(
+            DecoderResponse.failed(uri, "Unsupported extension")
+          )
+      }
   }
 
   private def toFile(
       uri: URI,
       suffixToRemove: String
+  ): Either[DecoderResponse, AbsolutePath] =
+    toFile(uri.toString.stripSuffix(suffixToRemove))
+
+  private def toFile(
+      uriAsStr: String
   ): Either[DecoderResponse, AbsolutePath] = {
-    val strippedURI = uri.toString.stripSuffix(suffixToRemove)
-    Try {
-      strippedURI.toAbsolutePath
-    }.filter(_.exists)
+    val uri = uriAsStr.toURI
+    val path = Try {
+      uri.toAbsolutePath
+    }
+    path
+      .filter(_.exists)
       .toOption
       .toRight(
-        DecoderResponse.failed(uri, s"File $strippedURI doesn't exist")
+        DecoderResponse.failed(uri, s"File $uriAsStr doesn't exist")
       )
   }
 
@@ -482,7 +491,18 @@ final class FileDecoderProvider(
   ): Future[DecoderResponse] = {
     val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
     val cfrMain = "org.benf.cfr.reader.Main"
-    val args = List("--analyseas", "CLASS", s"""${path.toNIO.toString}""")
+    val (parent, className) =
+      if (path.isJarFileSystem)
+        (workspace, path.toNIO.toString.stripPrefix("\\").stripPrefix("/"))
+      else (path.parent, path.toNIO.toString)
+    val extraClassPath = path.jarPath
+      .map(jarPath => List("--extraclasspath", jarPath.toString))
+      .getOrElse(List.empty)
+    val args = extraClassPath ::: List(
+      "--analyseas",
+      "CLASS",
+      s"""$className"""
+    )
     val sbOut = new StringBuilder()
     val sbErr = new StringBuilder()
 
@@ -491,7 +511,7 @@ final class FileDecoderProvider(
         .runJava(
           cfrDependency,
           cfrMain,
-          path.parent,
+          parent,
           args,
           redirectErrorOutput = false,
           s => {
