@@ -10,6 +10,7 @@ import scala.meta.internal.troubleshoot.DeprecatedSbtVersion
 import scala.meta.internal.troubleshoot.DeprecatedScalaVersion
 import scala.meta.internal.troubleshoot.FutureSbtVersion
 import scala.meta.internal.troubleshoot.FutureScalaVersion
+import scala.meta.internal.troubleshoot.MissingJdkSources
 import scala.meta.internal.troubleshoot.MissingSourceRoot
 import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.internal.troubleshoot.SemanticDBDisabled
@@ -99,6 +100,14 @@ class ProblemResolverSuite extends FunSuite {
     scalacOpts = List("-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar")
   )
 
+  checkRecommendation(
+    "missing-jdk-sources",
+    scalaVersion = BuildInfo.scala212,
+    MissingJdkSources.message,
+    isSbt = true,
+    invalidJavaHome = true
+  )
+
   def checkRecommendation(
       name: TestOptions,
       scalaVersion: String,
@@ -107,15 +116,23 @@ class ProblemResolverSuite extends FunSuite {
         "-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar",
         "-P:semanticdb:sourceroot:/tmp/metals"
       ),
-      isSbt: Boolean = false
+      isSbt: Boolean = false,
+      invalidJavaHome: Boolean = false
   ): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")
       workspace.toFile().deleteOnExit()
+      val javaHome =
+        if (invalidJavaHome)
+          Some("/some/invalid/path")
+        else
+          None // JdkSources will fallback to default java home path
+
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
         new TestMtagsResolver,
-        () => None
+        () => None,
+        () => javaHome
       )
 
       val target = scalaTarget(name.name, scalaVersion, scalacOpts, isSbt)

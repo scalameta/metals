@@ -686,7 +686,8 @@ class MetalsLanguageServer(
           () => httpServer,
           tables,
           clientConfig,
-          mtagsResolver
+          mtagsResolver,
+          () => userConfig.javaHome
         )
         fileDecoderProvider = new FileDecoderProvider(
           workspace,

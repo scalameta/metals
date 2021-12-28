@@ -83,3 +83,8 @@ case object FutureSbtVersion extends ScalaProblem {
   override def message: String =
     "Code navigation for this sbt version is not yet supported"
 }
+
+case object MissingJdkSources extends ScalaProblem {
+  override def message: String =
+    "Goto definition for Java classes will not work, please install jdk sources in java home"
+}
