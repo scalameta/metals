@@ -13,7 +13,7 @@ object NewFileTypes {
   case object ScalaFile extends NewFileType {
     override val id: String = "scala-file"
     override val syntax: Option[String] = None
-    override val label: String = "Scala file with automatically added package"
+    override val label: String = "Empty file"
   }
 
   case object Class extends NewFileType {
