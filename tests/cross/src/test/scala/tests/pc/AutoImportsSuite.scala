@@ -62,6 +62,25 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkEdit(
+    "basic-edit-directive",
+    """|// using scala 35
+       |// using something else
+       |
+       |object A {
+       |  <<Future>>.successful(2)
+       |}
+       |""".stripMargin,
+    """|// using scala 35
+       |// using something else
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  Future.successful(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "symbol-no-prefix",
     """|package a
        |
