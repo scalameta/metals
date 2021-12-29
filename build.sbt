@@ -249,8 +249,7 @@ commands ++= Seq(
                 | - "v$$num.$$num.$$num" - usual Metals release
                 | - "mtags_v$${existing-metals-release}_$${scala-version}" - mtags artifact release
                 |""".stripMargin
-          println(message)
-          s
+          throw new Exception(message)
       }
     } else defaultCommands
   }
