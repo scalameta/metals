@@ -1,7 +1,7 @@
 import scala.collection.mutable
 import scala.sys.process._
-import Tests._
 import Developers._
+import Tests._
 
 def localSnapshotVersion = "0.10.10-SNAPSHOT"
 def isCI = System.getenv("CI") != null
@@ -218,9 +218,12 @@ lazy val V = new {
   val ammonite212Version = scala212
   val ammonite213Version = scala213
 
+  val ammonite = "2.4.1"
   val bloop = "1.4.11-19-93ebe2c6"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
+  val coursier = "2.0.16"
+  val coursierInterfaces = "1.0.4"
   val debugAdapter = "2.0.12"
   val genyVersion = "0.7.0"
   val gradleBloop = bloop
@@ -229,8 +232,10 @@ lazy val V = new {
   val jsoup = "1.14.3"
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
+  val mill = "0.10.0-M4"
   val mdoc = "2.2.24"
   val munit = "0.7.29"
+  val organizeImportRule = "0.6.0"
   val pprint = "0.7.1"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
@@ -299,11 +304,6 @@ lazy val V = new {
   def guava = "com.google.guava" % "guava" % "31.0.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
-  val coursierInterfaces = "1.0.4"
-  val coursier = "2.0.16"
-  val ammonite = "2.4.1"
-  val mill = "0.10.0-M4"
-  val organizeImportRule = "0.6.0"
 
   val quickPublishScalaVersions =
     Set(
@@ -492,8 +492,6 @@ lazy val metals = project
       V.lsp4j,
       // for DAP
       V.dap4j,
-      // for producing SemanticDB from Java source files
-      "com.thoughtworks.qdox" % "qdox" % V.qdox,
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // for Java formatting
@@ -518,7 +516,6 @@ lazy val metals = project
       // ==================
       // Scala dependencies
       // ==================
-      "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
@@ -529,8 +526,6 @@ lazy val metals = project
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
-      // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % V.pprint,
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "1.4.3",
       // For remote language server
@@ -813,10 +808,7 @@ lazy val docs = project
     sharedSettings,
     publish / skip := true,
     moduleName := "metals-docs",
-    mdoc := (Compile / run).evaluated,
-    libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % V.jsoup
-    )
+    mdoc := (Compile / run).evaluated
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)
