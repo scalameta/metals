@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -258,7 +259,7 @@ final class Doctor(
 
   private def resetChoiceCommand(choice: String): String = {
     val param = s"""["$choice"]"""
-    s"command:metals.reset-choice?${URLEncoder.encode(param)}"
+    s"command:metals.reset-choice?${URLEncoder.encode(param, StandardCharsets.UTF_8.name())}"
   }
 
   private def buildTargetsTable(html: HtmlBuilder): Unit = {
