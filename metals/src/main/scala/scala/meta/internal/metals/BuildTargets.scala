@@ -259,14 +259,14 @@ final class BuildTargets(
     result.getItems.asScala.foreach { scalac =>
       info(scalac.getTarget()).foreach { info =>
         info.asScalaBuildTarget.foreach { scalaBuildTarget =>
-          val autoImports =
-            info.asSbtBuildTarget.map(_.getAutoImports.asScala)
+          val sbtTarget = info.asSbtBuildTarget
+          val autoImports = sbtTarget.map(_.getAutoImports.asScala)
           scalaTargetInfo(scalac.getTarget) = ScalaTarget(
             info,
             scalaBuildTarget,
             scalac,
             autoImports,
-            info.isSbtBuild
+            sbtTarget.map(_.getSbtVersion())
           )
         }
       }

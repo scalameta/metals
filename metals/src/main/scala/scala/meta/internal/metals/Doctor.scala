@@ -321,39 +321,115 @@ final class Doctor(
             )
         )
     } else {
+      val allTargetsInfo = targetIds.flatMap(extractTargetInfo)
       html
         .element("table")(
           _.element("thead")(
             _.element("tr")(
               _.element("th")(_.text("Build target"))
-                .element("th")(_.text("Scala"))
+                .element("th")(_.text("Type"))
                 .element("th")(_.text("Diagnostics"))
-                .element("th")(_.text("Goto definition"))
-                .element("th")(_.text("Completions"))
-                .element("th")(_.text("Find references"))
+                .element("th")(_.text("Interactive"))
+                .element("th")(_.text("Semanticdb"))
+                .element("th")(_.text("Debugging"))
+                .element("th")(_.text("Java support"))
                 .element("th")(_.text("Recommendation"))
             )
-          ).element("tbody")(html => buildTargetRows(html, targetIds))
+          ).element("tbody")(html => buildTargetRows(html, allTargetsInfo))
         )
+
+      // Additional explanations
+      explanation(
+        html,
+        title = "Diagnostics:",
+        correctMessage =
+          s"${Icons.unicode.check} - diagnostics correctly being reported by the build server",
+        incorrectMessage =
+          s"${Icons.unicode.alert} - only syntactic errors being reported",
+        show = allTargetsInfo.exists(_.diagnosticsStatus.isCorrect == false)
+      )
+
+      explanation(
+        html,
+        title = "Interactive features (completions, hover):",
+        correctMessage = s"${Icons.unicode.check} - supported Scala version",
+        incorrectMessage =
+          s"${Icons.unicode.error} - unsupported Scala version",
+        show = allTargetsInfo.exists(_.interactiveStatus.isCorrect == false)
+      )
+
+      explanation(
+        html,
+        title =
+          "Semanticdb features (references, renames, go to implementation):",
+        correctMessage =
+          s"${Icons.unicode.check} - build tool automatically creating needed semanticdb files",
+        incorrectMessage =
+          s"${Icons.unicode.error} - semanticdb not being produced",
+        show = allTargetsInfo.exists(_.indexesStatus.isCorrect == false)
+      )
+
+      explanation(
+        html,
+        title = "Debugging (run/test, breakpoints, evaluation):",
+        correctMessage =
+          s"${Icons.unicode.check} - users can run or test their code with debugging capabilities",
+        incorrectMessage =
+          s"${Icons.unicode.error} - the tool does not support debugging in this target",
+        show = allTargetsInfo.exists(_.debuggingStatus.isCorrect == false)
+      )
+
+      explanation(
+        html,
+        title = "Java Support:",
+        correctMessage =
+          s"${Icons.unicode.check} - working non-interactive features (references, rename etc.)",
+        incorrectMessage =
+          s"${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server",
+        show = allTargetsInfo.exists(_.javaStatus.isCorrect == false)
+      )
     }
+  }
+
+  private def explanation(
+      html: HtmlBuilder,
+      title: String,
+      correctMessage: String,
+      incorrectMessage: String,
+      show: Boolean
+  ) = {
+    html.element("div")(
+      _.element("p")(_.text(title)).element("ul") { ul =>
+        ul.element("li")(_.text(correctMessage))
+        if (show)
+          ul.element("li")(_.text(incorrectMessage))
+      }
+    )
+
   }
 
   private def buildTargetRows(
       html: HtmlBuilder,
-      targetIds: Seq[BuildTargetIdentifier]
+      targetIds: Seq[DoctorTargetInfo]
   ): Unit = {
     targetIds
-      .flatMap(extractTargetInfo)
       .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
         html.element("tr")(
           _.element("td")(_.text(targetInfo.name))
-            .element("td")(_.text(targetInfo.scalaVersion))
-            .element("td", center)(_.text(Icons.unicode.check))
-            .element("td", center)(_.text(targetInfo.definitionStatus))
-            .element("td", center)(_.text(targetInfo.completionsStatus))
-            .element("td", center)(_.text(targetInfo.referencesStatus))
+            .element("td")(_.text(targetInfo.targetType))
+            .element("td", center)(
+              _.text(targetInfo.diagnosticsStatus.explanation)
+            )
+            .element("td", center)(
+              _.text(targetInfo.interactiveStatus.explanation)
+            )
+            .element("td", center)(_.text(targetInfo.indexesStatus.explanation))
+            .element("td", center)(
+              _.text(targetInfo.debuggingStatus.explanation)
+            )
+            .element("td", center)(_.text(targetInfo.javaStatus.explanation))
             .element("td")(_.raw(targetInfo.recommenedFix))
         )
       }
@@ -362,63 +438,77 @@ final class Doctor(
   private def extractTargetInfo(
       targetId: BuildTargetIdentifier
   ): List[DoctorTargetInfo] = {
-    val scalaDoctorInfo =
-      buildTargets.scalaTarget(targetId).map(extractScalaTargetInfo).toList
-    val javaDoctorInfo =
-      buildTargets.javaTarget(targetId).map(extractJavaTargetInfo).toList
-    scalaDoctorInfo ::: javaDoctorInfo
+    val javaTarget = buildTargets.javaTarget(targetId)
+    buildTargets
+      .scalaTarget(targetId)
+      .map(st => extractScalaTargetInfo(st, javaTarget))
+      .toList
   }
 
-  private def extractScalaTargetInfo(target: ScalaTarget) = {
+  private def extractScalaTargetInfo(
+      target: ScalaTarget,
+      javaTarget: Option[JavaTarget]
+  ) = {
     val scalaVersion = target.scalaVersion
-    val definition: String =
+    val interactive =
       if (mtagsResolver.isSupportedScalaVersion(scalaVersion)) {
-        Icons.unicode.check
+        DoctorStatus(Icons.unicode.check, isCorrect = true)
       } else {
-        Icons.unicode.alert
+        DoctorStatus(Icons.unicode.error, isCorrect = false)
       }
-    val completions: String = definition
     val isSemanticdbNeeded = !target.isSemanticdbEnabled
-    val references: String =
+    val indexes =
       if (isSemanticdbNeeded) {
-        Icons.unicode.alert
+        DoctorStatus(Icons.unicode.error, isCorrect = false)
       } else {
-        Icons.unicode.check
+        DoctorStatus(Icons.unicode.check, isCorrect = true)
       }
     val recommendedFix = problemResolver.recommendation(target)
-    DoctorTargetInfo(
-      target.displayName,
-      target.dataKind,
-      target.baseDirectory,
-      scalaVersion,
-      definition,
-      completions,
-      references,
-      recommendedFix
-    )
-  }
+    val (targetType, diagnostics) =
+      target.sbtVersion match {
+        case Some(sbt) =>
+          (s"sbt $sbt", DoctorStatus(Icons.unicode.alert, isCorrect = false))
+        case None =>
+          (
+            s"Scala $scalaVersion",
+            DoctorStatus(Icons.unicode.check, isCorrect = true)
+          )
+      }
+    val (javaSupport, javaRecommendation) = javaTarget match {
+      case Some(target) if target.isSemanticdbEnabled =>
+        (DoctorStatus(Icons.unicode.check, isCorrect = true), None)
+      case Some(target) =>
+        (
+          DoctorStatus(Icons.unicode.alert, isCorrect = false),
+          problemResolver.recommendation(target)
+        )
+      case None => (DoctorStatus(Icons.unicode.alert, isCorrect = false), None)
+    }
 
-  private def extractJavaTargetInfo(target: JavaTarget) = {
-    val scalaVersion = "Java"
-    val definition: String = Icons.unicode.check
-    val completions: String = Icons.unicode.alert
-    val isSemanticdbNeeded = !target.isSemanticdbEnabled
-    val references: String =
-      if (isSemanticdbNeeded) {
-        Icons.unicode.alert
-      } else {
-        Icons.unicode.check
-      }
-    val recommendedFix = problemResolver.recommendation(target)
+    val canRun = target.info.getCapabilities().getCanRun()
+    val canTest = target.info.getCapabilities().getCanTest()
+    val debugging =
+      if (canRun && canTest && !target.isSbt)
+        DoctorStatus(Icons.unicode.check, isCorrect = true)
+      else DoctorStatus(Icons.unicode.error, isCorrect = false)
+    val sbtRecommendation =
+      if (target.isSbt)
+        Some("Diagnostics and debugging for sbt are not supported currently.")
+      else None
     DoctorTargetInfo(
       target.displayName,
       target.dataKind,
       target.baseDirectory,
-      scalaVersion,
-      definition,
-      completions,
-      references,
+      targetType,
+      diagnostics,
+      interactive,
+      indexes,
+      debugging,
+      javaSupport,
       recommendedFix
+        .orElse(javaRecommendation)
+        .orElse(sbtRecommendation)
+        .getOrElse("")
     )
   }
 
