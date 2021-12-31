@@ -73,9 +73,10 @@ final class InferredTypeProvider(
 
     def printType(tpe: Type): String =
       val short = shortType(tpe, shortenedNames)
-      val printer = ScopeAwareTypePrinter(indexedCtx)
-      printer.typeString(short)
-
+      if short.isErroneous then "Any"
+      else
+        val printer = ScopeAwareTypePrinter(indexedCtx)
+        printer.typeString(short)
     /*
      * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
      * Suprisingly, val ((a, c), b) = ((1, 3), 2) will be covered by Bind
