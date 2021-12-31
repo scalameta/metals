@@ -428,6 +428,32 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "error",
+    """|final case class Dependency(
+       |    org: String,
+       |    name: Option[String],
+       |    version: Option[String]
+       |)
+       |
+       |object Dependency {
+       |  def <<apply>>(org: String) = Dependency(org, None, None)
+       |  def apply(org: String, name: String) = Dependency(org, Some(name), None)
+       |}
+       |""".stripMargin,
+    """|final case class Dependency(
+       |    org: String,
+       |    name: Option[String],
+       |    version: Option[String]
+       |)
+       |
+       |object Dependency {
+       |  def apply(org: String): Any = Dependency(org, None, None)
+       |  def apply(org: String, name: String) = Dependency(org, Some(name), None)
+       |}
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

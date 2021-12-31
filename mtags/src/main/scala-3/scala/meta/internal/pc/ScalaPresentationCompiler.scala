@@ -405,20 +405,24 @@ case class ScalaPresentationCompiler(
 
             val docString =
               docComments.map(_.renderAsMarkdown).mkString("\n")
-            val expressionType = printer.expressionTypeString(exprTpw, history)
-            val forceExpressionType =
-              !pos.span.isZeroExtent || (
-                !hoverString.endsWith(
-                  expressionType
-                ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
-              )
-            val content = HoverMarkup(
-              expressionType,
-              hoverString,
-              docString,
-              forceExpressionType
-            )
-            ju.Optional.of(new Hover(content.toMarkupContent))
+            printer.expressionTypeString(exprTpw, history) match
+              case Some(expressionType) =>
+                val forceExpressionType =
+                  !pos.span.isZeroExtent || (
+                    !hoverString.endsWith(
+                      expressionType
+                    ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
+                  )
+                val content = HoverMarkup(
+                  expressionType,
+                  hoverString,
+                  docString,
+                  forceExpressionType
+                )
+                ju.Optional.of(new Hover(content.toMarkupContent))
+              case _ =>
+                ju.Optional.empty
+            end match
 
       end if
     }

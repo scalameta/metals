@@ -24,7 +24,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
   def typeString(tpw: Type): String =
     toText(tpw).mkString(defaultWidth, false)
 
-  def expressionTypeString(tpw: Type, history: ShortenedNames): String =
+  def expressionTypeString(tpw: Type, history: ShortenedNames): Option[String] =
     tpw match
       case t: PolyType =>
         expressionTypeString(t.resType, history)
@@ -33,9 +33,10 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
       case i: ImportType =>
         expressionTypeString(i.expr.typeOpt, history)
       case c: ConstantType =>
-        typeString(shortType(c.underlying, history))
-      case _ =>
-        typeString(shortType(tpw, history))
+        Some(typeString(shortType(c.underlying, history)))
+      case _ if !tpw.isErroneous =>
+        Some(typeString(shortType(tpw, history)))
+      case _ => None
 
   /**
    * for
@@ -109,7 +110,8 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
       defaultMethodSignature(sym, history, info, onlyMethodParams = true)
     else
       val short = shortType(info, history)
-      typeString(short)
+      if short.isErroneous then "Any"
+      else typeString(short)
   end completionDetailString
 
   /**
@@ -164,8 +166,10 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
     val paramLabelss = label(methodParams)
     val extLabelss = label(extParams)
 
-    val returnType = typeString(shortType(gtpe.finalResultType, shortenedNames))
-
+    val shortenedType = shortType(gtpe.finalResultType, shortenedNames)
+    val returnType =
+      if shortenedType.isErroneous then "Any"
+      else typeString(shortenedType)
     def extensionSignatureString =
       val extensionSignature = paramssString(extLabelss, extParams)
       if extParams.nonEmpty then
