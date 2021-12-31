@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
@@ -239,7 +240,7 @@ object CommandHTMLFormat {
         if (arguments.isEmpty) ""
         else {
           val asArray = s"""[${arguments.mkString(", ")}]"""
-          s"?${URLEncoder.encode(asArray)}"
+          s"?${URLEncoder.encode(asArray, StandardCharsets.UTF_8.name())}"
         }
       s"command:metals.$commandId$encodedArguments"
     }

@@ -128,7 +128,7 @@ class NewProjectProvider(
     def openWindow(newWindow: Boolean) = {
       val params = MetalsOpenWindowParams(
         projectPath.toURI.toString(),
-        new java.lang.Boolean(newWindow)
+        java.lang.Boolean.valueOf(newWindow)
       )
       val command = ClientCommands.OpenFolder.toExecuteCommandParams(params)
       client.metalsExecuteClientCommand(command)

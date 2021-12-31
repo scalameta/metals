@@ -20,5 +20,5 @@ final class Completer(expression: String) extends Stoppage.Handler {
     Complete(expression.replace("@@", ""), frameId, response = _, 1, column + 1)
   }
 
-  override def shutdown: Future[Unit] = Future.successful()
+  override def shutdown: Future[Unit] = Future.successful(())
 }

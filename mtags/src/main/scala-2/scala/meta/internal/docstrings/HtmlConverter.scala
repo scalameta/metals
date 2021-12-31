@@ -11,7 +11,7 @@ import org.jsoup.nodes.Entities.EscapeMode
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 import org.jsoup.safety.Cleaner
-import org.jsoup.safety.Whitelist
+import org.jsoup.safety.Safelist
 
 // TODO - Add conversion of tables
 
@@ -53,8 +53,8 @@ object HtmlConverter {
     val cleanedCode = cleanCode(code)
 
     // Parse html in docstring
-    val whitelist = Whitelist.relaxed
-    val cleaner = new Cleaner(whitelist)
+    val safeList = Safelist.relaxed
+    val cleaner = new Cleaner(safeList)
     val doc = cleaner.clean(Jsoup.parse(cleanedCode))
     doc.outputSettings().escapeMode(EscapeMode.xhtml)
 
