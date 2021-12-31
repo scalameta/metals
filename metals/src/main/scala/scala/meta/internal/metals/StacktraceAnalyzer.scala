@@ -198,7 +198,18 @@ object StacktraceAnalyzer {
 
   def toToplevelSymbol(symbolIn: String): List[String] = {
     val symbol = symbolIn.split('.').init.mkString("/")
-    if (symbol.contains('$')) {
+    /* Symbol containing `$package$` is a toplevel method and we only need to
+     * find any method contained in the same file even if overloaded
+     */
+    if (symbol.contains("$package$")) {
+      symbolIn.split("\\$package\\$") match {
+        case Array(filePath, symbol) =>
+          val re = filePath.replace('.', '/') + "$package" + symbol
+          List(re + "().")
+        case _ =>
+          Nil
+      }
+    } else if (symbol.contains('$')) {
       // if $ is only at the end we know it is object => append '.'
       // if $ is in the middle we don't know, we will try to treat it as class/trait first
       // but in case nothing is found we will retry as object
