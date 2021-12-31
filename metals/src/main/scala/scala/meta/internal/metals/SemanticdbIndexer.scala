@@ -14,7 +14,6 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import com.google.protobuf.InvalidProtocolBufferException
 
 class SemanticdbIndexer(
@@ -25,13 +24,11 @@ class SemanticdbIndexer(
     workspace: AbsolutePath
 ) {
 
-  def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
+  def onTargetRoots(): Unit = {
     for {
-      item <- scalacOptions.getItems.asScala
-      scalaInfo <- buildTargets.scalaInfo(item.getTarget)
+      targetRoot <- buildTargets.allTargetRoots
     } {
-      val targetroot = item.targetroot(scalaInfo.getScalaVersion)
-      onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
+      onChangeDirectory(targetRoot.resolve(Directories.semanticdb).toNIO)
     }
   }
 

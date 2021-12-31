@@ -1,5 +1,6 @@
 import scala.collection.mutable
 import scala.sys.process._
+import Developers._
 import Tests._
 
 def localSnapshotVersion = "0.10.10-SNAPSHOT"
@@ -58,50 +59,7 @@ inThisBuild(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
     ),
     homepage := Some(url("https://github.com/scalameta/metals")),
-    developers := List(
-      Developer(
-        "adpi2",
-        "Adrien Piquerez",
-        "adrien.piquerez@epfl.ch",
-        url("https://github.com/adpi2")
-      ),
-      Developer(
-        "ckipp01",
-        "Chris Kipp",
-        "ckipp@pm.me",
-        url("https://chris-kipp.io")
-      ),
-      Developer(
-        "gabro",
-        "Gabriele Petronella",
-        "gabriele@buildo.io",
-        url("https://github.com/gabro")
-      ),
-      Developer(
-        "kpodsiad",
-        "Kamil Podsiadło",
-        "kpodsiadlo@virtuslab.com ",
-        url("https://github.com/kpodsiad)")
-      ),
-      Developer(
-        "olafurpg",
-        "Ólafur Páll Geirsson",
-        "olafurpg@gmail.com",
-        url("https://geirsson.com")
-      ),
-      Developer(
-        "tgodzik",
-        "Tomasz Godzik",
-        "tgodzik@virtuslab.com",
-        url("https://github.com/tgodzik")
-      ),
-      Developer(
-        "dos65",
-        "Vadim Chelyshov",
-        "vchelyshov@virtuslab.com",
-        url("https://github.com/dos65")
-      )
-    ),
+    developers := metalsDevs,
     testFrameworks := List(),
     resolvers += Resolver.sonatypeRepo("public"),
     resolvers += Resolver.sonatypeRepo("snapshot"),
@@ -239,12 +197,11 @@ commands ++= Seq(
         case _ =>
           val message =
             s"""|Skip release. Invalid tag name.
-                |It should be either: 
+                |It should be either:
                 | - "v$$num.$$num.$$num" - usual Metals release
                 | - "mtags_v$${existing-metals-release}_$${scala-version}" - mtags artifact release
                 |""".stripMargin
-          println(message)
-          s
+          throw new Exception(message)
       }
     } else defaultCommands
   }
@@ -253,29 +210,41 @@ commands ++= Seq(
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val sbtScala = "2.12.14"
   val scala212 = "2.12.15"
   val scala213 = "2.13.7"
+  val scala3 = "3.1.0"
+  val nextScala3RC = "3.1.1-RC2"
+  val sbtScala = "2.12.14"
   val ammonite212Version = scala212
   val ammonite213Version = scala213
-  val scalameta = "4.4.30"
-  val semanticdb = scalameta
-  val bsp = "2.0.0-M15"
-  val bloop = "1.4.11-17-f4ef8273"
-  val scala3 = "3.1.0"
-  val nextScala3RC = "3.1.1-RC1"
+
+  val ammonite = "2.4.1"
+  val bloop = "1.4.11-19-93ebe2c6"
   val bloopNightly = bloop
-  val sbtBloop = bloop
-  val gradleBloop = bloop
-  val mavenBloop = bloop
-  val mdoc = "2.2.24"
-  val scalafmt = "3.0.5"
-  val munit = "0.7.29"
-  val scalafix = "0.9.33"
-  val lsp4jV = "0.12.0"
-  val sbtJdiTools = "1.1.1"
-  val genyVersion = "0.6.11"
+  val bsp = "2.0.0-M15"
+  val coursier = "2.0.16"
+  val coursierInterfaces = "1.0.4"
   val debugAdapter = "2.0.12"
+  val genyVersion = "0.7.0"
+  val gradleBloop = bloop
+  val java8Compat = "1.0.2"
+  val javaSemanticdb = "0.7.2"
+  val jsoup = "1.14.3"
+  val lsp4jV = "0.12.0"
+  val mavenBloop = bloop
+  val mill = "0.10.0-M4"
+  val mdoc = "2.2.24"
+  val munit = "0.7.29"
+  val organizeImportRule = "0.6.0"
+  val pprint = "0.7.1"
+  val sbtBloop = bloop
+  val sbtJdiTools = "1.1.1"
+  val scalafix = "0.9.33"
+  val scalafmt = "3.0.5"
+  val scalameta = "4.4.31"
+  val scribe = "3.6.3"
+  val semanticdb = scalameta
+  val qdox = "2.0.1"
 
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -335,11 +304,6 @@ lazy val V = new {
   def guava = "com.google.guava" % "guava" % "31.0.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
-  val coursierInterfaces = "1.0.4"
-  val coursier = "2.0.16"
-  val ammonite = "2.5.0"
-  val mill = "0.10.0-M4"
-  val organizeImportRule = "0.6.0"
 
   val quickPublishScalaVersions =
     Set(
@@ -425,29 +389,34 @@ val mtagsSettings = List(
   ),
   // @note needed to deal with issues with dottyDoc
   Compile / doc / sources := Seq.empty,
-  libraryDependencies +=
-    "com.thoughtworks.qdox" % "qdox" % "2.0.1", // for java mtags
+  libraryDependencies ++= Seq(
+    "com.lihaoyi" %% "geny" % V.genyVersion,
+    "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
+    "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat
+  ),
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "org.jsoup" % "jsoup" % "1.14.3", // for extracting HTML from javadocs
-      "com.lihaoyi" %% "geny" % V.genyVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2",
+      "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.0",
-      ("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2")
-        .cross(CrossVersion.for3Use2_13),
-      ("com.lihaoyi" %% "geny" % V.genyVersion)
-        .cross(CrossVersion.for3Use2_13),
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .cross(CrossVersion.for3Use2_13)
         .exclude("org.scala-lang", "scala-reflect")
         .exclude("org.scala-lang", "scala-compiler")
+        .exclude(
+          "com.lihaoyi",
+          "geny_2.13"
+        ) // avoid 2.13 and 3 on the classpath since we rely on it directly
+        .exclude(
+          "com.lihaoyi",
+          "sourcecode_2.13"
+        ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
     )
   ),
   libraryDependencies ++= List("org.lz4" % "lz4-java" % "1.8.0"),
@@ -456,7 +425,7 @@ val mtagsSettings = List(
     // NOTE(olafur) pprint is indispensable for me while developing, I can't
     // use println anymore for debugging because pprint.log is 100 times better.
     else {
-      List("com.lihaoyi" %% "pprint" % "0.6.6")
+      List("com.lihaoyi" %% "pprint" % V.pprint)
     }
   },
   buildInfoPackage := "scala.meta.internal.mtags",
@@ -508,12 +477,12 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.16",
       // for file watching
-      "com.swoval" % "file-tree-views" % "2.1.7",
+      "com.swoval" % "file-tree-views" % "2.1.8",
       // for http client
-      "io.undertow" % "undertow-core" % "2.2.13.Final",
+      "io.undertow" % "undertow-core" % "2.2.14.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.5.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "8.0.5",
+      "org.flywaydb" % "flyway-core" % "8.2.2",
       "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
@@ -523,14 +492,30 @@ lazy val metals = project
       V.lsp4j,
       // for DAP
       V.dap4j,
-      // for producing SemanticDB from Java source files
-      "com.thoughtworks.qdox" % "qdox" % "2.0.1",
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
+      // for Java formatting
+      "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.25.0" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.ant.core" % "3.5.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.compare.core" % "3.6.600" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.commands" % "3.9.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.contenttype" % "3.7.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.expressions" % "3.6.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.filesystem" % "1.7.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.jobs" % "3.10.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.resources" % "3.13.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.runtime" % "3.16.0" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.variables" % "3.4.600" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.equinox.app" % "1.4.300" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.equinox.common" % "3.10.600" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.7.600" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.equinox.registry" % "3.8.600" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.osgi" % "3.15.0" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.team.core" % "3.8.700" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.text" % "3.9.0" exclude ("*", "*"),
       // ==================
       // Scala dependencies
       // ==================
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2",
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
@@ -538,15 +523,13 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for logging
-      "com.outr" %% "scribe" % "3.6.3",
-      "com.outr" %% "scribe-file" % "3.6.3",
-      "com.outr" %% "scribe-slf4j" % "3.6.3", // needed for flyway database migrations
-      // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.6.2",
+      "com.outr" %% "scribe" % V.scribe,
+      "com.outr" %% "scribe-file" % V.scribe,
+      "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.4.2",
+      "com.lihaoyi" %% "ujson" % "1.4.3",
       // For remote language server
-      "com.lihaoyi" %% "requests" % "0.6.9",
+      "com.lihaoyi" %% "requests" % "0.7.0",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
@@ -567,6 +550,7 @@ lazy val metals = project
       "mavenBloopVersion" -> V.mavenBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
+      "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
       "organizeImportVersion" -> V.organizeImportRule,
@@ -824,10 +808,7 @@ lazy val docs = project
     sharedSettings,
     publish / skip := true,
     moduleName := "metals-docs",
-    mdoc := (Compile / run).evaluated,
-    libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.14.3"
-    )
+    mdoc := (Compile / run).evaluated
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

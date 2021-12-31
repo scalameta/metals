@@ -3,9 +3,9 @@ package tests
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.{BuildInfo => V}
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)

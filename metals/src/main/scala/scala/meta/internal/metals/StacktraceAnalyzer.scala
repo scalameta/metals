@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.io.FileWriter
-import java.net.URLEncoder
 
 import scala.util.Try
 
@@ -17,7 +16,7 @@ class StacktraceAnalyzer(
     buffers: Buffers,
     definitionProvider: DefinitionProvider,
     icons: Icons,
-    commandsInHtmlSupported: Boolean
+    commandInHtmlFormat: Option[CommandHTMLFormat]
 ) {
 
   def analyzeCommand(
@@ -98,27 +97,26 @@ class StacktraceAnalyzer(
 
   private def analyzeStackTrace(
       stacktrace: String
-  ): Option[l.ExecuteCommandParams] = {
-    if (commandsInHtmlSupported) {
-      Some(makeHtmlCommandParams(stacktrace))
-    } else {
-      val path = workspace.resolve(Directories.stacktrace)
-      val pathFile = path.toFile
-      val pathStr = pathFile.toString
+  ): Option[l.ExecuteCommandParams] =
+    commandInHtmlFormat match {
+      case Some(format) => Some(makeHtmlCommandParams(stacktrace, format))
+      case None =>
+        val path = workspace.resolve(Directories.stacktrace)
+        val pathFile = path.toFile
+        val pathStr = pathFile.toString
 
-      pathFile.createNewFile()
-      val fw = new FileWriter(pathStr)
-      try {
-        fw.write(s"/*\n$stacktrace\n*/")
-      } finally {
-        fw.close()
-      }
-      val fileStartPos = new l.Position(0, 0)
-      val range = new l.Range(fileStartPos, fileStartPos)
-      val stackTraceLocation = new l.Location(path.toURI.toString(), range)
-      Some(makeGotoCommandParams(stackTraceLocation))
+        pathFile.createNewFile()
+        val fw = new FileWriter(pathStr)
+        try {
+          fw.write(s"/*\n$stacktrace\n*/")
+        } finally {
+          fw.close()
+        }
+        val fileStartPos = new l.Position(0, 0)
+        val range = new l.Range(fileStartPos, fileStartPos)
+        val stackTraceLocation = new l.Location(path.toURI.toString(), range)
+        Some(makeGotoCommandParams(stackTraceLocation))
     }
-  }
 
   private def makeGotoCommandParams(
       location: Location
@@ -146,7 +144,8 @@ class StacktraceAnalyzer(
   }.toOption
 
   private def makeHtmlCommandParams(
-      stacktrace: String
+      stacktrace: String,
+      format: CommandHTMLFormat
   ): l.ExecuteCommandParams = {
     def htmlStack(builder: HtmlBuilder): Unit = {
       for (line <- stacktrace.split('\n')) {
@@ -158,7 +157,8 @@ class StacktraceAnalyzer(
                 .link(
                   gotoLocationUsingUri(
                     location.getUri,
-                    location.getRange.getStart.getLine
+                    location.getRange.getStart.getLine,
+                    format
                   ),
                   line.substring(line.indexOf("at ") + 3)
                 )
@@ -180,9 +180,17 @@ class StacktraceAnalyzer(
     ClientCommands.ShowStacktrace.toExecuteCommandParams(output)
   }
 
-  private def gotoLocationUsingUri(uri: String, line: Int): String = {
-    val param = s"""["${uri}",${line},true]"""
-    s"command:metals.goto-path-uri?${URLEncoder.encode(param)}"
+  private def gotoLocationUsingUri(
+      uri: String,
+      line: Int,
+      format: CommandHTMLFormat
+  ): String = {
+    val pos = new l.Position(line, 0)
+    val location = new l.Location(uri, new l.Range(pos, pos))
+    ServerCommands.GotoPosition.toCommandLink(
+      location,
+      format
+    )
   }
 }
 

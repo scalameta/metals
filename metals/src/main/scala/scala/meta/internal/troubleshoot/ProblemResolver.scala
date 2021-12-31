@@ -5,6 +5,8 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.JavaTarget
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
@@ -17,7 +19,7 @@ class ProblemResolver(
     workspace: AbsolutePath,
     mtagsResolver: MtagsResolver,
     currentBuildServer: () => Option[BspSession],
-    isClientCommandSupported: Boolean
+    javaHome: () => Option[String]
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
@@ -33,13 +35,22 @@ class ProblemResolver(
     }
   }
 
+  def recommendation(java: JavaTarget): String = {
+    findProblem(java)
+      .map(_.message)
+      .getOrElse("")
+  }
+
   def recommendation(scala: ScalaTarget): String = {
     findProblem(scala)
       .map(_.message)
       .getOrElse("")
   }
 
-  def problemMessage(allTargets: List[ScalaTarget]): Option[String] = {
+  def problemMessage(
+      scalaTargets: List[ScalaTarget],
+      javaTargets: List[JavaTarget]
+  ): Option[String] = {
 
     val unsupportedVersions = ListBuffer[String]()
     val deprecatedVersions = ListBuffer[String]()
@@ -50,7 +61,7 @@ class ProblemResolver(
     var futureSbt = false
 
     for {
-      target <- allTargets
+      target <- scalaTargets
       issue <- findProblem(target)
     } yield {
       issue match {
@@ -62,6 +73,17 @@ class ProblemResolver(
         case UnsupportedSbtVersion => unsupportedSbt = true
         case DeprecatedSbtVersion => deprecatedSbt = true
         case FutureSbtVersion => futureSbt = true
+        case MissingJdkSources => misconfiguredProjects += 1
+      }
+    }
+    for {
+      target <- javaTargets
+      issue <- findProblem(target)
+    } yield {
+      issue match {
+        case _: JavaSemanticDBDisabled => misconfiguredProjects += 1
+        case _: MissingJavaSourceRoot => misconfiguredProjects += 1
+        case _: MissingJavaTargetRoot => misconfiguredProjects += 1
       }
     }
 
@@ -91,14 +113,19 @@ class ProblemResolver(
 
     val semanticdbMessage =
       if (
-        misconfiguredProjects == allTargets.size && misconfiguredProjects > 0
+        misconfiguredProjects == (scalaTargets.size + javaTargets.size) && misconfiguredProjects > 0
       ) {
         Some(Messages.CheckDoctor.allProjectsMisconfigured)
       } else if (misconfiguredProjects == 1) {
-        val name = allTargets
+        val name = scalaTargets
           .find(t => !t.isSemanticdbEnabled)
           .map(_.displayName)
-          .getOrElse("<none>")
+          .getOrElse(
+            javaTargets
+              .find(t => !t.isSemanticdbEnabled)
+              .map(_.displayName)
+              .getOrElse("<none>")
+          )
         Some(Messages.CheckDoctor.singleMisconfiguredProject(name))
       } else if (misconfiguredProjects > 0) {
         Some(
@@ -147,7 +174,7 @@ class ProblemResolver(
     def isSupportedScalaVersion(version: String): Boolean =
       mtagsResolver.isSupportedScalaVersion(version)
 
-    scalaTarget.scalaVersion match {
+    val scalaVersionProblem = scalaTarget.scalaVersion match {
       case version if !isSupportedScalaVersion(version) && scalaTarget.isSbt =>
         if (ScalaVersions.isFutureVersion(version))
           Some(FutureSbtVersion)
@@ -169,7 +196,7 @@ class ProblemResolver(
       case _
           if !scalaTarget.isSourcerootDeclared && !ScalaVersions
             .isScala3Version(scalaTarget.scalaVersion) =>
-        Some(MissingSourceRoot(workspace.sourcerootOption))
+        Some(MissingSourceRoot(workspace.scalaSourcerootOption))
       case version
           if ScalaVersions.isDeprecatedScalaVersion(
             version
@@ -179,5 +206,31 @@ class ProblemResolver(
         Some(DeprecatedScalaVersion(version))
       case _ => None
     }
+    val javaSourcesProblem =
+      if (JdkSources(javaHome()).isDefined) None
+      else Some(MissingJdkSources)
+
+    scalaVersionProblem.orElse(javaSourcesProblem)
+  }
+
+  private def findProblem(
+      javaTarget: JavaTarget
+  ): Option[JavaProblem] = {
+    if (!javaTarget.isSemanticdbEnabled)
+      Some(
+        JavaSemanticDBDisabled(
+          currentBuildServer().map(_.main.name).getOrElse("<none>"),
+          isUnsupportedBloopVersion()
+        )
+      )
+    else if (!javaTarget.isSourcerootDeclared)
+      Some(MissingJavaSourceRoot(workspace.javaSourcerootOption))
+    else if (!javaTarget.isTargetrootDeclared)
+      Some(
+        MissingJavaTargetRoot(
+          "-Xplugin:semanticdb -targetroot:javac-classes-directory"
+        )
+      )
+    else None
   }
 }

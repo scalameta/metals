@@ -4,10 +4,12 @@ import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
+import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -165,18 +167,6 @@ object Messages {
 
   object MainClass {
     val message = "Multiple main classes found. Which would you like to run?"
-    def params(
-        mainClasses: List[ScalaMainClass]
-    ): ShowMessageRequestParams = {
-      val messageActionItems =
-        mainClasses
-          .map(mc => new MessageActionItem(mc.getClassName()))
-      val params = new ShowMessageRequestParams()
-      params.setMessage(message)
-      params.setType(MessageType.Info)
-      params.setActions(messageActionItems.asJava)
-      params
-    }
   }
 
   object ChooseBuildTool {
@@ -524,6 +514,7 @@ object Messages {
   object UpdateScalafmtConf {
 
     def letUpdate = new MessageActionItem("Let Metals update .scalafmt.conf")
+
     def createMessage(dialect: ScalafmtDialect): String = {
       s"Some source directories can't be formatted by scalafmt " +
         s"because they require the `runner.dialect = ${dialect.value}` setting." +

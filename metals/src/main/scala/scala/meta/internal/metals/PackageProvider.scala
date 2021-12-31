@@ -44,7 +44,7 @@ class PackageProvider(private val buildTargets: BuildTargets) {
       }
     }
 
-    if (path.isScala && path.toFile.length() == 0) {
+    if (path.isScalaOrJava && path.toFile.length() == 0) {
       buildTargets
         .inverseSourceItem(path)
         .map(path.toRelative)
@@ -59,7 +59,10 @@ class PackageProvider(private val buildTargets: BuildTargets) {
               .asScala
               .map(p => wrap(p.toString()))
               .mkString(".")
-            Some(NewFileTemplate(s"package $packageName\n\n@@"))
+            val text =
+              if (path.isScala) s"package $packageName\n\n@@"
+              else s"package $packageName;\n\n@@"
+            Some(NewFileTemplate(text))
           }
         }
     } else {

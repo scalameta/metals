@@ -14,9 +14,12 @@ import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -32,7 +35,8 @@ final class Doctor(
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
     clientConfig: ClientConfiguration,
-    mtagsResolver: MtagsResolver
+    mtagsResolver: MtagsResolver,
+    javaHome: () => Option[String]
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
@@ -40,7 +44,7 @@ final class Doctor(
       workspace,
       mtagsResolver,
       currentBuildServer,
-      clientConfig.isCommandInHtmlSupported()
+      javaHome
     )
 
   /**
@@ -124,7 +128,9 @@ final class Doctor(
    * Checks if there are any potential problems and if any, notifies the user.
    */
   def check(): Unit = {
-    val summary = problemResolver.problemMessage(allTargets())
+    val scalaTargets = buildTargets.allScala.toList
+    val javaTargets = buildTargets.allJava.toList
+    val summary = problemResolver.problemMessage(scalaTargets, javaTargets)
     executeReloadDoctor(summary)
     summary match {
       case Some(problem) =>
@@ -147,7 +153,8 @@ final class Doctor(
     }
   }
 
-  def allTargets(): List[ScalaTarget] = buildTargets.all.toList
+  private def allTargetIds(): Seq[BuildTargetIdentifier] =
+    buildTargets.allBuildTargetIds
 
   private def selectedBuildToolMessage(): Option[String] = {
     tables.buildTool.selectedBuildTool().map { value =>
@@ -213,7 +220,7 @@ final class Doctor(
   }
 
   private def buildTargetsJson(): String = {
-    val targets = allTargets()
+    val targetIds = allTargetIds()
     val buildToolHeading = selectedBuildToolMessage()
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
@@ -226,7 +233,7 @@ final class Doctor(
       ).flatten
         .mkString("\n\n")
 
-    val results = if (targets.isEmpty) {
+    val results = if (targetIds.isEmpty) {
       DoctorResults(
         doctorTitle,
         heading,
@@ -240,10 +247,10 @@ final class Doctor(
         ),
         None
       ).toJson
-
     } else {
-      val targetResults =
-        targets.sortBy(_.baseDirectory).map(extractTargetInfo)
+      val targetResults = targetIds
+        .flatMap(extractTargetInfo)
+        .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
       DoctorResults(doctorTitle, heading, None, Some(targetResults)).toJson
     }
     ujson.write(results)
@@ -299,8 +306,8 @@ final class Doctor(
         _.text(doctorHeading)
       )
 
-    val targets = allTargets()
-    if (targets.isEmpty) {
+    val targetIds = allTargetIds()
+    if (targetIds.isEmpty) {
       html
         .element("p")(
           _.text(noBuildTargetsTitle)
@@ -325,33 +332,43 @@ final class Doctor(
                 .element("th")(_.text("Find references"))
                 .element("th")(_.text("Recommendation"))
             )
-          ).element("tbody")(html => buildTargetRows(html, targets))
+          ).element("tbody")(html => buildTargetRows(html, targetIds))
         )
     }
   }
 
   private def buildTargetRows(
       html: HtmlBuilder,
-      targets: List[ScalaTarget]
+      targetIds: Seq[BuildTargetIdentifier]
   ): Unit = {
-    targets.sortBy(_.baseDirectory).foreach { target =>
-      val targetInfo = extractTargetInfo(target)
-      val center = "style='text-align: center'"
-      html.element("tr")(
-        _.element("td")(_.text(targetInfo.name))
-          .element("td")(_.text(targetInfo.scalaVersion))
-          .element("td", center)(_.text(Icons.unicode.check))
-          .element("td", center)(_.text(targetInfo.definitionStatus))
-          .element("td", center)(_.text(targetInfo.completionsStatus))
-          .element("td", center)(_.text(targetInfo.referencesStatus))
-          .element("td")(
-            _.raw(targetInfo.recommenedFix)
-          )
-      )
-    }
+    targetIds
+      .flatMap(extractTargetInfo)
+      .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
+      .foreach { targetInfo =>
+        val center = "style='text-align: center'"
+        html.element("tr")(
+          _.element("td")(_.text(targetInfo.name))
+            .element("td")(_.text(targetInfo.scalaVersion))
+            .element("td", center)(_.text(Icons.unicode.check))
+            .element("td", center)(_.text(targetInfo.definitionStatus))
+            .element("td", center)(_.text(targetInfo.completionsStatus))
+            .element("td", center)(_.text(targetInfo.referencesStatus))
+            .element("td")(_.raw(targetInfo.recommenedFix))
+        )
+      }
   }
 
-  private def extractTargetInfo(target: ScalaTarget) = {
+  private def extractTargetInfo(
+      targetId: BuildTargetIdentifier
+  ): List[DoctorTargetInfo] = {
+    val scalaDoctorInfo =
+      buildTargets.scalaTarget(targetId).map(extractScalaTargetInfo).toList
+    val javaDoctorInfo =
+      buildTargets.javaTarget(targetId).map(extractJavaTargetInfo).toList
+    scalaDoctorInfo ::: javaDoctorInfo
+  }
+
+  private def extractScalaTargetInfo(target: ScalaTarget) = {
     val scalaVersion = target.scalaVersion
     val definition: String =
       if (mtagsResolver.isSupportedScalaVersion(scalaVersion)) {
@@ -367,14 +384,40 @@ final class Doctor(
       } else {
         Icons.unicode.check
       }
-    val recommenedFix = problemResolver.recommendation(target)
+    val recommendedFix = problemResolver.recommendation(target)
     DoctorTargetInfo(
       target.displayName,
+      target.dataKind,
+      target.baseDirectory,
       scalaVersion,
       definition,
       completions,
       references,
-      recommenedFix
+      recommendedFix
+    )
+  }
+
+  private def extractJavaTargetInfo(target: JavaTarget) = {
+    val scalaVersion = "Java"
+    val definition: String = Icons.unicode.check
+    val completions: String = Icons.unicode.alert
+    val isSemanticdbNeeded = !target.isSemanticdbEnabled
+    val references: String =
+      if (isSemanticdbNeeded) {
+        Icons.unicode.alert
+      } else {
+        Icons.unicode.check
+      }
+    val recommendedFix = problemResolver.recommendation(target)
+    DoctorTargetInfo(
+      target.displayName,
+      target.dataKind,
+      target.baseDirectory,
+      scalaVersion,
+      definition,
+      completions,
+      references,
+      recommendedFix
     )
   }
 

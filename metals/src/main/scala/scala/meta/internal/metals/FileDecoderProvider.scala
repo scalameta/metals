@@ -21,6 +21,9 @@ import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.parsing.ClassFinder
@@ -89,6 +92,13 @@ final class FileDecoderProvider(
   private case class PathInfo(
       targetId: BuildTargetIdentifier,
       path: AbsolutePath
+  )
+  private case class BuildTargetMetadata(
+      targetId: BuildTargetIdentifier,
+      classDir: AbsolutePath,
+      targetRoot: AbsolutePath,
+      workspaceDir: AbsolutePath,
+      sourceRoot: AbsolutePath
   )
 
   /**
@@ -280,23 +290,23 @@ final class FileDecoderProvider(
       newExtension: String
   ): Either[String, PathInfo] =
     findBuildTargetMetadata(sourceFile)
-      .map { case (targetId, target, _, sourceRoot) =>
-        val classDir = target.classDirectory.toAbsolutePath
+      .map(metadata => {
         val oldExtension = sourceFile.extension
         val relativePath = sourceFile
-          .toRelative(sourceRoot)
+          .toRelative(metadata.sourceRoot)
           .resolveSibling(_.stripSuffix(oldExtension) + newExtension)
-        PathInfo(targetId, classDir.resolve(relativePath))
-      }
+        PathInfo(metadata.targetId, metadata.classDir.resolve(relativePath))
+      })
 
   private def findPathInfoForClassesPathFile(
       path: AbsolutePath
   ): Option[PathInfo] = {
     val pathInfos = for {
-      scalaTarget <- buildTargets.all
-      classPath = scalaTarget.classDirectory.toAbsolutePath
+      targetId <- buildTargets.allBuildTargetIds
+      classDir <- buildTargets.targetClassDirectories(targetId)
+      classPath = classDir.toAbsolutePath
       if (path.isInside(classPath))
-    } yield PathInfo(scalaTarget.id, path)
+    } yield PathInfo(targetId, path)
     pathInfos.toList.headOption
   }
 
@@ -326,10 +336,8 @@ final class FileDecoderProvider(
               DecoderResponse.failed(requestedURI, _)
             )
           } yield {
-            val (targetId, target, _, _) = buildMetadata
-            val classDir = target.classDirectory.toAbsolutePath
-            val pathToResource = classDir.resolve(resourcePath)
-            PathInfo(targetId, pathToResource)
+            val pathToResource = buildMetadata.classDir.resolve(resourcePath)
+            PathInfo(buildMetadata.targetId, pathToResource)
           }
           response match {
             case Left(decoderResponse) => Future.successful(decoderResponse)
@@ -366,16 +374,14 @@ final class FileDecoderProvider(
   ): Either[String, AbsolutePath] =
     for {
       metadata <- findBuildTargetMetadata(sourceFile)
-      (targetId, target, workspaceDirectory, _) = metadata
       foundSemanticDbPath <- {
-        val targetRoot = target.targetroot
-        val relativePath = SemanticdbClasspath.fromScala(
-          sourceFile.toRelative(workspaceDirectory.dealias)
+        val relativePath = SemanticdbClasspath.fromScalaOrJava(
+          sourceFile.toRelative(metadata.workspaceDir.dealias)
         )
         fileSystemSemanticdbs
           .findSemanticDb(
             relativePath,
-            targetRoot,
+            metadata.targetRoot,
             sourceFile,
             workspace
           )
@@ -385,18 +391,47 @@ final class FileDecoderProvider(
       }
     } yield foundSemanticDbPath.path
 
+  private def findJavaBuildTargetMetadata(
+      targetId: BuildTargetIdentifier,
+      sourceFile: AbsolutePath
+  ): Option[(String, AbsolutePath)] = {
+    for {
+      javaTarget <- buildTargets.javaTarget(targetId)
+      classDir = javaTarget.classDirectory
+      targetroot = javaTarget.targetroot
+    } yield (classDir, targetroot)
+  }
+
+  private def findScalaBuildTargetMetadata(
+      targetId: BuildTargetIdentifier,
+      sourceFile: AbsolutePath
+  ): Option[(String, AbsolutePath)] = {
+    for {
+      scalaTarget <- buildTargets.scalaTarget(targetId)
+      classDir = scalaTarget.classDirectory
+      targetroot = scalaTarget.targetroot
+    } yield (classDir, targetroot)
+  }
+
   private def findBuildTargetMetadata(
       sourceFile: AbsolutePath
-  ): Either[
-    String,
-    (BuildTargetIdentifier, ScalaTarget, AbsolutePath, AbsolutePath)
-  ] = {
+  ): Either[String, BuildTargetMetadata] = {
     val metadata = for {
       targetId <- buildTargets.inverseSources(sourceFile)
-      target <- buildTargets.scalaTarget(targetId)
       workspaceDirectory <- buildTargets.workspaceDirectory(targetId)
       sourceRoot <- buildTargets.inverseSourceItem(sourceFile)
-    } yield (targetId, target, workspaceDirectory, sourceRoot)
+      (classDir, targetroot) <-
+        if (sourceFile.isJava)
+          findJavaBuildTargetMetadata(targetId, sourceFile)
+        else
+          findScalaBuildTargetMetadata(targetId, sourceFile)
+    } yield BuildTargetMetadata(
+      targetId,
+      classDir.toAbsolutePath,
+      targetroot,
+      workspaceDirectory,
+      sourceRoot
+    )
     metadata.toRight(
       s"Cannot find build's metadata for ${sourceFile.toURI.toString()}"
     )

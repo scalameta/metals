@@ -104,6 +104,42 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
       )
     } yield ()
   }
+  test("run-java") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": { }
+           |}
+           |
+           |/a/src/main/java/Main.java
+           |package foo.bar;
+           |
+           |public class Main {
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/java/Main.java"
+      ) // compile `a` to populate its cache
+      _ <- assertCodeLenses(
+        "a/src/main/java/Main.java",
+        """|package foo.bar;
+           |
+           |public class Main {
+           |<<run>><<debug>>
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
 
   // Tests, whether main class in one project does not affect other class with same name in other project
   test("run-multi-module") {

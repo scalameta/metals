@@ -1,7 +1,7 @@
 package scala.meta.internal.builds
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 /**

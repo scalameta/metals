@@ -6,7 +6,7 @@ final case class DoctorResults(
     title: String,
     headerText: String,
     messages: Option[List[DoctorMessage]],
-    targets: Option[List[DoctorTargetInfo]]
+    targets: Option[Seq[DoctorTargetInfo]]
 ) {
   def toJson: Obj = {
     val json = ujson.Obj(
@@ -31,6 +31,8 @@ final case class DoctorMessage(title: String, recommendations: List[String]) {
 
 final case class DoctorTargetInfo(
     name: String,
+    dataKind: String,
+    baseDirectory: String,
     scalaVersion: String,
     definitionStatus: String,
     completionsStatus: String,

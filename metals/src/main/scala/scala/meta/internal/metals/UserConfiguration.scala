@@ -16,6 +16,11 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 
+case class JavaFormatConfig(
+    eclipseFormatConfigPath: AbsolutePath,
+    eclipseFormatProfile: Option[String]
+)
+
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
  */
@@ -43,7 +48,8 @@ case class UserConfiguration(
     enableIndentOnPaste: Boolean = false,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
-    testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses
+    testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
+    javaFormatConfig: Option[JavaFormatConfig] = None
 ) {
 
   def currentBloopVersion: String =
@@ -249,6 +255,23 @@ object UserConfiguration {
         """{ "testUserInterface" : "Test explorer" } """,
         "Test UI used for tests and test suites",
         "Default way of handling tests and test suites."
+      ),
+      UserConfigurationOption(
+        "java-format.eclipse-config-path",
+        """empty string `""`.""",
+        """"formatters/eclipse-formatter.xml"""",
+        "Eclipse Java formatter config path",
+        """Optional custom path to the eclipse-formatter.xml file.
+          |Should be an absolute path and use forward slashes `/` for file separators (even on Windows).
+          |""".stripMargin
+      ),
+      UserConfigurationOption(
+        "java-format.eclipse-profile",
+        """empty string `""`.""",
+        """"GoogleStyle"""",
+        "Eclipse Java formatting profile",
+        """|If the Eclipse formatter file contains more than one profile then specify the required profile name.
+           |""".stripMargin
       )
     )
 
@@ -420,6 +443,14 @@ object UserConfiguration {
           TestUserInterfaceKind.CodeLenses
       }
     }
+    val javaFormatConfig =
+      getStringKey("java-format.eclipse-config-path").map(f =>
+        JavaFormatConfig(
+          AbsolutePath(f),
+          getStringKey("java-format.eclipse-profile")
+        )
+      )
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -445,7 +476,8 @@ object UserConfiguration {
           enableIndentOnPaste,
           excludedPackages,
           defaultScalaVersion,
-          disableTestCodeLenses
+          disableTestCodeLenses,
+          javaFormatConfig
         )
       )
     } else {

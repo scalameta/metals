@@ -20,7 +20,6 @@ final case class ClientExperimentalCapabilities(
     doctorProvider: Option[String],
     executeClientCommandProvider: Option[Boolean],
     inputBoxProvider: Option[Boolean],
-    isCommandInHtmlSupported: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     slowTaskProvider: Option[Boolean],
@@ -37,7 +36,6 @@ final case class ClientExperimentalCapabilities(
 object ClientExperimentalCapabilities {
   import scala.meta.internal.metals.JsonParser._
   val Default: ClientExperimentalCapabilities = ClientExperimentalCapabilities(
-    None,
     None,
     None,
     None,
@@ -79,8 +77,6 @@ object ClientExperimentalCapabilities {
       executeClientCommandProvider =
         jsonObj.getBooleanOption("executeClientCommandProvider"),
       inputBoxProvider = jsonObj.getBooleanOption("inputBoxProvider"),
-      isCommandInHtmlSupported =
-        jsonObj.getBooleanOption("isCommandInHtmlSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),

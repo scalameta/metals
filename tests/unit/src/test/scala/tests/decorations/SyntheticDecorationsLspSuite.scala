@@ -2,6 +2,7 @@ package tests.decorations
 
 import java.net.URLEncoder
 
+import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.InitializationOptions
 
 import tests.BaseLspSuite
@@ -13,7 +14,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       InitializationOptions.Default.copy(
         inlineDecorationProvider = Some(true),
         decorationProvider = Some(true),
-        isCommandInHtmlSupported = Some(true)
+        commandInHtmlFormat = Some(CommandHTMLFormat.VSCode)
       )
     )
 
@@ -93,7 +94,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         .toURI
         .toString()
       expectedParamsBoston = URLEncoder.encode(
-        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":17}}}]"""
+        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}}}]"""
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",

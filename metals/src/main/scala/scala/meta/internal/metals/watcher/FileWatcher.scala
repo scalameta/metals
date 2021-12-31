@@ -88,13 +88,9 @@ object FileWatcher {
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceRoots.foreach(collect)
     buildTargets.sourceItems.foreach(collect)
-    val semanticdbs = buildTargets.scalacOptions.flatMap { item =>
-      for {
-        scalaInfo <- buildTargets.scalaInfo(item.getTarget)
-        targetroot = item.targetroot(scalaInfo.getScalaVersion)
-        path = targetroot.resolve(Directories.semanticdb) if !targetroot.isJar
-      } yield path.toNIO
-    }
+    val semanticdbs = buildTargets.allTargetRoots
+      .filterNot(_.isJar)
+      .map(_.resolve(Directories.semanticdb).toNIO)
 
     FilesToWatch(
       sourceFilesToWatch.toSet,
@@ -142,29 +138,9 @@ object FileWatcher {
       // Other OSes register all the files and directories individually
       val repo = initFileTreeRepository(watchFilter, callback)
 
-      // TODO(@pvid) swoval's FileTreeRepository should be able to create watch
-      // for files/directories that do not exist yet. However, there is an issue
-      // with watching **semanticdb** files when not creating source directories.
-      // I was not able to diagnose the issue.
-      // If you'd like to dive deeper into, try to remove the file creation and deletion
-      // and run some tests with `-Dswoval.log.level=debug` to see which files are registered
-      // and which file events are received.
-      val directoriesToCreate =
-        filesToWatch.sourceDirectories ++ filesToWatch.sourceFiles.map(
-          _.getParent()
-        )
-
-      val createdDirectories = directoriesToCreate.flatMap(path =>
-        AbsolutePath(path).createAndGetDirectories()
-      )
-
       filesToWatch.sourceDirectories.foreach(repo.register(_, Int.MaxValue))
       filesToWatch.semanticdDirectories.foreach(repo.register(_, Int.MaxValue))
       filesToWatch.sourceFiles.foreach(repo.register(_, -1))
-
-      createdDirectories.toSeq.sortBy(_.toNIO).reverse.foreach { dir =>
-        if (dir.isEmptyDirectory) dir.delete()
-      }
 
       () => repo.close()
     }

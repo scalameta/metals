@@ -51,12 +51,8 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
       initialConfig.renameFileThreshold
     )
 
-  def isCommandInHtmlSupported(): Boolean =
-    extract(
-      initializationOptions.isCommandInHtmlSupported,
-      experimentalCapabilities.isCommandInHtmlSupported,
-      initialConfig.isCommandInHtmlSupported
-    )
+  def commandInHtmlFormat(): Option[CommandHTMLFormat] =
+    initializationOptions.commandInHtmlFormat
 
   def icons(): Icons =
     initializationOptions.icons

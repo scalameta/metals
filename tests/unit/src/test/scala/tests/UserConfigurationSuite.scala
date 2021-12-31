@@ -3,7 +3,9 @@ package tests
 import java.util.Properties
 
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.JavaFormatConfig
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.io.AbsolutePath
 
 import munit.Location
 
@@ -183,4 +185,42 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin
   ) { ok => assert(ok.enableStripMarginOnTypeFormatting == false) }
 
+  checkOK(
+    "java format setting",
+    """
+      |{
+      | "javaFormat.eclipseConfigPath": "path",
+      | "javaFormat.eclipseProfile": "profile"
+      |}
+    """.stripMargin
+  ) { obtained =>
+    assert(
+      obtained.javaFormatConfig == Some(
+        JavaFormatConfig(AbsolutePath("path"), Some("profile"))
+      )
+    )
+  }
+  checkOK(
+    "java format no setting",
+    """
+      |{
+      |}
+    """.stripMargin
+  ) { obtained =>
+    assert(obtained.javaFormatConfig == None)
+  }
+  checkOK(
+    "java format no profile setting",
+    """
+      |{
+      | "javaFormat.eclipseConfigPath": "path"
+      |}
+    """.stripMargin
+  ) { obtained =>
+    assert(
+      obtained.javaFormatConfig == Some(
+        JavaFormatConfig(AbsolutePath("path"), None)
+      )
+    )
+  }
 }

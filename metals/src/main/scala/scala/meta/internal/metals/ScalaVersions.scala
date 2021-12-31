@@ -110,9 +110,14 @@ object ScalaVersions {
       scalaVersion: String,
       includeSource3: Boolean
   ): ScalafmtDialect = {
-    if (isScala3Version(scalaVersion)) ScalafmtDialect.Scala3
-    else if (includeSource3) ScalafmtDialect.Scala213Source3
-    else ScalafmtDialect.Scala213
+    ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion) match {
+      case "3" => ScalafmtDialect.Scala3
+      case "2.13" if includeSource3 => ScalafmtDialect.Scala213Source3
+      case "2.13" => ScalafmtDialect.Scala213
+      case "2.12" if includeSource3 => ScalafmtDialect.Scala212Source3
+      case "2.12" => ScalafmtDialect.Scala212
+      case "2.11" => ScalafmtDialect.Scala211
+    }
   }
 
   private val scalaVersionRegex =

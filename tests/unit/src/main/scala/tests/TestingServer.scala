@@ -439,8 +439,9 @@ final class TestingServer(
           field.setAccessible(true)
           field.getName -> field.get(initOptions)
         }
-        .collect { case (key, Some(value)) =>
-          key -> value
+        .collect {
+          case (key, Some(value: Boolean)) => key -> value
+          case (key, Some(value)) => key -> value.toString
         }
         .toMap
         .asJava
@@ -1450,7 +1451,7 @@ final class TestingServer(
       .map(_.getId().getUri())
       .getOrElse {
         val alternatives =
-          server.buildTargets.all.map(_.displayName).mkString(" ")
+          server.buildTargets.allTargets.map(_.getDisplayName()).mkString(" ")
         throw new NoSuchElementException(
           s"$displayName (alternatives: ${alternatives}"
         )

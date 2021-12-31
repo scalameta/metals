@@ -25,6 +25,7 @@ import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.Messages.UpdateScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.semver.SemVer
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -159,7 +160,7 @@ final class FormattingProvider(
       case Some(version) =>
         val text = config.toInputFromBuffers(buffers).text
         val dialect =
-          buildTargets.all.map(_.fmtDialect).toList.sorted.lastOption
+          buildTargets.allScala.map(_.fmtDialect).toList.sorted.lastOption
         val newText =
           ScalafmtConfig.update(text, Some(version), dialect, Map.empty)
         Files.write(config.toNIO, newText.getBytes(StandardCharsets.UTF_8))
@@ -290,14 +291,18 @@ final class FormattingProvider(
 
     val default = config.runnerDialect.getOrElse(ScalafmtDialect.Scala213)
 
+    val allTargets = buildTargets.allScala.toList
+    val sbtTargetsIds = allTargets.filter(_.isSbt).map(_.info.getId).toSet
+
     val itemsRequiresUpgrade =
       buildTargets.sourceItemsToBuildTargets.toList.flatMap {
-        case (path, ids) =>
+        case (path, ids) if !ids.asScala.exists(sbtTargetsIds.contains(_)) =>
           inferDialectForSourceItem(path, ids.asScala.toList, default)
             .map(d => (path, d))
+        case _ => Nil
       }
     if (itemsRequiresUpgrade.nonEmpty) {
-      val nonSbtTargets = buildTargets.all.toList.filter(!_.isSbt)
+      val nonSbtTargets = allTargets.filter(!_.isSbt)
       val minDialect =
         config.runnerDialect match {
           case Some(d) => d

@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import java.net.URI
 
+import scala.meta.internal.metals.clients.language.MetalsOpenWindowParams
+
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.{lsp4j => l}
 

@@ -204,6 +204,17 @@ object AutoImports:
           }.headOption
         case _ => None
 
+    // Naive way to find the start discounting any first lines that may be
+    // scala-cli directives.
+    @tailrec
+    def findStart(text: String, index: Int): Int =
+      if text.startsWith("//") then
+        val newline = text.indexOf("\n")
+        if newline != -1 then
+          findStart(text.drop(newline + 1), index + newline + 1)
+        else index + newline + 1
+      else index
+
     def forScalaSource: Option[AutoImportPosition] =
       lastPackageDef(None, tree).map { pkg =>
         val lastImportStatement =
@@ -211,7 +222,7 @@ object AutoImports:
         val (lineNumber, padTop) = lastImportStatement match
           case Some(stm) => (stm.endPos.line + 1, false)
           case None if pkg.pid.symbol.isEmptyPackage =>
-            (0, false)
+            (pos.source.offsetToLine(findStart(text, 0)), false)
           case None =>
             val pos = pkg.pid.endPos
             val line =
@@ -235,11 +246,15 @@ object AutoImports:
       }
 
     val path = pos.source.path
+
+    def fileStart =
+      AutoImportPosition(findStart(text, 0), 0, padTop = false)
+
     val ammonite =
       if path.endsWith(".sc.scala") then forAmmoniteScript else None
     ammonite
       .orElse(forScalaSource)
-      .getOrElse(AutoImportPosition(0, 0, padTop = false))
+      .getOrElse(fileStart)
   end autoImportPosition
 
 end AutoImports

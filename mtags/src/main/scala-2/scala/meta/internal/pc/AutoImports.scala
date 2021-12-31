@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
 import scala.reflect.internal.FatalError
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -81,7 +82,22 @@ trait AutoImports { this: MetalsGlobal =>
             )
           }
 
-        def fileStart = AutoImportPosition(0, 0, padTop = false)
+        // Naive way to find the start discounting any first lines that may be
+        // scala-cli directives.
+        @tailrec
+        def findStart(text: String, index: Int): Int = {
+          if (text.startsWith("//")) {
+            val newline = text.indexOf("\n")
+            if (newline != -1)
+              findStart(text.drop(newline + 1), index + newline + 1)
+            else index + newline + 1
+          } else {
+            index
+          }
+        }
+
+        def fileStart =
+          AutoImportPosition(findStart(text, 0), 0, padTop = false)
 
         (if (pos.source.path.endsWith(".sc.scala")) forAmmoniteScript else None)
           .orElse(forScalaSource)
