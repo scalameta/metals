@@ -503,7 +503,7 @@ lazy val metals = project
       "org.eclipse.platform" % "org.eclipse.core.expressions" % "3.6.500" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.core.filesystem" % "1.7.500" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.core.jobs" % "3.10.500" exclude ("*", "*"),
-      "org.eclipse.platform" % "org.eclipse.core.resources" % "3.13.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.core.resources" % "3.13.900" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.core.runtime" % "3.16.0" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.core.variables" % "3.4.600" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.equinox.app" % "1.4.300" exclude ("*", "*"),
