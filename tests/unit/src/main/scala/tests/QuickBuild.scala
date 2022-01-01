@@ -342,7 +342,7 @@ object QuickBuild {
   val Half: Regex = "(.+)::(.+):(.+)".r
   val Java: Regex = "(.+):(.+):(.+)".r
   def parseJson(text: String): JsonObject = {
-    new JsonParser().parse(text).getAsJsonObject
+    JsonParser.parseString(text).getAsJsonObject()
   }
 
   def newDigest(workspace: AbsolutePath): Option[(AbsolutePath, String)] = {

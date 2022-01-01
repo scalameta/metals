@@ -77,7 +77,8 @@ class ScalaVersionSelector(
           fallbackDialect(isAmmonite = path.isAmmoniteScript)
         )
         dialect
-          .copy(allowToplevelTerms = true, toplevelSeparator = "")
+          .withAllowToplevelTerms(true)
+          .withToplevelSeparator("")
       case _ => fallbackDialect(isAmmonite = false)
     }
   }

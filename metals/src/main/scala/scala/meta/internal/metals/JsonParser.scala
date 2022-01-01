@@ -13,7 +13,7 @@ object JsonParser {
 
   implicit class XtensionSerializedJson(string: String) {
     def parseJson: JsonElement = {
-      new com.google.gson.JsonParser().parse(string)
+      com.google.gson.JsonParser.parseString(string)
     }
   }
 
