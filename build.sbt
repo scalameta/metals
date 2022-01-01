@@ -219,7 +219,7 @@ lazy val V = new {
   val ammonite213Version = scala213
 
   val ammonite = "2.4.1"
-  val bloop = "1.4.11-19-93ebe2c6"
+  val bloop = "1.4.11-30-75fb3441"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
   val coursier = "2.0.16"
