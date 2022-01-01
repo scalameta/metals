@@ -509,7 +509,7 @@ lazy val metals = project
       "org.eclipse.platform" % "org.eclipse.equinox.app" % "1.4.300" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.equinox.common" % "3.10.600" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.7.600" exclude ("*", "*"),
-      "org.eclipse.platform" % "org.eclipse.equinox.registry" % "3.8.600" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.equinox.registry" % "3.8.800" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.osgi" % "3.15.0" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.team.core" % "3.8.700" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.text" % "3.9.0" exclude ("*", "*"),
