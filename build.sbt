@@ -496,7 +496,7 @@ lazy val metals = project
       "dev.dirs" % "directories" % "26",
       // for Java formatting
       "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.25.0" exclude ("*", "*"),
-      "org.eclipse.platform" % "org.eclipse.ant.core" % "3.5.500" exclude ("*", "*"),
+      "org.eclipse.platform" % "org.eclipse.ant.core" % "3.5.800" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.compare.core" % "3.6.600" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.core.commands" % "3.9.500" exclude ("*", "*"),
       "org.eclipse.platform" % "org.eclipse.core.contenttype" % "3.7.500" exclude ("*", "*"),
