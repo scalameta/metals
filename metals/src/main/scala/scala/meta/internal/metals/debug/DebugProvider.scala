@@ -305,13 +305,8 @@ class DebugProvider(
           symbol = symbolInfo.symbol
           testClass <- testClasses.get(symbol)
         } yield testClass
-        val mains = for {
-          symbolInfo <- textDocument.symbols
-          symbol = symbolInfo.symbol
-          mainClass <- classes.get(symbol)
-        } yield mainClass
-        if (mains.nonEmpty) {
-          verifyMain(buildTarget, mains.toList, params)
+        if (classes.nonEmpty) {
+          verifyMain(buildTarget, classes.values.toList, params)
         } else if (tests.nonEmpty) {
           Future(
             new b.DebugSessionParams(
