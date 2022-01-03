@@ -5,7 +5,7 @@
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
 # Project page: https://github.com/lefou/millw
-# Script Version: 0.3.9
+# Script Version: 0.4.0
 #
 # If you want to improve this script, please also contribute your changes back!
 #
@@ -116,7 +116,7 @@ if [ ! -s "${MILL}" ] ; then
     # TODO: handle command not found
     echo "Downloading mill ${MILL_VERSION} from ${MILL_REPO_URL}/releases ..." 1>&2
     MILL_VERSION_TAG=$(echo $MILL_VERSION | sed -E 's/([^-]+)(-M[0-9]+)?(-.*)?/\1\2/')
-    ${CURL_CMD} -L -o "${DOWNLOAD_FILE}" "${MILL_REPO_URL}/releases/download/${MILL_VERSION_TAG}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
+    ${CURL_CMD} -f -L -o "${DOWNLOAD_FILE}" "${MILL_REPO_URL}/releases/download/${MILL_VERSION_TAG}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
     chmod +x "${DOWNLOAD_FILE}"
     mkdir -p "${MILL_DOWNLOAD_PATH}"
     mv "${DOWNLOAD_FILE}" "${MILL}"

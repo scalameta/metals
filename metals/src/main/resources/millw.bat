@@ -5,7 +5,7 @@ rem You can give the required mill version with --mill-version parameter
 rem If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 rem
 rem Project page: https://github.com/lefou/millw
-rem Script Version: 0.3.9
+rem Script Version: 0.4.0
 rem
 rem If you want to improve this script, please also contribute your changes back!
 rem
@@ -20,7 +20,7 @@ set "DEFAULT_MILL_VERSION=0.9.10"
 set "MILL_REPO_URL=https://github.com/com-lihaoyi/mill"
 
 rem %~1% removes surrounding quotes
-if [%~1%]==[--mil-version] (
+if [%~1%]==[--mill-version] (
     rem shift command doesn't work within parentheses
     if not [%~2%]==[] (
         set MILL_VERSION=%~2%
@@ -79,7 +79,7 @@ if not exist "%MILL%" (
     rem but I don't think we can expect all the users to have it in 2019
     where /Q curl
     if %ERRORLEVEL% EQU 0 (
-        curl -L "!DOWNLOAD_URL!" -o "!DOWNLOAD_FILE!"
+        curl -f -L "!DOWNLOAD_URL!" -o "!DOWNLOAD_FILE!"
     ) else (
         rem bitsadmin seems to be available on Windows 7
         rem without /dynamic, github returns 403
