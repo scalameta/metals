@@ -60,7 +60,6 @@ import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
@@ -1743,7 +1742,7 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
         val args = params.getArguments.asScala
-        import DebugParametersJsonParsers._
+        import DebugProvider.DebugParametersJsonParsers._
         val debugSessionParams: Future[b.DebugSessionParams] = args match {
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
