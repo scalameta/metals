@@ -5,10 +5,10 @@ import java.util.UUID
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees

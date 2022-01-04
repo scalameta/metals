@@ -14,56 +14,121 @@ final class JavaFoldingRangeExtractor(
 ) {
   private val spanThreshold = 2
 
-  private sealed trait Token
-  private case class LBrace(line: Int, ch: Int) extends Token
-  private case class RBrace(line: Int, ch: Int) extends Token
+  private sealed trait Position
+  private case class LBrace(line: Int, ch: Int) extends Position
+  private case class RBrace(line: Int, ch: Int) extends Position
+
+  private trait Region extends Position {
+    def startLine: Int
+    def startCh: Int
+    def endLine: Int
+    def endCh: Int
+    def kind: String
+  }
   private case class Comment(
       startLine: Int,
       startCh: Int,
       endLine: Int,
       endCh: Int
-  ) extends Token
+  ) extends Region {
+    def kind = FoldingRangeKind.Comment
+  }
+
+  private case class Imports(
+      startLine: Int,
+      startCh: Int,
+      endLine: Int,
+      endCh: Int
+  ) extends Region {
+    def kind = FoldingRangeKind.Imports
+  }
 
   def extract(): List[FoldingRange] = {
     val scanner = ToolFactory.createScanner(true, true, false, true)
     scanner.setSource(text.toCharArray())
+
     @tailrec
-    def loop(token: Int, line: Int, acc: List[Token]): List[Token] = {
+    def swallowUntilSemicolon(token: Int, line: Int): Int = {
+      val addLine = scanner.getCurrentTokenSource.count(_ == '\n')
+      if (token != ITerminalSymbols.TokenNameSEMICOLON) {
+        swallowUntilSemicolon(scanner.getNextToken(), line + addLine)
+      } else {
+        line + addLine
+      }
+    }
+
+    @tailrec
+    def gatherImportLines(
+        token: Int,
+        line: Int,
+        lastImportLine: Int
+    ): (Int, Int, Int, Int) = {
+      val addLine = scanner.getRawTokenSource().count(_ == '\n')
+      token match {
+        case ITerminalSymbols.TokenNameimport =>
+          val currentLine = swallowUntilSemicolon(token, line)
+          gatherImportLines(scanner.getNextToken(), currentLine, line)
+        case ITerminalSymbols.TokenNameWHITESPACE =>
+          gatherImportLines(
+            scanner.getNextToken(),
+            line + addLine,
+            lastImportLine
+          )
+        case _ =>
+          val endCharacter =
+            scanner.getCurrentTokenEndPosition - scanner.getLineStart(
+              lastImportLine
+            )
+          (token, line, lastImportLine, endCharacter)
+      }
+
+    }
+
+    @tailrec
+    def gather(token: Int, line: Int, acc: List[Position]): List[Position] = {
       if (token != ITerminalSymbols.TokenNameEOF) {
         val addLine = scanner.getRawTokenSource().count(_ == '\n')
         def next = scanner.getNextToken()
         def startCharacter = {
           if (foldOnlyLines) 0
           else
-            scanner.getCurrentTokenStartPosition() - scanner.getLineStart(line)
+            scanner.getCurrentTokenStartPosition() - scanner.getLineStart(
+              line
+            ) - 1
         }
         def endCharacter = {
           if (foldOnlyLines) 0
           else
-            scanner.getCurrentTokenEndPosition() - scanner.getLineStart(
-              line + addLine
-            )
+            scanner.getCurrentTokenEndPosition() -
+              scanner.getLineStart(line + addLine) - 1
         }
         token match {
           case ITerminalSymbols.TokenNameLBRACE =>
             val ch = startCharacter
-            loop(next, line, LBrace(line, ch) :: acc)
+            gather(next, line, LBrace(line, ch) :: acc)
           case ITerminalSymbols.TokenNameRBRACE =>
             val ch = startCharacter
-            loop(next, line, RBrace(line, ch) :: acc)
+            gather(next, line, RBrace(line, ch) :: acc)
+
+          case ITerminalSymbols.TokenNameimport =>
+            val ch = startCharacter
+            val (tk, currentLine, endLine, endCharacter) =
+              gatherImportLines(token, line, line)
+            val imports = Imports(line, ch, endLine, endCharacter)
+            gather(tk, currentLine, imports :: acc)
 
           case ITerminalSymbols.TokenNameCOMMENT_BLOCK |
               ITerminalSymbols.TokenNameCOMMENT_JAVADOC =>
             val startCh = startCharacter
             val endCh = endCharacter
             val comment = Comment(line, startCh, line + addLine, endCh)
-            loop(next, line + addLine, comment :: acc)
+            gather(next, line + addLine, comment :: acc)
 
           case ITerminalSymbols.TokenNameWHITESPACE =>
             val addLine = scanner.getRawTokenSource().count(_ == '\n')
-            loop(next, line + addLine, acc)
+            gather(next, line + addLine, acc)
           case _ =>
-            loop(next, line + addLine, acc)
+            gather(next, line + addLine, acc)
         }
 
       } else {
@@ -71,11 +136,11 @@ final class JavaFoldingRangeExtractor(
       }
 
     }
-    val startAndEnds = loop(scanner.getNextToken(), 0, Nil)
+    val startAndEnds = gather(scanner.getNextToken(), 0, Nil)
     val stack = mutable.Stack.empty[LBrace]
     @tailrec
     def group(
-        remaining: List[Token],
+        remaining: List[Position],
         acc: List[FoldingRange]
     ): List[FoldingRange] = {
       remaining match {
@@ -96,18 +161,14 @@ final class JavaFoldingRangeExtractor(
             case None =>
               group(tail, acc)
           }
-        case Comment(
-              startLine,
-              startCharacter,
-              endLine,
-              endCharacter
-            ) :: tail =>
+
+        case (region: Region) :: tail =>
           createFoldingRange(
-            startLine,
-            startCharacter,
-            endLine,
-            endCharacter,
-            FoldingRangeKind.Comment
+            region.startLine,
+            region.startCh,
+            region.endLine,
+            region.endCh,
+            region.kind
           ) match {
             case Some(newFoldingRange) =>
               group(tail, newFoldingRange :: acc)
