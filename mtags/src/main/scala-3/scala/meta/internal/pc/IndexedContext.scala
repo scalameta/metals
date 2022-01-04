@@ -28,13 +28,19 @@ sealed trait IndexedContext:
     findSymbol(sym.decodedName) match
       case Some(symbols) if symbols.exists(_ == sym) =>
         Result.InScope
-      case Some(_) => Result.Conflict
+      case Some(symbols) if symbols.exists(isTypeAliasOf(_, sym)) =>
+        Result.InScope
+      case Some(_) =>
+        Result.Conflict
       case None => Result.Missing
 
   final def hasRename(sym: Symbol, as: String): Boolean =
     rename(sym.name.toSimpleName) match
       case Some(v) => v == as
       case None => false
+
+  private def isTypeAliasOf(alias: Symbol, sym: Symbol) =
+    alias.isAliasType && alias.info.dealias.typeSymbol == sym
 
   final def isEmpty: Boolean = this match
     case IndexedContext.Empty => true
