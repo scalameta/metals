@@ -449,12 +449,6 @@ object ServerCommands {
     "Open the Metals repository on GitHub"
   )
 
-  val ChatOnGitter = new OpenBrowserCommand(
-    "https://gitter.im/scalameta/metals",
-    "Chat on Gitter",
-    "Open the Metals channel on Gitter to discuss with other Metals users."
-  )
-
   val ChatOnDiscord = new OpenBrowserCommand(
     "https://discord.gg/RFpSVth",
     "Chat on Discord",

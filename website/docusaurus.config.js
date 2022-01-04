@@ -117,11 +117,6 @@ module.exports = {
                     </a>`
           },
           {
-            "html": `<a href = "https://gitter.im/scalameta/metals" target = "_blank" >
-                      <img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&style=social" />
-                    </a>`
-          },
-          {
             "html": `<a href="https://twitter.com/scalameta" target="_blank">
                       <img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&style=social" />
                     </a>`

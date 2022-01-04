@@ -1,7 +1,7 @@
 # Metals
 
-<a href="https://gitter.im/scalameta/metals">
-<img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&color=F71263" />
+<a href="https://discord.gg/FaVDrJegEh">
+<img alt="Chat with us on discord" src="https://img.shields.io/discord/632642981228314653">
 </a>
 <a href="https://twitter.com/scalameta">
 <img alt="Follow scalameta on Twitter" src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&color=blue" />

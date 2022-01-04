@@ -4,7 +4,7 @@ title: Contributing to Metals
 ---
 
 Whenever you are stuck or unsure, please open an issue or
-[ask on Gitter](https://gitter.im/scalameta/metals). This project follows
+[ask us on Discord](https://discord.gg/DwTc8xbNDd). This project follows
 [Scalameta's contribution guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md).
 
 ## Requirements
