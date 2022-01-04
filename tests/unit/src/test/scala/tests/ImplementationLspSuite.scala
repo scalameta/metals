@@ -532,6 +532,28 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "java-implementation",
+    """|/a/src/main/scala/a/Main.java
+       |package a;
+       |public class Main {
+       |  abstract class A {
+       |      abstract void he@@llo();
+       |  }
+       |  abstract class B extends A{
+       |      @Override void <<hello>>(){
+       |          System.out.println("Hello!");
+       |      }
+       |  }
+       |  class C extends B{
+       |      @Override void <<hello>>(){
+       |          System.out.println("Bye!");
+       |      }
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
 
