@@ -1596,11 +1596,15 @@ class MetalsLanguageServer(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
     CancelTokens.future { token =>
-      parseTrees.currentFuture.map(_ =>
-        foldingRangeProvider.getRangedFor(
-          params.getTextDocument().getUri().toAbsolutePath
+      val path = params.getTextDocument().getUri().toAbsolutePath
+      if (path.isScala)
+        parseTrees.currentFuture.map(_ =>
+          foldingRangeProvider.getRangedForScala(path)
         )
-      )
+      else
+        Future {
+          foldingRangeProvider.getRangedForJava(path)
+        }
     }
   }
 
