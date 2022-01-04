@@ -12,7 +12,7 @@ import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsBspException
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.WorkspaceErrorsException
+import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass

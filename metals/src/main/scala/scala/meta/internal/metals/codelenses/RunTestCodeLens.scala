@@ -14,12 +14,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.MethodSignature
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -159,7 +157,8 @@ final class RunTestCodeLens(
           .map(mainCommand(target, _))
           .getOrElse(Nil)
         val tests = testClasses(target, classes, symbol)
-        val fromAnnot = mainAnnot(occurrence, textDocument)
+        val fromAnnot = DebugProvider
+          .mainFromAnnotation(occurrence, textDocument)
           .flatMap { symbol =>
             classes.mainClasses
               .get(symbol)
@@ -194,60 +193,6 @@ final class RunTestCodeLens(
         .flatMap(className => testCommand(target, className))
     else
       Nil
-
-  private def mainAnnot(
-      occurrence: SymbolOccurrence,
-      textDocument: TextDocument
-  ): Option[String] = {
-    if (occurrence.symbol == "scala/main#") {
-      occurrence.range match {
-        case Some(range) =>
-          val closestOccurence = textDocument.occurrences.minBy { occ =>
-            occ.range
-              .filter { rng =>
-                occ.symbol != "scala/main#" &&
-                rng.endLine - range.endLine >= 0 &&
-                rng.endCharacter - rng.startCharacter > 0
-              }
-              .map(rng =>
-                (
-                  rng.endLine - range.endLine,
-                  rng.endCharacter - range.endCharacter
-                )
-              )
-              .getOrElse((Int.MaxValue, Int.MaxValue))
-          }
-          dropSourceFromToplevelSymbol(closestOccurence.symbol)
-
-        case None => None
-      }
-    } else {
-      None
-    }
-
-  }
-
-  /**
-   * Converts Scala3 sorceToplevelSymbol into a plain one that corresponds to class name.
-   * From `3.1.0` plain names were removed from occurrences because they are synthetic.
-   * Example:
-   *   `foo/Foo$package.mainMethod().` -> `foo/mainMethod#`
-   */
-  private def dropSourceFromToplevelSymbol(symbol: String): Option[String] = {
-    Symbol(symbol) match {
-      case GlobalSymbol(
-            GlobalSymbol(
-              owner,
-              Descriptor.Term(sourceOwner)
-            ),
-            Descriptor.Method(name, _)
-          ) if sourceOwner.endsWith("$package") =>
-        val converted = GlobalSymbol(owner, Descriptor.Term(name))
-        Some(converted.value)
-      case _ =>
-        None
-    }
-  }
 
   private def testCommand(
       target: b.BuildTargetIdentifier,

@@ -43,9 +43,14 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.ClassFinder
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -73,6 +78,8 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers
 ) {
+
+  import DebugProvider._
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
     buildTargets,
@@ -306,9 +313,16 @@ class DebugProvider(
           testClass <- testClasses.get(symbol)
         } yield testClass
         val mains = for {
-          symbolInfo <- textDocument.symbols
-          symbol = symbolInfo.symbol
-          mainClass <- classes.get(symbol)
+          occurrence <- textDocument.occurrences
+          if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
+          symbol = occurrence.symbol
+          mainClass <- {
+            val normal = classes.get(symbol)
+            val fromAnnot = DebugProvider
+              .mainFromAnnotation(occurrence, textDocument)
+              .flatMap(classes.get(_))
+            List(normal, fromAnnot).flatten
+          }
         } yield mainClass
         if (mains.nonEmpty) {
           verifyMain(buildTarget, mains.toList, params)
@@ -666,27 +680,92 @@ class DebugProvider(
 
 }
 
-object DebugParametersJsonParsers {
-  lazy val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
-  lazy val mainClassParamsParser =
-    new JsonParser.Of[DebugUnresolvedMainClassParams]
-  lazy val testClassParamsParser =
-    new JsonParser.Of[DebugUnresolvedTestClassParams]
-  lazy val attachRemoteParamsParser =
-    new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
-  lazy val unresolvedParamsParser =
-    new JsonParser.Of[DebugDiscoveryParams]
-}
+object DebugProvider {
 
-case object WorkspaceErrorsException
-    extends Exception(
-      s"Cannot run class, since the workspace has errors."
-    )
-case object NoRunOptionException
-    extends Exception(
-      s"There is nothing to run or test in the current file."
-    )
-case object SemanticDbNotFoundException
-    extends Exception(
-      "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
-    )
+  /**
+   * Given an occurence and a text document return the symbol of a main method
+   * that could be defined using the Scala 3 @main annotation.
+   *
+   * @param occurrence The symbol occurence you're checking against the document.
+   * @param textDocument The document of the current file.
+   * @return Possible symbol name of main.
+   */
+  def mainFromAnnotation(
+      occurrence: SymbolOccurrence,
+      textDocument: TextDocument
+  ): Option[String] = {
+    if (occurrence.symbol == "scala/main#") {
+      occurrence.range match {
+        case Some(range) =>
+          val closestOccurence = textDocument.occurrences.minBy { occ =>
+            occ.range
+              .filter { rng =>
+                occ.symbol != "scala/main#" &&
+                rng.endLine - range.endLine >= 0 &&
+                rng.endCharacter - rng.startCharacter > 0
+              }
+              .map(rng =>
+                (
+                  rng.endLine - range.endLine,
+                  rng.endCharacter - range.endCharacter
+                )
+              )
+              .getOrElse((Int.MaxValue, Int.MaxValue))
+          }
+          dropSourceFromToplevelSymbol(closestOccurence.symbol)
+
+        case None => None
+      }
+    } else {
+      None
+    }
+
+  }
+
+  /**
+   * Converts Scala3 sorceToplevelSymbol into a plain one that corresponds to class name.
+   * From `3.1.0` plain names were removed from occurrences because they are synthetic.
+   * Example:
+   *   `foo/Foo$package.mainMethod().` -> `foo/mainMethod#`
+   */
+  private def dropSourceFromToplevelSymbol(symbol: String): Option[String] = {
+    Symbol(symbol) match {
+      case GlobalSymbol(
+            GlobalSymbol(
+              owner,
+              Descriptor.Term(sourceOwner)
+            ),
+            Descriptor.Method(name, _)
+          ) if sourceOwner.endsWith("$package") =>
+        val converted = GlobalSymbol(owner, Descriptor.Term(name))
+        Some(converted.value)
+      case _ =>
+        None
+    }
+  }
+
+  object DebugParametersJsonParsers {
+    lazy val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
+    lazy val mainClassParamsParser =
+      new JsonParser.Of[DebugUnresolvedMainClassParams]
+    lazy val testClassParamsParser =
+      new JsonParser.Of[DebugUnresolvedTestClassParams]
+    lazy val attachRemoteParamsParser =
+      new JsonParser.Of[DebugUnresolvedAttachRemoteParams]
+    lazy val unresolvedParamsParser =
+      new JsonParser.Of[DebugDiscoveryParams]
+  }
+
+  case object WorkspaceErrorsException
+      extends Exception(
+        s"Cannot run class, since the workspace has errors."
+      )
+  case object NoRunOptionException
+      extends Exception(
+        s"There is nothing to run or test in the current file."
+      )
+  case object SemanticDbNotFoundException
+      extends Exception(
+        "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
+      )
+}
