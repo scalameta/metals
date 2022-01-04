@@ -43,7 +43,7 @@ class ShortenedNames(
         val isOk = syms.filter(_ != NoSymbol) match
           case Nil =>
             if short.symbol.isStatic || // Java static
-              short.symbol.owner.ownersIterator.forall { s =>
+              short.symbol.maybeOwner.ownersIterator.forall { s =>
                 // ensure the symbol can be referenced in a static manner, without any instance
                 s.is(Package) || s.is(Module)
               }
