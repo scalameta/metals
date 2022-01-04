@@ -1,0 +1,78 @@
+name: 🐛 Bug Report
+description: Create a bug report to help us improve
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Please list the steps for us to reproduce the issue you're having.
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. Scroll down to ...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expectation
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      description: What OS are you using?
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Other (note only the above 3 are officially supported)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: editor
+    attributes:
+      label: Editor/Extension
+      options:
+        - VS Code
+        - Sublime
+        - Nvim/Vim (coc-metals)
+        - Nvim (nvim-metals)
+        - Nvim/Vim (other)
+        - Emacs (lsp-metals)
+        - Emacs (other)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version of Metals
+      placeholder: v0.10.9
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context or search terms
+      description: |
+        - Any other context about the problem
+        - Search terms to help others discover this
+    validations:
+      required: false
