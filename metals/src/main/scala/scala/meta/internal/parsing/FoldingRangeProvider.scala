@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 
@@ -23,11 +24,12 @@ final class FoldingRangeProvider(
     foldOnlyLines.set(value)
   }
 
-  def getRangedFor(
+  def getRangedForScala(
       filePath: AbsolutePath
   ): util.List[FoldingRange] = {
     val result = for {
       code <- buffers.get(filePath)
+      if filePath.isScala
       tree <- trees.get(filePath)
     } yield {
       val revised = Input.VirtualFile(filePath.toString(), code)
@@ -36,6 +38,21 @@ final class FoldingRangeProvider(
       val extractor = new FoldingRangeExtractor(distance, foldOnlyLines.get())
       extractor.extract(tree)
     }
+    result.getOrElse(util.Collections.emptyList())
+  }
+
+  def getRangedForJava(
+      filePath: AbsolutePath
+  ): util.List[FoldingRange] = {
+    val result = for {
+      code <- buffers.get(filePath)
+      if filePath.isJava
+    } yield {
+      val extractor =
+        new JavaFoldingRangeExtractor(code, foldOnlyLines.get())
+      extractor.extract().asJava
+    }
+
     result.getOrElse(util.Collections.emptyList())
   }
 }
