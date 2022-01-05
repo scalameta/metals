@@ -57,12 +57,19 @@ final class JavaFoldingRangeExtractor(
       }
     }
 
+    case class CurrentScannerStatus(
+        currentToken: Int,
+        currentLine: Int,
+        lastImportLine: Int,
+        lastImportCharacter: Int
+    )
     @tailrec
     def gatherImportLines(
         token: Int,
         line: Int,
-        lastImportLine: Int
-    ): (Int, Int, Int, Int) = {
+        lastImportLine: Int,
+        hasCarriageReturn: Boolean = false
+    ): CurrentScannerStatus = {
       val addLine = scanner.getRawTokenSource().count(_ == '\n')
       token match {
         case ITerminalSymbols.TokenNameimport =>
@@ -72,14 +79,16 @@ final class JavaFoldingRangeExtractor(
           gatherImportLines(
             scanner.getNextToken(),
             line + addLine,
-            lastImportLine
+            lastImportLine,
+            hasCarriageReturn || scanner.getRawTokenSource().contains('\r')
           )
         case _ =>
           val endCharacter =
-            scanner.getCurrentTokenEndPosition - scanner.getLineStart(
-              lastImportLine
-            )
-          (token, line, lastImportLine, endCharacter)
+            scanner.getLineEnd(lastImportLine) -
+              scanner.getLineStart(lastImportLine)
+          val adjustedEnd =
+            if (hasCarriageReturn) endCharacter - 1 else endCharacter
+          CurrentScannerStatus(token, line, lastImportLine, adjustedEnd)
       }
 
     }
@@ -92,26 +101,25 @@ final class JavaFoldingRangeExtractor(
         def currentCharacterStart =
           scanner.getCurrentTokenStartPosition() - scanner.getLineStart(line)
         def currentCharacterEnd =
-          scanner.getCurrentTokenEndPosition() - scanner.getLineStart(
-            line + addLine
-          )
+          scanner.getCurrentTokenEndPosition() -
+            scanner.getLineStart(line + addLine)
 
         token match {
           case ITerminalSymbols.TokenNameLBRACE =>
             val startCharacter =
-              if (foldOnlyLines) 0 else currentCharacterStart - 1
+              if (foldOnlyLines) 0 else currentCharacterStart
             gather(next, line, LBrace(line, startCharacter) :: acc)
           case ITerminalSymbols.TokenNameRBRACE =>
             val (endLine, endChracter) =
               if (foldOnlyLines) (line - 1, 0)
-              else (line, currentCharacterEnd)
+              else (line, currentCharacterEnd + 1)
             gather(next, line, RBrace(endLine, endChracter) :: acc)
 
           case ITerminalSymbols.TokenNameimport =>
             val startCharacter =
-              if (foldOnlyLines) 0 else currentCharacterStart - 1
+              if (foldOnlyLines) 0 else currentCharacterStart
             val startLine = line
-            val (tk, currentLine, endLine, endCharacter) =
+            val CurrentScannerStatus(tk, currentLine, endLine, endCharacter) =
               gatherImportLines(token, line, line)
             val imports =
               Imports(startLine, startCharacter, endLine, endCharacter)
@@ -125,8 +133,8 @@ final class JavaFoldingRangeExtractor(
                 (0, 0, currentEndLine - 1)
               else
                 (
-                  currentCharacterStart - 1,
-                  currentCharacterEnd,
+                  currentCharacterStart,
+                  currentCharacterEnd + 1,
                   currentEndLine
                 )
             val comment = Comment(line, startCh, endLine, endCh)
@@ -144,7 +152,7 @@ final class JavaFoldingRangeExtractor(
       }
 
     }
-    val startAndEnds = gather(scanner.getNextToken(), 0, Nil)
+    val startAndEnds = gather(scanner.getNextToken(), 1, Nil)
     val stack = mutable.Stack.empty[LBrace]
     @tailrec
     def group(
@@ -158,9 +166,9 @@ final class JavaFoldingRangeExtractor(
         case RBrace(endLine, endCharacter) :: tail if stack.nonEmpty =>
           val lBrace = stack.pop()
           createFoldingRange(
-            lBrace.line,
+            lBrace.line - 1,
             lBrace.ch,
-            endLine,
+            endLine - 1,
             endCharacter,
             FoldingRangeKind.Region
           ) match {
@@ -172,9 +180,9 @@ final class JavaFoldingRangeExtractor(
 
         case (region: Region) :: tail =>
           createFoldingRange(
-            region.startLine,
+            region.startLine - 1,
             region.startCh,
-            region.endLine,
+            region.endLine - 1,
             region.endCh,
             region.kind
           ) match {

@@ -13,24 +13,22 @@ import org.eclipse.lsp4j.FoldingRangeKind;<<imports<<
  to
  wrap
  */<<comment<<
-public class Test {>>region>>
+public class Test >>region>>{
 
-    abstract class A {
+    abstract class A >>region>>{
         abstract void hello();
-    }
+    }<<region<<
 
     abstract class B extends A >>region>>{
         @Override
         void hello() {
-            System.out.println("Hello!");
-        }
+            System.out.println("Hello!");}
     }<<region<<
 
     class C extends B >>region>>{
         @Override
         void hello() {
-            System.out.println("Bye!");
-        }
+            System.out.println("Bye!");}
 
         String hello(String str) >>region>>{
             System.out.println("Bye!");
