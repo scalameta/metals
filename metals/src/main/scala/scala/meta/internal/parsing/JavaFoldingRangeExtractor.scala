@@ -89,39 +89,47 @@ final class JavaFoldingRangeExtractor(
       if (token != ITerminalSymbols.TokenNameEOF) {
         val addLine = scanner.getRawTokenSource().count(_ == '\n')
         def next = scanner.getNextToken()
-        def startCharacter = {
-          if (foldOnlyLines) 0
-          else
-            scanner.getCurrentTokenStartPosition() - scanner.getLineStart(
-              line
-            ) - 1
-        }
-        def endCharacter = {
-          if (foldOnlyLines) 0
-          else
-            scanner.getCurrentTokenEndPosition() -
-              scanner.getLineStart(line + addLine) - 1
-        }
+        def currentCharacterStart =
+          scanner.getCurrentTokenStartPosition() - scanner.getLineStart(line)
+        def currentCharacterEnd =
+          scanner.getCurrentTokenEndPosition() - scanner.getLineStart(
+            line + addLine
+          )
+
         token match {
           case ITerminalSymbols.TokenNameLBRACE =>
-            val ch = startCharacter
-            gather(next, line, LBrace(line, ch) :: acc)
+            val startCharacter =
+              if (foldOnlyLines) 0 else currentCharacterStart - 1
+            gather(next, line, LBrace(line, startCharacter) :: acc)
           case ITerminalSymbols.TokenNameRBRACE =>
-            val ch = startCharacter
-            gather(next, line, RBrace(line, ch) :: acc)
+            val (endLine, endChracter) =
+              if (foldOnlyLines) (line - 1, 0)
+              else (line, currentCharacterEnd)
+            gather(next, line, RBrace(endLine, endChracter) :: acc)
 
           case ITerminalSymbols.TokenNameimport =>
-            val ch = startCharacter
+            val startCharacter =
+              if (foldOnlyLines) 0 else currentCharacterStart - 1
+            val startLine = line
             val (tk, currentLine, endLine, endCharacter) =
               gatherImportLines(token, line, line)
-            val imports = Imports(line, ch, endLine, endCharacter)
+            val imports =
+              Imports(startLine, startCharacter, endLine, endCharacter)
             gather(tk, currentLine, imports :: acc)
 
           case ITerminalSymbols.TokenNameCOMMENT_BLOCK |
               ITerminalSymbols.TokenNameCOMMENT_JAVADOC =>
-            val startCh = startCharacter
-            val endCh = endCharacter
-            val comment = Comment(line, startCh, line + addLine, endCh)
+            val currentEndLine = line + addLine
+            val (startCh, endCh, endLine) =
+              if (foldOnlyLines)
+                (0, 0, currentEndLine - 1)
+              else
+                (
+                  currentCharacterStart - 1,
+                  currentCharacterEnd,
+                  currentEndLine
+                )
+            val comment = Comment(line, startCh, endLine, endCh)
             gather(next, line + addLine, comment :: acc)
 
           case ITerminalSymbols.TokenNameWHITESPACE =>
@@ -191,7 +199,7 @@ final class JavaFoldingRangeExtractor(
       endCharacter: Int,
       kind: String
   ): Option[FoldingRange] = {
-    if (endLine - startLine > spanThreshold) {
+    if (endLine - startLine >= spanThreshold) {
       val newFoldingRange = new FoldingRange(startLine, endLine)
       newFoldingRange.setStartCharacter(startCharacter)
       newFoldingRange.setEndCharacter(endCharacter)
