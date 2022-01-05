@@ -17,8 +17,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
-import scala.collection.convert.DecorateAsJava
-import scala.collection.convert.DecorateAsScala
 import scala.collection.mutable
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Await
@@ -26,6 +24,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters._
 import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -57,19 +56,11 @@ import org.eclipse.{lsp4j => l}
  *   // ...
  * }}}
  *
- * Includes the following converters from the standard library: {{{
- *  import scala.compat.java8.FutureConverters._
- *  import scala.meta.internal.jdk.CollectionConverters._
- * }}}
- *
  * If this doesn't scale because we have too many unrelated extension methods
  * then we can split this up, but for now it's really convenient to have to
  * remember only one import.
  */
-object MetalsEnrichments
-    extends DecorateAsJava
-    with DecorateAsScala
-    with MtagsEnrichments {
+object MetalsEnrichments extends MtagsEnrichments {
 
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
 

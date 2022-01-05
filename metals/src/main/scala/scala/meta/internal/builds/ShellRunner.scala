@@ -2,6 +2,7 @@ package scala.meta.internal.builds
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable

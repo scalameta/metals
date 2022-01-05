@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -141,6 +142,8 @@ final class Compilations(
 
     val groupedTargetIds = buildTargets.allBuildTargetIds
       .groupBy(buildTargets.buildServerOf(_))
+      .toSeq
+
     Future
       .traverse(groupedTargetIds) { case (connectionOpt, targetIds) =>
         clean(connectionOpt, targetIds)

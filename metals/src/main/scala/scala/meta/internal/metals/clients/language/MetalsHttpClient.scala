@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.CancellationException
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 import scala.meta.internal.decorations.PublishDecorationsParams

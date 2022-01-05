@@ -1,5 +1,7 @@
 package scala.meta.internal.worksheets
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -76,7 +78,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers, trees: Trees)
         ed.details
       )
     )
-    val hoverMap = HoverMap(updateWithEdits(source.text, edits), hovers)
+    val hoverMap = HoverMap(updateWithEdits(source.text, edits), hovers.toSeq)
 
     RenderResult(edits, hoverMap)
   }

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import scala.collection.concurrent.TrieMap
+import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._

@@ -1,7 +1,8 @@
 package tests
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 
 import bill.Bill

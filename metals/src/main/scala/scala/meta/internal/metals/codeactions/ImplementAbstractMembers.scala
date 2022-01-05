@@ -2,6 +2,7 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -22,6 +23,7 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
         .getContext()
         .getDiagnostics()
         .asScala
+        .toSeq
         .collect {
           case d @ ScalacDiagnostic.ObjectCreationImpossible(_)
               if params.getRange().overlapsWith(d.getRange()) =>

@@ -1,9 +1,9 @@
 package tests
 
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.JsonParser
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.{lsp4j => l}

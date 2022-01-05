@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsEnrichments._
 

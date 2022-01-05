@@ -5,13 +5,13 @@ import java.nio.file.Path
 import java.util.Collections.emptyList
 import java.util.Collections.singletonList
 
+import scala.jdk.CollectionConverters._
 import scala.util.Random
 
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsBspException
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

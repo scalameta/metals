@@ -2,6 +2,7 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
 
 import scala.meta.Term

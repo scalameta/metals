@@ -1,6 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.TextEdits
 
 import org.eclipse.lsp4j.DocumentHighlight

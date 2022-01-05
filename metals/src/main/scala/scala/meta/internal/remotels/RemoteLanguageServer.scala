@@ -6,6 +6,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 import scala.meta.internal.metals.Buffers
@@ -57,7 +58,7 @@ class RemoteLanguageServer(
           params.toJsonObject,
           "textDocument/references"
         )
-      } yield ReferencesResult(Symbols.None, locations.asScala)
+      } yield ReferencesResult(Symbols.None, locations.asScala.toSeq)
     }
 
   def definition(

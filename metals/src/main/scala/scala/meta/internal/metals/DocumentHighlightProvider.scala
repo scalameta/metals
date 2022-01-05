@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs

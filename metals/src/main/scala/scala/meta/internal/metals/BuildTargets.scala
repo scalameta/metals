@@ -10,6 +10,7 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
@@ -176,7 +177,8 @@ final class BuildTargets(
       scalac <- scalacTargetInfo.get(target.getId)
       scalaTarget <- target.asScalaBuildTarget
     } yield {
-      val autoImports = target.asSbtBuildTarget.map(_.getAutoImports.asScala)
+      val autoImports =
+        target.asSbtBuildTarget.map(_.getAutoImports.asScala.toSeq)
       ScalaTarget(
         target,
         scalaTarget,
@@ -538,7 +540,11 @@ final class BuildTargets(
       query: BuildTargetIdentifier,
       roots: List[BuildTargetIdentifier]
   ): Boolean = {
-    BuildTargets.isInverseDependency(query, roots, inverseDependencies.get)
+    BuildTargets.isInverseDependency(
+      query,
+      roots,
+      inverseDependencies.get(_).map(_.toSeq)
+    )
   }
   def inverseDependencyLeaves(
       target: BuildTargetIdentifier
@@ -553,7 +559,10 @@ final class BuildTargets(
   private def computeInverseDependencies(
       target: BuildTargetIdentifier
   ): BuildTargets.InverseDependencies = {
-    BuildTargets.inverseDependencies(List(target), inverseDependencies.get)
+    BuildTargets.inverseDependencies(
+      List(target),
+      inverseDependencies.get(_).map(_.toSeq)
+    )
   }
 
   def addDependencySource(

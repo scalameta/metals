@@ -4,6 +4,7 @@ import java.io.File
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 import scala.util.matching.Regex
 

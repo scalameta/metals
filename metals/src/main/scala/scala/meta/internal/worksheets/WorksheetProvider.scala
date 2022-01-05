@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta._
 import scala.meta.inputs.Input.VirtualFile
@@ -277,7 +278,11 @@ class WorksheetProvider(
       result,
       () => {
         try runEvaluation()
-        catch onError
+        catch {
+          case e: Throwable =>
+            onError(e)
+            ()
+        }
       }
     )
     result.asScala.recover(onError)
@@ -373,7 +378,7 @@ class WorksheetProvider(
     if (newDigest != previousDigest) {
       worksheetsDigests.put(path, newDigest)
       val sourceDeps = fetchDependencySources(
-        evaluatedWorksheet.dependencies().asScala
+        evaluatedWorksheet.dependencies().asScala.toSeq
       )
       compilers.restartWorksheetPresentationCompiler(
         path,

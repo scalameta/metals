@@ -3,6 +3,8 @@ package scala.meta.internal.parsing
 import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.trees.Origin
@@ -38,7 +40,7 @@ class DocumentSymbolProvider(trees: Trees) {
       }
       new SymbolTraverser().symbols(tree).asScala
     }
-    val symbols = result.getOrElse(Nil)
+    val symbols = result.getOrElse(Nil).toSeq
 
     if (supportsHierarchicalDocumentSymbols.get()) {
       Left(symbols.asJava)

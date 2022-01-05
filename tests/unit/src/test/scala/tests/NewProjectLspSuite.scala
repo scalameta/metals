@@ -3,6 +3,7 @@ package tests
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 import scala.meta.internal.builds.NewProjectProvider

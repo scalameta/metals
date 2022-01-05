@@ -1,12 +1,12 @@
 package tests.gradle
 
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.GradleDigest
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath

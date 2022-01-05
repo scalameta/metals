@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.testProvider
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.jdk.CollectionConverters._
 
 import org.eclipse.{lsp4j => l}
 

@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._

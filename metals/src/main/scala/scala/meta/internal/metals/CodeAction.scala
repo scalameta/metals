@@ -2,8 +2,8 @@ package scala.meta.internal.metals
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}

@@ -35,6 +35,9 @@ final class WorkspaceSources(workspace: AbsolutePath) {
   }
   def walkFileTree(root: AbsolutePath): Traversable[AbsolutePath] =
     new Traversable[AbsolutePath] {
+
+      override def iterator: Iterator[AbsolutePath] = ???
+
       override def foreach[U](f: AbsolutePath => U): Unit = {
         Files.walkFileTree(
           root.toNIO,
@@ -65,6 +68,9 @@ final class WorkspaceSources(workspace: AbsolutePath) {
     val text = Process(List("git", "ls-files"), cwd = workspace.toFile).!!
     if (text.isEmpty) throw new IllegalArgumentException
     new Traversable[AbsolutePath] {
+
+      override def iterator: Iterator[AbsolutePath] = ???
+
       override def foreach[U](f: AbsolutePath => U): Unit = {
         text.linesIterator.map(AbsolutePath(_)(workspace)).foreach(f)
       }

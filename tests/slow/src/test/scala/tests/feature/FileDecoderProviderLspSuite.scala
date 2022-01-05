@@ -1,6 +1,7 @@
 package tests.feature
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions

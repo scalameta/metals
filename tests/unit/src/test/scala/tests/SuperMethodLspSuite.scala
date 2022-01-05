@@ -302,7 +302,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       uri: String
   ): (Map[Int, (Position, String)], Map[Int, Option[Int]]) = {
     val (mapping, asserts) = parse(code)
-    (mapping.mapValues((_, uri)), asserts)
+    (mapping.mapValues((_, uri)).toMap, asserts)
   }
 
   private def parse(

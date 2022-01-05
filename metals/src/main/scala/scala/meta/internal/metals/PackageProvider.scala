@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 import scala.meta.internal.pc.Identifier

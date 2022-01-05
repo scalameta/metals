@@ -8,6 +8,7 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 import scala.tools.asm.tree.ClassNode
 import scala.tools.scalap.scalax.rules.scalasig.SymbolInfoSymbol
 import scala.util.control.NonFatal
@@ -182,7 +183,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
         }
       }
     )
-    result
+    result.toSeq
   }
 
   private def isClassfile(path: Path): Boolean = {

@@ -3,6 +3,7 @@ package tests
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 
+import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions

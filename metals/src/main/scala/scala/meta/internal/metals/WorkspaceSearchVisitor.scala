@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.{util => ju}
 
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -70,7 +71,7 @@ class WorkspaceSearchVisitor(
         )
       )
     }
-    result.asScala
+    result.asScala.toSeq
   }
   private val byNameLength = new ju.Comparator[l.SymbolInformation] {
     def compare(x: l.SymbolInformation, y: l.SymbolInformation): Int = {

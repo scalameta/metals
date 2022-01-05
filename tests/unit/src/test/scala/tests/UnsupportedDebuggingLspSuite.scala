@@ -3,6 +3,7 @@ package tests
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.TimeoutException
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 

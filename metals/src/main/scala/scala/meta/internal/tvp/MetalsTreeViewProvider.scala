@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.concurrent.TrieMap
+import scala.jdk.CollectionConverters._
 
 import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._

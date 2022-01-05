@@ -1,5 +1,7 @@
 package tests
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -51,6 +53,7 @@ abstract class DocumentSymbolSuite(
             .left
             .get
             .asScala
+            .toSeq
 
           val flatSymbols =
             documentSymbols.toSymbolInformation(file.file.toURI.toString)

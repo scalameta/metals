@@ -8,6 +8,7 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 import scala.meta.inputs.Input
@@ -298,7 +299,7 @@ class Compilers(
       .complete(offsetParams)
       .asScala
       .map(list =>
-        list.getItems.asScala
+        list.getItems.asScala.toSeq
           .map(
             toDebugCompletionItem(
               _,
@@ -715,7 +716,7 @@ class Compilers(
   ): PresentationCompiler = {
     newCompiler(
       mtags,
-      scalac.getOptions().asScala,
+      scalac.getOptions().asScala.toSeq,
       classpath,
       search,
       scalac.getTarget.getUri

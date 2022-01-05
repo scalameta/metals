@@ -3,6 +3,7 @@ package scala.meta.internal.metals.codeactions
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.Defn
 import scala.meta.Import

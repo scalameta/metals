@@ -3,6 +3,7 @@ package scala.meta.internal.metals.debug
 import java.net.URI
 import java.nio.file.Paths
 
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO

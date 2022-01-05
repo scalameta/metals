@@ -2,11 +2,12 @@ package tests.maven
 
 import java.nio.charset.StandardCharsets
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MavenDigest
 import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath

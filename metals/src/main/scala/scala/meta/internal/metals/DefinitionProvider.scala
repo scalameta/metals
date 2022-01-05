@@ -5,6 +5,7 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._

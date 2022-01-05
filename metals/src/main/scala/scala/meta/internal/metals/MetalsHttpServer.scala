@@ -10,12 +10,12 @@ import java.util.Collections
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.InputStreamIO
-import scala.meta.internal.metals.MetalsEnrichments._
 
 import io.undertow.Handlers.path
 import io.undertow.Handlers.websocket

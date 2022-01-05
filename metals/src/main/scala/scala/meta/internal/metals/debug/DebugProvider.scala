@@ -13,6 +13,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -126,7 +127,7 @@ class DebugProvider(
 
     // long timeout, since server might take a while to compile the project
     val connectToServer = () => {
-      val targets = parameters.getTargets().asScala
+      val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
         buildServer
@@ -152,7 +153,7 @@ class DebugProvider(
         if (buildServer.usesScalaDebugAdapter2x) {
           MetalsDebugAdapter.`2.x`(
             buildTargets,
-            targets
+            targets.toSeq
           )
         } else {
           MetalsDebugAdapter.`1.x`(
@@ -160,7 +161,7 @@ class DebugProvider(
             buildTargets,
             classFinder,
             scalaVersionSelector,
-            targets
+            targets.toSeq
           )
         }
       DebugProxy.open(
@@ -498,7 +499,7 @@ class DebugProvider(
           new b.DebugSessionParams(
             singletonList(target.getId()),
             b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
-            Unit.toJson
+            ().toJson
           )
         )
       case None =>

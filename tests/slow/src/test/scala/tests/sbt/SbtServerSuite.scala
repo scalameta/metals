@@ -1,5 +1,7 @@
 package tests.sbt
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.Messages

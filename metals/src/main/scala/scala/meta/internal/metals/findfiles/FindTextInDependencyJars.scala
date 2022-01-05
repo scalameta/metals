@@ -81,8 +81,8 @@ class FindTextInDependencyJars(
 
           allLocations.toList
         }
-        .flatten
         .toList
+        .flatten
     }
   }
 

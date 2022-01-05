@@ -23,6 +23,7 @@ import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
@@ -46,6 +47,7 @@ import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -2120,7 +2122,7 @@ class MetalsLanguageServer(
     def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
       case change if !change.isFailed =>
         Future
-          .sequence[Unit, List](
+          .sequence(
             compilations
               .cascadeCompileFiles(buffers.open.toSeq)
               .ignoreValue ::
@@ -2297,7 +2299,7 @@ class MetalsLanguageServer(
               )
             }
         }
-        workspaceSymbols.didChange(source, symbols)
+        workspaceSymbols.didChange(source, symbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
         // we cannot use `symbols` for expiring the cache for all symbols in the source.

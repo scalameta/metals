@@ -2,6 +2,8 @@ package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.BaseCommand
 import scala.meta.internal.metals.Buffers

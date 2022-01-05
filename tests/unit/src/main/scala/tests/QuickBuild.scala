@@ -6,6 +6,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
 
+import scala.jdk.CollectionConverters._
 import scala.util.Properties
 import scala.util.matching.Regex
 
@@ -317,7 +318,7 @@ object QuickBuild {
       else Set.empty[String]
 
     val repositories =
-      Repository.defaults().asScala ++
+      Repository.defaults().asScala.toList ++
         List(
           Repository.central(),
           Repository.ivy2Local(),

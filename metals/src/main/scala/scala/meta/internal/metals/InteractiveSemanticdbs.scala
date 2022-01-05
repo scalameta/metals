@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.jdk.CollectionConverters._
 import scala.util.Success
 import scala.util.Try
 

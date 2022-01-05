@@ -3,6 +3,7 @@ package tests
 import java.nio.file.Files
 
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -79,13 +80,18 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ <- server.initialize()
       _ <- Future {
         request = Future
-          .sequence(1.to(10).map { _ =>
-            server.server
-              .workspaceSymbol(new WorkspaceSymbolParams("PazQux.I"))
-              .asScala
-              .map(_.asScala.toList)
-          })
+          .sequence(
+            1
+              .to(10)
+              .map { _ =>
+                server.server
+                  .workspaceSymbol(new WorkspaceSymbolParams("PazQux.I"))
+                  .asScala
+                  .map(_.asScala.toList)
+              }
+          )
           .map(_.toList)
+
         Thread.sleep(10) // take a moment to delay
       }
       _ <- server.initialized()

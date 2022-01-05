@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.testProvider
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._

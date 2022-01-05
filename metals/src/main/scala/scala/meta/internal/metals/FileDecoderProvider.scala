@@ -11,6 +11,7 @@ import javax.annotation.Nullable
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Properties
 import scala.util.Success

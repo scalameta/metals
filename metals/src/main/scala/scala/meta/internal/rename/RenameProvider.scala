@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.Importee
 import scala.meta.Tree
@@ -349,7 +350,7 @@ final class RenameProvider(
   private def changeClosedFiles(
       fileEdits: Map[AbsolutePath, List[TextEdit]]
   ) = {
-    fileEdits.toArray.par.foreach { case (file, changes) =>
+    fileEdits.toArray.foreach { case (file, changes) => // TODO replace .par
       val text = file.readText
       val newText = TextEdits.applyEdits(text, changes)
       file.writeText(newText)

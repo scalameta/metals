@@ -21,14 +21,14 @@ object NamedArguments {
     )
 
   // anonymous classes
-  @deprecated(
-    message = "a",
-    since = susan
-  ) def b = 1
+  //@deprecated(
+  //  message = "a",
+  //  since = susan
+  //) def b = 1
 
   // vararg
-  List(
-    xs = 2
-  )
+  //List(
+  //  xs = 2
+  //)
 
 }

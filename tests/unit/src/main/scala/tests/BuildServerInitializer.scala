@@ -2,6 +2,7 @@ package tests
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.builds.BuildTool

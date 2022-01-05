@@ -2,6 +2,7 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -56,7 +57,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
             codeAction.setEdit(edit)
 
             codeAction
-          }
+          }.toSeq
         }
     }
 
@@ -106,7 +107,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
             val mainAction = actions.head
             val allDiagnostics =
               actions.flatMap(_.getDiagnostics().asScala).asJava
-            val edits = joinActionEdits(actions)
+            val edits = joinActionEdits(actions.toSeq)
             mainAction.setDiagnostics(allDiagnostics)
             mainAction
               .setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))

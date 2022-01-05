@@ -24,7 +24,7 @@ class SystemProcessSuite extends FunSuite {
       redirectErrorOutput = false,
       Map.empty
     )
-    val exitCode = Await.result(ps.complete, 1 seconds)
+    val exitCode = Await.result(ps.complete, 1.seconds)
     assertEquals(exitCode, 22)
   }
 
@@ -41,7 +41,7 @@ class SystemProcessSuite extends FunSuite {
       Map.empty
     )
     ps.cancel
-    val exitCode = Await.result(ps.complete, 5 seconds)
+    val exitCode = Await.result(ps.complete, 5.seconds)
     assert(exitCode != 0)
   }
 
@@ -52,7 +52,7 @@ class SystemProcessSuite extends FunSuite {
       redirectErrorOutput = false,
       Map.empty
     )
-    val exitCode = Await.result(ps.complete, 1 seconds)
+    val exitCode = Await.result(ps.complete, 1.seconds)
     assertEquals(exitCode, 1)
   }
 }

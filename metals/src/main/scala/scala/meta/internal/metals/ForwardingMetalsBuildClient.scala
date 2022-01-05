@@ -7,6 +7,7 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 
@@ -133,7 +134,7 @@ final class ForwardingMetalsBuildClient(
       }
 
     if (otherChanges.nonEmpty)
-      onBuildChanged(otherChanges)
+      onBuildChanged(otherChanges.toSeq)
   }
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}

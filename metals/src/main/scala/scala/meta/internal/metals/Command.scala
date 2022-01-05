@@ -1,10 +1,10 @@
 package scala.meta.internal.metals
 
+import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
 
 import org.eclipse.{lsp4j => l}
 

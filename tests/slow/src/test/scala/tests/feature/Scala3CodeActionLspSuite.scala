@@ -5,7 +5,6 @@ import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
-import scala.meta.internal.metals.codeactions.SourceOrganizeImports.kind
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
 import munit.Location

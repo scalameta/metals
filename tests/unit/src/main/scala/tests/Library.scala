@@ -98,4 +98,5 @@ object Library {
       .fetch()
       .asScala
       .map(f => AbsolutePath(f.toPath))
+      .toSeq
 }

@@ -3,6 +3,7 @@ package scala.meta.internal.metals.debug
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
@@ -57,7 +58,7 @@ final class BuildTargetClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
     Future
-      .traverse(targets.groupBy(buildTargets.buildServerOf)) {
+      .traverse(targets.groupBy(buildTargets.buildServerOf).toSeq) {
         case (None, _) =>
           Future.successful(())
         case (Some(connection), targets0) =>

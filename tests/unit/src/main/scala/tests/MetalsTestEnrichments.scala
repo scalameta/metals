@@ -3,6 +3,7 @@ package tests
 import java.nio.file.Files
 
 import scala.collection.mutable.ArrayBuffer
+import scala.jdk.CollectionConverters._
 import scala.{meta => m}
 
 import scala.meta.dialects
@@ -65,7 +66,7 @@ object MetalsTestEnrichments {
               symbols += defn.toCached
             }
         }
-        wsp.didChange(source, symbols)
+        wsp.didChange(source, symbols.toSeq)
       }
     }
     def indexLibraries(libraries: Seq[Library]): Unit = {

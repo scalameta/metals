@@ -20,6 +20,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.jdk.CollectionConverters._
 import scala.util.matching.Regex
 import scala.{meta => m}
 
@@ -219,6 +220,7 @@ final class TestingServer(
             .getItems()
             .asScala
             .flatMap(_.getSources().asScala)
+            .toSeq
         }
       case None =>
         Future.successful(Seq.empty)
@@ -1408,7 +1410,7 @@ final class TestingServer(
       schema = s.Schema.SEMANTICDB4,
       uri = input.path,
       text = input.text,
-      occurrences = occurrences
+      occurrences = occurrences.toSeq
     )
   }
 
@@ -1434,7 +1436,8 @@ final class TestingServer(
     for {
       documentSymbols <- server.documentSymbol(params).asScala
     } yield {
-      val symbols = documentSymbols.getLeft.asScala.toSymbolInformation(uri)
+      val symbols =
+        documentSymbols.getLeft.asScala.toSeq.toSymbolInformation(uri)
       val textDocument = s.TextDocument(
         schema = s.Schema.SEMANTICDB4,
         language = s.Language.SCALA,

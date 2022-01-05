@@ -4,6 +4,8 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers

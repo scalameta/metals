@@ -6,6 +6,7 @@ import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -118,7 +119,7 @@ final class Diagnostics(
     val path = params.getTextDocument.getUri.toAbsolutePath
     onPublishDiagnostics(
       path,
-      params.getDiagnostics().asScala.map(_.toLSP),
+      params.getDiagnostics().asScala.map(_.toLSP).toSeq,
       params.getReset()
     )
   }

@@ -1,8 +1,7 @@
 package tests
 
 import scala.concurrent.Future
-
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.jdk.CollectionConverters._
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
