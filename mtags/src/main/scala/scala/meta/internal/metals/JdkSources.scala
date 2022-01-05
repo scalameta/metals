@@ -11,7 +11,8 @@ import scala.meta.io.RelativePath
  * Locates zip file on disk that contains the source code for the JDK.
  */
 object JdkSources {
-  private val sources = RelativePath(Paths.get("src.zip"))
+  val zipFileName = "src.zip"
+  private val sources = RelativePath(Paths.get(zipFileName))
   private val libSources = RelativePath(Paths.get("lib")).resolve(sources)
 
   def apply(userJavaHome: Option[String] = None): Option[AbsolutePath] = {

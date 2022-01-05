@@ -368,6 +368,15 @@ class MetalsLanguageServer(
           workspace,
           fingerprints
         )
+        val javaInteractiveSemanticdb = {
+          val optJavaHome =
+            (userConfig.javaHome orElse JdkSources.defaultJavaHome)
+              .map(AbsolutePath(_))
+
+          optJavaHome.flatMap(
+            JavaInteractiveSemanticdb.create(_, workspace, buildTargets)
+          )
+        }
         interactiveSemanticdbs = register(
           new InteractiveSemanticdbs(
             workspace,
@@ -378,7 +387,8 @@ class MetalsLanguageServer(
             statusBar,
             () => compilers,
             clientConfig,
-            () => semanticDBIndexer
+            () => semanticDBIndexer,
+            javaInteractiveSemanticdb
           )
         )
         warnings = new Warnings(
