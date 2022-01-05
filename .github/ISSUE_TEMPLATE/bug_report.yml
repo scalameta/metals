@@ -6,15 +6,10 @@ body:
     attributes:
       label: Describe the bug
       description: A clear and concise description of what the bug is.
-    validations:
-      required: true
-
-  - type: textarea
-    id: reproduction
-    attributes:
-      label: Reproduction steps
-      description: Please list the steps for us to reproduce the issue you're having.
       placeholder: |
+        Description ...
+
+        Reproduction steps
         1. Go to ...
         2. Click on ...
         3. Scroll down to ...
@@ -27,8 +22,6 @@ body:
     attributes:
       label: Expected behavior
       description: A clear and concise description of what you expected to happen.
-    validations:
-      required: true
 
   - type: dropdown
     id: os
@@ -40,8 +33,6 @@ body:
         - Windows
         - Linux
         - Other (note only the above 3 are officially supported)
-    validations:
-      required: true
 
   - type: dropdown
     id: editor
@@ -56,8 +47,6 @@ body:
         - Emacs (lsp-metals)
         - Emacs (other)
         - Other
-    validations:
-      required: true
 
   - type: input
     id: version
