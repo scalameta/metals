@@ -123,7 +123,7 @@ def shortType(longType: Type, history: ShortenedNames)(using
               val short = ShortName(sym)
               TypeRef(loop(prefix, Some(short)), sym)
             case h :: tl =>
-              history.indexedContext.rename(h.name.toSimpleName) match
+              history.indexedContext.rename(h) match
                 case Some(rename) =>
                   PrettyType(
                     (rename :: prev.map(_.name)).mkString(".")
