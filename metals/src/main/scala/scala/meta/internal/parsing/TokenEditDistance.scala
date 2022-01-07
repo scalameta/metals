@@ -3,12 +3,12 @@ package scala.meta.internal.parsing
 import java.util.logging.Logger
 
 import scala.annotation.tailrec
-import scala.collection.compat.immutable.ArraySeq
 
 import scala.meta.Input
 import scala.meta.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.tokens.Token
 
 import difflib._
 import difflib.myers.Equalizer
@@ -127,7 +127,7 @@ final class TokenEditDistance private (
               start.revised.pos
             } else {
               val endOffset = end.revised match {
-                case t if t.isLF => t.start
+                case t @ Token.LF() => t.start
                 case t => t.end
               }
               Position.Range(revisedInput, start.revised.start, endOffset)
@@ -270,13 +270,15 @@ object TokenEditDistance {
    * @param revised The current snapshot of a string, for example open buffer
    *                in an editor.
    */
-  private def fromTokens[A <: BaseToken](
-      original: Seq[A],
-      revised: Seq[A],
+  private def fromTokens[
+      A <: TokenEditDistance.BasicToken
+  ](
+      original: Array[A],
+      revised: Array[A],
       equalizer: Equalizer[A]
   ): TokenEditDistance = {
     val buffer = Array.newBuilder[MatchingToken]
-    buffer.sizeHint(math.max(original.size, revised.size))
+    buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
     def loop(
         i: Int,
@@ -284,14 +286,14 @@ object TokenEditDistance {
         ds: List[Delta[A]]
     ): Unit = {
       val isDone: Boolean =
-        i >= original.size ||
-          j >= revised.size
+        i >= original.length ||
+          j >= revised.length
       if (isDone) ()
       else {
         val o = original(i)
         val r = revised(j)
         if (equalizer.equals(o, r)) {
-          buffer += MatchingToken(o, r)
+          buffer += new MatchingToken(o, r)
           loop(i + 1, j + 1, ds)
         } else {
           ds match {
@@ -308,9 +310,8 @@ object TokenEditDistance {
       }
     }
     val deltas = {
-      import scala.meta.internal.jdk.CollectionConverters._
       DiffUtils
-        .diff(original.asJava, revised.asJava, equalizer)
+        .diff(original.toList.asJava, revised.toList.asJava, equalizer)
         .getDeltas
         .iterator()
         .asScala
@@ -354,8 +355,8 @@ object TokenEditDistance {
         original <- trees.tokenized(originalInput).toOption
       } yield {
         TokenEditDistance.fromTokens(
-          ArraySeq(original.tokens: _*).map(ScalaToken.apply),
-          ArraySeq(revised.tokens: _*).map(ScalaToken.apply),
+          original.tokens,
+          revised.tokens,
           ScalaTokenEqualizer
         )
       }
@@ -363,15 +364,13 @@ object TokenEditDistance {
     }
   }
 
-  /**
-   * Compare tokens only by their text and token category.
-   */
-  private object ScalaTokenEqualizer extends Equalizer[ScalaToken] {
-    override def equals(original: ScalaToken, revised: ScalaToken): Boolean =
+  private object ScalaTokenEqualizer extends Equalizer[Token] {
+    override def equals(original: Token, revised: Token): Boolean =
       original.productPrefix == revised.productPrefix &&
         original.pos.text == revised.pos.text
 
   }
+
   /**
    * Compare tokens only by their text and token category.
    */
@@ -380,6 +379,13 @@ object TokenEditDistance {
       original.id == revised.id &&
         original.text == revised.text
 
+  }
+
+  type BasicToken = {
+    def pos: Position
+    def input: Input
+    def start: Int
+    def end: Int
   }
 
 }

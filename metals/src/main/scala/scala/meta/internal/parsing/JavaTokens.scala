@@ -1,6 +1,5 @@
 package scala.meta.internal.parsing
 
-import scala.collection.compat.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Failure
 import scala.util.Success
@@ -9,10 +8,21 @@ import scala.util.Try
 import scala.meta.inputs.Input
 import scala.meta.inputs.Input.File
 import scala.meta.inputs.Input.VirtualFile
+import scala.meta.inputs.Position
 
 import org.eclipse.jdt.core.ToolFactory
-import org.eclipse.jdt.core.compiler.IScanner
 import org.eclipse.jdt.core.compiler.ITerminalSymbols
+
+case class JavaToken(
+    id: Int,
+    text: String,
+    start: Int,
+    end: Int,
+    input: Input,
+    isLF: Boolean = false
+) {
+  lazy val pos: Position = Position.Range(input, start, end)
+}
 
 object JavaTokens {
 
@@ -22,7 +32,7 @@ object JavaTokens {
    * @param source to tokenize
    * @return tokenized source
    */
-  def tokenize(source: Input): Option[Seq[JavaToken]] = Try {
+  def tokenize(source: Input): Option[Array[JavaToken]] = Try {
 
     val scanner = ToolFactory.createScanner(
       /*tokenizeComments = */ true, /*tokenizeWhiteSpace = */ true,
@@ -34,13 +44,36 @@ object JavaTokens {
 
     def loop(token: Int): Unit = {
       if (token != ITerminalSymbols.TokenNameEOF) {
-        mapToken(token, scanner, source, buffer)
+        val start = scanner.getCurrentTokenStartPosition()
+        val end = scanner.getCurrentTokenStartPosition()
+
+        def createToken(txt: String, isLF: Boolean = false) = JavaToken(
+          token,
+          txt,
+          start,
+          end,
+          source,
+          isLF = false
+        )
+        token match {
+          case ITerminalSymbols.TokenNameWHITESPACE =>
+            scanner.getCurrentTokenSource().foreach {
+              case '\n' => buffer += createToken("\n", isLF = true)
+              case '\r' => buffer += createToken("\r")
+              case '\f' => buffer += createToken("\f")
+              case '\t' => buffer += createToken("\t")
+              case ' ' => buffer += createToken(" ")
+              case ch => buffer += createToken(ch.toString())
+            }
+          case _ =>
+            buffer += createToken(scanner.getCurrentTokenSource().mkString)
+        }
         loop(scanner.getNextToken())
       }
     }
 
     loop(scanner.getNextToken())
-    ArraySeq(buffer: _*)
+    buffer.toArray
   } match {
     case Failure(exception) =>
       source match {
@@ -53,37 +86,4 @@ object JavaTokens {
       None
     case Success(value) => Some(value)
   }
-
-  private def mapToken(
-      i: Int,
-      scanner: IScanner,
-      source: Input,
-      buffer: ArrayBuffer[JavaToken]
-  ): Unit = {
-    val start = scanner.getCurrentTokenStartPosition()
-    val end = scanner.getCurrentTokenStartPosition()
-
-    def token(txt: String, isLF: Boolean = false) = JavaToken(
-      i,
-      txt,
-      start,
-      end,
-      source,
-      isLF = false
-    )
-    i match {
-      case ITerminalSymbols.TokenNameWHITESPACE =>
-        scanner.getCurrentTokenSource().foreach {
-          case '\n' => buffer += token("\n", isLF = true)
-          case '\r' => buffer += token("\r")
-          case '\f' => buffer += token("\f")
-          case '\t' => buffer += token("\t")
-          case ' ' => buffer += token(" ")
-          case ch => buffer += token(ch.toString())
-        }
-      case _ =>
-        buffer += token(scanner.getCurrentTokenSource().mkString)
-    }
-  }
-
 }
