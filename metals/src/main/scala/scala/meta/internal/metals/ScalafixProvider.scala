@@ -263,10 +263,7 @@ case class ScalafixProvider(
     val targetRoot =
       if (produceSemanticdb) createTemporarySemanticdb(file, inBuffers)
       else
-        buildTargets.scalacOptions(scalaTarget.info.getId()).map {
-          scalacOptions =>
-            scalacOptions.targetroot(scalaTarget.scalaVersion).toNIO
-        }
+        Some(scalaTarget.targetroot.toNIO)
 
     val sourceroot =
       if (produceSemanticdb)
