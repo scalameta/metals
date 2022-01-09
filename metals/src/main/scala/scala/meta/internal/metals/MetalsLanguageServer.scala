@@ -2215,16 +2215,24 @@ class MetalsLanguageServer(
   }
 
   private def indexWorkspaceSources(): Unit = {
+    case class SourceToIndex(
+        source: AbsolutePath,
+        sourceItem: AbsolutePath,
+        targets: Iterable[b.BuildTargetIdentifier]
+    )
+    val sourcesToIndex = mutable.ListBuffer.empty[SourceToIndex]
     for {
       (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
       source <- sourceItem.listRecursive
       if source.isScalaOrJava
     } {
-      targets.asScala.foreach { target =>
-        buildTargets.linkSourceFile(target, source)
-      }
-      indexSourceFile(source, Some(sourceItem), targets.asScala.headOption)
+      targets.asScala.foreach(buildTargets.linkSourceFile(_, source))
+      sourcesToIndex += SourceToIndex(source, sourceItem, targets.asScala)
     }
+
+    sourcesToIndex.par.foreach(f =>
+      indexSourceFile(f.source, Some(f.sourceItem), f.targets.headOption)
+    )
   }
 
   private def reindexWorkspaceSources(
