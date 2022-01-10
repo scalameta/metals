@@ -385,7 +385,7 @@ final class Doctor(
         correctMessage =
           s"${Icons.unicode.check} - working non-interactive features (references, rename etc.)",
         incorrectMessage =
-          s"${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server",
+          s"${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (work for Bloop only)",
         show = allTargetsInfo.exists(_.javaStatus.isCorrect == false)
       )
     }
@@ -410,9 +410,9 @@ final class Doctor(
 
   private def buildTargetRows(
       html: HtmlBuilder,
-      targetIds: Seq[DoctorTargetInfo]
+      infos: Seq[DoctorTargetInfo]
   ): Unit = {
-    targetIds
+    infos
       .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
@@ -439,10 +439,47 @@ final class Doctor(
       targetId: BuildTargetIdentifier
   ): List[DoctorTargetInfo] = {
     val javaTarget = buildTargets.javaTarget(targetId)
-    buildTargets
-      .scalaTarget(targetId)
-      .map(st => extractScalaTargetInfo(st, javaTarget))
-      .toList
+    val scalaTarget = buildTargets.scalaTarget(targetId)
+
+    (scalaTarget, javaTarget) match {
+      case (Some(scalaTarget), javaTarget) =>
+        List(extractScalaTargetInfo(scalaTarget, javaTarget))
+      case (None, Some(javaTarget)) =>
+        List(extractJavaInfo(javaTarget))
+      case _ =>
+        Nil
+    }
+  }
+
+  private def extractJavaInfo(
+      javaTarget: JavaTarget
+  ): DoctorTargetInfo = {
+    val diagnostics = DoctorStatus(Icons.unicode.check, isCorrect = true)
+    val (javaSupport, javaRecommendation) =
+      if (javaTarget.isSemanticdbEnabled)
+        (DoctorStatus.check, None)
+      else
+        (DoctorStatus.alert, problemResolver.recommendation(javaTarget))
+
+    val canRun = javaTarget.info.getCapabilities().getCanRun()
+    val canTest = javaTarget.info.getCapabilities().getCanTest()
+    val debugging =
+      if (canRun && canTest) DoctorStatus.check
+      else DoctorStatus.error
+    DoctorTargetInfo(
+      javaTarget.displayName,
+      javaTarget.dataKind,
+      javaTarget.baseDirectory,
+      "Java",
+      diagnostics,
+      DoctorStatus.error,
+      javaSupport,
+      debugging,
+      javaSupport,
+      javaRecommendation
+        .getOrElse("")
+    )
+
   }
 
   private def extractScalaTargetInfo(
@@ -451,46 +488,39 @@ final class Doctor(
   ) = {
     val scalaVersion = target.scalaVersion
     val interactive =
-      if (mtagsResolver.isSupportedScalaVersion(scalaVersion)) {
-        DoctorStatus(Icons.unicode.check, isCorrect = true)
-      } else {
-        DoctorStatus(Icons.unicode.error, isCorrect = false)
-      }
+      if (mtagsResolver.isSupportedScalaVersion(scalaVersion))
+        DoctorStatus.check
+      else
+        DoctorStatus.error
+
     val isSemanticdbNeeded = !target.isSemanticdbEnabled
     val indexes =
-      if (isSemanticdbNeeded) {
-        DoctorStatus(Icons.unicode.error, isCorrect = false)
-      } else {
-        DoctorStatus(Icons.unicode.check, isCorrect = true)
-      }
+      if (isSemanticdbNeeded) DoctorStatus.error else DoctorStatus.check
+
     val recommendedFix = problemResolver.recommendation(target)
     val (targetType, diagnostics) =
       target.sbtVersion match {
         case Some(sbt) =>
-          (s"sbt $sbt", DoctorStatus(Icons.unicode.alert, isCorrect = false))
+          (s"sbt $sbt", DoctorStatus.alert)
         case None =>
-          (
-            s"Scala $scalaVersion",
-            DoctorStatus(Icons.unicode.check, isCorrect = true)
-          )
+          (s"Scala $scalaVersion", DoctorStatus.check)
       }
     val (javaSupport, javaRecommendation) = javaTarget match {
       case Some(target) if target.isSemanticdbEnabled =>
-        (DoctorStatus(Icons.unicode.check, isCorrect = true), None)
+        (DoctorStatus.check, None)
       case Some(target) =>
         (
-          DoctorStatus(Icons.unicode.alert, isCorrect = false),
+          DoctorStatus.alert,
           problemResolver.recommendation(target)
         )
-      case None => (DoctorStatus(Icons.unicode.alert, isCorrect = false), None)
+      case None => (DoctorStatus.alert, None)
     }
 
     val canRun = target.info.getCapabilities().getCanRun()
     val canTest = target.info.getCapabilities().getCanTest()
     val debugging =
-      if (canRun && canTest && !target.isSbt)
-        DoctorStatus(Icons.unicode.check, isCorrect = true)
-      else DoctorStatus(Icons.unicode.error, isCorrect = false)
+      if (canRun && canTest && !target.isSbt) DoctorStatus.check
+      else DoctorStatus.error
     val sbtRecommendation =
       if (target.isSbt)
         Some("Diagnostics and debugging for sbt are not supported currently.")
