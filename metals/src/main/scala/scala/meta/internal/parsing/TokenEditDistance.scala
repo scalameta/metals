@@ -17,13 +17,13 @@ import org.eclipse.{lsp4j => l}
 /**
  * Helper to map between position between two similar strings.
  */
-final class TokenEditDistance[+A] private (
-    matching: Array[MatchingToken[A]],
+final class TokenEditDistance private (
+    matching: Array[MatchingToken[Any]],
     empty: Option[EmptyResult],
-    tokenOps: TokenEditDistance.TokenOps[A]
+    tokenOps: TokenEditDistance.TokenOps[Any]
 ) {
   import tokenOps._
-  val logger: Logger = Logger.getLogger(classOf[TokenEditDistance[A]].getName)
+  val logger: Logger = Logger.getLogger(classOf[TokenEditDistance].getName)
   private val isUnchanged: Boolean =
     empty.contains(EmptyResult.Unchanged)
   private val isNoMatch: Boolean =
@@ -66,7 +66,7 @@ final class TokenEditDistance[+A] private (
       var startFallback = false
       val startMatch = BinarySearch.array(
         matching,
-        (mt: MatchingToken[A], i) => {
+        (mt: MatchingToken[Any], i) => {
           val result = compare(mt.original.pos, pos.start)
           result match {
             case BinarySearch.Smaller =>
@@ -94,7 +94,7 @@ final class TokenEditDistance[+A] private (
       var endFallback = false
       val endMatch = BinarySearch.array(
         matching,
-        (mt: MatchingToken[A], i) => {
+        (mt: MatchingToken[Any], i) => {
           // End offsets are non-inclusive so we decrement by one.
           val offset = math.max(pos.start, pos.end - 1)
           val result = compare(mt.original.pos, offset)
@@ -184,7 +184,7 @@ final class TokenEditDistance[+A] private (
     else if (isNoMatch) EmptyResult.noMatch
     else {
       BinarySearch
-        .array[MatchingToken[A]](
+        .array[MatchingToken[Any]](
           matching,
           (mt, _) => compare(mt.original.pos, originalOffset)
         )
@@ -230,7 +230,7 @@ final class TokenEditDistance[+A] private (
     else if (isNoMatch) EmptyResult.noMatch
     else {
       BinarySearch
-        .array[MatchingToken[A]](
+        .array[MatchingToken[Any]](
           matching,
           (mt, _) => compare(mt.revised.pos, revisedOffset)
         )
@@ -259,17 +259,17 @@ final class TokenEditDistance[+A] private (
 
 object TokenEditDistance {
 
-  lazy val unchanged: TokenEditDistance[Nothing] =
-    new TokenEditDistance[Nothing](
+  lazy val unchanged: TokenEditDistance =
+    new TokenEditDistance(
       Array.empty,
       empty = Some(EmptyResult.Unchanged),
-      NothingOps
+      AnyOps
     )
-  lazy val noMatch: TokenEditDistance[Nothing] =
-    new TokenEditDistance[Nothing](
+  lazy val noMatch: TokenEditDistance =
+    new TokenEditDistance(
       Array.empty,
       empty = Some(EmptyResult.NoMatch),
-      NothingOps
+      AnyOps
     )
 
   /**
@@ -284,7 +284,7 @@ object TokenEditDistance {
       original: Array[A],
       revised: Array[A],
       tokenOps: TokenOps[A]
-  ): TokenEditDistance[A] = {
+  ): TokenEditDistance = {
     val buffer = Array.newBuilder[MatchingToken[A]]
     buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
@@ -326,7 +326,11 @@ object TokenEditDistance {
         .toList
     }
     loop(0, 0, deltas)
-    new TokenEditDistance[A](buffer.result(), empty = None, tokenOps)
+    new TokenEditDistance(
+      buffer.result().asInstanceOf[Array[MatchingToken[Any]]],
+      empty = None,
+      tokenOps.asInstanceOf[TokenOps[Any]]
+    )
   }
 
   def apply(
@@ -334,7 +338,7 @@ object TokenEditDistance {
       revisedInput: Input.VirtualFile,
       trees: Trees,
       doNothingWhenUnchanged: Boolean = true
-  ): TokenEditDistance[Any] = {
+  ): TokenEditDistance = {
     val isScala =
       originalInput.path.isScalaFilename &&
         revisedInput.path.isScalaFilename
@@ -406,13 +410,13 @@ object TokenEditDistance {
     }
   }
 
-  object NothingOps extends TokenOps[Nothing] {
+  object AnyOps extends TokenOps[Any] {
 
-    def pos(token: Nothing): Position = ???
-    def input(token: Nothing): Input = ???
-    def start(token: Nothing): Int = ???
-    def end(token: Nothing): Int = ???
-    def equalizer: Equalizer[Nothing] = ???
+    def pos(token: Any): Position = ???
+    def input(token: Any): Input = ???
+    def start(token: Any): Int = ???
+    def end(token: Any): Int = ???
+    def equalizer: Equalizer[Any] = ???
   }
 
   object ScalaTokenOps extends TokenOps[Token] {

@@ -144,7 +144,7 @@ final class RunTestCodeLens(
       textDocument: TextDocument,
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
-      distance: TokenEditDistance[Any],
+      distance: TokenEditDistance,
       path: AbsolutePath
   ): Seq[l.CodeLens] = {
     for {

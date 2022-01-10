@@ -236,7 +236,7 @@ final class DefinitionProvider(
 
 case class DefinitionDestination(
     snapshot: TextDocument,
-    distance: TokenEditDistance[Any],
+    distance: TokenEditDistance,
     symbol: String,
     path: Option[AbsolutePath],
     uri: String

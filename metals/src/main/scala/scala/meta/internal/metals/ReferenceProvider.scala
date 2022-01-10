@@ -241,7 +241,7 @@ final class ReferenceProvider(
       source: AbsolutePath,
       params: ReferenceParams,
       snapshot: TextDocument,
-      distance: TokenEditDistance[Any],
+      distance: TokenEditDistance,
       occ: SymbolOccurrence,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
@@ -290,7 +290,7 @@ final class ReferenceProvider(
   private def referenceLocations(
       snapshot: TextDocument,
       isSymbol: Set[String],
-      distance: TokenEditDistance[Any],
+      distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
