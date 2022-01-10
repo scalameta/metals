@@ -7,6 +7,7 @@ import java.nio.file._
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -16,6 +17,7 @@ import java.{util => ju}
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -2229,10 +2231,19 @@ class MetalsLanguageServer(
       targets.asScala.foreach(buildTargets.linkSourceFile(_, source))
       sourcesToIndex += SourceToIndex(source, sourceItem, targets.asScala)
     }
-
-    sourcesToIndex.par.foreach(f =>
-      indexSourceFile(f.source, Some(f.sourceItem), f.targets.headOption)
+    val threadPool = new ForkJoinPool(
+      Runtime.getRuntime().availableProcessors() match {
+        case 1 => 1
+        case f => f / 2
+      }
     )
+    try {
+      val parSourcesToIndex = sourcesToIndex.par
+      parSourcesToIndex.tasksupport = new ForkJoinTaskSupport(threadPool)
+      parSourcesToIndex.foreach(f =>
+        indexSourceFile(f.source, Some(f.sourceItem), f.targets.headOption)
+      )
+    } finally threadPool.shutdown()
   }
 
   private def reindexWorkspaceSources(
