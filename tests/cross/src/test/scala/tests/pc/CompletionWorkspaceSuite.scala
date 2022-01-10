@@ -626,6 +626,21 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "renamed-mutable",
+    """|import scala.collection.{mutable => mut}
+       |object Main {
+       |  Map@@
+       |}
+       |""".stripMargin,
+    """|import scala.collection.{mutable => mut}
+       |object Main {
+       |  mut.Map
+       |}
+       |""".stripMargin,
+    filter = _ == "Map - scala.collection.mutable"
+  )
+
+  checkEdit(
     "ju-import",
     """|object Main {
        |  Map@@

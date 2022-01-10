@@ -16,7 +16,7 @@ sealed trait IndexedContext:
   given ctx: Context
   def scopeSymbols: List[Symbol]
   def names: IndexedContext.Names
-  def rename(name: SimpleName): Option[String]
+  def rename(sym: Symbol): Option[String]
   def outer: IndexedContext
 
   def findSymbol(name: String): Option[List[Symbol]]
@@ -35,7 +35,7 @@ sealed trait IndexedContext:
       case None => Result.Missing
 
   final def hasRename(sym: Symbol, as: String): Boolean =
-    rename(sym.name.toSimpleName) match
+    rename(sym) match
       case Some(v) => v == as
       case None => false
 
@@ -75,7 +75,7 @@ object IndexedContext:
     def findSymbol(name: String): Option[List[Symbol]] = None
     def scopeSymbols: List[Symbol] = List.empty
     val names: Names = Names(Map.empty, Map.empty)
-    def rename(name: SimpleName): Option[String] = None
+    def rename(sym: Symbol): Option[String] = None
     def outer: IndexedContext = this
 
   class LazyWrapper(using val ctx: Context) extends IndexedContext:
@@ -95,10 +95,10 @@ object IndexedContext:
       }
       acc.result
 
-    def rename(name: SimpleName): Option[String] =
+    def rename(sym: Symbol): Option[String] =
       names.renames
-        .get(name)
-        .orElse(outer.rename(name))
+        .get(sym)
+        .orElse(outer.rename(sym))
 
     private def outers: List[IndexedContext] =
       val builder = List.newBuilder[IndexedContext]
@@ -117,7 +117,7 @@ object IndexedContext:
 
   case class Names(
       symbols: Map[String, List[Symbol]],
-      renames: Map[SimpleName, String]
+      renames: Map[Symbol, String]
   )
 
   private def extractNames(ctx: Context): Names =
@@ -180,9 +180,7 @@ object IndexedContext:
       if ctx.isImportContext then
         val (syms, renames) =
           fromImportInfo(ctx.importInfo)
-            .map((sym, rename) =>
-              (sym, rename.map(r => sym.name.toSimpleName -> r.decoded))
-            )
+            .map((sym, rename) => (sym, rename.map(r => sym -> r.decoded)))
             .unzip
         (syms, renames.flatten.toMap)
       else if ctx.owner.isClass then
