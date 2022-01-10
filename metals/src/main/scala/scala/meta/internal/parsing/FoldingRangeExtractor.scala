@@ -16,7 +16,7 @@ import org.eclipse.lsp4j.FoldingRangeKind._
 import org.eclipse.{lsp4j => l}
 
 final class FoldingRangeExtractor(
-    distance: TokenEditDistance,
+    distance: TokenEditDistance[Any],
     foldOnlyLines: Boolean
 ) {
   private val spanThreshold = 2

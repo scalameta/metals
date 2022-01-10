@@ -17,11 +17,13 @@ import org.eclipse.{lsp4j => l}
 /**
  * Helper to map between position between two similar strings.
  */
-final class TokenEditDistance private (
-    matching: Array[MatchingToken],
-    empty: Option[EmptyResult]
+final class TokenEditDistance[+A] private (
+    matching: Array[MatchingToken[A]],
+    empty: Option[EmptyResult],
+    tokenOps: TokenEditDistance.TokenOps[A]
 ) {
-  val logger: Logger = Logger.getLogger(classOf[TokenEditDistance].getName)
+  import tokenOps._
+  val logger: Logger = Logger.getLogger(classOf[TokenEditDistance[A]].getName)
   private val isUnchanged: Boolean =
     empty.contains(EmptyResult.Unchanged)
   private val isNoMatch: Boolean =
@@ -64,7 +66,7 @@ final class TokenEditDistance private (
       var startFallback = false
       val startMatch = BinarySearch.array(
         matching,
-        (mt: MatchingToken, i) => {
+        (mt: MatchingToken[A], i) => {
           val result = compare(mt.original.pos, pos.start)
           result match {
             case BinarySearch.Smaller =>
@@ -92,7 +94,7 @@ final class TokenEditDistance private (
       var endFallback = false
       val endMatch = BinarySearch.array(
         matching,
-        (mt: MatchingToken, i) => {
+        (mt: MatchingToken[A], i) => {
           // End offsets are non-inclusive so we decrement by one.
           val offset = math.max(pos.start, pos.end - 1)
           val result = compare(mt.original.pos, offset)
@@ -182,7 +184,7 @@ final class TokenEditDistance private (
     else if (isNoMatch) EmptyResult.noMatch
     else {
       BinarySearch
-        .array[MatchingToken](
+        .array[MatchingToken[A]](
           matching,
           (mt, _) => compare(mt.original.pos, originalOffset)
         )
@@ -228,7 +230,7 @@ final class TokenEditDistance private (
     else if (isNoMatch) EmptyResult.noMatch
     else {
       BinarySearch
-        .array[MatchingToken](
+        .array[MatchingToken[A]](
           matching,
           (mt, _) => compare(mt.revised.pos, revisedOffset)
         )
@@ -257,10 +259,18 @@ final class TokenEditDistance private (
 
 object TokenEditDistance {
 
-  lazy val unchanged: TokenEditDistance =
-    new TokenEditDistance(Array.empty, empty = Some(EmptyResult.Unchanged))
-  lazy val noMatch: TokenEditDistance =
-    new TokenEditDistance(Array.empty, empty = Some(EmptyResult.NoMatch))
+  lazy val unchanged: TokenEditDistance[Nothing] =
+    new TokenEditDistance[Nothing](
+      Array.empty,
+      empty = Some(EmptyResult.Unchanged),
+      NothingOps
+    )
+  lazy val noMatch: TokenEditDistance[Nothing] =
+    new TokenEditDistance[Nothing](
+      Array.empty,
+      empty = Some(EmptyResult.NoMatch),
+      NothingOps
+    )
 
   /**
    * Build utility to map offsets between two slightly different strings.
@@ -270,14 +280,12 @@ object TokenEditDistance {
    * @param revised The current snapshot of a string, for example open buffer
    *                in an editor.
    */
-  private def fromTokens[
-      A <: TokenEditDistance.BasicToken
-  ](
+  private def fromTokens[A](
       original: Array[A],
       revised: Array[A],
-      equalizer: Equalizer[A]
-  ): TokenEditDistance = {
-    val buffer = Array.newBuilder[MatchingToken]
+      tokenOps: TokenOps[A]
+  ): TokenEditDistance[A] = {
+    val buffer = Array.newBuilder[MatchingToken[A]]
     buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
     def loop(
@@ -292,7 +300,7 @@ object TokenEditDistance {
       else {
         val o = original(i)
         val r = revised(j)
-        if (equalizer.equals(o, r)) {
+        if (tokenOps.equalizer.equals(o, r)) {
           buffer += new MatchingToken(o, r)
           loop(i + 1, j + 1, ds)
         } else {
@@ -311,14 +319,14 @@ object TokenEditDistance {
     }
     val deltas = {
       DiffUtils
-        .diff(original.toList.asJava, revised.toList.asJava, equalizer)
+        .diff(original.toList.asJava, revised.toList.asJava, tokenOps.equalizer)
         .getDeltas
         .iterator()
         .asScala
         .toList
     }
     loop(0, 0, deltas)
-    new TokenEditDistance(buffer.result(), empty = None)
+    new TokenEditDistance[A](buffer.result(), empty = None, tokenOps)
   }
 
   def apply(
@@ -326,7 +334,7 @@ object TokenEditDistance {
       revisedInput: Input.VirtualFile,
       trees: Trees,
       doNothingWhenUnchanged: Boolean = true
-  ): TokenEditDistance = {
+  ): TokenEditDistance[Any] = {
     val isScala =
       originalInput.path.isScalaFilename &&
         revisedInput.path.isScalaFilename
@@ -346,7 +354,7 @@ object TokenEditDistance {
         revised <- JavaTokens.tokenize(revisedInput)
         original <- JavaTokens.tokenize(originalInput)
       } yield {
-        TokenEditDistance.fromTokens(original, revised, JavaTokenEqualizer)
+        TokenEditDistance.fromTokens(original, revised, JavaTokenOps)
       }
       result.getOrElse(noMatch)
     } else {
@@ -357,7 +365,7 @@ object TokenEditDistance {
         TokenEditDistance.fromTokens(
           original.tokens,
           revised.tokens,
-          ScalaTokenEqualizer
+          ScalaTokenOps
         )
       }
       result.getOrElse(noMatch)
@@ -381,11 +389,57 @@ object TokenEditDistance {
 
   }
 
-  type BasicToken = {
-    def pos: Position
-    def input: Input
-    def start: Int
-    def end: Int
+  trait TokenOps[T] { self =>
+
+    def pos(token: T): Position
+    def input(token: T): Input
+    def start(token: T): Int
+    def end(token: T): Int
+    def equalizer: Equalizer[T]
+
+    implicit class ExtT(token: T) {
+      def pos: Position = self.pos(token)
+      def input: Input = self.input(token)
+      def start: Int = self.start(token)
+      def end: Int = self.end(token)
+      def equalizer: Equalizer[T] = self.equalizer
+    }
+  }
+
+  object NothingOps extends TokenOps[Nothing] {
+
+    def pos(token: Nothing): Position = ???
+    def input(token: Nothing): Input = ???
+    def start(token: Nothing): Int = ???
+    def end(token: Nothing): Int = ???
+    def equalizer: Equalizer[Nothing] = ???
+  }
+
+  object ScalaTokenOps extends TokenOps[Token] {
+
+    override def pos(token: Token): Position = token.pos
+
+    override def input(token: Token): Input = token.input
+
+    override def start(token: Token): Int = token.start
+
+    override def end(token: Token): Int = token.end
+
+    override def equalizer: Equalizer[Token] = ScalaTokenEqualizer
+
+  }
+  object JavaTokenOps extends TokenOps[JavaToken] {
+
+    override def pos(token: JavaToken): Position = token.pos
+
+    override def input(token: JavaToken): Input = token.input
+
+    override def start(token: JavaToken): Int = token.start
+
+    override def end(token: JavaToken): Int = token.end
+
+    override def equalizer: Equalizer[JavaToken] = JavaTokenEqualizer
+
   }
 
 }

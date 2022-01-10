@@ -45,7 +45,7 @@ object JavaTokens {
     def loop(token: Int): Unit = {
       if (token != ITerminalSymbols.TokenNameEOF) {
         val start = scanner.getCurrentTokenStartPosition()
-        val end = scanner.getCurrentTokenStartPosition()
+        val end = scanner.getCurrentTokenEndPosition() + 1
 
         def createToken(txt: String, isLF: Boolean = false) = JavaToken(
           token,

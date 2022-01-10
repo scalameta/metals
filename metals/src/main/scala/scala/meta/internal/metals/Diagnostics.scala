@@ -225,7 +225,7 @@ final class Diagnostics(
   // Adjust positions for type errors for changes in the open buffer.
   // Only needed when merging syntax errors with type errors.
   private def toFreshDiagnostic(
-      edit: TokenEditDistance,
+      edit: TokenEditDistance[Any],
       uri: String,
       d: Diagnostic,
       snapshot: Input
