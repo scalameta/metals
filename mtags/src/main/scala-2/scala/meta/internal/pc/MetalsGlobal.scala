@@ -205,13 +205,20 @@ class MetalsGlobal(
                 case _ => false
               }
 
-            def shouldRenamePrefix =
-              !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+            def canRename(rename: Name, ownerSym: Symbol): Boolean = {
+              val shouldRenamePrefix =
+                !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+
+              if (shouldRenamePrefix) {
+                val existingRename = history.renames.get(ownerSym)
+                existingRename.isEmpty && history.tryShortenName(
+                  ShortName(rename, ownerSymbol)
+                )
+              } else false
+            }
+
             history.config.get(ownerSymbol) match {
-              case Some(rename)
-                  if shouldRenamePrefix && history.tryShortenName(
-                    ShortName(rename, ownerSymbol)
-                  ) =>
+              case Some(rename) if canRename(rename, ownerSymbol) =>
                 TypeRef(
                   new PrettyType(rename.toString),
                   sym,

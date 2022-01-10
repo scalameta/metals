@@ -70,9 +70,9 @@ object AutoImports:
 
     val renames =
       (sym: Symbol) =>
-        renameConfig
-          .get(sym)
-          .orElse(indexedContext.rename(sym))
+        indexedContext
+          .rename(sym)
+          .orElse(renameConfig.get(sym))
 
     new AutoImportsGenerator(
       pos,
@@ -137,7 +137,6 @@ object AutoImports:
         case IndexedContext.Result.Missing => Some(AutoImport.Simple(symbol))
         case IndexedContext.Result.Conflict =>
           val owner = symbol.owner
-          val simpleName = owner.name.toSimpleName
           renames(owner) match
             case Some(rename) =>
               Some(AutoImport.renamedOrSpecified(symbol, rename))
