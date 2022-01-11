@@ -241,8 +241,8 @@ object UserConfiguration {
       ),
       UserConfigurationOption(
         "fallback-scala-version",
-        BuildInfo.scala212,
-        BuildInfo.scala212,
+        BuildInfo.scala3,
+        BuildInfo.scala3,
         "Default fallback Scala version",
         """|The Scala compiler version that is used as the default or fallback in case a file 
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
@@ -252,7 +252,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "test-user-interface",
         "Code Lenses",
-        """{ "testUserInterface" : "Test explorer" } """,
+        "Test explorer",
         "Test UI used for tests and test suites",
         "Default way of handling tests and test suites."
       ),
