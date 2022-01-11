@@ -31,9 +31,9 @@ class JavaEditDistanceSuite extends BaseSuite {
     val distance = TokenEditDistance(original, revised, trees = null)
 
     if (isWindows)
-      assertNoDiff(distance.toString(), "TokenEditDistance(22 tokens)")
+      assertNoDiff(distance.toString(), "Diff(22 tokens)")
     else
-      assertNoDiff(distance.toString(), "TokenEditDistance(19 tokens)")
+      assertNoDiff(distance.toString(), "Diff(19 tokens)")
 
   }
 
@@ -59,7 +59,7 @@ class JavaEditDistanceSuite extends BaseSuite {
 
     val distance = TokenEditDistance(original, revised, trees = null)
 
-    assertNoDiff(distance.toString(), "TokenEditDistance(unchanged)")
+    assertNoDiff(distance.toString(), "unchanged")
 
   }
 }
