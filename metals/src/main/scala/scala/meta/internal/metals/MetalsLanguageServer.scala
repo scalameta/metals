@@ -2258,8 +2258,8 @@ class MetalsLanguageServer(
         val dialect = {
           val scalaVersion =
             targetOpt
-              .flatMap(buildTargets.scalaInfo)
-              .map(_.getScalaVersion())
+              .flatMap(buildTargets.scalaTarget)
+              .map(_.scalaVersion)
               .getOrElse(
                 scalaVersionSelector.fallbackScalaVersion(
                   source.isAmmoniteScript

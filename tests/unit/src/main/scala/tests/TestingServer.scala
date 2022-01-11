@@ -1451,7 +1451,7 @@ final class TestingServer(
       .map(_.getId().getUri())
       .getOrElse {
         val alternatives =
-          server.buildTargets.allTargets.map(_.getDisplayName()).mkString(" ")
+          server.buildTargets.all.map(_.getDisplayName()).mkString(" ")
         throw new NoSuchElementException(
           s"$displayName (alternatives: ${alternatives}"
         )

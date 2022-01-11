@@ -466,7 +466,6 @@ class Compilers(
         }
         result
       }
-      scalac <- buildTargets.scalacOptions(targetId)
     } yield {
       jworksheetsCache.put(
         path,
@@ -483,7 +482,13 @@ class Compilers(
             buildTargets,
             workspaceFallback = Some(search)
           )
-          newCompiler(scalac, scalaTarget, mtags, classpath, worksheetSearch)
+          newCompiler(
+            scalaTarget.scalac,
+            scalaTarget,
+            mtags,
+            classpath,
+            worksheetSearch
+          )
         }
       )
     }
