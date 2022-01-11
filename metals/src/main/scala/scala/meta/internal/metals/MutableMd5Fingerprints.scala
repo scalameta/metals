@@ -15,7 +15,7 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
   private val fingerprints =
     new ConcurrentHashMap[AbsolutePath, ConcurrentLinkedQueue[Fingerprint]]()
   def add(path: AbsolutePath, text: String): Unit = {
-    val md5 = MD5.compute(text)
+    val md5 = MD5.compute(path, text)
     val value = fingerprints.computeIfAbsent(
       path,
       { _ =>
@@ -44,7 +44,7 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
       charset: Charset
   ): Option[String] = {
     val text = FileIO.slurp(path, charset)
-    val md5 = MD5.compute(text)
+    val md5 = MD5.compute(path, text)
     if (soughtMd5 != md5) {
       lookupText(path, soughtMd5)
     } else {

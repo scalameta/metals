@@ -87,7 +87,7 @@ final class InteractiveSemanticdbs(
         source,
         (path, existingDoc) => {
           val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
-          val sha = MD5.compute(text)
+          val sha = MD5.compute(source, text)
           if (existingDoc == null || existingDoc.md5 != sha) {
             Try(compile(path, text)) match {
               case Success(doc) if doc != null =>
@@ -200,14 +200,15 @@ final class InteractiveSemanticdbs(
       else doc
     }
     if (prependedLinesSize > 0)
-      cleanupAutoImports(textDocument, text, prependedLinesSize)
+      cleanupAutoImports(textDocument, text, prependedLinesSize, source)
     else textDocument
   }
 
   private def cleanupAutoImports(
       document: s.TextDocument,
       originalText: String,
-      linesSize: Int
+      linesSize: Int,
+      source: AbsolutePath
   ): s.TextDocument = {
 
     def adjustRange(range: s.Range): Option[s.Range] = {
@@ -247,7 +248,7 @@ final class InteractiveSemanticdbs(
       schema = document.schema,
       uri = document.uri,
       text = originalText,
-      md5 = MD5.compute(originalText),
+      md5 = MD5.compute(source, originalText),
       language = document.language,
       symbols = document.symbols,
       occurrences = adjustedOccurences,
