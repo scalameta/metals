@@ -19,7 +19,7 @@ module.exports = {
           "path": "../website/target/docs",
           "showLastUpdateAuthor": true,
           "showLastUpdateTime": true,
-          "editUrl": "https://github.com/scalameta/metals/edit/main/docs/",
+          "editUrl": ({docPath}) => `https://github.com/scalameta/metals/edit/main/docs/${docPath}`,
           "sidebarPath": "../website/sidebars.json"
         },
         "blog": {
