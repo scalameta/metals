@@ -235,6 +235,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "2.13.7" -> dot2137,
+      "2.13.8" -> dot2137,
       "2.13" -> dot213,
       "2.11" ->
         """|apply[A](xs: A*): List[A]
@@ -521,9 +522,7 @@ class CompletionSuite extends BaseCompletionSuite {
        * might have been a bug in presentation compiler that we were using
        * https://github.com/scalameta/metals/issues/2546
        */
-      "2.13.5" -> "Inner a.Outer",
-      "2.13.6" -> "Inner a.Outer",
-      "2.13.7" -> "Inner a.Outer"
+      "2.13" -> "Inner a.Outer"
     )
   )
 
@@ -741,9 +740,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" -> "DelayedLazyVal scala.concurrent",
-      "2.13.5" -> "DelayedLazyVal - scala.concurrent",
-      "2.13.6" -> "DelayedLazyVal - scala.concurrent",
-      "2.13.7" -> "DelayedLazyVal - scala.concurrent"
+      "2.13" -> "DelayedLazyVal - scala.concurrent"
     )
   )
 
