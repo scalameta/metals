@@ -354,7 +354,7 @@ final class Doctor(
         title = "Interactive features (completions, hover):",
         correctMessage = s"${Icons.unicode.check} - supported Scala version",
         incorrectMessage =
-          s"${Icons.unicode.error} - unsupported Scala version",
+          s"${Icons.unicode.error} - interactive features are unsupported for Java and older Scala versions",
         show = allTargetsInfo.exists(_.interactiveStatus.isCorrect == false)
       )
 
