@@ -35,16 +35,12 @@ class ProblemResolver(
     }
   }
 
-  def recommendation(java: JavaTarget): String = {
-    findProblem(java)
-      .map(_.message)
-      .getOrElse("")
+  def recommendation(java: JavaTarget): Option[String] = {
+    findProblem(java).map(_.message)
   }
 
-  def recommendation(scala: ScalaTarget): String = {
-    findProblem(scala)
-      .map(_.message)
-      .getOrElse("")
+  def recommendation(scala: ScalaTarget): Option[String] = {
+    findProblem(scala).map(_.message)
   }
 
   def problemMessage(
