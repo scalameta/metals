@@ -7,42 +7,16 @@ import scala.annotation.tailrec
 import scala.meta.Input
 import scala.meta.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.parsing.TokenOps.syntax._
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.tokens.Token
 
 import difflib._
-import difflib.myers.Equalizer
 import org.eclipse.{lsp4j => l}
 
 /**
  * Helper to map between position between two similar strings.
  */
-final class TokenEditDistance private (
-    matching: Array[MatchingToken[Any]],
-    empty: Option[EmptyResult],
-    tokenOps: TokenEditDistance.TokenOps[Any]
-) {
-  import tokenOps._
-  val logger: Logger = Logger.getLogger(classOf[TokenEditDistance].getName)
-  private val isUnchanged: Boolean =
-    empty.contains(EmptyResult.Unchanged)
-  private val isNoMatch: Boolean =
-    matching.isEmpty || empty.contains(EmptyResult.NoMatch)
-  override def toString: String = {
-    val value =
-      if (isUnchanged) "unchanged"
-      else if (isNoMatch) "no-match"
-      else s"${matching.length} tokens"
-    s"TokenEditDistance($value)"
-  }
-
-  private def originalInput: Input =
-    if (empty.isDefined) Input.None
-    else matching(0).original.input
-
-  private def revisedInput: Input =
-    if (empty.isDefined) Input.None
-    else matching(0).revised.input
+sealed trait TokenEditDistance {
 
   /**
    * Converts a range position in the original document to a range position in the revised document.
@@ -52,10 +26,124 @@ final class TokenEditDistance private (
    *   When the original token is removed in the revised document, we find instead the
    *   nearest token in the original document instead.
    */
-  def toRevised(range: l.Range): Option[l.Range] = {
-    if (isUnchanged) Some(range)
-    else if (isNoMatch) None
-    else {
+  def toRevised(range: l.Range): Option[l.Range]
+  def toRevised(originalOffset: Int): Either[EmptyResult, Position]
+  def toRevised(
+      originalLine: Int,
+      originalColumn: Int
+  ): Either[EmptyResult, Position]
+
+  def toOriginal(
+      revisedLine: Int,
+      revisedColumn: Int
+  ): Either[EmptyResult, Position]
+
+  def toOriginal(revisedOffset: Int): Either[EmptyResult, Position]
+
+  final def toRevised(pos: l.Position): Either[EmptyResult, Position] = {
+    toRevised(pos.getLine, pos.getCharacter)
+  }
+  final def toRevisedStrict(range: s.Range): Option[s.Range] = {
+    this match {
+      case TokenEditDistance.Unchanged => Some(range)
+      case _ =>
+        (
+          toRevised(range.startLine, range.startCharacter),
+          toRevised(range.endLine, range.endCharacter)
+        ) match {
+          case (Right(start), Right(end)) =>
+            Some(
+              s.Range(
+                start.startLine,
+                start.startColumn,
+                end.startLine,
+                end.startColumn
+              )
+            )
+          case _ => None
+        }
+    }
+  }
+
+  final def toOriginalStrict(range: s.Range): Option[s.Range] = {
+    this match {
+      case TokenEditDistance.Unchanged => Some(range)
+      case _ =>
+        (
+          toOriginal(range.startLine, range.startCharacter),
+          toOriginal(range.endLine, range.endCharacter)
+        ) match {
+          case (Right(start), Right(end)) =>
+            Some(
+              s.Range(
+                start.startLine,
+                start.startColumn,
+                end.endLine,
+                end.endColumn
+              )
+            )
+          case _ => None
+        }
+    }
+  }
+
+}
+
+object TokenEditDistance {
+
+  case object Unchanged extends TokenEditDistance {
+    def toRevised(range: l.Range): Option[l.Range] = Some(range)
+    def toRevised(originalOffset: Int): Either[EmptyResult, Position] =
+      EmptyResult.unchanged
+    def toRevised(
+        originalLine: Int,
+        originalColumn: Int
+    ): Either[EmptyResult, Position] =
+      EmptyResult.unchanged
+
+    def toOriginal(
+        revisedLine: Int,
+        revisedColumn: Int
+    ): Either[EmptyResult, Position] =
+      EmptyResult.unchanged
+
+    def toOriginal(revisedOffset: Int): Either[EmptyResult, Position] =
+      EmptyResult.unchanged
+
+    override def toString(): String = "unchanged"
+  }
+
+  case object NoMatch extends TokenEditDistance {
+    def toRevised(range: l.Range): Option[l.Range] = None
+    def toRevised(originalOffset: Int): Either[EmptyResult, Position] =
+      EmptyResult.noMatch
+    def toRevised(
+        originalLine: Int,
+        originalColumn: Int
+    ): Either[EmptyResult, Position] =
+      EmptyResult.noMatch
+
+    def toOriginal(
+        revisedLine: Int,
+        revisedColumn: Int
+    ): Either[EmptyResult, Position] =
+      EmptyResult.noMatch
+
+    def toOriginal(revisedOffset: Int): Either[EmptyResult, Position] =
+      EmptyResult.noMatch
+
+    override def toString(): String = "no-match"
+  }
+
+  final class Diff[A](
+      matching: Array[MatchingToken[A]],
+      originalInput: Input.VirtualFile,
+      revisedInput: Input.VirtualFile
+  )(implicit ops: TokenOps[A])
+      extends TokenEditDistance {
+
+    private val logger: Logger = Logger.getLogger(this.getClass.getName)
+    def toRevised(range: l.Range): Option[l.Range] = {
       val pos = range.toMeta(originalInput)
       val matchingTokens = matching.lift
 
@@ -66,7 +154,7 @@ final class TokenEditDistance private (
       var startFallback = false
       val startMatch = BinarySearch.array(
         matching,
-        (mt: MatchingToken[Any], i) => {
+        (mt: MatchingToken[A], i) => {
           val result = compare(mt.original.pos, pos.start)
           result match {
             case BinarySearch.Smaller =>
@@ -94,7 +182,7 @@ final class TokenEditDistance private (
       var endFallback = false
       val endMatch = BinarySearch.array(
         matching,
-        (mt: MatchingToken[Any], i) => {
+        (mt: MatchingToken[A], i) => {
           // End offsets are non-inclusive so we decrement by one.
           val offset = math.max(pos.start, pos.end - 1)
           val result = compare(mt.original.pos, offset)
@@ -129,124 +217,62 @@ final class TokenEditDistance private (
               start.revised.pos
             } else {
               val endOffset = end.revised match {
-                case t @ Token.LF() => t.start
+                case t if t.isLF => t.start
                 case t => t.end
               }
               Position.Range(revisedInput, start.revised.start, endOffset)
             }
           Some(revised.toLSP)
         case (start, end) =>
-          logger.warning(s"stale range: $start $end")
+          logger.warning(
+            s"stale range: ${start.map(_.show)} ${end.map(_.show)}"
+          )
           None
       }
     }
-  }
 
-  def toRevised(pos: l.Position): Either[EmptyResult, Position] = {
-    toRevised(pos.getLine, pos.getCharacter)
-  }
-
-  def toRevisedStrict(range: s.Range): Option[s.Range] = {
-    if (isUnchanged) Some(range)
-    else {
-      (
-        toRevised(range.startLine, range.startCharacter),
-        toRevised(range.endLine, range.endCharacter)
-      ) match {
-        case (Right(start), Right(end)) =>
-          Some(
-            s.Range(
-              start.startLine,
-              start.startColumn,
-              end.startLine,
-              end.startColumn
-            )
-          )
-        case _ => None
-      }
+    def toRevised(
+        originalLine: Int,
+        originalColumn: Int
+    ): Either[EmptyResult, Position] = {
+      toRevised(originalInput.toOffset(originalLine, originalColumn))
     }
-  }
 
-  def toRevised(
-      originalLine: Int,
-      originalColumn: Int
-  ): Either[EmptyResult, Position] = {
-    if (isUnchanged) EmptyResult.unchanged
-    else if (isNoMatch) EmptyResult.noMatch
-    else toRevised(originalInput.toOffset(originalLine, originalColumn))
-  }
-
-  /**
-   * Convert from offset in original string to offset in revised string
-   */
-  def toRevised(originalOffset: Int): Either[EmptyResult, Position] = {
-    if (isUnchanged) EmptyResult.unchanged
-    else if (isNoMatch) EmptyResult.noMatch
-    else {
+    def toRevised(originalOffset: Int): Either[EmptyResult, Position] = {
       BinarySearch
-        .array[MatchingToken[Any]](
+        .array[MatchingToken[A]](
           matching,
           (mt, _) => compare(mt.original.pos, originalOffset)
         )
         .fold(EmptyResult.noMatch)(m => Right(m.revised.pos))
     }
-  }
 
-  def toOriginalStrict(range: s.Range): Option[s.Range] = {
-    if (isUnchanged) Some(range)
-    else {
-      (
-        toOriginal(range.startLine, range.startCharacter),
-        toOriginal(range.endLine, range.endCharacter)
-      ) match {
-        case (Right(start), Right(end)) =>
-          Some(
-            s.Range(
-              start.startLine,
-              start.startColumn,
-              end.endLine,
-              end.endColumn
-            )
-          )
-        case _ => None
-      }
-    }
-  }
+    def toOriginal(
+        revisedLine: Int,
+        revisedColumn: Int
+    ): Either[EmptyResult, Position] =
+      toOriginal(revisedInput.toOffset(revisedLine, revisedColumn))
 
-  def toOriginal(
-      revisedLine: Int,
-      revisedColumn: Int
-  ): Either[EmptyResult, Position] = {
-    if (isUnchanged) EmptyResult.unchanged
-    else if (isNoMatch) EmptyResult.noMatch
-    else toOriginal(revisedInput.toOffset(revisedLine, revisedColumn))
-  }
-
-  /**
-   * Convert from offset in revised string to offset in original string
-   */
-  def toOriginal(revisedOffset: Int): Either[EmptyResult, Position] = {
-    if (isUnchanged) EmptyResult.unchanged
-    else if (isNoMatch) EmptyResult.noMatch
-    else {
+    def toOriginal(revisedOffset: Int): Either[EmptyResult, Position] =
       BinarySearch
-        .array[MatchingToken[Any]](
+        .array[MatchingToken[A]](
           matching,
           (mt, _) => compare(mt.revised.pos, revisedOffset)
         )
         .fold(EmptyResult.noMatch)(m => Right(m.original.pos))
-    }
+
+    private def compare(
+        pos: Position,
+        offset: Int
+    ): BinarySearch.ComparisonResult =
+      if (pos.contains(offset)) BinarySearch.Equal
+      else if (pos.end <= offset) BinarySearch.Smaller
+      else BinarySearch.Greater
+
+    override def toString(): String = s"Diff(${matching.length} tokens)"
   }
 
-  private def compare(
-      pos: Position,
-      offset: Int
-  ): BinarySearch.ComparisonResult =
-    if (pos.contains(offset)) BinarySearch.Equal
-    else if (pos.end <= offset) BinarySearch.Smaller
-    else BinarySearch.Greater
-
-  implicit class XtensionPositionRangeLSP(pos: Position) {
+  implicit class XtensionPositionRangeLSP(val pos: Position) extends AnyVal {
     def contains(offset: Int): Boolean =
       if (pos.start == pos.end) pos.end == offset
       else {
@@ -254,23 +280,6 @@ final class TokenEditDistance private (
         pos.end > offset
       }
   }
-
-}
-
-object TokenEditDistance {
-
-  lazy val unchanged: TokenEditDistance =
-    new TokenEditDistance(
-      Array.empty,
-      empty = Some(EmptyResult.Unchanged),
-      AnyOps
-    )
-  lazy val noMatch: TokenEditDistance =
-    new TokenEditDistance(
-      Array.empty,
-      empty = Some(EmptyResult.NoMatch),
-      AnyOps
-    )
 
   /**
    * Build utility to map offsets between two slightly different strings.
@@ -281,10 +290,11 @@ object TokenEditDistance {
    *                in an editor.
    */
   private def fromTokens[A](
+      originalInput: Input.VirtualFile,
       original: Array[A],
-      revised: Array[A],
-      tokenOps: TokenOps[A]
-  ): TokenEditDistance = {
+      revisedInput: Input.VirtualFile,
+      revised: Array[A]
+  )(implicit ops: TokenOps[A]) = {
     val buffer = Array.newBuilder[MatchingToken[A]]
     buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
@@ -300,7 +310,7 @@ object TokenEditDistance {
       else {
         val o = original(i)
         val r = revised(j)
-        if (tokenOps.equalizer.equals(o, r)) {
+        if (ops.equalizer.equals(o, r)) {
           buffer += new MatchingToken(o, r)
           loop(i + 1, j + 1, ds)
         } else {
@@ -319,18 +329,14 @@ object TokenEditDistance {
     }
     val deltas = {
       DiffUtils
-        .diff(original.toList.asJava, revised.toList.asJava, tokenOps.equalizer)
+        .diff(original.toList.asJava, revised.toList.asJava, ops.equalizer)
         .getDeltas
         .iterator()
         .asScala
         .toList
     }
     loop(0, 0, deltas)
-    new TokenEditDistance(
-      buffer.result().asInstanceOf[Array[MatchingToken[Any]]],
-      empty = None,
-      tokenOps.asInstanceOf[TokenOps[Any]]
-    )
+    new Diff(buffer.result(), originalInput, revisedInput)
   }
 
   def apply(
@@ -348,102 +354,38 @@ object TokenEditDistance {
 
     if (!isScala && !isJava) {
       // Ignore non-scala/java Files.
-      unchanged
+      Unchanged
     } else if (originalInput.value.isEmpty() || revisedInput.value.isEmpty()) {
-      noMatch
+      NoMatch
     } else if (doNothingWhenUnchanged && originalInput == revisedInput) {
-      unchanged
+      Unchanged
     } else if (isJava) {
       val result = for {
         revised <- JavaTokens.tokenize(revisedInput)
         original <- JavaTokens.tokenize(originalInput)
       } yield {
-        TokenEditDistance.fromTokens(original, revised, JavaTokenOps)
+        TokenEditDistance.fromTokens(
+          originalInput,
+          original,
+          revisedInput,
+          revised
+        )
       }
-      result.getOrElse(noMatch)
+      result.getOrElse(NoMatch)
     } else {
       val result = for {
         revised <- trees.tokenized(revisedInput).toOption
         original <- trees.tokenized(originalInput).toOption
       } yield {
         TokenEditDistance.fromTokens(
+          originalInput,
           original.tokens,
-          revised.tokens,
-          ScalaTokenOps
+          revisedInput,
+          revised.tokens
         )
       }
-      result.getOrElse(noMatch)
+      result.getOrElse(NoMatch)
     }
-  }
-
-  private object ScalaTokenEqualizer extends Equalizer[Token] {
-    override def equals(original: Token, revised: Token): Boolean =
-      original.productPrefix == revised.productPrefix &&
-        original.pos.text == revised.pos.text
-
-  }
-
-  /**
-   * Compare tokens only by their text and token category.
-   */
-  private object JavaTokenEqualizer extends Equalizer[JavaToken] {
-    override def equals(original: JavaToken, revised: JavaToken): Boolean =
-      original.id == revised.id &&
-        original.text == revised.text
-
-  }
-
-  trait TokenOps[T] { self =>
-
-    def pos(token: T): Position
-    def input(token: T): Input
-    def start(token: T): Int
-    def end(token: T): Int
-    def equalizer: Equalizer[T]
-
-    implicit class ExtT(token: T) {
-      def pos: Position = self.pos(token)
-      def input: Input = self.input(token)
-      def start: Int = self.start(token)
-      def end: Int = self.end(token)
-      def equalizer: Equalizer[T] = self.equalizer
-    }
-  }
-
-  object AnyOps extends TokenOps[Any] {
-
-    def pos(token: Any): Position = ???
-    def input(token: Any): Input = ???
-    def start(token: Any): Int = ???
-    def end(token: Any): Int = ???
-    def equalizer: Equalizer[Any] = ???
-  }
-
-  object ScalaTokenOps extends TokenOps[Token] {
-
-    override def pos(token: Token): Position = token.pos
-
-    override def input(token: Token): Input = token.input
-
-    override def start(token: Token): Int = token.start
-
-    override def end(token: Token): Int = token.end
-
-    override def equalizer: Equalizer[Token] = ScalaTokenEqualizer
-
-  }
-  object JavaTokenOps extends TokenOps[JavaToken] {
-
-    override def pos(token: JavaToken): Position = token.pos
-
-    override def input(token: JavaToken): Input = token.input
-
-    override def start(token: JavaToken): Int = token.start
-
-    override def end(token: JavaToken): Int = token.end
-
-    override def equalizer: Equalizer[JavaToken] = JavaTokenEqualizer
-
   }
 
 }
