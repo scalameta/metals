@@ -40,7 +40,8 @@ final class InteractiveSemanticdbs(
     statusBar: StatusBar,
     compilers: () => Compilers,
     clientConfig: ClientConfiguration,
-    semanticdbIndexer: () => SemanticdbIndexer
+    semanticdbIndexer: () => SemanticdbIndexer,
+    javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb]
 ) extends Cancelable
     with Semanticdbs {
 
@@ -77,8 +78,8 @@ final class InteractiveSemanticdbs(
       )
     }
 
-    // anything aside from `*.scala`, `*.sbt` and `*.sc` file
-    def isExcludedFile = !source.isScalaFilename
+    // anything aside from `*.scala`, `*.sbt`, `*.sc`, `*.java` file
+    def isExcludedFile = !source.isScalaFilename && !source.isJavaFilename
 
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
@@ -160,6 +161,17 @@ final class InteractiveSemanticdbs(
   }
 
   private def compile(source: AbsolutePath, text: String): s.TextDocument = {
+    if (source.isJavaFilename)
+      javaInteractiveSemanticdb.fold(s.TextDocument())(
+        _.textDocument(source, text)
+      )
+    else scalaCompile(source, text)
+  }
+
+  private def scalaCompile(
+      source: AbsolutePath,
+      text: String
+  ): s.TextDocument = {
     def worksheetCompiler =
       if (source.isWorksheet) compilers().loadWorksheetCompiler(source)
       else None

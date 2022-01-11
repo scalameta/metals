@@ -28,7 +28,8 @@ object DownloadDependencies {
     downloadMdoc()
     downloadScalafmt()
     downloadMtags()
-    downloadSemanticDB()
+    downloadSemanticDBScalac()
+    downloadSemanticDBJavac()
     downloadScala()
     // NOTE(olafur): important, Bloop comes last because it does System.exit()
     downloadBloop()
@@ -72,11 +73,16 @@ object DownloadDependencies {
     }
   }
 
-  def downloadSemanticDB(): Unit = {
+  def downloadSemanticDBScalac(): Unit = {
     scribe.info("Downloading semanticdb-scalac")
     BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
       Embedded.downloadSemanticdbScalac(scalaVersion)
     }
+  }
+
+  def downloadSemanticDBJavac(): Unit = {
+    scribe.info("Downloading semanticdb-javac")
+    Embedded.downloadSemanticdbJavac
   }
 
   def downloadBloop(): Unit = {
