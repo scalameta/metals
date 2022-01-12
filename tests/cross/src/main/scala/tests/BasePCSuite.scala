@@ -240,7 +240,7 @@ abstract class BasePCSuite extends BaseSuite {
     try index.addSourceFile(file, Some(tmp), dialect)
     catch {
       case NonFatal(e) =>
-        println(s"warn: $e")
+        println(s"warn: ${e.getMessage()}")
     }
     workspace.inputs(filename) = (code2, dialect)
   }

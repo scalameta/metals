@@ -211,15 +211,15 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.15"
-  val scala213 = "2.13.7"
+  val scala213 = "2.13.8"
   val scala3 = "3.1.0"
   val nextScala3RC = "3.1.1-RC2"
   val sbtScala = "2.12.14"
   val ammonite212Version = scala212
-  val ammonite213Version = scala213
+  val ammonite213Version = "2.13.7"
 
-  val ammonite = "2.5.0"
-  val bloop = "1.4.11-30-75fb3441"
+  val ammonite = "2.4.1"
+  val bloop = "1.4.11-51-ac1d788a"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
   val coursier = "2.0.16"
@@ -241,7 +241,7 @@ lazy val V = new {
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.9.33"
   val scalafmt = "3.0.5"
-  val scalameta = "4.4.31"
+  val scalameta = "4.4.32"
   val scribe = "3.6.7"
   val semanticdb = scalameta
   val qdox = "2.0.1"
@@ -265,10 +265,10 @@ lazy val V = new {
       "2.12.8",
       "2.12.9",
       "2.12.10",
-      "2.13.0",
       "2.13.1",
       "2.13.2",
-      "2.13.3"
+      "2.13.3",
+      "2.13.4"
     )
   def nonDeprecatedScala2Versions =
     Seq(
@@ -278,9 +278,9 @@ lazy val V = new {
       "2.12.13",
       "2.12.12",
       "2.12.11",
-      "2.13.4",
       "2.13.5",
-      "2.13.6"
+      "2.13.6",
+      "2.13.7"
     )
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
@@ -808,7 +808,8 @@ lazy val docs = project
     sharedSettings,
     publish / skip := true,
     moduleName := "metals-docs",
-    mdoc := (Compile / run).evaluated
+    mdoc := (Compile / run).evaluated,
+    dependencyOverrides += "com.lihaoyi" %% "pprint" % "0.6.6"
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

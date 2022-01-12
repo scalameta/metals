@@ -111,5 +111,4 @@ title: Making a release
     "Publish release".
 
 - Announce the new release with the link to the release notes:
-  - on [Gitter](https://gitter.im/scalameta/metals) - tag everybody with `@/all`
   - on [Discord](https://discord.com/invite/RFpSVth)

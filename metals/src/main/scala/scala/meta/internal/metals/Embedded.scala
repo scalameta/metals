@@ -261,6 +261,14 @@ object Embedded {
       semanticdbScalacDependency(scalaVersion),
       Some(scalaVersion)
     )
+
+  def downloadSemanticdbJavac: List[Path] = {
+    downloadDependency(
+      Dependency.of("com.sourcegraph", "semanticdb-javac", "0.7.3"),
+      None
+    )
+  }
+
   def downloadMtags(scalaVersion: String): List[Path] =
     downloadDependency(mtagsDependency(scalaVersion), Some(scalaVersion))
 

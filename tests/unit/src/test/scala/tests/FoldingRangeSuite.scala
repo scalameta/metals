@@ -5,6 +5,7 @@ import java.util.UUID
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.UserConfiguration
@@ -47,22 +48,27 @@ abstract class FoldingRangeSuite(
   }
 
   private def obtainFrom(file: InputFile): String = {
-    val scalaSource = file.input.text
+    val source = file.input.text
 
-    val actualRanges = findFoldingRangesFor(scalaSource)
+    val actualRanges = findFoldingRangesFor(source, file.file.extension)
     val edits = RangesTextEdits.fromFoldingRanges(actualRanges)
-    TextEdits.applyEdits(scalaSource, edits)
+    TextEdits.applyEdits(source, edits)
   }
 
   private def findFoldingRangesFor(
-      source: String
+      source: String,
+      extension: String
   ): java.util.List[l.FoldingRange] = {
-    val path = registerSource(source)
-    foldingRangeProvider.getRangedFor(path)
+    val path = registerSource(source, extension)
+    if (path.isScala) foldingRangeProvider.getRangedForScala(path)
+    else foldingRangeProvider.getRangedForJava(path)
   }
 
-  private def registerSource(source: String): AbsolutePath = {
-    val name = UUID.randomUUID().toString + ".scala"
+  private def registerSource(
+      source: String,
+      extension: String
+  ): AbsolutePath = {
+    val name = UUID.randomUUID().toString + "." + extension
     val path = AbsolutePath(Paths.get(name))
     buffers.put(path, source)
     path

@@ -82,19 +82,16 @@ object MetalsEnrichments
     def dataKind: String = Option(buildTarget.getDataKind()).getOrElse("")
 
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
-      if (isSbtBuild) {
-        decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
-          .map(_.getScalaBuildTarget)
-      } else {
-        decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
-      }
+      asSbtBuildTarget
+        .map(_.getScalaBuildTarget)
+        .orElse(decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget]))
     }
 
     def asSbtBuildTarget: Option[b.SbtBuildTarget] = {
-      buildTarget.getDataKind match {
-        case "sbt" => decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
-        case _ => None
-      }
+      if (isSbtBuild)
+        decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
+      else
+        None
     }
   }
 

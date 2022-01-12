@@ -86,7 +86,7 @@ final class DefinitionProvider(
         Future.successful(fromSnapshot)
       }
     fromIndex.flatMap { result =>
-      if (result.isEmpty) {
+      if (result.isEmpty && path.isScalaFilename) {
         compilers().definition(params, token)
       } else {
         if (fromSemanticdb.isEmpty) {

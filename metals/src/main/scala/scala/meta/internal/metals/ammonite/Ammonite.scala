@@ -291,10 +291,10 @@ final class Ammonite(
       source: AbsolutePath
   ): Option[AbsolutePath] =
     if (Ammonite.isAmmBuildTarget(targetId) && source.isAmmoniteScript)
-      buildTargets.scalacOptions(targetId).map { target =>
+      buildTargets.scalaTarget(targetId).map { target =>
         val rel = source.toRelative(workspace())
         val path = Paths
-          .get(new URI(target.getClassDirectory))
+          .get(new URI(target.classDirectory))
           .getParent
           .resolve(
             s"src/ammonite/$$file/${rel.toString.stripSuffix(".sc")}.scala"

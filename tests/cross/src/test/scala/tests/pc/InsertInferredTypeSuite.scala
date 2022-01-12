@@ -454,6 +454,30 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "either",
+    """|object O{
+       |  def <<returnEither>>(value: String) = {
+       |    if (value == "left") Left("a") else Right("b")
+       |  }
+       |}""".stripMargin,
+    """|object O{
+       |  def returnEither(value: String): Either[String,String] = {
+       |    if (value == "left") Left("a") else Right("b")
+       |  }
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object O{
+           |  def returnEither(value: String): Either[String, String] = {
+           |    if (value == "left") Left("a") else Right("b")
+           |  }
+           |}
+           |""".stripMargin
+    )
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

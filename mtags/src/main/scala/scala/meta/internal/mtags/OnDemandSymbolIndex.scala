@@ -137,7 +137,9 @@ final class OnDemandSymbolIndex(
 
 object OnDemandSymbolIndex {
   def empty(
-      onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+      onError: PartialFunction[Throwable, Unit] = { case NonFatal(e) =>
+        throw e
+      },
       toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
   ): OnDemandSymbolIndex =
     new OnDemandSymbolIndex(TrieMap.empty, onError, toIndexSource)

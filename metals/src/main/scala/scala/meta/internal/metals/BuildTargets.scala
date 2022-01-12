@@ -20,10 +20,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.JavacOptionsItem
 import ch.epfl.scala.bsp4j.JavacOptionsResult
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 
@@ -42,10 +39,10 @@ final class BuildTargets(
     TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]]
   private val buildTargetInfo =
     TrieMap.empty[BuildTargetIdentifier, BuildTarget]
-  private val javacTargetInfo =
-    TrieMap.empty[BuildTargetIdentifier, JavacOptionsItem]
-  private val scalacTargetInfo =
-    TrieMap.empty[BuildTargetIdentifier, ScalacOptionsItem]
+  private val javaTargetInfo =
+    TrieMap.empty[BuildTargetIdentifier, JavaTarget]
+  private val scalaTargetInfo =
+    TrieMap.empty[BuildTargetIdentifier, ScalaTarget]
   private val inverseDependencies =
     TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
   private val buildTargetSources =
@@ -65,21 +62,21 @@ final class BuildTargets(
     (t: BuildTargetIdentifier) =>
       var score = 1
 
-      val isSupportedScalaVersion = scalaInfo(t).exists(t =>
+      val isSupportedScalaVersion = scalaTarget(t).exists(t =>
         ScalaVersions.isSupportedAtReleaseMomentScalaVersion(
-          t.getScalaVersion()
+          t.scalaVersion
         )
       )
       if (isSupportedScalaVersion) score <<= 2
 
-      val usesJavac = javacOptions(t).nonEmpty
-      val isJVM = scalacOptions(t).exists(_.isJVM)
+      val usesJavac = javaTarget(t).nonEmpty
+      val isJVM = scalaTarget(t).exists(_.scalac.isJVM)
       if (usesJavac) score <<= 1
       else if (isJVM) score <<= 1
 
       // note(@tgodzik) once the support for Scala 3 is on par with Scala 2 this can be removed
-      val isScala2 = scalaInfo(t).exists(info =>
-        !ScalaVersions.isScala3Version(info.getScalaVersion())
+      val isScala2 = scalaTarget(t).exists(info =>
+        !ScalaVersions.isScala3Version(info.scalaVersion)
       )
       if (isScala2) score <<= 1
 
@@ -94,8 +91,8 @@ final class BuildTargets(
     sourceItemsToBuildTarget.values.foreach(_.clear())
     sourceItemsToBuildTarget.clear()
     buildTargetInfo.clear()
-    javacTargetInfo.clear()
-    scalacTargetInfo.clear()
+    javaTargetInfo.clear()
+    scalaTargetInfo.clear()
     inverseDependencies.clear()
     buildTargetSources.clear()
     inverseDependencySources.clear()
@@ -107,47 +104,38 @@ final class BuildTargets(
       : Iterator[(AbsolutePath, JIterable[BuildTargetIdentifier])] =
     sourceItemsToBuildTarget.iterator
 
-  private def scalacOptions: Iterable[ScalacOptionsItem] =
-    scalacTargetInfo.values
-  private def javacOptions: Iterable[JavacOptionsItem] = javacTargetInfo.values
-
-  def allTargets: Iterator[BuildTarget] = buildTargetInfo.values.iterator
-
   def allBuildTargetIds: Seq[BuildTargetIdentifier] = buildTargetInfo.keys.toSeq
 
   def allTargetRoots: Iterator[AbsolutePath] = {
-    val scalaTargetRoots = for {
-      item <- scalacOptions
-      scalaInfo <- scalaInfo(item.getTarget)
-    } yield (item.targetroot(scalaInfo.getScalaVersion))
-    val javaTargetRoots = javacOptions.map(_.targetroot)
+    val scalaTargetRoots = scalaTargetInfo.map(_._2.targetroot)
+    val javaTargetRoots = javaTargetInfo.map(_._2.targetroot)
     val allTargetRoots = scalaTargetRoots.toSet ++ javaTargetRoots.toSet
     allTargetRoots.iterator
   }
 
-  def allCommon: Iterator[CommonTarget] =
-    allTargets.map(CommonTarget.apply)
+  def all: Iterator[BuildTarget] =
+    buildTargetInfo.values.toIterator
 
   def allScala: Iterator[ScalaTarget] =
-    allTargets.flatMap(toScalaTarget)
+    scalaTargetInfo.values.toIterator
 
   def allJava: Iterator[JavaTarget] =
-    allTargets.flatMap(toJavaTarget)
+    javaTargetInfo.values.toIterator
 
-  def commonTarget(id: BuildTargetIdentifier): Option[CommonTarget] =
-    buildTargetInfo.get(id).map(CommonTarget.apply)
+  def info(id: BuildTargetIdentifier): Option[BuildTarget] =
+    buildTargetInfo.get(id)
 
   def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
-    buildTargetInfo.get(id).flatMap(toScalaTarget)
+    scalaTargetInfo.get(id)
 
   def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
-    buildTargetInfo.get(id).flatMap(toJavaTarget)
+    javaTargetInfo.get(id)
 
   def targetJarClasspath(
       id: BuildTargetIdentifier
   ): Option[List[AbsolutePath]] = {
-    val scalacData = scalacTargetInfo.get(id).map(_.jarClasspath)
-    val javacData = javacTargetInfo.get(id).map(_.jarClasspath)
+    val scalacData = scalaTarget(id).map(_.scalac.jarClasspath)
+    val javacData = javaTarget(id).map(_.javac.jarClasspath)
     scalacData
       .flatMap(s => javacData.map(j => (s ::: j).distinct).orElse(scalacData))
       .orElse(javacData)
@@ -156,8 +144,8 @@ final class BuildTargets(
   private def targetClasspath(
       id: BuildTargetIdentifier
   ): Option[List[String]] = {
-    val scalacData = scalacTargetInfo.get(id).map(_.classpath)
-    val javacData = javacTargetInfo.get(id).map(_.classpath)
+    val scalacData = scalaTarget(id).map(_.scalac.classpath)
+    val javacData = javaTarget(id).map(_.javac.classpath)
     scalacData
       .flatMap(s => javacData.map(j => (s ::: j).distinct).orElse(scalacData))
       .orElse(javacData)
@@ -166,31 +154,9 @@ final class BuildTargets(
   def targetClassDirectories(
       id: BuildTargetIdentifier
   ): List[String] = {
-    val scalacData = scalacTargetInfo.get(id).map(_.getClassDirectory).toList
-    val javacData = javacTargetInfo.get(id).map(_.getClassDirectory).toList
+    val scalacData = scalaTarget(id).map(_.scalac.getClassDirectory).toList
+    val javacData = javaTarget(id).map(_.javac.getClassDirectory).toList
     (scalacData ++ javacData).distinct
-  }
-
-  private def toScalaTarget(target: BuildTarget): Option[ScalaTarget] = {
-    for {
-      scalac <- scalacTargetInfo.get(target.getId)
-      scalaTarget <- target.asScalaBuildTarget
-    } yield {
-      val autoImports = target.asSbtBuildTarget.map(_.getAutoImports.asScala)
-      ScalaTarget(
-        target,
-        scalaTarget,
-        scalac,
-        autoImports,
-        target.isSbtBuild
-      )
-    }
-  }
-
-  private def toJavaTarget(target: BuildTarget): Option[JavaTarget] = {
-    for {
-      javac <- javacTargetInfo.get(target.getId)
-    } yield JavaTarget(target, javac)
   }
 
   def allWorkspaceJars: Iterator[AbsolutePath] = {
@@ -290,25 +256,30 @@ final class BuildTargets(
   }
 
   def addScalacOptions(result: ScalacOptionsResult): Unit = {
-    result.getItems.asScala.foreach { item =>
-      scalacTargetInfo(item.getTarget) = item
+    result.getItems.asScala.foreach { scalac =>
+      info(scalac.getTarget()).foreach { info =>
+        info.asScalaBuildTarget.foreach { scalaBuildTarget =>
+          val sbtTarget = info.asSbtBuildTarget
+          val autoImports = sbtTarget.map(_.getAutoImports.asScala)
+          scalaTargetInfo(scalac.getTarget) = ScalaTarget(
+            info,
+            scalaBuildTarget,
+            scalac,
+            autoImports,
+            sbtTarget.map(_.getSbtVersion())
+          )
+        }
+      }
     }
   }
 
   def addJavacOptions(result: JavacOptionsResult): Unit = {
-    result.getItems.asScala.foreach { item =>
-      javacTargetInfo(item.getTarget) = item
+    result.getItems.asScala.foreach { javac =>
+      info(javac.getTarget()).foreach { info =>
+        javaTargetInfo(javac.getTarget) = JavaTarget(info, javac)
+      }
     }
   }
-
-  def info(
-      buildTarget: BuildTargetIdentifier
-  ): Option[BuildTarget] =
-    buildTargetInfo.get(buildTarget)
-  def scalaInfo(
-      buildTarget: BuildTargetIdentifier
-  ): Option[ScalaBuildTarget] =
-    info(buildTarget).flatMap(_.asScalaBuildTarget)
 
   def targetRoots(
       buildTarget: BuildTargetIdentifier
@@ -321,28 +292,12 @@ final class BuildTargets(
   def javaTargetRoot(
       buildTarget: BuildTargetIdentifier
   ): Option[AbsolutePath] =
-    javacTargetInfo.get(buildTarget).map(_.targetroot)
+    javaTarget(buildTarget).map(_.targetroot)
 
   def scalaTargetRoot(
       buildTarget: BuildTargetIdentifier
   ): Option[AbsolutePath] =
-    scalacTargetInfo
-      .get(buildTarget)
-      .flatMap(scalacOptions => {
-        scalaInfo(scalacOptions.getTarget).map(scalaBuildTarget =>
-          scalacOptions.targetroot(scalaBuildTarget.getScalaVersion)
-        )
-      })
-
-  def scalacOptions(
-      buildTarget: BuildTargetIdentifier
-  ): Option[ScalacOptionsItem] =
-    scalacTargetInfo.get(buildTarget)
-
-  def javacOptions(
-      buildTarget: BuildTargetIdentifier
-  ): Option[JavacOptionsItem] =
-    javacTargetInfo.get(buildTarget)
+    scalaTarget(buildTarget).map(_.targetroot)
 
   def workspaceDirectory(
       buildTarget: BuildTargetIdentifier

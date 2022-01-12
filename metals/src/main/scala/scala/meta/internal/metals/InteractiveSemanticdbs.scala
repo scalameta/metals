@@ -40,7 +40,8 @@ final class InteractiveSemanticdbs(
     statusBar: StatusBar,
     compilers: () => Compilers,
     clientConfig: ClientConfiguration,
-    semanticdbIndexer: () => SemanticdbIndexer
+    semanticdbIndexer: () => SemanticdbIndexer,
+    javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb]
 ) extends Cancelable
     with Semanticdbs {
 
@@ -77,8 +78,8 @@ final class InteractiveSemanticdbs(
       )
     }
 
-    // anything aside from `*.scala`, `*.sbt` and `*.sc` file
-    def isExcludedFile = !source.isScalaFilename
+    // anything aside from `*.scala`, `*.sbt`, `*.sc`, `*.java` file
+    def isExcludedFile = !source.isScalaFilename && !source.isJavaFilename
 
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
@@ -87,7 +88,7 @@ final class InteractiveSemanticdbs(
         source,
         (path, existingDoc) => {
           val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
-          val sha = MD5.compute(text)
+          val sha = MD5.compute(source, text)
           if (existingDoc == null || existingDoc.md5 != sha) {
             Try(compile(path, text)) match {
               case Success(doc) if doc != null =>
@@ -160,6 +161,17 @@ final class InteractiveSemanticdbs(
   }
 
   private def compile(source: AbsolutePath, text: String): s.TextDocument = {
+    if (source.isJavaFilename)
+      javaInteractiveSemanticdb.fold(s.TextDocument())(
+        _.textDocument(source, text)
+      )
+    else scalaCompile(source, text)
+  }
+
+  private def scalaCompile(
+      source: AbsolutePath,
+      text: String
+  ): s.TextDocument = {
     def worksheetCompiler =
       if (source.isWorksheet) compilers().loadWorksheetCompiler(source)
       else None
@@ -200,14 +212,15 @@ final class InteractiveSemanticdbs(
       else doc
     }
     if (prependedLinesSize > 0)
-      cleanupAutoImports(textDocument, text, prependedLinesSize)
+      cleanupAutoImports(textDocument, text, prependedLinesSize, source)
     else textDocument
   }
 
   private def cleanupAutoImports(
       document: s.TextDocument,
       originalText: String,
-      linesSize: Int
+      linesSize: Int,
+      source: AbsolutePath
   ): s.TextDocument = {
 
     def adjustRange(range: s.Range): Option[s.Range] = {
@@ -247,7 +260,7 @@ final class InteractiveSemanticdbs(
       schema = document.schema,
       uri = document.uri,
       text = originalText,
-      md5 = MD5.compute(originalText),
+      md5 = MD5.compute(source, originalText),
       language = document.language,
       symbols = document.symbols,
       occurrences = adjustedOccurences,

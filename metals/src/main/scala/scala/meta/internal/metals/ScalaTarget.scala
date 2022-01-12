@@ -16,8 +16,10 @@ case class ScalaTarget(
     scalaInfo: ScalaBuildTarget,
     scalac: ScalacOptionsItem,
     autoImports: Option[Seq[String]],
-    isSbt: Boolean
+    sbtVersion: Option[String]
 ) {
+
+  def isSbt = sbtVersion.isDefined
 
   def dialect(path: AbsolutePath): Dialect = {
     scalaVersion match {

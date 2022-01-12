@@ -58,18 +58,21 @@ object AutoImports:
     import indexedContext.ctx
 
     val importPos = autoImportPosition(pos, text, tree)
-    val renameConfig: Map[SimpleName, String] =
-      config.symbolPrefixes.asScala.map { (from, to) =>
+    val renameConfig: Map[Symbol, String] =
+      config.symbolPrefixes.asScala.flatMap { (from, to) =>
         val fullName = from.stripSuffix("/").replace("/", ".")
         val pkg = requiredPackage(fullName)
-        (pkg.name.toSimpleName, to.stripSuffix(".").stripSuffix("#"))
+        val rename = to.stripSuffix(".").stripSuffix("#")
+        List(pkg, pkg.moduleClass)
+          .filter(_ != NoSymbol)
+          .map((_, rename))
       }.toMap
 
     val renames =
-      (name: SimpleName) =>
-        renameConfig
-          .get(name)
-          .orElse(indexedContext.rename(name))
+      (sym: Symbol) =>
+        indexedContext
+          .rename(sym)
+          .orElse(renameConfig.get(sym))
 
     new AutoImportsGenerator(
       pos,
@@ -99,7 +102,7 @@ object AutoImports:
       pos: SourcePosition,
       importPosition: AutoImportPosition,
       indexedContext: IndexedContext,
-      renames: SimpleName => Option[String]
+      renames: Symbol => Option[String]
   ):
 
     import indexedContext.ctx
@@ -134,8 +137,7 @@ object AutoImports:
         case IndexedContext.Result.Missing => Some(AutoImport.Simple(symbol))
         case IndexedContext.Result.Conflict =>
           val owner = symbol.owner
-          val simpleName = owner.name.toSimpleName
-          renames(simpleName) match
+          renames(owner) match
             case Some(rename) =>
               Some(AutoImport.renamedOrSpecified(symbol, rename))
             case _ => None

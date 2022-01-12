@@ -58,28 +58,28 @@ class ProblemResolverSuite extends FunSuite {
     "unsupported-sbt-version",
     scalaVersion = "2.12.7",
     UnsupportedSbtVersion.message,
-    isSbt = true
+    sbtVersion = Some("1.2.0")
   )
 
   checkRecommendation(
     "deprecated-sbt-version",
     scalaVersion = "2.12.8",
     DeprecatedSbtVersion.message,
-    isSbt = true
+    sbtVersion = Some("1.3.0")
   )
 
   checkRecommendation(
     "future-sbt-version",
     scalaVersion = "2.12.51",
     FutureSbtVersion.message,
-    isSbt = true
+    sbtVersion = Some("1.6.0")
   )
 
   checkRecommendation(
     "ok-sbt-version",
     scalaVersion = BuildInfo.scala212,
     "",
-    isSbt = true
+    sbtVersion = Some("1.6.0")
   )
 
   checkRecommendation(
@@ -104,7 +104,7 @@ class ProblemResolverSuite extends FunSuite {
     "missing-jdk-sources",
     scalaVersion = BuildInfo.scala212,
     MissingJdkSources.message,
-    isSbt = true,
+    sbtVersion = Some("1.6.0"),
     invalidJavaHome = true
   )
 
@@ -116,7 +116,7 @@ class ProblemResolverSuite extends FunSuite {
         "-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar",
         "-P:semanticdb:sourceroot:/tmp/metals"
       ),
-      isSbt: Boolean = false,
+      sbtVersion: Option[String] = None,
       invalidJavaHome: Boolean = false
   ): Unit = {
     test(name) {
@@ -135,8 +135,8 @@ class ProblemResolverSuite extends FunSuite {
         () => javaHome
       )
 
-      val target = scalaTarget(name.name, scalaVersion, scalacOpts, isSbt)
-      val message = problemResolver.recommendation(target)
+      val target = scalaTarget(name.name, scalaVersion, scalacOpts, sbtVersion)
+      val message = problemResolver.recommendation(target).getOrElse("")
 
       assertNoDiff(
         message,
@@ -149,7 +149,7 @@ class ProblemResolverSuite extends FunSuite {
       id: String,
       scalaVersion: String,
       scalacOptions: List[String],
-      isSbt: Boolean = false
+      sbtVersion: Option[String] = None
   ): ScalaTarget = {
     val scalaBinaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
@@ -182,7 +182,7 @@ class ProblemResolverSuite extends FunSuite {
       scalaBuildTarget,
       scalacOptionsItem,
       autoImports = None,
-      isSbt = isSbt
+      sbtVersion
     )
   }
 }

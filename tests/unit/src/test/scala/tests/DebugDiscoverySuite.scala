@@ -5,10 +5,10 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
+import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
+import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
 import scala.meta.internal.metals.debug.NoTestsFoundException
-import scala.meta.internal.metals.debug.SemanticDbNotFoundException
-import scala.meta.internal.metals.debug.WorkspaceErrorsException
 import scala.meta.io.AbsolutePath
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:

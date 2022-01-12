@@ -19,7 +19,7 @@ module.exports = {
           "path": "../website/target/docs",
           "showLastUpdateAuthor": true,
           "showLastUpdateTime": true,
-          "editUrl": "https://github.com/scalameta/metals/edit/main/docs/",
+          "editUrl": ({docPath}) => `https://github.com/scalameta/metals/edit/main/docs/${docPath}`,
           "sidebarPath": "../website/sidebars.json"
         },
         "blog": {
@@ -114,11 +114,6 @@ module.exports = {
           {
             "html": `<a href = "https://discord.gg/RFpSVth" target = "_blank" >
                       <img src="https://img.shields.io/discord/632642981228314653?logo=discord&style=social" />
-                    </a>`
-          },
-          {
-            "html": `<a href = "https://gitter.im/scalameta/metals" target = "_blank" >
-                      <img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&style=social" />
                     </a>`
           },
           {

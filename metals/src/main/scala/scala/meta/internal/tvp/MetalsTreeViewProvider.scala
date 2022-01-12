@@ -17,6 +17,7 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
 
@@ -54,19 +55,19 @@ class MetalsTreeViewProvider(
     (path, symbol) => classpath.symbols(path, symbol)
   )
 
-  val projects = new ClasspathTreeView[CommonTarget, BuildTargetIdentifier](
+  val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
     definitionIndex,
     Project,
     "projects",
     "Projects",
-    _.id,
+    _.getId(),
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
-    _.displayName,
+    _.getDisplayName(),
     _.baseDirectory,
     { () =>
-      buildTargets.allCommon.filter(target =>
-        buildTargets.buildTargetSources(target.id).nonEmpty
+      buildTargets.all.filter(target =>
+        buildTargets.buildTargetSources(target.getId()).nonEmpty
       )
     },
     { (id, symbol) =>
@@ -100,7 +101,7 @@ class MetalsTreeViewProvider(
         !isCollapsed.getOrElse(id, true) &&
         isVisible(Project)
       }
-      .flatMap(buildTargets.commonTarget)
+      .flatMap(buildTargets.info)
       .toArray
     if (toUpdate.nonEmpty) {
       val nodes = toUpdate.map { target =>
@@ -202,7 +203,6 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.GotoLog, "bug"),
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),
           echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
-          echoCommand(ServerCommands.ChatOnGitter, "gitter"),
           echoCommand(ServerCommands.ChatOnDiscord, "discord"),
           echoCommand(ServerCommands.OpenIssue, "issue-opened"),
           echoCommand(ServerCommands.MetalsGithub, "github"),
@@ -211,7 +211,7 @@ class MetalsTreeViewProvider(
         )
       case Project =>
         Option(params.nodeUri) match {
-          case None if buildTargets.allTargets.nonEmpty =>
+          case None if buildTargets.all.nonEmpty =>
             Array(
               projects.root,
               libraries.root

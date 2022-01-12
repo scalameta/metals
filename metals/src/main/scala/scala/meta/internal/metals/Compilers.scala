@@ -103,9 +103,11 @@ class Compilers(
     val mtags =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
 
-    scribe.info(
-      s"no build target found for $path. Using presentation compiler with project's scala-library version: ${mtags.scalaVersion}"
-    )
+    val tmpDirectory = workspace.resolve(Directories.tmp)
+    if (!path.toNIO.startsWith(tmpDirectory.toNIO))
+      scribe.info(
+        s"no build target found for $path. Using presentation compiler with project's scala-library version: ${mtags.scalaVersion}"
+      )
     newCompiler(
       mtags,
       List.empty,
@@ -466,7 +468,6 @@ class Compilers(
         }
         result
       }
-      scalac <- buildTargets.scalacOptions(targetId)
     } yield {
       jworksheetsCache.put(
         path,
@@ -483,7 +484,13 @@ class Compilers(
             buildTargets,
             workspaceFallback = Some(search)
           )
-          newCompiler(scalac, scalaTarget, mtags, classpath, worksheetSearch)
+          newCompiler(
+            scalaTarget.scalac,
+            scalaTarget,
+            mtags,
+            classpath,
+            worksheetSearch
+          )
         }
       )
     }

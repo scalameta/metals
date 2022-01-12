@@ -114,8 +114,8 @@ final class Warnings(
         }
         case Some(buildTarget) =>
           val targetName = buildTargets
-            .commonTarget(buildTarget)
-            .map(_.displayName)
+            .info(buildTarget)
+            .map(_.getDisplayName())
             .getOrElse("Unknown")
           if (isCompiling(buildTarget)) {
             val tryAgain = "Wait until compilation is finished and try again"

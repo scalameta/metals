@@ -7,6 +7,7 @@ import java.nio.file._
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -16,6 +17,7 @@ import java.{util => ju}
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -60,7 +62,6 @@ import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
@@ -368,6 +369,15 @@ class MetalsLanguageServer(
           workspace,
           fingerprints
         )
+        val javaInteractiveSemanticdb = {
+          val optJavaHome =
+            (userConfig.javaHome orElse JdkSources.defaultJavaHome)
+              .map(AbsolutePath(_))
+
+          optJavaHome.flatMap(
+            JavaInteractiveSemanticdb.create(_, workspace, buildTargets)
+          )
+        }
         interactiveSemanticdbs = register(
           new InteractiveSemanticdbs(
             workspace,
@@ -378,7 +388,8 @@ class MetalsLanguageServer(
             statusBar,
             () => compilers,
             clientConfig,
-            () => semanticDBIndexer
+            () => semanticDBIndexer,
+            javaInteractiveSemanticdb
           )
         )
         warnings = new Warnings(
@@ -1597,11 +1608,15 @@ class MetalsLanguageServer(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
     CancelTokens.future { token =>
-      parseTrees.currentFuture.map(_ =>
-        foldingRangeProvider.getRangedFor(
-          params.getTextDocument().getUri().toAbsolutePath
+      val path = params.getTextDocument().getUri().toAbsolutePath
+      if (path.isScala)
+        parseTrees.currentFuture.map(_ =>
+          foldingRangeProvider.getRangedForScala(path)
         )
-      )
+      else
+        Future {
+          foldingRangeProvider.getRangedForJava(path)
+        }
     }
   }
 
@@ -1743,7 +1758,7 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
         val args = params.getArguments.asScala
-        import DebugParametersJsonParsers._
+        import DebugProvider.DebugParametersJsonParsers._
         val debugSessionParams: Future[b.DebugSessionParams] = args match {
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
@@ -2212,16 +2227,33 @@ class MetalsLanguageServer(
   }
 
   private def indexWorkspaceSources(): Unit = {
+    case class SourceToIndex(
+        source: AbsolutePath,
+        sourceItem: AbsolutePath,
+        targets: Iterable[b.BuildTargetIdentifier]
+    )
+    val sourcesToIndex = mutable.ListBuffer.empty[SourceToIndex]
     for {
       (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
       source <- sourceItem.listRecursive
       if source.isScalaOrJava
     } {
-      targets.asScala.foreach { target =>
-        buildTargets.linkSourceFile(target, source)
-      }
-      indexSourceFile(source, Some(sourceItem), targets.asScala.headOption)
+      targets.asScala.foreach(buildTargets.linkSourceFile(_, source))
+      sourcesToIndex += SourceToIndex(source, sourceItem, targets.asScala)
     }
+    val threadPool = new ForkJoinPool(
+      Runtime.getRuntime().availableProcessors() match {
+        case 1 => 1
+        case f => f / 2
+      }
+    )
+    try {
+      val parSourcesToIndex = sourcesToIndex.par
+      parSourcesToIndex.tasksupport = new ForkJoinTaskSupport(threadPool)
+      parSourcesToIndex.foreach(f =>
+        indexSourceFile(f.source, Some(f.sourceItem), f.targets.headOption)
+      )
+    } finally threadPool.shutdown()
   }
 
   private def reindexWorkspaceSources(
@@ -2255,8 +2287,8 @@ class MetalsLanguageServer(
         val dialect = {
           val scalaVersion =
             targetOpt
-              .flatMap(buildTargets.scalaInfo)
-              .map(_.getScalaVersion())
+              .flatMap(buildTargets.scalaTarget)
+              .map(_.scalaVersion)
               .getOrElse(
                 scalaVersionSelector.fallbackScalaVersion(
                   source.isAmmoniteScript
