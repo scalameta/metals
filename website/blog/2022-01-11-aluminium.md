@@ -13,7 +13,7 @@ Metals 1.0.0, which is planned to come this year.
 <tbody>
   <tr>
     <td>Commits since last release</td>
-    <td align="center">336</td>
+    <td align="center">337</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
@@ -25,7 +25,7 @@ Metals 1.0.0, which is planned to come this year.
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center"></td>
+    <td align="center">42</td>
   </tr>
   <tr>
     <td>New features</td>
@@ -56,8 +56,8 @@ give Metals a try!
 - Support test explorer API.
 - Add go to definition via links for synthetic decorations.
 - Basic Java support.
-- Add support for Scala 2.13.8
-- Reworked Metals Doctor
+- Add support for Scala 2.13.8.
+- Reworked Metals Doctor.
 
 ## Add CFR class file viewer
 
@@ -74,18 +74,22 @@ CFR decompiles class files to java, which is much more readable than using
 In the future this might help in go to definition for jars that do not have a
 corresponding source jar, which is what Metals uses today.
 
-Editors support: Any editor that exposes the command.
+Editor support: VS Code, nvim-metals, Sublime Text
+
+**Extension authors:**
+
+This can be added as a new command for the users to invoke.
 
 ## [Scala 3] Type annotations on code selection
 
 In one of the last releases
 [v0.10.8](https://scalameta.org/metals/blog/2021/10/26/tungsten#type-annotations-on-code-selection)
-we add the ability to inspect the type of an expression that is currently
+we added the ability to inspect the type of an expression that is currently
 selected. We are happy to announce that this functionality is now also available
 for Scala 3, which is thanks to the continued effort of the team to bring the
 users the best Scala 3 experience possible.
 
-Editors support: VS Code, nvim-metals, Sublime Text
+Editor support: VS Code, nvim-metals, Sublime Text
 
 ## Simplify usage of sbt server
 
@@ -98,20 +102,20 @@ your build server to sbt via the metals.bsp-switch command, we'll either use the
 existing .bsp/sbt.json file if one exists or automatically generate it (needs at
 least sbt 1.4.1) for you and then switch to it.
 
-Editors support: Any editor that exposes the command.
+Editor support: All.
 
 ## Better support for mill BSP
 
 Recently [Mill](https://github.com/com-lihaoyi/mill) has complete revamped their
 BSP implementation allowing for a much better experience for Metals users. Just
 like sbt, you can now use the `metals.bsp-switch` command to use Mill as your
-BSP server (needs at least Mill 0.10.0-M4). Keep in mine that the BSP support in
+BSP server (needs at least Mill 0.10.0-M4). Keep in mind that the BSP support in
 Mill is still a work-in-progress. If you are interested in Mill BSP and you're a
 Metals user, feel free to include your input
 [here](https://github.com/com-lihaoyi/mill/issues/1546) as they are requesting
 feedback on improving the experience.
 
-Editors support: Any editor that exposes the command.
+Editor support: All.
 
 ## Extract value code action
 
@@ -138,7 +142,7 @@ def main(name: String) =
 This should work correctly for both Scala 2 and Scala 3, in which case it will
 try to maintain your coding style even if a block is needed.
 
-One important limitations is that this new code action doesn't allow extracting
+One important limitation is that this new code action doesn't allow extracting
 lambdas or partial functions, as this has the potential of breaking your code.
 
 Currently, this works only in method parameters and Metals will try to choose
@@ -147,7 +151,7 @@ will most likely be improved in the future to also be used in other places such
 as if conditions or to allow users to choose the exact parameter they want to
 extract.
 
-Editors support: All
+Editor support: All
 
 ## Add command to run current file
 
@@ -162,7 +166,7 @@ In Visual Studio Code this replaces the previously default config generation and
 now if no `launch.json` is specified in the workspace, any file can be run using
 the default run command (`F5`).
 
-Editors support: Any editor that supports DAP
+Editor support: Any editor that supports DAP
 
 ## Support test explorer API.
 
@@ -179,12 +183,12 @@ Lenses. The new UI adds a testing view, which shows all test suites declared in
 project's modules. From this panel it's also possible to run/debug test or to
 navigate to test's definition.
 
-<!-- ![test-explorer](https://i.imgur.com/VLYwqRn.gif) -->
+![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
 Code Lenses are still the default in other editors and can be brought back by
 setting `"metals.testUserInterface": "Code Lenses"`
 
-Editors support: Visual Studio Code
+Editor support: Visual Studio Code
 
 ## Go to definition via links for synthetic decorations.
 
@@ -200,7 +204,7 @@ rendered in the hover and will bring the user to the right definition.
 
 ![synthetic-def](https://i.imgur.com/YyHVmLX.gif)
 
-Editors support: Visual Studio Code, Sublime Text
+Editor support: Visual Studio Code, Sublime Text
 
 ## Basic Java support
 
@@ -209,6 +213,8 @@ now supports a subset of features for Java files and even Java only build
 targets. Currently the biggest missing piece is interactive compiler that would
 allow us to properly support features such as completions, hover or signature
 help.
+
+![java](https://i.imgur.com/SJvLTRL.gif)
 
 This was possible thanks to using the Java semanticdb plugin included in
 [lsif Java project](https://github.com/sourcegraph/lsif-java) from
@@ -226,7 +232,7 @@ The support includes:
 - run/debug code lense for Java main classes
 
 These functionalities will also now work thanks to
-[dos65](https://github.com/dos65) in dependency sources.
+[dos65](https://github.com/dos65)'s work in dependency sources.
 
 We are still missing some of the interactive features such as:
 
@@ -235,7 +241,7 @@ We are still missing some of the interactive features such as:
 - signature help
 - selection range
 
-An import note to make is that, while we still want to support some more
+An important note to make is that, while we still want to support some more
 features, Metals is not a Java language server, so we will never offer the same
 amount of functionality as the tools and IDEs focused on the Java language.
 Current discussion about the scope of Java support can be found in
@@ -243,12 +249,12 @@ Current discussion about the scope of Java support can be found in
 will most likely not support any more advanced refactorings or presentation
 compiler functions.
 
-Visual Studio Code: In case you want to use Metals in a Java only workspace it's
-now also possible to start Metals using a new `Start Metals` button in the the
-Metals tab. We don't want to start Metals as a default in such cases as some
+**Visual Studio Code:** In case you want to use Metals in a Java only workspace
+it's now also possible to start Metals using a new `Start Metals` button in the
+the Metals tab. We don't want to start Metals as a default in such cases as some
 other language server might be more suitable.
 
-Editors support: All
+Editor support: All
 
 ## Reworked Metals Doctor
 
@@ -273,6 +279,14 @@ The `type` column can now have 3 different values `Scala <version>`,
 
 You can always look for explanation of these statuses underneath the table or on
 the right in the Recommendation column.
+
+Editor support: All
+
+**Extension authors:**
+
+If you are using the json output method for the doctor, you will need to modify
+the way it's displayed according to
+[this](https://scalameta.org/metals/docs/integrations/new-editor#run-doctor-1).
 
 ## Miscellaneous
 
@@ -331,12 +345,15 @@ Thomas Lopatic
 
 ## Merged PRs
 
-## [v0.11.0](https://github.com/scalameta/metals/tree/v0.11.0) (2022-01-11)
+## [v0.11.0](https://github.com/scalameta/metals/tree/v0.11.0) (2022-01-12)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.10.9...v0.11.0)
 
 **Merged pull requests:**
 
+- Update Bloop to 1.4.12
+  [\#3497](https://github.com/scalameta/metals/pull/3497)
+  ([tgodzik](https://github.com/tgodzik))
 - Fix issues with renames in Java files
   [\#3495](https://github.com/scalameta/metals/pull/3495)
   ([tgodzik](https://github.com/tgodzik))
