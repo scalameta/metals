@@ -176,7 +176,7 @@ class SemanticdbTreePrinter(
   ): List[(String, s.Range)] = {
 
     def isExplicitTuple(range: s.Range) =
-      range.inString(textDocument.text).startsWith("Tuple")
+      range.inString(textDocument.text).exists(_.startsWith("Tuple"))
 
     def gatherSynthetics(tree: s.Tree) = {
       for {

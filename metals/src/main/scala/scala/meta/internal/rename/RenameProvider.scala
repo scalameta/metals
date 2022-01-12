@@ -17,6 +17,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
@@ -55,7 +56,8 @@ final class RenameProvider(
     buffers: Buffers,
     compilations: Compilations,
     clientConfig: ClientConfiguration,
-    trees: Trees
+    trees: Trees,
+    semanticDbs: Semanticdbs
 )(implicit executionContext: ExecutionContext) {
 
   private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]
@@ -124,8 +126,11 @@ final class RenameProvider(
         ): Boolean = {
           def realName = occ.symbol.desc.name.value
           def foundName =
-            occ.range.map(rng => rng.inString(textDocument.text).stripBackticks)
-          occ.symbol.isLocal || foundName.contains(realName)
+            occ.range
+              .flatMap(rng => rng.inString(textDocument.text))
+              .map(_.stripBackticks)
+          occ.symbol.isLocal ||
+          foundName.contains(realName)
         }
 
         def shouldCheckImplementation(
@@ -141,22 +146,29 @@ final class RenameProvider(
           (occurence, semanticDb) <- symbolOccurrence.toIterable
           definitionLoc <- definition.locations.asScala.headOption.toIterable
           definitionPath = definitionLoc.getUri().toAbsolutePath
+          defSemanticdb <- definition.semanticdb.toIterable
           if canRenameSymbol(occurence.symbol, Option(newName)) &&
             isWorkspaceSymbol(occurence.symbol, definitionPath) &&
             isNotRenamedSymbol(semanticDb, occurence)
           parentSymbols =
             implementationProvider
-              .topMethodParents(occurence.symbol, semanticDb)
+              .topMethodParents(occurence.symbol, defSemanticdb)
           txtParams <- {
             if (parentSymbols.isEmpty) List(textParams)
             else parentSymbols.map(toTextParams)
           }
-          isLocal = occurence.symbol.isLocal
+          isJava = definitionPath.isJava
           currentReferences =
             referenceProvider
               .references(
-                // we can't get definition by name for local symbols
-                toReferenceParams(txtParams, includeDeclaration = isLocal),
+                /**
+                 * isJava - in Java we can include declarations safely and we
+                 * also need to include contructors.
+                 */
+                toReferenceParams(
+                  txtParams,
+                  includeDeclaration = isJava
+                ),
                 findRealRange = findRealRange(newName),
                 includeSynthetic
               )
@@ -164,7 +176,7 @@ final class RenameProvider(
           definitionLocation = {
             if (parentSymbols.isEmpty)
               definition.locations.asScala
-                .filter(_.getUri().isScalaFilename)
+                .filter(_.getUri().isScalaOrJavaFilename)
             else parentSymbols
           }
           companionRefs = companionReferences(occurence.symbol, source, newName)
@@ -254,7 +266,7 @@ final class RenameProvider(
     ) = for {
       occ <- semanticDb.occurrences
       rng <- occ.range
-      realName = rng.inString(semanticDb.text)
+      realName <- rng.inString(semanticDb.text)
       if occ.symbol == occurence.symbol &&
         withoutBacktick(realName) == withoutBacktick(renameName)
     } yield new Location(uri, rng.toLSP)
@@ -316,6 +328,7 @@ final class RenameProvider(
         definitionProvider
           .fromSymbol(companionSymbol, Some(source))
           .asScala
+      // no companion objects in Java files
       if loc.getUri().isScalaFilename
       companionLocs <-
         referenceProvider
@@ -450,11 +463,7 @@ final class RenameProvider(
   ): Boolean = {
 
     def isFromWorkspace = {
-      val isInWorkspace = definitionPath.isWorkspaceSource(workspace)
-      if (isInWorkspace && definitionPath.isJava) {
-        client.showMessage(javaSymbol(symbol.desc.name.value))
-      }
-      isInWorkspace
+      definitionPath.isWorkspaceSource(workspace)
     }
 
     symbol.isLocal || isFromWorkspace
@@ -474,12 +483,13 @@ final class RenameProvider(
       symbol: String
   ): Option[s.Range] = {
     val name = range.inString(text)
-    val isBackticked = name.isBackticked
+    val symbolName = symbol.desc.name
+    val isBackticked = name.exists(_.isBackticked)
     val realName =
       if (isBackticked)
-        name.stripBackticks
+        name.map(_.stripBackticks)
       else name
-    if (symbol.isLocal || symbol.desc.name.toString == realName) {
+    if (symbol.isLocal || realName.contains(symbolName.toString)) {
       /* We don't want to remove anything that is backticked, as we don't
        * know whether it's actuall needed (could be a pattern match). Here
        * we make sure that the backticks are not added twice.
@@ -493,6 +503,7 @@ final class RenameProvider(
       }
       Some(realRange)
     } else {
+      scribe.warn(s"Name doesn't match for $symbolName at $range")
       None
     }
   }
@@ -582,15 +593,6 @@ final class RenameProvider(
       s"""|Renamed symbol is present in over $files files.
           |It will be renamed without opening the files
           |to prevent the editor from becoming unresponsive.""".stripMargin
-    new MessageParams(MessageType.Warning, message)
-  }
-
-  private def javaSymbol(
-      old: String
-  ): MessageParams = {
-    val message =
-      s"""|Definition of $old is contained in a java file.
-          |Rename will only work inside of Scala files.""".stripMargin
     new MessageParams(MessageType.Warning, message)
   }
 
