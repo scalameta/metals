@@ -51,7 +51,7 @@ class SemanticdbTextDocumentProvider(
       language = Language.SCALA,
       uri = path,
       text = sourceCode,
-      md5 = MD5.compute(AbsolutePath(path), sourceCode),
+      md5 = MD5.compute(sourceCode),
       symbols = extractor.symbolInfos.toList,
       occurrences = extractor.occurrences.toList
     )
