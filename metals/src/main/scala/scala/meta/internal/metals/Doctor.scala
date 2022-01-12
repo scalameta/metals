@@ -246,13 +246,29 @@ final class Doctor(
             )
           )
         ),
-        None
+        None,
+        List.empty
       ).toJson
     } else {
-      val targetResults = targetIds
+      val allTargetsInfo = targetIds
         .flatMap(extractTargetInfo)
         .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
-      DoctorResults(doctorTitle, heading, None, Some(targetResults)).toJson
+
+      val explanations = List(
+        DoctorExplanation.Diagnostics.toJson(allTargetsInfo),
+        DoctorExplanation.Interactive.toJson(allTargetsInfo),
+        DoctorExplanation.SemanticDB.toJson(allTargetsInfo),
+        DoctorExplanation.Debugging.toJson(allTargetsInfo),
+        DoctorExplanation.JavaSupport.toJson(allTargetsInfo)
+      )
+
+      DoctorResults(
+        doctorTitle,
+        heading,
+        None,
+        Some(allTargetsInfo),
+        explanations
+      ).toJson
     }
     ujson.write(results)
   }
@@ -339,73 +355,12 @@ final class Doctor(
         )
 
       // Additional explanations
-      explanation(
-        html,
-        title = "Diagnostics:",
-        correctMessage =
-          s"${Icons.unicode.check} - diagnostics correctly being reported by the build server",
-        incorrectMessage =
-          s"${Icons.unicode.alert} - only syntactic errors being reported",
-        show = allTargetsInfo.exists(_.diagnosticsStatus.isCorrect == false)
-      )
-
-      explanation(
-        html,
-        title = "Interactive features (completions, hover):",
-        correctMessage = s"${Icons.unicode.check} - supported Scala version",
-        incorrectMessage =
-          s"${Icons.unicode.error} - interactive features are unsupported for Java and older Scala versions",
-        show = allTargetsInfo.exists(_.interactiveStatus.isCorrect == false)
-      )
-
-      explanation(
-        html,
-        title =
-          "Semanticdb features (references, renames, go to implementation):",
-        correctMessage =
-          s"${Icons.unicode.check} - build tool automatically creating needed semanticdb files",
-        incorrectMessage =
-          s"${Icons.unicode.error} - semanticdb not being produced",
-        show = allTargetsInfo.exists(_.indexesStatus.isCorrect == false)
-      )
-
-      explanation(
-        html,
-        title = "Debugging (run/test, breakpoints, evaluation):",
-        correctMessage =
-          s"${Icons.unicode.check} - users can run or test their code with debugging capabilities",
-        incorrectMessage =
-          s"${Icons.unicode.error} - the tool does not support debugging in this target",
-        show = allTargetsInfo.exists(_.debuggingStatus.isCorrect == false)
-      )
-
-      explanation(
-        html,
-        title = "Java Support:",
-        correctMessage =
-          s"${Icons.unicode.check} - working non-interactive features (references, rename etc.)",
-        incorrectMessage =
-          s"${Icons.unicode.error} - missing semanticdb plugin, might not be added automatically by the build server (work for Bloop only)",
-        show = allTargetsInfo.exists(_.javaStatus.isCorrect == false)
-      )
+      DoctorExplanation.Diagnostics.toHtml(html, allTargetsInfo)
+      DoctorExplanation.Interactive.toHtml(html, allTargetsInfo)
+      DoctorExplanation.SemanticDB.toHtml(html, allTargetsInfo)
+      DoctorExplanation.Debugging.toHtml(html, allTargetsInfo)
+      DoctorExplanation.JavaSupport.toHtml(html, allTargetsInfo)
     }
-  }
-
-  private def explanation(
-      html: HtmlBuilder,
-      title: String,
-      correctMessage: String,
-      incorrectMessage: String,
-      show: Boolean
-  ) = {
-    html.element("div")(
-      _.element("p")(_.text(title)).element("ul") { ul =>
-        ul.element("li")(_.text(correctMessage))
-        if (show)
-          ul.element("li")(_.text(incorrectMessage))
-      }
-    )
-
   }
 
   private def buildTargetRows(

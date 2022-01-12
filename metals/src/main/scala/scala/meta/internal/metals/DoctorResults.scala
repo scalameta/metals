@@ -6,7 +6,8 @@ final case class DoctorResults(
     title: String,
     headerText: String,
     messages: Option[List[DoctorMessage]],
-    targets: Option[Seq[DoctorTargetInfo]]
+    targets: Option[Seq[DoctorTargetInfo]],
+    explanations: List[Obj]
 ) {
   private val version = 1
   def toJson: Obj = {
@@ -19,6 +20,7 @@ final case class DoctorResults(
       json("messages") = messageList.map(_.toJson)
     )
     targets.foreach(targetList => json("targets") = targetList.map(_.toJson))
+    json("explanations") = explanations
     json
   }
 }
@@ -37,6 +39,7 @@ object DoctorStatus {
   object alert extends DoctorStatus(Icons.unicode.alert, false)
   object error extends DoctorStatus(Icons.unicode.error, false)
 }
+
 final case class DoctorTargetInfo(
     name: String,
     dataKind: String,

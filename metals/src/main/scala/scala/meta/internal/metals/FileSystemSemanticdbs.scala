@@ -47,7 +47,8 @@ final class FileSystemSemanticdbs(
             charset,
             fingerprints,
             semanticdbRelativePath =>
-              findSemanticDb(semanticdbRelativePath, targetroot, file, ws)
+              findSemanticDb(semanticdbRelativePath, targetroot, file, ws),
+            (warn: String) => scribe.warn(warn)
           )
         case None =>
           TextDocumentLookup.NotFound(file)

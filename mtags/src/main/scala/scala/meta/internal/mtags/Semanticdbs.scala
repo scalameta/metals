@@ -30,7 +30,8 @@ object Semanticdbs {
       sourceroot: AbsolutePath,
       charset: Charset,
       fingerprints: Md5Fingerprints,
-      loader: RelativePath => Option[FoundSemanticDbPath]
+      loader: RelativePath => Option[FoundSemanticDbPath],
+      log: String => Unit = (_) => ()
   ): TextDocumentLookup = {
     if (scalaOrJavaPath.toNIO.getFileSystem != sourceroot.toNIO.getFileSystem) {
       TextDocumentLookup.NotFound(scalaOrJavaPath)
@@ -47,7 +48,8 @@ object Semanticdbs {
             semanticdbPath.nonDefaultRelPath.getOrElse(scalaRelativePath),
             semanticdbPath.path,
             charset,
-            fingerprints
+            fingerprints,
+            log
           )
       }
     }
@@ -58,7 +60,8 @@ object Semanticdbs {
       scalaRelativePath: RelativePath,
       semanticdbPath: AbsolutePath,
       charset: Charset,
-      fingerprints: Md5Fingerprints
+      fingerprints: Md5Fingerprints,
+      log: String => Unit
   ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)
@@ -72,6 +75,7 @@ object Semanticdbs {
             case Some(oldText) =>
               TextDocumentLookup.Stale(scalaPath, md5, sdoc.withText(oldText))
             case None =>
+              log("Could not load snapshot text for semanticdb")
               TextDocumentLookup.Stale(scalaPath, md5, sdoc)
           }
         } else {

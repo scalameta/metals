@@ -444,11 +444,35 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
-    "java-unchanged",
+    "java-changed",
     """|/a/src/main/java/a/Other.java
        |package a;
-       |public class Other{
+       |public class <<Other>>{
        |
+       |  <<Other>> other;
+       |  public <<Other>>(){
+       |     
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val other = new <<Oth@@er>>()
+       |}
+       |""".stripMargin,
+    newName = "Renamed"
+  )
+
+  renamed(
+    "java-only",
+    """|/a/src/main/java/a/Other.java
+       |package a;
+       |public class <<Other>>{
+       |
+       |  <<Ot@@her>> other;
+       |  public <<Other>>(){
+       |     
+       |  }
        |}
        |/a/src/main/scala/a/Main.scala
        |package a
@@ -493,7 +517,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
-    "macro2",
+    "macro1",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
@@ -508,7 +532,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
-    "macro1",
+    "macro2",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
@@ -519,7 +543,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   )
 
   renamed(
-    "macro2",
+    "macro3",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec

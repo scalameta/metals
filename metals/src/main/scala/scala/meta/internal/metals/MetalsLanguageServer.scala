@@ -597,7 +597,8 @@ class MetalsLanguageServer(
           buffers,
           compilations,
           clientConfig,
-          trees
+          trees,
+          semanticdbs
         )
         syntheticsDecorator = new SyntheticsDecorationProvider(
           workspace,

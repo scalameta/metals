@@ -129,7 +129,7 @@ final class ReferenceProvider(
       referenceDoc: TextDocument
   ): Set[String] = {
     val definitionDoc = if (referenceDoc.symbols.exists(_.symbol == symbol)) {
-      Some(referenceDoc)
+      Some((fromSource, referenceDoc))
     } else {
       for {
         location <- definition
@@ -138,26 +138,32 @@ final class ReferenceProvider(
           .headOption
         source = location.getUri().toAbsolutePath
         definitionDoc <- semanticdbs.textDocument(source).documentIncludingStale
-      } yield definitionDoc
+      } yield (source, definitionDoc)
     }
 
     definitionDoc match {
-      case Some(definitionDoc) =>
+      case Some((defPath, definitionDoc)) =>
         val name = symbol.desc.name.value
         val alternatives = new SymbolAlternatives(symbol, name)
 
-        val candidates = for {
+        def candidates(check: SymbolInformation => Boolean) = for {
           info <- definitionDoc.symbols
           if info.symbol != name
-          if {
-            alternatives.isVarSetter(info) ||
-            alternatives.isCompanionObject(info) ||
-            alternatives.isCopyOrApplyParam(info) ||
-            alternatives.isContructorParam(info)
-          }
+          if check(info)
         } yield info.symbol
 
-        val isCandidate = candidates.toSet
+        val isCandidate =
+          if (defPath.isJava)
+            candidates { info =>
+              alternatives.isJavaConstructor(info)
+            }.toSet
+          else
+            candidates { info =>
+              alternatives.isVarSetter(info) ||
+              alternatives.isCompanionObject(info) ||
+              alternatives.isCopyOrApplyParam(info) ||
+              alternatives.isContructorParam(info)
+            }.toSet
 
         val nonSyntheticSymbols = for {
           occ <- definitionDoc.occurrences
@@ -176,7 +182,9 @@ final class ReferenceProvider(
           }
         } yield info.symbol
 
-        if (isSyntheticSymbol)
+        if (defPath.isJava)
+          isCandidate
+        else if (isSyntheticSymbol)
           isCandidate -- nonSyntheticSymbols ++ additionalAlternativesForSynthetic
         else
           isCandidate -- nonSyntheticSymbols
@@ -200,21 +208,21 @@ final class ReferenceProvider(
           (path, entry) <- index.iterator
           if allowedBuildTargets.contains(entry.id) &&
             isSymbol.exists(entry.bloom.mightContain)
-          scalaPath = AbsolutePath(path)
-          if !visited(scalaPath)
-          _ = visited.add(scalaPath)
-          if scalaPath.exists
+          sourcePath = AbsolutePath(path)
+          if !visited(sourcePath)
+          _ = visited.add(sourcePath)
+          if sourcePath.exists
           semanticdb <-
             semanticdbs
-              .textDocument(scalaPath)
+              .textDocument(sourcePath)
               .documentIncludingStale
               .iterator
           semanticdbDistance = buffers.tokenEditDistance(
-            scalaPath,
+            sourcePath,
             semanticdb.text,
             trees
           )
-          uri = scalaPath.toURI.toString
+          uri = sourcePath.toURI.toString
           reference <-
             try {
               referenceLocations(
@@ -224,12 +232,13 @@ final class ReferenceProvider(
                 uri,
                 isIncludeDeclaration,
                 findRealRange,
-                includeSynthetics
+                includeSynthetics,
+                sourcePath.isJava
               )
             } catch {
               case NonFatal(e) =>
                 // Can happen for example if the SemanticDB text is empty for some reason.
-                scribe.error(s"reference: $scalaPath", e)
+                scribe.error(s"reference: $sourcePath", e)
                 Nil
             }
         } yield reference
@@ -269,7 +278,8 @@ final class ReferenceProvider(
           params.getTextDocument.getUri,
           isIncludeDeclaration,
           findRealRange,
-          includeSynthetics
+          includeSynthetics,
+          source.isJava
         )
       else Seq.empty
 
@@ -294,7 +304,8 @@ final class ReferenceProvider(
       uri: String,
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
-      includeSynthetics: Synthetic => Boolean
+      includeSynthetics: Synthetic => Boolean,
+      isJava: Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -313,7 +324,9 @@ final class ReferenceProvider(
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
     } {
-
+      if (isJava) {
+        add(range)
+      }
       /* Find real range is used when renaming occurrences,
        * where we need to check if the symbol name matches exactly.
        * This was needed for some issues with macro annotations
@@ -321,7 +334,10 @@ final class ReferenceProvider(
        * In case of finding references, where false positives
        * are ok and speed is more important, we just use the default noAdjustRange.
        */
-      findRealRange(range, snapshot.text, reference.symbol).foreach(add)
+      else {
+        findRealRange(range, snapshot.text, reference.symbol).foreach(add)
+      }
+
     }
 
     for {
@@ -363,6 +379,17 @@ class SymbolAlternatives(symbol: String, name: String) {
         info.symbol.owner,
         Descriptor.Type(info.displayName)
       )
+
+  // Returns true if `info` is the java constructor matching the occurrence class symbol.
+  def isJavaConstructor(info: SymbolInformation): Boolean = {
+    info.isConstructor &&
+    (Symbol(info.symbol) match {
+      case GlobalSymbol(clsSymbol, Descriptor.Method("<init>", _)) =>
+        symbol == clsSymbol.value
+      case _ =>
+        false
+    })
+  }
 
   // Returns true if `info` is the companion class matching the occurrence object symbol.
   def isCompanionClass(info: SymbolInformation): Boolean = {
