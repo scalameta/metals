@@ -99,7 +99,7 @@ class JavaInteractiveSemanticdb(
     val out = doc.copy(
       uri = source.toURI.toString(),
       text = text,
-      md5 = MD5.compute(source, text)
+      md5 = MD5.compute(text)
     )
 
     workDir.deleteRecursively()

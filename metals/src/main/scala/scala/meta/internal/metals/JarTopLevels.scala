@@ -120,7 +120,6 @@ final class JarTopLevels(conn: () => Connection) {
       .getFileAttributeView(path.toNIO, classOf[BasicFileAttributeView])
       .readAttributes()
     MD5.compute(
-      path,
       path.toString + ":" + attributes
         .lastModifiedTime()
         .toMillis + ":" + attributes.size()

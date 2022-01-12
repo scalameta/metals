@@ -121,7 +121,7 @@ class RemoteLanguageServer(
     val absolutePath = textDocument.get("uri").getAsString.toAbsolutePath
     val relativeUri =
       absolutePath.toRelative(workspace()).toURI(isDirectory = false)
-    val md5 = MD5.compute(absolutePath, buffers.get(absolutePath).getOrElse(""))
+    val md5 = MD5.compute(buffers.get(absolutePath).getOrElse(""))
 
     textDocument.add("uri", new JsonPrimitive(s"source://$relativeUri"))
     textDocument.add("md5", new JsonPrimitive(md5))

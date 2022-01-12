@@ -69,7 +69,7 @@ object Semanticdbs {
       case None => TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
       case Some(sdoc) =>
         val text = FileIO.slurp(scalaPath, charset)
-        val md5 = MD5.compute(scalaPath, text)
+        val md5 = MD5.compute(text)
         if (sdoc.md5 != md5) {
           fingerprints.lookupText(scalaPath, sdoc.md5) match {
             case Some(oldText) =>
