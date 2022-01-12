@@ -34,6 +34,8 @@ object ClientCommands {
        |export interface DoctorOutput {
        |  /** Metals Doctor title */
        |  title: string;
+       |  /** Version of the doctor json format, 0 if empty  */
+       |  version: String;
        |  /**
        |   * Contains decisions that were made about what build tool or build server
        |   * the user has chosen. There is also other brief information about understanding
@@ -47,6 +49,10 @@ object ClientCommands {
        |   targets?: DoctorBuildTarget[];
        |   /** Messages given if build targets cannot be found */
        |   messages?: DoctorRecommendation[];
+       |   /** Messages given if build targets cannot be found */
+       |   messages?: DoctorRecommendation[];
+       |   /** Explanations for the various statuses present in the doctor */
+       |   explanations?: DoctorExplanation[];
        |}
        |
        |```
@@ -54,16 +60,18 @@ object ClientCommands {
        |export interface DoctorBuildTarget {
        |  /** Name of the build target */
        |  buildTarget: string;
-       |  /** Scala version of the build target */
-       |  scalaVersion: string;
+       |  /** Can contain Scala version, sbt version or Java */
+       |  targetType: string;
        |  /** Status of diagnostics */
        |  diagnostics: string;
-       |  /** Status of goto definitions */
-       |  gotoDefinition: string;
-       |  /** Status of completions */
-       |  completions: string;
-       |  /** Status of find references */
-       |  findReferences: string;
+       |  /** Status of completions, hovers and other interactive features*/
+       |  interactive: string;
+       |  /** Status of semanticdb indexes */
+       |  semanticdb: string;
+       |  /** Status of debugging */
+       |  debugging: string;
+       |  /** Status of java support */
+       |  java: string;
        |  /** Any recommendations in how to fix any issues that are found above */
        |  recommendation: string;
        |}
@@ -73,6 +81,14 @@ object ClientCommands {
        |  /** Title of the recommendation */
        |  title: string;
        |  /** Recommendations related to the found issue. */
+       |  recommendations: string[]
+       |}
+       |```
+       |```json
+       |export interface DoctorExplanation {
+       |  /** Title of the explanation */
+       |  title: string;
+       |  /** Explanations of statuses that can be found in the doctor  */
        |  recommendations: string[]
        |}
        |```
