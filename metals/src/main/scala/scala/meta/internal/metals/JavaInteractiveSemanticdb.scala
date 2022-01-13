@@ -236,12 +236,19 @@ object JavaInteractiveSemanticdb {
   object JdkVersion {
 
     def parse(v: String): Option[JdkVersion] = {
-      val numbers = v.split('.').toList.take(3).map(s => Try(s.toInt).toOption)
+      val numbers = v
+        .split('-')
+        .head
+        .split('.')
+        .toList
+        .take(2)
+        .map(s => Try(s.toInt).toOption)
+
       numbers match {
         case Some(single) :: Nil =>
           if (single > 10) Some(JdkVersion(single, 0))
           else Some(JdkVersion(1, single))
-        case Some(major) :: Some(minor) :: Some(_) :: Nil =>
+        case Some(major) :: Some(minor) :: _ =>
           Some(JdkVersion(major, minor))
         case _ => None
       }
