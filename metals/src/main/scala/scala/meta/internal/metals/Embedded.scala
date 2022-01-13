@@ -264,7 +264,11 @@ object Embedded {
 
   def downloadSemanticdbJavac: List[Path] = {
     downloadDependency(
-      Dependency.of("com.sourcegraph", "semanticdb-javac", "0.7.3"),
+      Dependency.of(
+        "com.sourcegraph",
+        "semanticdb-javac",
+        BuildInfo.javaSemanticdbVersion
+      ),
       None
     )
   }
