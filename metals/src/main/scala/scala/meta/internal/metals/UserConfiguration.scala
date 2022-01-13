@@ -284,21 +284,46 @@ object UserConfiguration {
     val base: JsonObject =
       Option(json.getAsJsonObject("metals")).getOrElse(new JsonObject)
 
-    def getKey[A](key: String, f: JsonElement => Option[A]): Option[A] = {
+    def getKey[A](
+        key: String,
+        currentObject: JsonObject,
+        f: JsonElement => Option[A]
+    ): Option[A] = {
       def option[T](fn: String => T): Option[T] =
         Option(fn(key)).orElse(Option(fn(StringCase.kebabToCamel(key))))
       for {
         jsonValue <- option(k => properties.getProperty(s"metals.$k"))
           .filterNot(_.isEmpty())
           .map(prop => new JsonPrimitive(prop))
-          .orElse(option(base.get))
+          .orElse(option(currentObject.get))
         value <- f(jsonValue)
       } yield value
     }
-
-    def getStringKey(key: String): Option[String] =
+    def getSubKey(key: String): Option[JsonObject] =
       getKey(
         key,
+        base,
+        { value =>
+          Try(value.getAsJsonObject())
+            .fold(
+              _ => {
+                errors += s"json error: key '$key' should have value of type object but obtained $value"
+                None
+              },
+              Some(_)
+            )
+        }
+      )
+    def getStringKey(key: String): Option[String] =
+      getStringKeyOnObj(key, base)
+
+    def getStringKeyOnObj(
+        key: String,
+        currentObject: JsonObject
+    ): Option[String] =
+      getKey(
+        key,
+        currentObject,
         { value =>
           Try(value.getAsString)
             .fold(
@@ -315,6 +340,7 @@ object UserConfiguration {
     def getBooleanKey(key: String): Option[Boolean] =
       getKey(
         key,
+        base,
         { value =>
           Try(value.getAsBoolean())
             .fold(
@@ -340,6 +366,7 @@ object UserConfiguration {
     def getStringListKey(key: String): Option[List[String]] =
       getKey[List[String]](
         key,
+        base,
         { elem =>
           if (elem.isJsonArray()) {
             val parsed = elem.getAsJsonArray().asScala.flatMap { value =>
@@ -362,6 +389,7 @@ object UserConfiguration {
     def getStringMap(key: String): Option[Map[String, String]] =
       getKey(
         key,
+        base,
         { value =>
           Try {
             for {
@@ -444,10 +472,12 @@ object UserConfiguration {
       }
     }
     val javaFormatConfig =
-      getStringKey("java-format.eclipse-config-path").map(f =>
-        JavaFormatConfig(
-          AbsolutePath(f),
-          getStringKey("java-format.eclipse-profile")
+      getSubKey("java-format").flatMap(subKey =>
+        getStringKeyOnObj("eclipse-config-path", subKey).map(f =>
+          JavaFormatConfig(
+            AbsolutePath(f),
+            getStringKeyOnObj("eclipse-profile", subKey)
+          )
         )
       )
 
