@@ -97,15 +97,12 @@ final class TestSuitesProvider(
       cachedTestSuites.remove(removedClass)
     }
 
-    val time0 = System.currentTimeMillis()
     for {
       SymbolsPerTarget(buildTarget, testSymbols) <- symbolsPerTarget
       (symbol, fullyQualifiedClassName) <- testSymbols.readOnlySnapshot().toList
       // IMPORTANT this check is meant to check for class name, not a symbol
       if !cachedTestSuites.contains(fullyQualifiedClassName)
     } computeTestEntry(buildTarget, symbol, fullyQualifiedClassName)
-    val time1 = System.currentTimeMillis()
-    scribe.info(s"Cache refresh took: ${time1 - time0}ms")
   }
 
   private def computeTestEntry(
