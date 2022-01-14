@@ -3,6 +3,8 @@ package scala.meta.internal.parsing
 import java.util.logging.Logger
 
 import scala.annotation.tailrec
+import scala.collection.compat.immutable.ArraySeq
+import scala.reflect.ClassTag
 
 import scala.meta.Input
 import scala.meta.Position
@@ -289,7 +291,7 @@ object TokenEditDistance {
    * @param revised The current snapshot of a string, for example open buffer
    *                in an editor.
    */
-  private def fromTokens[A](
+  private def fromTokens[A: ClassTag](
       originalInput: Input.VirtualFile,
       original: Array[A],
       revisedInput: Input.VirtualFile,
@@ -329,7 +331,11 @@ object TokenEditDistance {
     }
     val deltas = {
       DiffUtils
-        .diff(original.toList.asJava, revised.toList.asJava, ops.equalizer)
+        .diff(
+          ArraySeq(original: _*).asJava,
+          ArraySeq(revised: _*).asJava,
+          ops.equalizer
+        )
         .getDeltas
         .iterator()
         .asScala
