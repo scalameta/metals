@@ -189,8 +189,10 @@ class UserConfigurationSuite extends BaseSuite {
     "java format setting",
     """
       |{
-      | "javaFormat.eclipseConfigPath": "path",
-      | "javaFormat.eclipseProfile": "profile"
+      | "javaFormat": {
+      |  "eclipseConfigPath": "path",
+      |  "eclipseProfile": "profile"
+      | }
       |}
     """.stripMargin
   ) { obtained =>
@@ -213,7 +215,9 @@ class UserConfigurationSuite extends BaseSuite {
     "java format no profile setting",
     """
       |{
-      | "javaFormat.eclipseConfigPath": "path"
+      | "javaFormat": {
+      |  "eclipseConfigPath": "path"
+      | }
       |}
     """.stripMargin
   ) { obtained =>
