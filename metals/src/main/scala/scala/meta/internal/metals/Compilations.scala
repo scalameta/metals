@@ -20,6 +20,7 @@ final class Compilations(
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
+    refreshTestSuites: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
 )(implicit ec: ExecutionContext) {
@@ -218,6 +219,7 @@ final class Compilations(
 
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(targets).foreach { _ =>
+          refreshTestSuites()
           if (targets.exists(isCurrentlyFocused)) {
             languageClient.refreshModel()
           }
