@@ -441,7 +441,8 @@ final class FileDecoderProvider(
       verbose: Boolean
   )(path: AbsolutePath): Future[DecoderResponse] = {
     try {
-      val args = if (verbose) List("-verbose") else Nil
+      val defaultArgs = List("-private")
+      val args = if (verbose) "-verbose" :: defaultArgs else defaultArgs
       val sbOut = new StringBuilder()
       val sbErr = new StringBuilder()
       shellRunner
