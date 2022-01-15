@@ -242,7 +242,7 @@ lazy val V = new {
   val scalafix = "0.9.33"
   val scalafmt = "3.0.5"
   val scalameta = "4.4.32"
-  val scribe = "3.6.7"
+  val scribe = "3.6.9"
   val semanticdb = scalameta
   val qdox = "2.0.1"
 
