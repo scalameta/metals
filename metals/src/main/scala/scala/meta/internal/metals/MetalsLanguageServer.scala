@@ -1678,7 +1678,7 @@ class MetalsLanguageServer(
       case ServerCommands.DecodeFile(uri) =>
         fileDecoderProvider.decodedFileContents(uri).asJavaObject
       case ServerCommands.DiscoverTestSuites() =>
-        testProvider.findTestSuites().asInstanceOf[CompletableFuture[Object]]
+        Future.successful { testProvider.findTestSuites() }.asJavaObject
       case ServerCommands.ChooseClass(params) =>
         fileDecoderProvider
           .chooseClassFromFile(

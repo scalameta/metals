@@ -1,13 +1,13 @@
 package scala.meta.internal.metals.testProvider
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
-
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
+import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -28,9 +28,7 @@ final class TestSuitesProvider(
     buildTargetClasses: BuildTargetClasses,
     definitionProvider: DefinitionProvider,
     clientConfig: ClientConfiguration
-) {
-  private val executor =
-    ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor())
+)(implicit ec: ExecutionContext) {
 
   /**
    * Cached, already discovered test suites.
@@ -47,63 +45,63 @@ final class TestSuitesProvider(
   private val cachedTestSuites =
     mutable.Map[FullyQualifiedClassName, TestEntry]()
 
+  val refreshTestSuites = new BatchedFunction[Unit, Unit](_ =>
+    CancelableFuture(doRefreshTestSuites())
+  )
+
   /**
    * Retrieves cached test suites.
    */
-  def findTestSuites()
-      : CompletableFuture[java.util.List[TestSuiteDiscoveryResult]] =
-    CompletableFuture.supplyAsync(
-      () => {
-        cachedTestSuites.values
-          .groupBy(_.buildTarget)
-          .toSeq
-          .map { case (buildTarget, entries) =>
-            val grouped = groupTestsByPackage(entries.toList)
-            TestSuiteDiscoveryResult(
-              buildTarget.getDisplayName(),
-              buildTarget.getId().getUri(),
-              grouped.asJava
-            )
-          }
-          .asJava
-      },
-      executor
-    )
+  def findTestSuites(): java.util.List[TestSuiteDiscoveryResult] = {
+    cachedTestSuites.values
+      .groupBy(_.buildTarget)
+      .toSeq
+      .map { case (buildTarget, entries) =>
+        val grouped = groupTestsByPackage(entries.toList)
+        TestSuiteDiscoveryResult(
+          buildTarget.getDisplayName(),
+          buildTarget.getId().getUri(),
+          grouped.asJava
+        )
+      }
+      .asJava
+  }
 
   /**
    * Find test suites for all build targets in current projects and update caches.
    */
-  def refreshTestSuites(): Unit = {
-    if (clientConfig.isTestExplorerProvider()) refreshTestSuitesImpl()
-  }
+  private def doRefreshTestSuites(): Future[Unit] =
+    if (clientConfig.isTestExplorerProvider()) Future {
+      val buildTargetList = buildTargets.allBuildTargetIds.toList
+        .flatMap(buildTargets.info)
+        .filterNot(_.isSbtBuild)
 
-  def refreshTestSuitesImpl(): Unit = executor.execute { () =>
-    val buildTargetList = buildTargets.allBuildTargetIds.toList
-      .flatMap(buildTargets.info)
-      .filterNot(_.isSbtBuild)
-
-    val symbolsPerTarget = buildTargetList
-      .map(buildTarget =>
-        SymbolsPerTarget(
-          buildTarget,
-          buildTargetClasses.classesOf(buildTarget.getId).testClasses
+      val symbolsPerTarget = buildTargetList
+        .map(buildTarget =>
+          SymbolsPerTarget(
+            buildTarget,
+            buildTargetClasses.classesOf(buildTarget.getId).testClasses
+          )
         )
-      )
 
-    // when test suite is deleted it has to be removed from cache
-    val classNamesFromBsp = symbolsPerTarget.flatMap(_.testSymbols.values).toSet
-    val classNamesToRemove = cachedTestSuites.keySet -- classNamesFromBsp
-    classNamesToRemove.foreach { removedClass =>
-      cachedTestSuites.remove(removedClass)
+      // when test suite is deleted it has to be removed from cache
+      val classNamesFromBsp =
+        symbolsPerTarget.flatMap(_.testSymbols.values).toSet
+      val classNamesToRemove = cachedTestSuites.keySet -- classNamesFromBsp
+      classNamesToRemove.foreach { removedClass =>
+        cachedTestSuites.remove(removedClass)
+      }
+
+      for {
+        SymbolsPerTarget(buildTarget, testSymbols) <- symbolsPerTarget
+        (symbol, fullyQualifiedClassName) <- testSymbols
+          .readOnlySnapshot()
+          .toList
+        // IMPORTANT this check is meant to check for class name, not a symbol
+        if !cachedTestSuites.contains(fullyQualifiedClassName)
+      } computeTestEntry(buildTarget, symbol, fullyQualifiedClassName)
     }
-
-    for {
-      SymbolsPerTarget(buildTarget, testSymbols) <- symbolsPerTarget
-      (symbol, fullyQualifiedClassName) <- testSymbols.readOnlySnapshot().toList
-      // IMPORTANT this check is meant to check for class name, not a symbol
-      if !cachedTestSuites.contains(fullyQualifiedClassName)
-    } computeTestEntry(buildTarget, symbol, fullyQualifiedClassName)
-  }
+    else Future.successful(())
 
   private def computeTestEntry(
       buildTarget: BuildTarget,
