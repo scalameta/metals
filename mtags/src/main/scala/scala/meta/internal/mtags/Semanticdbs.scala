@@ -75,7 +75,7 @@ object Semanticdbs {
             case Some(oldText) =>
               TextDocumentLookup.Stale(scalaPath, md5, sdoc.withText(oldText))
             case None =>
-              log("Could not load snapshot text for semanticdb")
+              log(s"Could not load snapshot text for $scalaPath")
               TextDocumentLookup.Stale(scalaPath, md5, sdoc)
           }
         } else {
