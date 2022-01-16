@@ -67,7 +67,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
-import scala.meta.internal.metals.testProvider.TestSuitesFinder
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
@@ -187,6 +187,7 @@ class MetalsLanguageServer(
     buildTargetClasses,
     () => workspace,
     languageClient,
+    () => testProvider.refreshTestSuites(),
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -263,7 +264,7 @@ class MetalsLanguageServer(
   private var compilers: Compilers = _
   private var scalafixProvider: ScalafixProvider = _
   private var fileDecoderProvider: FileDecoderProvider = _
-  private var testProvider: TestSuitesFinder = _
+  private var testProvider: TestSuitesProvider = _
   private var workspaceReload: WorkspaceReload = _
   private var buildToolSelector: BuildToolSelector = _
   def loadedPresentationCompilerCount(): Int =
@@ -712,10 +713,11 @@ class MetalsLanguageServer(
           clientConfig,
           classFinder
         )
-        testProvider = new TestSuitesFinder(
+        testProvider = new TestSuitesProvider(
           buildTargets,
           buildTargetClasses,
-          definitionProvider
+          definitionProvider,
+          clientConfig
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -1676,9 +1678,7 @@ class MetalsLanguageServer(
       case ServerCommands.DecodeFile(uri) =>
         fileDecoderProvider.decodedFileContents(uri).asJavaObject
       case ServerCommands.DiscoverTestSuites() =>
-        Future {
-          testProvider.findTestSuites().toList.asJava
-        }.asJavaObject
+        Future.successful { testProvider.findTestSuites() }.asJavaObject
       case ServerCommands.ChooseClass(params) =>
         fileDecoderProvider
           .chooseClassFromFile(
@@ -2464,7 +2464,10 @@ class MetalsLanguageServer(
     val targets = buildTargets.allBuildTargetIds
     buildTargetClasses
       .rebuildIndex(targets)
-      .foreach(_ => languageClient.refreshModel())
+      .foreach { _ =>
+        testProvider.refreshTestSuites()
+        languageClient.refreshModel()
+      }
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {

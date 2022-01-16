@@ -36,7 +36,7 @@ object TestGroups {
       "tests.decorations.SyntheticDecorationsLspSuite",
       "tests.codeactions.BracesParensLspSuite",
       "tests.debug.CompletionDapSuite", "tests.debug.EvaluationDapSuite",
-      "tests.FindTextInDependencyJarsSuite", "tests.TestSuitesFinderSuite",
+      "tests.FindTextInDependencyJarsSuite", "tests.TestSuitesProviderSuite",
       "tests.classFinder.FindAllClassesSuite",
       "tests.codeactions.ExtractValueLspSuite", "tests.clients.CommandSuite",
       "tests.JavaInteractiveSemanticdbSuite"),

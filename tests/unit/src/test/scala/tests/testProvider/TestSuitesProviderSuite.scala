@@ -2,6 +2,7 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import com.google.gson.Gson
@@ -9,7 +10,10 @@ import com.google.gson.GsonBuilder
 import munit.Location
 import munit.TestOptions
 
-class TestSuitesFinderSuite extends BaseLspSuite("testSuitesFinderSuite") {
+class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
+  override def initializationOptions: Some[InitializationOptions] = Some(
+    InitializationOptions.Default.copy(testExplorerProvider = Some(true))
+  )
   val gson: Gson =
     new GsonBuilder().setPrettyPrinting.disableHtmlEscaping().create()
 
@@ -106,7 +110,6 @@ class TestSuitesFinderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       "app/src/main/scala/another/AnotherPackage.scala"
     ),
     () => {
-
       s"""|[
           |  {
           |    "targetName": "app",
@@ -129,6 +132,32 @@ class TestSuitesFinderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |          }
           |        },
           |        "kind": "suite"
+          |      },
+          |      {
+          |        "prefix": "another",
+          |        "children": [
+          |          {
+          |            "fullyQualifiedName": "another.AnotherPackage",
+          |            "className": "AnotherPackage",
+          |            "location": {
+          |              "uri": "${classUriFor(
+        "app/src/main/scala/another/AnotherPackage.scala"
+      )}",
+          |              "range": {
+          |                "start": {
+          |                  "line": 2,
+          |                  "character": 6
+          |                },
+          |                "end": {
+          |                  "line": 2,
+          |                  "character": 20
+          |                }
+          |              }
+          |            },
+          |            "kind": "suite"
+          |          }
+          |        ],
+          |        "kind": "package"
           |      },
           |      {
           |        "prefix": "foo",
@@ -178,32 +207,6 @@ class TestSuitesFinderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |              }
           |            ],
           |            "kind": "package"
-          |          }
-          |        ],
-          |        "kind": "package"
-          |      },
-          |      {
-          |        "prefix": "another",
-          |        "children": [
-          |          {
-          |            "fullyQualifiedName": "another.AnotherPackage",
-          |            "className": "AnotherPackage",
-          |            "location": {
-          |              "uri": "${classUriFor(
-        "app/src/main/scala/another/AnotherPackage.scala"
-      )}",
-          |              "range": {
-          |                "start": {
-          |                  "line": 2,
-          |                  "character": 6
-          |                },
-          |                "end": {
-          |                  "line": 2,
-          |                  "character": 20
-          |                }
-          |              }
-          |            },
-          |            "kind": "suite"
           |          }
           |        ],
           |        "kind": "package"
