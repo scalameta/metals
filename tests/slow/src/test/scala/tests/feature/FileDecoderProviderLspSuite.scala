@@ -214,7 +214,9 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         |}
         |/app/src/main/scala/Main.scala
         |package foo.bar.example
-        |class Foo
+        |class Foo {
+        |  private final def foo: Int = 42
+        |}
         |class Bar
         |""".stripMargin,
     "app/src/main/scala/Main.scala",
@@ -253,7 +255,9 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         |}
         |/app/src/main/scala/Main.scala
         |package foo.bar.example
-        |class Foo
+        |class Foo {
+        |  private final def foo: Int = 42
+        |}
         |class Bar
         |""".stripMargin,
     "app/src/main/scala/Main.scala",
@@ -741,6 +745,7 @@ object FileDecoderProviderLspSuite {
     s"""|Compiled from "Main.scala"
         |public class foo.bar.example.Foo {
         |  public foo.bar.example.Foo();
+        |  private final int foo();
         |}
         |""".stripMargin
 
@@ -759,7 +764,7 @@ object FileDecoderProviderLspSuite {
         |  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
         |  this_class: #2                          // foo/bar/example/Foo
         |  super_class: #4                         // java/lang/Object
-        |  interfaces: 0, fields: 0, methods: 1, attributes: 3
+        |  interfaces: 0, fields: 0, methods: 2, attributes: 3
         |Constant pool:
         |   #1 = Utf8               foo/bar/example/Foo
         |   #2 = Class              #1             // foo/bar/example/Foo
@@ -772,12 +777,14 @@ object FileDecoderProviderLspSuite {
         |   #9 = Methodref          #4.#8          // java/lang/Object."<init>":()V
         |  #10 = Utf8               this
         |  #11 = Utf8               Lfoo/bar/example/Foo;
-        |  #12 = Utf8               Code
-        |  #13 = Utf8               LineNumberTable
-        |  #14 = Utf8               LocalVariableTable
-        |  #15 = Utf8               SourceFile
-        |  #16 = Utf8               TASTY
-        |  #17 = Utf8               Scala
+        |  #12 = Utf8               foo
+        |  #13 = Utf8               ()I
+        |  #14 = Utf8               Code
+        |  #15 = Utf8               LineNumberTable
+        |  #16 = Utf8               LocalVariableTable
+        |  #17 = Utf8               SourceFile
+        |  #18 = Utf8               TASTY
+        |  #19 = Utf8               Scala
         |{
         |  public foo.bar.example.Foo();
         |    descriptor: ()V
@@ -792,10 +799,23 @@ object FileDecoderProviderLspSuite {
         |      LocalVariableTable:
         |        Start  Length  Slot  Name   Signature
         |            0       5     0  this   Lfoo/bar/example/Foo;
+        |
+        |  private final int foo();
+        |    descriptor: ()I
+        |    flags: (0x0012) ACC_PRIVATE, ACC_FINAL
+        |    Code:
+        |      stack=1, locals=1, args_size=1
+        |         0: bipush        42
+        |         2: ireturn
+        |      LineNumberTable:
+        |        line 3: 0
+        |      LocalVariableTable:
+        |        Start  Length  Slot  Name   Signature
+        |            0       3     0  this   Lfoo/bar/example/Foo;
         |}
         |SourceFile: "Main.scala"
         |  TASTY: length = 0x10 (unknown attribute)
-        |   00 70 0D B0 E8 F1 16 00 00 FE 21 61 A1 EB 79 00
+        |   00 4C ED 51 38 8A 55 00 00 EB FF 96 61 37 65 00
         |
         |  Scala: length = 0x0 (unknown attribute)
         |
