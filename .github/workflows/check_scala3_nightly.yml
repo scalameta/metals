@@ -1,0 +1,18 @@
+name: "Check Scala nightly release"
+on:
+  schedule:
+    - cron: 0 5 * * *
+jobs:
+  test_and_release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: olafurpg/setup-scala@v13
+      - name: "Query maven-central"
+        run: |
+          TODAY_NIGHTLY=$(./coursier complete org.scala-lang:scala3-compiler_3: | grep $(date '+%Y%m%d'))
+          if [ ! -z $TODAY_NIGHTLY ]; then
+            gh workflow run mtags-auto-release.yml -f scala_version=$TODAY_NIGHTLY
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
