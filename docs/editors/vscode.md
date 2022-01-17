@@ -283,6 +283,26 @@ Optionally you can also bind this command to a shorcut. For example, if you want
   }
 ```
 
+## Test Explorer
+Metals 0.11.0 implements Visual Studio Code's [Testing API](https://code.visualstudio.com/api/extension-guides/testing).  
+
+Test Explorer UI is a new default way to run/debug test suites and replaces Code
+Lenses. The new UI adds a testing view, which shows all test suites declared in
+project's modules. From this panel it's possible to
+- view all discovered test suites grouped by build targets (modules) and filter them
+- run/debug test
+- navigate to test's definition.
+
+![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
+
+Work on Test Explorer is still on progress and feature has known limitations:
+- at the very beginning not all tests may be discovered. Triggering compilation (modify and save file) should solve issue.
+- single test cases can't be discovered and run (coming soon)
+- detecting suites in cross projects is inconsistent, see [this issue](https://github.com/scalameta/metals/issues/3503).
+- Features on JVM may work differently than on JS and Native platforms.
+
+If you encounter an error, create an [issue](https://github.com/scalameta/metals/issues).
+
 ## Coming from IntelliJ
 
 Install the
