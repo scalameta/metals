@@ -7,6 +7,7 @@ import scala.meta.Defn
 import scala.meta.Member
 import scala.meta.Pkg
 import scala.meta.Position
+import scala.meta.Self
 import scala.meta.Tree
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -48,14 +49,12 @@ class ClassFinder(trees: Trees) {
       }
 
       def addDfn(dfn: Member, isInnerClass: Boolean = false): Unit = {
-        val suffixToStrip = if (isInnerClass || !checkInnerClasses) "$" else ""
+        val suffixToStrip = if (!checkInnerClasses) "$" else ""
         val classWithPackage =
           findClassForOffset(tree, dfn.pos, path.filename, checkInnerClasses)
             .stripSuffix(suffixToStrip)
         val resourceDir = classWithPackage.replace('.', '/')
-        val suffix =
-          if (isInnerClass) s"$$${dfn.name.value}.$extension"
-          else s".$extension"
+        val suffix = s".$extension"
         val resourcePath = s"$resourceDir$suffix"
         val description = s"$classWithPackage$suffix"
         val c = ClassWithPos(resourcePath, name(dfn), description)
@@ -152,8 +151,14 @@ class ClassFinder(trees: Trees) {
       if (shouldNotContinue) {
         fullName
       } else {
-        tree.children.find { child =>
-          child.pos.start <= pos.start && pos.start <= child.pos.end
+        tree.children.find {
+          case Self(_, _) =>
+            // don't go into the self-type declaration (which
+            // exists even if it's empty, in which case it will
+            // have a matching position):
+            false
+          case child =>
+            child.pos.start <= pos.start && pos.start <= child.pos.end
         } match {
           case None => fullName
           case Some(t) =>
