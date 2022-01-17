@@ -122,8 +122,11 @@ class StacktraceAnalyzer(
       location: Location
   ): l.ExecuteCommandParams = {
     ClientCommands.GotoLocation.toExecuteCommandParams(
-      location,
-      true
+      ClientCommands.WindowLocation(
+        location.getUri(),
+        location.getRange(),
+        otherWindow = true
+      )
     )
   }
 
@@ -186,9 +189,12 @@ class StacktraceAnalyzer(
       format: CommandHTMLFormat
   ): String = {
     val pos = new l.Position(line, 0)
-    val location = new l.Location(uri, new l.Range(pos, pos))
-    ServerCommands.GotoPosition.toCommandLink(
-      location,
+    ClientCommands.GotoLocation.toCommandLink(
+      ClientCommands.WindowLocation(
+        uri,
+        new l.Range(pos, pos),
+        otherWindow = true
+      ),
       format
     )
   }
