@@ -4,9 +4,16 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Wed, 12 Jan 2022 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 17 Jan 2022 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
+        <item>
+            <title><![CDATA[Metals v0.11.1 - Aluminium]]></title>
+            <link>http://scalameta.org/metals/blog/2022/01/17/aluminium</link>
+            <guid>Metals v0.11.1 - Aluminium</guid>
+            <pubDate>Mon, 17 Jan 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[Metals v0.11.1 is a bugfix release needed to fix a couple of performance]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.11.0 - Aluminium]]></title>
             <link>http://scalameta.org/metals/blog/2022/01/12/aluminium</link>
