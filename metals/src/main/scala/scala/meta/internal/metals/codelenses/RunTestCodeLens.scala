@@ -179,7 +179,7 @@ final class RunTestCodeLens(
   }
 
   /**
-   * Do not return test code lenses if user declared text explorer as a test interface.
+   * Do not return test code lenses if user declared test explorer as a test interface.
    */
   private def testClasses(
       target: BuildTargetIdentifier,
