@@ -284,7 +284,7 @@ class MetalsTreeViewProvider(
         (!isLeading, distance)
       }
       val result =
-        if (path.isDependencySource(workspace())) {
+        if (path.isDependencySource(workspace()) || path.isJarFileSystem) {
           buildTargets
             .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
             .map { inferred =>
