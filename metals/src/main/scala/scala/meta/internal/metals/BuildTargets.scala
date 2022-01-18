@@ -363,28 +363,35 @@ final class BuildTargets(
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    val readonly = workspace.resolve(Directories.readonly)
-    source.toRelativeInside(readonly) match {
-      case Some(rel) =>
-        val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
-        names match {
-          case Directories.dependenciesName :: jarName :: _ =>
-            // match build target by source jar name
-            sourceJarFile(jarName)
-              .flatMap(inverseDependencySource(_).headOption)
-          case _ =>
-            None
-        }
-      case None =>
-        // else it can be a source file inside a jar
-        val fromJar = jarPath(source)
-          .flatMap { jar =>
-            allBuildTargetIds.find { id =>
-              targetJarClasspath(id).exists(_.contains(jar))
-            }
+    if (source.isJarFileSystem) {
+      for {
+        jarName <- source.jarPath.map(_.filename)
+        sourceJarFile <- sourceJarFile(jarName)
+        buildTargetId <- inverseDependencySource(sourceJarFile).headOption
+      } yield buildTargetId
+    } else {
+      val readonly = workspace.resolve(Directories.readonly)
+      source.toRelativeInside(readonly) match {
+        case Some(rel) =>
+          val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
+          names match {
+            case Directories.dependenciesName :: jarName :: _ =>
+              // match build target by source jar name
+              sourceJarFile(jarName)
+                .flatMap(inverseDependencySource(_).headOption)
+            case _ => None
           }
-        fromJar.foreach(addSourceItem(source, _))
-        fromJar
+        case None =>
+          // else it can be a source file inside a jar
+          val fromJar = jarPath(source)
+            .flatMap { jar =>
+              allBuildTargetIds.find { id =>
+                targetJarClasspath(id).exists(_.contains(jar))
+              }
+            }
+          fromJar.foreach(addSourceItem(source, _))
+          fromJar
+      }
     }
   }
 

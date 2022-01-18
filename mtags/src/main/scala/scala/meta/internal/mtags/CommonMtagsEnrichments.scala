@@ -519,9 +519,8 @@ trait CommonMtagsEnrichments {
     }
     def toInput: Input.VirtualFile = {
       val text = FileIO.slurp(path, StandardCharsets.UTF_8)
-      val file = path.toString()
-      val input = Input.VirtualFile(file, text)
-      input
+      val file = path.toURI.toString()
+      Input.VirtualFile(file, text)
     }
   }
 

@@ -43,7 +43,7 @@ class ExtractRenameMember(
 
     trees.get(path) match {
       case Some(tree) =>
-        val fileName = uri.toAbsolutePath.filename.replaceAll("\\.scala$", "")
+        val fileName = path.filename.replaceAll("\\.scala$", "")
 
         val definitions = membersDefinitions(tree)
         val sldNames = sealedNames(tree)

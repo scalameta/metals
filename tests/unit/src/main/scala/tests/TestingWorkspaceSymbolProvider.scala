@@ -10,6 +10,7 @@ import scala.meta.io.AbsolutePath
 object TestingWorkspaceSymbolProvider {
   def apply(
       workspace: AbsolutePath,
+      saveClassFileToDisk: Boolean = true,
       index: OnDemandSymbolIndex = OnDemandSymbolIndex.empty(),
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): WorkspaceSymbolProvider = {
@@ -17,6 +18,7 @@ object TestingWorkspaceSymbolProvider {
       workspace = workspace,
       buildTargets = BuildTargets.withoutAmmonite,
       index = index,
+      saveClassFileToDisk = saveClassFileToDisk,
       new ExcludedPackagesHandler().isExcludedPackage,
       bucketSize = bucketSize
     )

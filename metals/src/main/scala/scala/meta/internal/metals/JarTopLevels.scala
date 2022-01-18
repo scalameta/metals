@@ -9,6 +9,7 @@ import java.util.zip.ZipError
 
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -29,7 +30,14 @@ final class JarTopLevels(conn: () => Connection) {
       path: AbsolutePath
   ): Option[List[(String, AbsolutePath)]] =
     try {
-      val fs = PlatformFileIO.newJarFileSystem(path, create = false)
+      val fs = path.jarPath
+        .map(jarPath =>
+          PlatformFileIO.newFileSystem(
+            jarPath.toURI,
+            new java.util.HashMap[String, String]()
+          )
+        )
+        .getOrElse(PlatformFileIO.newJarFileSystem(path, create = false))
       val toplevels = List.newBuilder[(String, AbsolutePath)]
       conn()
         .query(

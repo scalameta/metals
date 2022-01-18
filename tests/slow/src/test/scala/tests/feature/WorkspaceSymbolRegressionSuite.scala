@@ -5,7 +5,7 @@ import scala.meta.io.AbsolutePath
 import bench.Corpus
 import tests.BaseWorkspaceSymbolSuite
 
-class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
+abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
   check("Actor", "1009 results")
   check("Actor(", "")
@@ -128,4 +128,14 @@ class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """.stripMargin
   )
 
+}
+
+class VirtualDocsWorkspaceSymbolRegressionSuite
+    extends WorkspaceSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = false
+}
+
+class SaveToDiskWorkspaceSymbolRegressionSuite
+    extends WorkspaceSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = true
 }

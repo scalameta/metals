@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.IOException
 import java.net.URI
+import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -264,7 +265,7 @@ object MetalsEnrichments
 
   implicit class XtensionPath(path: Path) {
     def toUriInput: Input.VirtualFile = {
-      val uri = path.toUri.toString
+      val uri = path.toAbsolutePath.toUri.toString
       val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
       Input.VirtualFile(uri, text)
     }
@@ -286,9 +287,10 @@ object MetalsEnrichments
         accum.resolve(filename.toString)
       }
     }
-    def isDependencySource(workspace: AbsolutePath): Boolean =
-      isLocalFileSystem(workspace) &&
-        isInReadonlyDirectory(workspace)
+    def isDependencySource(workspace: AbsolutePath): Boolean = {
+      (isLocalFileSystem(workspace) &&
+      isInReadonlyDirectory(workspace))
+    }
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
@@ -297,6 +299,8 @@ object MetalsEnrichments
 
     def isLocalFileSystem(workspace: AbsolutePath): Boolean =
       workspace.toNIO.getFileSystem == path.toNIO.getFileSystem
+
+    def isJarFileSystem: Boolean = path.toURI.getScheme() == "jar"
 
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
@@ -448,7 +452,7 @@ object MetalsEnrichments
      */
     def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
       buffers.get(path) match {
-        case Some(text) => Input.VirtualFile(path.toString(), text)
+        case Some(text) => Input.VirtualFile(path.toURI.toString(), text)
         case None => path.toInput
       }
     }
@@ -582,8 +586,14 @@ object MetalsEnrichments
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+      // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
+      // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
+      val decodedUriStr =
+        if (value.toUpperCase.startsWith("JAR:FILE%3A"))
+          URLDecoder.decode(value, "UTF-8")
+        else value
       val path = AbsolutePath(
-        Paths.get(URI.create(value.stripPrefix("metals:")))
+        Paths.get(URI.create(decodedUriStr.stripPrefix("metals:")))
       )
       if (followSymlink)
         path.dealias
