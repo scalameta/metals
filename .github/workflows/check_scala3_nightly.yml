@@ -13,7 +13,7 @@ jobs:
           apps: ""
       - name: "Query maven-central"
         run: |
-          TODAY_NIGHTLY=$(cs complete org.scala-lang:scala3-compiler_3: | grep $(date '+%Y%m%d'))
+          TODAY_NIGHTLY=$(cs complete org.scala-lang:scala3-compiler_3: | { grep $(date '+%Y%m%d') || true; })
           if [ ! -z $TODAY_NIGHTLY ]; then
             gh workflow run mtags-auto-release.yml -f scala_version=$TODAY_NIGHTLY
           fi
