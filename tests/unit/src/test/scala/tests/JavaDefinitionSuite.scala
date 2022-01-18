@@ -7,6 +7,7 @@ import scala.util.Properties
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
@@ -15,10 +16,20 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 
-class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
+abstract class JavaDefinitionSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"java-definition-$suiteNameSuffix") {
 
   val javaBasePrefix: String =
     if (Properties.isJavaAtLeast("9")) "java.base/" else ""
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(isVirtualDocumentSupported =
+        Some(useVirtualDocuments)
+      )
+    )
 
   check(
     "jdk-String",
@@ -29,6 +40,18 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|src.zip/${javaBasePrefix}java/lang/CharSequence.java info: result
         |public interface CharSequence {
         |                 ^^^^^^^^^^^^
+        |""".stripMargin
+  )
+
+  check(
+    "jdk-String-patch-module",
+    "java.lang.String",
+    s"""|${javaBasePrefix}java/lang/String.java
+        |private boolean nonSyncContentEquals(@@AbstractStringBuilder sb) {
+        |""".stripMargin,
+    s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
+        |abstract class AbstractStringBuilder implements Appendable, CharSequence {
+        |               ^^^^^^^^^^^^^^^^^^^^^
         |""".stripMargin
   )
 
@@ -157,15 +180,23 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
   private def renderLocation(loc: l.Location): String = {
     val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
     val relativePath =
-      path
-        .toRelative(workspace.resolve(Directories.dependencies))
-        .toString()
-        .replace("\\", "/")
-
-    val input = path.toInput.copy(path = relativePath.toString)
+      path.jarPath
+        .map(jarPath => s"${jarPath.filename}${path}")
+        .getOrElse(
+          path
+            .toRelative(workspace.resolve(Directories.dependencies))
+            .toString()
+        )
+    val input = path.toInput.copy(path = relativePath.replace("\\", "/"))
     loc
       .getRange()
       .toMeta(input)
       .formatMessage("info", "result", noPos = true)
   }
 }
+
+class JavaDefinitionSaveToDiskSuite
+    extends JavaDefinitionSuite(false, "save-to-disk")
+
+class JavaDefinitionVirtualDocSuite
+    extends JavaDefinitionSuite(true, "virtual-docs")
