@@ -7,10 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v13
+      - uses: coursier/setup-action@v1
+        with:
+          apps: ""
       - name: "Query maven-central"
         run: |
-          TODAY_NIGHTLY=$(./coursier complete org.scala-lang:scala3-compiler_3: | grep $(date '+%Y%m%d'))
+          TODAY_NIGHTLY=$(cs complete org.scala-lang:scala3-compiler_3: | grep $(date '+%Y%m%d'))
           if [ ! -z $TODAY_NIGHTLY ]; then
             gh workflow run mtags-auto-release.yml -f scala_version=$TODAY_NIGHTLY
           fi
