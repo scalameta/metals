@@ -33,6 +33,18 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
   )
 
   check(
+    "jdk-String-patch-module",
+    "java.lang.String",
+    s"""|${javaBasePrefix}java/lang/String.java
+        |private boolean nonSyncContentEquals(@@AbstractStringBuilder sb) {
+        |""".stripMargin,
+    s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
+        |abstract class AbstractStringBuilder implements Appendable, CharSequence {
+        |               ^^^^^^^^^^^^^^^^^^^^^
+        |""".stripMargin
+  )
+
+  check(
     "xnio1",
     "org.xnio.nio.NioTcpServer",
     s"""|/org/xnio/nio/NioTcpServer.java
