@@ -1,5 +1,6 @@
 name: "Check Scala nightly release"
 on:
+  workflow_dispatch:
   schedule:
     - cron: 0 5 * * *
 jobs:
