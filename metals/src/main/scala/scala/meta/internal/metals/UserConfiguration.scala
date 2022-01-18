@@ -252,7 +252,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "test-user-interface",
         "Code Lenses",
-        "Test explorer",
+        "test explorer",
         "Test UI used for tests and test suites",
         "Default way of handling tests and test suites."
       ),
@@ -463,9 +463,9 @@ object UserConfiguration {
     val defaultScalaVersion =
       getStringKey("fallback-scala-version").filter(_ != "automatic")
     val disableTestCodeLenses = {
-      val isTextExplorerEnabled = clientConfiguration.isTestExplorerProvider()
-      getStringKey("test-user-interface") match {
-        case Some("Test Explorer") if isTextExplorerEnabled =>
+      val isTestExplorerEnabled = clientConfiguration.isTestExplorerProvider()
+      getStringKey("test-user-interface").map(_.toLowerCase()) match {
+        case Some("test explorer") if isTestExplorerEnabled =>
           TestUserInterfaceKind.TestExplorer
         case _ =>
           TestUserInterfaceKind.CodeLenses

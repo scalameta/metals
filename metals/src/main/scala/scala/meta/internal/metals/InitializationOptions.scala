@@ -39,7 +39,7 @@ import org.eclipse.{lsp4j => l}
  * @param slowTaskProvider if the client implements `metals/slowTask`.
  * @param statusBarProvider if the client implements `metals/status`.
  * @param treeViewProvider if the client implements the Metals Tree View Protocol.
- * @param textExplorerProvider if the client implements the Text Explorer UI.
+ * @param testExplorerProvider if the client implements the Test Explorer UI.
  * @param openNewWindowProvider if the client can open a new window after new project creation.
  * @param copyWorksheetOutputProvider if the client can execute server CopyWorksheet command and
  *                                    copy results to the local buffer.
