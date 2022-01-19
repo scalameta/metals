@@ -247,7 +247,12 @@ final class FileDecoderProvider(
         decode(p.path)
       )
     else
-      Future.successful(DecoderResponse.failed(path.toURI, "Invalid extension"))
+      Future.successful(
+        DecoderResponse.failed(
+          path.toURI,
+          """Invalid extension. Metals can only decode ".java" or ".scala" files."""
+        )
+      )
   }
 
   private def decodeSemanticDb(
