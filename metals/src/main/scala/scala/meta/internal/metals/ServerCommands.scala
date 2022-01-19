@@ -115,7 +115,36 @@ object ServerCommands {
   val DiscoverTestSuites = new Command(
     "discover-test-suites",
     "Discover test suites",
-    "Discovers test suites in project"
+    """|Discovers test suites in project
+       |
+       |The response will be an Array of `SuiteDiscovery`.
+       |
+       |```ts
+       |interface SuiteDiscovery {
+       |  targetName: string;
+       |  targetUri: string;
+       |  discovered: TestDiscoveryResult[];
+       |}
+       |```
+       |```ts
+       |type TestDiscoveryResult = SuiteDiscovery | PackageDiscovery;
+       |```
+       |```ts
+       |interface SuiteDiscovery {
+       |  kind: "suite";
+       |  className: string;
+       |  fullyQualifiedName: string;
+       |  location: Location;
+       |}
+       |```
+       |```ts
+       |interface PackageDiscovery {
+       |  kind: "package";
+       |  prefix: string;
+       |  children: TestDiscoveryResult[];
+       |}
+       |```
+       |""".stripMargin
   )
 
   val RunDoctor = new Command(
@@ -494,6 +523,7 @@ object ServerCommands {
       CascadeCompile,
       CleanCompile,
       CopyWorksheetOutput,
+      DiscoverTestSuites,
       ExtractMemberDefinition,
       GenerateBspConfig,
       GotoPosition,
