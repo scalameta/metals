@@ -444,7 +444,7 @@ scripts.
 <thead>
   <tr>
     <td />
-    <td align="center">Sbt scripts</td>
+    <td align="center">sbt scripts</td>
     <td align="center">Worksheets</td>
     <td align="center">Ammonite scripts</td>
     <td align="center">Standalone Scala files</td>
@@ -570,10 +570,17 @@ scripts.
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
+  <tr>
+    <td>Decode file (cfr, semanticdb, tasty, javap)</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+  </tr>
 </tbody>
 </table>
 
-\* Diagnostics for Sbt script and standalone Scala files will only show parsing
+\* Diagnostics for sbt script and standalone Scala files will only show parsing
 errors, but not diagnostics coming from the compiler.
 
 ## Unsupported features
