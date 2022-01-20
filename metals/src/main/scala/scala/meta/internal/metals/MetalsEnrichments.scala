@@ -644,11 +644,27 @@ object MetalsEnrichments
         localOccurrence.symbol == symbol
       }
     }
+
+    /**
+     * Convert given symbol into location in code even though symbol's range may not exist.
+     */
     def definition(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
         .map { occ => occ.toLocation(uri) }
     }
+
+    /**
+     * Convert given symbol into location in code only if symbol's occurrence
+     * has range defined.
+     */
+    def toLocation(uri: String, symbol: String): Option[l.Location] =
+      for {
+        occ <- textDocument.occurrences.find(o =>
+          o.role.isDefinition && o.symbol == symbol
+        )
+        range <- occ.range
+      } yield range.toLocation(uri)
   }
 
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {

@@ -273,7 +273,8 @@ object QuickBuild {
     "com.lihaoyi::utest" -> Config.TestFramework(
       List("utest.runner.Framework")
     ),
-    "org.scalameta::munit" -> Config.TestFramework.munit
+    "org.scalameta::munit" -> Config.TestFramework.munit,
+    "junit:junit" -> Config.TestFramework.JUnit
   )
 
   /**

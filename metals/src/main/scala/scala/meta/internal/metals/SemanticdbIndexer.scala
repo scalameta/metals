@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
@@ -20,6 +21,7 @@ class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider,
     implicitDecorator: SyntheticsDecorationProvider,
+    testSuitesProvider: TestSuitesProvider,
     buildTargets: BuildTargets,
     workspace: AbsolutePath
 ) {
@@ -55,21 +57,17 @@ class SemanticdbIndexer(
 
   def onChange(path: AbsolutePath, textDocument: TextDocument): Unit = {
     val docs = TextDocuments(Seq(textDocument))
-    referenceProvider.onChange(docs, path)
-    implementationProvider.onChange(docs, path)
-    implicitDecorator.onChange(docs, path)
+    onChange(path, docs)
   }
 
   def onChange(file: Path): Unit = {
     if (!Files.isDirectory(file)) {
       if (file.isSemanticdb) {
         try {
-          val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
+          val docs = TextDocuments.parseFrom(Files.readAllBytes(file))
           SemanticdbClasspath.toScala(workspace, AbsolutePath(file)).foreach {
             scalaSourceFile =>
-              referenceProvider.onChange(doc, scalaSourceFile)
-              implementationProvider.onChange(doc, scalaSourceFile)
-              implicitDecorator.onChange(doc, scalaSourceFile)
+              onChange(scalaSourceFile, docs)
           }
         } catch {
           /* @note in some cases file might be created or modified, but not actually finished
@@ -88,5 +86,12 @@ class SemanticdbIndexer(
         scribe.warn(s"not a semanticdb file: $file")
       }
     }
+  }
+
+  private def onChange(path: AbsolutePath, docs: TextDocuments): Unit = {
+    referenceProvider.onChange(docs, path)
+    implementationProvider.onChange(docs, path)
+    implicitDecorator.onChange(docs, path)
+    testSuitesProvider.onChange(docs, path)
   }
 }

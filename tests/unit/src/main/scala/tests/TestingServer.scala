@@ -55,7 +55,7 @@ import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
-import scala.meta.internal.metals.testProvider.TestSuiteDiscoveryResult
+import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -802,19 +802,21 @@ final class TestingServer(
   }
 
   def discoverTestSuites(
-      files: List[String]
-  ): Future[List[TestSuiteDiscoveryResult]] = {
+      files: List[String],
+      uri: Option[String] = None
+  ): Future[List[BuildTargetUpdate]] = {
     val paths = files.map(filename => toPath(filename))
     val maxRetries = 6
     def askServer(
         retries: Int,
         backoff: Int
-    ): Future[List[TestSuiteDiscoveryResult]] = {
-      executeCommand(ServerCommands.DiscoverTestSuites)
-        .asInstanceOf[Future[ju.List[TestSuiteDiscoveryResult]]]
+    ): Future[List[BuildTargetUpdate]] = {
+      val arg = ServerCommands.DiscoverTestParams(uri.orNull)
+      executeCommand(ServerCommands.DiscoverTestSuites, arg)
+        .asInstanceOf[Future[ju.List[BuildTargetUpdate]]]
         .map(_.asScala.toList)
         .flatMap { r =>
-          if (r.exists(_.discovered.asScala.nonEmpty)) {
+          if (r.exists(_.events.asScala.nonEmpty)) {
             Future.successful(r)
           } else if (retries > 0) {
             scribe.info(

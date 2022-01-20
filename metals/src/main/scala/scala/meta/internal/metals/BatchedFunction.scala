@@ -11,6 +11,15 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.async.ConcurrentQueue
 
+final case class BatchedCallbackData[A, B](
+    arguments: Seq[A],
+    result: B
+)
+
+object BatchedCallbackData {
+  def noop[A, B]: BatchedCallbackData[A, B] => Unit = _ => ()
+}
+
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.
  *
@@ -22,6 +31,7 @@ final class BatchedFunction[A, B](
     fn: Seq[A] => CancelableFuture[B]
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B])
+    with Function2[Seq[A], BatchedCallbackData[A, B] => Unit, Future[B]]
     with Pauseable {
 
   /**
@@ -34,14 +44,23 @@ final class BatchedFunction[A, B](
    * @return the response from calling the batched function with potentially
    *         previously and/or subsequently batched arguments.
    */
-  def apply(arguments: Seq[A]): Future[B] = {
+  def apply(
+      arguments: Seq[A],
+      callback: BatchedCallbackData[A, B] => Unit
+  ): Future[B] = {
     val promise = Promise[B]()
-    queue.add(Request(arguments, promise))
+    queue.add(Request(arguments, promise, callback))
     runAcquire()
     promise.future
   }
 
-  def apply(argument: A): Future[B] = apply(List(argument))
+  def apply(arguments: Seq[A]): Future[B] = {
+    apply(arguments, BatchedCallbackData.noop)
+  }
+
+  def apply(
+      argument: A
+  ): Future[B] = apply(List(argument), BatchedCallbackData.noop)
 
   override def doUnpause(): Unit = {
     unlock()
@@ -62,7 +81,11 @@ final class BatchedFunction[A, B](
   )
 
   private val queue = new ConcurrentLinkedQueue[Request]()
-  private case class Request(arguments: Seq[A], result: Promise[B])
+  private case class Request(
+      arguments: Seq[A],
+      result: Promise[B],
+      callback: BatchedCallbackData[A, B] => Unit
+  )
 
   private val lock = new AtomicBoolean()
   private def unlock(): Unit = {
@@ -90,9 +113,17 @@ final class BatchedFunction[A, B](
     try {
       if (requests.nonEmpty) {
         val args = requests.flatMap(_.arguments)
+        val callbacks = requests.map(_.callback)
         val result = fn(args)
         this.current.set(result)
-        result.future.onComplete { response =>
+        val resultF = for {
+          result <- result.future
+          _ <- Future {
+            val callbackData = BatchedCallbackData(args, result)
+            callbacks.foreach(cb => cb(callbackData))
+          }
+        } yield result
+        resultF.onComplete { response =>
           unlock()
           requests.foreach(_.result.complete(response))
         }

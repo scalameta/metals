@@ -112,39 +112,65 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val DiscoverTestSuites = new Command(
-    "discover-test-suites",
-    "Discover test suites",
-    """|Discovers test suites in project
-       |
-       |The response will be an Array of `SuiteDiscovery`.
-       |
-       |```ts
-       |interface SuiteDiscovery {
-       |  targetName: string;
-       |  targetUri: string;
-       |  discovered: TestDiscoveryResult[];
-       |}
-       |```
-       |```ts
-       |type TestDiscoveryResult = SuiteDiscovery | PackageDiscovery;
-       |```
-       |```ts
-       |interface SuiteDiscovery {
-       |  kind: "suite";
-       |  className: string;
-       |  fullyQualifiedName: string;
-       |  location: Location;
-       |}
-       |```
-       |```ts
-       |interface PackageDiscovery {
-       |  kind: "package";
-       |  prefix: string;
-       |  children: TestDiscoveryResult[];
-       |}
-       |```
-       |""".stripMargin
+  /** If uri is null discover all test suites, otherwise discover testcases in file */
+  final case class DiscoverTestParams(
+      @Nullable uri: String = null
+  )
+  val DiscoverTestSuites = new ParametrizedCommand[DiscoverTestParams](
+    "discover-tests",
+    "Discover tests",
+    """
+      |Discovers all test suites in project
+      |
+      |The response will be an Array of `BuildTargetUpdate`s.
+      |
+      |```ts
+      |export interface BuildTargetUpdate {
+      |  targetName: TargetName;
+      |  targetUri: TargetUri;
+      |  events: TestExplorerEvent[];
+      |}
+      |export type TestExplorerEvent =
+      | RemoveTestSuite
+      | AddTestSuite
+      | AddTestCases;
+      |
+      |interface BaseTestExplorerEvent {
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
+      |}
+      |export interface RemoveTestSuite extends BaseTestExplorerEvent {
+      |  kind: "removeSuite";
+      |}
+      |
+      |export interface AddTestSuite extends BaseTestExplorerEvent {
+      |  kind: "addSuite";
+      |  symbol: string;
+      |  location: Location;
+      |  canResolveChildren: boolean;
+      |}
+      |
+      |export interface AddTestCases extends BaseTestExplorerEvent {
+      |  kind: "addTestCases";
+      |  testCases: TestCaseEntry[];
+      |}
+      |
+      |export interface TestCaseEntry {
+      |  name: string;
+      |  location: Location;
+      |}
+      |```
+      |""".stripMargin,
+    """Empty object if request is meant to discover all test suites
+      |or an object with uri, when request is meant to discover test cases for uri
+      |
+      |Example:
+      |```json
+      |{
+      |  uri: file:///home/dev/foo/Bar.scala
+      |}
+      |```
+      |""".stripMargin
   )
 
   val RunDoctor = new Command(
