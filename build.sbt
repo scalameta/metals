@@ -164,15 +164,21 @@ commands ++= Seq(
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },
-  Command.args("publish-mtags-dyn", "<scala-version> <version>") {
-    (state, args) =>
-      val configured =
-        configureMtagsScalaVersionDynamically(state, args(0), Some(args(1)))
-      val (out, _) =
-        Project
-          .extract(configured)
-          .runTask(mtags / PgpKeys.publishSigned, configured)
-      out
+  Command.args("publish-mtags-dyn", "<scala-version> <version>") { (state, args) =>
+    val scalaV = args(0)
+    val metalsV = args(1)
+    CiReleasePlugin.setupGpg()
+    val reloadKeyFiles =
+      "; set pgpSecretRing := pgpSecretRing.value; set pgpPublicRing := pgpPublicRing.value;"
+    val setupVersions =
+      s"""; set mtags/version := "$metalsV"; set mtags/scalaVersion := "${scalaV}""""
+
+    reloadKeyFiles ::
+      setupVersions ::
+      "; clean ; sonatypeBundleClean" ::
+      "mtags/publishSigned" ::
+      "sonatypeBundleRelease" ::
+      state
   },
   /**
    * In case if this command was called from tag that matches
