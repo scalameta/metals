@@ -34,7 +34,7 @@ opened, which includes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala
 directory structure `src/main/scala` is detected.
 
 It is also possible to opt in to install the pre-release version and try out the latest cutting edge features from Metals server. 
-Except new features, pre-release eversion also includes many bugfixes. It's encouraged to use them with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release version may result in less stable experience and it is not indented for beginners.
+Apart from new features, pre-release versions also include many bugfixes. It's encouraged to use them with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions may result in less stable experience and it is not indented for beginners.
 Pre-release versions follow `major.minor.PATCH` versioning.
 
 ![install pre-release version](https://imgur.com/CzOTleE.png)
