@@ -13,9 +13,9 @@ title: Visual Studio Code
 ## Installation
 
 Install the Metals extension from the
-[Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals).
+[Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals) by clicking on this badge [![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals) or via the VS Code editor:
 
-[![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
+![install stable version](https://imgur.com/Qew0fNH.png)
 
 > Make sure to disable the extensions
 > [Scala Language Server](https://marketplace.visualstudio.com/items?itemName=dragos.scala-lsp)
@@ -32,6 +32,12 @@ Next, open a directory containing your Scala code. The extension activates when
 the main directory contains `build.sbt` or `build.sc` file, a Scala file is
 opened, which includes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala
 directory structure `src/main/scala` is detected.
+
+It is also possible to opt in to install pre-release version and try out the latest cutting edge features from Metals server. 
+Except new features, pre-release eversion also includes many bugfixes. It's encouraged to use them with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release version may result in less stable experience and it is not indented for beginners.
+Pre-release version follow `major.minor.PATCH` versioning.
+
+![install pre-release version](https://imgur.com/CzOTleE.png)
 
 ```scala mdoc:editor:vscode
 Update the "Sbt Script" setting to use a custom `sbt` script instead of the
@@ -94,7 +100,7 @@ following locations:
 - "Server Properties" setting for the Metals VS Code extension, which can be
   configured per-workspace or per-user.
 
-## Using latest Metals SNAPSHOT
+##  Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
 
 Update the "Server Version" setting to try out the latest pending Metals
 features.
