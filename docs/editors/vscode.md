@@ -37,7 +37,7 @@ It is also possible to opt in to install the pre-release version and try out the
 Apart from new features, pre-release versions also include many bugfixes. It's encouraged to use them with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions may result in less stable experience and it is not indented for beginners.
 Pre-release versions follow `major.minor.PATCH` versioning.
 
-![install pre-release version](https://imgur.com/CzOTleE.png)
+![Install the pre-release extension](https://imgur.com/CzOTleE.png)
 
 ```scala mdoc:editor:vscode
 Update the "Sbt Script" setting to use a custom `sbt` script instead of the
