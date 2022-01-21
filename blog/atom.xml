@@ -2,18 +2,11 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/blog</id>
     <title>Metals Blog</title>
-    <updated>2022-01-17T00:00:00.000Z</updated>
+    <updated>2022-01-12T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/blog"/>
     <subtitle>Metals Blog</subtitle>
     <icon>http://scalameta.org/img/favicon.ico</icon>
-    <entry>
-        <title type="html"><![CDATA[Metals v0.11.1 - Aluminium]]></title>
-        <id>Metals v0.11.1 - Aluminium</id>
-        <link href="http://scalameta.org/metals/blog/2022/01/17/aluminium"/>
-        <updated>2022-01-17T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Metals v0.11.1 is a bugfix release needed to fix a couple of performance]]></summary>
-    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.11.0 - Aluminium]]></title>
         <id>Metals v0.11.0 - Aluminium</id>
