@@ -15,7 +15,22 @@ jobs:
       - uses: coursier/cache-action@v6.3
       - name: Publish
         run: |
-          sbt gh-actions-release
+          COMMAND="ci-release"
+          if [[ $GITHUB_REF == "refs/tags"* ]] && [[ $GITHUB_REF_NAME == "mtags_v"* ]]; then
+            METALS_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f2)
+            SCALA_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f3)
+
+            if [ ! -z $METALS_VERSION ] && [ ! -z $SCALA_VERSION ]; then
+              export CI_RELEASE="++$SCALA_VERSION mtags/publishSigned"
+              COMMAND="'; set mtags/version :=\"$METALS_VERSION\"; $COMMAND'"
+            else
+              echo 'Invalid tag name for mtags. Expected: mtags_v${existing-metals-release}_${scala-version}'
+              exit 1
+            fi
+          fi
+
+          sbt $COMMAND 
+          sbt docs/docusaurusPublishGhpages
         env:
           GIT_USER: scalameta@scalameta.org
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}

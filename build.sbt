@@ -114,8 +114,7 @@ def isNightliesEnabled: Boolean =
 
 def configureMtagsScalaVersionDynamically(
     state: State,
-    scalaV: String,
-    projectV: Option[String] = None
+    scalaV: String
 ): State = {
   val scalaVersionSettings =
     List(
@@ -123,13 +122,10 @@ def configureMtagsScalaVersionDynamically(
       mtags / scalaVersion := scalaV,
       cross / scalaVersion := scalaV
     )
-  val versionSettings =
-    projectV.map(v => mtags / version := v)
-
   val extracted = Project.extract(state)
   extracted
     .appendWithSession(
-      scalaVersionSettings ++ versionSettings,
+      scalaVersionSettings,
       state
     )
 }
@@ -163,53 +159,6 @@ commands ++= Seq(
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
-  },
-  Command.args("publish-mtags-dyn", "<scala-version> <version>") { (state, args) =>
-    val scalaV = args(0)
-    val metalsV = args(1)
-    CiReleasePlugin.setupGpg()
-    val reloadKeyFiles =
-      "; set pgpSecretRing := pgpSecretRing.value; set pgpPublicRing := pgpPublicRing.value;"
-    val setupVersions =
-      s"""; set mtags/version := "$metalsV"; set mtags/scalaVersion := "${scalaV}""""
-
-    reloadKeyFiles ::
-      setupVersions ::
-      "; clean ; sonatypeBundleClean" ::
-      "mtags/publishSigned" ::
-      "sonatypeBundleRelease" ::
-      state
-  },
-  /**
-   * In case if this command was called from tag that matches
-   * "mtags_v$metalsVersion_$scalaVersion" then publish only mtags with these parameters
-   * Otherwise, call std `ci-release` and publish docs
-   */
-  Command.command("gh-actions-release") { s =>
-    val isTag = Option(System.getenv("GITHUB_REF"))
-      .exists(_.startsWith("refs/tags"))
-
-    val metalsTagRegex = "^v\\d+\\.\\d+\\.\\d+.*".r
-    val mtagsTagRegex = "^mtags_v(\\d+\\.\\d+\\.\\d+)_(.+)".r
-
-    val defaultCommands = "ci-release" :: "docs/docusaurusPublishGhpages" :: s
-
-    if (isTag) {
-      Option(System.getenv("GITHUB_REF_NAME")) match {
-        case Some(mtagsTagRegex(metalsVersion, scalaV)) =>
-          s"publish-mtags-dyn $scalaV $metalsVersion" :: s
-        case Some(metalsTagRegex()) =>
-          defaultCommands
-        case _ =>
-          val message =
-            s"""|Skip release. Invalid tag name.
-                |It should be either:
-                | - "v$$num.$$num.$$num" - usual Metals release
-                | - "mtags_v$${existing-metals-release}_$${scala-version}" - mtags artifact release
-                |""".stripMargin
-          throw new Exception(message)
-      }
-    } else defaultCommands
   }
 )
 
