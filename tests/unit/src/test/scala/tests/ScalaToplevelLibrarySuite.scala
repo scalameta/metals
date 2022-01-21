@@ -18,7 +18,9 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
 
   val scala3ExclusionList: Set[String] = Set(
     // [scalameta] erased modifier support isn't implemeneted yet
-    "/scala/CanThrow.scala"
+    "/scala/CanThrow.scala",
+    // error in the parser
+    "/dotty/tools/dotc/transform/patmat/Space.scala"
   )
 
   scala2TestClasspath.foreach { entry =>
@@ -62,7 +64,7 @@ class ScalaToplevelLibrarySuite extends BaseSuite {
     assertNoDiff(
       obtained.mkString("\n"),
       expected.mkString("\n"),
-      s"${input.path}\n${input.text}"
+      s"${input.path}"
     )
   }
 

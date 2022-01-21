@@ -290,7 +290,7 @@ class ScalaVersionsSuite extends BaseSuite {
 
   test("not-future-RC") {
     assert(
-      !ScalaVersions.isFutureVersion(V.nextScala3RC)
+      !ScalaVersions.isFutureVersion("3.1.1-RC2")
     )
   }
 
