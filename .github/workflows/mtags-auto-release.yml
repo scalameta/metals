@@ -9,6 +9,10 @@ on:
         description: "Metals Version"
         required: true
         default: "v0.11.1"
+      metals_ref:
+        description: "Tag/branch-name from which run release"
+        required: true
+        default: "v0.11.1_mtags_release"
 jobs:
   test_and_release:
     runs-on: ubuntu-latest
@@ -16,7 +20,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.metals_version }}
+          ref: ${{ github.event.inputs.metals_ref }}
           token: ${{ secrets.GH_TOKEN }}
       - uses: olafurpg/setup-scala@v13
         with:
