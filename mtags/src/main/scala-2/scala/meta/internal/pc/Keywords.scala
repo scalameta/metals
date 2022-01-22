@@ -14,7 +14,8 @@ trait Keywords { this: MetalsGlobal =>
       editRange: l.Range,
       latestEnclosing: List[Tree],
       completion: CompletionPosition,
-      text: String
+      text: String,
+      isAmmoniteScript: Boolean
   ): List[Member] = {
 
     lazy val notInComment = checkIfNotInComment(pos, text)
@@ -42,6 +43,7 @@ trait Keywords { this: MetalsGlobal =>
         val isMethodBody = this.isMethodBody(latestEnclosing)
         val isTemplate = this.isTemplate(latestEnclosing)
         val isPackage = this.isPackage(latestEnclosing)
+        val isParam = this.isParam(latestEnclosing)
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
@@ -51,7 +53,10 @@ trait Keywords { this: MetalsGlobal =>
                 isDefinition = isDefinition,
                 isMethodBody = isMethodBody,
                 isTemplate = isTemplate,
-                isPackage = isPackage
+                isPackage = isPackage,
+                isParam = isParam,
+                isScala3 = false,
+                allowToplevel = isAmmoniteScript
               ) =>
             mkTextEditMember(kw, editRange)
         }
@@ -110,6 +115,13 @@ trait Keywords { this: MetalsGlobal =>
   private def isPackage(enclosing: List[Tree]): Boolean =
     enclosing match {
       case PackageDef(_, _) :: _ => true
+      case Nil => true
+      case _ => false
+    }
+
+  private def isParam(enclosing: List[Tree]): Boolean =
+    enclosing match {
+      case (_: DefDef) :: _ => true
       case _ => false
     }
 
