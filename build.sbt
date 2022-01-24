@@ -46,7 +46,6 @@ inThisBuild(
       if (isCI) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    // note bucket created by @tgodzik
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(

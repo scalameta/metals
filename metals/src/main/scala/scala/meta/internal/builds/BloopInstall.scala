@@ -66,6 +66,8 @@ final class BloopInstall(
         buildTool.redirectErrorOutput,
         Map(
           "COURSIER_PROGRESS" -> "disable",
+          // Envs below might be used to customize build/bloopInstall procedure.
+          // Example: you can disable `Xfatal-warnings` scalac option only for Metals.
           "METALS_ENABLED" -> "true",
           "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion
         )
