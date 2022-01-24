@@ -150,8 +150,12 @@ commands ++= Seq(
     "interfaces/publishLocal" :: s"++${V.scala212} metals/publishLocal" :: publishMtags
   },
   Command.command("cross-test-latest-nightly") { s =>
-    V.nightlyScala3Versions.lastOption match {
-      case Some(latest) => crossTestDyn(s, latest)
+    val max =
+      if (V.nightlyScala3DottyVersions.nonEmpty)
+        Option(V.nightlyScala3DottyVersions.max)
+      else None
+    max match {
+      case Some(latest) => crossTestDyn(s, latest.toString)
       case None =>
         println("No nightly versions was found. Skipping cross/test")
         s
@@ -242,12 +246,14 @@ lazy val V = new {
   def nonDeprecatedScala3Versions = Seq(scala3, "3.1.0", "3.0.2")
   def deprecatedScala3Versions = Seq("3.0.1", "3.0.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
-  lazy val nightlyScala3Versions = {
+  lazy val nightlyScala3DottyVersions = {
     if (isNightliesEnabled)
       Scala3NightlyVersions.nightlyReleasesAfter(scala3)
     else
       Nil
   }
+
+  def nightlyScala3Versions = nightlyScala3DottyVersions.map(_.toString)
 
   def supportedScalaVersions = scala2Versions ++ scala3Versions
   def nonDeprecatedScalaVersions =

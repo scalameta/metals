@@ -8,7 +8,7 @@ object Scala3NightlyVersions {
    * They should come at least after the last supported scala3 version
    * otherwise there is no point to use these versions.
    */
-  def nightlyReleasesAfter(version: String): List[String] = {
+  def nightlyReleasesAfter(version: String): List[DottyVersion] = {
 
     val lastVersion = DottyVersion.parse(version) match {
       case Some(v) => v
@@ -29,8 +29,7 @@ object Scala3NightlyVersions {
           case v if v > lastVersion => v
         }
         .toList
-        .sortWith(_ > _)
-        .map(_.original)
+        .sorted
         .takeRight(5)
     } catch {
       case e: Throwable =>
@@ -59,6 +58,8 @@ object Scala3NightlyVersions {
       diff > 0
     }
 
+    override def toString(): String = original
+
     private def toList: List[Int] =
       List(
         major,
@@ -84,5 +85,13 @@ object Scala3NightlyVersions {
 
       }.toOption.flatten
     }
+
+    implicit val ordering: Ordering[DottyVersion] =
+      new Ordering[DottyVersion] {
+        override def compare(x: DottyVersion, y: DottyVersion): Int =
+          if (x == y) 0
+          else if (x > y) 1
+          else -1
+      }
   }
 }
