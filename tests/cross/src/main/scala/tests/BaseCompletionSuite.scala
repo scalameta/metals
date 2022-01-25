@@ -112,7 +112,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
 
   /**
    * Check the results of applying the first completion suggested at a cursor position
-   *     inicated by `@@`.
+   *     indicated by `@@`.
    *
    * @param name name of the test
    * @param original snippet to test with `@@` indicating the cursor position
@@ -164,7 +164,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
    *
    * @param name name of the test
    * @param original snippet to test with `@@` indicating the cursor position
-   * @param expected string with a lsit of obtained completions
+   * @param expected string with a list of obtained completions
    * @param compat additional compatibility map for different Scala versions
    */
   def checkSnippet(
@@ -206,7 +206,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
    * @param postAssert additional assertions to make on the results
    * @param topLines a number of completions to include, by default all
    * @param filterText filter returned completions according to text
-   * @param includeDetail include the copmpletion detail in the results, true by default
+   * @param includeDetail include the completion detail in the results, true by default
    * @param filename name of the file to run the test on, `A.scala` by default
    * @param filter similar to filterText, but uses a function
    * @param enablePackageWrap whether to wrap the code in a package, true by default
