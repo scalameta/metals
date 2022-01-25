@@ -1,3 +1,5 @@
+import java.time.{Instant, ZoneId}
+import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.sys.process._
 import Developers._
@@ -42,9 +44,18 @@ usefulTasks := Welcome.tasks
 
 inThisBuild(
   List(
-    version ~= { dynVer =>
-      if (isCI) dynVer
-      else localSnapshotVersion // only for local publishing
+    version := {
+      val dynVer = version.value
+      val dynVerOut = dynverGitDescribeOutput.value
+      if (isCI) {
+        // We need to have date in version for published SNAPSHOT artifacts
+        // Do it manually as there is no way to configure dynver got this case
+        if (!dynVerOut.isDirty && dynVerOut.isSnapshot) {
+          val now = Instant.now().atZone(ZoneId.of("UTC"))
+          val date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+          dynVer.replace("-SNAPSHOT", s"-$date-SNAPSHOT")
+        } else dynVer
+      } else localSnapshotVersion // only for local publishing
     },
     // note bucket created by @tgodzik
     scalaVersion := V.scala212,
