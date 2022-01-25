@@ -1,5 +1,7 @@
 package scala.meta.internal.pc.completions
 
+import scala.meta.internal.mtags.MtagsEnrichments.given
+import scala.meta.internal.pc.CompletionPos
 import scala.meta.internal.pc.CompletionValue
 import scala.meta.internal.pc.Keyword
 
@@ -20,21 +22,23 @@ import org.eclipse.{lsp4j as l}
 object KeywordsCompletions:
 
   def contribute(
-      pos: SourcePosition,
-      path: List[Tree]
+      path: List[Tree],
+      completionPos: CompletionPos
   )(using ctx: Context): List[CompletionValue] =
 
-    lazy val notInComment = checkIfNotInComment(pos, path)
-    getIdentifierName(path, pos) match
-      case None =>
+    lazy val notInComment = checkIfNotInComment(completionPos.cursorPos, path)
+    path match
+      case Nil if completionPos.query.isEmpty =>
         Keyword.all.collect {
-          case kw if kw.isPackage && path == Nil && notInComment =>
+          // topelevel definitions are allowed in Scala 3
+          case kw if (kw.isPackage || kw.isTemplate) && notInComment =>
             CompletionValue.keyword(kw.name, kw.insertText)
         }
-      case Some(name) =>
+      case _ =>
         val isExpression = this.isExpression(path)
         val isBlock = this.isBlock(path)
-        val isDefinition = this.isDefinition(path, name, pos)
+        val isDefinition =
+          this.isDefinition(path, completionPos.query, completionPos.cursorPos)
         val isMethodBody = this.isMethodBody(path)
         val isTemplate = this.isTemplate(path)
         val isPackage = this.isPackage(path)
@@ -42,7 +46,7 @@ object KeywordsCompletions:
         Keyword.all.collect {
           case kw
               if kw.matchesPosition(
-                name,
+                completionPos.query,
                 isExpression = isExpression,
                 isBlock = isBlock,
                 isDefinition = isDefinition,
@@ -62,43 +66,13 @@ object KeywordsCompletions:
       pos: SourcePosition,
       path: List[Tree]
   ): Boolean =
-    import scala.meta.*
-    val content = pos.source.content
-    val text = path.headOption
-      .map(t => content.slice(t.span.start, t.span.end))
-      .getOrElse(content)
-    val start = pos.start
-    val end = pos.end
-    val tokens = text.tokenize.toOption
-    val treeStart = path.headOption.map(_.span.start).getOrElse(0)
-    tokens
-      .flatMap(t =>
-        t.find {
-          case t: Token.Comment
-              if treeStart + t.pos.start < start && treeStart + t.pos.end >= end =>
-            true
-          case _ => false
-        }
-      )
-      .isEmpty
+    val text = pos.source.content
+    val (treeStart, treeEnd) = path.headOption
+      .map(t => (t.span.start, t.span.end))
+      .getOrElse((0, text.size))
+    val offset = pos.start
+    text.mkString.checkIfNotInComment(treeStart, treeEnd, offset)
   end checkIfNotInComment
-
-  private def getIdentifierName(
-      enclosing: List[Tree],
-      pos: SourcePosition
-  ): Option[String] =
-    enclosing match
-      case Ident(name) :: _ => Some(name.toString())
-      case (vd: ValDef) :: _ => Some(vd.name.toString())
-      case _ =>
-        getLeadingIdentifierText(pos)
-
-  private def getLeadingIdentifierText(pos: SourcePosition): Option[String] =
-    var i = pos.point - 1
-    val chars = pos.source.content
-    while i >= 0 && !chars(i).isWhitespace do i -= 1
-    if i < 0 then None
-    else Some(new String(chars, i + 1, pos.point - i - 1))
 
   private def isPackage(enclosing: List[Tree]): Boolean =
     enclosing match

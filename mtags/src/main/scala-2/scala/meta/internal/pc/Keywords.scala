@@ -2,8 +2,7 @@ package scala.meta.internal.pc
 
 import scala.tools.nsc.reporters.StoreReporter
 
-import scala.meta._
-import scala.meta.tokens.Token
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
 
@@ -18,7 +17,7 @@ trait Keywords { this: MetalsGlobal =>
       isAmmoniteScript: Boolean
   ): List[Member] = {
 
-    lazy val notInComment = checkIfNotInComment(pos, text)
+    lazy val notInComment = checkIfNotInComment(pos, text, latestEnclosing)
 
     getIdentifierName(latestEnclosing, pos) match {
       case None =>
@@ -64,19 +63,16 @@ trait Keywords { this: MetalsGlobal =>
     }
   }
 
-  private def checkIfNotInComment(pos: Position, text: String): Boolean = {
-    val start = pos.start
-    val end = pos.end
-    val tokens = text.tokenize.toOption
-    tokens
-      .flatMap(t =>
-        t.find {
-          case t: Token.Comment if t.pos.start < start && t.pos.end >= end =>
-            true
-          case _ => false
-        }
-      )
-      .isEmpty
+  private def checkIfNotInComment(
+      pos: Position,
+      text: String,
+      enclosing: List[Tree]
+  ): Boolean = {
+    val (treeStart, treeEnd) = enclosing.headOption
+      .map(t => (t.pos.start, t.pos.end))
+      .getOrElse((0, text.size))
+    val offset = pos.start
+    text.mkString.checkIfNotInComment(treeStart, treeEnd, offset)
   }
 
   private def getIdentifierName(

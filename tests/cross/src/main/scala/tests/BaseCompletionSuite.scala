@@ -19,7 +19,7 @@ import org.eclipse.lsp4j.CompletionList
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 
-  def cancelToken: CancelToken = EmptyCancelToken
+  private def cancelToken: CancelToken = EmptyCancelToken
 
   private def resolvedCompletions(
       params: CompilerOffsetParams
@@ -36,7 +36,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     result
   }
 
-  def getItems(
+  private def getItems(
       original: String,
       filename: String = "A.scala"
   ): Seq[CompletionItem] = {
@@ -54,14 +54,36 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     )
   }
 
+  /**
+   * Check completions using `fn` returned at @@ cursor position indicated in the `original` string.
+   *
+   * @param name name of the test
+   * @param original snippet to test with `@@` indicating the cursor position
+   * @param fn function used to run assertions on completion items
+   */
   def checkItems(
       name: TestOptions,
       original: String,
-      fn: Seq[CompletionItem] => Unit
+      fn: Seq[CompletionItem] => Boolean
   )(implicit loc: Location): Unit = {
-    test(name) { fn(getItems(original)) }
+    test(name) { assert(fn(getItems(original))) }
   }
 
+  /**
+   * Check completion line `original`, which if included in the `template` should be
+   * changed to `expected` if first completion on the list is applied.
+   *
+   * @param name name of the tests
+   * @param template whole source file with `---` indicating where line `original`
+   * should be inserted.
+   * @param original line to be inserted and checked
+   * @param expected expected line `original` after being modified with the first completion
+   * @param filterText filter returned completions according to text
+   * @param assertSingleItem make sure only one item is suggested, true by default
+   * @param filter similar to filterText, but uses a function
+   * @param command additional command that should be applied after this completion is inserted
+   * @param compat additional compatibility map for different Scala versions
+   */
   def checkEditLine(
       name: TestOptions,
       template: String,
@@ -88,6 +110,19 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     )
   }
 
+  /**
+   * Check the results of applying the first completion suggested at a cursor position
+   *     inicated by `@@`.
+   *
+   * @param name name of the test
+   * @param original snippet to test with `@@` indicating the cursor position
+   * @param expected snippet after applying the first completion
+   * @param filterText filter returned completions according to text
+   * @param assertSingleItem make sure only one item is suggested, true by default
+   * @param filter similar to filterText, but uses a function
+   * @param command additional command that should be applied after this completion is inserted
+   * @param compat additional compatibility map for different Scala versions
+   */
   def checkEdit(
       name: TestOptions,
       original: String,
@@ -124,6 +159,14 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
+  /**
+   * Check snippet syntax returned in the completions. Snippets show the editor where the cursor should end up ($0).
+   *
+   * @param name name of the test
+   * @param original snippet to test with `@@` indicating the cursor position
+   * @param expected string with a lsit of obtained completions
+   * @param compat additional compatibility map for different Scala versions
+   */
   def checkSnippet(
       name: TestOptions,
       original: String,
@@ -148,6 +191,26 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
+  /**
+   * Check completions that will be shown in original param after `@@` marker
+   * correspoding to the cursor positions
+   * @param name test name
+   * @param original snippet to test with `@@` indicating the cursor position, by default wrapped in package
+   * @param expected expected list of completions
+   * @param includeDocs whether to include documentation in the completion description
+   * @param includeCommitCharacter  show commit characters, which when typed will
+   *    indicate that completion is accepted.
+   * @param compat additional compatibility map for different Scala versions
+   * @param postProcessObtained function used to modify resulting completion list
+   * @param stableOrder we should not sort completions if set to true
+   * @param postAssert additional assertions to make on the results
+   * @param topLines a number of completions to include, by default all
+   * @param filterText filter returned completions according to text
+   * @param includeDetail include the copmpletion detail in the results, true by default
+   * @param filename name of the file to run the test on, `A.scala` by default
+   * @param filter similar to filterText, but uses a function
+   * @param enablePackageWrap whether to wrap the code in a package, true by default
+   */
   def check(
       name: TestOptions,
       original: String,
@@ -157,7 +220,6 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       compat: Map[String, String] = Map.empty,
       postProcessObtained: String => String = identity,
       stableOrder: Boolean = true,
-      postAssert: () => Unit = () => (),
       topLines: Option[Int] = None,
       filterText: String = "",
       includeDetail: Boolean = true,
@@ -215,7 +277,6 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           getExpected(expected, compat, scalaVersion)
         )
       )
-      postAssert()
       if (filterText.nonEmpty) {
         filteredItems.foreach { item =>
           assertNoDiff(
@@ -228,7 +289,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
-  def trimTrailingSpace(string: String): String = {
+  private def trimTrailingSpace(string: String): String = {
     string.linesIterator
       .map(_.replaceFirst("\\s++$", ""))
       .mkString("\n")
