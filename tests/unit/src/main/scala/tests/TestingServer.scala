@@ -255,8 +255,8 @@ final class TestingServer(
         case Some(pos) => pos
       }
       val gotoExecutedCommandPositions = client.clientCommands.asScala.collect {
-        case ClientCommands.GotoLocation(location, _) =>
-          (location.getRange.getStart, location.getUri)
+        case ClientCommands.GotoLocation(location) =>
+          (location.range.getStart, location.uri)
       }
       Assertions.assertEquals(
         gotoExecutedCommandPositions,
