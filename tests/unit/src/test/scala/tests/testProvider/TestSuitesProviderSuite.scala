@@ -54,7 +54,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               FullyQualifiedName("NoPackage"),
               ClassName("NoPackage"),
               mtags.Symbol("_empty_/NoPackage#"),
-              Location(
+              QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
                 (1, 6, 1, 15)
               ).toLsp,
@@ -119,7 +119,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               FullyQualifiedName("NoPackage"),
               ClassName("NoPackage"),
               mtags.Symbol("_empty_/NoPackage#"),
-              Location(
+              QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
                 (0, 6, 0, 15)
               ).toLsp
@@ -128,7 +128,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               FullyQualifiedName("another.AnotherPackage"),
               ClassName("AnotherPackage"),
               mtags.Symbol("another/AnotherPackage#"),
-              Location(
+              QuickLocation(
                 classUriFor("app/src/main/scala/another/AnotherPackage.scala"),
                 (2, 6, 2, 20)
               ).toLsp
@@ -137,7 +137,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               FullyQualifiedName("foo.Foo"),
               ClassName("Foo"),
               mtags.Symbol("foo/Foo#"),
-              Location(
+              QuickLocation(
                 classUriFor("app/src/main/scala/foo/Foo.scala"),
                 (2, 6, 2, 9)
               ).toLsp
@@ -146,7 +146,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               FullyQualifiedName("foo.bar.FooBar"),
               ClassName("FooBar"),
               mtags.Symbol("foo/bar/FooBar#"),
-              Location(
+              QuickLocation(
                 classUriFor("app/src/main/scala/foo/bar/FooBar.scala"),
                 (2, 6, 2, 12)
               ).toLsp
@@ -187,7 +187,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               List(
                 TestCaseEntry(
                   "test1",
-                  Location(
+                  QuickLocation(
                     classUriFor("app/src/main/scala/JunitTestSuite.scala"),
                     (3, 6, 3, 11)
                   ).toLsp
@@ -233,7 +233,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               fcqn,
               className,
               symbol,
-              Location(classUriFor(file), (1, 6, 1, 20)).toLsp,
+              QuickLocation(classUriFor(file), (1, 6, 1, 20)).toLsp,
               canResolveChildren = true
             ),
             AddTestCases(
@@ -242,7 +242,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               List(
                 TestCaseEntry(
                   "test1",
-                  Location(classUriFor(file), (3, 6, 3, 11)).toLsp
+                  QuickLocation(classUriFor(file), (3, 6, 3, 11)).toLsp
                 )
               ).asJava
             )
@@ -307,7 +307,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
 
 }
 
-private final case class Location(
+private final case class QuickLocation(
     uri: String,
     range: (Int, Int, Int, Int)
 ) {
