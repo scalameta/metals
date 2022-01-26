@@ -6,10 +6,12 @@ import scala.collection.mutable
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.mtags
-import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
+
+final case class FullyQualifiedName(value: String) extends AnyVal
+final case class ClassName(value: String) extends AnyVal
 
 private[testProvider] final case class SymbolsPerTarget(
     target: BuildTarget,
@@ -21,7 +23,7 @@ private[testProvider] final case class SymbolsPerTarget(
 
 private[testProvider] final case class TestFileMetadata(
     entries: List[TestEntry],
-    textDocument: Option[TextDocument]
+    hasResolvedChildren: Boolean
 )
 
 private[testProvider] final case class TestEntry(
@@ -55,8 +57,7 @@ private[testProvider] final class TestSuitesIndex {
     cachedTestSuites.mapValues(_.values).toIterable
 
   def put(
-      entry: TestEntry,
-      textDocument: TextDocument
+      entry: TestEntry
   ): Unit = {
     cachedTestSuites.get(entry.buildTarget) match {
       case Some(suites) =>
@@ -68,24 +69,24 @@ private[testProvider] final class TestSuitesIndex {
 
     fileToMetadata.get(entry.path) match {
       case Some(metadata) =>
-        val updated = metadata.copy(
-          entries = entry :: metadata.entries,
-          textDocument = Some(textDocument)
-        )
+        val updated = metadata.copy(entries = entry :: metadata.entries)
         fileToMetadata.put(entry.path, updated)
       case None =>
-        val metadata = TestFileMetadata(List(entry), Some(textDocument))
+        val metadata = TestFileMetadata(List(entry), false)
         fileToMetadata.put(entry.path, metadata)
     }
   }
 
-  def updateDoc(path: AbsolutePath, doc: TextDocument): Unit =
+  def setHasResolvedChildren(path: AbsolutePath): Unit =
     fileToMetadata.get(path).foreach { metadata =>
-      val updated = metadata.copy(textDocument = Some(doc))
+      val updated = metadata.copy(hasResolvedChildren = true)
       fileToMetadata.update(path, updated)
     }
 
   def contains(path: AbsolutePath): Boolean = fileToMetadata.contains(path)
+
+  def hasResolvedChildren(path: AbsolutePath): Boolean =
+    fileToMetadata.get(path).map(_.hasResolvedChildren).getOrElse(false)
 
   def getMetadata(path: AbsolutePath): Option[TestFileMetadata] =
     fileToMetadata.get(path)
@@ -119,7 +120,8 @@ private[testProvider] final class TestSuitesIndex {
     } yield {
       fileToMetadata.get(entry.path).foreach { metadata =>
         val filtered =
-          metadata.entries.filter(_.testClass.fullyQualifiedName != suiteName)
+          metadata.entries
+            .filter(_.testClass.fullyQualifiedClassName != suiteName.value)
         if (filtered.isEmpty)
           fileToMetadata.remove(entry.path)
         else

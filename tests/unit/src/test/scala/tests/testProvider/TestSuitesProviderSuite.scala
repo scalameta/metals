@@ -9,7 +9,6 @@ import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.TestExplorerEvent
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
-import scala.meta.internal.mtags
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -51,9 +50,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           targetUri,
           List[TestExplorerEvent](
             AddTestSuite(
-              FullyQualifiedName("NoPackage"),
-              ClassName("NoPackage"),
-              mtags.Symbol("_empty_/NoPackage#"),
+              "NoPackage",
+              "NoPackage",
+              "_empty_/NoPackage#",
               QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
                 (1, 6, 1, 15)
@@ -116,36 +115,36 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           targetUri,
           List[TestExplorerEvent](
             AddTestSuite(
-              FullyQualifiedName("NoPackage"),
-              ClassName("NoPackage"),
-              mtags.Symbol("_empty_/NoPackage#"),
+              "NoPackage",
+              "NoPackage",
+              "_empty_/NoPackage#",
               QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
                 (0, 6, 0, 15)
               ).toLsp
             ),
             AddTestSuite(
-              FullyQualifiedName("another.AnotherPackage"),
-              ClassName("AnotherPackage"),
-              mtags.Symbol("another/AnotherPackage#"),
+              "another.AnotherPackage",
+              "AnotherPackage",
+              "another/AnotherPackage#",
               QuickLocation(
                 classUriFor("app/src/main/scala/another/AnotherPackage.scala"),
                 (2, 6, 2, 20)
               ).toLsp
             ),
             AddTestSuite(
-              FullyQualifiedName("foo.Foo"),
-              ClassName("Foo"),
-              mtags.Symbol("foo/Foo#"),
+              "foo.Foo",
+              "Foo",
+              "foo/Foo#",
               QuickLocation(
                 classUriFor("app/src/main/scala/foo/Foo.scala"),
                 (2, 6, 2, 9)
               ).toLsp
             ),
             AddTestSuite(
-              FullyQualifiedName("foo.bar.FooBar"),
-              ClassName("FooBar"),
-              mtags.Symbol("foo/bar/FooBar#"),
+              "foo.bar.FooBar",
+              "FooBar",
+              "foo/bar/FooBar#",
               QuickLocation(
                 classUriFor("app/src/main/scala/foo/bar/FooBar.scala"),
                 (2, 6, 2, 12)
@@ -182,8 +181,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           targetUri,
           List[TestExplorerEvent](
             AddTestCases(
-              FullyQualifiedName("JunitTestSuite"),
-              ClassName("JunitTestSuite"),
+              "JunitTestSuite",
+              "JunitTestSuite",
               List(
                 TestCaseEntry(
                   "test1",
@@ -220,9 +219,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |""".stripMargin,
     "app/src/main/scala/JunitTestSuite.scala",
     () => {
-      val fcqn = FullyQualifiedName("JunitTestSuite")
-      val className = ClassName("JunitTestSuite")
-      val symbol = mtags.Symbol("_empty_/JunitTestSuite#")
+      val fcqn = "JunitTestSuite"
+      val className = "JunitTestSuite"
+      val symbol = "_empty_/JunitTestSuite#"
       val file = "app/src/main/scala/JunitTestSuite.scala"
       List(
         BuildTargetUpdate(

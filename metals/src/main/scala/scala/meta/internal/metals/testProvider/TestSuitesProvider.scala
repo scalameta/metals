@@ -45,15 +45,14 @@ final class TestSuitesProvider(
    * Only consider 'relevant' files which have had already discovered test suite.
    * Metals have to update them because they can be visible to the user via:
    * 1. Test Explorer view can be opened and tree view is visible
-   * 2. test suite's file can be opened
+   * 2. test suite's file can be opened and test cases are visible
    */
   def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
-    if (isEnabled && index.contains(file)) {
+    if (isEnabled && index.hasResolvedChildren(file)) {
       if (docs.documents.nonEmpty) {
         val doc = docs.documents.head
-        index.updateDoc(file, doc)
+        refreshTestCases(file, Some(doc))
       }
-      refreshTestCases(file)
     }
   }
 
@@ -80,20 +79,26 @@ final class TestSuitesProvider(
    * Retrieve test cases for a given file. Even an empty list
    * because it can mean that all testcases were deleted.
    */
-  def getTestCases(path: AbsolutePath): Seq[BuildTargetUpdate] = {
+  def getTestCases(
+      path: AbsolutePath,
+      doc: Option[TextDocument] = None
+  ): Option[BuildTargetUpdate] = {
     val buildTargetUpdateOpt =
       for {
         metadata <- index.getMetadata(path)
         buildTarget <- metadata.entries.headOption.map(_.buildTarget)
       } yield {
-        val events = findTestCases(path)
+        val events = findTestCases(path, doc)
         BuildTargetUpdate(buildTarget, events)
       }
-    buildTargetUpdateOpt.toSeq
+    buildTargetUpdateOpt
   }
 
-  private def refreshTestCases(path: AbsolutePath): Unit = {
-    val buildTargetUpdateOpt = getTestCases(path)
+  private def refreshTestCases(
+      path: AbsolutePath,
+      doc: Option[TextDocument] = None
+  ): Unit = {
+    val buildTargetUpdateOpt = getTestCases(path, doc)
     buildTargetUpdateOpt.foreach { update =>
       client.metalsExecuteClientCommand(
         ClientCommands.UpdateTestExplorer.toExecuteCommandParams(
@@ -108,11 +113,12 @@ final class TestSuitesProvider(
    */
   private def findTestCases(
       path: AbsolutePath,
+      textDocument: Option[TextDocument] = None,
       symbol: Option[mtags.Symbol] = None
   ): Seq[AddTestCases] =
     for {
       metadata <- index.getMetadata(path).toSeq
-      doc <- metadata.textDocument.toSeq
+      doc <- textDocument.toSeq
       metadataEntry <- metadata.entries
       testEntry <- index.getTestEntry(
         metadataEntry.buildTarget,
@@ -122,9 +128,14 @@ final class TestSuitesProvider(
     } yield {
       val testClass = testEntry.testClass
       val testCases = junitTestFinder.findTests(doc, path, testEntry.symbol)
+
+      if (testCases.nonEmpty) {
+        index.setHasResolvedChildren(path)
+      }
+
       AddTestCases(
-        testClass.fullyQualifiedName,
-        testClass.clsName,
+        testClass.fullyQualifiedClassName,
+        testClass.className,
         testCases.asJava
       )
     }
@@ -151,15 +162,16 @@ final class TestSuitesProvider(
 
       // update cache
       addedEntries.values.foreach {
-        _.foreach { case (entry, doc) =>
-          index.put(entry, doc)
+        _.foreach { case (entry, _) =>
+          index.put(entry)
         }
       }
 
       val currentlyOpened = openedFiles().toSet
       val addedTestCases = addedEntries.mapValues {
-        _.flatMap { case (entry, _) =>
-          if (currentlyOpened.contains(entry.path)) findTestCases(entry.path)
+        _.flatMap { case (entry, doc) =>
+          if (currentlyOpened.contains(entry.path))
+            findTestCases(entry.path, Some(doc))
           else Seq.empty
         }
       }
@@ -219,7 +231,7 @@ final class TestSuitesProvider(
       // IMPORTANT this check is meant to check for class name, not a symbol
       fullyQualifiedName = FullyQualifiedName(fullyQualifiedClassName)
       if !cachedSuites.contains(fullyQualifiedName)
-      entry <- {
+      entryWithDoc <- {
         val mSymbol = mtags.Symbol(symbol)
         computeTestEntry(
           buildTarget,
@@ -227,7 +239,7 @@ final class TestSuitesProvider(
           fullyQualifiedName
         )
       }
-    } yield entry
+    } yield entryWithDoc
     entries.groupBy(_._1.buildTarget)
   }
 
@@ -263,7 +275,7 @@ final class TestSuitesProvider(
     val fullyQualifiedClassName = fullyQualifiedName.value.split('.').toSeq
     val entryWithDocumentOpt =
       for {
-        definition <- symbolIndex.definition(mtags.Symbol(symbol.value))
+        definition <- symbolIndex.definition(symbol)
         doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
         location <- doc.toLocation(definition.path.toURI.toString, symbol.value)
         className <- fullyQualifiedClassName.takeRight(1).headOption
@@ -273,9 +285,9 @@ final class TestSuitesProvider(
         )
 
         val testClass = AddTestSuite(
-          fullyQualifiedName,
-          ClassName(className),
-          symbol,
+          fullyQualifiedName.value,
+          className,
+          symbol.value,
           location,
           canResolveChildren
         )

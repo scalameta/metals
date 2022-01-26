@@ -1,8 +1,6 @@
 package scala.meta.internal.metals.testProvider
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.testProvider.TestExplorerEvent._
-import scala.meta.internal.mtags
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import org.eclipse.{lsp4j => l}
@@ -24,51 +22,33 @@ object BuildTargetUpdate {
 }
 
 sealed abstract class TestExplorerEvent(
-    val kind: String,
-    val fullyQualifiedClassName: String,
-    val className: String
+    val kind: String
 ) {
-  def fullyQualifiedName: FullyQualifiedName
-  def clsName: ClassName
+  def fullyQualifiedClassName: String
+  def className: String
 }
 object TestExplorerEvent {
-
-  final case class FullyQualifiedName(value: String) extends AnyVal
-  final case class ClassName(value: String) extends AnyVal
   final case class RemoveTestSuite(
-      @transient fullyQualifiedName: FullyQualifiedName,
-      @transient clsName: ClassName
-  ) extends TestExplorerEvent(
-        "removeSuite",
-        fullyQualifiedName.value,
-        clsName.value
-      )
+      fullyQualifiedClassName: String,
+      className: String
+  ) extends TestExplorerEvent("removeSuite")
 
   final case class AddTestSuite(
-      @transient fullyQualifiedName: FullyQualifiedName,
-      @transient clsName: ClassName,
-      @transient mSymbol: mtags.Symbol,
+      fullyQualifiedClassName: String,
+      className: String,
+      symbol: String,
       location: l.Location,
       canResolveChildren: Boolean = false
-  ) extends TestExplorerEvent(
-        "addSuite",
-        fullyQualifiedName.value,
-        clsName.value
-      ) {
-    val symbol: String = mSymbol.value
+  ) extends TestExplorerEvent("addSuite") {
     def asRemove: RemoveTestSuite =
-      RemoveTestSuite(fullyQualifiedName, clsName)
+      RemoveTestSuite(fullyQualifiedClassName, className)
   }
 
   final case class AddTestCases(
-      @transient fullyQualifiedName: FullyQualifiedName,
-      @transient clsName: ClassName,
+      fullyQualifiedClassName: String,
+      className: String,
       testCases: java.util.List[TestCaseEntry]
-  ) extends TestExplorerEvent(
-        "addTestCases",
-        fullyQualifiedName.value,
-        clsName.value
-      )
+  ) extends TestExplorerEvent("addTestCases")
 }
 
 // Represents a single test within a test suite
