@@ -218,12 +218,15 @@ final class Compilations(
         updateCompiledTargetState(result)
 
         // See https://github.com/scalacenter/bloop/issues/1067
-        classes.rebuildIndex(targets).foreach { _ =>
-          refreshTestSuites()
-          if (targets.exists(isCurrentlyFocused)) {
-            languageClient.refreshModel()
+        classes.rebuildIndex(
+          targets,
+          _ => {
+            refreshTestSuites()
+            if (targets.exists(isCurrentlyFocused)) {
+              languageClient.refreshModel()
+            }
           }
-        }
+        )
       }
 
     CancelableFuture(result, Cancelable(() => compilation.cancel(false)))
