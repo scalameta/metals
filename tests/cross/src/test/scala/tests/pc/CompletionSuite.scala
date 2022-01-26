@@ -1385,10 +1385,11 @@ class CompletionSuite extends BaseCompletionSuite {
     "select-ignores-next-line",
     s"""
        |object Main {
-       |  def hello =
+       |  def hello = {
        |    val name = Option("Bob")
        |    name.@@
        |    println(msg) 
+       |  }
        |}
        |""".stripMargin,
     _.nonEmpty

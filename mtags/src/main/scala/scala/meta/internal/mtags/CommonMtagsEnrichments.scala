@@ -362,6 +362,28 @@ trait CommonMtagsEnrichments {
       content.setValue(doc)
       content
     }
+
+    def checkIfNotInComment(
+        treeStart: Int,
+        treeEnd: Int,
+        currentOffset: Int
+    ): Boolean = {
+      import scala.meta._
+      val text = doc.slice(treeStart, treeEnd)
+      val tokens = text.tokenize.toOption
+      tokens
+        .flatMap(t =>
+          t.find {
+            case t: Token.Comment
+                if treeStart + t.pos.start < currentOffset &&
+                  treeStart + t.pos.end >= currentOffset =>
+              true
+            case _ =>
+              false
+          }
+        )
+        .isEmpty
+    }
   }
 
   implicit class XtensionRelativePathMetals(file: RelativePath) {

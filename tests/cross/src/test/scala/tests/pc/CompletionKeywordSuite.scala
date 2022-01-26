@@ -4,9 +4,6 @@ import tests.BaseCompletionSuite
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   check(
     "super-template",
     """
@@ -39,7 +36,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  // tr@@
       |}
       |""".stripMargin,
-    """|""".stripMargin,
+    "",
     includeCommitCharacter = true
   )
 
@@ -58,7 +55,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  **/
       |}
       |""".stripMargin,
-    """|""".stripMargin,
+    "",
     includeCommitCharacter = true
   )
 
@@ -164,6 +161,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
            |override def equals(x$1: Object): Boolean
            |override def hashCode(): Int
            |override def finalize(): Unit
+           |""".stripMargin,
+      "3" ->
+        """|value: Int
+           |val
+           |var
            |""".stripMargin
     )
   )
@@ -185,6 +187,25 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
+    "given-def",
+    """
+      |package foo
+      |
+      |object A {
+      |  def someMethod = {
+      |    gi@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|given (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true,
+    compat = Map(
+      "2" -> ""
+    )
+  )
+
+  check(
     "val-arg",
     """
       |package foo
@@ -196,7 +217,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   checkEditLine(
@@ -249,7 +271,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """
       |override def toString(): String
-    """.stripMargin
+    """.stripMargin,
+    compat = Map(
+      "3" -> ""
+    )
   )
 
   check(
@@ -285,7 +310,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |class Foo {
       |}
       |""".stripMargin,
-    "", // you should not use the empty package
+    """|import (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true,
     enablePackageWrap = false
   )
 
@@ -307,7 +334,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |
       |typ@@
     """.stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" -> "type"
+    )
   )
 
   check(
@@ -408,7 +438,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
   )
 
   check(
-    "topLevel".tag(IgnoreScala3),
+    "topLevel",
     "@@",
     """|abstract class
        |case class
@@ -423,6 +453,54 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
        |sealed class
        |sealed trait
        |trait
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|def
+                |val
+                |lazy val
+                |inline
+                |var
+                |given
+                |extension
+                |type
+                |class
+                |enum
+                |case class
+                |trait
+                |object
+                |package
+                |import
+                |final
+                |private
+                |protected
+                |abstract class
+                |sealed trait
+                |sealed abstract class
+                |sealed class
+                |implicit
+                |""".stripMargin
+    )
   )
+
+  check(
+    "using",
+    """|object A{
+       |  def hello(u@@)
+       |}""".stripMargin,
+    """|using (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true,
+    compat = Map(
+      "2" -> ""
+    )
+  )
+
+  check(
+    "not-using",
+    """|object A{
+       |  def hello(a: String, u@@)
+       |}""".stripMargin,
+    ""
+  )
+
 }
