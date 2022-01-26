@@ -163,7 +163,6 @@ def shortType(longType: Type, history: ShortenedNames)(using
           ),
           loop(restpe, None)
         )
-      case ConstantType(value) => value.tpe
       case SuperType(thistpe, supertpe) =>
         SuperType(loop(thistpe, None), loop(supertpe, None))
       case AppliedType(tycon, args) =>
