@@ -11,15 +11,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.async.ConcurrentQueue
 
-final case class BatchedCallbackData[A, B](
-    arguments: Seq[A],
-    result: B
-)
-
-object BatchedCallbackData {
-  def noop[A, B]: BatchedCallbackData[A, B] => Unit = _ => ()
-}
-
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.
  *
@@ -31,7 +22,7 @@ final class BatchedFunction[A, B](
     fn: Seq[A] => CancelableFuture[B]
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B])
-    with Function2[Seq[A], BatchedCallbackData[A, B] => Unit, Future[B]]
+    with Function2[Seq[A], () => Unit, Future[B]]
     with Pauseable {
 
   /**
@@ -46,7 +37,7 @@ final class BatchedFunction[A, B](
    */
   def apply(
       arguments: Seq[A],
-      callback: BatchedCallbackData[A, B] => Unit
+      callback: () => Unit
   ): Future[B] = {
     val promise = Promise[B]()
     queue.add(Request(arguments, promise, callback))
@@ -55,12 +46,12 @@ final class BatchedFunction[A, B](
   }
 
   def apply(arguments: Seq[A]): Future[B] = {
-    apply(arguments, BatchedCallbackData.noop)
+    apply(arguments, () => ())
   }
 
   def apply(
       argument: A
-  ): Future[B] = apply(List(argument), BatchedCallbackData.noop)
+  ): Future[B] = apply(List(argument), () => ())
 
   override def doUnpause(): Unit = {
     unlock()
@@ -84,7 +75,7 @@ final class BatchedFunction[A, B](
   private case class Request(
       arguments: Seq[A],
       result: Promise[B],
-      callback: BatchedCallbackData[A, B] => Unit
+      callback: () => Unit
   )
 
   private val lock = new AtomicBoolean()
@@ -119,8 +110,7 @@ final class BatchedFunction[A, B](
         val resultF = for {
           result <- result.future
           _ <- Future {
-            val callbackData = BatchedCallbackData(args, result)
-            callbacks.foreach(cb => cb(callbackData))
+            callbacks.foreach(cb => cb())
           }
         } yield result
         resultF.onComplete { response =>

@@ -220,7 +220,7 @@ final class Compilations(
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(
           targets,
-          _ => {
+          () => {
             refreshTestSuites()
             if (targets.exists(isCurrentlyFocused)) {
               languageClient.refreshModel()
