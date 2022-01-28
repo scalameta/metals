@@ -29,7 +29,11 @@ class Supermethods(
       commandParams: TextDocumentPositionParams
   ): Option[ExecuteCommandParams] = {
     getGoToSuperMethodLocation(commandParams)
-      .map(ClientCommands.GotoLocation.toExecuteCommandParams(_, false))
+      .map(location =>
+        ClientCommands.GotoLocation.toExecuteCommandParams(
+          ClientCommands.WindowLocation(location.getUri(), location.getRange())
+        )
+      )
   }
 
   def jumpToSelectedSuperMethod(
@@ -42,7 +46,12 @@ class Supermethods(
       askUserToSelectSuperMethod(methodSymbols)
         .map(
           _.flatMap(findDefinitionLocation(_, path))
-            .map(ClientCommands.GotoLocation.toExecuteCommandParams(_, false))
+            .map(location =>
+              ClientCommands.GotoLocation.toExecuteCommandParams(
+                ClientCommands
+                  .WindowLocation(location.getUri(), location.getRange())
+              )
+            )
             .foreach(client.metalsExecuteClientCommand)
         )
     }

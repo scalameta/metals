@@ -548,27 +548,17 @@ case class ScalaPresentationCompiler(
       indexedContext: IndexedContext
   )(using Context): CompletionItem =
     val printer = SymbolPrinter()(using ctx)
-
-    def completionItemKind(
-        sym: Symbol
-    )(using ctx: Context): CompletionItemKind =
-      if sym.is(Package) || sym.is(Module) then
-        CompletionItemKind.Module // No CompletionItemKind.Package (https://github.com/Microsoft/language-server-protocol/issues/155)
-      else if sym.isConstructor then CompletionItemKind.Constructor
-      else if sym.isClass then CompletionItemKind.Class
-      else if sym.is(Mutable) then CompletionItemKind.Variable
-      else if sym.is(Method) then CompletionItemKind.Method
-      else CompletionItemKind.Field
-
     val editRange = completionPos.toEditRange
     val sym = completion.symbol
 
     // For overloaded signatures we get multiple symbols, so we need
     // to recalculate the description
     // related issue https://github.com/lampepfl/dotty/issues/11941
-    lazy val kind: CompletionItemKind = completionItemKind(sym)
+    lazy val kind: CompletionItemKind = completion.completionItemKind
 
-    val description = printer.completionDetailString(sym, history)
+    val description =
+      if sym != NoSymbol then printer.completionDetailString(sym, history)
+      else ""
 
     def mkItem0(
         ident: String,
@@ -605,7 +595,7 @@ case class ScalaPresentationCompiler(
       if sym.isDeprecated then
         item.setTags(List(CompletionItemTag.Deprecated).asJava)
 
-      item.setKind(completionItemKind(sym))
+      item.setKind(kind)
       item
     end mkItem0
 
@@ -662,6 +652,8 @@ case class ScalaPresentationCompiler(
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
       case CompletionValue.Kind.NamedArg => mkItem(ident, ident)
+      case CompletionValue.Kind.Keyword =>
+        mkItem(completion.label, completion.insertText.getOrElse(ident))
       case _ => mkItem(ident, ident.backticked)
     end match
   end completionItems

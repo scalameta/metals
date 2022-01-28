@@ -4,6 +4,7 @@ import scala.collection.mutable
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.internal.pc.completions.KeywordsCompletions
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
@@ -39,14 +40,18 @@ class CompletionProvider(
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (_, compilerCompletions) = Completion.completions(pos)
 
-    val (completions, result) =
-      compilerCompletions
-        .flatMap(CompletionValue.fromCompiler)
-        .filterInteresting()
+    val (completions, result) = path match
+      // should not show completions for toplevel
+      case Nil if pos.source.file.extension != "sc" =>
+        (List.empty, SymbolSearch.Result.COMPLETE)
+      case _ =>
+        compilerCompletions
+          .flatMap(CompletionValue.fromCompiler)
+          .filterInteresting()
 
     val args = Completions.namedArgCompletions(pos, path)
-    val all = completions ++ args
-
+    val keywords = KeywordsCompletions.contribute(path, completionPos)
+    val all = completions ++ args ++ keywords
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
     val values = application.postProcess(all.sorted(ordering))
@@ -112,6 +117,8 @@ class CompletionProvider(
         val id = head.kind match
           case CompletionValue.Kind.NamedArg =>
             sym.detailString + "="
+          case CompletionValue.Kind.Keyword =>
+            head.label
           case _ =>
             val name = SemanticdbSymbols.symbolName(sym)
             if sym.isClass || sym.is(Module) then
@@ -156,7 +163,8 @@ class CompletionProvider(
     defn.RootPackage,
     // NOTE(gabro) valueOf was added as a Predef member in 2.13. We filter it out since is a niche
     // use case and it would appear upon typing 'val'
-    defn.ValueOfClass.info.member(nme.valueOf).symbol
+    defn.ValueOfClass.info.member(nme.valueOf).symbol,
+    defn.ScalaPredefModule.requiredMethod(nme.valueOf)
   ).flatMap(_.alternatives.map(_.symbol)).toSet
 
   private def computeRelevancePenalty(
@@ -176,7 +184,7 @@ class CompletionProvider(
 
     // symbols defined in this file are more relevant
     if (pos.source != sym.source || sym.is(Package)) &&
-      completion.kind != CompletionValue.Kind.NamedArg
+      !completion.isCustom
     then relevance |= IsNotDefinedInFile
     // fields are more relevant than non fields
     if !hasGetter then relevance |= IsNotGetter
@@ -201,8 +209,8 @@ class CompletionProvider(
     completion.kind match
       case CompletionValue.Kind.Workspace =>
         relevance |= (IsWorkspaceSymbol + sym.name.show.length)
-      case CompletionValue.Kind.NamedArg =>
-        relevance |= IsNamedArg
+      case _ if completion.isCustom =>
+        relevance |= IsCustom
       case _ =>
     relevance
   end computeRelevancePenalty
@@ -275,8 +283,7 @@ class CompletionProvider(
         val s1 = o1.symbol
         val s2 = o2.symbol
         if s1.isLocal && s2.isLocal &&
-          o1.kind != CompletionValue.Kind.NamedArg &&
-          o2.kind != CompletionValue.Kind.NamedArg
+          !o1.isCustom && !o2.isCustom
         then
           if s1.srcPos.isAfter(s2.srcPos) then -1
           else 1
@@ -295,12 +302,16 @@ class CompletionProvider(
         val s1 = o1.symbol
         val s2 = o2.symbol
         val byLocalSymbol = compareLocalSymbols(o1, o2)
+        val bothHaveSymbols = o1.symbol != NoSymbol && o2.symbol != NoSymbol
         if byLocalSymbol != 0 then byLocalSymbol
         else
-          val byRelevance = Integer.compare(
-            computeRelevancePenalty(o1, application),
-            computeRelevancePenalty(o2, application)
-          )
+          val byRelevance =
+            if bothHaveSymbols then
+              Integer.compare(
+                computeRelevancePenalty(o1, application),
+                computeRelevancePenalty(o2, application)
+              )
+            else 0
           if byRelevance != 0 then byRelevance
           else
             val byFuzzy = Integer.compare(
@@ -313,7 +324,7 @@ class CompletionProvider(
                 s1.name.show,
                 s2.name.show
               )
-              if byIdentifier != 0 then byIdentifier
+              if byIdentifier != 0 || !bothHaveSymbols then byIdentifier
               else
                 val byOwner =
                   s1.owner.fullName.toString

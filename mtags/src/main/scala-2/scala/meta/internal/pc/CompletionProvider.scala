@@ -320,7 +320,14 @@ class CompletionProvider(
     }
     completions.foreach(visit)
     completion.contribute.foreach(visit)
-    buf ++= keywords(pos, editRange, latestParentTrees, completion, text)
+    buf ++= keywords(
+      pos,
+      editRange,
+      latestParentTrees,
+      completion,
+      text,
+      isAmmoniteScript
+    )
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)

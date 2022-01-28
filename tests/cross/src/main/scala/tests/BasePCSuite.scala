@@ -279,6 +279,8 @@ abstract class BasePCSuite extends BaseSuite {
 
   object IgnoreScala2 extends IgnoreScalaVersion(_.startsWith("2."))
 
+  object IgnoreScala212 extends IgnoreScalaVersion(_.startsWith("2.12"))
+
   object IgnoreScala3 extends IgnoreScalaVersion(_.startsWith("3."))
 
   case class RunForScalaVersion(versions: Set[String])

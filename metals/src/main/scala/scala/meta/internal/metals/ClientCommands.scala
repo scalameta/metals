@@ -226,8 +226,13 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  case class WindowLocation(
+      uri: String,
+      range: l.Range,
+      otherWindow: Boolean = false
+  )
   object GotoLocation
-      extends ParametrizedCommand2[l.Location, Boolean](
+      extends ParametrizedCommand[WindowLocation](
         "metals-goto-location",
         "Goto location",
         "Move the cursor focus to the provided location",
@@ -242,9 +247,9 @@ object ClientCommands {
            |  "range": {
            |    "start": {"line": 194, "character": 0},
            |    "end":   {"line": 194, "character": 1}
-           |  }
+           |  },
+           |  "otherWindow" : true
            |},
-           |  false
            |]
            |```
            |""".stripMargin

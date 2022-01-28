@@ -214,4 +214,28 @@ class HoverDefnSuite extends BaseHoverSuite {
     )
   )
 
+  check(
+    "val-int-literal".tag(IgnoreScala212),
+    """object a {
+      |  <<val @@x : 1 = 1>>
+      |}
+      |""".stripMargin,
+    """|val x: 1
+       |""".stripMargin.hover,
+    compat = Map(
+      "2.12" -> "",
+      "3" -> """|Int
+                |val x: (1 : Int)""".stripMargin.hover
+    )
+  )
+
+  check(
+    "val-int-literal-union".tag(IgnoreScala2),
+    """object a {
+      |  <<val @@x : 1 | 2 = 1>>
+      |}
+      |""".stripMargin,
+    "val x: (1 : Int) | (2 : Int)".hover
+  )
+
 }

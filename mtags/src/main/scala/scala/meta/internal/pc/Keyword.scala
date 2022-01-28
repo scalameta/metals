@@ -15,6 +15,10 @@ case class Keyword(
     isMethodBody: Boolean = false,
     // Does this keyword define a symbol? For example "def" or "class"
     isDefinition: Boolean = false,
+    // Is located in param definition
+    isParam: Boolean = false,
+    // Is this keyword only in Scala 3?
+    isScala3: Boolean = false,
     // Optional character to select this completion item, for example "."
     commitCharacter: Option[String] = None
 ) {
@@ -36,15 +40,21 @@ case class Keyword(
       isDefinition: Boolean,
       isMethodBody: Boolean,
       isTemplate: Boolean,
-      isPackage: Boolean
+      isPackage: Boolean,
+      isParam: Boolean,
+      isScala3: Boolean,
+      allowToplevel: Boolean
   ): Boolean = {
-    this.name.startsWith(name) && {
+    val isAllowedInThisScalaVersion = (this.isScala3 && isScala3) || !this.isScala3
+    this.name.startsWith(name) && isAllowedInThisScalaVersion && {
       (this.isExpression && isExpression) ||
       (this.isBlock && isBlock) ||
       (this.isDefinition && isDefinition) ||
       (this.isTemplate && isTemplate) ||
+      (this.isTemplate && allowToplevel && isPackage) ||
       (this.isPackage && isPackage) ||
-      (this.isMethodBody && isMethodBody)
+      (this.isMethodBody && isMethodBody) ||
+      (this.isParam && isParam)
     }
   }
 }
@@ -55,9 +65,14 @@ object Keyword {
     Keyword("def", isBlock = true, isTemplate = true, isDefinition = true),
     Keyword("val", isBlock = true, isTemplate = true, isDefinition = true),
     Keyword("lazy val", isBlock = true, isTemplate = true, isDefinition = true),
+    Keyword("inline", isBlock = true, isTemplate = true, isDefinition = true, isPackage = true, isScala3 = true),
+    Keyword("using", isParam = true, isScala3 = true),
     Keyword("var", isBlock = true, isTemplate = true, isDefinition = true),
+    Keyword("given", isBlock = true, isTemplate = true, isDefinition = true, isScala3 = true),
+    Keyword("extension", isBlock = true, isTemplate = true, isDefinition = true, isPackage = true, isScala3 = true),
     Keyword("type", isTemplate = true, isDefinition = true),
     Keyword("class", isTemplate = true, isPackage = true, isDefinition = true),
+    Keyword("enum", isTemplate = true, isPackage = true, isDefinition = true, isScala3 = true),
     Keyword("case class", isTemplate = true, isPackage = true, isDefinition = true),
     Keyword("trait", isTemplate = true, isPackage = true, isDefinition = true),
     Keyword("object", isTemplate = true, isPackage = true, isDefinition = true),
@@ -95,7 +110,8 @@ object Keyword {
     Keyword("with"),
     Keyword("catch"),
     Keyword("extends"),
-    Keyword("finally")
+    Keyword("finally"),
+    Keyword("then")
   )
 
 }
