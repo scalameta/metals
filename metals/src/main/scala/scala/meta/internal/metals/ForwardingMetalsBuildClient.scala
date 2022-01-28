@@ -12,7 +12,6 @@ import scala.util.Success
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
@@ -215,8 +214,7 @@ final class ForwardingMetalsBuildClient(
             hasReportedError.add(target)
             statusBar.addMessage(
               MetalsStatusParams(
-                message,
-                command = ClientCommands.FocusDiagnostics.id
+                message
               )
             )
           }
