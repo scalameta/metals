@@ -64,22 +64,34 @@ final class TestSuitesProvider(
     else Future.unit
 
   /**
+   * Discover tests:
+   * - for a workspace if path isn't defined
+   * - for a given file if path is defined
+   */
+  def discoverTests(
+      path: Option[AbsolutePath]
+  ): java.util.List[BuildTargetUpdate] = {
+    val updates = path match {
+      case Some(path0) => getTestCases(path0).toSeq
+      case None => getTestSuites()
+    }
+    updates.asJava
+  }
+
+  /**
    * Retrieves all cached test suites. Useful for tests.
    */
-  def getTestSuites(): java.util.List[BuildTargetUpdate] = {
-    index.suites
-      .map { case (buildTarget, entries) =>
-        BuildTargetUpdate(buildTarget, entries.map(_.testClass).toSeq)
-      }
-      .toSeq
-      .asJava
+  private def getTestSuites(): Seq[BuildTargetUpdate] = {
+    index.suites.map { case (buildTarget, entries) =>
+      BuildTargetUpdate(buildTarget, entries.map(_.testClass).toSeq)
+    }.toSeq
   }
 
   /**
    * Retrieve test cases for a given file. Even an empty list
    * because it can mean that all testcases were deleted.
    */
-  def getTestCases(
+  private def getTestCases(
       path: AbsolutePath,
       doc: Option[TextDocument] = None
   ): Option[BuildTargetUpdate] = {
@@ -113,18 +125,19 @@ final class TestSuitesProvider(
    */
   private def findTestCases(
       path: AbsolutePath,
-      textDocument: Option[TextDocument] = None,
+      textDocument: Option[TextDocument],
       symbol: Option[mtags.Symbol] = None
   ): Seq[AddTestCases] =
     for {
       metadata <- index.getMetadata(path).toSeq
-      doc <- textDocument.toSeq
       metadataEntry <- metadata.entries
       testEntry <- index.getTestEntry(
         metadataEntry.buildTarget,
         metadataEntry.suiteName
       )
       if symbol.forall(_ == testEntry.symbol)
+      // if text document isn't defined try to fetch it from semanticdbs
+      doc <- textDocument.orElse(getSemanticDb(testEntry.symbol).map(_._2))
     } yield {
       val testClass = testEntry.testClass
       val testCases = junitTestFinder.findTests(doc, path, testEntry.symbol)
@@ -266,6 +279,15 @@ final class TestSuitesProvider(
     buildTargetUpdates
   }
 
+  private def getSemanticDb(
+      symbol: mtags.Symbol
+  ): Option[(mtags.SymbolDefinition, TextDocument)] = {
+    for {
+      definition <- symbolIndex.definition(symbol)
+      doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
+    } yield (definition, doc)
+  }
+
   private def computeTestEntry(
       buildTarget: BuildTarget,
       symbol: mtags.Symbol,
@@ -275,8 +297,7 @@ final class TestSuitesProvider(
     val fullyQualifiedClassName = fullyQualifiedName.value.split('.').toSeq
     val entryWithDocumentOpt =
       for {
-        definition <- symbolIndex.definition(symbol)
-        doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
+        (definition, doc) <- getSemanticDb(symbol)
         location <- doc.toLocation(definition.path.toURI.toString, symbol.value)
         className <- fullyQualifiedClassName.takeRight(1).headOption
       } yield {

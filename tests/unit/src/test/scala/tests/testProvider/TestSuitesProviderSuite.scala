@@ -288,7 +288,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         _ <- initialize(layout)
         _ <- server.didOpen(file)
         _ <- server.executeCommand(ServerCommands.CascadeCompile)
-        jsonObjects <- server.client.updateTestExplorer.future
+        jsonObjects <- server.client.testExplorerUpdates.future
       } yield {
         val prettyPrinted = jsonObjects.map(gson.toJson)
         val prettyPrintedExpected = expected().map(gson.toJson)

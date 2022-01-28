@@ -1688,9 +1688,9 @@ class MetalsLanguageServer(
         fileDecoderProvider.decodedFileContents(uri).asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Future {
-          if (params.uri != null)
-            testProvider.getTestCases(params.uri.toAbsolutePath).asJava
-          else testProvider.getTestSuites()
+          testProvider.discoverTests(
+            Option(params.uri).map(_.toAbsolutePath)
+          )
         }.asJavaObject
       case ServerCommands.ChooseClass(params) =>
         fileDecoderProvider

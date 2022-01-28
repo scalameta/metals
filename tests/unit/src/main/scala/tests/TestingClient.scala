@@ -108,7 +108,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = (_) => ()
 
-  val updateTestExplorer: Promise[List[JsonObject]] =
+  val testExplorerUpdates: Promise[List[JsonObject]] =
     Promise[List[JsonObject]]()
 
   override def metalsExecuteClientCommand(
@@ -119,7 +119,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       case ClientCommands.RefreshModel.id =>
         refreshModelHandler(refreshCount.getAndIncrement())
       case ClientCommands.UpdateTestExplorer.id =>
-        updateTestExplorer.trySuccess(
+        testExplorerUpdates.trySuccess(
           params.getArguments().asScala.toList.asInstanceOf[List[JsonObject]]
         )
       case _ =>
