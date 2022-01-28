@@ -21,6 +21,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.ScalaPlatform
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -159,16 +160,22 @@ final class TestSuitesProvider(
   private def doRefreshTestSuites(): Future[Unit] =
     if (isEnabled) Future {
       val buildTargetList = buildTargets.allBuildTargetIds.toList
+        // filter out JS and Native platforms
+        .filter(id =>
+          buildTargets
+            .scalaTarget(id)
+            .forall(_.scalaInfo.getPlatform == ScalaPlatform.JVM)
+        )
         .flatMap(buildTargets.info)
         .filterNot(_.isSbtBuild)
 
       val symbolsPerTarget = buildTargetList
-        .map(buildTarget =>
+        .map { buildTarget =>
           SymbolsPerTarget(
             buildTarget,
             buildTargetClasses.classesOf(buildTarget.getId).testClasses
           )
-        )
+        }
 
       val deletedSuites = removeStaleTestSuites(symbolsPerTarget)
       val addedEntries = getTestEntries(symbolsPerTarget)
