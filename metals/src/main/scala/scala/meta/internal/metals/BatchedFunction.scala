@@ -11,15 +11,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.async.ConcurrentQueue
 
-final case class BatchedCallbackData[A, B](
-    arguments: Seq[A],
-    result: B
-)
-
-object BatchedCallbackData {
-  def noop[A, B]: BatchedCallbackData[A, B] => Unit = _ => ()
-}
-
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.
  *
