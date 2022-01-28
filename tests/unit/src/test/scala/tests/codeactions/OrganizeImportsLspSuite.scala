@@ -206,6 +206,34 @@ class OrganizeImportsLspSuite
   )
 
   check(
+    "basic-source-3",
+    """
+      |package a
+      |import scala.concurrent.duration.*
+      |import scala.concurrent.{Future<<>> as ScalaFuture}
+      |import scala.concurrent.ExecutionContext.global
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val k = ScalaFuture.successful(1)
+      |}
+      |""".stripMargin,
+    s"${SourceOrganizeImports.title}",
+    """
+      |package a
+      |import scala.concurrent.duration.*
+      |import scala.concurrent.{Future as ScalaFuture}
+      |
+      |object A {
+      |  val d = Duration(10, MICROSECONDS)
+      |  val k = ScalaFuture.successful(1)
+      |}
+      |""".stripMargin,
+    kind = List(sourceKind),
+    scalacOptions = scalacOption ++ List("-Xsource:3")
+  )
+
+  check(
     "on-unused",
     """|package a
        |
