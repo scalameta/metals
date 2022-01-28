@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Collections
+import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
@@ -296,9 +296,17 @@ case class ScalafixProvider(
         api.getClass.getClassLoader
       )
     } yield {
-      val scalacOption =
-        if (scalaBinaryVersion == "2.13") "-Wunused:imports"
-        else "-Ywarn-unused-import"
+      val scalacOptions: ju.List[String] = {
+        val list = new ju.ArrayList[String](2)
+
+        if (scalaBinaryVersion == "2.13") list.add("-Wunused:imports")
+        else list.add("-Ywarn-unused-import")
+
+        if (!isScala3 && scalaTarget.scalac.getOptions().contains("-Xsource:3"))
+          list.add("-Xsource:3")
+
+        list
+      }
 
       val evaluated = api
         .newArguments()
@@ -309,7 +317,7 @@ case class ScalafixProvider(
         .withRules(List(organizeImportRuleName).asJava)
         .withPaths(List(diskFilePath.toNIO).asJava)
         .withSourceroot(sourceroot.toNIO)
-        .withScalacOptions(Collections.singletonList(scalacOption))
+        .withScalacOptions(scalacOptions)
         .evaluate()
 
       if (produceSemanticdb)
