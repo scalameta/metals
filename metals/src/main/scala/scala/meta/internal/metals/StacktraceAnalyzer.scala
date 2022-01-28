@@ -56,9 +56,7 @@ class StacktraceAnalyzer(
   def stacktraceLenses(content: List[String]): Seq[l.CodeLens] = {
     (for {
       (line, row) <- content.zipWithIndex
-      cleanedLine = stripErrorSignifier(line)
-      if cleanedLine.startsWith("at ")
-      location <- fileLocationFromLine(cleanedLine)
+      location <- fileLocationFromLine(line)
       range = new l.Range(new l.Position(row, 0), new l.Position(row, 0))
     } yield makeGotoLocationCodeLens(location, range)).toSeq
   }
@@ -67,11 +65,16 @@ class StacktraceAnalyzer(
     def findLocationForSymbol(s: String): Option[Location] =
       definitionProvider.fromSymbol(s, None).asScala.headOption
 
-    for {
-      symbol <- symbolFromLine(line)
-      location <- toToplevelSymbol(symbol)
-        .collectFirst(Function.unlift(findLocationForSymbol))
-    } yield trySetLineFromStacktrace(location, line)
+    val cleanedLine = stripErrorSignifier(line)
+    if (cleanedLine.startsWith("at")) {
+      for {
+        symbol <- symbolFromLine(line)
+        location <- toToplevelSymbol(symbol)
+          .collectFirst(Function.unlift(findLocationForSymbol))
+      } yield trySetLineFromStacktrace(location, line)
+    } else {
+      None
+    }
   }
 
   /**
@@ -152,24 +155,20 @@ class StacktraceAnalyzer(
   ): l.ExecuteCommandParams = {
     def htmlStack(builder: HtmlBuilder): Unit = {
       for (line <- stacktrace.split('\n')) {
-        if (line.contains("at ")) {
-          fileLocationFromLine(line) match {
-            case Some(location) =>
-              builder
-                .text("at ")
-                .link(
-                  gotoLocationUsingUri(
-                    location.getUri,
-                    location.getRange.getStart.getLine,
-                    format
-                  ),
-                  line.substring(line.indexOf("at ") + 3)
-                )
-            case None =>
-              builder.raw(line)
-          }
-        } else {
-          builder.raw(line)
+        fileLocationFromLine(line) match {
+          case Some(location) =>
+            builder
+              .text("at ")
+              .link(
+                gotoLocationUsingUri(
+                  location.getUri,
+                  location.getRange.getStart.getLine,
+                  format
+                ),
+                line.substring(line.indexOf("at ") + 3)
+              )
+          case None =>
+            builder.raw(line)
         }
         builder.raw("<br>")
       }
