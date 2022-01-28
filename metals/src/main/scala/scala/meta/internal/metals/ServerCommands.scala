@@ -120,55 +120,20 @@ object ServerCommands {
     "discover-tests",
     "Discover tests",
     """
-      |Discovers all test suites in project
-      |
-      |The response will be an Array of `BuildTargetUpdate`s.
-      |
-      |```ts
-      |export interface BuildTargetUpdate {
-      |  targetName: TargetName;
-      |  targetUri: TargetUri;
-      |  events: TestExplorerEvent[];
-      |}
-      |export type TestExplorerEvent =
-      | RemoveTestSuite
-      | AddTestSuite
-      | AddTestCases;
-      |
-      |interface BaseTestExplorerEvent {
-      |  fullyQualifiedClassName: FullyQualifiedClassName;
-      |  className: ClassName;
-      |}
-      |export interface RemoveTestSuite extends BaseTestExplorerEvent {
-      |  kind: "removeSuite";
-      |}
-      |
-      |export interface AddTestSuite extends BaseTestExplorerEvent {
-      |  kind: "addSuite";
-      |  symbol: string;
-      |  location: Location;
-      |  canResolveChildren: boolean;
-      |}
-      |
-      |export interface AddTestCases extends BaseTestExplorerEvent {
-      |  kind: "addTestCases";
-      |  testCases: TestCaseEntry[];
-      |}
-      |
-      |export interface TestCaseEntry {
-      |  name: string;
-      |  location: Location;
-      |}
+      |Discovers all tests in project or a file.
+      |See ClientCommands.UpdateTestExplorer to see how response looks like.
       |```
       |""".stripMargin,
-    """Empty object if request is meant to discover all test suites
-      |or an object with uri, when request is meant to discover test cases for uri
-      |
-      |Example:
+    """
+      |An object with uri, when request is meant to discover test cases for uri
       |```json
       |{
       |  uri: file:///home/dev/foo/Bar.scala
       |}
+      |```
+      |or empty object if request is meant to discover all test suites
+      |```json
+      |{}
       |```
       |""".stripMargin
   )

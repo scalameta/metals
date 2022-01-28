@@ -184,27 +184,31 @@ object ClientCommands {
       |  targetUri: TargetUri;
       |  events: TestExplorerEvent[];
       |}
+      |
       |export type TestExplorerEvent =
       | RemoveTestSuite
       | AddTestSuite
       | AddTestCases;
       |
-      |interface BaseTestExplorerEvent {
-      |  fullyQualifiedClassName: FullyQualifiedClassName;
-      |  className: ClassName;
-      |}
       |export interface RemoveTestSuite extends BaseTestExplorerEvent {
       |  kind: "removeSuite";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
       |}
       |
       |export interface AddTestSuite extends BaseTestExplorerEvent {
       |  kind: "addSuite";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
       |  symbol: string;
       |  location: Location;
+      |  canResolveChildren: boolean;
       |}
       |
       |export interface AddTestCases extends BaseTestExplorerEvent {
       |  kind: "addTestCases";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
       |  testCases: TestCaseEntry[];
       |}
       |
