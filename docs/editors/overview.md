@@ -446,7 +446,7 @@ scripts.
     <td />
     <td align="center">sbt scripts</td>
     <td align="center">Worksheets</td>
-    <td align="center">Ammonite scripts</td>
+    <td align="center">Ammonite scripts*</td>
     <td align="center">Standalone Scala files</td>
   </tr>
 </thead>
@@ -580,11 +580,9 @@ scripts.
 </tbody>
 </table>
 
+\* Note that there are some specific Ammonite features that aren't supported
+like [multi-stage](https://ammonite.io/#Multi-stageScripts) scripts. Currently
+Ammonite support is also limited to Scala 2.
+
 \* Diagnostics for sbt script and standalone Scala files will only show parsing
 errors, but not diagnostics coming from the compiler.
-
-## Unsupported features
-
-Metals does not support the following features:
-
-- Refactoring: move class, extract/inline value, convert to block
