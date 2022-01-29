@@ -513,9 +513,6 @@ class DebugProvider(
       languageClient.metalsStatus(
         Messages.DebugErrorsPresent(clientConfig.icons())
       )
-      languageClient.metalsExecuteClientCommand(
-        ClientCommands.FocusDiagnostics.toExecuteCommandParams()
-      )
     case t: ClassNotFoundException =>
       languageClient.showMessage(
         Messages.DebugClassNotFound.invalidClass(t.getMessage())
