@@ -16,7 +16,8 @@ import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.Position
 
-class DecorationWorksheetPublisher() extends WorksheetPublisher {
+class DecorationWorksheetPublisher(isInlineDecorationProvider: Boolean)
+    extends WorksheetPublisher {
 
   private val commentHeader = " // "
 
@@ -65,7 +66,12 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
       decorations: Array[DecorationOptions]
   ): Unit = {
     val params =
-      new PublishDecorationsParams(path.toURI.toString(), decorations)
+      new PublishDecorationsParams(
+        path.toURI.toString(),
+        decorations,
+        // do not send additional param if it's not inline provider
+        isInline = if (isInlineDecorationProvider) false else null
+      )
     languageClient.metalsPublishDecorations(params)
   }
 
