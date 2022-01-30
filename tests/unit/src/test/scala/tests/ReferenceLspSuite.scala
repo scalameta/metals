@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
 
-class ReferenceLspSuite(
+abstract class ReferenceLspSuite(
     useVirtualDocuments: Boolean,
     suiteNameSuffix: String
 ) extends BaseRangesSuite(s"reference-$suiteNameSuffix") {
