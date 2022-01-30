@@ -27,7 +27,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Failure
 import scala.util.Properties
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
@@ -289,7 +291,7 @@ object MetalsEnrichments
     }
     def isDependencySource(workspace: AbsolutePath): Boolean = {
       (isLocalFileSystem(workspace) &&
-      isInReadonlyDirectory(workspace))
+        isInReadonlyDirectory(workspace)) || isJarFileSystem
     }
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
@@ -300,7 +302,8 @@ object MetalsEnrichments
     def isLocalFileSystem(workspace: AbsolutePath): Boolean =
       workspace.toNIO.getFileSystem == path.toNIO.getFileSystem
 
-    def isJarFileSystem: Boolean = path.toURI.getScheme() == "jar"
+    def isJarFileSystem: Boolean =
+      path.toNIO.getFileSystem().provider().getScheme().equals("jar")
 
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
@@ -395,7 +398,7 @@ object MetalsEnrichments
         AbsolutePath(out)
       }
 
-      // prevent inifinity loop
+      // prevent infinity loop
       if (retryCount > 5) {
         throw new Exception(s"Unable to save $path in workspace")
       } else if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
@@ -530,6 +533,32 @@ object MetalsEnrichments
 
   }
 
+  implicit class XtensionURI(value: URI) {
+    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
+    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+      val path =
+        if (value.getScheme() == "jar")
+          Try {
+            AbsolutePath(Paths.get(value))
+          } match {
+            case Success(path) => path
+            case Failure(_) =>
+              // don't close - put up with the resource staying open so all AbsolutePath methods don't have to be wrapped
+              m.internal.io.PlatformFileIO.newFileSystem(
+                value,
+                new java.util.HashMap[String, String]()
+              )
+              AbsolutePath(Paths.get(value))
+          }
+        else
+          AbsolutePath(Paths.get(value))
+      if (followSymlink)
+        path.dealias
+      else
+        path
+    }
+  }
+
   implicit class XtensionString(value: String) {
 
     /**
@@ -588,17 +617,12 @@ object MetalsEnrichments
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
       // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
       // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
-      val decodedUriStr =
-        if (value.toUpperCase.startsWith("JAR:FILE%3A"))
-          URLDecoder.decode(value, "UTF-8")
-        else value
-      val path = AbsolutePath(
-        Paths.get(URI.create(decodedUriStr.stripPrefix("metals:")))
-      )
-      if (followSymlink)
-        path.dealias
+      if (value.toUpperCase.startsWith("JAR%3AFILE"))
+        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+      else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
+        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
       else
-        path
+        URI.create(value.stripPrefix("metals:")).toAbsolutePath(followSymlink)
     }
 
     def indexToLspPosition(index: Int): l.Position = {
@@ -737,7 +761,7 @@ object MetalsEnrichments
   implicit class XtensionClasspath(classpath: List[String]) {
     def toAbsoluteClasspath: Iterator[AbsolutePath] = {
       classpath.iterator
-        .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
+        .map(_.toAbsolutePath)
         .filter(p => Files.exists(p.toNIO))
     }
   }

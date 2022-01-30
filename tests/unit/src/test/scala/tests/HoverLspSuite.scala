@@ -1,9 +1,24 @@
 package tests
 
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.{BuildInfo => V}
 
-class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
+abstract class HoverLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"hover-$suiteNameSuffix")
+    with TestHovers {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   test("basic".tag(FlakyWindows)) {
     for {
@@ -154,3 +169,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
   }
 
 }
+
+class HoverLspSaveToDiskSuite extends HoverLspSuite(false, "save-to-disk")
+
+class HoverLspVirtualDocSuite extends HoverLspSuite(true, "virtual-docs")

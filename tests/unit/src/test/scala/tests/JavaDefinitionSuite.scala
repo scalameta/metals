@@ -26,8 +26,11 @@ abstract class JavaDefinitionSuite(
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
-      InitializationOptions.Default.copy(isVirtualDocumentSupported =
-        Some(useVirtualDocuments)
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
       )
     )
 

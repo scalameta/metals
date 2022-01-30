@@ -4,6 +4,7 @@ import java.nio.file.Files
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -11,7 +12,20 @@ import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import tests.MetalsTestEnrichments._
 
-class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
+abstract class WorkspaceSymbolLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"workspace-symbol-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   test("basic") {
     cleanWorkspace()
@@ -157,10 +171,12 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         "scala/Option.scala",
         " None"
       )
-      optionSourcePath = server
+      optionSourceAbsolutePath = server
         .toPath("scala/Option.scala")
-        .toRelative(workspace)
-        .toString
+      optionSourcePath = {
+        if (useVirtualDocuments) optionSourceAbsolutePath
+        else optionSourceAbsolutePath.toRelative(workspace)
+      }.toString
         .replace("\\", "/")
       _ = assertNoDiff(
         optionReferences,
@@ -328,3 +344,9 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 }
+
+class WorkspaceSymbolLspSaveToDiskSuite
+    extends WorkspaceSymbolLspSuite(false, "save-to-disk")
+
+class WorkspaceSymbolLspVirtualDocSuite
+    extends WorkspaceSymbolLspSuite(true, "virtual-docs")

@@ -2,9 +2,24 @@ package tests
 
 import java.nio.file.Files
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.RecursivelyDelete
 
-class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
+abstract class FileWatcherLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"file-watcher-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
+
   test("basic") {
     cleanCompileCache("a")
     cleanCompileCache("b")
@@ -115,3 +130,9 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
     } yield ()
   }
 }
+
+class FileWatcherLspSaveToDiskSuite
+    extends FileWatcherLspSuite(false, "save-to-disk")
+
+class FileWatcherLspVirtualDocSuite
+    extends FileWatcherLspSuite(true, "virtual-docs")

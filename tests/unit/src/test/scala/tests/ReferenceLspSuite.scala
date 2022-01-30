@@ -2,9 +2,23 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
 
-class ReferenceLspSuite extends BaseRangesSuite("reference") {
+class ReferenceLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseRangesSuite(s"reference-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   test("case-class") {
     cleanWorkspace()
@@ -403,3 +417,9 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     server.assertReferences(filename, edit, expected, base)
   }
 }
+
+class ReferenceLspSaveToDiskSuite
+    extends ReferenceLspSuite(false, "save-to-disk")
+
+class ReferenceLspVirtualDocSuite
+    extends ReferenceLspSuite(true, "virtual-docs")

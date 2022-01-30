@@ -2,13 +2,27 @@ package tests
 
 import scala.collection.SortedSet
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.tvp.TreeViewProvider
 
 /**
  * @note This suite will fail on openjdk8 < 262)
  *       due to https://mail.openjdk.java.net/pipermail/jdk8u-dev/2020-July/012143.html
  */
-class TreeViewLspSuite extends BaseLspSuite("tree-view") {
+abstract class TreeViewLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"tree-view-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   /**
    * The libraries we expect to find for tests in this file.
@@ -534,3 +548,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     } yield ()
   }
 }
+
+class TreeViewLspSaveToDiskSuite extends TreeViewLspSuite(false, "save-to-disk")
+
+class TreeViewLspVirtualDocSuite extends TreeViewLspSuite(true, "virtual-docs")

@@ -23,12 +23,14 @@ final class StepNavigator(
       val info = stoppage.frame.info
       val (actualPath, actualLine) =
         if (info.getSource == null) (null, info.getLine)
-        else (info.getSource.getPath.toAbsolutePath, info.getLine)
+        else (info.getSource.getPath, info.getLine)
 
       val (expected, nextStep) = expectedSteps.dequeue()
 
-      if (actualLine == expected.line && actualPath == expected.file) {
-        if (expected.file.exists) {
+      if (
+        actualLine == expected.line && expected.pathEqualsActual(actualPath)
+      ) {
+        if (actualPath.toAbsolutePath.exists) {
           nextStep
         } else {
           throw new Exception(s"${expected.file} does not exist")
@@ -42,20 +44,21 @@ final class StepNavigator(
   }
 
   def at(path: String, line: Int)(nextStep: DebugStep): StepNavigator = {
-    at(root.resolve(path), line)(nextStep)
-  }
-
-  private def at(path: AbsolutePath, line: Int)(
-      nextStep: DebugStep
-  ): StepNavigator = {
-    val location = Location(path, line)
-    new StepNavigator(root, dependencies, steps :+ (location -> nextStep))
+    val location = WorkspaceLocation(root, path, line)
+    at(location)(nextStep)
   }
 
   def atDependency(path: String, line: Int)(
       nextStep: DebugStep
   ): StepNavigator = {
-    at(dependencies.resolve(path), line)(nextStep)
+    val location = DependencyLocation(dependencies, path, line)
+    at(location)(nextStep)
+  }
+
+  private def at(location: Location)(
+      nextStep: DebugStep
+  ): StepNavigator = {
+    new StepNavigator(root, dependencies, steps :+ (location -> nextStep))
   }
 
   override def shutdown: Future[Unit] = {
@@ -73,8 +76,34 @@ object StepNavigator {
   def apply(root: AbsolutePath): StepNavigator =
     new StepNavigator(root, root.resolve(Directories.dependencies), Nil)
 
-  case class Location(file: AbsolutePath, line: Long) {
-    override def toString: String = s"$file:$line"
+  sealed trait Location {
+    def pathEqualsActual(actual: String): Boolean
+    def file: String
+    def line: Long
   }
+  case class WorkspaceLocation(root: AbsolutePath, path: String, lineNum: Long)
+      extends Location {
 
+    override def pathEqualsActual(actual: String): Boolean =
+      actual.stripPrefix("file://") == file.toString
+    override def file: String = root.resolve(path).toString
+    override def line: Long = lineNum
+    override def toString: String = s"$root$file:$line"
+  }
+  case class DependencyLocation(
+      dependencies: AbsolutePath,
+      path: String,
+      lineNum: Long
+  ) extends Location {
+
+    override def pathEqualsActual(actual: String): Boolean = {
+      if (actual.startsWith("jar:"))
+        actual.endsWith(path)
+      else
+        actual.stripPrefix("file://") == file.toString
+    }
+    override def file: String = dependencies.resolve(path).toString
+    override def line: Long = lineNum
+    override def toString: String = s"$dependencies$file:$line"
+  }
 }

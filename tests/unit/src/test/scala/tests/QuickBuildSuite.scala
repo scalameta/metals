@@ -1,6 +1,22 @@
 package tests
 
-class QuickBuildSuite extends BaseLspSuite("quick-build") {
+import scala.meta.internal.metals.InitializationOptions
+
+abstract class QuickBuildSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"quick-build-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
+
   test("basic") {
     cleanCompileCache("b")
     for {
@@ -73,3 +89,7 @@ class QuickBuildSuite extends BaseLspSuite("quick-build") {
     } yield ()
   }
 }
+
+class QuickBuildSaveToDiskSuite extends QuickBuildSuite(false, "save-to-disk")
+
+class QuickBuildVirtualDocSuite extends QuickBuildSuite(true, "virtual-docs")

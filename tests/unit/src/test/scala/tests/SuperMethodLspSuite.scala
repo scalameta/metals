@@ -2,9 +2,24 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
+
 import org.eclipse.lsp4j.Position
 
-class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
+abstract class SuperMethodLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"gotosupermethod-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   test("simple") {
     val code =
@@ -342,3 +357,9 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     (result.toMap, expected.toMap)
   }
 }
+
+class SuperMethodLspSaveToDiskSuite
+    extends SuperMethodLspSuite(false, "save-to-disk")
+
+class SuperMethodLspVirtualDocSuite
+    extends SuperMethodLspSuite(true, "virtual-docs")

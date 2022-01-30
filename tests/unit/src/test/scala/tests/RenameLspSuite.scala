@@ -1,6 +1,21 @@
 package tests
 
-class RenameLspSuite extends BaseRenameLspSuite("rename") {
+import scala.meta.internal.metals.InitializationOptions
+
+abstract class RenameLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseRenameLspSuite(s"rename-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   renamed(
     "basic",
@@ -813,3 +828,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
   override protected def compilerPlugins: List[String] =
     List("org.scalamacros:::paradise:2.1.1")
 }
+
+class RenameLspSaveToDiskSuite extends RenameLspSuite(false, "save-to-disk")
+
+class RenameLspVirtualDocSuite extends RenameLspSuite(true, "virtual-docs")

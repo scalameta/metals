@@ -4,7 +4,14 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 
-class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
+abstract class WorksheetLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends tests.BaseWorksheetLspSuite(
+      V.scala212,
+      useVirtualDocuments,
+      suiteNameSuffix
+    ) {
 
   checkWorksheetDeps(
     "imports-inside",
@@ -167,3 +174,9 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
     } yield ()
   }
 }
+
+class WorksheetLspSaveToDiskSuite
+    extends WorksheetLspSuite(false, "save-to-disk")
+
+class WorksheetLspVirtualDocSuite
+    extends WorksheetLspSuite(true, "virtual-docs")

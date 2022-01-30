@@ -1,9 +1,24 @@
 package tests
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-class DefinitionLspSuite extends BaseLspSuite("definition") {
+abstract class DefinitionLspSuite(
+    useVirtualDocuments: Boolean,
+    suiteNameSuffix: String
+) extends BaseLspSuite(s"definition-$suiteNameSuffix") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
+
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(
       statistics = new StatisticsConfig("diagnostics")
@@ -390,3 +405,9 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   }
 
 }
+
+class DefinitionLspSaveToDiskSuite
+    extends DefinitionLspSuite(false, "save-to-disk")
+
+class DefinitionLspVirtualDocSuite
+    extends DefinitionLspSuite(true, "virtual-docs")

@@ -9,7 +9,7 @@ import scala.meta.internal.semver.SemVer
 import munit.Flaky
 import munit.Tag
 
-class BaseSuite extends munit.FunSuite with Assertions {
+abstract class BaseSuite extends munit.FunSuite with Assertions {
 
   /**
    * Tests that are only flaky on Windows

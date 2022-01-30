@@ -1,5 +1,6 @@
 package tests.debug
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
@@ -13,10 +14,21 @@ import tests.BuildToolLayout
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
 abstract class BaseStepDapSuite(
+    useVirtualDocuments: Boolean,
     suiteName: String,
     initializer: BuildServerInitializer,
     buildToolLayout: BuildToolLayout
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 
   private val scalaLibDependency = s"scala-library-$scalaVersion-sources.jar"
   private val javaLibDependency = s"src.zip"
@@ -101,13 +113,13 @@ abstract class BaseStepDapSuite(
                  |}
                  |""".stripMargin,
     main = "a.Main",
-    instrument = steps =>
+    instrument = steps => {
+      val jarDep =
+        s"$scalaLibDependency${if (useVirtualDocuments) "!" else ""}/scala/Predef.scala"
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(
-          s"$scalaLibDependency/scala/Predef.scala",
-          line = 404
-        )(Continue)
+        .atDependency(jarDep, line = 404)(Continue)
+    }
   )
 
   assertSteps("step-into-java-lib")(
@@ -127,10 +139,11 @@ abstract class BaseStepDapSuite(
         if (isJava17) ("java.base/java/io/PrintStream.java", 1027)
         else if (isJava8) ("java/io/PrintStream.java", 805)
         else ("java.base/java/io/PrintStream.java", 881)
-
+      val jarDep =
+        s"$javaLibDependency${if (useVirtualDocuments) "!" else ""}/$javaLibFile"
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(s"$javaLibDependency/$javaLibFile", javaLibLine)(Continue)
+        .atDependency(jarDep, javaLibLine)(Continue)
     }
   )
 
@@ -168,10 +181,10 @@ abstract class BaseStepDapSuite(
       cleanWorkspace()
       val debugLayout = DebugWorkspaceLayout(sources)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
-      val navigator = instrument(StepNavigator(workspace))
 
       for {
         _ <- initialize(workspaceLayout)
+        navigator = instrument(StepNavigator(workspace))
         debugger <- debugMain("a", main, navigator)
         _ <- debugger.initialize
         _ <- debugger.launch

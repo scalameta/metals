@@ -63,9 +63,11 @@ private[debug] object MetalsDebugAdapter {
 
   def `2.x`(
       buildTargets: BuildTargets,
-      targets: Seq[BuildTargetIdentifier]
+      targets: Seq[BuildTargetIdentifier],
+      saveJarFileToDisk: Boolean
   ): MetalsDebugAdapter2x = {
-    val sourcePathAdapter = SourcePathAdapter(buildTargets, targets)
+    val sourcePathAdapter =
+      SourcePathAdapter(buildTargets, targets, saveJarFileToDisk)
     new MetalsDebugAdapter2x(sourcePathAdapter)
   }
 }
