@@ -94,14 +94,14 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         .toURI
         .toString()
       expectedParamsBoston = URLEncoder.encode(
-        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}}}]"""
+        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}},"otherWindow":false}]"""
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "    hello()@@",
         s"""|**Synthetics**:
             |
-            |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.goto-position?$expectedParamsBoston))
+            |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.metals-goto-location?$expectedParamsBoston))
             |""".stripMargin
       )
       // Implicit conversions

@@ -11,6 +11,7 @@ import scala.{meta => m}
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.HoverExtParams
@@ -328,8 +329,8 @@ final class SyntheticsDecorationProvider(
       range: s.Range,
       format: CommandHTMLFormat
   ): String = {
-    val location = new l.Location(uri, range.toLSP)
-    ServerCommands.GotoPosition.toCommandLink(location, format)
+    val location = ClientCommands.WindowLocation(uri, range.toLSP)
+    ClientCommands.GotoLocation.toCommandLink(location, format)
   }
 
   private def gotoSymbolUsingUri(
