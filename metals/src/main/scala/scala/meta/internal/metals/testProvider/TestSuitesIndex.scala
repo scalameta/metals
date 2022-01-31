@@ -47,13 +47,13 @@ private[testProvider] final class TestSuitesIndex {
    * "a/TestSuiteName#, a.TestSuiteName"
    */
   private val cachedTestSuites =
-    mutable.Map[
+    TrieMap[
       BuildTarget,
-      mutable.Map[FullyQualifiedName, TestEntry]
+      TrieMap[FullyQualifiedName, TestEntry]
     ]()
-  private val fileToMetadata = mutable.Map[AbsolutePath, TestFileMetadata]()
+  private val fileToMetadata = TrieMap[AbsolutePath, TestFileMetadata]()
 
-  def suites: Iterable[(BuildTarget, Iterable[TestEntry])] =
+  def allSuites: Iterable[(BuildTarget, Iterable[TestEntry])] =
     cachedTestSuites.mapValues(_.values).toIterable
 
   def put(
@@ -63,7 +63,7 @@ private[testProvider] final class TestSuitesIndex {
       case Some(suites) =>
         suites.put(entry.suiteName, entry)
       case None =>
-        val suites = mutable.Map(entry.suiteName -> entry)
+        val suites = TrieMap(entry.suiteName -> entry)
         cachedTestSuites.put(entry.buildTarget, suites)
     }
 
@@ -130,4 +130,15 @@ private[testProvider] final class TestSuitesIndex {
       entry
     }
   }
+
+  def remove(path: AbsolutePath): List[TestEntry] = {
+    for {
+      metadata <- fileToMetadata.remove(path).toList
+      entry <- metadata.entries
+    } yield {
+      remove(entry.buildTarget, entry.suiteName)
+      entry
+    }
+  }
+
 }

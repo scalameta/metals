@@ -42,6 +42,7 @@ class SemanticdbIndexer(
   def onDelete(file: Path): Unit = {
     referenceProvider.onDelete(file)
     implementationProvider.onDelete(file)
+    testSuitesProvider.onDelete(file)
   }
 
   private def onChangeDirectory(dir: Path): Unit = {

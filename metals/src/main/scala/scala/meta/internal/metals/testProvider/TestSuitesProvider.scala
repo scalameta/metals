@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.testProvider
 
+import java.nio.file.Path
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -57,6 +59,17 @@ final class TestSuitesProvider(
     }
   }
 
+  def onDelete(file: Path): Unit = {
+    val removed = index.remove(AbsolutePath(file))
+    removed match {
+      case Nil => ()
+      case head :: _ =>
+        updateClient(
+          BuildTargetUpdate(head.buildTarget, removed.map(_.testClass.asRemove))
+        )
+    }
+  }
+
   /**
    * Check if opened file contains test suite and update test cases if yes.
    */
@@ -79,11 +92,19 @@ final class TestSuitesProvider(
     updates.asJava
   }
 
+  private def updateClient(updates: BuildTargetUpdate*): Unit = {
+    client.metalsExecuteClientCommand(
+      ClientCommands.UpdateTestExplorer.toExecuteCommandParams(
+        updates: _*
+      )
+    )
+  }
+
   /**
    * Retrieves all cached test suites. Useful for tests.
    */
   private def getTestSuites(): Seq[BuildTargetUpdate] = {
-    index.suites.map { case (buildTarget, entries) =>
+    index.allSuites.map { case (buildTarget, entries) =>
       BuildTargetUpdate(buildTarget, entries.map(_.testClass).toSeq)
     }.toSeq
   }
@@ -159,6 +180,7 @@ final class TestSuitesProvider(
    */
   private def doRefreshTestSuites(): Future[Unit] =
     if (isEnabled) Future {
+      val start = System.currentTimeMillis()
       val buildTargetList = buildTargets.allBuildTargetIds.toList
         // filter out JS and Native platforms
         .filter(id =>
@@ -210,6 +232,10 @@ final class TestSuitesProvider(
           )
         )
       }
+
+      val end = System.currentTimeMillis()
+      val diff = end - start
+      pprint.log(s"Refresh took ${diff}ms")
     }
     else Future.successful(())
 
@@ -273,17 +299,18 @@ final class TestSuitesProvider(
       addedTestCases: Map[BuildTarget, Seq[TestExplorerEvent]]
   ): Seq[BuildTargetUpdate] = {
 
-    val buildTargetUpdates =
-      (deletedSuites.keySet ++ addedSuites.keySet ++ addedTestCases.keySet)
-        .map { buildTarget =>
-          val deleted = deletedSuites.get(buildTarget).getOrElse(Seq.empty)
-          val added = addedSuites.get(buildTarget).getOrElse(Seq.empty)
-          val added0 = addedTestCases.get(buildTarget).getOrElse(Seq.empty)
-          BuildTargetUpdate(buildTarget, deleted ++ added ++ added0)
+    val aggregated =
+      (deletedSuites.toSeq ++ addedSuites.toSeq ++ addedTestCases.toSeq)
+        .foldLeft(Map.empty[BuildTarget, Seq[TestExplorerEvent]]) {
+          case (acc, (target, events)) =>
+            val prev = acc.getOrElse(target, Seq.empty)
+            acc.updated(target, events ++ prev)
         }
-        .filterNot(_.events.isEmpty())
-        .toSeq
-    buildTargetUpdates
+
+    aggregated.flatMap { case (target, events) =>
+      if (events.nonEmpty) Some(BuildTargetUpdate(target, events))
+      else None
+    }.toSeq
   }
 
   private def getSemanticDb(
@@ -300,13 +327,11 @@ final class TestSuitesProvider(
       symbol: mtags.Symbol,
       fullyQualifiedName: FullyQualifiedName
   ): Option[(TestEntry, TextDocument)] = {
-    // fullyQualifiedClassName always contains at least one element - class name
-    val fullyQualifiedClassName = fullyQualifiedName.value.split('.').toSeq
+    val className = fullyQualifiedName.value.split('.').last
     val entryWithDocumentOpt =
       for {
         (definition, doc) <- getSemanticDb(symbol)
         location <- doc.toLocation(definition.path.toURI.toString, symbol.value)
-        className <- fullyQualifiedClassName.takeRight(1).headOption
       } yield {
         val canResolveChildren = doc.occurrences.exists(
           _.symbol == JunitTestFinder.junitAnnotationSymbol
