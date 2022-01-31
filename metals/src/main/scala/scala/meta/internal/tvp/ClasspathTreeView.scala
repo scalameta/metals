@@ -20,7 +20,6 @@ class ClasspathTreeView[Value, Key](
     scheme: String,
     title: String,
     id: Value => Key,
-    context: String,
     encode: Key => String,
     decode: String => Key,
     valueTitle: Value => String,
@@ -34,8 +33,7 @@ class ClasspathTreeView[Value, Key](
       viewId,
       rootUri,
       title + s" (${toplevels().size})",
-      collapseState = MetalsTreeItemCollapseState.collapsed,
-      contextValue = "root"
+      collapseState = MetalsTreeItemCollapseState.collapsed
     )
 
   def matches(uri: String): Boolean = uri.startsWith(rootUri)
@@ -166,8 +164,7 @@ class ClasspathTreeView[Value, Key](
       uri,
       valueTitle(value),
       tooltip = valueTooltip(value),
-      collapseState = MetalsTreeItemCollapseState.collapsed,
-      contextValue = context
+      collapseState = MetalsTreeItemCollapseState.collapsed
     )
   }
 

@@ -10,9 +10,9 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTarget
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
-import ch.epfl.scala.bsp4j.BuildTarget
 
 final class BuildTargetProvider(
     buildTargets: BuildTargets,
