@@ -180,7 +180,6 @@ final class TestSuitesProvider(
    */
   private def doRefreshTestSuites(): Future[Unit] =
     if (isEnabled) Future {
-      val start = System.currentTimeMillis()
       val buildTargetList = buildTargets.allBuildTargetIds.toList
         // filter out JS and Native platforms
         .filter(id =>
@@ -232,10 +231,6 @@ final class TestSuitesProvider(
           )
         )
       }
-
-      val end = System.currentTimeMillis()
-      val diff = end - start
-      pprint.log(s"Refresh took ${diff}ms")
     }
     else Future.successful(())
 
@@ -245,7 +240,7 @@ final class TestSuitesProvider(
    */
   private def removeStaleTestSuites(
       symbolsPerTargets: List[SymbolsPerTarget]
-  ): Map[BuildTarget, Seq[TestExplorerEvent]] = {
+  ): Map[BuildTarget, List[TestExplorerEvent]] = {
     // when test suite is deleted it has to be removed from cache
     symbolsPerTargets.map { case SymbolsPerTarget(buildTarget, testSymbols) =>
       val fromBSP = testSymbols.values.toSet.map(FullyQualifiedName(_))
@@ -266,8 +261,8 @@ final class TestSuitesProvider(
    * Returns discovered test entries per build target.
    */
   private def getTestEntries(
-      symbolsPerTarget: Seq[SymbolsPerTarget]
-  ): Map[BuildTarget, Seq[(TestEntry, TextDocument)]] = {
+      symbolsPerTarget: List[SymbolsPerTarget]
+  ): Map[BuildTarget, List[(TestEntry, TextDocument)]] = {
     val entries = for {
       SymbolsPerTarget(buildTarget, testSymbols) <- symbolsPerTarget
       cachedSuites = index.getSuites(buildTarget)
@@ -292,20 +287,23 @@ final class TestSuitesProvider(
   /**
    * Compute BuildTargetUpdates from added and deleted entries.
    * For added entry check if it's located in currently opened file, if yes try to find test cases for it.
+   * Order of events in build target update: delete suite, add suite, add test cases.
    */
   private def getBuildTargetUpdates(
-      deletedSuites: Map[BuildTarget, Seq[TestExplorerEvent]],
-      addedSuites: Map[BuildTarget, Seq[TestExplorerEvent]],
-      addedTestCases: Map[BuildTarget, Seq[TestExplorerEvent]]
+      deletedSuites: Map[BuildTarget, List[TestExplorerEvent]],
+      addedSuites: Map[BuildTarget, List[TestExplorerEvent]],
+      addedTestCases: Map[BuildTarget, List[TestExplorerEvent]]
   ): Seq[BuildTargetUpdate] = {
-
+    // because events are being prepended list them in reversed order
+    // (testcases, add, remove)
+    val allEvents =
+      addedTestCases.toSeq ++ addedSuites.toSeq ++ deletedSuites.toSeq
     val aggregated =
-      (deletedSuites.toSeq ++ addedSuites.toSeq ++ addedTestCases.toSeq)
-        .foldLeft(Map.empty[BuildTarget, Seq[TestExplorerEvent]]) {
-          case (acc, (target, events)) =>
-            val prev = acc.getOrElse(target, Seq.empty)
-            acc.updated(target, events ++ prev)
-        }
+      allEvents.foldLeft(Map.empty[BuildTarget, List[TestExplorerEvent]]) {
+        case (acc, (target, events)) =>
+          val prev = acc.getOrElse(target, List.empty)
+          acc.updated(target, events ++ prev)
+      }
 
     aggregated.flatMap { case (target, events) =>
       if (events.nonEmpty) Some(BuildTargetUpdate(target, events))

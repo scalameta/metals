@@ -115,21 +115,12 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           targetUri,
           List[TestExplorerEvent](
             AddTestSuite(
-              "NoPackage",
-              "NoPackage",
-              "_empty_/NoPackage#",
+              "foo.bar.FooBar",
+              "FooBar",
+              "foo/bar/FooBar#",
               QuickLocation(
-                classUriFor("app/src/main/scala/NoPackage.scala"),
-                (0, 6, 0, 15)
-              ).toLsp
-            ),
-            AddTestSuite(
-              "another.AnotherPackage",
-              "AnotherPackage",
-              "another/AnotherPackage#",
-              QuickLocation(
-                classUriFor("app/src/main/scala/another/AnotherPackage.scala"),
-                (2, 6, 2, 20)
+                classUriFor("app/src/main/scala/foo/bar/FooBar.scala"),
+                (2, 6, 2, 12)
               ).toLsp
             ),
             AddTestSuite(
@@ -142,12 +133,21 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               ).toLsp
             ),
             AddTestSuite(
-              "foo.bar.FooBar",
-              "FooBar",
-              "foo/bar/FooBar#",
+              "another.AnotherPackage",
+              "AnotherPackage",
+              "another/AnotherPackage#",
               QuickLocation(
-                classUriFor("app/src/main/scala/foo/bar/FooBar.scala"),
-                (2, 6, 2, 12)
+                classUriFor("app/src/main/scala/another/AnotherPackage.scala"),
+                (2, 6, 2, 20)
+              ).toLsp
+            ),
+            AddTestSuite(
+              "NoPackage",
+              "NoPackage",
+              "_empty_/NoPackage#",
+              QuickLocation(
+                classUriFor("app/src/main/scala/NoPackage.scala"),
+                (0, 6, 0, 15)
               ).toLsp
             )
           ).asJava
@@ -266,10 +266,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         _ <- initialize(layout)
         discovered <- server.discoverTestSuites(files, uri())
       } yield {
-        val prettyPrinted = discovered.map(gson.toJson)
-        val prettyPrintedExpected = expected().map(gson.toJson)
-
-        assertEquals(prettyPrinted, prettyPrintedExpected)
+        assertEquals(discovered, expected())
       }
     }
   }
