@@ -157,17 +157,11 @@ final class SyntheticsDecorationProvider(
      * If at any time worksheets will support it, we need to make sure that the
      * evaluation will not be replaced with implicit decorations.
      */
-    if (isFocusedDocument) {
-      val textDocument = currentDocument(path)
-      textDocument match {
-        case Some(doc) =>
-          decorations(path, doc)
-        case _ =>
-          Nil
-      }
-
-    } else {
-      Nil
+    currentDocument(path) match {
+      case Some(doc) if isFocusedDocument =>
+        decorations(path, doc)
+      case _ =>
+        Nil
     }
   }
 

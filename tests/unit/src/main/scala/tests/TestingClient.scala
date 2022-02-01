@@ -397,7 +397,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           .filter { case (deco, _) => deco.range.getEnd().getLine() == i }
           /* Need to sort them by the type of decoration, inline needs to be first.
            * This mirrors the VS Code behaviour, the first declared type is
-           * shown first if the ned is the same */
+           * shown first if the end is the same */
           .sortBy { case (deco, isInline) =>
             (deco.range.getEnd().getCharacter(), !isInline)
           }
