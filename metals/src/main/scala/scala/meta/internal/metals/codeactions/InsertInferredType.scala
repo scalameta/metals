@@ -48,7 +48,6 @@ class InsertInferredType(trees: Trees, compilers: Compilers)
         pattern.parent
           .collect {
             case Pat.Typed(_, _) => None
-            case Pat.Bind(lhs, _) if lhs != pattern => Some(insertTypeToPattern)
             case _: Pat.Bind => None
             case vl: Defn.Val if vl.decltpe.isEmpty => Some(insertType)
             case vr: Defn.Var if vr.decltpe.isEmpty => Some(insertType)
