@@ -13,7 +13,6 @@ import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
@@ -89,7 +88,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val treeViewChanges = new ConcurrentLinkedQueue[TreeViewDidChangeParams]()
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   val decorations =
-    new ConcurrentHashMap[AbsolutePath, Array[DecorationOptions]]()
+    new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams => None
   }
@@ -349,7 +348,18 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       params: PublishDecorationsParams
   ): Unit = {
     val path = params.uri.toAbsolutePath
-    decorations.put(path, params.options)
+    decorations.compute(
+      path,
+      {
+        case (_, decorationTypes) => {
+          if (decorationTypes == null) {
+            Set(params)
+          } else {
+            decorationTypes.filter(p => p.isInline != params.isInline) + params
+          }
+        }
+      }
+    )
   }
 
   def workspaceDecorations: String = {
@@ -373,9 +383,25 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       }
       val input = path.toInputFromBuffers(buffers)
       input.text.linesIterator.zipWithIndex.foreach { case (line, i) =>
-        val lineDecorations = decorations
-          .filter(_.range.getEnd().getLine() == i)
-          .sortBy(_.range.getEnd().getCharacter())
+        val lineDecorations = decorations.toList
+          .flatMap(params =>
+            params.options.map(o =>
+              (
+                o,
+                Option(params.isInline).getOrElse(
+                  false.asInstanceOf[java.lang.Boolean]
+                )
+              )
+            )
+          )
+          .filter { case (deco, _) => deco.range.getEnd().getLine() == i }
+          /* Need to sort them by the type of decoration, inline needs to be first.
+           * This mirrors the VS Code behaviour, the first declared type is
+           * shown first if the end is the same */
+          .sortBy { case (deco, isInline) =>
+            (deco.range.getEnd().getCharacter(), !isInline)
+          }
+          .map(_._1)
         if (isHover) {
           out.append(line)
           lineDecorations.collect {

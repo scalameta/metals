@@ -731,7 +731,9 @@ class MetalsLanguageServer(
 
         val worksheetPublisher =
           if (clientConfig.isDecorationProvider)
-            new DecorationWorksheetPublisher()
+            new DecorationWorksheetPublisher(
+              clientConfig.isInlineDecorationProvider()
+            )
           else
             new WorkspaceEditWorksheetPublisher(buffers, trees)
         worksheetProvider = register(
@@ -1228,75 +1230,78 @@ class MetalsLanguageServer(
   @JsonNotification("workspace/didChangeConfiguration")
   def didChangeConfiguration(
       params: DidChangeConfigurationParams
-  ): CompletableFuture[Unit] =
-    Future {
-      val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-      UserConfiguration.fromJson(json, clientConfig) match {
-        case Left(errors) =>
-          errors.foreach { error => scribe.error(s"config error: $error") }
-          Future.successful(())
-        case Right(newUserConfig) =>
-          val old = userConfig
-          userConfig = newUserConfig
-          if (userConfig.excludedPackages != old.excludedPackages) {
-            excludedPackageHandler.update(userConfig.excludedPackages)
-            workspaceSymbols.indexClasspath()
-          }
+  ): CompletableFuture[Unit] = {
+    val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
+    UserConfiguration.fromJson(json, clientConfig) match {
+      case Left(errors) =>
+        errors.foreach { error => scribe.error(s"config error: $error") }
+        Future.successful(())
+      case Right(newUserConfig) =>
+        val old = userConfig
+        userConfig = newUserConfig
+        if (userConfig.excludedPackages != old.excludedPackages) {
+          excludedPackageHandler.update(userConfig.excludedPackages)
+          workspaceSymbols.indexClasspath()
+        }
 
-          userConfig.fallbackScalaVersion.foreach { version =>
-            if (
-              !ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)
-            ) {
-              val params =
-                Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
-                  version
-                )
-              languageClient.showMessage(params)
-            }
+        userConfig.fallbackScalaVersion.foreach { version =>
+          if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
+            val params =
+              Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
+                version
+              )
+            languageClient.showMessage(params)
           }
+        }
 
-          if (userConfig.symbolPrefixes != old.symbolPrefixes) {
-            compilers.restartAll()
-          }
+        if (userConfig.symbolPrefixes != old.symbolPrefixes) {
+          compilers.restartAll()
+        }
 
+        val resetDecorations =
           if (
             userConfig.showImplicitArguments != old.showImplicitArguments ||
             userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
             userConfig.showInferredType != old.showInferredType
           ) {
-            buildServerPromise.future.map(_ => syntheticsDecorator.refresh())
+            buildServerPromise.future.flatMap { _ =>
+              syntheticsDecorator.refresh()
+            }
+          } else {
+            Future.successful(())
           }
 
-          bspSession
-            .map { session =>
-              if (session.main.isBloop) {
-                bloopServers.ensureDesiredVersion(
-                  userConfig.currentBloopVersion,
-                  session.version,
-                  userConfig.bloopVersion.nonEmpty,
-                  old.bloopVersion.isDefined,
-                  () => autoConnectToBuildServer
-                )
-              } else if (
-                userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
-                  .exists(Ammonite.isAmmBuildTarget)
-              ) {
-                languageClient
-                  .showMessageRequest(AmmoniteJvmParametersChange.params())
-                  .asScala
-                  .flatMap {
-                    case item if item == AmmoniteJvmParametersChange.restart =>
-                      ammonite.reload()
-                    case _ =>
-                      Future.successful(())
-                  }
-              } else {
-                Future.successful(())
-              }
+        val restartBuildServer = bspSession
+          .map { session =>
+            if (session.main.isBloop) {
+              bloopServers.ensureDesiredVersion(
+                userConfig.currentBloopVersion,
+                session.version,
+                userConfig.bloopVersion.nonEmpty,
+                old.bloopVersion.isDefined,
+                () => autoConnectToBuildServer
+              )
+            } else if (
+              userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
+                .exists(Ammonite.isAmmBuildTarget)
+            ) {
+              languageClient
+                .showMessageRequest(AmmoniteJvmParametersChange.params())
+                .asScala
+                .flatMap {
+                  case item if item == AmmoniteJvmParametersChange.restart =>
+                    ammonite.reload()
+                  case _ =>
+                    Future.successful(())
+                }
+            } else {
+              Future.successful(())
             }
-            .getOrElse(Future.successful(()))
-      }
-    }.flatten.asJava
+          }
+          .getOrElse(Future.successful(()))
+        Future.sequence(List(restartBuildServer, resetDecorations)).map(_ => ())
+    }
+  }.asJava
 
   @JsonNotification("workspace/didChangeWatchedFiles")
   def didChangeWatchedFiles(

@@ -183,7 +183,7 @@ lazy val V = new {
   val coursier = "2.0.16"
   val coursierInterfaces = "1.0.6"
   val debugAdapter = "2.0.12"
-  val genyVersion = "0.7.0"
+  val genyVersion = "0.7.1"
   val gradleBloop = bloop
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.7.4"
@@ -199,8 +199,8 @@ lazy val V = new {
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.9.34"
   val scalafmt = "3.0.5"
-  val scalameta = "4.4.32"
-  val scribe = "3.6.10"
+  val scalameta = "4.4.33"
+  val scribe = "3.6.7"
   val semanticdb = scalameta
   val qdox = "2.0.1"
 
@@ -433,7 +433,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.16",
+      "com.geirsson" %% "metaconfig-core" % "0.10.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.16",
       // for file watching
@@ -442,7 +442,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.14.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.5.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "8.4.1",
+      "org.flywaydb" % "flyway-core" % "8.4.3",
       "com.h2database" % "h2" % "1.4.200",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
@@ -487,7 +487,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "1.4.4",
+      "com.lihaoyi" %% "ujson" % "1.5.0",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.7.0",
       // for producing SemanticDB from Scala source files
