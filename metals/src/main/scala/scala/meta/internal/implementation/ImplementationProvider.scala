@@ -12,6 +12,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
@@ -42,22 +43,22 @@ final class ImplementationProvider(
     definitionProvider: DefinitionProvider,
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector
-) {
+) extends SemanticdbFeatureProvider {
   import ImplementationProvider._
 
   private val globalTable = new GlobalClassTable(buildTargets)
   private val implementationsInPath =
     new ConcurrentHashMap[Path, Map[String, Set[ClassLocation]]]
 
-  def clear(): Unit = {
+  override def reset(): Unit = {
     implementationsInPath.clear()
   }
 
-  def onDelete(path: Path): Unit = {
-    implementationsInPath.remove(path)
+  override def onDelete(path: AbsolutePath): Unit = {
+    implementationsInPath.remove(path.toNIO)
   }
 
-  def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+  override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     implementationsInPath.compute(
       path.toNIO,
       { (_, _) => computeInheritance(docs) }

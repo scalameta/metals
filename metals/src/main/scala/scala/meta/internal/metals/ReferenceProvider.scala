@@ -36,7 +36,7 @@ final class ReferenceProvider(
     remote: RemoteLanguageServer,
     trees: Trees,
     buildTargets: BuildTargets
-) {
+) extends SemanticdbFeatureProvider {
   private var referencedPackages: BloomFilter[CharSequence] =
     BloomFilters.create(10000)
 
@@ -46,14 +46,15 @@ final class ReferenceProvider(
   )
   val index: TrieMap[Path, IndexEntry] = TrieMap.empty
 
-  def reset(): Unit = {
+  override def reset(): Unit = {
     index.clear()
   }
-  def onDelete(file: Path): Unit = {
-    index.remove(file)
+
+  override def onDelete(file: AbsolutePath): Unit = {
+    index.remove(file.toNIO)
   }
 
-  def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
+  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
     buildTargets.inverseSources(file).map { id =>
       val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
       val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
