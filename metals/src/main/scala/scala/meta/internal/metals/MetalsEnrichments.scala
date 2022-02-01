@@ -311,9 +311,14 @@ object MetalsEnrichments
       )
 
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
-      val relative = path.toRelative(prefix)
-      if (relative.toNIO.getName(0).filename != "..") Some(relative)
-      else None
+      // windows throws an exception on toRelative when on different drives
+      if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
+        None
+      else {
+        val relative = path.toRelative(prefix)
+        if (relative.toNIO.getName(0).filename != "..") Some(relative)
+        else None
+      }
     }
 
     def isInside(prefix: AbsolutePath): Boolean =

@@ -282,7 +282,7 @@ final class TestingServer(
           val path = longPath.toAbsolutePath.toRelativeInside(
             workspace.resolve(Directories.dependencies)
           )
-          path.map(_.toString).getOrElse(longPath)
+          path.map(_.toString).getOrElse(longPath).replace("\\", "/")
         }
         val shortenedObtained = gotoExecutedCommandPositions.map {
           case (position, location) => (position, shortenJarPath(location))

@@ -27,9 +27,7 @@ final class StepNavigator(
 
       val (expected, nextStep) = expectedSteps.dequeue()
 
-      if (
-        actualLine == expected.line && expected.pathEqualsActual(actualPath)
-      ) {
+      if (actualLine == expected.line && expected.pathEquals(actualPath)) {
         if (actualPath.toAbsolutePath.exists) {
           nextStep
         } else {
@@ -77,15 +75,15 @@ object StepNavigator {
     new StepNavigator(root, root.resolve(Directories.dependencies), Nil)
 
   sealed trait Location {
-    def pathEqualsActual(actual: String): Boolean
+    def pathEquals(actual: String): Boolean
     def file: String
     def line: Long
   }
   case class WorkspaceLocation(root: AbsolutePath, path: String, lineNum: Long)
       extends Location {
 
-    override def pathEqualsActual(actual: String): Boolean =
-      actual.stripPrefix("file://") == file.toString
+    override def pathEquals(actual: String): Boolean =
+      actual.toAbsolutePath.toString == file.toString
     override def file: String = root.resolve(path).toString
     override def line: Long = lineNum
     override def toString: String = s"$root$file:$line"
@@ -96,12 +94,7 @@ object StepNavigator {
       lineNum: Long
   ) extends Location {
 
-    override def pathEqualsActual(actual: String): Boolean = {
-      if (actual.startsWith("jar:"))
-        actual.endsWith(path)
-      else
-        actual.stripPrefix("file://") == file.toString
-    }
+    override def pathEquals(actual: String): Boolean = actual.endsWith(path)
     override def file: String = dependencies.resolve(path).toString
     override def line: Long = lineNum
     override def toString: String = s"$dependencies$file:$line"
