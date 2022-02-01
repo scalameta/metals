@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -30,7 +31,7 @@ final class TestSuitesProvider(
     buildTargetClasses: BuildTargetClasses,
     symbolIndex: GlobalSymbolIndex,
     semanticdbs: Semanticdbs,
-    openedFiles: () => Iterable[AbsolutePath],
+    buffers: Buffers,
     clientConfig: ClientConfiguration,
     client: MetalsLanguageClient
 )(implicit ec: ExecutionContext) {
@@ -51,7 +52,7 @@ final class TestSuitesProvider(
    * 2. test suite's file can be opened and test cases are visible
    */
   def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
-    if (isEnabled && index.hasResolvedChildren(file)) {
+    if (isEnabled && index.hasTestCasesGranularity(file)) {
       if (docs.documents.nonEmpty) {
         val doc = docs.documents.head
         refreshTestCases(file, Some(doc))
@@ -61,12 +62,15 @@ final class TestSuitesProvider(
 
   def onDelete(file: Path): Unit = {
     val removed = index.remove(AbsolutePath(file))
-    removed match {
-      case Nil => ()
-      case head :: _ =>
-        updateClient(
-          BuildTargetUpdate(head.buildTarget, removed.map(_.testClass.asRemove))
-        )
+    val removeEvents = removed
+      .groupBy(_.buildTarget)
+      .map { case (buildTarget, entries) =>
+        BuildTargetUpdate(buildTarget, entries.map(_.testClass.asRemove))
+      }
+      .toList
+
+    if (removeEvents.nonEmpty) {
+      updateClient(removeEvents: _*)
     }
   }
 
@@ -74,7 +78,7 @@ final class TestSuitesProvider(
    * Check if opened file contains test suite and update test cases if yes.
    */
   def didOpen(file: AbsolutePath): Future[Unit] =
-    if (isEnabled && index.contains(file)) Future(refreshTestCases(file))
+    if (isEnabled && index.contains(file)) Future(refreshTestCases(file, None))
     else Future.unit
 
   /**
@@ -86,7 +90,7 @@ final class TestSuitesProvider(
       path: Option[AbsolutePath]
   ): java.util.List[BuildTargetUpdate] = {
     val updates = path match {
-      case Some(path0) => getTestCases(path0).toSeq
+      case Some(path0) => getTestCases(path0, None)
       case None => getTestSuites()
     }
     updates.asJava
@@ -110,33 +114,33 @@ final class TestSuitesProvider(
   }
 
   /**
-   * Retrieve test cases for a given file. Even an empty list
+   * Retrieve test cases for a given file. Even an empty list is being sent
    * because it can mean that all testcases were deleted.
    */
   private def getTestCases(
       path: AbsolutePath,
-      doc: Option[TextDocument] = None
-  ): Option[BuildTargetUpdate] = {
-    val buildTargetUpdateOpt =
+      doc: Option[TextDocument]
+  ): List[BuildTargetUpdate] = {
+    val buildTargetUpdates =
       for {
-        metadata <- index.getMetadata(path)
-        buildTarget <- metadata.entries.headOption.map(_.buildTarget)
+        metadata <- index.getMetadata(path).toList
+        events = findTestCases(path, doc)
+        buildTarget <- metadata.entries.map(_.buildTarget)
       } yield {
-        val events = findTestCases(path, doc)
         BuildTargetUpdate(buildTarget, events)
       }
-    buildTargetUpdateOpt
+    buildTargetUpdates
   }
 
   private def refreshTestCases(
       path: AbsolutePath,
-      doc: Option[TextDocument] = None
+      doc: Option[TextDocument]
   ): Unit = {
-    val buildTargetUpdateOpt = getTestCases(path, doc)
-    buildTargetUpdateOpt.foreach { update =>
+    val buildTargetUpdates = getTestCases(path, doc)
+    if (buildTargetUpdates.nonEmpty) {
       client.metalsExecuteClientCommand(
         ClientCommands.UpdateTestExplorer.toExecuteCommandParams(
-          update
+          buildTargetUpdates: _*
         )
       )
     }
@@ -147,8 +151,7 @@ final class TestSuitesProvider(
    */
   private def findTestCases(
       path: AbsolutePath,
-      textDocument: Option[TextDocument],
-      symbol: Option[mtags.Symbol] = None
+      textDocument: Option[TextDocument]
   ): Seq[AddTestCases] =
     for {
       metadata <- index.getMetadata(path).toSeq
@@ -157,7 +160,6 @@ final class TestSuitesProvider(
         metadataEntry.buildTarget,
         metadataEntry.suiteName
       )
-      if symbol.forall(_ == testEntry.symbol)
       // if text document isn't defined try to fetch it from semanticdbs
       doc <- textDocument.orElse(getSemanticDb(testEntry.symbol).map(_._2))
     } yield {
@@ -165,7 +167,7 @@ final class TestSuitesProvider(
       val testCases = junitTestFinder.findTests(doc, path, testEntry.symbol)
 
       if (testCases.nonEmpty) {
-        index.setHasResolvedChildren(path)
+        index.setHasTestCasesGranularity(path)
       }
 
       AddTestCases(
@@ -208,10 +210,9 @@ final class TestSuitesProvider(
         }
       }
 
-      val currentlyOpened = openedFiles().toSet
       val addedTestCases = addedEntries.mapValues {
         _.flatMap { case (entry, doc) =>
-          if (currentlyOpened.contains(entry.path))
+          if (buffers.contains(entry.path))
             findTestCases(entry.path, Some(doc))
           else Seq.empty
         }

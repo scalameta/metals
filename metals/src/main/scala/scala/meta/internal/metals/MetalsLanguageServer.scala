@@ -618,7 +618,7 @@ class MetalsLanguageServer(
           buildTargetClasses,
           definitionIndex,
           semanticdbs,
-          () => buffers.open,
+          buffers,
           clientConfig,
           languageClient
         )

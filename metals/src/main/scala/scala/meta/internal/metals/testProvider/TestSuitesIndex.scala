@@ -23,7 +23,7 @@ private[testProvider] final case class SymbolsPerTarget(
 
 private[testProvider] final case class TestFileMetadata(
     entries: List[TestEntry],
-    hasResolvedChildren: Boolean
+    hasTestCasesGranularity: Boolean
 )
 
 private[testProvider] final case class TestEntry(
@@ -77,16 +77,16 @@ private[testProvider] final class TestSuitesIndex {
     }
   }
 
-  def setHasResolvedChildren(path: AbsolutePath): Unit =
+  def setHasTestCasesGranularity(path: AbsolutePath): Unit =
     fileToMetadata.get(path).foreach { metadata =>
-      val updated = metadata.copy(hasResolvedChildren = true)
+      val updated = metadata.copy(hasTestCasesGranularity = true)
       fileToMetadata.update(path, updated)
     }
 
   def contains(path: AbsolutePath): Boolean = fileToMetadata.contains(path)
 
-  def hasResolvedChildren(path: AbsolutePath): Boolean =
-    fileToMetadata.get(path).map(_.hasResolvedChildren).getOrElse(false)
+  def hasTestCasesGranularity(path: AbsolutePath): Boolean =
+    fileToMetadata.get(path).map(_.hasTestCasesGranularity).getOrElse(false)
 
   def getMetadata(path: AbsolutePath): Option[TestFileMetadata] =
     fileToMetadata.get(path)
