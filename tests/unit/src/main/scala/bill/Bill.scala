@@ -32,7 +32,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags
@@ -71,12 +70,22 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
  * - no incremental compilation, every compilation is a clean compile.
  */
 object Bill {
+
+  val logName = ".bill-metals.log"
+
   class Server() extends BuildServer with ScalaBuildServer {
     val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
     override def onConnectWithClient(server: BuildClient): Unit =
       client = server
     var workspace: Path = Paths.get(".").toAbsolutePath.normalize()
+
+    def billLog: AbsolutePath = {
+      val logFile = AbsolutePath(workspace.resolve(logName))
+      logFile.touch()
+      logFile
+    }
+
     // Returns true if we're tracing shutdown requests, used for testing purposes.
     def isShutdownTrace(): Boolean = {
       Files.isRegularFile(workspace.resolve("shutdown-trace"))
@@ -147,9 +156,8 @@ object Bill {
     ): CompletableFuture[InitializeBuildResult] = {
       Future {
         workspace = Paths.get(URI.create(params.getRootUri))
-        MetalsLogger.setupLspLogger(AbsolutePath(workspace), true)
         if (isShutdownTrace()) {
-          println("trace: initialize")
+          billLog.appendText("trace: initialize\n")
         }
         val capabilities = new BuildServerCapabilities
         capabilities.setCompileProvider(new CompileProvider(languages))
@@ -174,7 +182,7 @@ object Bill {
         // waits for the shutdown request to respond before initializing a new build
         // server connection.
         Thread.sleep(1000)
-        println("trace: shutdown")
+        billLog.appendText("trace: shutdown\n")
       }
       CompletableFuture.completedFuture(null)
     }
