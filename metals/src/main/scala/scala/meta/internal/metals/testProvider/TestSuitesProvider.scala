@@ -1,7 +1,5 @@
 package scala.meta.internal.metals.testProvider
 
-import java.nio.file.Path
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -12,6 +10,7 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
@@ -34,7 +33,8 @@ final class TestSuitesProvider(
     buffers: Buffers,
     clientConfig: ClientConfiguration,
     client: MetalsLanguageClient
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
 
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
@@ -51,7 +51,7 @@ final class TestSuitesProvider(
    * 1. Test Explorer view can be opened and tree view is visible
    * 2. test suite's file can be opened and test cases are visible
    */
-  def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
+  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
     if (isEnabled && index.hasTestCasesGranularity(file)) {
       if (docs.documents.nonEmpty) {
         val doc = docs.documents.head
@@ -60,8 +60,8 @@ final class TestSuitesProvider(
     }
   }
 
-  def onDelete(file: Path): Unit = {
-    val removed = index.remove(AbsolutePath(file))
+  override def onDelete(file: AbsolutePath): Unit = {
+    val removed = index.remove(file)
     val removeEvents = removed
       .groupBy(_.buildTarget)
       .map { case (buildTarget, entries) =>
@@ -73,6 +73,8 @@ final class TestSuitesProvider(
       updateClient(removeEvents: _*)
     }
   }
+
+  override def reset(): Unit = ()
 
   /**
    * Check if opened file contains test suite and update test cases if yes.

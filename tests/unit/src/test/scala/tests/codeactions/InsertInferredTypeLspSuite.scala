@@ -180,6 +180,15 @@ class InsertInferredTypeLspSuite
   )
 
   checkNoAction(
+    "match-bind-true",
+    """|object A{
+       |  (1, 2) match {
+       |    case num @ <<first>> => "Two!"
+       |  }
+       |}""".stripMargin
+  )
+
+  checkNoAction(
     "existing-type",
     """|package a
        |

@@ -21,5 +21,6 @@ case class DecorationOptions(
 
 case class PublishDecorationsParams(
     uri: String,
-    options: Array[DecorationOptions]
+    options: Array[DecorationOptions],
+    @Nullable isInline: java.lang.Boolean
 )

@@ -94,14 +94,14 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         .toURI
         .toString()
       expectedParamsBoston = URLEncoder.encode(
-        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}}}]"""
+        s"""[{"uri":"$mainClassPath","range":{"start":{"line":9,"character":17},"end":{"line":9,"character":23}},"otherWindow":false}]"""
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
         "    hello()@@",
         s"""|**Synthetics**:
             |
-            |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.goto-position?$expectedParamsBoston))
+            |([andy](command:metals.goto?$expectedParamsAndy), [boston](command:metals.metals-goto-location?$expectedParamsBoston))
             |""".stripMargin
       )
       // Implicit conversions
@@ -419,7 +419,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions": false,
+          |  "show-implicit-conversions-and-classes": false,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -506,7 +506,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions": false,
+          |  "show-implicit-conversions-and-classes": false,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -557,7 +557,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions": true,
+          |  "show-implicit-conversions-and-classes": true,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -643,7 +643,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ <- server.didChangeConfiguration(
         """{
           |  "show-implicit-arguments": false,
-          |  "show-implicit-conversions": false,
+          |  "show-implicit-conversions-and-classes": false,
           |  "show-inferred-type": true
           |}
           |""".stripMargin
@@ -676,6 +676,48 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |
            |  def run(args: List[String]): IO[ExitCode] = ???
            |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("worksheet") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/Main.worksheet.sc
+           |def method(implicit str: String) = str + str
+           |implicit val name = "Susan".stripMargin
+           |val greeting = s"Hello $$name"
+           |method
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/Main.worksheet.sc")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|def method(implicit str: String) = str + str
+           |implicit val name = "Susan".stripMargin // : String = "Susan"
+           |val greeting = s"Hello $name" // : String = "Hello Susan"
+           |method // : String = "SusanSusan"
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions-and-classes": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|def method(implicit str: String): String = str + str
+           |implicit val name: String = augmentString("Susan").stripMargin // : String = "Susan"
+           |val greeting: String = s"Hello $name" // : String = "Hello Susan"
+           |method(name) // : String = "SusanSusan"
            |""".stripMargin
       )
     } yield ()

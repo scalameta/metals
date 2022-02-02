@@ -11,7 +11,11 @@ import scala.meta.internal.metals.{BuildInfo => V}
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
     extends BaseLspSuite("worksheet") {
   override def initializationOptions: Option[InitializationOptions] =
-    Some(InitializationOptions.Default.copy(decorationProvider = Some(true)))
+    Some(
+      InitializationOptions.Default.copy(
+        decorationProvider = Some(true)
+      )
+    )
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)

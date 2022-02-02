@@ -11,10 +11,12 @@ import scala.{meta => m}
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
@@ -46,8 +48,8 @@ final class SyntheticsDecorationProvider(
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     trees: Trees
-)(implicit ec: ExecutionContext) {
-
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
   private object Document {
     /* We update it with each compilation in order not read the same file on
      * each change. When typing documents stay the same most of the time.
@@ -59,42 +61,32 @@ final class SyntheticsDecorationProvider(
     def set(doc: TextDocument): Unit = document.set(doc)
   }
 
-  def publishSynthetics(path: AbsolutePath): Future[Unit] = {
-
-    // If focused document is not supported we can't be sure what is currently open
-    def isFocusedDocument =
-      focusedDocument().contains(path) || !clientConfig.isDidFocusProvider()
-
-    /**
-     * Worksheets currently do not use semanticdb, which is why this will not work.
-     * If at any time worksheets will support it, we need to make sure that the
-     * evaluation will not be replaced with implicit decorations.
-     */
-    if (!path.isWorksheet && isFocusedDocument) {
-      val textDocument = currentDocument(path)
-      textDocument match {
-        case Some(doc) =>
-          Future(publishSyntheticDecorations(path, doc))
-        case _ =>
-          Future.successful(())
-      }
-
-    } else
-      Future.successful(())
+  def publishSynthetics(path: AbsolutePath): Future[Unit] = Future {
+    val decorations = syntheticDecorations(path)
+    publish(path, decorations)
   }
 
-  def onChange(textDocument: TextDocuments, path: AbsolutePath): Unit = {
+  override def onDelete(path: AbsolutePath): Unit = ()
+  override def reset(): Unit = ()
+
+  override def onChange(
+      textDocument: TextDocuments,
+      path: AbsolutePath
+  ): Unit = {
     for {
       focused <- focusedDocument()
       if path == focused || !clientConfig.isDidFocusProvider()
       textDoc <- enrichWithText(textDocument.documents.headOption, path)
     } {
-      publishSyntheticDecorations(path, textDoc)
+      publish(path, decorations(path, textDoc))
     }
   }
 
-  def refresh(): Unit = {
-    focusedDocument().foreach(publishSynthetics)
+  def refresh(): Future[Unit] = {
+    focusedDocument() match {
+      case Some(doc) => publishSynthetics(doc)
+      case None => Future.unit
+    }
   }
 
   def addSyntheticsHover(
@@ -156,6 +148,41 @@ final class SyntheticsDecorationProvider(
     } else {
       pcHover
     }
+
+  private def syntheticDecorations(
+      path: AbsolutePath
+  ): Seq[DecorationOptions] = {
+
+    // If focused document is not supported we can't be sure what is currently open
+    def isFocusedDocument =
+      focusedDocument().contains(path) || !clientConfig.isDidFocusProvider()
+
+    /**
+     * Worksheets currently do not use semanticdb, which is why this will not work.
+     * If at any time worksheets will support it, we need to make sure that the
+     * evaluation will not be replaced with implicit decorations.
+     */
+    currentDocument(path) match {
+      case Some(doc) if isFocusedDocument =>
+        decorations(path, doc)
+      case _ =>
+        Nil
+    }
+  }
+
+  private def publish(
+      path: AbsolutePath,
+      decorations: Seq[DecorationOptions]
+  ): Unit = if (decorations.nonEmpty) {
+    val params =
+      new PublishDecorationsParams(
+        path.toURI.toString(),
+        decorations.toArray,
+        if (clientConfig.isInlineDecorationProvider()) true else null
+      )
+
+    client.metalsPublishDecorations(params)
+  }
 
   private def isSyntheticsEnabled: Boolean = {
     userConfig().showImplicitArguments || userConfig().showInferredType || userConfig().showImplicitConversionsAndClasses
@@ -328,8 +355,8 @@ final class SyntheticsDecorationProvider(
       range: s.Range,
       format: CommandHTMLFormat
   ): String = {
-    val location = new l.Location(uri, range.toLSP)
-    ServerCommands.GotoPosition.toCommandLink(location, format)
+    val location = ClientCommands.WindowLocation(uri, range.toLSP)
+    ClientCommands.GotoLocation.toCommandLink(location, format)
   }
 
   private def gotoSymbolUsingUri(
@@ -368,10 +395,10 @@ final class SyntheticsDecorationProvider(
     )
   }
 
-  private def publishSyntheticDecorations(
+  private def decorations(
       path: AbsolutePath,
       textDocument: TextDocument
-  ): Unit = {
+  ): Seq[DecorationOptions] = {
     if (clientConfig.isInlineDecorationProvider()) {
 
       lazy val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
@@ -401,14 +428,9 @@ final class SyntheticsDecorationProvider(
         if (userConfig().showInferredType)
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
-      val params =
-        new PublishDecorationsParams(
-          path.toURI.toString(),
-          (decorations ++ typDecorations).toArray
-        )
-
-      client.metalsPublishDecorations(params)
-    }
+      decorations ++ typDecorations
+    } else
+      Nil
   }
 
   private def typeDecorations(
