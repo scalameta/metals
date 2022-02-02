@@ -16,10 +16,7 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 
-abstract class JavaDefinitionSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"java-definition-$suiteNameSuffix") {
+class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
 
   val javaBasePrefix: String =
     if (Properties.isJavaAtLeast("9")) "java.base/" else ""
@@ -27,7 +24,7 @@ abstract class JavaDefinitionSuite(
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -43,7 +40,8 @@ abstract class JavaDefinitionSuite(
     s"""|src.zip/${javaBasePrefix}java/lang/CharSequence.java info: result
         |public interface CharSequence {
         |                 ^^^^^^^^^^^^
-        |""".stripMargin
+        |""".stripMargin,
+    withoutVirtualDocs = true
   )
 
   check(
@@ -105,9 +103,10 @@ abstract class JavaDefinitionSuite(
       depSymbol: String,
       input: String,
       expected: String,
-      dependencies: List[String] = Nil
+      dependencies: List[String] = Nil,
+      withoutVirtualDocs: Boolean = false
   )(implicit loc: Location): Unit = {
-    test(name) {
+    test(name, withoutVirtualDocs) {
       val parsed = FileLayout.mapFromString(input)
       assert(parsed.size == 1, "Input should have only one dep source file")
       val (path, query) = parsed.head
@@ -197,9 +196,3 @@ abstract class JavaDefinitionSuite(
       .formatMessage("info", "result", noPos = true)
   }
 }
-
-class JavaDefinitionSaveToDiskSuite
-    extends JavaDefinitionSuite(false, "save-to-disk")
-
-class JavaDefinitionVirtualDocSuite
-    extends JavaDefinitionSuite(true, "virtual-docs")

@@ -10,24 +10,25 @@ import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
 
-abstract class FindTextInDependencyJarsSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"find-text-in-dependency-jars-$suiteNameSuffix") {
+class FindTextInDependencyJarsSuite
+    extends BaseLspSuite("find-text-in-dependency-jars") {
 
   val akkaVersion = "2.6.16"
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
       )
     )
 
-  test("find exact string match in .conf file inside jar") {
+  test(
+    "find exact string match in .conf file inside jar",
+    withoutVirtualDocs = true
+  ) {
     val isJavaAtLeast9 = scala.util.Properties.isJavaAtLeast(9.toString)
     val isJavaAtLeast17 = scala.util.Properties.isJavaAtLeast(17.toString)
 
@@ -119,9 +120,3 @@ abstract class FindTextInDependencyJarsSuite(
     assertNoDiff(rendered, expected)
   }
 }
-
-class FindTextInDependencyJarsSaveToDiskSuite
-    extends FindTextInDependencyJarsSuite(false, "save-to-disk")
-
-class FindTextInDependencyJarsVirtualDocSuite
-    extends FindTextInDependencyJarsSuite(true, "virtual-docs")

@@ -14,7 +14,6 @@ import tests.BuildToolLayout
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
 abstract class BaseStepDapSuite(
-    useVirtualDocuments: Boolean,
     suiteName: String,
     initializer: BuildServerInitializer,
     buildToolLayout: BuildToolLayout
@@ -23,7 +22,7 @@ abstract class BaseStepDapSuite(
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -101,7 +100,7 @@ abstract class BaseStepDapSuite(
         .at("a/src/main/scala/a/ScalaMain.scala", line = 6)(Continue)
   )
 
-  assertSteps("step-into-scala-lib")(
+  assertSteps("step-into-scala-lib", withoutVirtualDocs = true)(
     sources = """|/a/src/main/scala/Main.scala
                  |package a
                  |
@@ -122,7 +121,7 @@ abstract class BaseStepDapSuite(
     }
   )
 
-  assertSteps("step-into-java-lib")(
+  assertSteps("step-into-java-lib", withoutVirtualDocs = true)(
     sources = """|/a/src/main/scala/Main.scala
                  |package a
                  |
@@ -172,12 +171,12 @@ abstract class BaseStepDapSuite(
         .at("a/src/main/scala/a/Main.scala", line = 13)(Continue)
   )
 
-  def assertSteps(name: TestOptions)(
+  def assertSteps(name: TestOptions, withoutVirtualDocs: Boolean = false)(
       sources: String,
       main: String,
       instrument: StepNavigator => StepNavigator
   )(implicit loc: Location): Unit = {
-    test(name) {
+    test(name, withoutVirtualDocs) {
       cleanWorkspace()
       val debugLayout = DebugWorkspaceLayout(sources)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)

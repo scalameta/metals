@@ -6,15 +6,12 @@ import scala.meta.internal.metals.InitializationOptions
 
 import org.eclipse.lsp4j.Position
 
-abstract class SuperHierarchyLspSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"super-method-hierarchy-$suiteNameSuffix") {
+class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -88,7 +85,7 @@ abstract class SuperHierarchyLspSuite(
     )
   }
 
-  test("with external dep") {
+  test("with external dep", withoutVirtualDocs = true) {
     val code =
       """
         |package a
@@ -180,9 +177,3 @@ abstract class SuperHierarchyLspSuite(
   }
 
 }
-
-class SuperHierarchyLspSaveToDiskSuite
-    extends SuperHierarchyLspSuite(false, "save-to-disk")
-
-class SuperHierarchyLspVirtualDocSuite
-    extends SuperHierarchyLspSuite(true, "virtual-docs")

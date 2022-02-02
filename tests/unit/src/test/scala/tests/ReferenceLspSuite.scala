@@ -5,15 +5,12 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
 
-abstract class ReferenceLspSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseRangesSuite(s"reference-$suiteNameSuffix") {
+class ReferenceLspSuite extends BaseRangesSuite("reference") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -417,9 +414,3 @@ abstract class ReferenceLspSuite(
     server.assertReferences(filename, edit, expected, base)
   }
 }
-
-class ReferenceLspSaveToDiskSuite
-    extends ReferenceLspSuite(false, "save-to-disk")
-
-class ReferenceLspVirtualDocSuite
-    extends ReferenceLspSuite(true, "virtual-docs")

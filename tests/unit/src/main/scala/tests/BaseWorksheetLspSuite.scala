@@ -9,15 +9,13 @@ import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.{BuildInfo => V}
 
 abstract class BaseWorksheetLspSuite(
-    scalaVersion: String,
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"worksheet-$suiteNameSuffix") {
+    scalaVersion: String
+) extends BaseLspSuite(s"worksheet") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         decorationProvider = Some(true)
       )
     )
@@ -468,6 +466,33 @@ abstract class BaseWorksheetLspSuite(
   }
 
   test("definition") {
+    // NOTE(olafur) this test fails unpredicatly on Windows with
+    //      """|/a/src/main/scala/Main.worksheet.sc
+    //         |val message/*<no symbol>*/ = "Hello World!"
+    //         |println/*<no symbol>*/(message/*<no symbol>*/)
+    assume(!isWindows, "This test fails unpredictably on Window")
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/Main.worksheet.sc
+           |val message = "Hello World!"
+           |println(message)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/Main.worksheet.sc
+           |val message/*L0*/ = "Hello World!"
+           |println/*Predef.scala*/(message/*L0*/)
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("definition".only, withoutVirtualDocs = true) {
     // NOTE(olafur) this test fails unpredicatly on Windows with
     //      """|/a/src/main/scala/Main.worksheet.sc
     //         |val message/*<no symbol>*/ = "Hello World!"

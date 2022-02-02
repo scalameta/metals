@@ -4,18 +4,9 @@ import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 import tests.debug.BaseStepDapSuite
 
-abstract class SbtStepDapSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseStepDapSuite(
-      useVirtualDocuments,
-      s"sbt-debug-step-$suiteNameSuffix",
+class SbtStepDapSuite
+    extends BaseStepDapSuite(
+      s"sbt-debug-step",
       SbtServerInitializer,
       SbtBuildLayout
     )
-
-class SbtStepDapSuiteSaveToDiskSuite
-    extends SbtStepDapSuite(false, "save-to-disk")
-
-class SbtStepDapSuiteVirtualDocSuite
-    extends SbtStepDapSuite(true, "virtual-docs")

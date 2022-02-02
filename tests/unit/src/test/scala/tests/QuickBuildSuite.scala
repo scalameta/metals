@@ -2,22 +2,19 @@ package tests
 
 import scala.meta.internal.metals.InitializationOptions
 
-abstract class QuickBuildSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"quick-build-$suiteNameSuffix") {
+class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
       )
     )
 
-  test("basic") {
+  test("basic", withoutVirtualDocs = true) {
     cleanCompileCache("b")
     for {
       _ <- initialize(
@@ -89,7 +86,3 @@ abstract class QuickBuildSuite(
     } yield ()
   }
 }
-
-class QuickBuildSaveToDiskSuite extends QuickBuildSuite(false, "save-to-disk")
-
-class QuickBuildVirtualDocSuite extends QuickBuildSuite(true, "virtual-docs")

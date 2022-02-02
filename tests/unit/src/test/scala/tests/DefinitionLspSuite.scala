@@ -4,15 +4,12 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-abstract class DefinitionLspSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"definition-$suiteNameSuffix") {
+class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -310,7 +307,7 @@ abstract class DefinitionLspSuite(
     } yield ()
   }
 
-  test("rambo") {
+  test("rambo", withoutVirtualDocs = true) {
     cleanDatabase()
     for {
       _ <- initialize(
@@ -405,9 +402,3 @@ abstract class DefinitionLspSuite(
   }
 
 }
-
-class DefinitionLspSaveToDiskSuite
-    extends DefinitionLspSuite(false, "save-to-disk")
-
-class DefinitionLspVirtualDocSuite
-    extends DefinitionLspSuite(true, "virtual-docs")

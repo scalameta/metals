@@ -12,15 +12,12 @@ import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import tests.MetalsTestEnrichments._
 
-abstract class WorkspaceSymbolLspSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"workspace-symbol-$suiteNameSuffix") {
+class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -139,7 +136,7 @@ abstract class WorkspaceSymbolLspSuite(
     } yield ()
   }
 
-  test("dependencies") {
+  test("dependencies", withoutVirtualDocs = true) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -344,9 +341,3 @@ abstract class WorkspaceSymbolLspSuite(
     } yield ()
   }
 }
-
-class WorkspaceSymbolLspSaveToDiskSuite
-    extends WorkspaceSymbolLspSuite(false, "save-to-disk")
-
-class WorkspaceSymbolLspVirtualDocSuite
-    extends WorkspaceSymbolLspSuite(true, "virtual-docs")

@@ -4,16 +4,12 @@ import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.{BuildInfo => V}
 
-abstract class HoverLspSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"hover-$suiteNameSuffix")
-    with TestHovers {
+class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -141,7 +137,7 @@ abstract class HoverLspSuite(
     } yield ()
   }
 
-  test("dependencies".tag(FlakyWindows)) {
+  test("dependencies".tag(FlakyWindows), withoutVirtualDocs = true) {
     for {
       _ <- initialize(
         """/metals.json
@@ -169,7 +165,3 @@ abstract class HoverLspSuite(
   }
 
 }
-
-class HoverLspSaveToDiskSuite extends HoverLspSuite(false, "save-to-disk")
-
-class HoverLspVirtualDocSuite extends HoverLspSuite(true, "virtual-docs")

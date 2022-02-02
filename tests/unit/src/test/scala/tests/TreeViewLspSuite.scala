@@ -9,15 +9,12 @@ import scala.meta.internal.tvp.TreeViewProvider
  * @note This suite will fail on openjdk8 < 262)
  *       due to https://mail.openjdk.java.net/pipermail/jdk8u-dev/2020-July/012143.html
  */
-abstract class TreeViewLspSuite(
-    useVirtualDocuments: Boolean,
-    suiteNameSuffix: String
-) extends BaseLspSuite(s"tree-view-$suiteNameSuffix") {
+class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(useVirtualDocuments),
+        isVirtualDocumentSupported = Some(true),
         debuggingProvider = Some(true),
         treeViewProvider = Some(true),
         slowTaskProvider = Some(true)
@@ -151,7 +148,7 @@ abstract class TreeViewLspSuite(
     } yield ()
   }
 
-  test("libraries") {
+  test("libraries", withoutVirtualDocs = true) {
     for {
       _ <- initialize(
         """
@@ -548,7 +545,3 @@ abstract class TreeViewLspSuite(
     } yield ()
   }
 }
-
-class TreeViewLspSaveToDiskSuite extends TreeViewLspSuite(false, "save-to-disk")
-
-class TreeViewLspVirtualDocSuite extends TreeViewLspSuite(true, "virtual-docs")
