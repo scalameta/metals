@@ -614,9 +614,7 @@ class MetalsLanguageServer(
           trees
         )
         semanticDBIndexer = new SemanticdbIndexer(
-          referencesProvider,
-          implementationProvider,
-          syntheticsDecorator,
+          List(referencesProvider, implementationProvider, syntheticsDecorator),
           buildTargets,
           workspace
         )

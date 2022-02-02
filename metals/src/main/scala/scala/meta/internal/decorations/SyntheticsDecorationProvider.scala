@@ -16,6 +16,7 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
@@ -47,8 +48,8 @@ final class SyntheticsDecorationProvider(
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
     trees: Trees
-)(implicit ec: ExecutionContext) {
-
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
   private object Document {
     /* We update it with each compilation in order not read the same file on
      * each change. When typing documents stay the same most of the time.
@@ -65,7 +66,10 @@ final class SyntheticsDecorationProvider(
     publish(path, decorations)
   }
 
-  def onChange(
+  override def onDelete(path: AbsolutePath): Unit = ()
+  override def reset(): Unit = ()
+
+  override def onChange(
       textDocument: TextDocuments,
       path: AbsolutePath
   ): Unit = {
