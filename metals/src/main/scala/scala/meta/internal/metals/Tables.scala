@@ -7,6 +7,7 @@ import java.sql.DriverManager
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.Digests
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 
@@ -96,12 +97,18 @@ final class Tables(
       if (isAutoServer) ";AUTO_SERVER=TRUE"
       else ""
     val dbfile = workspace.resolve(".metals").resolve("metals")
+    // from "h2" % "2.0.206" the only option is the MVStore, which uses `metals.mv.db` file
+    val oldDbfile = workspace.resolve(".metals").resolve("metals.h2.db")
+    if (oldDbfile.exists) {
+      scribe.info(s"Deleting old database format $oldDbfile")
+      oldDbfile.delete()
+    }
     Files.createDirectories(dbfile.toNIO.getParent)
     System.setProperty(
       "h2.bindAddress",
       System.getProperty("h2.bindAddress", "127.0.0.1")
     )
-    val url = s"jdbc:h2:file:$dbfile;MV_STORE=false$autoServer"
+    val url = s"jdbc:h2:file:$dbfile$autoServer"
     tryUrl(url)
   }
 
