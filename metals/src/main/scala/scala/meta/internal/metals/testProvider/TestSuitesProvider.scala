@@ -24,6 +24,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
+import org.eclipse.{lsp4j => l}
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -163,7 +164,7 @@ final class TestSuitesProvider(
         metadataEntry.suiteName
       )
       // if text document isn't defined try to fetch it from semanticdbs
-      doc <- textDocument.orElse(getSemanticDb(testEntry.symbol).map(_._2))
+      doc <- textDocument.orElse(fetchTextDocument(testEntry.symbol))
     } yield {
       val testClass = testEntry.testClass
       val testCases = junitTestFinder.findTests(doc, path, testEntry.symbol)
@@ -178,6 +179,13 @@ final class TestSuitesProvider(
         testCases.asJava
       )
     }
+
+  private def fetchTextDocument(symbol: mtags.Symbol): Option[TextDocument] = {
+    for {
+      definition <- symbolIndex.definition(symbol)
+      doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
+    } yield doc
+  }
 
   /**
    * Find test suites for all build targets in current projects and update caches.
@@ -205,24 +213,15 @@ final class TestSuitesProvider(
       val deletedSuites = removeStaleTestSuites(symbolsPerTarget)
       val addedEntries = getTestEntries(symbolsPerTarget)
 
-      // update cache
-      addedEntries.values.foreach {
-        _.foreach { case (entry, _) =>
-          index.put(entry)
-        }
-      }
-
       val addedTestCases = addedEntries.mapValues {
-        _.flatMap { case (entry, doc) =>
+        _.flatMap { entry =>
           if (buffers.contains(entry.path))
-            findTestCases(entry.path, Some(doc))
+            findTestCases(entry.path, None)
           else Seq.empty
         }
       }
 
-      val addedSuites = addedEntries.mapValues(_.map { case (entry, _) =>
-        entry.testClass
-      })
+      val addedSuites = addedEntries.mapValues(_.map(_.testClass))
 
       val buildTargetUpdates =
         getBuildTargetUpdates(deletedSuites, addedSuites, addedTestCases)
@@ -265,7 +264,7 @@ final class TestSuitesProvider(
    */
   private def getTestEntries(
       symbolsPerTarget: List[SymbolsPerTarget]
-  ): Map[BuildTarget, List[(TestEntry, TextDocument)]] = {
+  ): Map[BuildTarget, List[TestEntry]] = {
     val entries = for {
       SymbolsPerTarget(buildTarget, testSymbols) <- symbolsPerTarget
       cachedSuites = index.getSuites(buildTarget)
@@ -284,7 +283,7 @@ final class TestSuitesProvider(
         )
       }
     } yield entryWithDoc
-    entries.groupBy(_._1.buildTarget)
+    entries.groupBy(_.buildTarget)
   }
 
   /**
@@ -314,50 +313,64 @@ final class TestSuitesProvider(
     }.toSeq
   }
 
-  private def getSemanticDb(
+  private def getSymbolLocation(
       symbol: mtags.Symbol
-  ): Option[(mtags.SymbolDefinition, TextDocument)] = {
+  ): Option[(mtags.SymbolDefinition, l.Location)] = {
     for {
-      definition <- symbolIndex.definition(symbol)
-      doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
-    } yield (definition, doc)
+      // check if definition symbol is equal to queried symbol
+      definition <- symbolIndex
+        .definition(symbol)
+        .filter(_.definitionSymbol == symbol)
+      location <- {
+        definition.range
+          .map { range =>
+            new l.Location(
+              definition.path.toURI.toString,
+              range.toLSP
+            )
+          }
+          .orElse {
+            semanticdbs
+              .textDocument(definition.path)
+              .documentIncludingStale
+              .flatMap(
+                _.toLocation(definition.path.toURI.toString, symbol.value)
+              )
+          }
+      }
+    } yield (definition, location)
   }
 
   private def computeTestEntry(
       buildTarget: BuildTarget,
       symbol: mtags.Symbol,
       fullyQualifiedName: FullyQualifiedName
-  ): Option[(TestEntry, TextDocument)] = {
+  ): Option[TestEntry] = {
     val className = fullyQualifiedName.value.split('.').last
-    val entryWithDocumentOpt =
-      for {
-        (definition, doc) <- getSemanticDb(symbol)
-        location <- doc.toLocation(definition.path.toURI.toString, symbol.value)
-      } yield {
-        val canResolveChildren = doc.occurrences.exists(
-          _.symbol == JunitTestFinder.junitAnnotationSymbol
-        )
+    val entryOpt = for {
+      (definition, location) <- getSymbolLocation(symbol)
+    } yield {
+      val testClass = AddTestSuite(
+        fullyQualifiedName.value,
+        className,
+        symbol.value,
+        location,
+        true
+      )
 
-        val testClass = AddTestSuite(
-          fullyQualifiedName.value,
-          className,
-          symbol.value,
-          location,
-          canResolveChildren
-        )
+      val entry = TestEntry(
+        buildTarget,
+        definition.path,
+        fullyQualifiedName,
+        symbol,
+        testClass
+      )
 
-        val entry = TestEntry(
-          buildTarget,
-          definition.path,
-          fullyQualifiedName,
-          symbol,
-          testClass
-        )
+      index.put(entry)
+      entry
+    }
 
-        (entry, doc)
-      }
-
-    entryWithDocumentOpt
+    entryOpt
   }
 
 }

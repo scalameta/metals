@@ -38,7 +38,7 @@ object TestExplorerEvent {
       className: String,
       symbol: String,
       location: l.Location,
-      canResolveChildren: Boolean = false
+      canResolveChildren: Boolean
   ) extends TestExplorerEvent("addSuite") {
     def asRemove: RemoveTestSuite =
       RemoveTestSuite(fullyQualifiedClassName, className)

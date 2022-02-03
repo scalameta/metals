@@ -29,7 +29,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |{
         |  "app": {
         |    "libraryDependencies" : [ "junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3" ],
-        |    "scalaVersion": "2.13.6"
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
         |
@@ -71,7 +71,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |{
         |  "app": {
         |    "libraryDependencies" : [ "org.scalameta::munit:0.7.29", "junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"],
-        |    "scalaVersion": "2.13.6"
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
         |
@@ -121,7 +121,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               QuickLocation(
                 classUriFor("app/src/main/scala/foo/bar/FooBar.scala"),
                 (2, 6, 2, 12)
-              ).toLsp
+              ).toLsp,
+              true
             ),
             AddTestSuite(
               "foo.Foo",
@@ -130,7 +131,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               QuickLocation(
                 classUriFor("app/src/main/scala/foo/Foo.scala"),
                 (2, 6, 2, 9)
-              ).toLsp
+              ).toLsp,
+              true
             ),
             AddTestSuite(
               "another.AnotherPackage",
@@ -139,7 +141,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               QuickLocation(
                 classUriFor("app/src/main/scala/another/AnotherPackage.scala"),
                 (2, 6, 2, 20)
-              ).toLsp
+              ).toLsp,
+              true
             ),
             AddTestSuite(
               "NoPackage",
@@ -148,7 +151,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
                 (0, 6, 0, 15)
-              ).toLsp
+              ).toLsp,
+              true
             )
           ).asJava
         )
@@ -162,7 +166,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |{
         |  "app": {
         |    "libraryDependencies" : [ "junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3" ],
-        |    "scalaVersion": "2.13.6"
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
         |
@@ -206,7 +210,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |{
         |  "app": {
         |    "libraryDependencies" : [ "junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3" ],
-        |    "scalaVersion": "2.13.6"
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
         |

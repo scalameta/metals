@@ -2498,7 +2498,6 @@ class MetalsLanguageServer(
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach { _ =>
-        testProvider.refreshTestSuites()
         languageClient.refreshModel()
       }
   }
