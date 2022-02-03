@@ -190,13 +190,13 @@ object ClientCommands {
       | AddTestSuite
       | AddTestCases;
       |
-      |export interface RemoveTestSuite extends BaseTestExplorerEvent {
+      |export interface RemoveTestSuite {
       |  kind: "removeSuite";
       |  fullyQualifiedClassName: FullyQualifiedClassName;
       |  className: ClassName;
       |}
       |
-      |export interface AddTestSuite extends BaseTestExplorerEvent {
+      |export interface AddTestSuite {
       |  kind: "addSuite";
       |  fullyQualifiedClassName: FullyQualifiedClassName;
       |  className: ClassName;
@@ -205,7 +205,7 @@ object ClientCommands {
       |  canResolveChildren: boolean;
       |}
       |
-      |export interface AddTestCases extends BaseTestExplorerEvent {
+      |export interface AddTestCases {
       |  kind: "addTestCases";
       |  fullyQualifiedClassName: FullyQualifiedClassName;
       |  className: ClassName;
