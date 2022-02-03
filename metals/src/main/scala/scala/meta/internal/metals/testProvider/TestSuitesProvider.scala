@@ -11,6 +11,8 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
+import scala.meta.internal.metals.TestUserInterfaceKind
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
@@ -33,6 +35,7 @@ final class TestSuitesProvider(
     semanticdbs: Semanticdbs,
     buffers: Buffers,
     clientConfig: ClientConfiguration,
+    userConfig: () => UserConfiguration,
     client: MetalsLanguageClient
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
@@ -40,7 +43,9 @@ final class TestSuitesProvider(
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
 
-  private def isEnabled = clientConfig.isTestExplorerProvider()
+  private def isEnabled =
+    clientConfig.isTestExplorerProvider() &&
+      userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
 
   val refreshTestSuites: BatchedFunction[Unit, Unit] =
     BatchedFunction.fromFuture(_ => doRefreshTestSuites())

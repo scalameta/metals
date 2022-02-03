@@ -620,6 +620,7 @@ class MetalsLanguageServer(
           semanticdbs,
           buffers,
           clientConfig,
+          () => userConfig,
           languageClient
         )
         semanticDBIndexer = new SemanticdbIndexer(
