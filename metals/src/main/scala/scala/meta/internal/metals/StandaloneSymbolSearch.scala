@@ -177,17 +177,17 @@ object StandaloneSymbolSearch {
     }
 
     (missingScala, JdkSources(javaHome)) match {
-      case (true, None) =>
+      case (true, Left(_)) =>
         val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (sources ++ scalaSources, classpath ++ scalaClasspath)
-      case (true, Some(absPath)) =>
+      case (true, Right(absPath)) =>
         val (scalaSources, scalaClasspath) = getScala(scalaVersion)
         (
           (scalaSources :+ absPath) ++ sources,
           classpath ++ scalaClasspath
         )
-      case (false, None) => (sources, classpath)
-      case (false, Some(absPath)) =>
+      case (false, Left(_)) => (sources, classpath)
+      case (false, Right(absPath)) =>
         (sources :+ absPath, classpath)
     }
   }

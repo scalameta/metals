@@ -1,9 +1,10 @@
 package tests.troubleshoot
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.troubleshoot.DeprecatedSbtVersion
@@ -103,7 +104,14 @@ class ProblemResolverSuite extends FunSuite {
   checkRecommendation(
     "missing-jdk-sources",
     scalaVersion = BuildInfo.scala212,
-    MissingJdkSources.message,
+    MissingJdkSources(
+      List(
+        "/some/invalid/src.zip",
+        "/some/invalid/lib/src.zip",
+        "/some/invalid/path/src.zip",
+        "/some/invalid/path/lib/src.zip"
+      ).map(path => AbsolutePath(Paths.get(path)))
+    ).message,
     sbtVersion = Some("1.6.0"),
     invalidJavaHome = true
   )

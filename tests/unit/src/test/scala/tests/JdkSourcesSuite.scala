@@ -7,11 +7,11 @@ import scala.meta.internal.mtags.Symbol
 
 class JdkSourcesSuite extends BaseSuite {
   test("src.zip") {
-    JdkSources.getOrThrow()
+    JdkSources().right.get
   }
 
   test("index-src.zip") {
-    val jdk = JdkSources.getOrThrow()
+    val jdk = JdkSources().right.get
     val symbolIndex = OnDemandSymbolIndex.empty()
 
     symbolIndex.addSourceJar(jdk, dialects.Scala213)
