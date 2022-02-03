@@ -217,7 +217,7 @@ object Embedded {
     Dependency.of(
       "org.scalameta",
       s"mdoc_${scalaBinaryVersion}",
-      BuildInfo.mdocVersion
+      if (scalaBinaryVersion == "2.11") "2.2.24" else BuildInfo.mdocVersion
     )
   }
 

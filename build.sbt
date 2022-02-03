@@ -191,7 +191,7 @@ lazy val V = new {
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
   val mill = "0.10.0"
-  val mdoc = "2.2.24"
+  val mdoc = "2.3.0"
   val munit = "0.7.29"
   val organizeImportRule = "0.6.0"
   val pprint = "0.7.1"
@@ -443,7 +443,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.8.5.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "8.4.3",
-      "com.h2database" % "h2" % "1.4.200",
+      "com.h2database" % "h2" % "2.0.206",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
