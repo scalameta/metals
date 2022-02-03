@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import java.util.Comparator
 
+import scala.annotation.tailrec
+
 /**
  * A comparator for identifier like "Predef" or "Function10".
  *
@@ -14,35 +16,47 @@ import java.util.Comparator
 object IdentifierComparator extends Comparator[CharSequence] {
   override def compare(o1: CharSequence, o2: CharSequence): Int = {
     val len = math.min(o1.length(), o2.length())
-    var i = 0
-    while (i < len) {
-      val a = o1.charAt(i)
-      val b = o2.charAt(i)
-      if (a.isDigit && b.isDigit) {
-        val byDigit = Integer.compare(toDigit(o1, i), toDigit(o2, i))
-        if (byDigit != 0) return byDigit
-        else {
-          i = seekNonDigit(o1, i)
+
+    @tailrec
+    def compareLoop(idx: Int): Int = {
+      if (idx >= len) Integer.compare(o1.length(), o2.length())
+      else {
+        val a = o1.charAt(idx)
+        val b = o2.charAt(idx)
+        if (a.isDigit && b.isDigit) {
+          val byDigits = compareSequences(o1, o2, idx)
+          if (byDigits != 0) byDigits
+          else compareLoop(seekNonDigit(o1, idx))
+        } else {
+          val result = Character.compare(a, b)
+          if (result != 0) result
+          else compareLoop(idx + 1)
         }
-      } else {
-        val result = Character.compare(a, b)
-        if (result != 0) {
-          return result
-        }
-        i += 1
       }
     }
-    Integer.compare(o1.length(), o2.length())
+
+    compareLoop(0)
   }
-  private def seekNonDigit(cs: CharSequence, i: Int): Int = {
-    var curr = i
-    while (curr < cs.length() && cs.charAt(curr).isDigit) {
-      curr += 1
-    }
-    curr
+
+  @tailrec
+  def seekNonDigit(cs: CharSequence, idx: Int): Int = {
+    val condition = idx < cs.length() && cs.charAt(idx).isDigit
+    if (condition) seekNonDigit(cs, idx + 1)
+    else idx
   }
-  private def toDigit(cs: CharSequence, i: Int): Int = {
+
+  private def compareSequences(
+      s1: CharSequence,
+      s2: CharSequence,
+      idx: Int
+  ): Int = {
+    val first = toDigit(s1, idx)
+    val second = toDigit(s2, idx)
+    first.compare(second)
+  }
+
+  private def toDigit(cs: CharSequence, i: Int): BigInt = {
     val digit = cs.subSequence(i, seekNonDigit(cs, i))
-    Integer.parseUnsignedInt(digit.toString)
+    BigInt(digit.toString())
   }
 }
