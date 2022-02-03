@@ -15,6 +15,11 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
+final case class SymbolLocation(
+    path: AbsolutePath,
+    range: Option[s.Range]
+)
+
 /**
  * Index split on buckets per dialect in order to have a constant time
  * and low memory footprint to infer dialect for SymbolDefinition because
@@ -29,7 +34,7 @@ import scala.meta.io.AbsolutePath
  */
 class SymbolIndexBucket(
     toplevels: TrieMap[String, Set[AbsolutePath]],
-    definitions: TrieMap[String, Set[AbsolutePath]],
+    definitions: TrieMap[String, Set[SymbolLocation]],
     sourceJars: ClasspathLoader,
     toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None,
     mtags: Mtags,
@@ -164,12 +169,13 @@ class SymbolIndexBucket(
       definitions
         .get(symbol.value)
         .map { paths =>
-          paths.map { p =>
+          paths.map { location =>
             SymbolDefinition(
               querySymbol = querySymbol,
               definitionSymbol = symbol,
-              path = p,
-              dialect = dialect
+              path = location.path,
+              dialect = dialect,
+              range = location.range
             )
           }.toList
         }
@@ -203,7 +209,7 @@ class SymbolIndexBucket(
       document.occurrences.foreach { occ =>
         if (occ.symbol.isGlobal && occ.role.isDefinition) {
           val acc = definitions.getOrElse(occ.symbol, Set.empty)
-          definitions.put(occ.symbol, acc + file)
+          definitions.put(occ.symbol, acc + SymbolLocation(file, occ.range))
         } else {
           // do nothing, we only care about global symbol definitions.
         }
