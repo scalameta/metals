@@ -69,7 +69,7 @@ class ProblemResolver(
         case UnsupportedSbtVersion => unsupportedSbt = true
         case DeprecatedSbtVersion => deprecatedSbt = true
         case FutureSbtVersion => futureSbt = true
-        case MissingJdkSources => misconfiguredProjects += 1
+        case MissingJdkSources(_) => misconfiguredProjects += 1
       }
     }
     for {
@@ -202,9 +202,11 @@ class ProblemResolver(
         Some(DeprecatedScalaVersion(version))
       case _ => None
     }
-    val javaSourcesProblem =
-      if (JdkSources(javaHome()).isDefined) None
-      else Some(MissingJdkSources)
+
+    val javaSourcesProblem = JdkSources(javaHome()) match {
+      case Left(notFound) => Some(MissingJdkSources(notFound.candidates))
+      case Right(_) => None
+    }
 
     scalaVersionProblem.orElse(javaSourcesProblem)
   }

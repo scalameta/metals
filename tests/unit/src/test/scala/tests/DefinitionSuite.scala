@@ -41,7 +41,7 @@ abstract class DefinitionSuiteBase(
       index.addSourceFile(source.file, Some(source.sourceDirectory), dialect)
     }
     // Step 2. Index dependency sources
-    index.addSourceJar(JdkSources().get, dialect)
+    index.addSourceJar(JdkSources().right.get, dialect)
     input.dependencySources.entries.foreach { jar =>
       index.addSourceJar(
         jar,

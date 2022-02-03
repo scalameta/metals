@@ -2516,12 +2516,13 @@ class MetalsLanguageServer(
     val usedJars = mutable.HashSet.empty[AbsolutePath]
     val jdkSources = JdkSources(userConfig.javaHome)
     jdkSources match {
-      case Some(zip) =>
+      case Right(zip) =>
         usedJars += zip
         addSourceJarSymbols(zip)
-      case None =>
+      case Left(notFound) =>
+        val candidates = notFound.candidates.mkString(", ")
         scribe.warn(
-          s"Could not find java sources in ${userConfig.javaHome}. Java symbols will not be available."
+          s"Could not find java sources in $candidates. Java symbols will not be available."
         )
     }
     val isVisited = new ju.HashSet[String]()
