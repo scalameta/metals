@@ -7,29 +7,21 @@ class IdentifierComparatorSuite extends munit.FunSuite {
   implicit val ord: Ordering[String] = (s1, s2) =>
     IdentifierComparator.compare(s1, s2)
 
-  test("sort-functions") {
+  test("functions") {
     val sorted = List("Function0", "Function10", "Function1").sorted
     val expected = List("Function0", "Function1", "Function10")
     assertEquals(sorted, expected)
   }
 
-  test("sort-integers") {
+  test("no-digits") {
+    val sorted = List("Some", "Option", "Either").sorted
+    val expected = List("Either", "Option", "Some")
+    assertEquals(sorted, expected)
+  }
+
+  test("integers") {
     val sorted = List("04", "004", "4", "0").sorted
     val expected = List("0", "4", "04", "004")
-    assertEquals(sorted, expected)
-  }
-
-  test("sort-octals") {
-    val sorted = List("0x01", "0x1", "0x0").sorted
-    val expected = List("0x0", "0x1", "0x01")
-    assertEquals(sorted, expected)
-  }
-
-  test("sort-long-numbers") {
-    val sorted =
-      List("File30110521182112346", "File0", "File30110521182112345").sorted
-    val expected =
-      List("File0", "File30110521182112345", "File30110521182112346")
     assertEquals(sorted, expected)
   }
 
@@ -45,9 +37,23 @@ class IdentifierComparatorSuite extends munit.FunSuite {
     assertEquals(sorted, expected)
   }
 
-  test("smaller-digit") {
+  test("different-size") {
     val sorted = List("4400", "450", "40", "5").sorted
     val expected = List("5", "40", "450", "4400")
+    assertEquals(sorted, expected)
+  }
+
+  test("same-size") {
+    val sorted = List("131", "121").sorted
+    val expected = List("121", "131")
+    assertEquals(sorted, expected)
+  }
+
+  test("sort-long-numbers") {
+    val sorted =
+      List("File30110521182112346", "File0", "File30110521182112345").sorted
+    val expected =
+      List("File0", "File30110521182112345", "File30110521182112346")
     assertEquals(sorted, expected)
   }
 

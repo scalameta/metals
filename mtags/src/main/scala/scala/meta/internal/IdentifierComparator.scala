@@ -26,7 +26,7 @@ object IdentifierComparator extends Comparator[CharSequence] {
         val a = o1.charAt(idx)
         val b = o2.charAt(idx)
         if (a.isDigit && b.isDigit) {
-          val byDigits = compareSequences(o1, o2, idx)
+          val byDigits = compareDigitSequences(o1, o2, idx)
           if (byDigits != 0) byDigits
           else compareLoop(seekNonDigit(o1, idx))
         } else {
@@ -41,53 +41,68 @@ object IdentifierComparator extends Comparator[CharSequence] {
   }
 
   @tailrec
-  def seekNonDigit(cs: CharSequence, idx: Int): Int = {
+  private def seekNonDigit(cs: CharSequence, idx: Int): Int = {
     val condition = idx < cs.length() && cs.charAt(idx).isDigit
     if (condition) seekNonDigit(cs, idx + 1)
     else idx
   }
 
-  private def compareSequences(
+  /**
+   * Compare two digit sequences:
+   * - compare their length if they aren't equal
+   * - compare them digit by digit, short circuit for first diff
+   * - for same sequences compare leading zeros
+   */
+  private def compareDigitSequences(
       s1: CharSequence,
       s2: CharSequence,
-      idx: Int
+      start: Int
   ): Int = {
-    val first = asString(s1, idx)
-    val second = asString(s2, idx)
-    val firstMaxIndex = first.length - 1
-    val secondMaxIndex = second.length - 1
+    val (first, zeros1) = extractDigits(s1, start)
+    val (second, zeros2) = extractDigits(s2, start)
 
-    val isFirstLonger = Integer.compare(first.length, second.length)
+    val len = math.min(first.length, second.length)
 
     @tailrec
-    def compareLoop(index1: Int, index2: Int): Int = {
-      if (index1 >= first.length || index2 >= second.length) {
-        isFirstLonger
+    def compareLoop(index: Int): Int = {
+      if (index >= len) {
+        Integer.compare(zeros1, zeros2)
       } else {
-        val a = first.charAt(index1)
-        val b = second.charAt(index2)
+        val a = first.charAt(index)
+        val b = second.charAt(index)
         val byDigit = Character.compare(a, b)
         // if digits are the same keep comparing
-        // if they differ and they're last digits pick greater one
-        // if they differ but they aren't last pick longer sequence
-        if (byDigit == 0) compareLoop(index1 + 1, index2 + 1)
-        else if (index1 == firstMaxIndex && index2 == secondMaxIndex) byDigit
-        else isFirstLonger
+        if (byDigit == 0) compareLoop(index + 1)
+        else byDigit
       }
     }
 
-    compareLoop(skipLeadingZeros(first), skipLeadingZeros(second))
+    val isFirstLonger = Integer.compare(first.length, second.length)
+
+    if (isFirstLonger != 0) isFirstLonger
+    else compareLoop(0)
   }
 
   @tailrec
-  private def skipLeadingZeros(cs: CharSequence, idx: Int = 0): Int = {
-    val char = cs.charAt(idx)
-    if (char == '0' && idx + 1 < cs.length()) skipLeadingZeros(cs, idx + 1)
-    else idx
+  private def skipLeadingZeros(cs: CharSequence, index: Int): Int = {
+    val char = cs.charAt(index)
+    if (char == '0' && index + 1 < cs.length()) skipLeadingZeros(cs, index + 1)
+    else index
   }
 
-  private def asString(cs: CharSequence, i: Int): CharSequence = {
-    val lastDigit = seekNonDigit(cs, i)
-    cs.subSequence(i, lastDigit)
+  /**
+   * @param cs CharSequence from which digits will be extracted
+   * @param start index of first digit character
+   * @return Tuple containing extracted digits and stripped, leading zeros
+   */
+  private def extractDigits(
+      cs: CharSequence,
+      start: Int
+  ): (CharSequence, Int) = {
+    val firstDigit = skipLeadingZeros(cs, start)
+    val lastDigit = seekNonDigit(cs, firstDigit)
+    val digits = cs.subSequence(firstDigit, lastDigit)
+    val leadingZeros = firstDigit - start
+    (digits, leadingZeros)
   }
 }
