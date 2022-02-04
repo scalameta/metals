@@ -2,7 +2,6 @@ package tests
 
 import scala.concurrent.Promise
 
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import bill.Bill
@@ -43,7 +42,7 @@ class BspBuildChangedSuite extends BaseLspSuite("bsp-build-changed") {
       _ <- server.server.buildServerPromise.future
       _ = {
         val logs = workspace
-          .resolve(Directories.log)
+          .resolve(Bill.logName)
           .readText
           .linesIterator
           .filter(_.startsWith("trace:"))
