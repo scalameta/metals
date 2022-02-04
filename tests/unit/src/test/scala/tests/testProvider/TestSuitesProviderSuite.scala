@@ -5,6 +5,8 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.TestUserInterfaceKind
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.TestExplorerEvent
@@ -16,9 +18,12 @@ import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 
 class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
-  override def initializationOptions: Some[InitializationOptions] = Some(
+  override val initializationOptions: Some[InitializationOptions] = Some(
     InitializationOptions.Default.copy(testExplorerProvider = Some(true))
   )
+
+  override val userConfig: UserConfiguration =
+    UserConfiguration(testUserInterface = TestUserInterfaceKind.TestExplorer)
 
   val gson: Gson =
     new GsonBuilder().setPrettyPrinting.disableHtmlEscaping().create()
