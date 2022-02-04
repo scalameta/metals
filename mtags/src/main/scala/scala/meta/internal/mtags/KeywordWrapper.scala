@@ -20,11 +20,11 @@ trait KeywordWrapper {
     }
     val validChunks = chunks.zipWithIndex.forall { case (chunk, index) =>
       chunk.forall(c => c.isLetter || c.isDigit || c == '$') ||
-        (chunk.forall(validOperator) &&
-          // operators can only come last
-          index == chunks.length - 1 &&
-          // but cannot be preceded by only a _
-          !(chunks.lift(index - 1).contains("") && index - 1 == 0))
+      (chunk.forall(validOperator) &&
+        // operators can only come last
+        index == chunks.length - 1 &&
+        // but cannot be preceded by only a _
+        !(chunks.lift(index - 1).contains("") && index - 1 == 0))
     }
 
     val firstLetterValid =

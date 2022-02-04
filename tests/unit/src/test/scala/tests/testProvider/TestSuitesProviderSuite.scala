@@ -45,7 +45,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |        "fullyQualifiedName": "NoPackage",
           |        "className": "NoPackage",
           |        "location": {
-          |          "uri": "${classUriFor("app/src/main/scala/NoPackage.scala")}",
+          |          "uri": "${classUriFor(
+        "app/src/main/scala/NoPackage.scala"
+      )}",
           |          "range": {
           |            "start": {
           |              "line": 0,
@@ -119,7 +121,9 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |        "fullyQualifiedName": "NoPackage",
           |        "className": "NoPackage",
           |        "location": {
-          |          "uri": "${classUriFor("app/src/main/scala/NoPackage.scala")}",
+          |          "uri": "${classUriFor(
+        "app/src/main/scala/NoPackage.scala"
+      )}",
           |          "range": {
           |            "start": {
           |              "line": 0,

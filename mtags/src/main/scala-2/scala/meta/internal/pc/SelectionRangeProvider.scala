@@ -64,7 +64,7 @@ class SelectionRangeProvider(
     //   a <- >>region>>Some(1)<<region<<
     // } yield a
     //
-    //Apply(
+    // Apply(
     //  Select(Apply(Ident(Some), List(Literal(Constant(1)))), flatMap), <-- This range
     //  List(
     //    Function(
@@ -75,7 +75,7 @@ class SelectionRangeProvider(
     //      )
     //    )
     //  )
-    //)
+    // )
     if (child.getRange() == parent.getRange()) {
       parent
     } else {

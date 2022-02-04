@@ -79,8 +79,8 @@ object CompletionPos:
             head match
               case i: Ident => i.sourcePos.point
               case s: Select =>
-                if s.name.toTermName == nme.ERROR || pos.span.point < s.span.point then
-                  fallback
+                if s.name.toTermName == nme.ERROR || pos.span.point < s.span.point
+                then fallback
                 else s.span.point
               case _ => fallback
     loop(path)

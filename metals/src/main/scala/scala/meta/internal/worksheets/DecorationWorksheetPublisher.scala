@@ -31,7 +31,7 @@ class DecorationWorksheetPublisher(isInlineDecorationProvider: Boolean)
   }
 
   override def hover(path: AbsolutePath, position: Position): Option[Hover] =
-    //publish'ed Decorations handle hover, so nothing to return here
+    // publish'ed Decorations handle hover, so nothing to return here
     None
 
   private def render(

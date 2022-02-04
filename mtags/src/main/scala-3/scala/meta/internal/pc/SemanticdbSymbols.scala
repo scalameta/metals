@@ -52,11 +52,11 @@ object SemanticdbSymbols:
                   owner.info.decl(termName(value)).symbol :: Nil
                 case Descriptor.Parameter(value) =>
                   // TODO - need to check how to implement this properly
-                  //owner.paramSymss.flatten.filter(_.name.containsName(value))
+                  // owner.paramSymss.flatten.filter(_.name.containsName(value))
                   Nil
                 case Descriptor.TypeParameter(value) =>
                   // TODO - need to check how to implement this properly
-                  //owner.typeParams.filter(_.name.containsName(value))
+                  // owner.typeParams.filter(_.name.containsName(value))
                   Nil
                 case Descriptor.Method(value, _) =>
                   // TODO - need to check how to implement this properly

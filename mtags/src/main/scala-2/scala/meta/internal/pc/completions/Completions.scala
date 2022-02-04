@@ -398,14 +398,15 @@ trait Completions { this: MetalsGlobal =>
     // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
     // which often causes null pointer exceptions, it's easier to catch the error here than
     // enforce discipline in the code.
-    try completionPositionUnsafe(
-      pos,
-      source,
-      text,
-      editRange,
-      completions,
-      latestEnclosing
-    )
+    try
+      completionPositionUnsafe(
+        pos,
+        source,
+        text,
+        editRange,
+        completions,
+        latestEnclosing
+      )
     catch {
       case NonFatal(e) =>
         logger.log(Level.SEVERE, e.getMessage(), e)

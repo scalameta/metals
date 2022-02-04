@@ -50,7 +50,7 @@ class NewProjectProvider(
         ) {
           // Matches:
           // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
-          //(A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
+          // (A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
           val all = for {
             result <- Try(requests.get(templatesUrl)).toOption.toIterable
             _ = if (result.statusCode != 200)

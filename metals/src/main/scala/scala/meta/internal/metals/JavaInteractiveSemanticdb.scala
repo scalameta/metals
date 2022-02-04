@@ -135,10 +135,8 @@ class JavaInteractiveSemanticdb(
   private def addExportsFlags: List[String] = {
     if (jdkVersion.major >= 17) {
       val compilerPackages = List(
-        "com.sun.tools.javac.api",
-        "com.sun.tools.javac.code",
-        "com.sun.tools.javac.model",
-        "com.sun.tools.javac.tree",
+        "com.sun.tools.javac.api", "com.sun.tools.javac.code",
+        "com.sun.tools.javac.model", "com.sun.tools.javac.tree",
         "com.sun.tools.javac.util"
       )
       compilerPackages.flatMap(pkg =>

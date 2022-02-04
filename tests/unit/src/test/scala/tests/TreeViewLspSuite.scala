@@ -18,11 +18,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
    */
   val expectedLibraries: SortedSet[String] = {
     lazy val jdk8Libraries = SortedSet(
-      "charsets",
-      "jce",
-      "jsse",
-      "resources",
-      "rt"
+      "charsets", "jce", "jsse", "resources", "rt"
     )
 
     val otherLibraries = SortedSet(

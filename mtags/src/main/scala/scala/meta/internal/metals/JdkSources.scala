@@ -34,7 +34,7 @@ object JdkSources {
     def isJdkCandidate(path: AbsolutePath): Boolean = {
       def containsJre = path.resolve("jre").exists
       val name = path.filename.toString
-      name.contains("jdk") || containsJre //e.g. jdk-8, java-openjdk-11
+      name.contains("jdk") || containsJre // e.g. jdk-8, java-openjdk-11
     }
 
     for {
