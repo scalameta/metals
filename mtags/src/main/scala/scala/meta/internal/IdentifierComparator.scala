@@ -54,17 +54,25 @@ object IdentifierComparator extends Comparator[CharSequence] {
   ): Int = {
     val first = asString(s1, idx)
     val second = asString(s2, idx)
+    val firstMaxIndex = first.length - 1
+    val secondMaxIndex = second.length - 1
+
+    val isFirstLonger = Integer.compare(first.length, second.length)
 
     @tailrec
     def compareLoop(index1: Int, index2: Int): Int = {
       if (index1 >= first.length || index2 >= second.length) {
-        Integer.compare(first.length, second.length)
+        isFirstLonger
       } else {
         val a = first.charAt(index1)
         val b = second.charAt(index2)
         val byDigit = Character.compare(a, b)
-        if (byDigit != 0) byDigit
-        else compareLoop(index1 + 1, index2 + 2)
+        // if digits are the same keep comparing
+        // if they differ and they're last digits pick greater one
+        // if they differ but they aren't last pick longer sequence
+        if (byDigit == 0) compareLoop(index1 + 1, index2 + 1)
+        else if (index1 == firstMaxIndex && index2 == secondMaxIndex) byDigit
+        else isFirstLonger
       }
     }
 

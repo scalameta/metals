@@ -45,4 +45,10 @@ class IdentifierComparatorSuite extends munit.FunSuite {
     assertEquals(sorted, expected)
   }
 
+  test("smaller-digit") {
+    val sorted = List("4400", "450", "40", "5").sorted
+    val expected = List("5", "40", "450", "4400")
+    assertEquals(sorted, expected)
+  }
+
 }
