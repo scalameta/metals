@@ -12,6 +12,8 @@ import scala.annotation.tailrec
  * - orders numbers by their numerical value instead of lexicographical
  *   - Good: `Function1`, `Function2`,  `Function10`
  *   - Bad:  `Function1`, `Function10`, `Function2`
+ *
+ * See IdentifierComparatorSuite for more examples
  */
 object IdentifierComparator extends Comparator[CharSequence] {
   override def compare(o1: CharSequence, o2: CharSequence): Int = {
@@ -50,13 +52,34 @@ object IdentifierComparator extends Comparator[CharSequence] {
       s2: CharSequence,
       idx: Int
   ): Int = {
-    val first = toDigit(s1, idx)
-    val second = toDigit(s2, idx)
-    first.compare(second)
+    val first = asString(s1, idx)
+    val second = asString(s2, idx)
+
+    @tailrec
+    def compareLoop(index1: Int, index2: Int): Int = {
+      if (index1 >= first.length || index2 >= second.length) {
+        Integer.compare(first.length, second.length)
+      } else {
+        val a = first.charAt(index1)
+        val b = second.charAt(index2)
+        val byDigit = Character.compare(a, b)
+        if (byDigit != 0) byDigit
+        else compareLoop(index1 + 1, index2 + 2)
+      }
+    }
+
+    compareLoop(skipLeadingZeros(first), skipLeadingZeros(second))
   }
 
-  private def toDigit(cs: CharSequence, i: Int): BigInt = {
-    val digit = cs.subSequence(i, seekNonDigit(cs, i))
-    BigInt(digit.toString())
+  @tailrec
+  private def skipLeadingZeros(cs: CharSequence, idx: Int = 0): Int = {
+    val char = cs.charAt(idx)
+    if (char == '0' && idx + 1 < cs.length()) skipLeadingZeros(cs, idx + 1)
+    else idx
+  }
+
+  private def asString(cs: CharSequence, i: Int): CharSequence = {
+    val lastDigit = seekNonDigit(cs, i)
+    cs.subSequence(i, lastDigit)
   }
 }
