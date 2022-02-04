@@ -89,7 +89,8 @@ object TestGroups {
       "tests.debug.DotEnvFileParserSuite", "tests.SemanticdbScala3Suite",
       "tests.troubleshoot.ProblemResolverSuite", "tests.BspBuildChangedSuite",
       "tests.classFinder.ClassBreakpointSuite",
-      "tests.classFinder.ClassNameResolverSuite", "tests.JavaDefinitionSuite")
+      "tests.classFinder.ClassNameResolverSuite", "tests.JavaDefinitionSuite",
+      "tests.IdentifierComparatorSuite")
   )
 
 }
