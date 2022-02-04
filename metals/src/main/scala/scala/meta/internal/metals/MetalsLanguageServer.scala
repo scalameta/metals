@@ -2774,11 +2774,11 @@ class MetalsLanguageServer(
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)
         case e: IndexingExceptions.InvalidJarException =>
-          scribe.warn(s"invalid jar: ${e.path}")
+          scribe.warn(s"invalid jar: ${e.path}", e.underlying)
         case e: IndexingExceptions.PathIndexingException =>
-          scribe.error(s"issues while parsing: ${e.path}", e)
+          scribe.error(s"issues while parsing: ${e.path}", e.underlying)
         case e: IndexingExceptions.InvalidSymbolException =>
-          scribe.error(s"searching for `${e.symbol}` failed", e)
+          scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.
         case NonFatal(e) =>
