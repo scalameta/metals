@@ -492,7 +492,7 @@ abstract class BaseWorksheetLspSuite(
     } yield ()
   }
 
-  test("definition".only, withoutVirtualDocs = true) {
+  test("definition", withoutVirtualDocs = true) {
     // NOTE(olafur) this test fails unpredicatly on Windows with
     //      """|/a/src/main/scala/Main.worksheet.sc
     //         |val message/*<no symbol>*/ = "Hello World!"
