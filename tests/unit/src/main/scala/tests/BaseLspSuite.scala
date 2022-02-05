@@ -25,6 +25,7 @@ import scala.meta.io.AbsolutePath
 
 import munit.Ignore
 import munit.Location
+import munit.Tag
 import munit.TestOptions
 
 /**
@@ -49,6 +50,8 @@ abstract class BaseLspSuite(
   var workspace: AbsolutePath = _
 
   protected def initializationOptions: Option[InitializationOptions] = None
+
+  private val virtualDocTag = new Tag("UseVirtualDocs")
 
   private var useVirtualDocs = false
 
@@ -86,13 +89,12 @@ abstract class BaseLspSuite(
       fn: => Future[Unit]
   )(implicit loc: Location) {
     if (withoutVirtualDocs) {
-      test(testOpts.withName(s"${testOpts.name}-readonly")) {
-        useVirtualDocs = false
-        fn.map(_ => useVirtualDocs = true)
-      }
-      test(testOpts.withName(s"${testOpts.name}-virtualdoc")) {
-        fn
-      }
+      test(testOpts.withName(s"${testOpts.name}-readonly")) { fn }
+      test(
+        testOpts
+          .withName(s"${testOpts.name}-virtualdoc")
+          .withTags(Set(virtualDocTag))
+      ) { fn }
     } else {
       test(testOpts)(fn)
     }
@@ -133,6 +135,7 @@ abstract class BaseLspSuite(
   override def beforeEach(context: BeforeEach): Unit = {
     cancelServer()
     if (context.test.tags.contains(Ignore)) return
+    useVirtualDocs = context.test.tags.contains(virtualDocTag)
     newServer(context.test.name)
   }
 
