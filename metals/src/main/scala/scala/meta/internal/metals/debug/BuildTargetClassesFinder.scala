@@ -20,7 +20,7 @@ class BuildTargetClassesFinder(
     index: OnDemandSymbolIndex
 ) {
 
-  //In case of success returns non-empty list
+  // In case of success returns non-empty list
   def findMainClassAndItsBuildTarget(
       className: String,
       buildTarget: Option[String]
@@ -49,7 +49,7 @@ class BuildTargetClassesFinder(
     }
   }
 
-  //In case of success returns non-empty list
+  // In case of success returns non-empty list
   def findTestClassAndItsBuildTarget(
       className: String,
       buildTarget: Option[String]

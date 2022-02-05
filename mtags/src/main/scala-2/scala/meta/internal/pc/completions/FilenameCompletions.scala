@@ -45,7 +45,7 @@ trait FilenameCompletions { this: MetalsGlobal =>
         val siblings = pkg.stats.count {
           case d: DefTree =>
             d.name.toString() == name &&
-              d.name.isTermName == isTermName
+            d.name.isTermName == isTermName
           case _ => false
         }
         if (

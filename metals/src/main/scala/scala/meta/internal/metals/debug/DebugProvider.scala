@@ -445,8 +445,8 @@ class DebugProvider(
           Option(params.envFile)
         )
 
-      //should not really happen due to
-      //`findMainClassAndItsBuildTarget` succeeding with non-empty list
+      // should not really happen due to
+      // `findMainClassAndItsBuildTarget` succeeding with non-empty list
       case Nil => Future.failed(new ju.NoSuchElementException(params.mainClass))
     }
     result.failed.foreach(reportErrors)
@@ -481,8 +481,8 @@ class DebugProvider(
             singletonList(clazz).toJson
           )
         )
-      //should not really happen due to
-      //`findMainClassAndItsBuildTarget` succeeding with non-empty list
+      // should not really happen due to
+      // `findMainClassAndItsBuildTarget` succeeding with non-empty list
       case Nil => Future.failed(new ju.NoSuchElementException(params.testClass))
     }
     result.failed.foreach(reportErrors)
