@@ -3,23 +3,52 @@ package scala.meta.internal.metals.testProvider
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.JavacOptionsItem
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
 
 final case class FullyQualifiedName(value: String) extends AnyVal
 final case class ClassName(value: String) extends AnyVal
 
-private[testProvider] final case class SymbolsPerTarget(
+private[testProvider] final case class SymbolsPerTarget private (
     target: BuildTarget,
     testSymbols: TrieMap[
       BuildTargetClasses.Symbol,
       BuildTargetClasses.FullyQualifiedClassName
-    ]
-)
+    ],
+    private val classpath: List[String]
+) {
+  def hasJunitOnClasspath: Boolean =
+    classpath.exists(_.contains("junit-interface"))
+}
+object SymbolsPerTarget {
+  def apply(
+      target: BuildTarget,
+      testSymbols: TrieMap[
+        BuildTargetClasses.Symbol,
+        BuildTargetClasses.FullyQualifiedClassName
+      ],
+      scalac: Option[ScalacOptionsItem],
+      javac: Option[JavacOptionsItem]
+  ): SymbolsPerTarget = {
+    SymbolsPerTarget(
+      target,
+      testSymbols,
+      scalac
+        .map(_.getClasspath())
+        .orElse(javac.map(_.getClasspath()))
+        .map(_.asScala.toList)
+        .map(c => { pprint.log(c); c })
+        .getOrElse(Nil)
+    )
+  }
+}
 
 private[testProvider] final case class TestFileMetadata(
     entries: List[TestEntry],
@@ -29,9 +58,14 @@ private[testProvider] final case class TestFileMetadata(
 private[testProvider] final case class TestEntry(
     buildTarget: BuildTarget,
     path: AbsolutePath,
-    suiteName: FullyQualifiedName,
-    symbol: mtags.Symbol,
+    suiteInfo: TestSuiteInfo,
     testClass: AddTestSuite
+)
+
+private[testProvider] final case class TestSuiteInfo(
+    fullyQualifiedName: FullyQualifiedName,
+    className: ClassName,
+    symbol: mtags.Symbol
 )
 
 private[testProvider] final class TestSuitesIndex {
@@ -59,11 +93,12 @@ private[testProvider] final class TestSuitesIndex {
   def put(
       entry: TestEntry
   ): Unit = {
+    val fullyQualifiedName = entry.suiteInfo.fullyQualifiedName
     cachedTestSuites.get(entry.buildTarget) match {
       case Some(suites) =>
-        suites.put(entry.suiteName, entry)
+        suites.put(fullyQualifiedName, entry)
       case None =>
-        val suites = TrieMap(entry.suiteName -> entry)
+        val suites = TrieMap(fullyQualifiedName -> entry)
         cachedTestSuites.put(entry.buildTarget, suites)
     }
 
@@ -136,7 +171,7 @@ private[testProvider] final class TestSuitesIndex {
       metadata <- fileToMetadata.remove(path).toList
       entry <- metadata.entries
     } yield {
-      remove(entry.buildTarget, entry.suiteName)
+      remove(entry.buildTarget, entry.suiteInfo.fullyQualifiedName)
       entry
     }
   }
