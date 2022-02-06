@@ -30,11 +30,8 @@ def crossSetting[A](
 // -Xlint is unusable because of
 // https://github.com/scala/bug/issues/10448
 val scala212CompilerOptions = List(
-  "-Ywarn-unused:imports",
-  "-Ywarn-unused:privates",
-  "-Ywarn-unused:locals",
-  "-Ywarn-unused:patvars",
-  "-Ywarn-unused:implicits"
+  "-Ywarn-unused:imports", "-Ywarn-unused:privates", "-Ywarn-unused:locals",
+  "-Ywarn-unused:patvars", "-Ywarn-unused:implicits"
 )
 
 logo := Welcome.logo
@@ -198,9 +195,9 @@ lazy val V = new {
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.9.34"
-  val scalafmt = "3.0.5"
+  val scalafmt = "3.4.0"
   val scalameta = "4.4.33"
-  val scribe = "3.6.7"
+  val scribe = "3.6.10"
   val semanticdb = scalameta
   val qdox = "2.0.1"
 

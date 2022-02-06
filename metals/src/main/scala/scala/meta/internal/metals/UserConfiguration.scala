@@ -165,9 +165,7 @@ object UserConfiguration {
             |""".stripMargin
       ),
       UserConfigurationOption(
-        "bloop-sbt-already-installed",
-        "false",
-        "false",
+        "bloop-sbt-already-installed", "false", "false",
         "Don't generate Bloop plugin file for sbt",
         "If true, Metals will not generate `metals.sbt` files under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
       ),
@@ -250,9 +248,7 @@ object UserConfiguration {
         """.stripMargin
       ),
       UserConfigurationOption(
-        "test-user-interface",
-        "Code Lenses",
-        "test explorer",
+        "test-user-interface", "Code Lenses", "test explorer",
         "Test UI used for tests and test suites",
         "Default way of handling tests and test suites."
       ),

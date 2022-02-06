@@ -141,7 +141,7 @@ case class ScalaPresentationCompiler(
       driver.run(uri, sourceFile)
 
       val ctx = driver.currentCtx
-      val pos = sourcePosition(driver, params, uri)
+      val pos = driver.sourcePosition(params)
       val (items, isIncomplete) = driver.compilationUnits.get(uri) match
         case Some(unit) =>
           val path =
@@ -295,136 +295,13 @@ case class ScalaPresentationCompiler(
     }
   end selectionRange
 
-  def expandRangeToEnclosingApply(
-      path: List[Tree],
-      pos: SourcePosition
-  )(using Context): List[Tree] =
-    def tryTail(enclosing: List[Tree]): Option[List[Tree]] =
-      enclosing match
-        case Nil => None
-        case head :: tail =>
-          head match
-            case t: GenericApply
-                if t.fun.srcPos.span.contains(pos.span) && !t.tpe.isErroneous =>
-              tryTail(tail).orElse(Some(enclosing))
-            case New(_) =>
-              tail match
-                case Nil => None
-                case Select(_, _) :: next =>
-                  tryTail(next)
-                case _ =>
-                  None
-            case _ =>
-              None
-    path match
-      case head :: tail =>
-        tryTail(tail).getOrElse(path)
-      case _ =>
-        List(EmptyTree)
-  end expandRangeToEnclosingApply
-
   def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
-    def qual(tree: Tree): Tree =
-      tree match
-        case Apply(q, _) => qual(q)
-        case TypeApply(q, _) => qual(q)
-        case AppliedTypeTree(q, _) => qual(q)
-        case Select(q, _) => q
-        case _ => tree
-
-    def seenFrom(tree: Tree, sym: Symbol)(using Context): (Type, Symbol) =
-      try
-        val pre = qual(tree)
-        val denot = sym.denot.asSeenFrom(pre.tpe.widenTermRefExpr)
-        (denot.info, sym.withUpdatedTpe(denot.info))
-      catch case NonFatal(e) => (sym.info, sym)
-
     compilerAccess.withNonInterruptableCompiler(
       ju.Optional.empty[Hover](),
       params.token
     ) { access =>
       val driver = access.compiler()
-      val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(uri, sourceFile)
-
-      given ctx: Context = driver.currentCtx
-      val pos = sourcePosition(driver, params, uri)
-      val trees = driver.openedTrees(uri)
-
-      def typeFromPath(path: List[Tree]) =
-        if path.isEmpty then NoType else path.head.tpe
-
-      val path = Interactive.pathTo(trees, pos)
-      val tp = typeFromPath(path)
-      val tpw = tp.widenTermRefExpr
-      // For expression we need to find all enclosing applies to get the exact generic type
-      val enclosing = expandRangeToEnclosingApply(path, pos)
-      val exprTp = typeFromPath(enclosing)
-      val exprTpw = exprTp.widenTermRefExpr
-
-      if tp.isError || tpw == NoType || tpw.isError || path.isEmpty then
-        ju.Optional.empty()
-      else
-        Interactive.enclosingSourceSymbols(enclosing, pos) match
-          case Nil =>
-            ju.Optional.empty()
-          case symbols @ (symbol :: _) =>
-            val printer = SymbolPrinter()
-            val docComments =
-              symbols.flatMap(ParsedComment.docOf(_))
-            val history = driver.compilationUnits.get(uri) match
-              case Some(unit) =>
-                val newctx =
-                  ctx.fresh.setCompilationUnit(unit)
-                val context =
-                  MetalsInteractive.contextOfPath(enclosing)(using newctx)
-                new ShortenedNames(IndexedContext(context))
-              case None => new ShortenedNames(IndexedContext(ctx))
-            val hoverString =
-              tpw match
-                // https://github.com/lampepfl/dotty/issues/8891
-                case tpw: ImportType =>
-                  printer.hoverDetailString(
-                    symbol,
-                    history,
-                    symbol.paramRef
-                  )
-                case _ =>
-                  val (tpe, sym) =
-                    if symbol.isType then (symbol.typeRef, symbol)
-                    else seenFrom(enclosing.head, symbol)
-
-                  val finalTpe =
-                    if tpe != NoType then tpe
-                    else tpw
-
-                  printer.hoverDetailString(sym, history, finalTpe)
-              end match
-            end hoverString
-
-            val docString =
-              docComments.map(_.renderAsMarkdown).mkString("\n")
-            printer.expressionTypeString(exprTpw, history) match
-              case Some(expressionType) =>
-                val forceExpressionType =
-                  !pos.span.isZeroExtent || (
-                    !hoverString.endsWith(
-                      expressionType
-                    ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
-                  )
-                val content = HoverMarkup(
-                  expressionType,
-                  hoverString,
-                  docString,
-                  forceExpressionType
-                )
-                ju.Optional.of(new Hover(content.toMarkupContent))
-              case _ =>
-                ju.Optional.empty
-            end match
-
-      end if
+      HoverProvider.hover(params, driver)
     }
   end hover
 
@@ -451,7 +328,7 @@ case class ScalaPresentationCompiler(
 
       val ctx = driver.currentCtx
 
-      val pos = sourcePosition(driver, params, uri)
+      val pos = driver.sourcePosition(params)
       val trees = driver.openedTrees(uri)
 
       // @tgodzik tpd.TypeApply doesn't seem to be handled here
@@ -503,40 +380,6 @@ case class ScalaPresentationCompiler(
 
   def withWorkspace(workspace: Path): PresentationCompiler =
     copy(workspace = Some(workspace))
-
-  private def sourcePosition(
-      driver: InteractiveDriver,
-      params: OffsetParams,
-      uri: URI
-  ): SourcePosition =
-    val source = driver.openedFiles(uri)
-    val span = params match
-      case p: RangeParams if p.offset != p.endOffset =>
-        p.trimWhitespaceInRange.fold {
-          Spans.Span(p.offset, p.endOffset)
-        } {
-          case trimmed: RangeParams =>
-            Spans.Span(trimmed.offset, trimmed.endOffset)
-          case offset =>
-            Spans.Span(p.offset, p.offset)
-        }
-      case _ => Spans.Span(params.offset)
-
-    new SourcePosition(source, span)
-  end sourcePosition
-
-  private def range(p: SourcePosition): Option[Range] =
-    if p.exists then
-      Some(
-        new Range(
-          new Position(
-            p.startLine,
-            p.startColumn
-          ),
-          new Position(p.endLine, p.endColumn)
-        )
-      )
-    else None
 
   private def completionItems(
       completion: CompletionValue,
@@ -590,7 +433,7 @@ case class ScalaPresentationCompiler(
 
       val documentation = ParsedComment.docOf(sym)
       if documentation.nonEmpty then
-        item.setDocumentation(hoverContent(None, documentation.toList))
+        item.setDocumentation(markupContent(None, documentation.toList))
 
       if sym.isDeprecated then
         item.setTags(List(CompletionItemTag.Deprecated).asJava)
@@ -658,7 +501,7 @@ case class ScalaPresentationCompiler(
     end match
   end completionItems
 
-  private def hoverContent(
+  private def markupContent(
       typeInfo: Option[String],
       comments: List[ParsedComment]
   )(using ctx: Context): MarkupContent =
@@ -671,7 +514,7 @@ case class ScalaPresentationCompiler(
     }
     comments.foreach { comment => buf.append(comment.renderAsMarkdown) }
     markupContent(buf.toString)
-  end hoverContent
+  end markupContent
 
   private def markupContent(content: String): MarkupContent =
     if content.isEmpty then null

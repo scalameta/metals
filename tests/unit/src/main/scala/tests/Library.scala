@@ -23,7 +23,7 @@ object Library {
     Library(
       "JDK",
       Classpath(PackageIndex.bootClasspath),
-      Classpath(JdkSources().get :: Nil)
+      Classpath(JdkSources().right.get :: Nil)
     )
   def cats: Seq[AbsolutePath] =
     fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")

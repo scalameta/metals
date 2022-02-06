@@ -2,6 +2,7 @@ package scala.meta.internal.troubleshoot
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.io.AbsolutePath
 
 /**
  * Class describing different issues that a build target can have that might influence
@@ -84,7 +85,9 @@ case object FutureSbtVersion extends ScalaProblem {
     "Code navigation for this sbt version is not yet supported"
 }
 
-case object MissingJdkSources extends ScalaProblem {
+case class MissingJdkSources(candidates: List[AbsolutePath])
+    extends ScalaProblem {
+  private val candidateString = candidates.mkString(", ")
   override def message: String =
-    "Goto definition for Java classes will not work, please install jdk sources in java home"
+    s"Goto definition for Java classes will not work, please install jdk sources in java home. Searched: $candidateString"
 }

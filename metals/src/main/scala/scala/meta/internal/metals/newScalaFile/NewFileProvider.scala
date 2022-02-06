@@ -181,7 +181,7 @@ class NewFileProvider(
       ext: String
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ext)
-    //name can be actually be "foo/Name", where "foo" is a folder to create
+    // name can be actually be "foo/Name", where "foo" is a folder to create
     val className = Identifier.backtickWrap(
       directory.getOrElse(workspace).resolve(name).filename
     )

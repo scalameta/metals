@@ -98,7 +98,7 @@ final class InferredTypeProvider(
             val tuplePartTpe = applied.args(tupleIndex)
             val typeEndPos = tpl.args(tupleIndex).pos.end
             val namePos = typeEndPos + valdefOffset - 4
-            val lspPos = driver.sourcePosition(params.uri, namePos).toLSP
+            val lspPos = new SourcePosition(source, Spans.Span(namePos)).toLSP
             val typeNameEdit =
               new TextEdit(
                 lspPos,

@@ -1399,7 +1399,7 @@ final class TestingServer(
         else Some(Symbols.Multi(symbols.sorted))
       } else {
         if (symbols.isEmpty) None // OK, expected
-        else if (last == symbols) None //OK, expected
+        else if (last == symbols) None // OK, expected
         else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
       }
       occurrences ++= occurrence.map { symbol =>

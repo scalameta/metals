@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
 import java.nio.file.Paths
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -15,13 +14,16 @@ object JdkSources {
   private val sources = RelativePath(Paths.get(zipFileName))
   private val libSources = RelativePath(Paths.get("lib")).resolve(sources)
 
-  def apply(userJavaHome: Option[String] = None): Option[AbsolutePath] = {
-    candidates(userJavaHome).headOption
+  def apply(
+      userJavaHome: Option[String] = None
+  ): Either[NoSourcesAvailable, AbsolutePath] = {
+    val paths = candidates(userJavaHome)
+    paths.find(_.isFile) match {
+      case Some(value) => Right(value)
+      case None => Left(NoSourcesAvailable(paths))
+    }
   }
 
-  def defaultJavaHomePath: Option[Path] = {
-    defaultJavaHome.map(Paths.get(_))
-  }
   def defaultJavaHome: Option[String] = {
     Option(System.getenv("JAVA_HOME")).orElse(
       Option(System.getProperty("java.home"))
@@ -32,7 +34,7 @@ object JdkSources {
     def isJdkCandidate(path: AbsolutePath): Boolean = {
       def containsJre = path.resolve("jre").exists
       val name = path.filename.toString
-      name.contains("jdk") || containsJre //e.g. jdk-8, java-openjdk-11
+      name.contains("jdk") || containsJre // e.g. jdk-8, java-openjdk-11
     }
 
     for {
@@ -53,15 +55,8 @@ object JdkSources {
       }
       jdk <- jdkHome ++ List(javaHome.parent, javaHome)
       src <- List(sources, libSources).map(jdk.resolve)
-      if src.isFile
     } yield src
   }
 
-  def getOrThrow(): AbsolutePath = {
-    val list = candidates(None)
-    list.find(_.isFile).getOrElse {
-      val tried = list.mkString("\n")
-      throw new NoSuchElementException(s"JDK src.zip. Tried\n:$tried")
-    }
-  }
+  case class NoSourcesAvailable(candidates: List[AbsolutePath])
 }

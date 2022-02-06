@@ -69,7 +69,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         val logs = workspace
-          .resolve(Directories.log)
+          .resolve(Bill.logName)
           .readText
           .linesIterator
           .filter(_.startsWith("trace:"))
@@ -105,7 +105,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {
         val logs = workspace
-          .resolve(Directories.log)
+          .resolve(Bill.logName)
           .readText
           .linesIterator
           .filter(_.startsWith("trace:"))

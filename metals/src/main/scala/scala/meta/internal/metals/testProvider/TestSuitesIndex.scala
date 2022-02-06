@@ -44,7 +44,6 @@ object SymbolsPerTarget {
         .map(_.getClasspath())
         .orElse(javac.map(_.getClasspath()))
         .map(_.asScala.toList)
-        .map(c => { pprint.log(c); c })
         .getOrElse(Nil)
     )
   }

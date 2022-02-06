@@ -2533,12 +2533,13 @@ class MetalsLanguageServer(
     val usedJars = mutable.HashSet.empty[AbsolutePath]
     val jdkSources = JdkSources(userConfig.javaHome)
     jdkSources match {
-      case Some(zip) =>
+      case Right(zip) =>
         usedJars += zip
         addSourceJarSymbols(zip)
-      case None =>
+      case Left(notFound) =>
+        val candidates = notFound.candidates.mkString(", ")
         scribe.warn(
-          s"Could not find java sources in ${userConfig.javaHome}. Java symbols will not be available."
+          s"Could not find java sources in $candidates. Java symbols will not be available."
         )
     }
     val isVisited = new ju.HashSet[String]()
@@ -2790,11 +2791,11 @@ class MetalsLanguageServer(
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)
         case e: IndexingExceptions.InvalidJarException =>
-          scribe.warn(s"invalid jar: ${e.path}")
+          scribe.warn(s"invalid jar: ${e.path}", e.underlying)
         case e: IndexingExceptions.PathIndexingException =>
-          scribe.error(s"issues while parsing: ${e.path}", e)
+          scribe.error(s"issues while parsing: ${e.path}", e.underlying)
         case e: IndexingExceptions.InvalidSymbolException =>
-          scribe.error(s"searching for `${e.symbol}` failed", e)
+          scribe.error(s"searching for `${e.symbol}` failed", e.underlying)
         case _: NoSuchFileException =>
         // only comes for badly configured jar with `/Users` path added.
         case NonFatal(e) =>

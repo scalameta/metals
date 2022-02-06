@@ -108,7 +108,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                 val isAlignedTypes = toZip.lengthCompare(params.length) == 0 &&
                   toZip.zip(params).forall { case (a, b) =>
                     a == b.tpe ||
-                      b.tpe.typeSymbol.isTypeParameter
+                    b.tpe.typeSymbol.isTypeParameter
                   }
                 if (isAlignedTypes) {
                   ctor.info
