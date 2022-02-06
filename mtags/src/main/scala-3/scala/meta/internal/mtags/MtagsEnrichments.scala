@@ -6,6 +6,7 @@ import scala.annotation.tailrec
 
 import scala.meta.internal.pc.MetalsInteractive
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 
 import dotty.tools.dotc.Driver
 import dotty.tools.dotc.core.Contexts.*
@@ -22,13 +23,26 @@ import org.eclipse.{lsp4j as l}
 object MtagsEnrichments extends CommonMtagsEnrichments:
 
   extension (driver: InteractiveDriver)
-    def sourcePosition(params: OffsetParams): SourcePosition =
-      sourcePosition(params.uri, params.offset)
 
-    def sourcePosition(uri: URI, offset: Int): SourcePosition =
+    def sourcePosition(
+        params: OffsetParams
+    ): SourcePosition =
+      val uri = params.uri
       val source = driver.openedFiles(uri)
-      val p = Spans.Span(offset)
-      new SourcePosition(source, p)
+      val span = params match
+        case p: RangeParams if p.offset != p.endOffset =>
+          p.trimWhitespaceInRange.fold {
+            Spans.Span(p.offset, p.endOffset)
+          } {
+            case trimmed: RangeParams =>
+              Spans.Span(trimmed.offset, trimmed.endOffset)
+            case offset =>
+              Spans.Span(p.offset, p.offset)
+          }
+        case _ => Spans.Span(params.offset)
+
+      new SourcePosition(source, span)
+    end sourcePosition
 
     def localContext(params: OffsetParams): Context =
       if driver.currentCtx.run.units.isEmpty then
