@@ -56,8 +56,9 @@ final class BuildTargetClasses(
   private def fetchClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
+    val distinctTargets = targets.distinct
     Future
-      .traverse(targets.groupBy(buildTargets.buildServerOf)) {
+      .traverse(distinctTargets.groupBy(buildTargets.buildServerOf)) {
         case (None, _) =>
           Future.successful(())
         case (Some(connection), targets0) =>

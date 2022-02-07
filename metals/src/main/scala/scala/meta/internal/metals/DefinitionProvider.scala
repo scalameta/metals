@@ -247,7 +247,7 @@ case class DefinitionDestination(
    */
   def toResult: Option[DefinitionResult] =
     for {
-      location <- snapshot.definition(uri, symbol)
+      location <- snapshot.toLocation(uri, symbol)
       revisedPosition = distance.toRevised(
         location.getRange.getStart.getLine,
         location.getRange.getStart.getCharacter

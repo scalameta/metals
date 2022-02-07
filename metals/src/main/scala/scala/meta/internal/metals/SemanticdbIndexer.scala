@@ -66,9 +66,9 @@ class SemanticdbIndexer(
     if (!Files.isDirectory(file)) {
       if (file.isSemanticdb) {
         try {
-          val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
+          val docs = TextDocuments.parseFrom(Files.readAllBytes(file))
           SemanticdbClasspath.toScala(workspace, AbsolutePath(file)).foreach {
-            sourceFile => onChange(sourceFile, doc)
+            sourceFile => onChange(sourceFile, docs)
           }
         } catch {
           /* @note in some cases file might be created or modified, but not actually finished

@@ -116,39 +116,30 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val DiscoverTestSuites = new Command(
-    "discover-test-suites",
-    "Discover test suites",
-    """|Discovers test suites in project
-       |
-       |The response will be an Array of `SuiteDiscovery`.
-       |
-       |```ts
-       |interface SuiteDiscovery {
-       |  targetName: string;
-       |  targetUri: string;
-       |  discovered: TestDiscoveryResult[];
-       |}
-       |```
-       |```ts
-       |type TestDiscoveryResult = SuiteDiscovery | PackageDiscovery;
-       |```
-       |```ts
-       |interface SuiteDiscovery {
-       |  kind: "suite";
-       |  className: string;
-       |  fullyQualifiedName: string;
-       |  location: Location;
-       |}
-       |```
-       |```ts
-       |interface PackageDiscovery {
-       |  kind: "package";
-       |  prefix: string;
-       |  children: TestDiscoveryResult[];
-       |}
-       |```
-       |""".stripMargin
+  /** If uri is null discover all test suites, otherwise discover testcases in file */
+  final case class DiscoverTestParams(
+      @Nullable uri: String = null
+  )
+  val DiscoverTestSuites = new ParametrizedCommand[DiscoverTestParams](
+    "discover-tests",
+    "Discover tests",
+    """
+      |Discovers all tests in project or a file.
+      |See ClientCommands.UpdateTestExplorer to see how response looks like.
+      |```
+      |""".stripMargin,
+    """
+      |An object with uri, when request is meant to discover test cases for uri
+      |```json
+      |{
+      |  uri: file:///home/dev/foo/Bar.scala
+      |}
+      |```
+      |or empty object if request is meant to discover all test suites
+      |```json
+      |{}
+      |```
+      |""".stripMargin
   )
 
   val TargetInfoDisplay = new Command(

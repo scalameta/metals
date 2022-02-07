@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.net.URI
 
 import scala.meta.internal.metals.clients.language.MetalsOpenWindowParams
+import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.{lsp4j => l}
@@ -168,6 +169,55 @@ object ClientCommands {
         |}
         |```
     """.stripMargin
+  )
+
+  val UpdateTestExplorer = new ListParametrizedCommand[BuildTargetUpdate](
+    "metals-update-test-explorer",
+    "Update Test Explorer",
+    "Notifies the client that the test explorer model has to be updated",
+    """
+      |Sends to the client an Array of `BuildTargetUpdate`s.
+      |
+      |```ts
+      |export interface BuildTargetUpdate {
+      |  targetName: TargetName;
+      |  targetUri: TargetUri;
+      |  events: TestExplorerEvent[];
+      |}
+      |
+      |export type TestExplorerEvent =
+      | RemoveTestSuite
+      | AddTestSuite
+      | AddTestCases;
+      |
+      |export interface RemoveTestSuite {
+      |  kind: "removeSuite";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
+      |}
+      |
+      |export interface AddTestSuite {
+      |  kind: "addSuite";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
+      |  symbol: string;
+      |  location: Location;
+      |  canResolveChildren: boolean;
+      |}
+      |
+      |export interface AddTestCases {
+      |  kind: "addTestCases";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
+      |  testCases: TestCaseEntry[];
+      |}
+      |
+      |export interface TestCaseEntry {
+      |  name: string;
+      |  location: Location;
+      |}
+      |```
+      |""".stripMargin
   )
 
   val RefreshModel = new Command(

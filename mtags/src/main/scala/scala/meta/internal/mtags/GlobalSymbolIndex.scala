@@ -2,7 +2,7 @@ package scala.meta.internal.mtags
 
 import scala.meta.Dialect
 import scala.meta.internal.mtags
-import scala.meta.internal.semanticdb
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
 /**
@@ -105,5 +105,5 @@ case class SymbolDefinition(
     definitionSymbol: Symbol,
     path: AbsolutePath,
     dialect: Dialect,
-    range: Option[semanticdb.Range]
+    range: Option[s.Range]
 )

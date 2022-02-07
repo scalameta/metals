@@ -160,7 +160,7 @@ class MetalsLanguageServer(
   var bspSession: Option[BspSession] =
     Option.empty[BspSession]
   private val savedFiles = new ActiveFiles(time)
-  private val openedFiles = new ActiveFiles(time)
+  private val recentlyOpenedFiles = new ActiveFiles(time)
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
@@ -614,8 +614,23 @@ class MetalsLanguageServer(
           () => userConfig,
           trees
         )
+        testProvider = new TestSuitesProvider(
+          buildTargets,
+          buildTargetClasses,
+          definitionIndex,
+          semanticdbs,
+          buffers,
+          clientConfig,
+          () => userConfig,
+          languageClient
+        )
         semanticDBIndexer = new SemanticdbIndexer(
-          List(referencesProvider, implementationProvider, syntheticsDecorator),
+          List(
+            referencesProvider,
+            implementationProvider,
+            syntheticsDecorator,
+            testProvider
+          ),
           buildTargets,
           workspace
         )
@@ -715,12 +730,6 @@ class MetalsLanguageServer(
           languageClient,
           clientConfig,
           classFinder
-        )
-        testProvider = new TestSuitesProvider(
-          buildTargets,
-          buildTargetClasses,
-          definitionProvider,
-          clientConfig
         )
         popupChoiceReset = new PopupChoiceReset(
           workspace,
@@ -1025,7 +1034,7 @@ class MetalsLanguageServer(
     // and we would lose the notion of the focused document
     focusedDocument.foreach(recentlyFocusedFiles.add)
     focusedDocument = Some(path)
-    openedFiles.add(path)
+    recentlyOpenedFiles.add(path)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -1048,7 +1057,12 @@ class MetalsLanguageServer(
     // We need both parser and semanticdb for synthetic decorations
     val publishSynthetics = for {
       _ <- Future.sequence(List(parseTrees(path), interactive))
-      _ <- syntheticsDecorator.publishSynthetics(path)
+      _ <- Future.sequence(
+        List(
+          syntheticsDecorator.publishSynthetics(path),
+          testProvider.didOpen(path)
+        )
+      )
     } yield ()
 
     if (path.isDependencySource(workspace)) {
@@ -1113,7 +1127,7 @@ class MetalsLanguageServer(
         if (path.isDependencySource(workspace)) {
           syntheticsDecorator.publishSynthetics(path)
           CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
-        } else if (openedFiles.isRecentlyActive(path)) {
+        } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
           CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
         } else {
           syntheticsDecorator.publishSynthetics(path)
@@ -1685,8 +1699,12 @@ class MetalsLanguageServer(
         disconnectOldBuildServer().asJavaObject
       case ServerCommands.DecodeFile(uri) =>
         fileDecoderProvider.decodedFileContents(uri).asJavaObject
-      case ServerCommands.DiscoverTestSuites() =>
-        Future.successful { testProvider.findTestSuites() }.asJavaObject
+      case ServerCommands.DiscoverTestSuites(params) =>
+        Future {
+          testProvider.discoverTests(
+            Option(params.uri).map(_.toAbsolutePath)
+          )
+        }.asJavaObject
       case ServerCommands.ChooseClass(params) =>
         fileDecoderProvider
           .chooseClassFromFile(
@@ -2501,7 +2519,6 @@ class MetalsLanguageServer(
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach { _ =>
-        testProvider.refreshTestSuites()
         languageClient.refreshModel()
       }
   }

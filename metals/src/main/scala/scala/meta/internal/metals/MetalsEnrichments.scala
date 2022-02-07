@@ -643,13 +643,13 @@ object MetalsEnrichments
         localOccurrence.symbol == symbol
       }
     }
-    def definition(uri: String, symbol: String): Option[l.Location] = {
+
+    def toLocation(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
         .map { occ => occ.toLocation(uri) }
     }
   }
-
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
     def formatMessage(uri: String, hint: String): String = {
       val severity = d.getSeverity.toString.toLowerCase()

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.BuildTool
@@ -28,6 +29,7 @@ import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeAction
@@ -86,6 +88,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
   val treeViewChanges = new ConcurrentLinkedQueue[TreeViewDidChangeParams]()
+
+  /** Stores commands executed by the client */
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   val decorations =
     new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
@@ -103,6 +107,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = (_) => ()
 
+  val testExplorerUpdates: Promise[List[JsonObject]] =
+    Promise[List[JsonObject]]()
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
@@ -110,6 +117,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     params.getCommand match {
       case ClientCommands.RefreshModel.id =>
         refreshModelHandler(refreshCount.getAndIncrement())
+      case ClientCommands.UpdateTestExplorer.id =>
+        testExplorerUpdates.trySuccess(
+          params.getArguments().asScala.toList.asInstanceOf[List[JsonObject]]
+        )
       case _ =>
     }
   }
