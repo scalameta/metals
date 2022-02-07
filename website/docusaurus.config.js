@@ -9,6 +9,7 @@ module.exports = {
   "customFields": {
     "repoUrl": "https://github.com/scalameta/metals"
   },
+  "staticDirectories": ["static", "../website/target/data"],
   "onBrokenLinks": "log",
   "onBrokenMarkdownLinks": "log",
   "presets": [
@@ -19,7 +20,7 @@ module.exports = {
           "path": "../website/target/docs",
           "showLastUpdateAuthor": true,
           "showLastUpdateTime": true,
-          "editUrl": ({docPath}) => `https://github.com/scalameta/metals/edit/main/docs/${docPath}`,
+          "editUrl": ({ docPath }) => `https://github.com/scalameta/metals/edit/main/docs/${docPath}`,
           "sidebarPath": "../website/sidebars.json"
         },
         "blog": {
@@ -30,6 +31,9 @@ module.exports = {
         },
         "theme": {
           "customCss": "../src/css/customTheme.css"
+        },
+        "gtag": {
+          "trackingID": "UA-140140828-1"
         }
       }
     ]
@@ -131,9 +135,6 @@ module.exports = {
     "algolia": {
       "apiKey": "c865f6d974a3072a35d4b53d48ac2307",
       "indexName": "metals"
-    },
-    "gtag": {
-      "trackingID": "UA-140140828-1"
     }
   }
 }
