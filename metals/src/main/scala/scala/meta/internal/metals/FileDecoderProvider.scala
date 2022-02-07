@@ -103,7 +103,7 @@ final class FileDecoderProvider(
 
   /**
    * URI format...
-   * metalsDecode:/fileUrl.decodeExtension
+   * metalsDecode:fileUrl.decodeExtension
    * or
    * jar:file:///jarPath/jar-sources.jar!/packagedir/file.java
    *
@@ -141,6 +141,9 @@ final class FileDecoderProvider(
    *
    * jar:
    * metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
+   *
+   * build target:
+   * metalsDecode:file:///workspacePath/buildTargetName.metals-buildtarget
    */
   def decodedFileContents(uriAsStr: String): Future[DecoderResponse] = {
     Try(URI.create(uriAsStr)) match {
@@ -213,7 +216,16 @@ final class FileDecoderProvider(
           }
       }
     } else
-      Future.successful(DecoderResponse.failed(uri, "Unsupported extension"))
+      additionalExtension match {
+        case "metals-buildtarget" =>
+          Future.successful(
+            decodeBuildTarget(uri)
+          )
+        case _ =>
+          Future.successful(
+            DecoderResponse.failed(uri, "Unsupported extension")
+          )
+      }
   }
 
   private def toFile(
@@ -253,6 +265,14 @@ final class FileDecoderProvider(
           """Invalid extension. Metals can only decode ".java" or ".scala" files."""
         )
       )
+  }
+
+  private def decodeBuildTarget(uri: URI): DecoderResponse = {
+    val targetName =
+      uri.toString.stripSuffix(".metals-buildtarget").split('/').last
+    val text =
+      new BuildTargetInfo(buildTargets).buildTargetDetails(targetName)
+    DecoderResponse.success(uri, text)
   }
 
   private def decodeSemanticDb(

@@ -259,6 +259,7 @@ class MetalsLanguageServer(
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
   private var newFileProvider: NewFileProvider = _
+  private var buildTargetProvider: BuildTargetProvider = _
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
@@ -686,6 +687,10 @@ class MetalsLanguageServer(
           scalafixProvider,
           trees,
           diagnostics,
+          languageClient
+        )
+        buildTargetProvider = new BuildTargetProvider(
+          buildTargets,
           languageClient
         )
         doctor = new Doctor(
@@ -1693,6 +1698,21 @@ class MetalsLanguageServer(
         Future {
           doctor.executeRunDoctor()
         }.asJavaObject
+      case ServerCommands.TargetInfoDisplay() => {
+        Option(params.getArguments())
+          .map(_.asScala.toList)
+          .getOrElse(List.empty)
+          .headOption match {
+          case Some(arg: JsonPrimitive) =>
+            buildTargetProvider
+              .displayBuildTargetInfo(workspace, arg.getAsString)
+              .asJavaObject
+          case _ =>
+            buildTargetProvider
+              .askForBuildTargetAndDisplayBuildTargetInfo(workspace)
+              .asJavaObject
+        }
+      }
       case ServerCommands.BspSwitch() =>
         (for {
           isSwitched <- bspConnector.switchBuildServer(
@@ -2528,13 +2548,13 @@ class MetalsLanguageServer(
     val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
+      _ = jdkSources.foreach(source =>
+        buildTargets.addDependencySource(source, item.getTarget)
+      )
       scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       path = sourceUri.toAbsolutePath
       _ = buildTargets.addDependencySource(path, item.getTarget)
-      _ = jdkSources.foreach(source =>
-        buildTargets.addDependencySource(source, item.getTarget)
-      )
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)

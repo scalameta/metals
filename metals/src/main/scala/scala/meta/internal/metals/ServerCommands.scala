@@ -98,7 +98,11 @@ object ServerCommands {
        |  ```
        |- jar:
        |  ```
-       |   metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
+       |  metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
+       |  ```
+       |- build target:
+       |  ```
+       |  metalsDecode:file:///workspacePath/buildTargetName.metals-buildtarget
        |  ```
        |
        |Response:
@@ -144,6 +148,15 @@ object ServerCommands {
        |  children: TestDiscoveryResult[];
        |}
        |```
+       |""".stripMargin
+  )
+
+  val TargetInfoDisplay = new Command(
+    "target-info-display",
+    "Display target info",
+    """|Choose a Build Target and view information about its configuration.
+       |""".stripMargin,
+    """|[string], name of the Build Target.
        |""".stripMargin
   )
 
@@ -540,6 +553,7 @@ object ServerCommands {
       RunDoctor,
       DecodeFile,
       DisconnectBuildServer,
+      TargetInfoDisplay,
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,
