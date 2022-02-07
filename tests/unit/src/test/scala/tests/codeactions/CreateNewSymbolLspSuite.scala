@@ -68,10 +68,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         |${ImportMissingSymbol.title("Location", docToolName)}
         |${CreateNewSymbol.title("Missing")}
         |${CreateNewSymbol.title("Location")}
-        |${ExtractRenameMember.renameFileAsClassTitle(
-      fileName = "A.scala",
-      memberName = "School"
-    )}
+        |${ExtractRenameMember.renameFileAsClassTitle(fileName = "A.scala", memberName = "School")}
         |""".stripMargin,
     selectedActionIndex = 4,
     pickedKind = "scala-class",
@@ -101,9 +98,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
         _ <- initialize(s"""/metals.json
                            |{"a":{}}
                            |/$path
-                           |${input
-          .replace("<<", "")
-          .replace(">>", "")}
+                           |${input.replace("<<", "").replace(">>", "")}
                            |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <-
