@@ -45,9 +45,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |        "fullyQualifiedName": "NoPackage",
           |        "className": "NoPackage",
           |        "location": {
-          |          "uri": "${classUriFor(
-        "app/src/main/scala/NoPackage.scala"
-      )}",
+          |          "uri": "${classUriFor("app/src/main/scala/NoPackage.scala")}",
           |          "range": {
           |            "start": {
           |              "line": 0,
@@ -121,9 +119,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |        "fullyQualifiedName": "NoPackage",
           |        "className": "NoPackage",
           |        "location": {
-          |          "uri": "${classUriFor(
-        "app/src/main/scala/NoPackage.scala"
-      )}",
+          |          "uri": "${classUriFor("app/src/main/scala/NoPackage.scala")}",
           |          "range": {
           |            "start": {
           |              "line": 0,
@@ -144,9 +140,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |            "fullyQualifiedName": "another.AnotherPackage",
           |            "className": "AnotherPackage",
           |            "location": {
-          |              "uri": "${classUriFor(
-        "app/src/main/scala/another/AnotherPackage.scala"
-      )}",
+          |              "uri": "${classUriFor("app/src/main/scala/another/AnotherPackage.scala")}",
           |              "range": {
           |                "start": {
           |                  "line": 2,
@@ -170,9 +164,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |            "fullyQualifiedName": "foo.Foo",
           |            "className": "Foo",
           |            "location": {
-          |              "uri": "${classUriFor(
-        "app/src/main/scala/foo/Foo.scala"
-      )}",
+          |              "uri": "${classUriFor("app/src/main/scala/foo/Foo.scala")}",
           |              "range": {
           |                "start": {
           |                  "line": 2,
@@ -193,9 +185,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |                "fullyQualifiedName": "foo.bar.FooBar",
           |                "className": "FooBar",
           |                "location": {
-          |                  "uri": "${classUriFor(
-        "app/src/main/scala/foo/bar/FooBar.scala"
-      )}",
+          |                  "uri": "${classUriFor("app/src/main/scala/foo/bar/FooBar.scala")}",
           |                  "range": {
           |                    "start": {
           |                      "line": 2,
