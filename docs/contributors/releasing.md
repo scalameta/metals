@@ -3,6 +3,8 @@ id: releasing
 title: Making a release
 ---
 
+## Metals 
+
 - Choose the right version number:
 
   - `x.0.0` is reserved for incompatible changes and require a milestone cycle.
@@ -110,5 +112,26 @@ title: Making a release
   - Once the VS Code extension has been updated on the Marketplace, click
     "Publish release".
 
+- Update version numbers in:
+  - `build.sbt` - update `localSnapshotVersion`
+  - `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
+  - `.github/workflows/mtags-auto-release.yml` - update `metals_version` and `metals_ref`
+
 - Announce the new release with the link to the release notes:
   - on [Discord](https://discord.com/invite/RFpSVth)
+
+## Add new Scala version support to the existing release
+
+- If it's a Scala2 you need to release semanticdb plugin for it first.
+  
+  - Find out which scalameta version the existing release uses
+  - In scalameta project:
+    - checkout on the tag for this version
+    - apply required changes for supporting new Scala2 compiler
+    - create and push tag with the following name: `semanticdb_v${existing-scalameta-version}_${scala-version}`
+      Notice this tag should include [these changes in `release.yml`](https://github.com/scalameta/scalameta/pull/2562/commits/1dfc99677659f5a9919c0dc9166547a0b332d35c)
+
+- Release mtags artifact.
+  Open [`Mtags auto release` action page](https://github.com/scalameta/metals/actions/workflows/mtags-auto-release.yml),
+  click `Run Workflow`, specify Scala version and confirm.
+  
