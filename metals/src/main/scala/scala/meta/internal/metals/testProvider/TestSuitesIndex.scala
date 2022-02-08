@@ -28,7 +28,7 @@ private[testProvider] final case class SymbolsPerTarget private (
     classpath.exists { item =>
       // need to check organization also because
       // munit brings dependency on 'org/scalameta/junit-interface'
-      item.contains("com/github/sbt/junit-interface") || 
+      item.contains("com/github/sbt/junit-interface") ||
       item.contains("com/novocode/junit-interface")
     }
 }

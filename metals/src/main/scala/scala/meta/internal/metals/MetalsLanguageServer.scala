@@ -682,7 +682,8 @@ class MetalsLanguageServer(
           stacktraceAnalyzer,
           clientConfig,
           semanticdbs,
-          compilers
+          compilers,
+          () => bspSession.exists(_.main.isBloop)
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -1814,17 +1815,25 @@ class MetalsLanguageServer(
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
             Future.successful(params)
+
           case Seq(mainClassParamsParser.Jsonized(params))
               if params.mainClass != null =>
             debugProvider.resolveMainClassParams(params)
+
+          case Seq(testSelectionParamsParser.Jsonized(params)) =>
+            debugProvider.resolveTestSelectionParams(params)
+
           case Seq(testClassParamsParser.Jsonized(params))
               if params.testClass != null =>
             debugProvider.resolveTestClassParams(params)
+
           case Seq(attachRemoteParamsParser.Jsonized(params))
               if params.hostName != null =>
             debugProvider.resolveAttachRemoteParams(params)
+
           case Seq(unresolvedParamsParser.Jsonized(params)) =>
             debugProvider.debugDiscovery(params)
+
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
