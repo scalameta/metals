@@ -1820,7 +1820,8 @@ class MetalsLanguageServer(
               if params.mainClass != null =>
             debugProvider.resolveMainClassParams(params)
 
-          case Seq(testSelectionParamsParser.Jsonized(params)) =>
+          case Seq(testSelectionParamsParser.Jsonized(params))
+              if params.target != null && params.classes != null =>
             debugProvider.resolveTestSelectionParams(params)
 
           case Seq(testClassParamsParser.Jsonized(params))

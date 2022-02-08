@@ -563,8 +563,8 @@ case class DebugUnresolvedMainClassParams(
 )
 
 final case class DebugScalaTestSelectionParams(
-    target: b.BuildTargetIdentifier,
-    classes: java.util.List[ScalaTestSuiteSelection],
+    @Nullable target: b.BuildTargetIdentifier,
+    @Nullable classes: java.util.List[ScalaTestSuiteSelection],
     jvmOptions: java.util.List[String],
     env: java.util.Map[String, String]
 )
