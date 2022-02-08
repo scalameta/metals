@@ -1,5 +1,6 @@
 package docs
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -54,7 +55,20 @@ object Docs {
 
   lazy val stableVersion: String = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {
-    val out = Paths.get("website", "target", "docs")
+    val target = Paths.get("website", "target")
+
+    val dataOut = target.resolve("data")
+    val docsOut = target.resolve("docs")
+
+    Files.createDirectories(dataOut)
+    Files.write(
+      dataOut.resolve("latests.json"),
+      s"""|{
+          |  "release": "${release.version}",
+          |  "snapshot": "${snapshot.version}"
+          |}""".stripMargin.getBytes()
+    )
+
     val settings = mdoc
       .MainSettings()
       .withSiteVariables(
@@ -71,7 +85,7 @@ object Docs {
           "SCALA_VERSION" -> V.scala212
         )
       )
-      .withOut(out)
+      .withOut(docsOut)
       .withArgs(args.toList)
     val exitCode = mdoc.Main.process(settings)
     if (exitCode != 0) {
