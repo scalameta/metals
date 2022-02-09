@@ -5,7 +5,7 @@ import tests.QuickBuildLayout
 
 class StepDapSuite
     extends BaseStepDapSuite(
-      s"debug-step",
+      "debug-step",
       QuickBuildInitializer,
       QuickBuildLayout
     )
