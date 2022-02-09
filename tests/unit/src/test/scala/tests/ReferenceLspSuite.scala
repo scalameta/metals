@@ -8,14 +8,7 @@ import scala.meta.internal.metals.ServerCommands
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   test("case-class") {
     cleanWorkspace()

@@ -5,14 +5,7 @@ import scala.meta.internal.metals.InitializationOptions
 abstract class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   renamed(
     "basic",

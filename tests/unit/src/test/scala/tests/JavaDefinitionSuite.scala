@@ -22,14 +22,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     if (Properties.isJavaAtLeast("9")) "java.base/" else ""
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   check(
     "jdk-String",

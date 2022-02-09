@@ -13,7 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
 
-  override val initializationOptions: Some[InitializationOptions] =
+  override protected def initializationOptions: Some[InitializationOptions] =
     Some(
       // NOTE: Default is fine here since they default to off
       InitializationOptions.Default

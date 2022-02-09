@@ -16,14 +16,7 @@ class FindTextInDependencyJarsSuite
   val akkaVersion = "2.6.16"
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   test(
     "find exact string match in .conf file inside jar",

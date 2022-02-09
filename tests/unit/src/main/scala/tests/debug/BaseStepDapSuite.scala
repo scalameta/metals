@@ -10,6 +10,7 @@ import munit.TestOptions
 import tests.BaseDapSuite
 import tests.BuildServerInitializer
 import tests.BuildToolLayout
+import tests.TestingServer
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
 // https://stackoverflow.com/questions/2225737/error-jdwp-unable-to-get-jni-1-2-environment
@@ -20,14 +21,7 @@ abstract class BaseStepDapSuite(
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   private val scalaLibDependency = s"scala-library-$scalaVersion-sources.jar"
   private val javaLibDependency = s"src.zip"

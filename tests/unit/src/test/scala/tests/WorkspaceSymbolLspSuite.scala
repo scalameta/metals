@@ -15,14 +15,7 @@ import tests.MetalsTestEnrichments._
 class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   test("basic") {
     cleanWorkspace()

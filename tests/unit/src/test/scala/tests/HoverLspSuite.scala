@@ -7,14 +7,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   test("basic".tag(FlakyWindows)) {
     for {

@@ -23,7 +23,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class NewProjectLspSuite extends BaseLspSuite("new-project") {
 
-  override def initializationOptions: Option[InitializationOptions] =
+  override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default
         .copy(inputBoxProvider = Some(true), openNewWindowProvider = Some(true))

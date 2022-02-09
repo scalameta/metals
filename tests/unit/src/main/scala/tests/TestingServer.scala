@@ -69,6 +69,7 @@ import scala.meta.io.RelativePath
 import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
+import munit.Tag
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
@@ -457,13 +458,7 @@ final class TestingServer(
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
     documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
     textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)
-    val initOptions = initializationOptions.getOrElse(
-      InitializationOptions.Default.copy(
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    val initOptions = initializationOptions.getOrElse(TestingServer.TestDefault)
 
     // Yes, this is a bit gross :/
     // However, I want to only get the existing fields that are being set
@@ -1674,4 +1669,15 @@ object TestingServer {
         throw new IllegalArgumentException(s"no such file: $filename")
       }
   }
+
+  val virtualDocTag = new Tag("UseVirtualDocs")
+
+  val TestDefault: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        debuggingProvider = Some(true),
+        treeViewProvider = Some(true),
+        slowTaskProvider = Some(true)
+      )
+    )
 }

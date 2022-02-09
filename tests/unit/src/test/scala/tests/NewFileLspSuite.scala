@@ -22,7 +22,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class NewFileLspSuite extends BaseLspSuite("new-file") {
 
-  override def initializationOptions: Option[InitializationOptions] =
+  override protected def initializationOptions: Option[InitializationOptions] =
     Some(InitializationOptions.Default.copy(inputBoxProvider = Some(true)))
 
   checkScala("new-worksheet-picked")(

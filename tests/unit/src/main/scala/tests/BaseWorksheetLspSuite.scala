@@ -15,7 +15,6 @@ abstract class BaseWorksheetLspSuite(
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
         decorationProvider = Some(true)
       )
     )

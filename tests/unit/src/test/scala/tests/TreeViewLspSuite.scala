@@ -12,14 +12,7 @@ import scala.meta.internal.tvp.TreeViewProvider
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        isVirtualDocumentSupported = Some(true),
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    TestingServer.TestDefault
 
   /**
    * The libraries we expect to find for tests in this file.
