@@ -98,6 +98,7 @@ object HoverProvider:
                     expressionType
                   ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
                 )
+
               val content = HoverMarkup(
                 expressionType,
                 hoverString,

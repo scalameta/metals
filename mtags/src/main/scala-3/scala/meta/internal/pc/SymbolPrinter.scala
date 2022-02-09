@@ -64,11 +64,13 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
     sym match
       case p if p.is(Flags.Package) =>
         s"package ${p.fullNameBackticked}"
-      case c if c.is(Flags.EnumVal) =>
+      // simple enum cases -> case A
+      // enum case classes -> case A(a: B)
+      case c if c.isAllOf(Flags.EnumCase) =>
         s"case $name: $shortTypeString"
       // enum
       case e if e.is(Flags.Enum) || sym.companionClass.is(Flags.Enum) =>
-        s"enum $name: $ownerTypeString"
+        s"enum $name: $shortTypeString"
       /* Type cannot be shown on the right since it is already a type
        * let's instead use that space to show the full path.
        */

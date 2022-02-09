@@ -63,7 +63,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |   case Red, Green, Blue
        |
        |""".stripMargin,
-    """|enum Color: enums2.SimpleEnum
+    """|enum Color: Color
        |""".stripMargin.hover
   )
 
@@ -76,7 +76,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |  val color = <<Col@@or>>.Red
        |
        |""".stripMargin,
-    """|enum Color: enums3.SimpleEnum
+    """|enum Color: Color
        |""".stripMargin.hover
   )
 
@@ -92,6 +92,17 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|case Green: Color
+       |""".stripMargin.hover
+  )
+
+  check(
+    "enum-class",
+    """|
+       |object SimpleEnum:
+       |  enum Foo:
+       |    case <<Ba@@r(a: Int)>> extends Foo
+       |""".stripMargin,
+    """|case Bar: Bar
        |""".stripMargin.hover
   )
 

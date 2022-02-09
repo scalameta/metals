@@ -331,7 +331,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |```
        |""".stripMargin,
     compat = Map(
-      "3" -> "enum FileVisitResult: java.nio.file".hover
+      "3" -> "enum FileVisitResult: FileVisitResult".hover
     )
   )
 
