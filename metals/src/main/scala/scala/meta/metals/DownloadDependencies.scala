@@ -8,8 +8,6 @@ import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.ScalaVersions
 
-import bloop.launcher.Launcher
-
 object DownloadDependencies {
 
   /**
@@ -92,7 +90,6 @@ object DownloadDependencies {
 
   def downloadBloop(): Unit = {
     scribe.info("Downloading bloop")
-    // NOTE(olafur): this starts a daemon process for the Bloop server.
-    Launcher.main(Array("--skip-bsp-connection", BuildInfo.bloopVersion))
+    Embedded.downloadBloopLauncher
   }
 }

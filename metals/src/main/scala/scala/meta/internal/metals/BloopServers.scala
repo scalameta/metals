@@ -1,11 +1,6 @@
 package scala.meta.internal.metals
 
-import java.io.ByteArrayInputStream
-import java.io.OutputStream
-import java.io.PrintStream
-import java.nio.channels.Channels
-import java.nio.channels.Pipe
-import java.nio.charset.StandardCharsets
+import java.io.File
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -15,9 +10,6 @@ import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
-import bloop.bloopgun.BloopgunCli
-import bloop.bloopgun.core.Shell
-import bloop.launcher.LauncherMain
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**
@@ -37,21 +29,27 @@ final class BloopServers(
     client: MetalsBuildClient,
     languageClient: LanguageClient,
     tables: Tables,
-    config: MetalsServerConfig
+    config: MetalsServerConfig,
+    userConfig: () => UserConfiguration
 )(implicit ec: ExecutionContextExecutorService) {
 
   import BloopServers._
 
   def shutdownServer(): Boolean = {
-    val dummyIn = new ByteArrayInputStream(new Array(0))
-    val cli = new BloopgunCli(
-      BuildInfo.bloopVersion,
-      dummyIn,
-      System.out,
-      System.err,
-      Shell.default
+    val cp = Embedded.downloadBloopgun
+
+    val command = List(
+      JavaBinary(userConfig().javaHome),
+      "-cp",
+      cp.mkString(File.pathSeparator),
+      "bloop.bloopgun.Bloopgun",
+      "exit"
     )
-    val result = cli.run(Array("exit")) == 0
+    val process = new ProcessBuilder(command.asJava)
+      .directory(workspace.toFile)
+      .start()
+
+    val result = process.waitFor() == 0
     if (!result) {
       scribe.warn("There were issues stopping the Bloop server.")
       scribe.warn(
@@ -125,73 +123,43 @@ final class BloopServers(
       bloopVersion: String,
       bloopPort: Option[Int]
   ): Future[SocketConnection] = {
-    val launcherInOutPipe = Pipe.open()
-    val launcherIn = new QuietInputStream(
-      Channels.newInputStream(launcherInOutPipe.source()),
-      "Bloop InputStream"
+    val cp = Embedded.downloadBloopLauncher
+    val command = List(
+      JavaBinary(userConfig().javaHome),
+      "-cp",
+      cp.mkString(File.pathSeparator),
+      "bloop.launcher.Launcher",
+      BuildInfo.bloopVersion
     )
-    val clientOut = new ClosableOutputStream(
-      Channels.newOutputStream(launcherInOutPipe.sink()),
-      "Bloop OutputStream"
+    val process = new ProcessBuilder(command.asJava)
+      .directory(workspace.toFile)
+      .start()
+
+    val output = new ClosableOutputStream(
+      process.getOutputStream,
+      s"Bloop output stream"
     )
-
-    val clientInOutPipe = Pipe.open()
-    val clientIn = Channels.newInputStream(clientInOutPipe.source())
-    val launcherOut = Channels.newOutputStream(clientInOutPipe.sink())
-
-    val serverStarted = Promise[Unit]()
-    val bloopLogs = new OutputStream {
-      private lazy val b = new StringBuilder
-      override def write(byte: Int): Unit = byte.toChar match {
-        case c => b.append(c)
-      }
-      def logs = b.lines.toList
+    val input = new QuietInputStream(
+      process.getInputStream,
+      s"Bloop input stream"
+    )
+    val finished = Promise[Unit]()
+    Future {
+      process.waitFor()
+      finished.success(())
     }
 
-    val launcher =
-      new LauncherMain(
-        launcherIn,
-        launcherOut,
-        new PrintStream(bloopLogs, true),
-        StandardCharsets.UTF_8,
-        Shell.default,
-        userNailgunHost = None,
-        userNailgunPort = bloopPort,
-        serverStarted
+    Future.successful {
+      SocketConnection(
+        name,
+        output,
+        input,
+        List(
+          Cancelable(() => process.destroy())
+        ),
+        finished
       )
-
-    val finished = Promise[Unit]()
-    val job = ec.submit(new Runnable {
-      override def run(): Unit = {
-        launcher.runLauncher(
-          bloopVersion,
-          skipBspConnection = false,
-          Nil
-        )
-        finished.success(())
-      }
-    })
-
-    serverStarted.future
-      .map { _ =>
-        SocketConnection(
-          name,
-          clientOut,
-          clientIn,
-          List(
-            Cancelable { () =>
-              clientOut.flush()
-              clientOut.close()
-            },
-            Cancelable(() => job.cancel(true))
-          ),
-          finished
-        )
-      }
-      .recover { case t: Throwable =>
-        bloopLogs.logs.foreach(scribe.error(_))
-        throw t
-      }
+    }
   }
 }
 

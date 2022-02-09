@@ -463,7 +463,8 @@ class MetalsLanguageServer(
           buildClient,
           languageClient,
           tables,
-          clientConfig.initialConfig
+          clientConfig.initialConfig,
+          () => userConfig
         )
         bspServers = new BspServers(
           workspace,

@@ -287,6 +287,22 @@ object Embedded {
       resolution = resolutionParams
     )
 
+  def downloadBloopLauncher: List[Path] = {
+    downloadDependency(
+      Dependency
+        .of("ch.epfl.scala", "bloop-launcher_2.12", BuildInfo.bloopVersion),
+      scalaVersion = None
+    )
+  }
+
+  def downloadBloopgun: List[Path] = {
+    downloadDependency(
+      Dependency
+        .of("ch.epfl.scala", "bloopgun_2.12", BuildInfo.bloopVersion),
+      scalaVersion = None
+    )
+  }
+
   def organizeImportRule(scalaBinaryVersion: String): List[Path] = {
     val dep = Dependency.of(
       "com.github.liancheng",
