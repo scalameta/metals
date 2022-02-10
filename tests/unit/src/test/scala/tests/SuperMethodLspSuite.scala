@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.Position
 class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   test("simple") {
     val code =

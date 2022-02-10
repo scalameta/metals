@@ -22,7 +22,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     if (Properties.isJavaAtLeast("9")) "java.base/" else ""
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   check(
     "jdk-String",

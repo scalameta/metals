@@ -8,7 +8,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   test("basic", withoutVirtualDocs = true) {
     cleanCompileCache("a")

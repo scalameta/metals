@@ -5,7 +5,7 @@ import scala.meta.internal.metals.InitializationOptions
 class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   test("basic", withoutVirtualDocs = true) {
     cleanCompileCache("b")

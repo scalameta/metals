@@ -7,7 +7,7 @@ import scala.meta.internal.metals.StatisticsConfig
 class DefinitionLspSuite extends BaseLspSuite("definition") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(

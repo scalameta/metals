@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.Position
 class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   test("simple") {
     val code =

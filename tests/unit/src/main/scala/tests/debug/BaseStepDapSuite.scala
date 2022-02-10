@@ -21,7 +21,7 @@ abstract class BaseStepDapSuite(
 ) extends BaseDapSuite(suiteName, initializer, buildToolLayout) {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   private val scalaLibDependency = s"scala-library-$scalaVersion-sources.jar"
   private val javaLibDependency = s"src.zip"

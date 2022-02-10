@@ -458,7 +458,8 @@ final class TestingServer(
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
     documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
     textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)
-    val initOptions = initializationOptions.getOrElse(TestingServer.TestDefault)
+    val initOptions: InitializationOptions =
+      initializationOptions.getOrElse(TestingServer.TestDefault)
 
     // Yes, this is a bit gross :/
     // However, I want to only get the existing fields that are being set
@@ -1672,12 +1673,10 @@ object TestingServer {
 
   val virtualDocTag = new Tag("UseVirtualDocs")
 
-  val TestDefault: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
+  val TestDefault: InitializationOptions =
+    InitializationOptions.Default.copy(
+      debuggingProvider = Some(true),
+      treeViewProvider = Some(true),
+      slowTaskProvider = Some(true)
     )
 }

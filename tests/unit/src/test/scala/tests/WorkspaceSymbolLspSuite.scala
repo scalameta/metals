@@ -15,7 +15,7 @@ import tests.MetalsTestEnrichments._
 class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   test("basic") {
     cleanWorkspace()

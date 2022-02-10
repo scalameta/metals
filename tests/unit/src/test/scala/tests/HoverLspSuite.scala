@@ -7,7 +7,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    TestingServer.TestDefault
+    Some(TestingServer.TestDefault)
 
   test("basic".tag(FlakyWindows)) {
     for {
