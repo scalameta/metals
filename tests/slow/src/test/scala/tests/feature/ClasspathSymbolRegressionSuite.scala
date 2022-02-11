@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 import tests.BaseWorkspaceSymbolSuite
 import tests.Library
 
-class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
+abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   var tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   override def libraries: List[Library] = Library.allScala2
   def workspace: AbsolutePath = tmp
@@ -194,4 +194,14 @@ class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |""".stripMargin
   )
 
+}
+
+class VirtualDocsClasspathSymbolRegressionSuite
+    extends ClasspathSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = false
+}
+
+class SaveToDiskClasspathSymbolRegressionSuite
+    extends ClasspathSymbolRegressionSuite {
+  override def saveClassFileToDisk: Boolean = true
 }

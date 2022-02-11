@@ -18,9 +18,10 @@ import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 
 class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
-  override val initializationOptions: Some[InitializationOptions] = Some(
-    InitializationOptions.Default.copy(testExplorerProvider = Some(true))
-  )
+  override protected def initializationOptions: Some[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(testExplorerProvider = Some(true))
+    )
 
   override val userConfig: UserConfiguration =
     UserConfiguration(testUserInterface = TestUserInterfaceKind.TestExplorer)

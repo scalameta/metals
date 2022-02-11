@@ -2,9 +2,14 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
+
 import org.eclipse.lsp4j.Position
 
 class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   test("simple") {
     val code =
@@ -208,7 +213,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     )
   }
 
-  test("jump-to-external-dependency") {
+  test("jump-to-external-dependency", withoutVirtualDocs = true) {
     val code =
       """
         |package a

@@ -9,7 +9,7 @@ import tests.BaseLspSuite
 
 class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
 
-  override def initializationOptions: Option[InitializationOptions] =
+  override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
         inlineDecorationProvider = Some(true),

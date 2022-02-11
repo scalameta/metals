@@ -54,6 +54,9 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
   def commandInHtmlFormat(): Option[CommandHTMLFormat] =
     initializationOptions.commandInHtmlFormat
 
+  def isVirtualDocumentSupported(): Boolean =
+    initializationOptions.isVirtualDocumentSupported.getOrElse(false)
+
   def icons(): Icons =
     initializationOptions.icons
       .map(Icons.fromString)

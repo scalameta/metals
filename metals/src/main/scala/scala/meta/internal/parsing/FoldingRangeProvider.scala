@@ -32,8 +32,9 @@ final class FoldingRangeProvider(
       if filePath.isScala
       tree <- trees.get(filePath)
     } yield {
-      val revised = Input.VirtualFile(filePath.toString(), code)
-      val fromTree = Input.VirtualFile(filePath.toString(), tree.pos.input.text)
+      val revised = Input.VirtualFile(filePath.toURI.toString(), code)
+      val fromTree =
+        Input.VirtualFile(filePath.toURI.toString(), tree.pos.input.text)
       val distance = TokenEditDistance(fromTree, revised, trees)
       val extractor = new FoldingRangeExtractor(distance, foldOnlyLines.get())
       extractor.extract(tree)

@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import java.net.URI
+import java.net.URLDecoder
 import java.nio.file.Paths
 import java.util.concurrent.CancellationException
 
@@ -95,8 +96,17 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
     def stripBackticks: String = value.stripPrefix("`").stripSuffix("`")
     def isBackticked: Boolean =
       value.size > 1 && value.head == '`' && value.last == '`'
-    def toAbsolutePath: AbsolutePath =
-      AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:")))).dealias
+    def toAbsolutePath: AbsolutePath = toAbsolutePath(true)
+    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+      val decodedUriStr =
+        URLDecoder.decode(value.stripPrefix("metals:"), "UTF-8")
+      val decodedUri = URI.create(decodedUriStr)
+      val path = AbsolutePath(Paths.get(decodedUri))
+      if (followSymlink)
+        path.dealias
+      else
+        path
+    }
     def lastIndexBetween(
         char: Char,
         lowerBound: Int,

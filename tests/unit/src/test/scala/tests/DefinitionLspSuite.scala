@@ -1,9 +1,14 @@
 package tests
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
 class DefinitionLspSuite extends BaseLspSuite("definition") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(
       statistics = new StatisticsConfig("diagnostics")
@@ -295,7 +300,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  test("rambo") {
+  test("rambo", withoutVirtualDocs = true) {
     cleanDatabase()
     for {
       _ <- initialize(

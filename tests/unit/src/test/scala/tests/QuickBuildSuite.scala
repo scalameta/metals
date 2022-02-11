@@ -1,7 +1,13 @@
 package tests
 
-class QuickBuildSuite extends BaseLspSuite("quick-build") {
-  test("basic") {
+import scala.meta.internal.metals.InitializationOptions
+
+class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
+  test("basic", withoutVirtualDocs = true) {
     cleanCompileCache("b")
     for {
       _ <- initialize(

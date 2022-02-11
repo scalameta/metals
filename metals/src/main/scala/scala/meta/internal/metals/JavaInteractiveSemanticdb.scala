@@ -33,20 +33,32 @@ class JavaInteractiveSemanticdb(
   private val readonly = workspace.resolve(Directories.readonly)
 
   def textDocument(source: AbsolutePath, text: String): s.TextDocument = {
-    val sourceRoot = source.parent
     val workDir = AbsolutePath(
       Files.createTempDirectory("metals-javac-semanticdb")
     )
     val targetRoot = workDir.resolve("target")
     Files.createDirectory(targetRoot.toNIO)
 
+    val localSource =
+      if (source.isLocalFileSystem(workspace)) {
+        source
+      } else {
+        val sourceRoot = workDir.resolve("source")
+        Files.createDirectory(sourceRoot.toNIO)
+        val localSource = sourceRoot.resolve(source.filename)
+        Files.write(localSource.toNIO, text.getBytes)
+        localSource
+      }
+
+    val sourceRoot = localSource.parent
     val targetClasspath = buildTargets
-      .inferBuildTarget(sourceRoot)
+      .inferBuildTarget(source)
       .flatMap(buildTargets.targetJarClasspath)
       .getOrElse(Nil)
       .map(_.toString)
 
-    val jigsawOptions = addExportsFlags ++ patchModuleFlags(source, sourceRoot)
+    val jigsawOptions =
+      addExportsFlags ++ patchModuleFlags(localSource, sourceRoot, source)
     val mainOptions =
       List(
         javac.toString,
@@ -58,7 +70,7 @@ class JavaInteractiveSemanticdb(
     val pluginOption =
       s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot}"
     val cmd =
-      mainOptions ::: jigsawOptions ::: pluginOption :: source.toString :: Nil
+      mainOptions ::: jigsawOptions ::: pluginOption :: localSource.toString :: Nil
 
     val stdout = List.newBuilder[String]
     val ps = SystemProcess.run(
@@ -71,7 +83,7 @@ class JavaInteractiveSemanticdb(
     )
 
     val future = ps.complete.recover { case NonFatal(e) =>
-      scribe.error(s"Running javac-semanticdb failed for $source", e)
+      scribe.error(s"Running javac-semanticdb failed for $localSource", e)
       1
     }
 
@@ -80,7 +92,7 @@ class JavaInteractiveSemanticdb(
       targetRoot
         .resolve("META-INF")
         .resolve("semanticdb")
-        .resolve(s"${source.filename}.semanticdb")
+        .resolve(s"${localSource.filename}.semanticdb")
 
     val doc = if (semanticdbFile.exists) {
       FileIO
@@ -91,7 +103,7 @@ class JavaInteractiveSemanticdb(
       val log = stdout.result()
       if (exitCode != 0 || log.nonEmpty)
         scribe.warn(
-          s"Running javac-semanticdb failed for $source. Output:\n${log.mkString("\n")}"
+          s"Running javac-semanticdb failed for ${source.toURI}. Output:\n${log.mkString("\n")}"
         )
       s.TextDocument()
     }
@@ -108,7 +120,8 @@ class JavaInteractiveSemanticdb(
 
   private def patchModuleFlags(
       source: AbsolutePath,
-      sourceRoot: AbsolutePath
+      sourceRoot: AbsolutePath,
+      originalSource: AbsolutePath
   ): List[String] = {
     // Jigsaw doesn't allow compiling source with package
     // that is declared in some existing module.
@@ -127,7 +140,22 @@ class JavaInteractiveSemanticdb(
             case _ =>
               Nil
           }
-        case None => Nil
+        case None =>
+          if (
+            originalSource.jarPath.exists(_.filename == JdkSources.zipFileName)
+          ) {
+            originalSource.toNIO
+              .iterator()
+              .asScala
+              .headOption
+              .map(_.filename)
+              .map(moduleName =>
+                List("--patch-module", s"$moduleName=$sourceRoot")
+              )
+              .getOrElse(Nil)
+          } else {
+            Nil
+          }
       }
     } else Nil
   }

@@ -2,10 +2,15 @@ package tests
 
 import java.nio.file.Files
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.RecursivelyDelete
 
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
-  test("basic") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
+  test("basic", withoutVirtualDocs = true) {
     cleanCompileCache("a")
     cleanCompileCache("b")
     cleanCompileCache("c")

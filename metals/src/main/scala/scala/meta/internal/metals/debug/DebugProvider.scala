@@ -152,7 +152,8 @@ class DebugProvider(
         if (buildServer.usesScalaDebugAdapter2x) {
           MetalsDebugAdapter.`2.x`(
             buildTargets,
-            targets
+            targets,
+            saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported()
           )
         } else {
           MetalsDebugAdapter.`1.x`(

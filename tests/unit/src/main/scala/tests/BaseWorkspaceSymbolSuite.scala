@@ -12,8 +12,9 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath
   def libraries: List[Library] = Nil
   def dialect: Dialect = dialects.Scala213
+  def saveClassFileToDisk: Boolean
   lazy val symbols: WorkspaceSymbolProvider = {
-    val p = TestingWorkspaceSymbolProvider(workspace)
+    val p = TestingWorkspaceSymbolProvider(workspace, saveClassFileToDisk)
     p.indexWorkspace(dialect)
     p.indexLibraries(libraries)
     p.indexClasspath()

@@ -196,7 +196,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       .mkString("\n")
   }
   private def toPath(filename: String): AbsolutePath =
-    TestingServer.toPath(workspace, filename)
+    TestingServer.toPath(workspace, filename, TrieMap.empty)
   def workspaceMessageRequests: String = {
     messageRequests.asScala.mkString("\n")
   }
@@ -207,7 +207,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     val isDeleted = !path.isFile
     val diags = diagnostics.getOrElse(path, Nil).sortBy(_.getRange)
     val relpath =
-      path.toRelative(workspace).toURI(isDirectory = false).toString
+      if (path.isJarFileSystem)
+        path.toString.stripPrefix("/")
+      else
+        path.toRelative(workspace).toURI(isDirectory = false).toString
     val input =
       if (isDeleted) {
         Input.VirtualFile(relpath + " (deleted)", "\n <deleted>" * 1000)

@@ -108,7 +108,7 @@ final class Trees(
   }
 
   def tokenized(input: inputs.Input.VirtualFile): Tokenized =
-    scalaVersionSelector.getDialect(AbsolutePath(input.path))(input).tokenize
+    scalaVersionSelector.getDialect(input.path.toAbsolutePath)(input).tokenize
 
   private def parse(
       path: AbsolutePath,
@@ -117,7 +117,7 @@ final class Trees(
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
     } yield {
-      val input = Input.VirtualFile(path.toString(), text)
+      val input = Input.VirtualFile(path.toURI.toString(), text)
       dialect(input).parse[Source]
     }
   }

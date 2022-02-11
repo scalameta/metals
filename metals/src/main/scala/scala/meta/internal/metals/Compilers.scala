@@ -146,7 +146,8 @@ class Compilers(
                   isExcludedPackage,
                   userConfig,
                   trees,
-                  buildTargets
+                  buildTargets,
+                  saveSymbolFileToDisk = !config.isVirtualDocumentSupported()
                 )
               ).getOrElse(EmptySymbolSearch),
               "default",
@@ -482,6 +483,7 @@ class Compilers(
             isExcludedPackage,
             trees,
             buildTargets,
+            saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
             workspaceFallback = Some(search)
           )
           newCompiler(
@@ -512,7 +514,8 @@ class Compilers(
               isExcludedPackage,
               userConfig,
               trees,
-              buildTargets
+              buildTargets,
+              saveSymbolFileToDisk = !config.isVirtualDocumentSupported()
             ),
             path.toString(),
             path

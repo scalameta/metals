@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
-class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
+abstract class BaseCodeLensLspSuite(name: String) extends BaseLspSuite(name) {
 
   def check(
       name: TestOptions,

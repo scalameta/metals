@@ -7,7 +7,7 @@ import scala.meta.internal.pc.Identifier
 import munit.Location
 import munit.TestOptions
 
-class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
+abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
   protected def compilerPlugins: List[String] = Nil

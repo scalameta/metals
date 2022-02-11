@@ -4,6 +4,7 @@ import java.nio.file.Files
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -12,6 +13,9 @@ import org.eclipse.lsp4j.WorkspaceSymbolParams
 import tests.MetalsTestEnrichments._
 
 class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   test("basic") {
     cleanWorkspace()
@@ -125,7 +129,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  test("dependencies") {
+  test("dependencies", withoutVirtualDocs = true) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -157,10 +161,12 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         "scala/Option.scala",
         " None"
       )
-      optionSourcePath = server
+      optionSourceAbsolutePath = server
         .toPath("scala/Option.scala")
-        .toRelative(workspace)
-        .toString
+      optionSourcePath = {
+        if (useVirtualDocuments) optionSourceAbsolutePath
+        else optionSourceAbsolutePath.toRelative(workspace)
+      }.toString
         .replace("\\", "/")
       _ = assertNoDiff(
         optionReferences,

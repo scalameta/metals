@@ -3,6 +3,7 @@ package tests
 import java.net.URI
 
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
@@ -14,7 +15,13 @@ class FindTextInDependencyJarsSuite
 
   val akkaVersion = "2.6.16"
 
-  test("find exact string match in .conf file inside jar") {
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
+  test(
+    "find exact string match in .conf file inside jar",
+    withoutVirtualDocs = true
+  ) {
     val isJavaAtLeast9 = scala.util.Properties.isJavaAtLeast(9.toString)
     val isJavaAtLeast17 = scala.util.Properties.isJavaAtLeast(17.toString)
 
@@ -83,14 +90,20 @@ class FindTextInDependencyJarsSuite
   ): Unit = {
     val rendered = locations
       .map { loc =>
-        val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
-        val relativePath =
-          path
+        val uri = URI.create(loc.getUri())
+        val input = if (uri.getScheme() == "jar") {
+          val jarPath = uri.toAbsolutePath
+          val relativePath =
+            s"${jarPath.jarPath.map(_.filename).getOrElse("")}${jarPath}"
+          jarPath.toInput.copy(path = relativePath.toString)
+        } else {
+          val path = AbsolutePath.fromAbsoluteUri(uri)
+          val relativePath = path
             .toRelative(workspace.resolve(Directories.dependencies))
             .toString()
             .replace("\\", "/")
-
-        val input = path.toInput.copy(path = relativePath.toString)
+          path.toInput.copy(path = relativePath.toString)
+        }
         loc
           .getRange()
           .toMeta(input)
