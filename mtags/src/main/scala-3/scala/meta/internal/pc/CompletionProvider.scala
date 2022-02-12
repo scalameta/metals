@@ -50,7 +50,7 @@ class CompletionProvider(
           .filterInteresting()
 
     val args = Completions.namedArgCompletions(pos, path)
-    val keywords = KeywordsCompletions.contribute(path, completionPos)
+    val keywords = Nil // KeywordsCompletions.contribute(path, completionPos)
     val all = completions ++ args ++ keywords
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)

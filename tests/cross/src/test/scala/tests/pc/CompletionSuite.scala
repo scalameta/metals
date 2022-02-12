@@ -1394,4 +1394,66 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     _.nonEmpty
   )
+
+  check(
+    "empty-template-braces".only,
+    s"""|package x
+        |object Foo {
+        |  def bar: Int = 42
+        |  @@
+        |}""".stripMargin,
+    """|Foo x
+       |bar: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "empty-template-optional-braces1".tag(IgnoreScala2).only,
+    s"""|package x
+        |object Foo:
+        |  def bar: Int = 42
+        |  @@
+        |""".stripMargin,
+    """|Foo x
+       |bar: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "empty-line-optional-braces2".tag(IgnoreScala2).only,
+    s"""|package x
+        |object Foo:
+        |  def bar: Int = 42
+        |  def baz: Int =
+        |    val x = 1
+        |    val y = 2
+        |    @@
+        |""".stripMargin,
+    """|y: Int
+       |x: Int
+       |Foo x
+       |bar: Int
+       |""".stripMargin,
+    topLines = Some(4)
+  )
+
+  check(
+    "empty-line-optional-braces3".tag(IgnoreScala2).only,
+    s"""|package x
+        |object Foo:
+        |  def bar: Int = 42
+        |  def baz: Int =
+        |    val x = 1
+        |    val y = 2
+        |  @@
+        |""".stripMargin,
+    """|Foo x
+       |bar: Int
+       |baz: Int
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
 }

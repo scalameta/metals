@@ -83,6 +83,7 @@ import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.TextEdit
+import scala.annotation.tailrec
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -130,6 +131,37 @@ case class ScalaPresentationCompiler(
       TastyUtils.getTasty(targetUri, isHttpEnabled)
     }
 
+  /**
+   * In case if completion comes from empty line like:
+   * ```
+   * class Foo:
+   *   val a = 1
+   *   @@
+   * ```
+   * it's required to modify actual code by addition Ident.
+   *
+   * Otherwise, completion poisition doesn't point at any tree
+   * because scala parser trim end position to the last statement pos.
+   */
+  private def applyCompletionCursor(params: OffsetParams): String =
+    import params.*
+
+    @tailrec
+    def isEmptyLine(idx: Int, initial: Int): Boolean =
+      if idx < 0 then true
+      else
+        val ch = text.charAt(idx)
+        val isNewline = ch == '\n'
+        if Chars.isWhitespace(ch) || (isNewline && idx == initial) then
+          isEmptyLine(idx - 1, initial)
+        else if isNewline then true
+        else false
+
+    if isEmptyLine(offset, offset) then
+      text.substring(0, offset) + "CURSOR" + text.substring(offset)
+    else text
+  end applyCompletionCursor
+
   def complete(params: OffsetParams): CompletableFuture[CompletionList] =
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
@@ -137,7 +169,9 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+
+      val code = applyCompletionCursor(params)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, code)
       driver.run(uri, sourceFile)
 
       val ctx = driver.currentCtx
