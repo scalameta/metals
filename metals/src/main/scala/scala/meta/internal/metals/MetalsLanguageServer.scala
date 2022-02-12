@@ -29,6 +29,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.dialects._
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspConnector
@@ -2571,7 +2572,6 @@ class MetalsLanguageServer(
       _ = jdkSources.foreach(source =>
         buildTargets.addDependencySource(source, item.getTarget)
       )
-      scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       path = sourceUri.toAbsolutePath
       _ = buildTargets.addDependencySource(path, item.getTarget)
@@ -2583,11 +2583,15 @@ class MetalsLanguageServer(
           usedJars += path
           addSourceJarSymbols(path)
         } else if (path.isDirectory) {
-          val dialect =
-            ScalaVersions.dialectForScalaVersion(
-              scalaTarget.scalaVersion,
-              includeSource3 = true
+          val dialect = buildTargets
+            .scalaTarget(item.getTarget)
+            .map(scalaTarget =>
+              ScalaVersions.dialectForScalaVersion(
+                scalaTarget.scalaVersion,
+                includeSource3 = true
+              )
             )
+            .getOrElse(Scala213)
           definitionIndex.addSourceDirectory(path, dialect)
         } else {
           scribe.warn(s"unexpected dependency: $path")
