@@ -50,7 +50,7 @@ class CompletionProvider(
           .filterInteresting()
 
     val args = Completions.namedArgCompletions(pos, path)
-    val keywords = Nil // KeywordsCompletions.contribute(path, completionPos)
+    val keywords = KeywordsCompletions.contribute(path, completionPos)
     val all = completions ++ args ++ keywords
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
@@ -172,7 +172,6 @@ class CompletionProvider(
       application: CompletionApplication
   ): Int =
     import MemberOrdering.*
-    var relevance = 0
     val sym = completion.symbol
 
     def hasGetter = try
@@ -182,37 +181,44 @@ class CompletionProvider(
       (sym.isField && !isJavaClass && !isModuleOrClass) || sym.getter != NoSymbol
     catch case _ => false
 
-    // symbols defined in this file are more relevant
-    if (pos.source != sym.source || sym.is(Package)) &&
-      !completion.isCustom
-    then relevance |= IsNotDefinedInFile
-    // fields are more relevant than non fields
-    if !hasGetter then relevance |= IsNotGetter
-    // symbols whose owner is a base class are less relevant
-    if sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass then
-      relevance |= IsInheritedBaseMethod
-    // symbols not provided via an implicit are more relevant
-    if sym.is(Implicit) ||
-      sym.is(ExtensionMethod) ||
-      application.isImplicitConversion(sym)
-    then relevance |= IsImplicitConversion
-    if application.isInherited(sym) then relevance |= IsInherited
-    if sym.is(Package) then relevance |= IsPackage
-    // accessors of case class members are more relevant
-    if !sym.is(CaseAccessor) then relevance |= IsNotCaseAccessor
-    // public symbols are more relevant
-    if !sym.isPublic then relevance |= IsNotCaseAccessor
-    // synthetic symbols are less relevant (e.g. `copy` on case classes)
-    if sym.is(Synthetic) && !sym.isAllOf(EnumCase) then relevance |= IsSynthetic
-    if sym.isDeprecated then relevance |= IsDeprecated
-    if isEvilMethod(sym.name) then relevance |= IsEvilMethod
+    def symbolRelevance: Int =
+      var relevance = 0
+      // symbols defined in this file are more relevant
+      if (pos.source != sym.source || sym.is(Package)) &&
+        !completion.isCustom
+      then relevance |= IsNotDefinedInFile
+      // fields are more relevant than non fields
+      if !hasGetter then relevance |= IsNotGetter
+      // symbols whose owner is a base class are less relevant
+      if sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass
+      then relevance |= IsInheritedBaseMethod
+      // symbols not provided via an implicit are more relevant
+      if sym.is(Implicit) ||
+        sym.is(ExtensionMethod) ||
+        application.isImplicitConversion(sym)
+      then relevance |= IsImplicitConversion
+      if application.isInherited(sym) then relevance |= IsInherited
+      if sym.is(Package) then relevance |= IsPackage
+      // accessors of case class members are more relevant
+      if !sym.is(CaseAccessor) then relevance |= IsNotCaseAccessor
+      // public symbols are more relevant
+      if !sym.isPublic then relevance |= IsNotCaseAccessor
+      // synthetic symbols are less relevant (e.g. `copy` on case classes)
+      if sym.is(Synthetic) && !sym.isAllOf(EnumCase) then
+        relevance |= IsSynthetic
+      if sym.isDeprecated then relevance |= IsDeprecated
+      if isEvilMethod(sym.name) then relevance |= IsEvilMethod
+
+      relevance
+    end symbolRelevance
+
     completion.kind match
-      case CompletionValue.Kind.Workspace =>
-        relevance |= (IsWorkspaceSymbol + sym.name.show.length)
       case _ if completion.isCustom =>
-        relevance |= IsCustom
+        Int.MaxValue
+      case CompletionValue.Kind.Workspace =>
+        symbolRelevance | (IsWorkspaceSymbol + sym.name.show.length)
       case _ =>
-    relevance
+        symbolRelevance
   end computeRelevancePenalty
 
   private lazy val isEvilMethod: Set[Name] = Set[Name](
@@ -306,12 +312,10 @@ class CompletionProvider(
         if byLocalSymbol != 0 then byLocalSymbol
         else
           val byRelevance =
-            if bothHaveSymbols then
-              Integer.compare(
-                computeRelevancePenalty(o1, application),
-                computeRelevancePenalty(o2, application)
-              )
-            else 0
+            Integer.compare(
+              computeRelevancePenalty(o1, application),
+              computeRelevancePenalty(o2, application)
+            )
           if byRelevance != 0 then byRelevance
           else
             val byFuzzy = Integer.compare(

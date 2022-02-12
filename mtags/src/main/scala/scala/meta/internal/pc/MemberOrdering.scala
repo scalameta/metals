@@ -14,7 +14,6 @@ object MemberOrdering {
   val IsSynthetic: Int = 1 << 20
   val IsDeprecated: Int = 1 << 19
   val IsEvilMethod: Int = 1 << 18 // example: clone() and finalize()
-  val IsCustom: Int = 1 << 17
 
   // OverrideDefMember
   val IsNotAbstract: Int = 1 << 30
@@ -34,8 +33,7 @@ object MemberOrdering {
       (IsSynthetic, "synthetic"),
       (IsDeprecated, "deprecated"),
       (IsEvilMethod, "evilMethod"),
-      (IsNotAbstract, "notAbstract"),
-      (IsCustom, "custom")
+      (IsNotAbstract, "notAbstract")
     ).collect { case (i, name) if (value & i) > 0 => name }
       .mkString(", ")
   }

@@ -1396,7 +1396,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "empty-template-braces".only,
+    "empty-template-braces",
     s"""|package x
         |object Foo {
         |  def bar: Int = 42
@@ -1409,7 +1409,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "empty-template-optional-braces1".tag(IgnoreScala2).only,
+    "empty-template-optional-braces1".tag(IgnoreScala2),
     s"""|package x
         |object Foo:
         |  def bar: Int = 42
@@ -1422,7 +1422,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "empty-line-optional-braces2".tag(IgnoreScala2).only,
+    "empty-line-optional-braces2".tag(IgnoreScala2),
     s"""|package x
         |object Foo:
         |  def bar: Int = 42
@@ -1440,7 +1440,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "empty-line-optional-braces3".tag(IgnoreScala2).only,
+    "empty-line-optional-braces3".tag(IgnoreScala2),
     s"""|package x
         |object Foo:
         |  def bar: Int = 42
