@@ -1,5 +1,8 @@
 package example
 
+import io.circe.derivation.deriveDecoder
+import io.circe.derivation.deriveEncoder
+
 class Definitions {
   Predef.any2stringadd(1)
   List[
@@ -8,8 +11,8 @@ class Definitions {
       java.lang.Double
     ]
   ](
-    xs = null
+    elems = null
   )
-  println(MacroAnnotation.decodeMacroAnnotation)
-  println(MacroAnnotation.encodeMacroAnnotation)
+  println(deriveDecoder[MacroAnnotation])
+  println(deriveEncoder[MacroAnnotation])
 }

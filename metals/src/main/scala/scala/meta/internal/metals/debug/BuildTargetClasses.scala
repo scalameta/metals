@@ -58,7 +58,7 @@ final class BuildTargetClasses(
   ): Future[Unit] = {
     val distinctTargets = targets.distinct
     Future
-      .traverse(distinctTargets.groupBy(buildTargets.buildServerOf)) {
+      .traverse(distinctTargets.groupBy(buildTargets.buildServerOf).toSeq) {
         case (None, _) =>
           Future.successful(())
         case (Some(connection), targets0) =>

@@ -57,7 +57,7 @@ class RemoteLanguageServer(
           params.toJsonObject,
           "textDocument/references"
         )
-      } yield ReferencesResult(Symbols.None, locations.asScala)
+      } yield ReferencesResult(Symbols.None, locations.asScala.toSeq)
     }
 
   def definition(

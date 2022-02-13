@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.mutable
+import scala.collection.parallel.CollectionConverters._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers

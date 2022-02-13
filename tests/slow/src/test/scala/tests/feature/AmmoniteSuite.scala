@@ -14,7 +14,7 @@ class Ammonite212Suite extends tests.BaseAmmoniteSuite(V.ammonite212) {
            |/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${V.scala212}"
+           |    "scalaVersion": "${V.scala213}"
            |  }
            |}
            |/main.sc

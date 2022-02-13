@@ -75,7 +75,7 @@ case class QuickBuild(
   def withId(id: String): QuickBuild =
     QuickBuild(
       id,
-      if (scalaVersion == null) V.scala212
+      if (scalaVersion == null) V.scala213
       else scalaVersion,
       orEmpty(libraryDependencies),
       orEmpty(compilerPlugins),
@@ -148,7 +148,7 @@ case class QuickBuild(
         val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
         val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
         val cache =
-          if (scalaVersion == V.scala212)
+          if (scalaVersion == V.scala213)
             List("-Ycache-plugin-class-loader:last-modified")
           else List()
         List(
@@ -329,7 +329,7 @@ object QuickBuild {
 
     Fetch
       .create()
-      .withRepositories(repositories: _*)
+      .withRepositories(repositories.toSeq: _*)
       .withDependencies(dependencies: _*)
       .withClassifiers(classifiers.asJava)
       .withMainArtifacts()
@@ -355,7 +355,7 @@ object QuickBuild {
     val newDigest = {
       val digest = MessageDigest.getInstance("MD5")
       digest.update(version.getBytes(StandardCharsets.UTF_8))
-      digest.update(V.scala212.getBytes(StandardCharsets.UTF_8))
+      digest.update(V.scala213.getBytes(StandardCharsets.UTF_8))
       def update(file: AbsolutePath): Unit = {
         if (file.isFile) {
           digest.update(file.readAllBytes)

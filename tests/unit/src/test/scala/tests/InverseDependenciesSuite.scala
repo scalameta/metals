@@ -31,7 +31,7 @@ class InverseDependenciesSuite extends BaseSuite {
         { key =>
           original.inverseDependencies
             .get(key.getUri)
-            .map(_.map(new BuildTargetIdentifier(_)))
+            .map(_.map(new BuildTargetIdentifier(_)).toSeq)
         }
       )
       assertNoDiff(

@@ -52,6 +52,7 @@ class ClasspathTreeView[Value, Key](
         .filter(i => node.isDescendent(i.symbol))
         .flatMap(i => i :: i.parents)
         .distinctBy(_.symbol)
+        .toSeq
 
       val directChildren = transitiveChildren.filter { s =>
         s.symbol.owner == node.symbol && {

@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
-import scala.collection.convert.DecorateAsJava
-import scala.collection.convert.DecorateAsScala
+import scala.collection.convert.AsJavaExtensions
+import scala.collection.convert.AsScalaExtensions
 import scala.collection.mutable
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Await
@@ -70,8 +70,8 @@ import org.eclipse.{lsp4j => l}
  * remember only one import.
  */
 object MetalsEnrichments
-    extends DecorateAsJava
-    with DecorateAsScala
+    extends AsJavaExtensions
+    with AsScalaExtensions
     with MtagsEnrichments {
 
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {

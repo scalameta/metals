@@ -1,15 +1,18 @@
 package example
 
+import io.circe.derivation.deriveDecoder/*package.scala fallback to io.circe.derivation.package.*/
+import io.circe.derivation.deriveEncoder/*package.scala fallback to io.circe.derivation.package.*/
+
 class Definitions/*Definitions.scala*/ {
   Predef/*Predef.scala*/.any2stringadd/*Predef.scala*/(1)
-  List/*List.scala*/[
+  List/*package.scala*/[
     java.util.Map/*Map.java*/.Entry/*Map.java*/[
       java.lang.Integer/*Integer.java*/,
       java.lang.Double/*Double.java*/
     ]
   ](
-    xs/*List.scala*/ = null
+    elems/*Factory.scala*/ = null
   )
-  println/*Predef.scala*/(MacroAnnotation/*MacroAnnotation.scala*/.decodeMacroAnnotation/*MacroAnnotation.scala fallback to example.MacroAnnotation#*/)
-  println/*Predef.scala*/(MacroAnnotation/*MacroAnnotation.scala*/.encodeMacroAnnotation/*MacroAnnotation.scala fallback to example.MacroAnnotation#*/)
+  println/*Predef.scala*/(deriveDecoder/*package.scala fallback to io.circe.derivation.package.*/[MacroAnnotation/*MacroAnnotation.scala*/])
+  println/*Predef.scala*/(deriveEncoder/*package.scala fallback to io.circe.derivation.package.*/[MacroAnnotation/*MacroAnnotation.scala*/])
 }

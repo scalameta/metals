@@ -259,7 +259,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
        |""".stripMargin,
     Assert(
       _.replace("object A", "object B"),
-      """|a/src/main/scala/A.scala:2:3: error: not enough arguments for method lengthCompare: (len: Int)Int.
+      """|a/src/main/scala/A.scala:2:3: error: not enough arguments for method lengthCompare: (len: Int): Int.
          |Unspecified value parameter len.
          |  "".lengthCompare()
          |  ^^^^^^^^^^^^^^^^^^

@@ -261,7 +261,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(params: PublishDiagnosticsParams): Unit = {
     val path = params.getUri.toAbsolutePath
-    diagnostics(path) = params.getDiagnostics.asScala
+    diagnostics(path) = params.getDiagnostics.asScala.toSeq
     diagnosticsCount
       .getOrElseUpdate(path, new AtomicInteger())
       .incrementAndGet()
@@ -308,13 +308,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         } else if (CheckDoctor.isDoctor(params)) {
           getDoctorInformation
         } else if (BspSwitch.isSelectBspServer(params)) {
-          selectBspServer(params.getActions.asScala)
+          selectBspServer(params.getActions.asScala.toSeq)
         } else if (isSameMessageFromList(ChooseBuildTool.params)) {
-          chooseBuildTool(params.getActions.asScala)
+          chooseBuildTool(params.getActions.asScala.toSeq)
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           createScalaFmtConf
         } else if (params.getMessage() == MainClass.message) {
-          chooseMainClass(params.getActions.asScala)
+          chooseMainClass(params.getActions.asScala.toSeq)
         } else {
           throw new IllegalArgumentException(params.toString)
         }
@@ -474,7 +474,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       if (command != null) {
         server.executeCommandUnsafe(
           command.getCommand(),
-          command.getArguments().asScala
+          command.getArguments().asScala.toSeq
         )
       } else Future.unit
 

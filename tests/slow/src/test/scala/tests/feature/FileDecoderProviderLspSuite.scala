@@ -32,7 +32,7 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
        |/metals.json
        |{
        |  "a": {
-       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala212}",
+       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
        |    "libraryDependencies": [
        |      "ch.epfl.scala:com-microsoft-java-debug-core:0.21.0+1-7f1080f1"
        |    ]

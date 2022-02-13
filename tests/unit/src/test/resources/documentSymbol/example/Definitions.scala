@@ -1,6 +1,9 @@
-/*example(Package):15*/package example
+/*example(Package):18*/package example
 
-/*example.Definitions(Class):15*/class Definitions {
+import io.circe.derivation.deriveDecoder
+import io.circe.derivation.deriveEncoder
+
+/*example.Definitions(Class):18*/class Definitions {
   Predef.any2stringadd(1)
   List[
     java.util.Map.Entry[
@@ -8,8 +11,8 @@
       java.lang.Double
     ]
   ](
-    xs = null
+    elems = null
   )
-  println(MacroAnnotation.decodeMacroAnnotation)
-  println(MacroAnnotation.encodeMacroAnnotation)
+  println(deriveDecoder[MacroAnnotation])
+  println(deriveEncoder[MacroAnnotation])
 }

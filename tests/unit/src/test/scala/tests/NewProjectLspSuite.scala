@@ -35,16 +35,16 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         |  settings(
         |    inThisBuild(List(
         |      organization := "com.example",
-        |      scalaVersion := "2.13.1"
+        |      scalaVersion := "2.13.8"
         |    )),
         |    name := "scalatest-example"
         |  )
         |
-        |libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.0" % Test
+        |libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.4" % Test
         |
         |
         |/$name/project/build.properties
-        |sbt.version=1.3.10
+        |sbt.version=1.6.2
         |
         |
         |/$name/src/main/scala/CubeCalculator.scala

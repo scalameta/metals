@@ -35,7 +35,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    mavenCentral()
             |}
             |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
             |""".stripMargin
       )
@@ -86,7 +86,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    }
             |
             |    dependencies {
-            |        classpath 'ch.epfl.scala:gradle-bloop_2.12:1.4.3'
+            |        classpath 'ch.epfl.scala:gradle-bloop_2.12:${V.gradleBloopVersion}'
             |    }
             |}
             |
@@ -96,7 +96,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    mavenCentral()
             |}
             |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
             |""".stripMargin
       )
@@ -193,7 +193,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    mavenCentral()
             |}
             |dependencies {
-            |    implementation 'org.scala-lang:scala-reflect:${V.scala212}'
+            |    implementation 'org.scala-lang:scala-reflect:${V.scala213}'
             |}
             |""".stripMargin
       )
@@ -222,7 +222,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    mavenCentral()
             |}
             |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
             |""".stripMargin
       )
@@ -257,7 +257,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    mavenCentral()
             |}
             |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
             |/src/main/scala/reload/Main.scala
             |package reload
@@ -316,7 +316,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |    mavenCentral()
             |}
             |dependencies {
-            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
             |""".stripMargin
       }
@@ -431,7 +431,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
            |    mavenCentral()
            |}
            |dependencies {
-           |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+           |    implementation 'org.scala-lang:scala-library:${V.scala213}'
            |}
            |tasks.withType(ScalaCompile) {
            |    scalaCompileOptions.additionalParameters = [

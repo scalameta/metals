@@ -9,8 +9,8 @@ class Miscellaneous/*Miscellaneous.scala*/ {
     val _ = 42
   }
   // infix + inferred apply/implicits/tparams
-  (List/*List.scala*/(1)
+  (List/*package.scala*/(1)
     .map/*List.scala*/(_ +/*Int.scala*/ 1)
-    ++/*List.scala*/
-      List/*List.scala*/(3))
+    ++/*Iterable.scala*/
+      List/*package.scala*/(3))
 }

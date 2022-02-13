@@ -15,7 +15,7 @@ class SymlinkedProjectSuite
             |sbt.version=${V.sbtVersion}
             |
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |
             |/src/main/scala/Foo.scala
             |class Foo
@@ -54,7 +54,7 @@ class SymlinkedProjectSuite
             |sbt.version=${V.sbtVersion}
             |
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |
             |lazy val a = (project in file("a"))
             |lazy val b = (project in file("b")).dependsOn(a)

@@ -149,7 +149,8 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/Post.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Post.scala:5:1: error: object creation impossible, since method post in trait Post of type => Int is not defined
+        """|a/src/main/scala/a/Post.scala:5:1: error: object creation impossible. Missing implementation for:
+           |  def post: Int // inherited from trait Post
            |object Post extends Post
            |^^^^^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
@@ -169,16 +170,16 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
             |/a/src/main/scala/a/Deprecation.scala
             |package a
             |object Deprecation {
-            | val x = readInt()
+            |  val stream = Stream.empty
             |}
             |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Deprecation.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Deprecation.scala:3:10: error: method readInt in trait DeprecatedPredef is deprecated (since 2.11.0): use the method in `scala.io.StdIn`
-           | val x = readInt()
-           |         ^^^^^^^
+        """|a/src/main/scala/a/Deprecation.scala:3:16: error: value Stream in package scala is deprecated (since 2.13.0): Use LazyList instead of Stream
+           |  val stream = Stream.empty
+           |               ^^^^^^
            |""".stripMargin
       )
     } yield ()

@@ -27,11 +27,11 @@ class MultipleBuildFilesLspSuite
     for {
       _ <- initialize(
         s"""|/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |/build.sc
             |import mill._, scalalib._
             |object foo extends ScalaModule {
-            |  def scalaVersion = "${V.scala212}"
+            |  def scalaVersion = "${V.scala213}"
             |}
             |""".stripMargin
       )

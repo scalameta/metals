@@ -8,7 +8,6 @@ import munit.TestOptions
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
-  protected def compilerPlugins: List[String] = Nil
 
   def assertCheck(
       filename: String,
@@ -52,7 +51,6 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |{"a":
              |  {
              |    "scalaVersion" : "$actualScalaVersion",
-             |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
              |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
              |  }
              |}

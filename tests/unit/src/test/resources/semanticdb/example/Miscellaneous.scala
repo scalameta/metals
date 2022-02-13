@@ -9,8 +9,8 @@ class Miscellaneous/*example.Miscellaneous#*/ {
     val _ = 42
   }
   // infix + inferred apply/implicits/tparams
-  (List/*scala.collection.immutable.List.*/(1)
+  (List/*scala.package.List.*/(1)
     .map/*scala.collection.immutable.List#map().*/(_ +/*scala.Int#`+`(+4).*/ 1)
-    ++/*scala.collection.immutable.List#`++`().*/
-      List/*scala.collection.immutable.List.*/(3))
+    ++/*scala.collection.IterableOps#`++`().*/
+      List/*scala.package.List.*/(3))
 }

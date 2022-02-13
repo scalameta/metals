@@ -24,7 +24,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       this.getClass.getResourceAsStream("/test-pom.xml")
     ),
     StandardCharsets.UTF_8
-  ).replace("<<>>", V.scala212)
+  ).replace("<<>>", V.scala213)
 
   override def currentDigest(
       workspace: AbsolutePath

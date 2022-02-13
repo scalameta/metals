@@ -42,7 +42,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    hello();    hello()
            |  }
            |  
-           |  "foo".map(c => c.toUpper)
+           |  val ordered = "acb".sorted
            |  "foo".map(c => c.toInt)
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
            |  Future{
@@ -78,8 +78,8 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |    hello()(andy, boston);    hello()(andy, boston)
            |  }
            |  
-           |  augmentString("foo").map[Char, String](c: Char => charWrapper(c).toUpper)(StringCanBuildFrom)
-           |  augmentString("foo").map[Int, IndexedSeq[Int]](c: Char => c.toInt)(fallbackStringCanBuildFrom[Int])
+           |  val ordered: String = augmentString("acb").sorted(Char)[Char]
+           |  augmentString("foo").map[Int](c: Char => c.toInt)
            |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
            |  Future[Unit]{
            |    println("")
@@ -110,57 +110,31 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
-        "  @@\"foo\".map(c => c.toUpper)",
+        "  val ordered = @@\"acb\".sorted",
         s"""|**Synthetics**:
             |
             |[augmentString](command:metals.goto?$augmentStringParams)
             |""".stripMargin
       )
-      charParams = URLEncoder.encode("""["scala/Char#"]""")
-      stringParams = URLEncoder.encode("""["scala/Predef.String#"]""")
-      // Inferred type parameters
-      _ <- server.assertHoverAtLine(
-        "a/src/main/scala/Main.scala",
-        "  \"foo\".map@@(c => c.toUpper)",
-        s"""|**Expression type**:
-            |```scala
-            |String
-            |```
-            |**Symbol signature**:
-            |```scala
-            |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
-            |```
-            |
-            |**Synthetics**:
-            |
-            |[[Char](command:metals.goto?$charParams), [String](command:metals.goto?$stringParams)]
-            |""".stripMargin
-      )
       // Normal hover without synthetics
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
-        "  \"foo\".m@@ap(c => c.toUpper)",
-        """|**Expression type**:
-           |```scala
-           |String
-           |```
-           |**Symbol signature**:
-           |```scala
-           |def map[B, That](f: Char => B)(implicit bf: CanBuildFrom[String,B,That]): That
+        "  val or@@dered = \"acb\".sorted",
+        """|```scala
+           |val ordered: String
            |```
            |""".stripMargin
       )
-      intParams = URLEncoder.encode("""["scala/Int#"]""")
-      fallbackParams = URLEncoder.encode(
-        """["scala/LowPriorityImplicits#fallbackStringCanBuildFrom()."]"""
-      )
-      // Implicit parameter from Predef
+      orderingParams = URLEncoder.encode("""["scala/math/Ordering.Char."]""")
+      charParams = URLEncoder.encode("""["scala/Char#"]""")
+      // Implicit parameter from Math Ordering
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/Main.scala",
-        "  \"foo\".map(c => c.toInt)@@",
+        "  val ordered = \"acb\".sorted@@",
         s"""|**Synthetics**:
             |
-            |([fallbackStringCanBuildFrom](command:metals.goto?$fallbackParams)[[Int](command:metals.goto?$intParams)])
+            |([Char](command:metals.goto?$orderingParams))
+            |[[Char](command:metals.goto?$charParams)]
             |""".stripMargin
       )
     } yield ()
@@ -182,7 +156,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  ("1" + "2").map(c => c.toUpper)
+           |  ("1" + "2").map(c => c.toDouble)
            |}
            |""".stripMargin
       )
@@ -205,7 +179,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()(andy)
-           |  ("1" + "2").map(c => c.toUpper)(StringCanBuildFrom)
+           |  ("1" + "2").map(c => c.toDouble)
            |}
            |""".stripMargin
       )
@@ -227,7 +201,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  ("1" + "2").map[Char, String](c: Char => c.toUpper)
+           |  ("1" + "2").map[Double](c: Char => c.toDouble)
            |}
            |""".stripMargin
       )
@@ -249,7 +223,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  }
            |  implicit val andy : String = "Andy"
            |  hello()
-           |  (augmentString("1" + "2")).map(c => charWrapper(c).toUpper)
+           |  (augmentString("1" + "2")).map(c => c.toDouble)
            |}
            |""".stripMargin
       )
@@ -285,7 +259,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|object Main{
-           |  (augmentString(augmentString(augmentString("1" + "2"))
+           |  augmentString(augmentString((augmentString("1" + "2"))
            |    .stripSuffix("."))
            |    .stripSuffix("#"))
            |    .stripPrefix("_empty_.")
@@ -457,7 +431,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val func0: () => Int = () => 2
            |  val func1: (Int) => Int = (a : Int) => a + 2
            |  val func2: (Int, Int) => Int = (a : Int, b: Int) => a + b
-           |  val complex: List[(Double, Int)] = tail.zip[Double, Int, List[(Double, Int)]](1 to 12)
+           |  val complex: List[(Double, Int)] = tail.zip[Int](1 to 12)
            |  for{
            |    i: (Double, Int) <- complex
            |    c: (Int) => Int = func1

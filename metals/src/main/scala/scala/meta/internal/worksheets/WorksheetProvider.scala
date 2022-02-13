@@ -277,7 +277,11 @@ class WorksheetProvider(
       result,
       () => {
         try runEvaluation()
-        catch onError
+        catch {
+          case e: Throwable =>
+            onError(e)
+            ()
+        }
       }
     )
     result.asScala.recover(onError)
@@ -373,7 +377,7 @@ class WorksheetProvider(
     if (newDigest != previousDigest) {
       worksheetsDigests.put(path, newDigest)
       val sourceDeps = fetchDependencySources(
-        evaluatedWorksheet.dependencies().asScala
+        evaluatedWorksheet.dependencies().asScala.toSeq
       )
       compilers.restartWorksheetPresentationCompiler(
         path,

@@ -48,8 +48,8 @@ class CompletionDapSuite
     expression = "Preceding(@@)",
     expectedCompletions = """|num = 
                              |args: Array[String]
+                             |Main a
                              |main(args: Array[String]): Unit
-                             |Preceding a.Main
                              |""".stripMargin,
     expectedEdit = "Preceding(num = )",
     topLines = Some(4)

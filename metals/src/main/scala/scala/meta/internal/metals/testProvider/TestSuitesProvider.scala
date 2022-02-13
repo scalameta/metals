@@ -216,9 +216,9 @@ final class TestSuitesProvider(
           getTestCasesForSuites(entry.path, List(entry.suiteInfo), None)
         else Seq.empty
       }
-    }
+    }.toMap
 
-    val addedSuites = addedEntries.mapValues(_.map(_.testClass))
+    val addedSuites = addedEntries.mapValues(_.map(_.testClass)).toMap
 
     val buildTargetUpdates =
       getBuildTargetUpdates(deletedSuites, addedSuites, addedTestCases)

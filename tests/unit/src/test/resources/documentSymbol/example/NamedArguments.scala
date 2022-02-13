@@ -7,7 +7,7 @@
     }
 )
 /*example.NamedArguments(Module):34*/object NamedArguments {
-  /*example.NamedArguments.susan(Constant):10*/val susan = "Susan"
+  /*example.NamedArguments.susan(Constant):10*/final val susan = "Susan"
   /*example.NamedArguments.user1(Constant):15*/val user1 =
     User
       .apply(
@@ -28,7 +28,7 @@
 
   // vararg
   List(
-    xs = 2
+    elems = 2
   )
 
 }

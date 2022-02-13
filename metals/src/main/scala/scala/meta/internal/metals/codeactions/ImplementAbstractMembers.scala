@@ -22,6 +22,7 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
         .getContext()
         .getDiagnostics()
         .asScala
+        .toSeq
         .collect {
           case d @ ScalacDiagnostic.ObjectCreationImpossible(_)
               if params.getRange().overlapsWith(d.getRange()) =>

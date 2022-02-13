@@ -51,19 +51,23 @@ object Snapshot {
     // maven-metadata.xml is consistently outdated so we scrape the "Last modified" column
     // of the HTML page that lists all snapshot releases instead.
     val doc = Jsoup.connect(url).get
-    val snapshots: Seq[Snapshot] = doc.select("tr").asScala.flatMap { tr =>
-      val lastModified =
-        tr.select("td:nth-child(2)").text()
-      val version =
-        tr.select("td:nth-child(1)").text().stripSuffix("/")
-      if (lastModified.nonEmpty && !version.contains("maven-metadata")) {
-        val date: ZonedDateTime =
-          ZonedDateTime.parse(lastModified, zdtFormatter)
-        List(Snapshot(version, date.toLocalDateTime))
-      } else {
-        List()
+    val snapshots: Seq[Snapshot] = doc
+      .select("tr")
+      .asScala
+      .flatMap { tr =>
+        val lastModified =
+          tr.select("td:nth-child(2)").text()
+        val version =
+          tr.select("td:nth-child(1)").text().stripSuffix("/")
+        if (lastModified.nonEmpty && !version.contains("maven-metadata")) {
+          val date: ZonedDateTime =
+            ZonedDateTime.parse(lastModified, zdtFormatter)
+          List(Snapshot(version, date.toLocalDateTime))
+        } else {
+          List()
+        }
       }
-    }
+      .toSeq
     if (snapshots.isEmpty) {
       val doc = Jsoup.connect(url + "maven-metadata.xml").get
       val latest = doc.select("latest").text().trim

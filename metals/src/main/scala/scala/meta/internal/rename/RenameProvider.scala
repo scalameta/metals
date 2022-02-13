@@ -2,6 +2,7 @@ package scala.meta.internal.rename
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import scala.collection.parallel.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 

@@ -26,14 +26,14 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     )
 
     val otherLibraries = SortedSet(
-      "cats-core_2.12", "cats-kernel_2.12", "cats-macros_2.12", "checker-qual",
-      "circe-core_2.12", "circe-numbers_2.12", "error_prone_annotations",
-      "failureaccess", "gson", "guava", "j2objc-annotations", "jsr305",
-      "listenablefuture", "machinist_2.12", "org.eclipse.lsp4j",
-      "org.eclipse.lsp4j.generator", "org.eclipse.lsp4j.jsonrpc",
-      "org.eclipse.xtend.lib", "org.eclipse.xtend.lib.macro",
-      "org.eclipse.xtext.xbase.lib", "scala-library", "scala-reflect",
-      "semanticdb-javac", "sourcecode_2.12"
+      "cats-core_2.13", "cats-kernel_2.13", "checker-qual", "circe-core_2.13",
+      "circe-numbers_2.13", "error_prone_annotations", "failureaccess", "gson",
+      "guava", "j2objc-annotations", "jsr305", "listenablefuture",
+      "org.eclipse.lsp4j", "org.eclipse.lsp4j.generator",
+      "org.eclipse.lsp4j.jsonrpc", "org.eclipse.xtend.lib",
+      "org.eclipse.xtend.lib.macro", "org.eclipse.xtext.xbase.lib",
+      "scala-library", "scala-reflect", "semanticdb-javac",
+      "simulacrum-scalafix-annotations_2.13", "sourcecode_2.13"
     )
 
     if (scala.util.Properties.isJavaAtLeast(9.toString)) {
@@ -149,7 +149,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           |{
           |  "a": {
           |    "libraryDependencies": [
-          |      "io.circe::circe-core:0.11.1",
+          |      "io.circe::circe-core:0.14.0",
           |      "org.eclipse.lsp4j:org.eclipse.lsp4j:0.5.0",
           |      "com.lihaoyi::sourcecode:0.1.7"
           |    ]
@@ -169,9 +169,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         server.assertTreeViewChildren(
           s"libraries:${server.jar("scala-library")}!/scala/Some#",
           """|value val
-             |isEmpty() method
              |get() method
-             |x() method
              |""".stripMargin
         )
         server.assertTreeViewChildren(
@@ -222,8 +220,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
               |  Projects (0)
               |  Libraries (${expectedLibrariesCount})
               |  Libraries (${expectedLibrariesCount})
-              |    sourcecode_2.12-0.1.7.jar
-              |    sourcecode_2.12-0.1.7.jar
+              |    sourcecode_2.13-0.1.7.jar
+              |    sourcecode_2.13-0.1.7.jar
               |      sourcecode/
               |      sourcecode/
               |        Args class

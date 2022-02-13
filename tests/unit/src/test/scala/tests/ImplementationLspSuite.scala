@@ -471,14 +471,14 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
     "libraries",
     """|/a/src/main/scala/a/A.scala
        |package a
-       |import org.scalatest.FunSuite
-       |import org.scalatest.WordSpecLike
-       |import org.scalatest.Matchers
-       |import org.scalatest.BeforeAndAfterAll
        |
-       |class <<ZigZagTest>> extends WordSpecLike with Matchers with Before@@AndAfterAll {}
-       |class <<ZigZagTest2>> extends WordSpecLike with Matchers with BeforeAndAfterAll {}
-       |class <<ZigZagTest3>> extends WordSpecLike with Matchers with BeforeAndAfterAll {}
+       |import org.scalatest.BeforeAndAfterAll
+       |import org.scalatest.matchers.should.Matchers
+       |import org.scalatest.wordspec.AnyWordSpec
+       |
+       |class <<ZigZagTest>> extends AnyWordSpec with Matchers with Before@@AndAfterAll {}
+       |class <<ZigZagTest2>> extends AnyWordSpec with Matchers with BeforeAndAfterAll {}
+       |class <<ZigZagTest3>> extends AnyWordSpec with Matchers with BeforeAndAfterAll {}
        |""".stripMargin
   )
 
@@ -555,10 +555,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
   )
 
   override protected def libraryDependencies: List[String] =
-    List("org.scalatest::scalatest:3.0.5", "io.circe::circe-generic:0.12.0")
-
-  override protected def compilerPlugins: List[String] =
-    List("org.scalamacros:::paradise:2.1.1")
+    List("org.scalatest::scalatest:3.2.4", "io.circe::circe-generic:0.12.0")
 
   override def assertCheck(
       filename: String,

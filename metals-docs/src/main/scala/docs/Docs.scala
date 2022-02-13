@@ -82,7 +82,7 @@ object Docs {
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
           "SCALA211_VERSION" -> V.scala211,
-          "SCALA_VERSION" -> V.scala212
+          "SCALA_VERSION" -> V.scala213
         )
       )
       .withOut(docsOut)

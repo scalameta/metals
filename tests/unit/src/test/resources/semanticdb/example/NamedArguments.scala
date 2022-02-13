@@ -7,7 +7,7 @@ case class User/*example.User#*/(
     }
 )
 object NamedArguments/*example.NamedArguments.*/ {
-  val susan/*example.NamedArguments.susan.*/ = "Susan"
+  final val susan/*example.NamedArguments.susan.*/ = "Susan"
   val user1/*example.NamedArguments.user1.*/ =
     User/*example.User.*/
       .apply/*example.User.apply().*/(
@@ -27,8 +27,8 @@ object NamedArguments/*example.NamedArguments.*/ {
   ) def b/*example.NamedArguments.b().*/ = 1
 
   // vararg
-  List/*scala.collection.immutable.List.*/(
-    xs/*scala.collection.immutable.List.apply().(xs)*/ = 2
+  List/*scala.package.List.*/(
+    elems/*scala.collection.IterableFactory#apply().(elems)*/ = 2
   )
 
 }

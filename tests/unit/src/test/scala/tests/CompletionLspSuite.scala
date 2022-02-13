@@ -10,8 +10,8 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   override def munitIgnore: Boolean = isWindows
 
-  test("basic-212") {
-    basicTest(V.scala212)
+  test("basic-213") {
+    basicTest(V.scala213)
   }
 
   test("workspace".flaky) {
@@ -91,7 +91,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
             |  val y = 1
             |}
             |""".stripMargin,
-          """|DelayedLazyVal scala.concurrent
+          """|DelayedLazyVal - scala.concurrent
              |""".stripMargin
         )
         _ <- extra
@@ -105,7 +105,12 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   // FIXME(gabro): the tests don't pass with 2.12.10, although the plugins seem to work fine when
   // tested manually
-  if (BuildInfo.scalaVersion != "2.12.10") {
+  // It's also not published for 2.13
+  if (
+    BuildInfo.scalaVersion != "2.12.10" && !BuildInfo.scalaVersion.startsWith(
+      "2.13"
+    )
+  ) {
     checkPlugin(
       "kind-projector",
       """
@@ -124,7 +129,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     checkPlugin(
       "better-monadic-for",
       """|
-         |"com.olegpy::better-monadic-for:0.3.0-M4"
+         |"com.olegpy::better-monadic-for:0.3.0"
          |""".stripMargin,
       for {
         _ <- assertCompletion(
@@ -251,7 +256,6 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         """|Duration - java.time
            |Duration - javax.xml.datatype
            |Duration - scala.concurrent.duration
-           |DurationConversions - scala.concurrent.duration
            |DurationDouble - scala.concurrent.duration.package
            |DurationDouble - scala.concurrent.duration.package
            |DurationInt - scala.concurrent.duration.package
@@ -260,7 +264,10 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |DurationLong - scala.concurrent.duration.package
            |DurationLong - scala.concurrent.duration.package
            |FiniteDuration - scala.concurrent.duration
-           |FiniteDurationIsOrdered - scala.concurrent.duration.FiniteDuration""".stripMargin,
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters""".stripMargin,
         includeDetail = false
       )
       _ <- server.didChangeConfiguration(
@@ -276,6 +283,12 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         "Duration@@",
         """|Duration - java.time
            |Duration - javax.xml.datatype
+           |DurationConverters - scala.jdk
+           |DurationConverters - scala.jdk.javaapi
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |JavaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters
+           |ScalaDurationOps - scala.jdk.DurationConverters
            |""".stripMargin,
         includeDetail = false
       )

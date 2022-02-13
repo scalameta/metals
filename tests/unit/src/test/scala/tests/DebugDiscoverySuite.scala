@@ -96,12 +96,12 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -305,12 +305,12 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -338,17 +338,17 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |/${barPath}
            |package a
-           |class Bar extends org.scalatest.FunSuite {
+           |class Bar extends org.scalatest.funsuite.AnyFunSuite {
            |  test("bart") {}
            |}
            |""".stripMargin
@@ -407,12 +407,12 @@ class DebugDiscoverySuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/${fooPath}
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
