@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.{util as ju}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -83,7 +84,6 @@ import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.TextEdit
-import scala.annotation.tailrec
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -149,6 +149,7 @@ case class ScalaPresentationCompiler(
     @tailrec
     def isEmptyLine(idx: Int, initial: Int): Boolean =
       if idx < 0 then true
+      else if idx >= text.length then isEmptyLine(idx - 1, initial)
       else
         val ch = text.charAt(idx)
         val isNewline = ch == '\n'
@@ -426,7 +427,6 @@ case class ScalaPresentationCompiler(
   )(using Context): CompletionItem =
     val printer = SymbolPrinter()(using ctx)
     val editRange = completionPos.toEditRange
-    val sym = completion.symbol
 
     // For overloaded signatures we get multiple symbols, so we need
     // to recalculate the description
@@ -434,8 +434,7 @@ case class ScalaPresentationCompiler(
     lazy val kind: CompletionItemKind = completion.completionItemKind
 
     val description =
-      if sym != NoSymbol then printer.completionDetailString(sym, history)
-      else ""
+      completion.anySymbol.fold("")(printer.completionDetailString(_, history))
 
     def mkItem0(
         ident: String,
@@ -465,12 +464,10 @@ case class ScalaPresentationCompiler(
 
       item.setAdditionalTextEdits(additionalEdits.asJava)
 
-      val documentation = ParsedComment.docOf(sym)
-      if documentation.nonEmpty then
-        item.setDocumentation(markupContent(None, documentation.toList))
+      completion.documentation
+        .foreach(doc => item.setDocumentation(markupContent(doc)))
 
-      if sym.isDeprecated then
-        item.setTags(List(CompletionItemTag.Deprecated).asJava)
+      item.setTags(completion.lspTags.asJava)
 
       item.setKind(kind)
       item
@@ -496,8 +493,8 @@ case class ScalaPresentationCompiler(
       mkItem(ident, value, isFromWorkspace = true, additionalEdits)
 
     val ident = completion.label
-    completion.kind match
-      case CompletionValue.Kind.Workspace =>
+    completion match
+      case CompletionValue.Workspace(label, sym) =>
         path match
           case (_: Ident) :: (_: Import) :: _ =>
             mkWorkspaceItem(
@@ -528,9 +525,8 @@ case class ScalaPresentationCompiler(
                   case IndexedContext.Result.InScope =>
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
-      case CompletionValue.Kind.NamedArg => mkItem(ident, ident)
-      case CompletionValue.Kind.Keyword =>
-        mkItem(completion.label, completion.insertText.getOrElse(ident))
+      case CompletionValue.NamedArg(label, _) => mkItem(ident, ident)
+      case CompletionValue.Keyword(label, text) => mkItem(label, text)
       case _ => mkItem(ident, ident.backticked)
     end match
   end completionItems

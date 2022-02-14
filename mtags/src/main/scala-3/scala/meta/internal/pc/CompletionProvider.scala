@@ -110,30 +110,32 @@ class CompletionProvider(
 
   extension (l: List[CompletionValue])
     def filterInteresting(): (List[CompletionValue], SymbolSearch.Result) =
+
       val isSeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
       def visit(head: CompletionValue): Boolean =
-        val sym = head.symbol
-        val id = head.kind match
-          case CompletionValue.Kind.NamedArg =>
-            sym.detailString + "="
-          case CompletionValue.Kind.Keyword =>
-            head.label
-          case _ =>
-            val name = SemanticdbSymbols.symbolName(sym)
-            if sym.isClass || sym.is(Module) then
-              // drop #|. at the end to avoid duplication
-              name.substring(0, name.length - 1)
-            else name
-        def isNotLocalForwardReference: Boolean =
-          !sym.isLocalToBlock ||
-            !sym.srcPos.isAfter(pos) ||
-            sym.is(Param)
+        val (id, include) =
+          head match
+            case symOnly: CompletionValue.SymbolOnly =>
+              val sym = symOnly.symbol
+              val name = SemanticdbSymbols.symbolName(sym)
+              val id =
+                if sym.isClass || sym.is(Module) then
+                  // drop #|. at the end to avoid duplication
+                  name.substring(0, name.length - 1)
+                else name
 
-        if !isSeen(id) &&
-          !isUninterestingSymbol(sym) &&
-          isNotLocalForwardReference
-        then
+              val include =
+                !isUninterestingSymbol(sym) &&
+                  isNotLocalForwardReference(sym)
+
+              (id, include)
+            case kw: CompletionValue.Keyword => (kw.label, true)
+            case namedArg: CompletionValue.NamedArg =>
+              val id = namedArg.symbol.detailString + "="
+              (id, true)
+
+        if !isSeen(id) && include then
           isSeen += id
           buf += head
           true
@@ -167,28 +169,31 @@ class CompletionProvider(
     defn.ScalaPredefModule.requiredMethod(nme.valueOf)
   ).flatMap(_.alternatives.map(_.symbol)).toSet
 
+  private def isNotLocalForwardReference(sym: Symbol)(using Context): Boolean =
+    !sym.isLocalToBlock ||
+      !sym.srcPos.isAfter(pos) ||
+      sym.is(Param)
+
   private def computeRelevancePenalty(
       completion: CompletionValue,
       application: CompletionApplication
   ): Int =
     import MemberOrdering.*
-    val sym = completion.symbol
 
-    def hasGetter = try
+    def hasGetter(sym: Symbol) = try
       def isModuleOrClass = sym.is(Module) || sym.isClass
       // isField returns true for some classes
       def isJavaClass = sym.is(JavaDefined) && isModuleOrClass
       (sym.isField && !isJavaClass && !isModuleOrClass) || sym.getter != NoSymbol
     catch case _ => false
 
-    def symbolRelevance: Int =
+    def symbolRelevance(sym: Symbol): Int =
       var relevance = 0
       // symbols defined in this file are more relevant
-      if (pos.source != sym.source || sym.is(Package)) &&
-        !completion.isCustom
-      then relevance |= IsNotDefinedInFile
+      if pos.source != sym.source || sym.is(Package) then
+        relevance |= IsNotDefinedInFile
       // fields are more relevant than non fields
-      if !hasGetter then relevance |= IsNotGetter
+      if !hasGetter(sym) then relevance |= IsNotGetter
       // symbols whose owner is a base class are less relevant
       if sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass
       then relevance |= IsInheritedBaseMethod
@@ -212,13 +217,13 @@ class CompletionProvider(
       relevance
     end symbolRelevance
 
-    completion.kind match
-      case _ if completion.isCustom =>
-        Int.MaxValue
-      case CompletionValue.Kind.Workspace =>
-        symbolRelevance | (IsWorkspaceSymbol + sym.name.show.length)
+    completion match
+      case CompletionValue.Workspace(_, sym) =>
+        symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
+      case CompletionValue.SymbolOnly(sym) =>
+        symbolRelevance(sym)
       case _ =>
-        symbolRelevance
+        Int.MaxValue
   end computeRelevancePenalty
 
   private lazy val isEvilMethod: Set[Name] = Set[Name](
@@ -254,14 +259,11 @@ class CompletionProvider(
         def isInherited(symbol: Symbol): Boolean =
           isMember(symbol) && symbol.owner != tpe.typeSymbol
         def postProcess(items: List[CompletionValue]): List[CompletionValue] =
-          items.map { i =>
-            val sym = i.symbol
-            i.kind match
-              case CompletionValue.Kind.Compiler
-                  if sym.info.paramNamess.nonEmpty && isMember(sym) =>
-                i.copy(symbol = substituteTypeVars(sym))
-              case _ =>
-                i
+          items.map {
+            case CompletionValue.Compiler(label, sym)
+                if sym.info.paramNamess.nonEmpty && isMember(sym) =>
+              CompletionValue.Compiler(label, substituteTypeVars(sym))
+            case other => other
           }
 
         private def substituteTypeVars(symbol: Symbol): Symbol =
@@ -279,21 +281,34 @@ class CompletionProvider(
 
   end CompletionApplication
 
+  extension (v: CompletionValue)
+    def orderingName(using Context): String =
+      v match
+        case symOnly: CompletionValue.SymbolOnly =>
+          symOnly.symbol.name.show
+        case other =>
+          other.label
+
   private def completionOrdering(
       application: CompletionApplication
   ): Ordering[CompletionValue] =
     new Ordering[CompletionValue]:
       val queryLower = completionPos.query.toLowerCase()
       val fuzzyCache = mutable.Map.empty[Symbol, Int]
-      def compareLocalSymbols(o1: CompletionValue, o2: CompletionValue): Int =
-        val s1 = o1.symbol
-        val s2 = o2.symbol
-        if s1.isLocal && s2.isLocal &&
-          !o1.isCustom && !o2.isCustom
-        then
-          if s1.srcPos.isAfter(s2.srcPos) then -1
-          else 1
+
+      def compareLocalSymbols(s1: Symbol, s2: Symbol): Int =
+        if s1.isLocal && s2.isLocal then
+          val firstIsAfter = s1.srcPos.isAfter(s2.srcPos)
+          if firstIsAfter then -1 else 1
         else 0
+      end compareLocalSymbols
+
+      def compareByRelevance(o1: CompletionValue, o2: CompletionValue): Int =
+        Integer.compare(
+          computeRelevancePenalty(o1, application),
+          computeRelevancePenalty(o2, application)
+        )
+
       def fuzzyScore(o: Symbol): Int =
         fuzzyCache.getOrElseUpdate(
           o, {
@@ -304,46 +319,59 @@ class CompletionProvider(
           }
         )
 
+      def compareByApplyParams(o1: CompletionValue, o2: CompletionValue): Int =
+        def priority(v: CompletionValue): Int =
+          v match
+            case _: CompletionValue.Compiler => 0
+            case _: CompletionValue.NamedArg => 1
+            case _ => 2
+
+        priority(o1) - priority(o2)
+      end compareByApplyParams
+
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
-        val s1 = o1.symbol
-        val s2 = o2.symbol
-        val byLocalSymbol = compareLocalSymbols(o1, o2)
-        val bothHaveSymbols = o1.symbol != NoSymbol && o2.symbol != NoSymbol
-        if byLocalSymbol != 0 then byLocalSymbol
-        else
-          val byRelevance =
-            Integer.compare(
-              computeRelevancePenalty(o1, application),
-              computeRelevancePenalty(o2, application)
-            )
-          if byRelevance != 0 then byRelevance
-          else
-            val byFuzzy = Integer.compare(
-              fuzzyScore(s1),
-              fuzzyScore(s2)
-            )
-            if byFuzzy != 0 then byFuzzy
+        (o1, o2) match
+          case (
+                CompletionValue.SymbolOnly(s1),
+                CompletionValue.SymbolOnly(s2)
+              ) =>
+            val byLocalSymbol = compareLocalSymbols(s1, s2)
+            if byLocalSymbol != 0 then byLocalSymbol
             else
-              val byIdentifier = IdentifierComparator.compare(
-                s1.name.show,
-                s2.name.show
-              )
-              if byIdentifier != 0 || !bothHaveSymbols then byIdentifier
+              val byRelevance = compareByRelevance(o1, o2)
+              if byRelevance != 0 then byRelevance
               else
-                val byOwner =
-                  s1.owner.fullName.toString
-                    .compareTo(s2.owner.fullName.toString)
-                if byOwner != 0 then byOwner
+                val byFuzzy = Integer.compare(
+                  fuzzyScore(s1),
+                  fuzzyScore(s2)
+                )
+                if byFuzzy != 0 then byFuzzy
                 else
-                  val byParamCount = Integer.compare(
-                    s1.paramSymss.flatten.size,
-                    s2.paramSymss.flatten.size
+                  val byIdentifier = IdentifierComparator.compare(
+                    s1.name.show,
+                    s2.name.show
                   )
-                  if byParamCount != 0 then byParamCount
-                  else s1.detailString.compareTo(s2.detailString)
+                  if byIdentifier != 0 then byIdentifier
+                  else
+                    val byOwner =
+                      s1.owner.fullName.toString
+                        .compareTo(s2.owner.fullName.toString)
+                    if byOwner != 0 then byOwner
+                    else
+                      val byParamCount = Integer.compare(
+                        s1.paramSymss.flatten.size,
+                        s2.paramSymss.flatten.size
+                      )
+                      if byParamCount != 0 then byParamCount
+                      else s1.detailString.compareTo(s2.detailString)
+                end if
+              end if
             end if
-          end if
-        end if
+          case _ =>
+            val byApplyParams = compareByApplyParams(o1, o2)
+            if byApplyParams != 0 then byApplyParams
+            else compareByRelevance(o1, o2)
+
       end compare
 
 end CompletionProvider
