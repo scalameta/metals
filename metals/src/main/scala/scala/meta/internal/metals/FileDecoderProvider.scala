@@ -147,7 +147,7 @@ final class FileDecoderProvider(
     Try(URI.create(uriAsStr)) match {
       case Success(uri) =>
         uri.getScheme() match {
-          case "jar" => Future { decodeJar(uri) }
+          case "jar" => Future { decodeJar(uriAsStr) }
           case "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
@@ -166,7 +166,13 @@ final class FileDecoderProvider(
     }
   }
 
-  private def decodeJar(uri: URI): DecoderResponse = {
+  private def decodeJar(uriAsStr: String): DecoderResponse = {
+
+    /**
+     *  URI.create will decode the string, which means ZipFileSystemProvider will not work
+     *  Related stack question: https://stackoverflow.com/questions/9873845/java-7-zip-file-system-provider-doesnt-seem-to-accept-spaces-in-uri
+     */
+    val uri = new URI("jar", uriAsStr.stripPrefix("jar:"), null)
     Try {
       val path = uri.toAbsolutePath
       FileIO.slurp(path, StandardCharsets.UTF_8)
