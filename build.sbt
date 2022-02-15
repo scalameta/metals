@@ -173,7 +173,7 @@ lazy val V = new {
   val ammonite212Version = scala212
   val ammonite213Version = "2.13.7"
 
-  val ammonite = "2.5.1"
+  val ammonite = "2.5.2"
   val bloop = "1.4.12"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
@@ -437,9 +437,9 @@ lazy val metals = project
       "com.swoval" % "file-tree-views" % "2.1.8",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.14.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.8.5.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.6.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "8.4.3",
+      "org.flywaydb" % "flyway-core" % "8.4.4",
       "com.h2database" % "h2" % "2.0.206",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
