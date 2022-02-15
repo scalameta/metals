@@ -72,7 +72,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.5.Final"
+      "org.jboss.xnio:xnio-nio:3.8.6.Final"
     )
   )
 
@@ -87,7 +87,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.5.Final"
+      "org.jboss.xnio:xnio-nio:3.8.6.Final"
     )
   )
 
