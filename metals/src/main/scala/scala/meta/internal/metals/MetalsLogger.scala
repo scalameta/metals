@@ -10,12 +10,11 @@ import scala.meta.io.RelativePath
 import scribe._
 import scribe.file.FileWriter
 import scribe.file.PathBuilder
-import scribe.format.FormatterInterpolator
 import scribe.format.Formatter
-import scribe.format.date
-import scribe.format.message
-import scribe.format.levelPaddedRight
 import scribe.format.FormatterInterpolator
+import scribe.format.date
+import scribe.format.levelPaddedRight
+import scribe.format.message
 import scribe.modify.LogModifier
 
 object MetalsLogger {
@@ -99,7 +98,7 @@ object MetalsLogger {
 
   def defaultFormat: Formatter = formatter"$date $levelPaddedRight $message"
 
-  def silent =
+  def silent: LoggerSupport[Unit] =
     new LoggerSupport[Unit] {
       override def log[M](record: LogRecord[M]): Unit = ()
     }
