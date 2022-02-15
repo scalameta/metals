@@ -26,7 +26,6 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     Right(FileDecoderProviderLspSuite.tastySingle)
   )
 
-  val userHome: String = System.getProperty("user.home")
   check(
     "decode-jar",
     s"""
@@ -53,7 +52,7 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     "file-decode",
     Right(FileDecoderProviderLspSuite.EventsJarFile),
     customUri = Some(
-      s"jar:file://${userHome}/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/com-microsoft-java-debug-core/0.21.0%2B1-7f1080f1/com-microsoft-java-debug-core-0.21.0%2B1-7f1080f1-sources.jar!/com/microsoft/java/debug/core/protocol/Events.java"
+      s"jar:${coursierCacheDir.toUri}/v1/https/repo1.maven.org/maven2/ch/epfl/scala/com-microsoft-java-debug-core/0.21.0%2B1-7f1080f1/com-microsoft-java-debug-core-0.21.0%2B1-7f1080f1-sources.jar!/com/microsoft/java/debug/core/protocol/Events.java"
     )
   )
 

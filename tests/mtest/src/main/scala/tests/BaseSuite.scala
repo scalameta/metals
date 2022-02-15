@@ -1,5 +1,8 @@
 package tests
 
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import scala.concurrent.duration.Duration
 import scala.util.Properties
 
@@ -26,6 +29,16 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
 
   def isWindows: Boolean =
     Properties.isWin
+
+  def isMacOS: Boolean =
+    Properties.isMac
+
+  def userHome: Path = Paths.get(System.getProperty("user.home"))
+
+  def coursierCacheDir: Path =
+    if (isWindows) userHome.resolve("AppData/Local/Coursier/Cache")
+    else if (isMacOS) userHome.resolve("Library/Caches/Coursier")
+    else userHome.resolve(".cache/coursier")
 
   def isValidScalaVersionForEnv(scalaVersion: String): Boolean =
     this.isJava8 || SemVer.isCompatibleVersion(
