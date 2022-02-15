@@ -13,9 +13,12 @@ jobs:
           apps: ""
       - name: "Query maven-central"
         run: |
-          TODAY_NIGHTLY=$(cs complete org.scala-lang:scala3-compiler_3: | { grep $(date '+%Y%m%d') || true; })
-          if [ ! -z $TODAY_NIGHTLY ]; then
-            gh workflow run mtags-auto-release.yml -f scala_version=$TODAY_NIGHTLY
-          fi
+          cs complete org.scala-lang:scala3-compiler_3: | grep NIGHTLY | sort > all_nightly
+          LAST_NIGHTLY_MTAG=$(cs complete org.scalameta:mtags_3 | grep NIGHTLY | sort | tail -n 1 | cut -d "_" -f2)
+          LAST_NIGHTLY_POS=$(grep -n $LAST_NIGHTLY_MTAG  all_nightly | cut -d ":" -f1)
+          NEW_NIGHTLIES=$(tail -n +$LAST_NIGHTLY_POS all_nightly)
+          while IFS= read -r version; do
+            gh workflow run mtags-auto-release.yml -f scala_version=$version
+          done <<< "$NEW_NIGHTLIES"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
