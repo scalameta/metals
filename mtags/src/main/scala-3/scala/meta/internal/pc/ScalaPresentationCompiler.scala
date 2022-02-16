@@ -434,7 +434,7 @@ case class ScalaPresentationCompiler(
     lazy val kind: CompletionItemKind = completion.completionItemKind
 
     val description =
-      completion.anySymbol.fold("")(printer.completionDetailString(_, history))
+      completion.description(printer, history)
 
     def mkItem0(
         ident: String,

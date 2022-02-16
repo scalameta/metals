@@ -116,7 +116,7 @@ class CompletionProvider(
       def visit(head: CompletionValue): Boolean =
         val (id, include) =
           head match
-            case symOnly: CompletionValue.SymbolOnly =>
+            case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
               val id =
@@ -132,7 +132,7 @@ class CompletionProvider(
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
             case namedArg: CompletionValue.NamedArg =>
-              val id = namedArg.symbol.detailString + "="
+              val id = namedArg.label + "="
               (id, true)
 
         if !isSeen(id) && include then
@@ -220,8 +220,8 @@ class CompletionProvider(
     completion match
       case CompletionValue.Workspace(_, sym) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
-      case CompletionValue.SymbolOnly(sym) =>
-        symbolRelevance(sym)
+      case sym: CompletionValue.Symbolic =>
+        symbolRelevance(sym.symbol)
       case _ =>
         Int.MaxValue
   end computeRelevancePenalty
@@ -281,14 +281,6 @@ class CompletionProvider(
 
   end CompletionApplication
 
-  extension (v: CompletionValue)
-    def orderingName(using Context): String =
-      v match
-        case symOnly: CompletionValue.SymbolOnly =>
-          symOnly.symbol.name.show
-        case other =>
-          other.label
-
   private def completionOrdering(
       application: CompletionApplication
   ): Ordering[CompletionValue] =
@@ -319,7 +311,18 @@ class CompletionProvider(
           }
         )
 
-      def compareByApplyParams(o1: CompletionValue, o2: CompletionValue): Int =
+      /**
+       * This one is used for the following case:
+       * ```scala
+       * def foo(argument: Int): Int = ???
+       * val argument = 42
+       * foo(arg@@) // completions should be ordered as :
+       *            // - argument       (local val) - actual value comes first
+       *            // - argument = ... (named arg) - named arg after
+       *            // - ... all other options
+       * ```
+       */
+      def compareInApplyParams(o1: CompletionValue, o2: CompletionValue): Int =
         def priority(v: CompletionValue): Int =
           v match
             case _: CompletionValue.Compiler => 0
@@ -327,14 +330,16 @@ class CompletionProvider(
             case _ => 2
 
         priority(o1) - priority(o2)
-      end compareByApplyParams
+      end compareInApplyParams
 
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
           case (
-                CompletionValue.SymbolOnly(s1),
-                CompletionValue.SymbolOnly(s2)
+                sym1: CompletionValue.Symbolic,
+                sym2: CompletionValue.Symbolic
               ) =>
+            val s1 = sym1.symbol
+            val s2 = sym2.symbol
             val byLocalSymbol = compareLocalSymbols(s1, s2)
             if byLocalSymbol != 0 then byLocalSymbol
             else
@@ -368,7 +373,7 @@ class CompletionProvider(
               end if
             end if
           case _ =>
-            val byApplyParams = compareByApplyParams(o1, o2)
+            val byApplyParams = compareInApplyParams(o1, o2)
             if byApplyParams != 0 then byApplyParams
             else compareByRelevance(o1, o2)
 
