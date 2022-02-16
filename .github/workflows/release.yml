@@ -15,6 +15,17 @@ jobs:
       - uses: coursier/cache-action@v6.3
       - name: Publish
         run: |
+          LOCKED=true
+          while [ $LOCKED = true ]; do
+            IN_PROGRESS=$(gh api /repos/scalameta/metals/actions/workflows/release.yml/runs?status=in_progress -q ".total_count")
+            if [ $IN_PROGRESS == "0" ]; then
+              LOCKED=false
+            else
+              echo "Waiting the completion of other release job..."
+              sleep 20
+            fi
+          done
+
           COMMAND="ci-release"
           UPDATE_DOCS=true
           if [[ $GITHUB_REF == "refs/tags"* ]] && [[ $GITHUB_REF_NAME == "mtags_v"* ]]; then
