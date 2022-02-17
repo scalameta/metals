@@ -188,8 +188,7 @@ object Messages {
       s"${icons.info} Partial navigation",
       tooltip = "This external library source has compile errors. " +
         "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as " +
-        "the external library.",
-      command = ClientCommands.FocusDiagnostics.id
+        "the external library."
     )
 
   object CheckDoctor {

@@ -26,6 +26,7 @@ class StandaloneSymbolSearch(
     isExcludedPackage: String => Boolean,
     trees: Trees,
     buildTargets: BuildTargets,
+    saveSymbolFileToDisk: Boolean,
     workspaceFallback: Option[SymbolSearch] = None
 ) extends SymbolSearch {
 
@@ -52,7 +53,8 @@ class StandaloneSymbolSearch(
       workspace,
       semanticdbsFallback = None,
       trees,
-      buildTargets
+      buildTargets,
+      saveSymbolFileToDisk
     )
 
   def documentation(symbol: String): ju.Optional[SymbolDocumentation] =
@@ -109,7 +111,8 @@ object StandaloneSymbolSearch {
       isExcludedPackage: String => Boolean,
       userConfig: () => UserConfiguration,
       trees: Trees,
-      buildTargets: BuildTargets
+      buildTargets: BuildTargets,
+      saveSymbolFileToDisk: Boolean
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -126,7 +129,8 @@ object StandaloneSymbolSearch {
       buffers,
       isExcludedPackage,
       trees,
-      buildTargets
+      buildTargets,
+      saveSymbolFileToDisk
     )
   }
   def apply(
@@ -136,7 +140,8 @@ object StandaloneSymbolSearch {
       isExcludedPackage: String => Boolean,
       userConfig: () => UserConfiguration,
       trees: Trees,
-      buildTargets: BuildTargets
+      buildTargets: BuildTargets,
+      saveSymbolFileToDisk: Boolean
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
@@ -148,7 +153,8 @@ object StandaloneSymbolSearch {
       buffers,
       isExcludedPackage,
       trees,
-      buildTargets
+      buildTargets,
+      saveSymbolFileToDisk
     )
   }
 

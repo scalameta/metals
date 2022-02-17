@@ -8,6 +8,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.parsers.Parse
 import scala.meta.parsers.Parsed
 
 import org.eclipse.lsp4j.Diagnostic
@@ -108,17 +109,22 @@ final class Trees(
   }
 
   def tokenized(input: inputs.Input.VirtualFile): Tokenized =
-    scalaVersionSelector.getDialect(AbsolutePath(input.path))(input).tokenize
+    scalaVersionSelector.getDialect(input.path.toAbsolutePath)(input).tokenize
 
   private def parse(
       path: AbsolutePath,
       dialect: Dialect
-  ): Option[Parsed[Source]] = {
+  ): Option[Parsed[Tree]] = {
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
     } yield {
-      val input = Input.VirtualFile(path.toString(), text)
-      dialect(input).parse[Source]
+      val input = Input.VirtualFile(path.toURI.toString(), text)
+      if (path.isAmmoniteScript) {
+        val ammoniteInput = Input.Ammonite(input)
+        dialect(ammoniteInput).parse(Parse.parseAmmonite)
+      } else {
+        dialect(input).parse[Source]
+      }
     }
   }
 

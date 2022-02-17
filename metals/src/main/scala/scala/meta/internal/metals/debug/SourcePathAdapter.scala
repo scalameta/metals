@@ -16,7 +16,8 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 private[debug] final class SourcePathAdapter(
     workspace: AbsolutePath,
     sources: Set[AbsolutePath],
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    saveJarFileToDisk: Boolean
 ) {
   private val dependencies = workspace.resolve(Directories.dependencies)
   def toDapURI(sourcePath: AbsolutePath): Option[URI] = {
@@ -43,7 +44,8 @@ private[debug] final class SourcePathAdapter(
       Try(URI.create(sourcePath)).getOrElse(Paths.get(sourcePath).toUri())
     sourceUri.getScheme match {
       case "jar" =>
-        Option(AbsolutePath(Paths.get(sourceUri)).toFileOnDisk(workspace))
+        val path = sourceUri.toAbsolutePath
+        Some(if (saveJarFileToDisk) path.toFileOnDisk(workspace) else path)
       case "file" => Some(AbsolutePath(Paths.get(sourceUri)))
       case _ => None
     }
@@ -57,11 +59,12 @@ private[debug] final class SourcePathAdapter(
 private[debug] object SourcePathAdapter {
   def apply(
       buildTargets: BuildTargets,
-      targets: Seq[BuildTargetIdentifier]
+      targets: Seq[BuildTargetIdentifier],
+      saveJarFileToDisk: Boolean
   ): SourcePathAdapter = {
     val workspace = buildTargets.workspaceDirectory(targets.head).get
     val sources =
       targets.flatMap(buildTargets.buildTargetTransitiveSources).toSet
-    new SourcePathAdapter(workspace, sources, buildTargets)
+    new SourcePathAdapter(workspace, sources, buildTargets, saveJarFileToDisk)
   }
 }

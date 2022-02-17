@@ -91,6 +91,36 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("multi-stage") {
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "$scalaVersion"
+            |  }
+            |}
+            |/main.sc
+            |
+            |interp.repositories() ++= Seq(coursierapi.MavenRepository.of("https://jitpack.io"))
+            |
+            |@
+            |
+            |import $$ivy.`io.circe::circe-json-schema:0.1.0`
+            |
+            |import io.circe.schema.Schema
+            |
+            |val schema = Schema.loadFromString("{}")
+            |println(schema.isSuccess)
+            |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
+      _ <- server.didSave("main.sc")(identity)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   test("invalid-version") {
     val fakeScalaVersion = "30.3.4"
     for {

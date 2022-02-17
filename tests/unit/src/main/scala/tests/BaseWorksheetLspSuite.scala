@@ -8,9 +8,11 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.{BuildInfo => V}
 
-abstract class BaseWorksheetLspSuite(scalaVersion: String)
-    extends BaseLspSuite("worksheet") {
-  override def initializationOptions: Option[InitializationOptions] =
+abstract class BaseWorksheetLspSuite(
+    scalaVersion: String
+) extends BaseLspSuite(s"worksheet") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
         decorationProvider = Some(true)
@@ -27,6 +29,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   if (!ScalaVersions.isScala3Version(scalaVersion))
     test("completion") {
       assume(!isWindows, "This test is flaky on Windows")
+      cleanWorkspace()
       for {
         _ <- initialize(
           s"""
@@ -81,6 +84,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     }
 
   test("outside-target") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -125,6 +129,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("render") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -225,6 +230,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("cancel") {
+    cleanWorkspace()
     val cancelled = Promise[Unit]()
     client.slowTaskHandler = { _ =>
       cancelled.trySuccess(())
@@ -260,6 +266,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("crash") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -305,6 +312,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("dependsOn") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -338,6 +346,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("no-worksheet".flaky) {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -361,6 +370,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("update-classpath") {
+    cleanWorkspace()
     client.slowTaskHandler = _ => None
     for {
       _ <- initialize(
@@ -399,6 +409,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("syntax-error") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -462,12 +473,13 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  test("definition") {
+  test("definition", withoutVirtualDocs = false) {
     // NOTE(olafur) this test fails unpredicatly on Windows with
     //      """|/a/src/main/scala/Main.worksheet.sc
     //         |val message/*<no symbol>*/ = "Hello World!"
     //         |println/*<no symbol>*/(message/*<no symbol>*/)
     assume(!isWindows, "This test fails unpredictably on Window")
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -491,7 +503,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("root-outside-definition") {
     assume(!isWindows, "This test fails unpredictably on Window")
-
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -537,6 +549,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("no-position") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -579,6 +592,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   }
 
   test("fatal-exception") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -624,6 +638,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
 
   test("export") {
     assume(!isWindows, "This test is flaky on Windows")
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""

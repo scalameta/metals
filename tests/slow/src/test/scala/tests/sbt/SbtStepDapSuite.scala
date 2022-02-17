@@ -6,7 +6,7 @@ import tests.debug.BaseStepDapSuite
 
 class SbtStepDapSuite
     extends BaseStepDapSuite(
-      "sbt-debug-step",
+      s"sbt-debug-step",
       SbtServerInitializer,
       SbtBuildLayout
     )

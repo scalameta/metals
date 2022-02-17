@@ -2,6 +2,7 @@ package tests
 
 import scala.collection.SortedSet
 
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.tvp.TreeViewProvider
 
 /**
@@ -9,6 +10,9 @@ import scala.meta.internal.tvp.TreeViewProvider
  *       due to https://mail.openjdk.java.net/pipermail/jdk8u-dev/2020-July/012143.html
  */
 class TreeViewLspSuite extends BaseLspSuite("tree-view") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   /**
    * The libraries we expect to find for tests in this file.
@@ -137,7 +141,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     } yield ()
   }
 
-  test("libraries") {
+  test("libraries", withoutVirtualDocs = true) {
     for {
       _ <- initialize(
         """

@@ -25,6 +25,7 @@ import scala.meta.io.AbsolutePath
 
 import munit.Ignore
 import munit.Location
+import munit.TestOptions
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -48,6 +49,10 @@ abstract class BaseLspSuite(
   var workspace: AbsolutePath = _
 
   protected def initializationOptions: Option[InitializationOptions] = None
+
+  private var useVirtualDocs = false
+
+  protected def useVirtualDocuments = useVirtualDocs
 
   protected def mtagsResolver: MtagsResolver =
     new TestMtagsResolver
@@ -77,6 +82,21 @@ abstract class BaseLspSuite(
     assertNoDiff(obtained, expectedName)
   }
 
+  def test(testOpts: TestOptions, withoutVirtualDocs: Boolean)(
+      fn: => Future[Unit]
+  )(implicit loc: Location) {
+    if (withoutVirtualDocs) {
+      test(testOpts.withName(s"${testOpts.name}-readonly")) { fn }
+      test(
+        testOpts
+          .withName(s"${testOpts.name}-virtualdoc")
+          .withTags(Set(TestingServer.virtualDocTag))
+      ) { fn }
+    } else {
+      test(testOpts)(fn)
+    }
+  }
+
   def newServer(workspaceName: String): Unit = {
     workspace = createWorkspace(workspaceName)
     val buffers = Buffers()
@@ -85,6 +105,9 @@ abstract class BaseLspSuite(
       icons = this.icons
     )
 
+    val initOptions = initializationOptions.map {
+      _.copy(isVirtualDocumentSupported = Some(useVirtualDocs))
+    }
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
       workspace,
@@ -94,7 +117,7 @@ abstract class BaseLspSuite(
       bspGlobalDirectories,
       sh,
       time,
-      initializationOptions,
+      initOptions,
       mtagsResolver
     )(ex)
     server.server.userConfig = this.userConfig
@@ -109,6 +132,7 @@ abstract class BaseLspSuite(
   override def beforeEach(context: BeforeEach): Unit = {
     cancelServer()
     if (context.test.tags.contains(Ignore)) return
+    useVirtualDocs = context.test.tags.contains(TestingServer.virtualDocTag)
     newServer(context.test.name)
   }
 

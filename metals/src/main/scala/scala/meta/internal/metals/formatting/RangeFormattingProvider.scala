@@ -48,7 +48,7 @@ class RangeFormattingProvider(
     buffers
       .get(path)
       .map { sourceText =>
-        val virtualFile = Input.VirtualFile(path.toString(), sourceText)
+        val virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
         val startPos = range.getStart.toMeta(virtualFile)
         val endPos = range.getEnd.toMeta(virtualFile)
         val tokensOpt = trees.tokenized(virtualFile).toOption

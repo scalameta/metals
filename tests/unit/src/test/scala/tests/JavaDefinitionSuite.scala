@@ -7,6 +7,7 @@ import scala.util.Properties
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
@@ -20,6 +21,9 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
   val javaBasePrefix: String =
     if (Properties.isJavaAtLeast("9")) "java.base/" else ""
 
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
   check(
     "jdk-String",
     "java.lang.String",
@@ -29,6 +33,19 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|src.zip/${javaBasePrefix}java/lang/CharSequence.java info: result
         |public interface CharSequence {
         |                 ^^^^^^^^^^^^
+        |""".stripMargin,
+    withoutVirtualDocs = true
+  )
+
+  check(
+    "jdk-String-patch-module",
+    "java.lang.String",
+    s"""|${javaBasePrefix}java/lang/String.java
+        |private boolean nonSyncContentEquals(@@AbstractStringBuilder sb) {
+        |""".stripMargin,
+    s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
+        |abstract class AbstractStringBuilder implements Appendable, CharSequence {
+        |               ^^^^^^^^^^^^^^^^^^^^^
         |""".stripMargin
   )
 
@@ -55,7 +72,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.5.Final"
+      "org.jboss.xnio:xnio-nio:3.8.6.Final"
     )
   )
 
@@ -70,7 +87,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.5.Final"
+      "org.jboss.xnio:xnio-nio:3.8.6.Final"
     )
   )
 
@@ -79,9 +96,10 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
       depSymbol: String,
       input: String,
       expected: String,
-      dependencies: List[String] = Nil
+      dependencies: List[String] = Nil,
+      withoutVirtualDocs: Boolean = false
   )(implicit loc: Location): Unit = {
-    test(name) {
+    test(name, withoutVirtualDocs) {
       val parsed = FileLayout.mapFromString(input)
       assert(parsed.size == 1, "Input should have only one dep source file")
       val (path, query) = parsed.head
@@ -157,12 +175,14 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
   private def renderLocation(loc: l.Location): String = {
     val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
     val relativePath =
-      path
-        .toRelative(workspace.resolve(Directories.dependencies))
-        .toString()
-        .replace("\\", "/")
-
-    val input = path.toInput.copy(path = relativePath.toString)
+      path.jarPath
+        .map(jarPath => s"${jarPath.filename}${path}")
+        .getOrElse(
+          path
+            .toRelative(workspace.resolve(Directories.dependencies))
+            .toString()
+        )
+    val input = path.toInput.copy(path = relativePath.replace("\\", "/"))
     loc
       .getRange()
       .toMeta(input)

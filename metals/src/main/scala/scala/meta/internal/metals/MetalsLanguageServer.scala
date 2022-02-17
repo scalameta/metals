@@ -29,6 +29,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 
+import scala.meta.dialects._
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspConnector
@@ -333,7 +334,7 @@ class MetalsLanguageServer(
       case None =>
         languageClient.showMessage(Messages.noRoot)
       case Some(path) =>
-        workspace = AbsolutePath(Paths.get(URI.create(path))).dealias
+        workspace = path.toAbsolutePath
         MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
 
         val clientInfo = Option(params.getClientInfo()) match {
@@ -506,7 +507,8 @@ class MetalsLanguageServer(
           remote,
           trees,
           buildTargets,
-          scalaVersionSelector
+          scalaVersionSelector,
+          saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported()
         )
         formattingProvider = new FormattingProvider(
           workspace,
@@ -642,6 +644,7 @@ class MetalsLanguageServer(
           workspace,
           buildTargets,
           definitionIndex,
+          saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
           excludedPackageHandler.isExcludedPackage
         )
         symbolSearch = new MetalsSymbolSearch(
@@ -802,7 +805,8 @@ class MetalsLanguageServer(
         findTextInJars = new FindTextInDependencyJars(
           buildTargets,
           () => workspace,
-          languageClient
+          languageClient,
+          saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported()
         )
     }
   }
@@ -2578,7 +2582,6 @@ class MetalsLanguageServer(
       _ = jdkSources.foreach(source =>
         buildTargets.addDependencySource(source, item.getTarget)
       )
-      scalaTarget <- buildTargets.scalaTarget(item.getTarget)
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       path = sourceUri.toAbsolutePath
       _ = buildTargets.addDependencySource(path, item.getTarget)
@@ -2590,11 +2593,15 @@ class MetalsLanguageServer(
           usedJars += path
           addSourceJarSymbols(path)
         } else if (path.isDirectory) {
-          val dialect =
-            ScalaVersions.dialectForScalaVersion(
-              scalaTarget.scalaVersion,
-              includeSource3 = true
+          val dialect = buildTargets
+            .scalaTarget(item.getTarget)
+            .map(scalaTarget =>
+              ScalaVersions.dialectForScalaVersion(
+                scalaTarget.scalaVersion,
+                includeSource3 = true
+              )
             )
+            .getOrElse(Scala213)
           definitionIndex.addSourceDirectory(path, dialect)
         } else {
           scribe.warn(s"unexpected dependency: $path")

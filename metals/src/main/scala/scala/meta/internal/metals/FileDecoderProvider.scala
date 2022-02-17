@@ -3,9 +3,7 @@ package scala.meta.internal.metals
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.net.URI
-import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
-import java.nio.file.Paths
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
@@ -149,7 +147,7 @@ final class FileDecoderProvider(
     Try(URI.create(uriAsStr)) match {
       case Success(uri) =>
         uri.getScheme() match {
-          case "jar" => Future { decodeJar(uri) }
+          case "jar" => Future { decodeJar(uriAsStr) }
           case "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
@@ -168,14 +166,15 @@ final class FileDecoderProvider(
     }
   }
 
-  private def decodeJar(uri: URI): DecoderResponse = {
+  private def decodeJar(uriAsStr: String): DecoderResponse = {
+
+    /**
+     *  URI.create will decode the string, which means ZipFileSystemProvider will not work
+     *  Related stack question: https://stackoverflow.com/questions/9873845/java-7-zip-file-system-provider-doesnt-seem-to-accept-spaces-in-uri
+     */
+    val uri = new URI("jar", uriAsStr.stripPrefix("jar:"), null)
     Try {
-      // jar file system cannot cope with a heavily encoded uri
-      // hence the roundabout way of creating an AbsolutePath
-      // must have "jar:file:"" instead of "jar:file%3A"
-      val decodedUriStr = URLDecoder.decode(uri.toString(), "UTF-8")
-      val decodedUri = URI.create(decodedUriStr)
-      val path = AbsolutePath(Paths.get(decodedUri))
+      val path = uri.toAbsolutePath
       FileIO.slurp(path, StandardCharsets.UTF_8)
     } match {
       case Failure(exception) => DecoderResponse.failed(uri, exception)

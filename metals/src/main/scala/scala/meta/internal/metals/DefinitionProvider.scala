@@ -53,7 +53,8 @@ final class DefinitionProvider(
     remote: RemoteLanguageServer,
     trees: Trees,
     buildTargets: BuildTargets,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
+    saveDefFileToDisk: Boolean
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -63,7 +64,8 @@ final class DefinitionProvider(
     workspace,
     Some(semanticdbs),
     trees,
-    buildTargets
+    buildTargets,
+    saveDefFileToDisk
   )
 
   def definition(
@@ -270,7 +272,8 @@ class DestinationProvider(
     workspace: AbsolutePath,
     semanticdbsFallback: Option[Semanticdbs],
     trees: Trees,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
+    saveSymbolFileToDisk: Boolean
 ) {
 
   private def bestTextDocument(
@@ -350,7 +353,9 @@ class DestinationProvider(
   ): Option[DefinitionDestination] = {
     definition(symbol, allowedBuildTargets).map { defn =>
       val destinationDoc = bestTextDocument(defn)
-      val destinationPath = defn.path.toFileOnDisk(workspace)
+      val destinationPath =
+        if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
+        else defn.path
       val destinationDistance =
         buffers.tokenEditDistance(destinationPath, destinationDoc.text, trees)
       DefinitionDestination(

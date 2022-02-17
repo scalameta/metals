@@ -15,6 +15,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
 
   def checkWorksheetDeps(opts: TestOptions, path: String): Unit = {
     test(opts) {
+      cleanWorkspace()
       for {
         _ <- initialize(
           s"""
@@ -72,6 +73,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   }
 
   test("bad-dep") {
+    cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {
       _ <- initialize(
@@ -95,6 +97,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   // classloader including things like the java.sql module.
   // https://github.com/scalameta/metals/issues/2187
   test("classloader") {
+    cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {
       _ <- initialize(
@@ -116,6 +119,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
   }
 
   test("akka") {
+    cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {
       _ <- initialize(

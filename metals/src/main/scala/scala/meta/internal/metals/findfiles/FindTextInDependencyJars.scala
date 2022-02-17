@@ -24,7 +24,8 @@ import org.eclipse.lsp4j.Range
 class FindTextInDependencyJars(
     buildTargets: BuildTargets,
     workspace: () => AbsolutePath,
-    languageClient: MetalsLanguageClient
+    languageClient: MetalsLanguageClient,
+    saveJarFileToDisk: Boolean
 )(implicit ec: ExecutionContext) {
   import FindTextInDependencyJars._
 
@@ -111,7 +112,9 @@ class FindTextInDependencyJars(
           .flatMap { absPath =>
             val fileRanges: List[Range] = visitFileInsideJar(absPath, pattern)
             if (fileRanges.nonEmpty) {
-              val result = absPath.toFileOnDisk(workspace())
+              val result =
+                if (saveJarFileToDisk) absPath.toFileOnDisk(workspace())
+                else absPath
               fileRanges
                 .map(range => new Location(result.toURI.toString, range))
             } else Nil

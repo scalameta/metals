@@ -69,6 +69,7 @@ import scala.meta.io.RelativePath
 import _root_.org.eclipse.lsp4j.DocumentSymbolCapabilities
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
+import munit.Tag
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
@@ -156,7 +157,7 @@ final class TestingServer(
     )
   )
 
-  private val readonlySources = TrieMap.empty[String, AbsolutePath]
+  private val virtualDocSources = TrieMap.empty[String, AbsolutePath]
   def statusBarHistory: String = {
     // collect both published items in the client and pending items from the server.
     val all = List(
@@ -172,6 +173,11 @@ final class TestingServer(
       includeFilename: Boolean = false
   ): String = {
     val infos = server.workspaceSymbol(query)
+    infos.foreach(info => {
+      val path = info.getLocation().getUri().toAbsolutePath
+      if (path.isJarFileSystem)
+        virtualDocSources(path.toString.stripPrefix("/")) = path
+    })
     infos
       .map { info =>
         val kind =
@@ -258,10 +264,42 @@ final class TestingServer(
         case ClientCommands.GotoLocation(location) =>
           (location.range.getStart, location.uri)
       }
-      Assertions.assertEquals(
-        gotoExecutedCommandPositions,
-        expectedGotoPositions
-      )
+      if (
+        initializationOptions
+          .flatMap(_.isVirtualDocumentSupported)
+          .getOrElse(false)
+      ) {
+
+        def shortenJarPath(longPath: String): String = {
+          val revSplitPath = longPath.reverse.split("!")
+          if (revSplitPath.length == 2) {
+            val path = revSplitPath(0).reverse
+            val jarPath =
+              revSplitPath(1).replace("\\", "/").takeWhile(_ != '/').reverse
+            s"$jarPath$path"
+          } else longPath
+        }
+        def shortenReadOnlyPath(longPath: String): String = {
+          val path = longPath.toAbsolutePath.toRelativeInside(
+            workspace.resolve(Directories.dependencies)
+          )
+          path.map(_.toString).getOrElse(longPath).replace("\\", "/")
+        }
+        val shortenedObtained = gotoExecutedCommandPositions.map {
+          case (position, location) => (position, shortenJarPath(location))
+        }
+        val shortenedExpected = expectedGotoPositions.map {
+          case (position, location) => (position, shortenReadOnlyPath(location))
+        }
+        Assertions.assertEquals(
+          shortenedObtained,
+          shortenedExpected
+        )
+      } else
+        Assertions.assertEquals(
+          gotoExecutedCommandPositions,
+          expectedGotoPositions
+        )
     }
   }
 
@@ -420,13 +458,8 @@ final class TestingServer(
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
     documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
     textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)
-    val initOptions = initializationOptions.getOrElse(
-      InitializationOptions.Default.copy(
-        debuggingProvider = Some(true),
-        treeViewProvider = Some(true),
-        slowTaskProvider = Some(true)
-      )
-    )
+    val initOptions: InitializationOptions =
+      initializationOptions.getOrElse(TestingServer.TestDefault)
 
     // Yes, this is a bit gross :/
     // However, I want to only get the existing fields that are being set
@@ -472,7 +505,7 @@ final class TestingServer(
   }
 
   def toPath(filename: String): AbsolutePath =
-    TestingServer.toPath(workspace, filename)
+    TestingServer.toPath(workspace, filename, virtualDocSources)
 
   def executeCommand[T](
       command: ParametrizedCommand[T],
@@ -1320,9 +1353,12 @@ final class TestingServer(
       r.asScala
         .map { l =>
           val path = l.getUri.toAbsolutePath
+          val shortPath =
+            if (path.isJarFileSystem) path.toString.replace("\\", "/")
+            else path.toRelative(workspace).toURI(false).toString
           val input = path
             .toInputFromBuffers(buffers)
-            .copy(path = path.toRelative(workspace).toURI(false).toString)
+            .copy(path = shortPath)
           val pos = l.getRange.toMeta(input)
           pos.formatMessage("info", "reference")
         }
@@ -1376,8 +1412,8 @@ final class TestingServer(
         .asJava
         .get()
       definition.definition.foreach { path =>
-        if (path.isDependencySource(workspace)) {
-          readonlySources(path.toNIO.getFileName.toString) = path
+        if (path.isJarFileSystem) {
+          virtualDocSources(path.toString.stripPrefix("/")) = path
         }
       }
       val locations = definition.locations.asScala.toList
@@ -1617,7 +1653,11 @@ final class TestingServer(
 }
 
 object TestingServer {
-  def toPath(workspace: AbsolutePath, filename: String): AbsolutePath = {
+  def toPath(
+      workspace: AbsolutePath,
+      filename: String,
+      virtualDocSources: TrieMap[String, AbsolutePath]
+  ): AbsolutePath = {
     val path = RelativePath(filename)
     val base = List(workspace, workspace.resolve(Directories.readonly))
     val dependencies = workspace.resolve(Directories.dependencies).list.toList
@@ -1625,8 +1665,18 @@ object TestingServer {
     all
       .map(_.resolve(path))
       .find(p => Files.exists(p.toNIO))
+      .orElse(virtualDocSources.get(filename))
       .getOrElse {
         throw new IllegalArgumentException(s"no such file: $filename")
       }
   }
+
+  val virtualDocTag = new Tag("UseVirtualDocs")
+
+  val TestDefault: InitializationOptions =
+    InitializationOptions.Default.copy(
+      debuggingProvider = Some(true),
+      treeViewProvider = Some(true),
+      slowTaskProvider = Some(true)
+    )
 }

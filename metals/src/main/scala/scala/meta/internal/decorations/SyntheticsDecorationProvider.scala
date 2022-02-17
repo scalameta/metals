@@ -519,10 +519,11 @@ final class SyntheticsDecorationProvider(
     } yield pos
 
     val allMissingTypeRanges = declarationsWithoutTypes.toSet
+    val uri = path.toURI.toString
     val typeDecorations = for {
       tree <- trees.get(path).toIterable
-      textDocumentInput = Input.VirtualFile(textDocument.uri, textDocument.text)
-      treeInput = Input.VirtualFile(textDocument.uri, tree.pos.input.text)
+      textDocumentInput = Input.VirtualFile(uri, textDocument.text)
+      treeInput = Input.VirtualFile(uri, tree.pos.input.text)
       semanticDbToTreeEdit = TokenEditDistance(
         textDocumentInput,
         treeInput,
