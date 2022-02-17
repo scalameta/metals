@@ -91,7 +91,6 @@ case class ArgCompletion(
     allParams.filter(param => param.name.startsWith(prefix))
 
   def contribute: List[CompletionValue] =
-    val printer = SymbolPrinter()
     params.map(p =>
       CompletionValue.namedArg(
         s"${p.nameBackticked} = ",

@@ -87,6 +87,11 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
     end match
   end hoverDetailString
 
+  def typeDetailString(tpe: Type, history: ShortenedNames): String =
+    val short = shortType(tpe, history)
+    if short.isErroneous then "Any"
+    else typeString(short)
+
   /**
    * Calculate the string for "detail" field in CompletionItem.
    *
@@ -108,10 +113,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
       " " + fullNameString(typeSymbol.owner)
     else if sym.is(Flags.Method) then
       defaultMethodSignature(sym, history, info, onlyMethodParams = true)
-    else
-      val short = shortType(info, history)
-      if short.isErroneous then "Any"
-      else typeString(short)
+    else typeDetailString(info, history)
   end completionDetailString
 
   /**

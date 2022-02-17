@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.{util as ju}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -130,6 +131,38 @@ case class ScalaPresentationCompiler(
       TastyUtils.getTasty(targetUri, isHttpEnabled)
     }
 
+  /**
+   * In case if completion comes from empty line like:
+   * ```
+   * class Foo:
+   *   val a = 1
+   *   @@
+   * ```
+   * it's required to modify actual code by addition Ident.
+   *
+   * Otherwise, completion poisition doesn't point at any tree
+   * because scala parser trim end position to the last statement pos.
+   */
+  private def applyCompletionCursor(params: OffsetParams): String =
+    import params.*
+
+    @tailrec
+    def isEmptyLine(idx: Int, initial: Int): Boolean =
+      if idx < 0 then true
+      else if idx >= text.length then isEmptyLine(idx - 1, initial)
+      else
+        val ch = text.charAt(idx)
+        val isNewline = ch == '\n'
+        if Chars.isWhitespace(ch) || (isNewline && idx == initial) then
+          isEmptyLine(idx - 1, initial)
+        else if isNewline then true
+        else false
+
+    if isEmptyLine(offset, offset) then
+      text.substring(0, offset) + "CURSOR" + text.substring(offset)
+    else text
+  end applyCompletionCursor
+
   def complete(params: OffsetParams): CompletableFuture[CompletionList] =
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
@@ -137,7 +170,9 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
+
+      val code = applyCompletionCursor(params)
+      val sourceFile = CompilerInterfaces.toSource(params.uri, code)
       driver.run(uri, sourceFile)
 
       val ctx = driver.currentCtx
@@ -392,7 +427,6 @@ case class ScalaPresentationCompiler(
   )(using Context): CompletionItem =
     val printer = SymbolPrinter()(using ctx)
     val editRange = completionPos.toEditRange
-    val sym = completion.symbol
 
     // For overloaded signatures we get multiple symbols, so we need
     // to recalculate the description
@@ -400,8 +434,7 @@ case class ScalaPresentationCompiler(
     lazy val kind: CompletionItemKind = completion.completionItemKind
 
     val description =
-      if sym != NoSymbol then printer.completionDetailString(sym, history)
-      else ""
+      completion.description(printer, history)
 
     def mkItem0(
         ident: String,
@@ -431,12 +464,10 @@ case class ScalaPresentationCompiler(
 
       item.setAdditionalTextEdits(additionalEdits.asJava)
 
-      val documentation = ParsedComment.docOf(sym)
-      if documentation.nonEmpty then
-        item.setDocumentation(markupContent(None, documentation.toList))
+      completion.documentation
+        .foreach(doc => item.setDocumentation(markupContent(doc)))
 
-      if sym.isDeprecated then
-        item.setTags(List(CompletionItemTag.Deprecated).asJava)
+      item.setTags(completion.lspTags.asJava)
 
       item.setKind(kind)
       item
@@ -462,8 +493,8 @@ case class ScalaPresentationCompiler(
       mkItem(ident, value, isFromWorkspace = true, additionalEdits)
 
     val ident = completion.label
-    completion.kind match
-      case CompletionValue.Kind.Workspace =>
+    completion match
+      case CompletionValue.Workspace(label, sym) =>
         path match
           case (_: Ident) :: (_: Import) :: _ =>
             mkWorkspaceItem(
@@ -494,9 +525,8 @@ case class ScalaPresentationCompiler(
                   case IndexedContext.Result.InScope =>
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
-      case CompletionValue.Kind.NamedArg => mkItem(ident, ident)
-      case CompletionValue.Kind.Keyword =>
-        mkItem(completion.label, completion.insertText.getOrElse(ident))
+      case CompletionValue.NamedArg(label, _) => mkItem(ident, ident)
+      case CompletionValue.Keyword(label, text) => mkItem(label, text)
       case _ => mkItem(ident, ident.backticked)
     end match
   end completionItems
