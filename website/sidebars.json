@@ -28,6 +28,7 @@
       "integrations/remote-language-server",
       "integrations/new-build-tool",
       "integrations/new-editor",
+      "integrations/test-explorer",
       "integrations/tree-view-protocol",
       "integrations/decoration-protocol",
       "integrations/debug-adapter-protocol"

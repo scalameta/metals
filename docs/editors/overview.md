@@ -397,30 +397,18 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 
 ## Test Explorer
 
-Test Explorer is a feature that allows editors to display tests in workspace in a different way than code lenses. Altough it was implemented in order to use Visual Studio Code's [Testing API](https://code.visualstudio.com/api/extension-guides/testing). Test Explorer API is editor agnostic and can be used by other editors than just VS Code.
+Test Explorer is a feature that allows editors to display tests as a separate tree representation of tests. 
+Although it was implemented in order to use Visual Studio Code's [Testing API](https://code.visualstudio.com/api/extension-guides/testing). Test Explorer API is editor agnostic and can be used by other editors than just VS Code.
 ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
-Work on Test Explorer is still on progress and feature has known limitations:
+Work on Test Explorer is still on progress and the feature has some known limitations:
 
-- Test Explorer is able to discover single test cases only for JUnit4 test classes. Support for other test framework is in progress. However, running single tests is available only when you use Bloop as build server. Otherwise running single test will result in running whole suite.
+- Test Explorer is able to discover single test cases only for JUnit4 test classes. Support for other test framework is being worked on.
 - detecting suites in cross scala-version projects is inconsistent, see [this issue](https://github.com/scalameta/metals/issues/3503).
-- there is no support for JS and Native platforms
+- there is no support for JS and Native platforms. For any changes subscribe to the related [feature request](https://github.com/scalameta/metals-feature-requests/issues/256).
 
 You can find more
 information about Test Explorer under the [VS Code](vscode.md#test-explorer) specific section.
-
-### Test Discovery
-
-Test Explorer provides two ways to interact with it:
-
-- first one is based on notifications being sent to the client and doesn't require from client to start any actions. All necessary updates are being immediately sent to it.
-
-![](../diagrams/out/test-explorer-server-notifications.png)
-
-- client can also manually ask for test suites from the whole workspace, or for test cases for a given file.
-
-![](../diagrams/out/test-explorer-client-queries.png)
-
 ### Running Tests
 
 Both run and debug under the hood use BSP's debug request. More information about it can be found at [Bloop DAP diagram](https://github.com/scalacenter/bloop/blob/master/docs/assets/dap-example-metals.png) or [BSP specification](https://build-server-protocol.github.io/docs/specification.html#debug-request) website.
