@@ -79,8 +79,8 @@ final class InferredTypeProvider(
         printer.typeString(short)
     /*
      * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
-     * Suprisingly, val ((a, c), b) = ((1, 3), 2) will be covered by Bind
-     * https://github.com/lampepfl/dotty/issues/12627
+     * val ((a, c), b) = ((1, 3), 2) will be covered by Bind
+     * This is needed to Scala versions pre 3.1.2.
      */
     def editForTupleUnapply(
         applied: AppliedType,
@@ -122,11 +122,8 @@ final class InferredTypeProvider(
       case Some(vl @ ValDef(sym, tpt, _)) =>
         val isParam = path.tail.headOption.exists(_.symbol.isAnonymousFunction)
         def baseEdit(withParens: Boolean) =
-          val nameEnd =
-            if isParam then vl.endPos
-            else tpt.endPos
           new TextEdit(
-            nameEnd.toLSP,
+            vl.namePos.endPos.toLSP,
             ": " + printType(tpt.tpe) + {
               if withParens then ")" else ""
             }
