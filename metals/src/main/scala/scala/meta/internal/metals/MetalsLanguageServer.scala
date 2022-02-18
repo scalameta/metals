@@ -260,7 +260,6 @@ class MetalsLanguageServer(
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
   private var newFileProvider: NewFileProvider = _
-  private var buildTargetProvider: BuildTargetProvider = _
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
@@ -705,10 +704,6 @@ class MetalsLanguageServer(
           scalafixProvider,
           trees,
           diagnostics,
-          languageClient
-        )
-        buildTargetProvider = new BuildTargetProvider(
-          buildTargets,
           languageClient
         )
         doctor = new Doctor(
@@ -1720,21 +1715,13 @@ class MetalsLanguageServer(
         Future {
           doctor.executeRunDoctor()
         }.asJavaObject
-      case ServerCommands.TargetInfoDisplay() => {
-        Option(params.getArguments())
-          .map(_.asScala.toList)
-          .getOrElse(List.empty)
-          .headOption match {
-          case Some(arg: JsonPrimitive) =>
-            buildTargetProvider
-              .displayBuildTargetInfo(workspace, arg.getAsString)
-              .asJavaObject
-          case _ =>
-            buildTargetProvider
-              .askForBuildTargetAndDisplayBuildTargetInfo(workspace)
-              .asJavaObject
-        }
-      }
+      case ServerCommands.ListBuildTargets() =>
+        Future {
+          buildTargets.all.toList
+            .map(_.getDisplayName())
+            .sorted
+            .asJava
+        }.asJavaObject
       case ServerCommands.BspSwitch() =>
         (for {
           isSwitched <- bspConnector.switchBuildServer(
