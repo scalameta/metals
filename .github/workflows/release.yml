@@ -15,6 +15,19 @@ jobs:
       - uses: coursier/cache-action@v6.3
       - name: Publish
         run: |
+          LOCKED=true
+          while [ $LOCKED = true ]; do
+            # if there are several release jobs at the same time
+            # allow to continue the one which id is less than others
+            FIRST_IN_PROGRESS=$(gh api /repos/scalameta/metals/actions/workflows/release.yml/runs?status=in_progress -q ".workflow_runs[].id" | sort | head -n 1)
+            if [ $FIRST_IN_PROGRESS == $GITHUB_RUN_ID ]; then
+              LOCKED=false
+            else
+              echo "Waiting the completion of other release job..."
+              sleep 20
+            fi
+          done
+
           COMMAND="ci-release"
           UPDATE_DOCS=true
           if [[ $GITHUB_REF == "refs/tags"* ]] && [[ $GITHUB_REF_NAME == "mtags_v"* ]]; then
@@ -40,3 +53,4 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
