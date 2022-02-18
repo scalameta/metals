@@ -1,4 +1,5 @@
 package scala.meta.internal.pc
+package completions
 
 import scala.meta.internal.tokenizers.Chars
 

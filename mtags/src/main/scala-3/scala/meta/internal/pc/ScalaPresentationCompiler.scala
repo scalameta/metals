@@ -1,25 +1,17 @@
 package scala.meta.internal.pc
 
-import java.io.BufferedWriter
 import java.io.File
-import java.io.OutputStreamWriter
 import java.net.URI
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.{util as ju}
 
-import scala.annotation.tailrec
 import scala.collection.JavaConverters.*
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
-import scala.io.Codec
-import scala.language.implicitConversions
-import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.BuildInfo
@@ -27,63 +19,17 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.internal.pc.DefinitionResultImpl
-import scala.meta.internal.semver.SemVer
-import scala.meta.internal.tokenizers.Chars
-import scala.meta.pc.DefinitionResult
-import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.RangeParams
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.VirtualFileParams
+import scala.meta.internal.pc.completions.CompletionsProvider
+import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags
-import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.NameKinds.*
-import dotty.tools.dotc.core.NameOps.*
-import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.SymDenotations.*
-import dotty.tools.dotc.core.Symbols.*
-import dotty.tools.dotc.core.Types.*
-import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.printing.PlainPrinter
-import dotty.tools.dotc.printing.Texts.*
 import dotty.tools.dotc.reporting.StoreReporter
-import dotty.tools.dotc.transform.SymUtils.*
-import dotty.tools.dotc.util.NoSourcePosition
-import dotty.tools.dotc.util.ParsedComment
-import dotty.tools.dotc.util.ScriptSourceFile
-import dotty.tools.dotc.util.Signatures
-import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.util.SourcePosition
-import dotty.tools.dotc.util.Spans
-import dotty.tools.io.VirtualFile
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionItemKind
-import org.eclipse.lsp4j.CompletionItemTag
-import org.eclipse.lsp4j.CompletionList
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.DocumentSymbol
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.MarkupContent
-import org.eclipse.lsp4j.ParameterInformation
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.SelectionRange
-import org.eclipse.lsp4j.SignatureHelp
-import org.eclipse.lsp4j.SignatureInformation
-import org.eclipse.lsp4j.TextEdit
+import dotty.tools.dotc.util.*
+import org.eclipse.{lsp4j as l}
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -131,108 +77,20 @@ case class ScalaPresentationCompiler(
       TastyUtils.getTasty(targetUri, isHttpEnabled)
     }
 
-  /**
-   * In case if completion comes from empty line like:
-   * ```
-   * class Foo:
-   *   val a = 1
-   *   @@
-   * ```
-   * it's required to modify actual code by addition Ident.
-   *
-   * Otherwise, completion poisition doesn't point at any tree
-   * because scala parser trim end position to the last statement pos.
-   */
-  private def applyCompletionCursor(params: OffsetParams): String =
-    import params.*
-
-    @tailrec
-    def isEmptyLine(idx: Int, initial: Int): Boolean =
-      if idx < 0 then true
-      else if idx >= text.length then isEmptyLine(idx - 1, initial)
-      else
-        val ch = text.charAt(idx)
-        val isNewline = ch == '\n'
-        if Chars.isWhitespace(ch) || (isNewline && idx == initial) then
-          isEmptyLine(idx - 1, initial)
-        else if isNewline then true
-        else false
-
-    if isEmptyLine(offset, offset) then
-      text.substring(0, offset) + "CURSOR" + text.substring(offset)
-    else text
-  end applyCompletionCursor
-
-  def complete(params: OffsetParams): CompletableFuture[CompletionList] =
+  def complete(params: OffsetParams): CompletableFuture[l.CompletionList] =
     compilerAccess.withInterruptableCompiler(
       EmptyCompletionList(),
       params.token
     ) { access =>
       val driver = access.compiler()
-      val uri = params.uri
+      new CompletionsProvider(
+        search,
+        driver,
+        params,
+        config,
+        buildTargetIdentifier
+      ).completions()
 
-      val code = applyCompletionCursor(params)
-      val sourceFile = CompilerInterfaces.toSource(params.uri, code)
-      driver.run(uri, sourceFile)
-
-      val ctx = driver.currentCtx
-      val pos = driver.sourcePosition(params)
-      val (items, isIncomplete) = driver.compilationUnits.get(uri) match
-        case Some(unit) =>
-          val path =
-            Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
-
-          val newctx = ctx.fresh.setCompilationUnit(unit)
-          val tpdPath =
-            Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
-              newctx
-            )
-          val locatedCtx =
-            MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-          val indexedCtx = IndexedContext(locatedCtx)
-          val completionPos =
-            CompletionPos.infer(pos, params.text, path)(using newctx)
-          val (completions, searchResult) =
-            CompletionProvider(
-              pos,
-              ctx.fresh.setCompilationUnit(unit),
-              search,
-              buildTargetIdentifier,
-              completionPos,
-              indexedCtx,
-              path
-            )
-              .completions()
-          val history = ShortenedNames(indexedCtx)
-          val autoImportsGen = AutoImports.generator(
-            completionPos.sourcePos,
-            params.text,
-            unit.tpdTree,
-            indexedCtx,
-            config
-          )
-
-          val items = completions.zipWithIndex.map { case (item, idx) =>
-            completionItems(
-              item,
-              history,
-              idx,
-              autoImportsGen,
-              completionPos,
-              path,
-              indexedCtx
-            )(using newctx)
-          }
-          val isIncomplete = searchResult match
-            case SymbolSearch.Result.COMPLETE => false
-            case SymbolSearch.Result.INCOMPLETE => true
-          (items, isIncomplete)
-        case None => (Nil, false)
-
-      new CompletionList(
-        isIncomplete,
-        items.asJava
-      )
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] =
@@ -268,9 +126,9 @@ case class ScalaPresentationCompiler(
 
   // TODO NOT IMPLEMENTED
   def completionItemResolve(
-      item: CompletionItem,
+      item: l.CompletionItem,
       symbol: String
-  ): CompletableFuture[CompletionItem] =
+  ): CompletableFuture[l.CompletionItem] =
     CompletableFuture.completedFuture(
       null
     )
@@ -301,15 +159,15 @@ case class ScalaPresentationCompiler(
   // TODO NOT IMPLEMENTED
   def implementAbstractMembers(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] =
+  ): CompletableFuture[ju.List[l.TextEdit]] =
     CompletableFuture.completedFuture(
-      List.empty[TextEdit].asJava
+      List.empty[l.TextEdit].asJava
     )
 
   override def insertInferredType(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] =
-    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
+  ): CompletableFuture[ju.List[l.TextEdit]] =
+    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new InferredTypeProvider(params, pc.compiler(), config)
         .inferredTypeEdits()
@@ -318,9 +176,9 @@ case class ScalaPresentationCompiler(
 
   override def selectionRange(
       params: ju.List[OffsetParams]
-  ): CompletableFuture[ju.List[SelectionRange]] =
+  ): CompletableFuture[ju.List[l.SelectionRange]] =
     CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(List.empty[SelectionRange].asJava) {
+      compilerAccess.withSharedCompiler(List.empty[l.SelectionRange].asJava) {
         pc =>
           new SelectionRangeProvider(
             pc.compiler(),
@@ -330,9 +188,9 @@ case class ScalaPresentationCompiler(
     }
   end selectionRange
 
-  def hover(params: OffsetParams): CompletableFuture[ju.Optional[Hover]] =
+  def hover(params: OffsetParams): CompletableFuture[ju.Optional[l.Hover]] =
     compilerAccess.withNonInterruptableCompiler(
-      ju.Optional.empty[Hover](),
+      ju.Optional.empty[l.Hover](),
       params.token
     ) { access =>
       val driver = access.compiler()
@@ -351,9 +209,9 @@ case class ScalaPresentationCompiler(
       options = options.asScala.toList
     )
 
-  def signatureHelp(params: OffsetParams): CompletableFuture[SignatureHelp] =
+  def signatureHelp(params: OffsetParams): CompletableFuture[l.SignatureHelp] =
     compilerAccess.withNonInterruptableCompiler(
-      new SignatureHelp(),
+      new l.SignatureHelp(),
       params.token
     ) { access =>
       val driver = access.compiler()
@@ -377,7 +235,7 @@ case class ScalaPresentationCompiler(
 
       val signatureInfos =
         alternatives.flatMap(Signatures.toSignature(_)(using ctx))
-      new SignatureHelp(
+      new l.SignatureHelp(
         signatureInfos.map(signatureToSignatureInformation).asJava,
         callableN,
         paramN
@@ -386,7 +244,7 @@ case class ScalaPresentationCompiler(
 
   override def didChange(
       params: VirtualFileParams
-  ): CompletableFuture[ju.List[Diagnostic]] =
+  ): CompletableFuture[ju.List[l.Diagnostic]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
   override def didClose(uri: URI): Unit =
@@ -416,125 +274,10 @@ case class ScalaPresentationCompiler(
   def withWorkspace(workspace: Path): PresentationCompiler =
     copy(workspace = Some(workspace))
 
-  private def completionItems(
-      completion: CompletionValue,
-      history: ShortenedNames,
-      idx: Int,
-      autoImports: AutoImportsGenerator,
-      completionPos: CompletionPos,
-      path: List[Tree],
-      indexedContext: IndexedContext
-  )(using Context): CompletionItem =
-    val printer = SymbolPrinter()(using ctx)
-    val editRange = completionPos.toEditRange
-
-    // For overloaded signatures we get multiple symbols, so we need
-    // to recalculate the description
-    // related issue https://github.com/lampepfl/dotty/issues/11941
-    lazy val kind: CompletionItemKind = completion.completionItemKind
-
-    val description =
-      completion.description(printer, history)
-
-    def mkItem0(
-        ident: String,
-        nameEdit: TextEdit,
-        isFromWorkspace: Boolean = false,
-        additionalEdits: List[TextEdit] = Nil
-    ): CompletionItem =
-
-      val label =
-        kind match
-          case CompletionItemKind.Method =>
-            s"${ident}${description}"
-          case CompletionItemKind.Variable | CompletionItemKind.Field =>
-            s"${ident}: ${description}"
-          case CompletionItemKind.Module | CompletionItemKind.Class =>
-            if isFromWorkspace then s"${ident} -${description}"
-            else s"${ident}${description}"
-          case _ =>
-            ident
-      val item = new CompletionItem(label)
-
-      item.setSortText(f"${idx}%05d")
-      item.setDetail(description)
-      item.setFilterText(completion.label)
-
-      item.setTextEdit(nameEdit)
-
-      item.setAdditionalTextEdits(additionalEdits.asJava)
-
-      completion.documentation
-        .foreach(doc => item.setDocumentation(markupContent(doc)))
-
-      item.setTags(completion.lspTags.asJava)
-
-      item.setKind(kind)
-      item
-    end mkItem0
-
-    def mkItem(
-        ident: String,
-        value: String,
-        isFromWorkspace: Boolean = false,
-        additionalEdits: List[TextEdit] = Nil
-    ): CompletionItem =
-      val nameEdit = new TextEdit(
-        editRange,
-        value
-      )
-      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
-
-    def mkWorkspaceItem(
-        ident: String,
-        value: String,
-        additionalEdits: List[TextEdit] = Nil
-    ): CompletionItem =
-      mkItem(ident, value, isFromWorkspace = true, additionalEdits)
-
-    val ident = completion.label
-    completion match
-      case CompletionValue.Workspace(label, sym) =>
-        path match
-          case (_: Ident) :: (_: Import) :: _ =>
-            mkWorkspaceItem(
-              ident,
-              sym.fullNameBackticked
-            )
-          case _ =>
-            autoImports.editsForSymbol(sym) match
-              case Some(edits) =>
-                edits match
-                  case AutoImportEdits(Some(nameEdit), other) =>
-                    mkItem0(
-                      ident,
-                      nameEdit,
-                      isFromWorkspace = true,
-                      other.toList
-                    )
-                  case _ =>
-                    mkItem(
-                      ident,
-                      ident.backticked,
-                      isFromWorkspace = true,
-                      edits.edits
-                    )
-              case None =>
-                val r = indexedContext.lookupSym(sym)
-                r match
-                  case IndexedContext.Result.InScope =>
-                    mkItem(ident, ident.backticked)
-                  case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
-      case CompletionValue.NamedArg(label, _) => mkItem(ident, ident)
-      case CompletionValue.Keyword(label, text) => mkItem(label, text)
-      case _ => mkItem(ident, ident.backticked)
-    end match
-  end completionItems
-
   private def markupContent(
       typeInfo: Option[String],
       comments: List[ParsedComment]
-  )(using ctx: Context): MarkupContent =
+  )(using ctx: Context): l.MarkupContent =
     val buf = new StringBuilder
     typeInfo.foreach { info =>
       buf.append(s"""```scala
@@ -546,17 +289,17 @@ case class ScalaPresentationCompiler(
     markupContent(buf.toString)
   end markupContent
 
-  private def markupContent(content: String): MarkupContent =
+  private def markupContent(content: String): l.MarkupContent =
     if content.isEmpty then null
     else
-      val markup = new MarkupContent
+      val markup = new l.MarkupContent
       markup.setKind("markdown")
       markup.setValue(content.trim)
       markup
 
   def signatureToSignatureInformation(
       signature: Signatures.Signature
-  ): SignatureInformation =
+  ): l.SignatureInformation =
     val paramInfoss =
       signature.paramss.map(_.map(paramToParameterInformation))
     val paramLists = signature.paramss
@@ -572,7 +315,7 @@ case class ScalaPresentationCompiler(
     val returnTypeLabel = signature.returnType.map(t => s": $t").getOrElse("")
     val label = s"${signature.name}$tparamsLabel$paramLists$returnTypeLabel"
     val documentation = signature.doc.map(markupContent)
-    val sig = new SignatureInformation(label)
+    val sig = new l.SignatureInformation(label)
     sig.setParameters(paramInfoss.flatten.asJava)
     documentation.foreach(sig.setDocumentation(_))
     sig
@@ -583,9 +326,9 @@ case class ScalaPresentationCompiler(
    */
   private def paramToParameterInformation(
       param: Signatures.Param
-  ): ParameterInformation =
+  ): l.ParameterInformation =
     val documentation = param.doc.map(markupContent)
-    val info = new ParameterInformation(param.show)
+    val info = new l.ParameterInformation(param.show)
     documentation.foreach(info.setDocumentation(_))
     info
 

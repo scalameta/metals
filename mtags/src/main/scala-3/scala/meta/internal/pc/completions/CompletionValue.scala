@@ -1,4 +1,5 @@
 package scala.meta.internal.pc
+package completions
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*

@@ -1,20 +1,9 @@
 package scala.meta.internal.pc.completions
 
 import scala.meta.internal.mtags.MtagsEnrichments.given
-import scala.meta.internal.pc.CompletionPos
-import scala.meta.internal.pc.CompletionValue
 import scala.meta.internal.pc.Keyword
 
-import dotty.tools.dotc.ast.tpd.Block
-import dotty.tools.dotc.ast.tpd.DefDef
-import dotty.tools.dotc.ast.tpd.Ident
-import dotty.tools.dotc.ast.tpd.PackageDef
-import dotty.tools.dotc.ast.tpd.Template
-import dotty.tools.dotc.ast.tpd.TermTree
-import dotty.tools.dotc.ast.tpd.Tree
-import dotty.tools.dotc.ast.tpd.TypeDef
-import dotty.tools.dotc.ast.tpd.ValDef
-import dotty.tools.dotc.ast.tpd.ValOrDefDef
+import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
