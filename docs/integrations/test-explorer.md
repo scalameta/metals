@@ -19,13 +19,12 @@ Test Explorer provides two ways to interact with it:
 
 ## How it works under the hood
 
-Test Explorer uses BSP's [debug request](https://build-server-protocol.github.io/docs/specification.html#debug-request) to run and debug test classes. TE reuses already available debug support in Metals and build servers such as Bloop or SBT.
+Test Explorer (TE) uses BSP's [debug request](https://build-server-protocol.github.io/docs/specification.html#debug-request) to run and debug test classes. TE reuses already available debug support in Metals and build servers such as Bloop or SBT.
 Both run and debug under the hood use BSP's debug request.
 
 ### Running and debugging
 
-Following diagram ([source](https://github.com/scalacenter/bloop/blob/12bdc7f97cc3970d3e22a8b513f4b609c813f0a7/docs/assets/dap-example-metals.png)) represents what communication between language client, language server and build server. (It's very likely that in the future Debug Adapter will be inlined in the Metals to reduce number of moving parts).
-![](https://raw.githubusercontent.com/scalacenter/bloop/master/docs/assets/dap-example-metals.png)
+Following diagram ([source](https://github.com/scalacenter/bloop/blob/12bdc7f97cc3970d3e22a8b513f4b609c813f0a7/docs/assets/dap-example-metals.png)) represents what communication between language client, language server and build server. ![](https://raw.githubusercontent.com/scalacenter/bloop/master/docs/assets/dap-example-metals.png)
 
 The current implementation of TE is a better version of code lenses, with more user friendly UX provided by the VSCode.
 
