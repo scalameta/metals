@@ -403,7 +403,7 @@ Although it was implemented in order to use Visual Studio Code's [Testing API](h
 
 Work on Test Explorer is still on progress and the feature has some known limitations:
 
-- Test Explorer is able to discover single test cases only for JUnit4 test classes. Support for other test framework is being worked on.
+- Test Explorer is able to discover single test cases only for JUnit4 test classes. Support for other test frameworks is being worked on.
 - detecting suites in cross scala-version projects is inconsistent, see [this issue](https://github.com/scalameta/metals/issues/3503).
 - there is no support for JS and Native platforms. For any changes subscribe to the related [feature request](https://github.com/scalameta/metals-feature-requests/issues/256).
 

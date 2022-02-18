@@ -5,7 +5,7 @@
 
 ### Usage
 
-Documentation can be found at [website](https://plantuml.com/command-line). Following instruction is more or less based on mentioned website.
+Documentation can be found on the [website](https://plantuml.com/command-line).
 
 The most basic way to run it is `plantuml file1 file2 file3`. This will look for @startXYZ into file1, file2 and file3. For each diagram, a .png file will be created.
 
