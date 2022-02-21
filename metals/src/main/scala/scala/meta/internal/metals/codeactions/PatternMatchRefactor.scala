@@ -87,20 +87,24 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val blockWithOnlyMatch: Term.Block => Boolean = {
-      case Term.Block(Term.Match(_) :: Nil) => true
+    val isAnonymousFunctionWithMatch: Term.AnonymousFunction => Boolean = {
+      case Term.AnonymousFunction(Term.Match(_)) => true
       case _ => false
     }
 
     val codeAction = trees
-      .findLastEnclosingAt[Term.Block](
+      .findLastEnclosingAt[Term.AnonymousFunction](
         path,
         range.getStart(),
-        blockWithOnlyMatch
+        isAnonymousFunctionWithMatch
       )
       .map {
-        case block @ Term.Block((head: Term.Match) :: Nil) =>
-          convert(block, head, path)
+        case func @ Term.AnonymousFunction(head: Term.Match) =>
+          func.parent match {
+            case Some(block: Term.Block) =>
+              convert(block, head, path)
+            case _ => Nil
+          }
         case _ => Nil
       }
       .getOrElse(Nil)
