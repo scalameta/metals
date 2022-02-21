@@ -7,6 +7,7 @@ import scala.collection.JavaConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
+import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
@@ -64,7 +65,6 @@ class CompletionsProvider(
             indexedCtx,
             path
           ).completions()
-        val history = ShortenedNames(indexedCtx)
         val autoImportsGen = AutoImports.generator(
           completionPos.sourcePos,
           params.text,
@@ -76,7 +76,6 @@ class CompletionsProvider(
         val items = completions.zipWithIndex.map { case (item, idx) =>
           completionItems(
             item,
-            history,
             idx,
             autoImportsGen,
             completionPos,
@@ -130,14 +129,14 @@ class CompletionsProvider(
 
   private def completionItems(
       completion: CompletionValue,
-      history: ShortenedNames,
+      // history: ShortenedNames,
       idx: Int,
       autoImports: AutoImportsGenerator,
       completionPos: CompletionPos,
       path: List[Tree],
       indexedContext: IndexedContext
   )(using ctx: Context): CompletionItem =
-    val printer = SymbolPrinter()(using ctx)
+    val printer = MetalsPrinter.standard(indexedContext)
     val editRange = completionPos.toEditRange
 
     // For overloaded signatures we get multiple symbols, so we need
@@ -146,7 +145,7 @@ class CompletionsProvider(
     lazy val kind: CompletionItemKind = completion.completionItemKind
 
     val description =
-      completion.description(printer, history)
+      completion.description(printer)
 
     def mkItem0(
         ident: String,
