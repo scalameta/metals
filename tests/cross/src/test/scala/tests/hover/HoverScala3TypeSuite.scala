@@ -52,7 +52,12 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|case Red: Red
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "3.1.3-RC1" ->
+        """|case Red: Color
+           |""".stripMargin.hover
+    )
   )
 
   check(
