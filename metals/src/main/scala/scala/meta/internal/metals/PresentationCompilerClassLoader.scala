@@ -14,7 +14,8 @@ class PresentationCompilerClassLoader(parent: ClassLoader)
     val isShared =
       name.startsWith("org.eclipse.lsp4j") ||
         name.startsWith("com.google.gson") ||
-        name.startsWith("scala.meta.pc")
+        name.startsWith("scala.meta.pc") ||
+        name.startsWith("javax")
     if (isShared) {
       parent.loadClass(name)
     } else {
