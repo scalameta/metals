@@ -205,6 +205,9 @@ object Messages {
       s"Navigation will not work in project '$name' due to mis-configuration." + moreInfo
     def multipleMisconfiguredProjects(count: Int): String =
       s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
+    val misconfiguredTestFrameworks: String =
+      "Test Explorer won't work due to mis-configuration." + moreInfo
+
     def isDoctor(params: ShowMessageRequestParams): Boolean =
       params.getActions.asScala.contains(moreInformation)
     def moreInformation: MessageActionItem =
