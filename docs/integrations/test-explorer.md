@@ -7,7 +7,7 @@ Test Explorer is under active development, this page explain how it works under 
 
 ## Test Discovery
 
-Test Explorer provides two ways to interact with it:
+Test Explorer (TE) provides two ways to interact with it:
 
 - The first one is based on notifications being sent from Metals to the client and doesn't require the client to do any actions except listen for the notifications. All necessary updates are being immediately sent to it.
 
@@ -17,9 +17,17 @@ Test Explorer provides two ways to interact with it:
 
 ![](../diagrams/out/test-explorer-client-queries.png)
 
+## Integration
+
+In order to use TE, the client has to set `InitializationOptions.testExplorerProvider`. This action will deactivate code lenses for test classes and enable TE to send updates.
+
+The preferred way to implement TE is to implement client's command `metals-update-test-explorer`. Using this request, Metals will push all necessary updates to the client.
+
+It is also possible to depend on server command `metals.discover-tests`, however this option is discouraged. In the future it may be deprecated and then removed. Currently it exists because VSCode allows users to choose Test UI and this request is used whenever such change in options occurs.
+
 ## How it works under the hood
 
-Test Explorer (TE) uses BSP's [debug request](https://build-server-protocol.github.io/docs/specification.html#debug-request) to run and debug test classes. TE reuses already available debug support in Metals and build servers such as Bloop or SBT.
+Test Explorer uses BSP's [debug request](https://build-server-protocol.github.io/docs/specification.html#debug-request) to run and debug test classes. TE reuses already available debug support in Metals and build servers such as Bloop or SBT.
 Both run and debug under the hood use BSP's debug request.
 
 ### Running and debugging
