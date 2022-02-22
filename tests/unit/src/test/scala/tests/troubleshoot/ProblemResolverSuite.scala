@@ -119,21 +119,21 @@ class ProblemResolverSuite extends FunSuite {
   )
 
   checkRecommendation(
-    "novocode-junit-interface".only,
+    "novocode-junit-interface",
     scalaVersion = BuildInfo.scala213,
     OutdatedJunitInterfaceVersion.message,
     classpatch = List("/com/novocode/junit-interface/0.11/")
   )
 
   checkRecommendation(
-    "github-junit-interface".only,
+    "github-junit-interface",
     scalaVersion = BuildInfo.scala213,
     OutdatedJunitInterfaceVersion.message,
     classpatch = List("/com/github/sbt/junit-interface/0.13.2/")
   )
 
   checkRecommendation(
-    "github-junit-interface-valid".only,
+    "github-junit-interface-valid",
     scalaVersion = BuildInfo.scala213,
     "",
     classpatch = List("/com/github/sbt/junit-interface/0.13.3/")
