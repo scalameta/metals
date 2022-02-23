@@ -2,11 +2,39 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2022-01-17T00:00:00.000Z</updated>
+    <updated>2022-02-23T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>Metals Blog</subtitle>
     <icon>http://scalameta.org/metals/img/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[Towards better releases]]></title>
+        <id>/2022/02/23/towards-better-releases</id>
+        <link href="http://scalameta.org/metals/blog/2022/02/23/towards-better-releases"/>
+        <updated>2022-02-23T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[As many of you might have noticed, the previous 0.11.0 release didn't go smoothly due to a number of issues that came to light only after the release was published.]]></summary>
+        <content type="html"><![CDATA[<p>As many of you might have noticed, the previous <code>0.11.0</code> release didn't go smoothly due to a number of issues that came to light only after the release was published.
+Some of them were quite critical and the only option to continue to work was to downgrade Metals until <code>0.11.1</code> arrived.</p><p>We apologize for that!</p><p>However, this post is not only about saying sorry.
+In order to avoid such situations in the future we have taken it upon ourselves to take steps that will allow us to detect issues earlier.</p><p>There were two main improvements that were implemented since the last release:</p><ul><li>Decouple Metals releases from Scala releases</li><li>Pre-release version for VSCode extension</li></ul><h2 class="anchor anchorWithStickyNavbar_mojV" id="decouple-metals-releases-from-scala-releases">Decouple Metals releases from Scala releases<a class="hash-link" href="#decouple-metals-releases-from-scala-releases" title="Direct link to heading">​</a></h2><p>We haven't mentioned this in the release notes for <code>0.11.0</code>, but since that version we have changed the way Metals detects whether a specific version is supported and thanks to that we are now able to backpublish new Scala versions support.
+The support of Scala <code>3.1.1</code> Scala was added to Metals <code>0.11.1</code> using this new mechanism.
+It allows us to provide new Scala version support much faster than before and also support Scala3-NIGTHTLY versions.</p><p>The additional benefit from this approach is that it eliminates time pressure for future Metals releases.
+If you look at the release notes for previous versions, almost every one brings at least one new compiler version support.
+Having this limitation and the need to provide the new release as soon as possible always increases the chances of something affecting the release. So, now with this new feature we are able to take our time for final fixes and do releases with more confidence.</p><p>The current state for Scala versions support is:</p><ul><li>Every Metals release comes with support to all known supported Scala versions + last 5 latest Scala3-NIGHTLY versions.
+This is applied to SNAPSHOT releases too.</li><li>In case a new Scala version appear, the latest Metals release will receive its support automatically.
+For example, the next Scala <code>3.1.2</code>  will be supported only by the latest Metals <code>0.11.1</code> but not by <code>0.11.0</code>.
+That works for Scala3-NIGHTLY versions too. Metals has a scheduled daily job that publishes artifacts for newly discovered NIGHTLY versions.</li></ul><h2 class="anchor anchorWithStickyNavbar_mojV" id="pre-release-version-for-vscode-extension">Pre-release version for VSCode extension<a class="hash-link" href="#pre-release-version-for-vscode-extension" title="Direct link to heading">​</a></h2><p>Another great feature that was added was the possibility to use the <code>pre-release</code> versions of the Metals extension.
+If you open the Metals extension page, you will find a <code>Switch to Pre-release version</code> button.
+This version is like a snapshot, it's published for every change in the <a href="https://github.com/scalameta/metals-vscode" target="_blank" rel="noopener noreferrer">scalameta/metals-vscode</a> repository.</p><p>It allows to test not yet released features, as well as to check if everything works fine for your workspace using the latest main branch.
+Some issues might be observed only under the particular version of the client as was the case with the ill fated 0.11.0 release.</p><p>Also, there is a new setting <code>Metals: Suggest Latest Upgrade</code> that is enabled by default for <code>pre-release</code>.
+If you have it enabled, you will receive notifications with an option to upgrade Metals server version to the latest snapshot once a day.</p><p>We hope that some brave users will start using this <code>pre-release</code> version and report issues if you encounter any.
+This will help us spot problems earlier.</p><p><em>Notice</em>:
+Using pre-release versions may result in a less stable experience.
+In case of issues, if you are switching back from <code>pre-release</code> to <code>release</code> you also need to downgrade <code>Metals: Server Version</code> manually. The actual version might be found at <a href="https://scalameta.org/metals/docs/#latest-metals-server-versions" target="_blank" rel="noopener noreferrer">docs page</a> or <a href="https://scalameta.org/metals/latests.json" target="_blank" rel="noopener noreferrer">latest.json</a></p>]]></content>
+        <author>
+            <name>Vadim Chelyshov</name>
+            <uri>https://twitter.com/_dos65</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.11.1 - Aluminium]]></title>
         <id>/2022/01/17/aluminium</id>
