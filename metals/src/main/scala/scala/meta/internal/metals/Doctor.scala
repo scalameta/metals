@@ -45,7 +45,8 @@ final class Doctor(
       workspace,
       mtagsResolver,
       currentBuildServer,
-      javaHome
+      javaHome,
+      () => clientConfig.isCompletionItemResolve()
     )
 
   /**

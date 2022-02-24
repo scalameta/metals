@@ -19,7 +19,8 @@ class ProblemResolver(
     workspace: AbsolutePath,
     mtagsResolver: MtagsResolver,
     currentBuildServer: () => Option[BspSession],
-    javaHome: () => Option[String]
+    javaHome: () => Option[String],
+    isTestExplorerProvider: () => Boolean
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
@@ -215,16 +216,18 @@ class ProblemResolver(
       case Right(_) => None
     }
 
-    def outdatedJunitInterface = {
-      val novocode = ".*com/novocode/junit-interface.*".r
-      val junit = raw".*com/github/sbt/junit-interface/(\d).(\d+).(\d+).*".r
-      scalaTarget.scalac.getClasspath().asScala.collectFirst {
-        case novocode() => OutdatedJunitInterfaceVersion
-        case junit(major, minor, patch)
-            if (major.toInt == 0 && (minor.toInt <= 13 && patch.toInt <= 2)) =>
-          OutdatedJunitInterfaceVersion
+    def outdatedJunitInterface =
+      if (!isTestExplorerProvider()) None
+      else {
+        val novocode = ".*com/novocode/junit-interface.*".r
+        val junit = raw".*com/github/sbt/junit-interface/(\d).(\d+).(\d+).*".r
+        scalaTarget.scalac.getClasspath().asScala.collectFirst {
+          case novocode() => OutdatedJunitInterfaceVersion
+          case junit(major, minor, patch)
+              if (major.toInt == 0 && (minor.toInt <= 13 && patch.toInt <= 2)) =>
+            OutdatedJunitInterfaceVersion
+        }
       }
-    }
 
     scalaVersionProblem
       .orElse(javaSourcesProblem)
