@@ -46,7 +46,7 @@ final class Doctor(
       mtagsResolver,
       currentBuildServer,
       javaHome,
-      () => clientConfig.isCompletionItemResolve()
+      () => clientConfig.isTestExplorerProvider()
     )
 
   /**
