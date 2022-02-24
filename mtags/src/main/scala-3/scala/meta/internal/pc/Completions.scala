@@ -27,10 +27,13 @@ trait Completions:
     path match
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
         ArgCompletion(Some(ident), app, pos).contribute
+      case (Literal(Constant(null))) :: (app: Apply) :: _ => // fun(a, @@)
+        ArgCompletion(None, app, pos).contribute
       case (app: Apply) :: _ => // fun(@@)
         ArgCompletion(None, app, pos).contribute
       case _ =>
         Nil
+end Completions
 
 case class ArgCompletion(
     ident: Option[Ident],
