@@ -194,6 +194,7 @@ class MetalsLanguageServer(
   )
   private val fileWatcher = register(
     new FileWatcher(
+      initialConfig,
       () => workspace,
       buildTargets,
       fileWatchFilter,
