@@ -139,6 +139,14 @@ class ProblemResolverSuite extends FunSuite {
     classpatch = List("/com/github/sbt/junit-interface/0.13.3/")
   )
 
+  checkRecommendation(
+    "no-test-explorer-provider",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpatch = List("/com/github/sbt/junit-interface/0.13.2/"),
+    isTestExplorerProvider = false
+  )
+
   def checkRecommendation(
       name: TestOptions,
       scalaVersion: String,
@@ -149,7 +157,8 @@ class ProblemResolverSuite extends FunSuite {
       ),
       sbtVersion: Option[String] = None,
       invalidJavaHome: Boolean = false,
-      classpatch: List[String] = Nil
+      classpatch: List[String] = Nil,
+      isTestExplorerProvider: Boolean = true
   )(implicit loc: Location): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")
@@ -164,7 +173,8 @@ class ProblemResolverSuite extends FunSuite {
         AbsolutePath(workspace),
         new TestMtagsResolver,
         () => None,
-        () => javaHome
+        () => javaHome,
+        () => isTestExplorerProvider
       )
 
       val target =
