@@ -1,12 +1,9 @@
 package scala.meta.internal.metals.watcher
 
-import java.io.BufferedInputStream
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.collection.mutable
-import scala.util.hashing.MurmurHash3
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
@@ -64,7 +61,7 @@ final class FileWatcher(
 }
 
 object FileWatcher {
-  type Hash = Int
+  type Hash = Long
 
   private case class FilesToWatch(
       sourceFiles: Set[Path],
@@ -182,18 +179,9 @@ object FileWatcher {
 
   private def hashFile(path: Path, hashFilter: Path => Boolean): Hash = {
     if (hashFilter(path)) {
-      val inputStream = new BufferedInputStream(Files.newInputStream(path))
-      try {
-        MurmurHash3.orderedHash(
-          Stream.continually(inputStream.read()).takeWhile(_ != -1)
-        )
-      } catch {
-        case _: IOException => 0
-      } finally {
-        inputStream.close()
-      }
+      path.toFile().lastModified()
     } else {
-      0
+      0L
     }
   }
 }
