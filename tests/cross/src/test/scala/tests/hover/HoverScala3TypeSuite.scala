@@ -173,4 +173,12 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |def apply[T](a: T)(using Int): T
        |""".stripMargin.hover
   )
+
+  check(
+    "toplevel-left",
+    """|def foo = <<L@@eft>>("")
+       |""".stripMargin,
+    """|final case class Left: Left
+       |""".stripMargin.hover
+  )
 }
