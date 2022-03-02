@@ -8,6 +8,8 @@ import scala.meta as m
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
+import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.tokens.{Token as T}
@@ -72,11 +74,9 @@ final class InferredTypeProvider(
       shortenedNames.imports(autoImportsGen)
 
     def printType(tpe: Type): String =
-      val short = shortType(tpe, shortenedNames)
-      if short.isErroneous then "Any"
-      else
-        val printer = ScopeAwareTypePrinter(indexedCtx)
-        printer.typeString(short)
+      val printer = MetalsPrinter.forInferredType(shortenedNames, indexedCtx)
+      printer.tpe(tpe)
+
     /*
      * Get the exact position in ValDef pattern for val (a, b) = (1, 2)
      * val ((a, c), b) = ((1, 3), 2) will be covered by Bind

@@ -1,4 +1,7 @@
 package scala.meta.internal.pc
+package completions
+
+import scala.meta.internal.pc.printer.MetalsPrinter
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
@@ -41,15 +44,12 @@ sealed trait CompletionValue:
       Nil
     )
 
-  final def description(
-      printer: SymbolPrinter,
-      history: ShortenedNames
-  ): String =
+  final def description(printer: MetalsPrinter): String =
     this match
       case so: CompletionValue.Symbolic =>
-        printer.completionDetailString(so.symbol, history)
+        printer.completionSymbol(so.symbol)
       case CompletionValue.NamedArg(_, tpe) =>
-        printer.typeDetailString(tpe, history)
+        printer.tpe(tpe)
       case _: CompletionValue.Keyword => ""
 
   private def forSymOnly[A](f: Symbol => A, orElse: => A): A =

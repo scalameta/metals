@@ -1,4 +1,5 @@
 package scala.meta.internal.pc
+package completions
 
 import scala.collection.mutable
 
@@ -25,7 +26,7 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.SrcPos
 
-class CompletionProvider(
+class Completions(
     pos: SourcePosition,
     ctx: Context,
     search: SymbolSearch,
@@ -49,7 +50,7 @@ class CompletionProvider(
           .flatMap(CompletionValue.fromCompiler)
           .filterInteresting()
 
-    val args = Completions.namedArgCompletions(pos, path)
+    val args = NamedArgCompletions.contribute(pos, path)
     val keywords = KeywordsCompletions.contribute(path, completionPos)
     val all = completions ++ args ++ keywords
     val application = CompletionApplication.fromPath(path)
@@ -178,7 +179,7 @@ class CompletionProvider(
       completion: CompletionValue,
       application: CompletionApplication
   ): Int =
-    import MemberOrdering.*
+    import scala.meta.internal.pc.MemberOrdering.*
 
     def hasGetter(sym: Symbol) = try
       def isModuleOrClass = sym.is(Module) || sym.isClass
@@ -379,4 +380,4 @@ class CompletionProvider(
 
       end compare
 
-end CompletionProvider
+end Completions
