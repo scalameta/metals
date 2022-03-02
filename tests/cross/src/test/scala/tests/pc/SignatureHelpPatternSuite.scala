@@ -4,10 +4,6 @@ import tests.BaseSignatureHelpSuite
 
 class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
 
-  // @tgodzik docs not yet supported for Scala 3
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   check(
     "case",
     """
@@ -17,14 +13,16 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
-       |             ^^^^^^^^^^^^^^^^^^^^
+    """|map[B](f: ((Int, Int)) => B): List[B]
+       |       ^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|map[B](f: ((Int, Int)) => B): List[B]
-           |       ^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin
+      "2.12" -> """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
+                   |             ^^^^^^^^^^^^^^^^^^^^
+                   |""".stripMargin,
+      "3" -> """|map[B](f: A => B): List[B]
+                |       ^^^^^^^^^
+                |""".stripMargin
     )
   )
 
@@ -44,6 +42,10 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       "2.11" ->
         """|unapply(x: A): Some[A]
            |        ^^^^
+           |""".stripMargin,
+      "3" ->
+        """|unapply[A](x$0: Some[A]): Option[A]
+           |           ^^^^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -60,7 +62,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|unapply(a: T, b: T): Two[T]
        |        ^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|unapply[T](x$1: generic2.Two[T]): generic2.Two[T]
+           |           ^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -75,7 +83,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|unapply(a: C[T]): HKT[C,T]
        |        ^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|unapply[C[_$1], T](x$1: generic3.HKT[C, T]): generic3.HKT[C, T]
+           |                   ^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
