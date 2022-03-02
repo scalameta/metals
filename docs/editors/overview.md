@@ -14,7 +14,6 @@ specific sections.
 
 ```
 
-
 ## Editor support
 
 Metals works with the following text editors with varying degree of
@@ -395,6 +394,24 @@ Highlight references to the same symbol in the open file.
 
 Browse packages, classes and methods in the workspace and library dependencies
 using the Metals sidebar. This feature is only implemented in VS Code.
+
+## Test Explorer
+
+Test Explorer is a feature that allows editors to display tests as a separate tree representation of tests. 
+Although it was implemented in order to use Visual Studio Code's [Testing API](https://code.visualstudio.com/api/extension-guides/testing). Test Explorer API is editor agnostic and can be used by other editors than just VS Code.
+![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
+
+Work on Test Explorer is still on progress and the feature has some known limitations:
+
+- Test Explorer is able to discover single test cases only for JUnit4 test classes. Support for other test frameworks is being worked on.
+- detecting suites in cross scala-version projects is inconsistent, see [this issue](https://github.com/scalameta/metals/issues/3503).
+- there is no support for JS and Native platforms. For any changes subscribe to the related [feature request](https://github.com/scalameta/metals-feature-requests/issues/256).
+
+You can find more
+information about Test Explorer under the [VS Code](vscode.md#test-explorer) specific section.
+### Running Tests
+
+Both run and debug under the hood use BSP's debug request. More information about it can be found at [Bloop DAP diagram](https://github.com/scalacenter/bloop/blob/master/docs/assets/dap-example-metals.png) or [BSP specification](https://build-server-protocol.github.io/docs/specification.html#debug-request) website.
 
 ## Metals Extensions
 

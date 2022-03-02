@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.testProvider
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -222,6 +223,10 @@ final class TestSuitesProvider(
     val buildTargetUpdates =
       getBuildTargetUpdates(deletedSuites, addedSuites, addedTestCases)
 
+    // update cached suites with currently discovered
+    addedEntries.foreach { case (_, entries) =>
+      entries.foreach(index.put(_))
+    }
     updateClientIfNonEmpty(buildTargetUpdates)
   }
 
@@ -235,7 +240,7 @@ final class TestSuitesProvider(
     // when test suite is deleted it has to be removed from cache
     symbolsPerTargets.map {
       case SymbolsPerTarget(buildTarget, testSymbols, _) =>
-        val fromBSP = testSymbols.values.toSet.map(FullyQualifiedName(_))
+        val fromBSP = testSymbols.values.toSet.map(FullyQualifiedName)
         val cached = index.getSuiteNames(buildTarget)
         val diff = (cached -- fromBSP)
         val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
@@ -256,26 +261,32 @@ final class TestSuitesProvider(
   private def getTestEntries(
       symbolsPerTarget: List[SymbolsPerTarget]
   ): Map[BuildTarget, List[TestEntry]] = {
-    val entries = for {
-      current <- symbolsPerTarget
-      cachedSuites = index.getSuites(current.target)
-      (symbol, fullyQualifiedClassName) <- current.testSymbols
+    val entries = symbolsPerTarget.flatMap { currentTarget =>
+      val cachedSuites = mutable.Set.empty[FullyQualifiedName]
+      currentTarget.testSymbols
         .readOnlySnapshot()
         .toList
-      // IMPORTANT this check is meant to check for class name, not a symbol
-      fullyQualifiedName = FullyQualifiedName(fullyQualifiedClassName)
-      if !cachedSuites.contains(fullyQualifiedName)
-      testEntry <-
-        computeTestEntry(
-          current.target,
-          mtags.Symbol(symbol),
-          fullyQualifiedName,
-          current.hasJunitOnClasspath
-        )
-    } yield {
-      index.put(testEntry)
-      testEntry
+        .foldLeft(List.empty[TestEntry]) {
+          case (entries, (symbol, fullyQualifiedClassName)) =>
+            val fullyQualifiedName = FullyQualifiedName(fullyQualifiedClassName)
+            if (cachedSuites.contains(fullyQualifiedName)) entries
+            else {
+              val entryOpt = computeTestEntry(
+                currentTarget.target,
+                mtags.Symbol(symbol),
+                fullyQualifiedName,
+                currentTarget.hasJunitOnClasspath
+              )
+              entryOpt match {
+                case Some(entry) =>
+                  cachedSuites.add(entry.suiteInfo.fullyQualifiedName)
+                  entry :: entries
+                case None => entries
+              }
+            }
+        }
     }
+
     entries.groupBy(_.buildTarget)
   }
 

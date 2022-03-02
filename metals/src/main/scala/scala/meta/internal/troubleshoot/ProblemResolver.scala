@@ -19,7 +19,8 @@ class ProblemResolver(
     workspace: AbsolutePath,
     mtagsResolver: MtagsResolver,
     currentBuildServer: () => Option[BspSession],
-    javaHome: () => Option[String]
+    javaHome: () => Option[String],
+    isTestExplorerProvider: () => Boolean
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
@@ -52,6 +53,7 @@ class ProblemResolver(
     val deprecatedVersions = ListBuffer[String]()
     val futureVersions = ListBuffer[String]()
     var misconfiguredProjects = 0
+    var misconfiguredTestFrameworks = 0
     var unsupportedSbt = false
     var deprecatedSbt = false
     var futureSbt = false
@@ -70,6 +72,7 @@ class ProblemResolver(
         case DeprecatedSbtVersion => deprecatedSbt = true
         case FutureSbtVersion => futureSbt = true
         case MissingJdkSources(_) => misconfiguredProjects += 1
+        case OutdatedJunitInterfaceVersion => misconfiguredTestFrameworks += 1
       }
     }
     for {
@@ -133,6 +136,10 @@ class ProblemResolver(
         None
       }
 
+    val testFrameworks =
+      if (misconfiguredTestFrameworks == 0) None
+      else Some(Messages.CheckDoctor.misconfiguredTestFrameworks)
+
     val allMessages = List(
       deprecatedMessage,
       unsupportedMessage,
@@ -140,7 +147,8 @@ class ProblemResolver(
       deprecatedSbtMessage,
       unsupportedSbtMessage,
       futureSbtMessage,
-      semanticdbMessage
+      semanticdbMessage,
+      testFrameworks
     ).flatten
 
     def scalaVersionsMessages = List(
@@ -203,12 +211,27 @@ class ProblemResolver(
       case _ => None
     }
 
-    val javaSourcesProblem = JdkSources(javaHome()) match {
+    def javaSourcesProblem = JdkSources(javaHome()) match {
       case Left(notFound) => Some(MissingJdkSources(notFound.candidates))
       case Right(_) => None
     }
 
-    scalaVersionProblem.orElse(javaSourcesProblem)
+    def outdatedJunitInterface =
+      if (!isTestExplorerProvider()) None
+      else {
+        val novocode = ".*com/novocode/junit-interface.*".r
+        val junit = raw".*com/github/sbt/junit-interface/(\d).(\d+).(\d+).*".r
+        scalaTarget.scalac.getClasspath().asScala.collectFirst {
+          case novocode() => OutdatedJunitInterfaceVersion
+          case junit(major, minor, patch)
+              if (major.toInt == 0 && (minor.toInt <= 13 && patch.toInt <= 2)) =>
+            OutdatedJunitInterfaceVersion
+        }
+      }
+
+    scalaVersionProblem
+      .orElse(javaSourcesProblem)
+      .orElse(outdatedJunitInterface)
   }
 
   private def findProblem(

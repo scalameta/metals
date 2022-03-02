@@ -174,7 +174,7 @@ lazy val V = new {
   val ammonite213Version = "2.13.7"
 
   val ammonite = "2.5.2"
-  val bloop = "1.4.12"
+  val bloop = "1.4.13"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
   val coursier = "2.0.16"
@@ -188,7 +188,7 @@ lazy val V = new {
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
   val mill = "0.10.0"
-  val mdoc = "2.3.0"
+  val mdoc = "2.3.1"
   val munit = "0.7.29"
   val organizeImportRule = "0.6.0"
   val pprint = "0.7.1"
@@ -196,8 +196,8 @@ lazy val V = new {
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.9.34"
   val scalafmt = "3.4.0"
-  val scalameta = "4.4.35"
-  val scribe = "3.7.1"
+  val scalameta = "4.5.0"
+  val scribe = "3.8.0"
   val semanticdb = scalameta
   val qdox = "2.0.1"
 
@@ -258,7 +258,7 @@ lazy val V = new {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  def guava = "com.google.guava" % "guava" % "31.0.1-jre"
+  def guava = "com.google.guava" % "guava" % "31.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   def dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
@@ -439,7 +439,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.16.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.6.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "8.4.4",
+      "org.flywaydb" % "flyway-core" % "8.5.1",
       "com.h2database" % "h2" % "2.0.206",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",

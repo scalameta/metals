@@ -14,7 +14,7 @@ import scribe.format.Formatter
 import scribe.format.FormatterInterpolator
 import scribe.format.date
 import scribe.format.levelPaddedRight
-import scribe.format.message
+import scribe.format.messages
 import scribe.modify.LogModifier
 
 object MetalsLogger {
@@ -96,7 +96,7 @@ object MetalsLogger {
   def newFileWriter(logfile: AbsolutePath): FileWriter =
     FileWriter(pathBuilder = PathBuilder.static(logfile.toNIO)).flushAlways
 
-  def defaultFormat: Formatter = formatter"$date $levelPaddedRight $message"
+  def defaultFormat: Formatter = formatter"$date $levelPaddedRight $messages"
 
   def silent: LoggerSupport[Unit] =
     new LoggerSupport[Unit] {

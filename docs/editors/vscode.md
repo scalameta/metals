@@ -301,12 +301,6 @@ project's modules. From this panel it's possible to
 
 ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
-Work on Test Explorer is still on progress and feature has known limitations:
-- at the very beginning not all tests may be discovered. Triggering compilation (modify and save file) should solve issue.
-- single test cases can't be discovered and run (coming soon)
-- detecting suites in cross projects is inconsistent, see [this issue](https://github.com/scalameta/metals/issues/3503).
-- Features on JVM may work differently than on JS and Native platforms.
-
 If you encounter an error, create an [issue](https://github.com/scalameta/metals/issues).
 
 ## Coming from IntelliJ

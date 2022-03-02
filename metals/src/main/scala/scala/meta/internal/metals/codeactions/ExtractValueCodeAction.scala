@@ -253,26 +253,13 @@ class ExtractValueCodeAction(
   @tailrec
   private def isNotLambda(tree: Tree): Boolean = {
 
-    def hasPlaceholder(tree: Tree): Boolean = {
-      tree match {
-        case _: Term.Placeholder => true
-        /**
-         * Placeholder in the next apply no longer applies to the current apply.
-         * ApplyInfix or ApplyUnary cannot be extracted though by themselves without types.
-         */
-        case _: Term.Apply => false
-        case _: Term.ApplyUsing => false
-        case _ =>
-          tree.children.exists(hasPlaceholder)
-      }
-    }
-
     tree match {
       case _: Term.FunctionTerm => false
       case _: Term.PolyFunction => false
       case _: Term.PartialFunction => false
+      case _: Term.AnonymousFunction => false
       case Term.Block(List(single)) => isNotLambda(single)
-      case _ => !hasPlaceholder(tree)
+      case _ => true
     }
   }
 

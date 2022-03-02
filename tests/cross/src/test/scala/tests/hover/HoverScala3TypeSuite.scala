@@ -52,7 +52,12 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |""".stripMargin,
     """|case Red: Red
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "3.1.3-RC1" ->
+        """|case Red: Color
+           |""".stripMargin.hover
+    )
   )
 
   check(
@@ -65,6 +70,21 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|enum Color: enums2.SimpleEnum
        |""".stripMargin.hover
+  )
+
+  check(
+    "enums-outermost",
+    """|enum Color:
+       |  case Red
+       |  case <<Bl@@ue>>
+       |  case Cyan
+       |""".stripMargin,
+    "",
+    compat = Map(
+      "3.1.3-RC1" ->
+        """|case Blue: Color
+           |""".stripMargin.hover
+    )
   )
 
   check(
@@ -166,6 +186,14 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|String
        |def apply[T](a: T)(using Int): T
+       |""".stripMargin.hover
+  )
+
+  check(
+    "toplevel-left",
+    """|def foo = <<L@@eft>>("")
+       |""".stripMargin,
+    """|final case class Left: Left
        |""".stripMargin.hover
   )
 }

@@ -85,6 +85,11 @@ case object FutureSbtVersion extends ScalaProblem {
     "Code navigation for this sbt version is not yet supported"
 }
 
+case object OutdatedJunitInterfaceVersion extends ScalaProblem {
+  override def message: String =
+    "Test Explorer will not work properly with this version of junit-interface, please update it to at least com.github.sbt:junit-interface:0.13.3"
+}
+
 case class MissingJdkSources(candidates: List[AbsolutePath])
     extends ScalaProblem {
   private val candidateString = candidates.mkString(", ")

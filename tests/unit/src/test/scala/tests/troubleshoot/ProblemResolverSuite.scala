@@ -13,6 +13,7 @@ import scala.meta.internal.troubleshoot.FutureSbtVersion
 import scala.meta.internal.troubleshoot.FutureScalaVersion
 import scala.meta.internal.troubleshoot.MissingJdkSources
 import scala.meta.internal.troubleshoot.MissingSourceRoot
+import scala.meta.internal.troubleshoot.OutdatedJunitInterfaceVersion
 import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.internal.troubleshoot.SemanticDBDisabled
 import scala.meta.internal.troubleshoot.UnsupportedSbtVersion
@@ -26,6 +27,7 @@ import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import munit.FunSuite
+import munit.Location
 import munit.TestOptions
 import tests.TestMtagsResolver
 
@@ -116,6 +118,35 @@ class ProblemResolverSuite extends FunSuite {
     invalidJavaHome = true
   )
 
+  checkRecommendation(
+    "novocode-junit-interface",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedJunitInterfaceVersion.message,
+    classpatch = List("/com/novocode/junit-interface/0.11/")
+  )
+
+  checkRecommendation(
+    "github-junit-interface",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedJunitInterfaceVersion.message,
+    classpatch = List("/com/github/sbt/junit-interface/0.13.2/")
+  )
+
+  checkRecommendation(
+    "github-junit-interface-valid",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpatch = List("/com/github/sbt/junit-interface/0.13.3/")
+  )
+
+  checkRecommendation(
+    "no-test-explorer-provider",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpatch = List("/com/github/sbt/junit-interface/0.13.2/"),
+    isTestExplorerProvider = false
+  )
+
   def checkRecommendation(
       name: TestOptions,
       scalaVersion: String,
@@ -125,8 +156,10 @@ class ProblemResolverSuite extends FunSuite {
         "-P:semanticdb:sourceroot:/tmp/metals"
       ),
       sbtVersion: Option[String] = None,
-      invalidJavaHome: Boolean = false
-  ): Unit = {
+      invalidJavaHome: Boolean = false,
+      classpatch: List[String] = Nil,
+      isTestExplorerProvider: Boolean = true
+  )(implicit loc: Location): Unit = {
     test(name) {
       val workspace = Files.createTempDirectory("metals")
       workspace.toFile().deleteOnExit()
@@ -140,10 +173,12 @@ class ProblemResolverSuite extends FunSuite {
         AbsolutePath(workspace),
         new TestMtagsResolver,
         () => None,
-        () => javaHome
+        () => javaHome,
+        () => isTestExplorerProvider
       )
 
-      val target = scalaTarget(name.name, scalaVersion, scalacOpts, sbtVersion)
+      val target =
+        scalaTarget(name.name, scalaVersion, scalacOpts, sbtVersion, classpatch)
       val message = problemResolver.recommendation(target).getOrElse("")
 
       assertNoDiff(
@@ -157,7 +192,8 @@ class ProblemResolverSuite extends FunSuite {
       id: String,
       scalaVersion: String,
       scalacOptions: List[String],
-      sbtVersion: Option[String] = None
+      sbtVersion: Option[String] = None,
+      classpatch: List[String] = Nil
   ): ScalaTarget = {
     val scalaBinaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
@@ -181,7 +217,7 @@ class ProblemResolverSuite extends FunSuite {
     val scalacOptionsItem = new ScalacOptionsItem(
       buildId,
       scalacOptions.asJava,
-      /* classpath = */ Nil.asJava,
+      classpatch.asJava,
       ""
     )
 

@@ -28,6 +28,8 @@ object NamedArgCompletions:
     path match
       case (ident: Ident) :: (app: Apply) :: _ => // fun(arg@@)
         contribute(Some(ident), app, pos)
+      case (Literal(Constant(null))) :: (app: Apply) :: _ => // fun(a, @@)
+        contribute(None, app, pos)
       case (app: Apply) :: _ => // fun(@@)
         contribute(None, app, pos)
       case _ =>

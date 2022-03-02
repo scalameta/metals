@@ -260,7 +260,6 @@ class MetalsLanguageServer(
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
   private var newFileProvider: NewFileProvider = _
-  private var buildTargetProvider: BuildTargetProvider = _
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
@@ -685,7 +684,8 @@ class MetalsLanguageServer(
           stacktraceAnalyzer,
           clientConfig,
           semanticdbs,
-          compilers
+          compilers,
+          () => bspSession.exists(_.main.isBloop)
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -705,10 +705,6 @@ class MetalsLanguageServer(
           scalafixProvider,
           trees,
           diagnostics,
-          languageClient
-        )
-        buildTargetProvider = new BuildTargetProvider(
-          buildTargets,
           languageClient
         )
         doctor = new Doctor(
@@ -1720,21 +1716,13 @@ class MetalsLanguageServer(
         Future {
           doctor.executeRunDoctor()
         }.asJavaObject
-      case ServerCommands.TargetInfoDisplay() => {
-        Option(params.getArguments())
-          .map(_.asScala.toList)
-          .getOrElse(List.empty)
-          .headOption match {
-          case Some(arg: JsonPrimitive) =>
-            buildTargetProvider
-              .displayBuildTargetInfo(workspace, arg.getAsString)
-              .asJavaObject
-          case _ =>
-            buildTargetProvider
-              .askForBuildTargetAndDisplayBuildTargetInfo(workspace)
-              .asJavaObject
-        }
-      }
+      case ServerCommands.ListBuildTargets() =>
+        Future {
+          buildTargets.all.toList
+            .map(_.getDisplayName())
+            .sorted
+            .asJava
+        }.asJavaObject
       case ServerCommands.BspSwitch() =>
         (for {
           isSwitched <- bspConnector.switchBuildServer(
@@ -1818,17 +1806,26 @@ class MetalsLanguageServer(
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
             Future.successful(params)
+
           case Seq(mainClassParamsParser.Jsonized(params))
               if params.mainClass != null =>
             debugProvider.resolveMainClassParams(params)
+
+          case Seq(testSelectionParamsParser.Jsonized(params))
+              if params.target != null && params.classes != null =>
+            debugProvider.resolveTestSelectionParams(params)
+
           case Seq(testClassParamsParser.Jsonized(params))
               if params.testClass != null =>
             debugProvider.resolveTestClassParams(params)
+
           case Seq(attachRemoteParamsParser.Jsonized(params))
               if params.hostName != null =>
             debugProvider.resolveAttachRemoteParams(params)
+
           case Seq(unresolvedParamsParser.Jsonized(params)) =>
             debugProvider.debugDiscovery(params)
+
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"

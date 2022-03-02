@@ -70,7 +70,7 @@ final class BloopInstall(
           // Example: you can disable `Xfatal-warnings` scalac option only for Metals.
           "METALS_ENABLED" -> "true",
           "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion
-        )
+        ) ++ sys.env
       )
       .map {
         case ExitCodes.Success => WorkspaceLoadedStatus.Installed

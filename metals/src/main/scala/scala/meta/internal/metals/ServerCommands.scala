@@ -142,12 +142,10 @@ object ServerCommands {
       |""".stripMargin
   )
 
-  val TargetInfoDisplay = new Command(
-    "target-info-display",
-    "Display target info",
-    """|Choose a Build Target and view information about its configuration.
-       |""".stripMargin,
-    """|[string], name of the Build Target.
+  val ListBuildTargets = new Command(
+    "list-build-targets",
+    "List build targets",
+    """|Retrieve a list of build targets for the workspace.
        |""".stripMargin
   )
 
@@ -544,7 +542,7 @@ object ServerCommands {
       RunDoctor,
       DecodeFile,
       DisconnectBuildServer,
-      TargetInfoDisplay,
+      ListBuildTargets,
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
       StartDebugAdapter,
@@ -560,6 +558,18 @@ case class DebugUnresolvedMainClassParams(
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
     @Nullable envFile: String = null
+)
+
+final case class DebugScalaTestSelectionParams(
+    @Nullable target: b.BuildTargetIdentifier,
+    @Nullable classes: java.util.List[ScalaTestSuiteSelection],
+    jvmOptions: java.util.List[String],
+    env: java.util.Map[String, String]
+)
+
+final case class ScalaTestSuiteSelection(
+    className: String,
+    tests: java.util.List[String]
 )
 
 case class DebugUnresolvedTestClassParams(
