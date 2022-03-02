@@ -73,6 +73,21 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
   )
 
   check(
+    "enums-outermost",
+    """|enum Color:
+       |  case Red
+       |  case <<Bl@@ue>>
+       |  case Cyan
+       |""".stripMargin,
+    "",
+    compat = Map(
+      "3.1.3-RC1" ->
+        """|case Blue: Color
+           |""".stripMargin.hover
+    )
+  )
+
+  check(
     "enums3",
     """|
        |object SimpleEnum:
