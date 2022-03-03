@@ -685,7 +685,7 @@ class MetalsLanguageServer(
           clientConfig,
           semanticdbs,
           compilers,
-          () => bspSession.exists(_.main.isBloop)
+          () => bspSession.exists(_.main.isBloopOrSbt)
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -1811,8 +1811,8 @@ class MetalsLanguageServer(
               if params.mainClass != null =>
             debugProvider.resolveMainClassParams(params)
 
-          case Seq(testSelectionParamsParser.Jsonized(params))
-              if params.target != null && params.classes != null =>
+          case Seq(testSuitesParamsParser.Jsonized(params))
+              if params.target != null && params.requestData != null =>
             debugProvider.resolveTestSelectionParams(params)
 
           case Seq(testClassParamsParser.Jsonized(params))
