@@ -275,6 +275,14 @@ abstract class BasePCSuite extends BaseSuite {
       }
     }
 
+    def forLessThan(version: String): IgnoreScalaVersion = {
+      val enableFrom = SemVer.Version.fromString(version)
+      IgnoreScalaVersion { v =>
+        val semver = SemVer.Version.fromString(v)
+        !(semver >= enableFrom)
+      }
+    }
+
   }
 
   object IgnoreScala2 extends IgnoreScalaVersion(_.startsWith("2."))
