@@ -39,6 +39,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                                       be turned off. By default this is on, but Metals only
  *                                       supports a small subset of this, so it may be problematic
  *                                       for certain clients.
+ * @param macOsMaxWatchRoots The maximum number of root directories to watch on MacOS.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -89,7 +90,12 @@ final case class MetalsServerConfig(
     ),
     bloopPort: Option[Int] = Option(System.getProperty("metals.bloop-port"))
       .filter(_.forall(Character.isDigit(_)))
-      .map(_.toInt)
+      .map(_.toInt),
+    macOsMaxWatchRoots: Int =
+      Option(System.getProperty("metals.macos-max-watch-roots"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(32)
 ) {
   override def toString: String =
     List[String](
@@ -105,7 +111,8 @@ final case class MetalsServerConfig(
       s"ask-to-reconnect=$askToReconnect",
       s"icons=$icons",
       s"statistics=$statistics",
-      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}"
+      s"bloop-port=${bloopPort.map(_.toString()).getOrElse("default")}",
+      s"macos-max-watch-roots=${macOsMaxWatchRoots}"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
