@@ -44,8 +44,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
            |        ^^^^
            |""".stripMargin,
       "3" ->
-        """|unapply[A](x$0: Some[A]): Option[A]
-           |           ^^^^^^^^^^^^
+        """|Some[A](value: A)
+           |        ^^^^^^^^
            |""".stripMargin
     )
   )
@@ -56,17 +56,17 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |case class Two[T](a: T, b: T)
       |object Main {
       |  (null: Any) match {
-      |    case Two(@@) =>
+      |    case Two("", @@) =>
       |  }
       |}
       |""".stripMargin,
     """|unapply(a: T, b: T): Two[T]
-       |        ^^^^
+       |              ^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|unapply[T](x$1: generic2.Two[T]): generic2.Two[T]
-           |           ^^^^^^^^^^^^^^^^^^^^
+        """|Two[T](a: T, b: T)
+           |             ^^^^
            |""".stripMargin
     )
   )
@@ -86,8 +86,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|unapply[C[_$1], T](x$1: generic3.HKT[C, T]): generic3.HKT[C, T]
-           |                   ^^^^^^^^^^^^^^^^^^^^^^^
+        """|HKT[C[_$1], T](a: C[T])
+           |               ^^^^^^^
            |""".stripMargin
     )
   )
@@ -107,6 +107,26 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|unapply(a: Int): Option[(Int, Int)]
        |        ^^^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "using-params".tag(IgnoreScala2),
+    """
+      |class HKT[C[_], T](a: C[T])
+      |object HKT {
+      |  def unapply(using String)(using Boolean)(a: Int): Option[(Int, Int)] = Some(2 -> 2)
+      |}
+      |object Main {
+      |  given b: Boolean = true
+      |  given str: String = ""
+      |  (null: Any) match {
+      |    case HKT(1, @@) =>
+      |  }
+      |}
+      |""".stripMargin,
+    """|unapply(implicit x$1: String)(implicit x$2: Boolean)(a: Int): Option[(Int, Int)]
+       |                                                     ^^^^^^
        |""".stripMargin
   )
 }

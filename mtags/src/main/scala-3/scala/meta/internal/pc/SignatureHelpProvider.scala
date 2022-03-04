@@ -12,8 +12,8 @@ import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Denotations.SingleDenotation
 import dotty.tools.dotc.core.Symbols
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.ErrorType
-import dotty.tools.dotc.core.Types.MethodType
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.reporting.AmbiguousOverload
@@ -24,6 +24,12 @@ import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
+import dotty.tools.dotc.core.Types.PolyType
+import dotty.tools.dotc.core.Types.Type
+import dotty.tools.dotc.core.Types.MethodType
+import scala.annotation.tailrec
+import scala.collection.immutable.LazyList.cons
+import dotty.tools.dotc.core.Flags
 
 object SignatureHelpProvider:
 
@@ -33,7 +39,6 @@ object SignatureHelpProvider:
     driver.run(uri, sourceFile)
 
     given ctx: Context = driver.currentCtx
-    // given locatedCtx: Context = driver.localContext(params)
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
     val path =
@@ -63,68 +68,44 @@ object SignatureHelpProvider:
   private def callInfo(path: List[Tree], span: Span)(using
       ctx: Context
   ): (Int, Int, List[SingleDenotation]) =
-    path match
-      case (tpd.UnApply(fun, implicits, patterns)) :: _ =>
-        val paramIndex = patterns.indexWhere(_.span.contains(span)) match
-          case -1 => (patterns.length - 1 max 0)
-          case n => n
+    Signatures.callInfo(path, span)(using ctx) match
+      case default @ (_, _, Nil) =>
+        path match
+          case (tpd.UnApply(fun, _, patterns)) :: parent :: _ =>
+            val implicitsBefore = countParams(fun)
 
-        val (alternativeIndex, alternatives) = fun.tpe match
-          case err: ErrorType =>
-            val (alternativeIndex, alternatives) =
-              alternativesFromError(err, patterns)
-            (alternativeIndex, alternatives)
+            def defaultParamIndex =
+              patterns.indexWhere(_.span.contains(span)) match
+                case -1 => (patterns.length - 1 max 0) + implicitsBefore
+                case n => n + implicitsBefore
 
-          case _ =>
             val funSymbol = fun.symbol
+            val retType = funSymbol.info.finalResultType
+            val isSomeMatch = funSymbol.owner.companionClass == defn.SomeClass
+            val isExplicitUnapply =
+              !isSomeMatch && retType.typeSymbol == defn.OptionClass
+            val paramIndex =
+              if isExplicitUnapply then implicitsBefore
+              else defaultParamIndex
+
+            val signatureSymbol =
+              if isSomeMatch then
+                funSymbol.owner.companionClass.primaryConstructor
+              else if isExplicitUnapply then funSymbol
+              else
+                // if unapply doesn't return option it means it's a case class
+                retType.typeSymbol.primaryConstructor
             val alternatives =
-              funSymbol.owner.info.member(funSymbol.name).alternatives
+              signatureSymbol.owner.info
+                .member(signatureSymbol.name)
+                .alternatives
             val alternativeIndex =
-              alternatives.map(_.symbol).indexOf(funSymbol) max 0
-            (alternativeIndex, alternatives)
-        (paramIndex, alternativeIndex, alternatives)
-      case _ =>
-        Signatures.callInfo(path, span)(using ctx)
-
-  /**
-   * Copied over from Signatures since it's a private method.
-   */
-  private def alternativesFromError(err: ErrorType, params: List[tpd.Tree])(
-      using Context
-  ): (Int, List[SingleDenotation]) =
-    val alternatives =
-      err.msg match
-        case msg: AmbiguousOverload => msg.alternatives
-        case msg: NoMatchingOverload => msg.alternatives
-        case _ => Nil
-
-    // If the user writes `foo(bar, <cursor>)`, the typer will insert a synthetic
-    // `null` parameter: `foo(bar, null)`. This may influence what's the "best"
-    // alternative, so we discard it.
-    val userParams = params match
-      case xs :+ (nul @ tpd.Literal(Constant(null))) if nul.span.isZeroExtent =>
-        xs
-      case _ => params
-    val userParamsTypes = userParams.map(_.tpe)
-
-    // Assign a score to each alternative (how many parameters are correct so far), and
-    // use that to determine what is the current active signature.
-    val alternativesScores = alternatives.map { alt =>
-      alt.info.stripPoly match
-        case tpe: MethodType =>
-          userParamsTypes
-            .zip(tpe.paramInfos)
-            .takeWhile { case (t0, t1) => t0 <:< t1 }
-            .size
-        case _ =>
-          0
-    }
-    val bestAlternative =
-      if alternativesScores.isEmpty then 0
-      else alternativesScores.zipWithIndex.maxBy(_._1)._2
-
-    (bestAlternative, alternatives)
-  end alternativesFromError
+              alternatives.map(_.symbol).indexOf(signatureSymbol) max 0
+            (paramIndex, alternativeIndex, alternatives)
+          case _ =>
+            default
+      case other =>
+        other
 
   /**
    * Convert `param` to `ParameterInformation`
@@ -160,4 +141,22 @@ object SignatureHelpProvider:
     documentation.foreach(sig.setDocumentation(_))
     sig
   end signatureToSignatureInformation
+
+  /**
+   * ****** Copied over from the compiler needed for versions prior to 3.1.3 ************
+   */
+  /**
+   * The number of parameters that are applied in `tree`.
+   *
+   * This handles currying, so for an application such as `foo(1, 2)(3)`, the result of
+   * `countParams` should be 3.
+   *
+   * @param tree The tree to inspect.
+   * @return The number of parameters that are passed.
+   */
+  private def countParams(tree: tpd.Tree): Int =
+    tree match
+      case tpd.Apply(fun, params) => countParams(fun) + params.length
+      case _ => 0
+
 end SignatureHelpProvider
