@@ -26,8 +26,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       if (
         tree.symbol == null ||
         tree.symbol == NoSymbol ||
-        tree.symbol.isErroneous ||
-        tree.symbol.isSynthetic
+        tree.symbol.isErroneous
       ) {
         DefinitionResultImpl.empty
       } else if (tree.symbol.hasPackageFlag) {

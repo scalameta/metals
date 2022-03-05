@@ -351,4 +351,26 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "synthetic-definition-case-class",
+    """|
+       |class Main {
+       |  case class <<>>User(name: String, age: Int)
+       |  def hello(u: User): Unit = ()
+       |  hello(Us@@er())
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "synthetic-definition-class-constructor",
+    """|
+       |class Main {
+       |  <<class User(name: String, age: Int)>>
+       |  def hello(u: User): Unit = ()
+       |  hello(new Us@@er())
+       |}
+       |""".stripMargin
+  )
 }
