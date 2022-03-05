@@ -302,7 +302,16 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "eta",
     """|
        |object Main {
-       |  List(1).map(@@_ + 2)
+       |  List(1).map(<<>>@@_ + 2)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "eta-2",
+    """|
+       |object Main {
+       |  List(1).foldLeft(0)(_ + <<>>@@_)
        |}
        |""".stripMargin
   )
