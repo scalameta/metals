@@ -369,7 +369,17 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  def hello(u: User): Unit = ()
        |  hello(Us@@er())
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |class Main {
+           |  case class <<User>>(name: String, age: Int)
+           |  def hello(u: User): Unit = ()
+           |  hello(User())
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -380,6 +390,16 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  def hello(u: User): Unit = ()
        |  hello(new Us@@er())
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |class Main {
+           |  class <<User>>(name: String, age: Int)
+           |  def hello(u: User): Unit = ()
+           |  hello(new Us@@er())
+           |}
+           |""".stripMargin
+    )
   )
 }

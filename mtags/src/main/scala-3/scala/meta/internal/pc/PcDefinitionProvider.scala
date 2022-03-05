@@ -130,13 +130,16 @@ class PcDefinitionProvider(
       case (imp: Import) :: _ =>
         importedSymbols(imp, _.span.contains(pos.span))
 
-      // For constructor calls, return the `<init>` that was selected
-      case _ :: (_: New) :: (select: Select) :: _ =>
-        List(select.symbol)
-
       // wildcard param
       case head :: _ if (head.symbol.is(Param) && head.symbol.is(Synthetic)) =>
-        Nil
+        List(head.symbol)
+
+      case (head @ Select(target, name)) :: _
+          if head.symbol.is(Synthetic) && name == StdNames.nme.apply =>
+        println(head)
+        val sym = target.symbol
+        if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
+        else List(target.symbol)
 
       case head :: tl =>
         if head.symbol.is(Synthetic) then enclosingSymbols(tl, pos, indexed)
