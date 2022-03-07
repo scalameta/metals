@@ -376,7 +376,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "synthetic-definition-class-constructor",
     """|
        |class Main {
-       |  <<class User(name: String, age: Int)>>
+       |  class <<>>User(name: String, age: Int)
        |  def hello(u: User): Unit = ()
        |  hello(new Us@@er())
        |}
