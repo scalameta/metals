@@ -30,13 +30,25 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main {
        |  for {
-       |    <<x>> <- List(1)
+       |    <<>>x <- List(1)
        |    y <- 1.to(x)
        |    z = y + x
        |    if y < @@x
        |  } yield y
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  for {
+           |    <<x>> <- List(1)
+           |    y <- 1.to(x)
+           |    z = y + x
+           |    if y < x
+           |  } yield y
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -225,7 +237,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "named-arg-local",
     """|
        |object Main {
-       |  <<def foo(arg: Int): Unit = ()>>
+       |  def <<>>foo(arg: Int): Unit = ()
        |
        |  foo(a@@rg = 42)
        |}
@@ -295,7 +307,15 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val n = ma@@th.max(1, 2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |object Main {
+           |  val n = ma@@th.max(1, 2)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -304,14 +324,22 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  List(1).map(<<>>@@_ + 2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |object Main {
+           |  List(1).map(@@_ + 2)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
     "eta-2",
     """|
        |object Main {
-       |  List(1).foldLeft(0)(_ + <<>>@@_)
+       |  List(1).foldLeft(0)(_ + @@_)
        |}
        |""".stripMargin
   )
@@ -369,7 +397,16 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  def hello(u: User): Unit = ()
        |  hello(Us@@er())
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|class Main {
+           |  case class User(name: String, age: Int)
+           |  def <<hello>>(u: User): Unit = ()
+           |  hello(User())
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -380,6 +417,15 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  def hello(u: User): Unit = ()
        |  hello(new Us@@er())
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|class Main {
+           |  class User(name: String, age: Int)
+           |  def hello(u: User): Unit = ()
+           |  hello(new User())
+           |}
+           |""".stripMargin
+    )
   )
 }
