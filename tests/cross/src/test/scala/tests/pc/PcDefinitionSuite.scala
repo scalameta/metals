@@ -339,9 +339,16 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "eta-2",
     """|
        |object Main {
-       |  List(1).foldLeft(0)(_ + @@_)
+       |  List(1).foldLeft(0)(_ + <<>>@@_)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  List(1).foldLeft(0)(_ + _)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -400,9 +407,10 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|class Main {
-           |  case class User(name: String, age: Int)
-           |  def <<hello>>(u: User): Unit = ()
+        """|
+           |class Main {
+           |  case class <<User>>(name: String, age: Int)
+           |  def hello(u: User): Unit = ()
            |  hello(User())
            |}
            |""".stripMargin
@@ -420,10 +428,11 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|class Main {
-           |  class User(name: String, age: Int)
+        """|
+           |class Main {
+           |  class <<User>>(name: String, age: Int)
            |  def hello(u: User): Unit = ()
-           |  hello(new User())
+           |  hello(new Us@@er())
            |}
            |""".stripMargin
     )
