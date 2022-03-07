@@ -54,14 +54,14 @@ give Metals a try!
 
 ## Reduce indexing time in monorepos on MacOS
 
-Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS can now index monorepo workspaces much faster than before. After changes, we observed at times **over 10 times faster** indexing times in the workspaces where only a few submodules needed to be imported.  
+Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS can now index monorepo workspaces much faster than before. After changes, we observed at times **over 10 times faster** indexing times in the workspaces where only a few submodules needed to be imported.
 
-Here are a few examples of indexing improvement.
+Here are a few examples of indexing improvement. They are not actual benchmarks of any kind, but more of rough estimations of improvements in a couple example repos
 
-Before | After
----|---
-\>10minutes | ~30seconds
-~40seconds  | ~4s
+| Before      | After      |
+| ----------- | ---------- |
+| \>10minutes | ~30seconds |
+| ~40seconds  | ~4s        |
 
 However, take into mind that indexing speedup heavily depends on your repository structure. The more imported modules which don't need to be imported, the greater the speed improvement is.
 
@@ -70,26 +70,28 @@ If you are interested in details you can check out the related [pull request](ht
 ## Display build target info
 
 Thanks to the [Arthurm1](https://github.com/Arthurm1) Metals is now able to display all important information about modules.
-This brand new feature gathers in one view information such as: 
+This brand new feature gathers in one view information such as:
+
 - javac and scalac options
 - dependent modules
 - projects classpath
 - and many more
 
-![](https://i.imgur.com/XGyJEsl.gif)
+![display-build-target-info](https://i.imgur.com/XGyJEsl.gif)
 
-## View source jar files as virtual docs
+## [vscode] View source jar files as virtual docs
 
 Previously, when the client wanted to browse files in source jars source, these files were extracted and saved in the `metals/readonly/dependencies` directory. With the help of [virtual documents](https://code.visualstudio.com/api/extension-guides/virtual-documents) Metals can show you dependencies in readonly files without unnecessary copying.
 Thanks [Arthurm1](https://github.com/Arthurm1) for this feature!
 
 Together with Metals tab, this feature could be used to browse through your dependencies' sources. Just run the `Metals: Reveal Active File in Side Bar` command and browse through both dependencies and source code seamlessly.
 
-![](https://imgur.com/HsuW8Hn.gif)
+![virtual-docs-navigation](https://imgur.com/HsuW8Hn.gif)
 
 ## Improve completions for Scala 3
 
-todo
+Completion suggestions for different Scala keywords now work with most of the Scala 3 keywords. This includes for example `given` and `enum`, it should also work even if defining things in toplevel without a wrapping class or object.
+![keyword-completions](https://i.imgur.com/4BUxCDK.gif)
 
 ## [Test Explorer] Detect and run single tests for JUnit4
 
@@ -98,7 +100,22 @@ From now on, Metals is able to run or debug single test in JUnit4.
 
 Currently, this feature **only works when using Bloop as your build server**, but in a future release there will be support added for sbt as well.
 
-![](https://imgur.com/FbgSTGr.gif)
+![test-explorer-single-tests](https://imgur.com/FbgSTGr.gif)
+
+## Miscellaneous
+
+- Show implicit decorations in worksheets
+  [\#3582](https://github.com/scalameta/metals/pull/3582)
+  ([tgodzik](https://github.com/tgodzik))
+- Add current env variables to bloopInstall
+  [\#3662](https://github.com/scalameta/metals/pull/3662)
+  ([tgodzik](https://github.com/tgodzik))
+- Fix issues with Ammonite multistage scripts
+  [\#3627](https://github.com/scalameta/metals/pull/3627)
+  ([tgodzik](https://github.com/tgodzik))
+- Print information about candidates searched when missing JDK sources
+  [\#3606](https://github.com/scalameta/metals/pull/3606)
+  ([tgodzik](https://github.com/tgodzik))
 
 ## Contributors
 
