@@ -136,7 +136,6 @@ class PcDefinitionProvider(
 
       case (head @ Select(target, name)) :: _
           if head.symbol.is(Synthetic) && name == StdNames.nme.apply =>
-        println(head)
         val sym = target.symbol
         if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
         else List(target.symbol)
