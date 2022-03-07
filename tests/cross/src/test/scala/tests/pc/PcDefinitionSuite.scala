@@ -30,13 +30,25 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main {
        |  for {
-       |    <<x>> <- List(1)
+       |    <<>>x <- List(1)
        |    y <- 1.to(x)
        |    z = y + x
        |    if y < @@x
        |  } yield y
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  for {
+           |    <<x>> <- List(1)
+           |    y <- 1.to(x)
+           |    z = y + x
+           |    if y < x
+           |  } yield y
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -225,7 +237,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "named-arg-local",
     """|
        |object Main {
-       |  <<def foo(arg: Int): Unit = ()>>
+       |  def <<>>foo(arg: Int): Unit = ()
        |
        |  foo(a@@rg = 42)
        |}
@@ -302,9 +314,33 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "eta",
     """|
        |object Main {
-       |  List(1).map(@@_ + 2)
+       |  List(1).map(<<>>@@_ + 2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |object Main {
+           |  List(1).map(@@_ + 2)
+           |}
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "eta-2",
+    """|
+       |object Main {
+       |  List(1).foldLeft(0)(_ + <<>>@@_)
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  List(1).foldLeft(0)(_ + _)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -350,5 +386,47 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |  val all = Option(42)./*scala/Option#get(). Option.scala*/@@get :: List("1", "2")
        |}
        |""".stripMargin
+  )
+
+  check(
+    "synthetic-definition-case-class",
+    """|
+       |class Main {
+       |  case class <<>>User(name: String, age: Int)
+       |  def hello(u: User): Unit = ()
+       |  hello(Us@@er())
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |class Main {
+           |  case class <<User>>(name: String, age: Int)
+           |  def hello(u: User): Unit = ()
+           |  hello(User())
+           |}
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "synthetic-definition-class-constructor",
+    """|
+       |class Main {
+       |  class <<>>User(name: String, age: Int)
+       |  def hello(u: User): Unit = ()
+       |  hello(new Us@@er())
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|
+           |class Main {
+           |  class <<User>>(name: String, age: Int)
+           |  def hello(u: User): Unit = ()
+           |  hello(new Us@@er())
+           |}
+           |""".stripMargin
+    )
   )
 }
