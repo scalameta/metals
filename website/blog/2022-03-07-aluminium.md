@@ -54,7 +54,7 @@ give Metals a try!
 
 ## Reduce indexing time in monorepos on MacOS
 
-Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS can now index monorepo workspace much more faster than before. After changes, we observed even **over 10 times faster** indexing time in the workspaces where only a few submodules are needed to be imported.  
+Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS can now index monorepo workspaces much faster than before. After changes, we observed at times **over 10 times faster** indexing times in the workspaces where only a few submodules needed to be imported.  
 
 Here are a few examples of indexing improvement.
 
@@ -63,13 +63,13 @@ Before | After
 \>10minutes | ~30seconds
 ~40seconds  | ~4s
 
-However, take into mind that indexing speedup heavily depends on your repository structure. The more imported modules which don't need to be imported, the greater speed improvement is.
+However, take into mind that indexing speedup heavily depends on your repository structure. The more imported modules which don't need to be imported, the greater the speed improvement is.
 
-If you are interested in details you can check related [pull request](https://github.com/scalameta/metals/pull/3665).
+If you are interested in details you can check out the related [pull request](https://github.com/scalameta/metals/pull/3665).
 
 ## Display build target info
 
-Thanks to the [Arthurm1](https://github.com/Arthurm1) Metals are able to display all important information about modules.
+Thanks to the [Arthurm1](https://github.com/Arthurm1) Metals is now able to display all important information about modules.
 This brand new feature gathers in one view information such as: 
 - javac and scalac options
 - dependent modules
@@ -93,10 +93,10 @@ todo
 
 ## [Test Explorer] Detect and run single tests for JUnit4
 
-We're actively working on improving Test Explorer and getting it better with each release.
-From now on, Metals are able to run or debug single test in JUnit4.
+We're actively working on improving the Test Explorer and getting it better with each release.
+From now on, Metals is able to run or debug single test in JUnit4.
 
-Currently, this feature **works only for Bloop build server**, but in the future release we're going to add support for sbt as well.
+Currently, this feature **only works when using Bloop as your build server**, but in a future release there will be support added for sbt as well.
 
 ![](https://imgur.com/FbgSTGr.gif)
 
