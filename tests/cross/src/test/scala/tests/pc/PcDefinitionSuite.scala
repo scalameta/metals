@@ -307,15 +307,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  val n = ma@@th.max(1, 2)
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |object Main {
-           |  val n = ma@@th.max(1, 2)
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
