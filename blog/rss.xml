@@ -4,9 +4,223 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Wed, 23 Feb 2022 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 08 Mar 2022 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
+        <item>
+            <title><![CDATA[Metals v0.11.2 - Aluminium]]></title>
+            <link>http://scalameta.org/metals/blog/2022/03/08/aluminium</link>
+            <guid>/2022/03/08/aluminium</guid>
+            <pubDate>Tue, 08 Mar 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[We're happy to announce the release of Metals v0.11.2, which focuses on improving overall user experience.]]></description>
+            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v0.11.2, which focuses on improving overall user experience.</p><table><tbody><tr><td>Commits since last release</td><td align="center">197</td></tr><tr><td>Merged PRs</td><td align="center">94</td></tr><tr><td>Contributors</td><td align="center">11</td></tr><tr><td>Closed issues</td><td align="center">19</td></tr><tr><td>New features</td><td align="center">7</td></tr></tbody></table><p>For full details: <a href="https://github.com/scalameta/metals/milestone/?closed=1" target="_blank" rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/?closed=1</a></p><p>Metals is a language server for Scala that works with VS Code, Vim, Emacs and
+Sublime Text. Metals is developed at the
+<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com" target="_blank" rel="noopener noreferrer">VirtusLab</a>
+with the help from <a href="https://lunatech.com" target="_blank" rel="noopener noreferrer">Lunatech</a> along with contributors from
+the community.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="tldr">TL;DR<a class="hash-link" href="#tldr" title="Direct link to heading">​</a></h2><p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p><ul><li>Reduce indexing time in monorepos on MacOS</li><li>Display build target info</li><li>View source jar files as virtual docs</li><li>Improve completions for Scala 3</li><li>[Test Explorer]<!-- --> Detect and run single tests for JUnit4</li></ul><h2 class="anchor anchorWithStickyNavbar_mojV" id="reduce-indexing-time-in-monorepos-on-macos">Reduce indexing time in monorepos on MacOS<a class="hash-link" href="#reduce-indexing-time-in-monorepos-on-macos" title="Direct link to heading">​</a></h2><p>Thanks to changes made by <a href="https://github.com/Duhemm" target="_blank" rel="noopener noreferrer">Duhemm</a>, Metals on MacOS can now index monorepo workspaces much faster than before. After changes, we observed at times <strong>over 10 times faster</strong> indexing times in the workspaces where only a few submodules needed to be imported.</p><p>Here are a few examples of indexing improvement. They are not actual benchmarks of any kind, but more of rough estimations of improvements in a couple of example repos.</p><table><thead><tr><th>Before</th><th>After</th></tr></thead><tbody><tr><td>&gt;<!-- -->10minutes</td><td>~30seconds</td></tr><tr><td>~40seconds</td><td>~4s</td></tr></tbody></table><p>However, take into mind that indexing speedup heavily depends on your repository structure. The more imported modules which don't need to be imported, the greater the speed improvement is.</p><p>If you are interested in details you can check out the related <a href="https://github.com/scalameta/metals/pull/3665" target="_blank" rel="noopener noreferrer">pull request</a>.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="display-build-target-info">Display build target info<a class="hash-link" href="#display-build-target-info" title="Direct link to heading">​</a></h2><p>Thanks to the <a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a> Metals is now able to display all important information about modules.
+This brand new feature gathers in one view information such as:</p><ul><li>javac and scalac options</li><li>dependent modules</li><li>projects classpath</li><li>and many more</li></ul><p><img src="https://i.imgur.com/XGyJEsl.gif" alt="display-build-target-info"></p><h2 class="anchor anchorWithStickyNavbar_mojV" id="vscode-view-source-jar-files-as-virtual-docs">[vscode]<!-- --> View source jar files as virtual docs<a class="hash-link" href="#vscode-view-source-jar-files-as-virtual-docs" title="Direct link to heading">​</a></h2><p>Previously, when the client wanted to browse files in source jars source, these files were extracted and saved in the <code>metals/readonly/dependencies</code> directory. With the help of <a href="https://code.visualstudio.com/api/extension-guides/virtual-documents" target="_blank" rel="noopener noreferrer">virtual documents</a> Metals can show you dependencies in readonly files without unnecessary copying.
+Thanks <a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a> for this feature!</p><p>Together with Metals tab, this feature could be used to browse through your dependencies' sources. Just run the <code>Metals: Reveal Active File in Side Bar</code> command and browse through both dependencies and source code seamlessly.</p><p><img src="https://imgur.com/HsuW8Hn.gif" alt="virtual-docs-navigation"></p><p>Currently, <code>Metals: Reveal Active File in Side Bar</code> works only for Scala 2.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="improve-completions-for-scala-3">Improve completions for Scala 3<a class="hash-link" href="#improve-completions-for-scala-3" title="Direct link to heading">​</a></h2><p>Completion suggestions for different Scala keywords now work with most of the Scala 3 keywords. This includes for example <code>given</code> and <code>enum</code>, it should also work even if defining things in toplevel without a wrapping class or object.
+<img src="https://i.imgur.com/4BUxCDK.gif" alt="keyword-completions"></p><p>Another improvement for Scala 3 completions is better support for showing scope completions, when writing in an empty line. Previously, we would not show correct completions when no identifier was specified.</p><div class="codeBlockContainer_I0IT language-scala theme-code-block"><div class="codeBlockContent_wNvx scala"><pre tabindex="0" class="prism-code language-scala codeBlock_jd64 thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_mRuA"><span class="token-line" style="color:#bfc7d5"><span class="token plain">object Foo:</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  def bar: Int = 42</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  def baz: Int =</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    val x = 1</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    val y = 2</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  @@</span><br></span></code></pre><button type="button" aria-label="Copy code to clipboard" class="copyButton_wuS7 clean-btn">Copy</button></div></div><p>In the above situation with cursor position indicated by <code>@@</code> we will now properly show <code>bar</code> and <code>baz</code> completions.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="test-explorer-detect-and-run-single-tests-for-junit4">[Test Explorer]<!-- --> Detect and run single tests for JUnit4<a class="hash-link" href="#test-explorer-detect-and-run-single-tests-for-junit4" title="Direct link to heading">​</a></h2><p>We're actively working on improving the Test Explorer and making it better with each release.
+From this release, Metals is able to run or debug single test in JUnit4.</p><p>Currently, this feature <strong>only works when using Bloop as your build server</strong>, but in a future release there will be support added for sbt as well.</p><p><img src="https://imgur.com/FbgSTGr.gif" alt="test-explorer-single-tests"></p><h2 class="anchor anchorWithStickyNavbar_mojV" id="vscode-add-mirror-setting-to-help-coursier-set-up">[vscode]<!-- --> Add mirror setting to help coursier set up<a class="hash-link" href="#vscode-add-mirror-setting-to-help-coursier-set-up" title="Direct link to heading">​</a></h2><p>In order to bootstrap Metals, vscode's extension uses the coursier script which needs access to <code>repo1.maven.org</code>. Previously, this URL couldn't be configured which was causing problems on the machines that didn't have access to repo1.maven.org.</p><p>Thanks to <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>'s work from now on it's possible to define <code>metals.coursierMirror</code> property.</p><p><img src="https://imgur.com/iLB079M.png" alt="coursier-mirror"></p><p>More information about mirrors can be found at <a href="https://get-coursier.io/blog/#mirrors" target="_blank" rel="noopener noreferrer">coursier documentation</a>.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="miscellaneous">Miscellaneous<a class="hash-link" href="#miscellaneous" title="Direct link to heading">​</a></h2><ul><li>Show implicit decorations in worksheets
+<a href="https://github.com/scalameta/metals/pull/3582" target="_blank" rel="noopener noreferrer">#<!-- -->3582</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Add current env variables to bloopInstall
+<a href="https://github.com/scalameta/metals/pull/3662" target="_blank" rel="noopener noreferrer">#<!-- -->3662</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Fix issues with Ammonite multistage scripts
+<a href="https://github.com/scalameta/metals/pull/3627" target="_blank" rel="noopener noreferrer">#<!-- -->3627</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Print information about candidates searched when missing JDK sources
+<a href="https://github.com/scalameta/metals/pull/3606" target="_blank" rel="noopener noreferrer">#<!-- -->3606</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li></ul><h2 class="anchor anchorWithStickyNavbar_mojV" id="contributors">Contributors<a class="hash-link" href="#contributors" title="Direct link to heading">​</a></h2><p>Big thanks to everybody who contributed to this release or reported an issue!</p><div class="codeBlockContainer_I0IT theme-code-block"><div class="codeBlockContent_wNvx"><pre tabindex="0" class="prism-code language-text codeBlock_jd64 thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_mRuA"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v0.11.1..v0.11.2</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    37  Tomasz Godzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    24  Vadim Chelyshov</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    22  Scala Steward</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    15  Arthur McGibbon</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     8  Kamil Podsiadlo</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     7  ckipp01</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     6  Kamil Podsiadło</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1  Martin Duhem</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1  Adrien Piquerez</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1  Jerome Wuerf</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1  Hugo van Rijswijk</span><br></span></code></pre><button type="button" aria-label="Copy code to clipboard" class="copyButton_wuS7 clean-btn">Copy</button></div></div><h2 class="anchor anchorWithStickyNavbar_mojV" id="merged-prs">Merged PRs<a class="hash-link" href="#merged-prs" title="Direct link to heading">​</a></h2><h2 class="anchor anchorWithStickyNavbar_mojV" id="v0112-2022-03-08"><a href="https://github.com/scalameta/metals/tree/v0.11.2" target="_blank" rel="noopener noreferrer">v0.11.2</a> (2022-03-08)<a class="hash-link" href="#v0112-2022-03-08" title="Direct link to heading">​</a></h2><p><a href="https://github.com/scalameta/metals/compare/v0.11.1...v0.11.2" target="_blank" rel="noopener noreferrer">Full Changelog</a></p><p><strong>Merged pull requests:</strong></p><ul><li>Go to definition of synthetic symbols.
+<a href="https://github.com/scalameta/metals/pull/3683" target="_blank" rel="noopener noreferrer">#<!-- -->3683</a>
+(<a href="https://github.com/olafurpg" target="_blank" rel="noopener noreferrer">olafurpg</a>)</li><li>Don't watch entire workspace on MacOS
+<a href="https://github.com/scalameta/metals/pull/3665" target="_blank" rel="noopener noreferrer">#<!-- -->3665</a>
+(<a href="https://github.com/Duhemm" target="_blank" rel="noopener noreferrer">Duhemm</a>)</li><li>fix: Add test case for topelevel tuple hover
+<a href="https://github.com/scalameta/metals/pull/3676" target="_blank" rel="noopener noreferrer">#<!-- -->3676</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Scala3 PC refactorings
+<a href="https://github.com/scalameta/metals/pull/3651" target="_blank" rel="noopener noreferrer">#<!-- -->3651</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>fix: Add tests for Scala 3 toplevel enums
+<a href="https://github.com/scalameta/metals/pull/3674" target="_blank" rel="noopener noreferrer">#<!-- -->3674</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>chore: fix flaky test provider suite
+<a href="https://github.com/scalameta/metals/pull/3673" target="_blank" rel="noopener noreferrer">#<!-- -->3673</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Update scribe, scribe-file, scribe-slf4j to 3.8.0
+<a href="https://github.com/scalameta/metals/pull/3669" target="_blank" rel="noopener noreferrer">#<!-- -->3669</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update mdoc-interfaces to 2.3.1
+<a href="https://github.com/scalameta/metals/pull/3672" target="_blank" rel="noopener noreferrer">#<!-- -->3672</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update mdoc, mdoc-interfaces, sbt-mdoc to 2.3.1
+<a href="https://github.com/scalameta/metals/pull/3671" target="_blank" rel="noopener noreferrer">#<!-- -->3671</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update sbt-buildinfo to 0.11.0
+<a href="https://github.com/scalameta/metals/pull/3667" target="_blank" rel="noopener noreferrer">#<!-- -->3667</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update guava to 31.1-jre
+<a href="https://github.com/scalameta/metals/pull/3668" target="_blank" rel="noopener noreferrer">#<!-- -->3668</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update flyway-core to 8.5.1
+<a href="https://github.com/scalameta/metals/pull/3670" target="_blank" rel="noopener noreferrer">#<!-- -->3670</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>fix: Add test case when using Left class and Scala 3
+<a href="https://github.com/scalameta/metals/pull/3666" target="_blank" rel="noopener noreferrer">#<!-- -->3666</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Change hashing to lastModified
+<a href="https://github.com/scalameta/metals/pull/3611" target="_blank" rel="noopener noreferrer">#<!-- -->3611</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Update Bloop to 1.4.13
+<a href="https://github.com/scalameta/metals/pull/3664" target="_blank" rel="noopener noreferrer">#<!-- -->3664</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Fix issues with nightlies tests
+<a href="https://github.com/scalameta/metals/pull/3663" target="_blank" rel="noopener noreferrer">#<!-- -->3663</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>fix: do not show test explorer related error for client which don't implement it
+<a href="https://github.com/scalameta/metals/pull/3661" target="_blank" rel="noopener noreferrer">#<!-- -->3661</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Add current env variables to bloopInstall
+<a href="https://github.com/scalameta/metals/pull/3662" target="_blank" rel="noopener noreferrer">#<!-- -->3662</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>docs: add a post about release-related changes
+<a href="https://github.com/scalameta/metals/pull/3653" target="_blank" rel="noopener noreferrer">#<!-- -->3653</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>fix: support Scala 2.11 PC on jdk higher than 8
+<a href="https://github.com/scalameta/metals/pull/3658" target="_blank" rel="noopener noreferrer">#<!-- -->3658</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>feat: allow running single test
+<a href="https://github.com/scalameta/metals/pull/3619" target="_blank" rel="noopener noreferrer">#<!-- -->3619</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Bump scalameta to 4.5.0
+<a href="https://github.com/scalameta/metals/pull/3652" target="_blank" rel="noopener noreferrer">#<!-- -->3652</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Change displayBuildTarget to listBuildTargets
+<a href="https://github.com/scalameta/metals/pull/3649" target="_blank" rel="noopener noreferrer">#<!-- -->3649</a>
+(<a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a>)</li><li>Fix issues in tests for Scala 3 Nightlies
+<a href="https://github.com/scalameta/metals/pull/3650" target="_blank" rel="noopener noreferrer">#<!-- -->3650</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>fix: release workflow - prevent parallel publishing to sonatype
+<a href="https://github.com/scalameta/metals/pull/3644" target="_blank" rel="noopener noreferrer">#<!-- -->3644</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Cancel PRs automatically if new commits are pushed
+<a href="https://github.com/scalameta/metals/pull/3646" target="_blank" rel="noopener noreferrer">#<!-- -->3646</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>fix: check scala3 nigtly - exclude existing latest
+<a href="https://github.com/scalameta/metals/pull/3645" target="_blank" rel="noopener noreferrer">#<!-- -->3645</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Scala3 emptyline completions
+<a href="https://github.com/scalameta/metals/pull/3629" target="_blank" rel="noopener noreferrer">#<!-- -->3629</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Update millw to 0.4.2
+<a href="https://github.com/scalameta/metals/pull/3641" target="_blank" rel="noopener noreferrer">#<!-- -->3641</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>fix: actions, discover new scala3 nigtly properly
+<a href="https://github.com/scalameta/metals/pull/3640" target="_blank" rel="noopener noreferrer">#<!-- -->3640</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Fix FileDecoderProviderLspSuite to work locally
+<a href="https://github.com/scalameta/metals/pull/3639" target="_blank" rel="noopener noreferrer">#<!-- -->3639</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Update scribe, scribe-file, scribe-slf4j to 3.7.1
+<a href="https://github.com/scalameta/metals/pull/3634" target="_blank" rel="noopener noreferrer">#<!-- -->3634</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Fix showing virtual docs in jars with paths that need escaping
+<a href="https://github.com/scalameta/metals/pull/3632" target="_blank" rel="noopener noreferrer">#<!-- -->3632</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Update undertow-core to 2.2.16.Final
+<a href="https://github.com/scalameta/metals/pull/3635" target="_blank" rel="noopener noreferrer">#<!-- -->3635</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update flyway-core to 8.4.4
+<a href="https://github.com/scalameta/metals/pull/3636" target="_blank" rel="noopener noreferrer">#<!-- -->3636</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update ammonite-util to 2.5.2
+<a href="https://github.com/scalameta/metals/pull/3633" target="_blank" rel="noopener noreferrer">#<!-- -->3633</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update sbt, scripted-plugin to 1.6.2
+<a href="https://github.com/scalameta/metals/pull/3638" target="_blank" rel="noopener noreferrer">#<!-- -->3638</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update xnio-nio to 3.8.6.Final
+<a href="https://github.com/scalameta/metals/pull/3637" target="_blank" rel="noopener noreferrer">#<!-- -->3637</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Index non-scala target dependency sources
+<a href="https://github.com/scalameta/metals/pull/3628" target="_blank" rel="noopener noreferrer">#<!-- -->3628</a>
+(<a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a>)</li><li>Fix issues with Ammonite multistage scripts
+<a href="https://github.com/scalameta/metals/pull/3627" target="_blank" rel="noopener noreferrer">#<!-- -->3627</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>View source jar files as virtual docs
+<a href="https://github.com/scalameta/metals/pull/3143" target="_blank" rel="noopener noreferrer">#<!-- -->3143</a>
+(<a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a>)</li><li>Bump debug-adapter to 2.0.13
+<a href="https://github.com/scalameta/metals/pull/3626" target="_blank" rel="noopener noreferrer">#<!-- -->3626</a>
+(<a href="https://github.com/adpi2" target="_blank" rel="noopener noreferrer">adpi2</a>)</li><li>docs: provide latest versions
+<a href="https://github.com/scalameta/metals/pull/3618" target="_blank" rel="noopener noreferrer">#<!-- -->3618</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>docs: describe how to add new Scala version support to the existing release
+<a href="https://github.com/scalameta/metals/pull/3617" target="_blank" rel="noopener noreferrer">#<!-- -->3617</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>feat, refactor: use notification to send test updates
+<a href="https://github.com/scalameta/metals/pull/3554" target="_blank" rel="noopener noreferrer">#<!-- -->3554</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Display build target info
+<a href="https://github.com/scalameta/metals/pull/3380" target="_blank" rel="noopener noreferrer">#<!-- -->3380</a>
+(<a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a>)</li><li>scalafmt - newlines.inInterpolation = avoid
+<a href="https://github.com/scalameta/metals/pull/3614" target="_blank" rel="noopener noreferrer">#<!-- -->3614</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>refactor: <!-- -->[Scala 3]<!-- --> Extract hover to a separate file
+<a href="https://github.com/scalameta/metals/pull/3613" target="_blank" rel="noopener noreferrer">#<!-- -->3613</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>chore(fmt): bump scalafmt to 3.4.0
+<a href="https://github.com/scalameta/metals/pull/3610" target="_blank" rel="noopener noreferrer">#<!-- -->3610</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>fix: compare long numbers in TVP
+<a href="https://github.com/scalameta/metals/pull/3607" target="_blank" rel="noopener noreferrer">#<!-- -->3607</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Update scribe to 3.6.10
+<a href="https://github.com/scalameta/metals/pull/3598" target="_blank" rel="noopener noreferrer">#<!-- -->3598</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Ignore UncheckedIOException coming from broken source jars
+<a href="https://github.com/scalameta/metals/pull/3609" target="_blank" rel="noopener noreferrer">#<!-- -->3609</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Print information about candidates searched when missing JDK sources
+<a href="https://github.com/scalameta/metals/pull/3606" target="_blank" rel="noopener noreferrer">#<!-- -->3606</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>feat: add range to symbol definition
+<a href="https://github.com/scalameta/metals/pull/3605" target="_blank" rel="noopener noreferrer">#<!-- -->3605</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Revert to Mdoc 2.2.24 for Scala 2.11
+<a href="https://github.com/scalameta/metals/pull/3601" target="_blank" rel="noopener noreferrer">#<!-- -->3601</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>chore(ci): update setup-action
+<a href="https://github.com/scalameta/metals/pull/3603" target="_blank" rel="noopener noreferrer">#<!-- -->3603</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>Migrate to the newest H2 version
+<a href="https://github.com/scalameta/metals/pull/3595" target="_blank" rel="noopener noreferrer">#<!-- -->3595</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>refactor: <code>SemanticdbFeatureProvider</code> trait
+<a href="https://github.com/scalameta/metals/pull/3602" target="_blank" rel="noopener noreferrer">#<!-- -->3602</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>Do not insert inferred type on variable bound to another
+<a href="https://github.com/scalameta/metals/pull/3600" target="_blank" rel="noopener noreferrer">#<!-- -->3600</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Show implicit decorations in worksheets
+<a href="https://github.com/scalameta/metals/pull/3582" target="_blank" rel="noopener noreferrer">#<!-- -->3582</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Update scalameta, semanticdb-scalac, ... to 4.4.33
+<a href="https://github.com/scalameta/metals/pull/3592" target="_blank" rel="noopener noreferrer">#<!-- -->3592</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update mdoc, mdoc-interfaces, sbt-mdoc to 2.3.0
+<a href="https://github.com/scalameta/metals/pull/3591" target="_blank" rel="noopener noreferrer">#<!-- -->3591</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update flyway-core to 8.4.3
+<a href="https://github.com/scalameta/metals/pull/3590" target="_blank" rel="noopener noreferrer">#<!-- -->3590</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update ujson to 1.5.0
+<a href="https://github.com/scalameta/metals/pull/3588" target="_blank" rel="noopener noreferrer">#<!-- -->3588</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update geny to 0.7.1
+<a href="https://github.com/scalameta/metals/pull/3587" target="_blank" rel="noopener noreferrer">#<!-- -->3587</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Update metaconfig-core to 0.10.0
+<a href="https://github.com/scalameta/metals/pull/3585" target="_blank" rel="noopener noreferrer">#<!-- -->3585</a>
+(<a href="https://github.com/scala-steward" target="_blank" rel="noopener noreferrer">scala-steward</a>)</li><li>Fix goto definition for local synthetics
+<a href="https://github.com/scalameta/metals/pull/3580" target="_blank" rel="noopener noreferrer">#<!-- -->3580</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>minor: remove non-relevant things
+<a href="https://github.com/scalameta/metals/pull/3564" target="_blank" rel="noopener noreferrer">#<!-- -->3564</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Make sure we only analyze stacktrace lines that do look the part
+<a href="https://github.com/scalameta/metals/pull/3578" target="_blank" rel="noopener noreferrer">#<!-- -->3578</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>docs(ammonite): add note about ammonite support
+<a href="https://github.com/scalameta/metals/pull/3579" target="_blank" rel="noopener noreferrer">#<!-- -->3579</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>Don't focus diagnotics if compialtion returned with error
+<a href="https://github.com/scalameta/metals/pull/3577" target="_blank" rel="noopener noreferrer">#<!-- -->3577</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>Pass -Xsource:3 to scalafix organize-imports action if present
+<a href="https://github.com/scalameta/metals/pull/3574" target="_blank" rel="noopener noreferrer">#<!-- -->3574</a>
+(<a href="https://github.com/hugo-vrijswijk" target="_blank" rel="noopener noreferrer">hugo-vrijswijk</a>)</li><li>Insert missing comma
+<a href="https://github.com/scalameta/metals/pull/3573" target="_blank" rel="noopener noreferrer">#<!-- -->3573</a>
+(<a href="https://github.com/ossScharom" target="_blank" rel="noopener noreferrer">ossScharom</a>)</li><li>cleanup: remove unused stuff from CompilerInterfaces
+<a href="https://github.com/scalameta/metals/pull/3572" target="_blank" rel="noopener noreferrer">#<!-- -->3572</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>fix: add possibility to define callback for <code>BatchedFunction</code><a href="https://github.com/scalameta/metals/pull/3571" target="_blank" rel="noopener noreferrer">#<!-- -->3571</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>fix: Open other window when using Analyze Stacktrace
+<a href="https://github.com/scalameta/metals/pull/3540" target="_blank" rel="noopener noreferrer">#<!-- -->3540</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>feature: Add support for Scala 3.1.2-RC1
+<a href="https://github.com/scalameta/metals/pull/3569" target="_blank" rel="noopener noreferrer">#<!-- -->3569</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>fix: <!-- -->[Scala 3]<!-- --> Show exact literal type
+<a href="https://github.com/scalameta/metals/pull/3567" target="_blank" rel="noopener noreferrer">#<!-- -->3567</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>feature: <!-- -->[Scala 3]<!-- --> Add keyword completions
+<a href="https://github.com/scalameta/metals/pull/3560" target="_blank" rel="noopener noreferrer">#<!-- -->3560</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>release: fix last 5 nigtly version selection
+<a href="https://github.com/scalameta/metals/pull/3558" target="_blank" rel="noopener noreferrer">#<!-- -->3558</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Add support for Scala 3.1.1
+<a href="https://github.com/scalameta/metals/pull/3555" target="_blank" rel="noopener noreferrer">#<!-- -->3555</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>actions: mtags release adjustments
+<a href="https://github.com/scalameta/metals/pull/3557" target="_blank" rel="noopener noreferrer">#<!-- -->3557</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>[Actions]<!-- --> Mtags publishing - move all logic to ci-script
+<a href="https://github.com/scalameta/metals/pull/3553" target="_blank" rel="noopener noreferrer">#<!-- -->3553</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>docs: mention about pre-release version of Metals extension
+<a href="https://github.com/scalameta/metals/pull/3552" target="_blank" rel="noopener noreferrer">#<!-- -->3552</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>[Actions]<!-- --> Mtags release
+<a href="https://github.com/scalameta/metals/pull/3551" target="_blank" rel="noopener noreferrer">#<!-- -->3551</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>docs: Add docs for discover-test-suites
+<a href="https://github.com/scalameta/metals/pull/3546" target="_blank" rel="noopener noreferrer">#<!-- -->3546</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>docs: add a small note about decode not working on extra file types.
+<a href="https://github.com/scalameta/metals/pull/3549" target="_blank" rel="noopener noreferrer">#<!-- -->3549</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>[Actions]<!-- --> Scala3 Nightly check - yet another fix
+<a href="https://github.com/scalameta/metals/pull/3548" target="_blank" rel="noopener noreferrer">#<!-- -->3548</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>[Actions]<!-- --> One more fix to check_scala3_nightly job
+<a href="https://github.com/scalameta/metals/pull/3547" target="_blank" rel="noopener noreferrer">#<!-- -->3547</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Compare only uppercase MD5
+<a href="https://github.com/scalameta/metals/pull/3545" target="_blank" rel="noopener noreferrer">#<!-- -->3545</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>[JavaInteractiveSemanticdb]<!-- --> Add test-case to cover --patch-module flag usage
+<a href="https://github.com/scalameta/metals/pull/3538" target="_blank" rel="noopener noreferrer">#<!-- -->3538</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>[Actions]<!-- --> Install coursier for nightly checks
+<a href="https://github.com/scalameta/metals/pull/3543" target="_blank" rel="noopener noreferrer">#<!-- -->3543</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>refactor: check lowercase test-user-interface
+<a href="https://github.com/scalameta/metals/pull/3544" target="_blank" rel="noopener noreferrer">#<!-- -->3544</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>[Actions]<!-- --> Trigger Scala3-nightly mtags publishing automatically
+<a href="https://github.com/scalameta/metals/pull/3541" target="_blank" rel="noopener noreferrer">#<!-- -->3541</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>Add release notes for 0.11.1
+<a href="https://github.com/scalameta/metals/pull/3524" target="_blank" rel="noopener noreferrer">#<!-- -->3524</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li></ul>]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[Towards better releases]]></title>
             <link>http://scalameta.org/metals/blog/2022/02/23/towards-better-releases</link>
