@@ -86,11 +86,8 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
       compat: Map[String, A],
       scalaVersion: String
   ): A =
-    compat
-      .collect {
-        case (ver, compatCode) if scalaVersion.startsWith(ver) => compatCode
-      }
-      .headOption
+    Compat
+      .forScalaVersion(scalaVersion, compat)
       .getOrElse(default)
 
   protected def toJsonArray(list: List[String]): String = {

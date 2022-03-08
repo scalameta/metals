@@ -276,6 +276,15 @@ class ScalaVersionsSuite extends BaseSuite {
     )
   }
 
+  test("compare-NIGTLY") {
+    assert(
+      SemVer.isLaterVersion(
+        "3.0.0-RC1-bin-20201125-1c3538a-NIGHTLY",
+        "3.0.0-RC1-bin-20201126-1c3538a-NIGHTLY"
+      )
+    )
+  }
+
   test("not-future-3-M1") {
     assert(
       !ScalaVersions.isFutureVersion("3.0.0-M1")
