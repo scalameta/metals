@@ -198,7 +198,8 @@ class CompletionProvider(
           case _: NamedArgMember => item.getLabel
           case _ => ident
         }
-        item.setTextEdit(textEdit(editText))
+        val escaped = if (isSnippet) editText.replace("$", "\\$") else editText
+        item.setTextEdit(textEdit(escaped))
       }
 
       member match {

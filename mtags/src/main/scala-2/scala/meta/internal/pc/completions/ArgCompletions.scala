@@ -40,7 +40,7 @@ trait ArgCompletions { this: MetalsGlobal =>
     lazy val allParams: List[Symbol] = {
       baseParams.iterator.filterNot { param =>
         isNamed(param.name) ||
-        param.name.containsChar('$') // exclude synthetic parameters
+        param.isSynthetic
       }.toList
     }
     lazy val params: List[Symbol] =

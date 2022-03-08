@@ -231,6 +231,18 @@ class CompletionArgSuite extends BaseCompletionSuite {
     ""
   )
 
+  check( // see: https://github.com/scalameta/metals/issues/2400
+    "explicit-dollar",
+    """|object Main {
+       |  def test($foo: Int, $bar: Int): Int = ???
+       |  test($f@@)
+       |}
+       |""".stripMargin,
+    """|$foo = : Int
+       |""".stripMargin,
+    topLines = Option(1)
+  )
+
   check(
     "arg14",
     s"""|object Main {
