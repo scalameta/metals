@@ -88,12 +88,15 @@ Together with Metals tab, this feature could be used to browse through your depe
 
 ![virtual-docs-navigation](https://imgur.com/HsuW8Hn.gif)
 
+Currently, `Metals: Reveal Active File in Side Bar` works only for Scala 2.
+
 ## Improve completions for Scala 3
 
 Completion suggestions for different Scala keywords now work with most of the Scala 3 keywords. This includes for example `given` and `enum`, it should also work even if defining things in toplevel without a wrapping class or object.
 ![keyword-completions](https://i.imgur.com/4BUxCDK.gif)
 
 Another improvement for Scala 3 completions is better support for showing scope completions, when writing in an empty line. Previously, we would not show correct completions when no identifier was specified.
+
 ```scala
 object Foo:
   def bar: Int = 42
@@ -102,8 +105,8 @@ object Foo:
     val y = 2
     @@
 ```
-In the above situation with cursor position indicated by `@@` we will now properly show `bar` and `baz` completions.
 
+In the above situation with cursor position indicated by `@@` we will now properly show `bar` and `baz` completions.
 
 ## [Test Explorer] Detect and run single tests for JUnit4
 
