@@ -23,11 +23,11 @@ We're happy to announce the release of Metals v0.11.2, which focuses on improvin
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center"></td>
+    <td align="center">19</td>
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center"></td>
+    <td align="center">7</td>
   </tr>
 </tbody>
 
@@ -144,6 +144,9 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 
 **Merged pull requests:**
 
+- Go to definition of synthetic symbols.
+  [\#3683](https://github.com/scalameta/metals/pull/3683)
+  ([olafurpg](https://github.com/olafurpg))
 - Don't watch entire workspace on MacOS
   [\#3665](https://github.com/scalameta/metals/pull/3665)
   ([Duhemm](https://github.com/Duhemm))
