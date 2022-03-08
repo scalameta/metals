@@ -35,8 +35,8 @@ We're happy to announce the release of Metals v0.11.2, which focuses on improvin
 
 For full details: https://github.com/scalameta/metals/milestone/?closed=1
 
-Metals is a language server for Scala that works with VS Code, Vim, Emacs,
-Sublime Text and Eclipse. Metals is developed at the
+Metals is a language server for Scala that works with VS Code, Vim, Emacs and
+Sublime Text. Metals is developed at the
 [Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
 with the help from [Lunatech](https://lunatech.com) along with contributors from
 the community.
@@ -93,10 +93,22 @@ Together with Metals tab, this feature could be used to browse through your depe
 Completion suggestions for different Scala keywords now work with most of the Scala 3 keywords. This includes for example `given` and `enum`, it should also work even if defining things in toplevel without a wrapping class or object.
 ![keyword-completions](https://i.imgur.com/4BUxCDK.gif)
 
+Another improvement for Scala 3 completions is better support for showing scope completions, when writing in an empty line. Previously, we would not show correct completions when no identifier was specified.
+```scala
+object Foo:
+  def bar: Int = 42
+  def baz: Int =
+    val x = 1
+    val y = 2
+    @@
+```
+In the above situation with cursor position indicated by `@@` we will now properly show `bar` and `baz` completions.
+
+
 ## [Test Explorer] Detect and run single tests for JUnit4
 
-We're actively working on improving the Test Explorer and getting it better with each release.
-From now on, Metals is able to run or debug single test in JUnit4.
+We're actively working on improving the Test Explorer and making it better with each release.
+From this release, Metals is able to run or debug single test in JUnit4.
 
 Currently, this feature **only works when using Bloop as your build server**, but in a future release there will be support added for sbt as well.
 
@@ -148,7 +160,7 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 
 ## Merged PRs
 
-## [v0.11.2](https://github.com/scalameta/metals/tree/v0.11.2) (2022-03-04)
+## [v0.11.2](https://github.com/scalameta/metals/tree/v0.11.2) (2022-03-08)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.11.1...v0.11.2)
 
