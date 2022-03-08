@@ -102,6 +102,16 @@ Currently, this feature **only works when using Bloop as your build server**, bu
 
 ![test-explorer-single-tests](https://imgur.com/FbgSTGr.gif)
 
+## [vscode] Add mirror setting to help coursier set up
+
+In order to bootstrap Metals, vscode's extension uses the coursier script which needs access to `repo1.maven.org`. Previously, this URL couldn't be configured which was causing problems on the machines that didn't have access to repo1.maven.org.
+
+Thanks to [tgodzik](https://github.com/tgodzik)'s work from now on it's possible to define `metals.coursierMirror` property.
+
+![coursier-mirror](https://imgur.com/iLB079M.png)
+
+More information about mirrors can be found at [coursier documentation](https://get-coursier.io/blog/#mirrors).
+
 ## Miscellaneous
 
 - Show implicit decorations in worksheets
