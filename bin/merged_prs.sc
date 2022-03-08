@@ -143,8 +143,8 @@ def template(
       |
       |For full details: https://github.com/scalameta/metals/milestone/<num>?closed=1
       |
-      |Metals is a language server for Scala that works with VS Code, Vim, Emacs,
-      |Sublime Text and Eclipse. Metals is developed at the
+      |Metals is a language server for Scala that works with VS Code, Vim, Emacs and
+      |Sublime Text. Metals is developed at the
       |[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
       |with the help from [Lunatech](https://lunatech.com) along with contributors from
       |the community.
