@@ -244,6 +244,20 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Option(1)
   )
 
+  checkSnippet( // known issue: the second parameter with $ become | (returned from compiler)
+    "explicit-dollar-autofill".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  def test($foo: Int, $bar: Int): Int = ???
+      |  test($f@@)
+      |}
+      |""".stripMargin,
+    """|\$foo = 
+       |\$foo = ${1:???}, | = ${2:???}
+       |""".stripMargin,
+    topLines = Option(2)
+  )
+
   check(
     "arg14",
     s"""|object Main {

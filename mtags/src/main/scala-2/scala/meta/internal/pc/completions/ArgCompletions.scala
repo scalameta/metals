@@ -119,12 +119,12 @@ trait ArgCompletions { this: MetalsGlobal =>
       ) {
         val editText = allParams.zipWithIndex
           .collect {
-            case (param, index) if !param.hasDefault =>
-              s"${Identifier.backtickWrap(param.name)} = $${${index + 1}${findDefaultValue(param)}}"
+            case (param, index) if !param.hasDefault => {
+              s"${Identifier.backtickWrap(param.name).replace("$", "\\$")} = $${${index + 1}${findDefaultValue(param)}}"
+            }
           }
           .mkString(", ")
-        val escaped = editText.replace("$", "\\$") // escape for snippet
-        val edit = new l.TextEdit(editRange, escaped)
+        val edit = new l.TextEdit(editRange, editText)
         List(
           new TextEditMember(
             filterText = s"$prefix-$suffix",
