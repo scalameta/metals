@@ -123,7 +123,8 @@ trait ArgCompletions { this: MetalsGlobal =>
               s"${Identifier.backtickWrap(param.name)} = $${${index + 1}${findDefaultValue(param)}}"
           }
           .mkString(", ")
-        val edit = new l.TextEdit(editRange, editText)
+        val escaped = editText.replace("$", "\\$") // escape for snippet
+        val edit = new l.TextEdit(editRange, escaped)
         List(
           new TextEditMember(
             filterText = s"$prefix-$suffix",

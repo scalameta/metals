@@ -171,10 +171,15 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       name: TestOptions,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      topLines: Option[Int] = None,
   )(implicit loc: Location): Unit = {
     test(name) {
-      val items = getItems(original)
+      val baseItems = getItems(original)
+      val items = topLines match {
+        case Some(top) => baseItems.take(top)
+        case None => baseItems
+      }
       val obtained = items
         .map { item =>
           item
