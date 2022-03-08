@@ -103,7 +103,7 @@ object Foo:
   def baz: Int =
     val x = 1
     val y = 2
-    @@
+  @@
 ```
 
 In the above situation with cursor position indicated by `@@` we will now properly show `bar` and `baz` completions.
