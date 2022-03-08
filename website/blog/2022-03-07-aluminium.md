@@ -56,7 +56,7 @@ give Metals a try!
 
 Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS can now index monorepo workspaces much faster than before. After changes, we observed at times **over 10 times faster** indexing times in the workspaces where only a few submodules needed to be imported.
 
-Here are a few examples of indexing improvement. They are not actual benchmarks of any kind, but more of rough estimations of improvements in a couple example repos
+Here are a few examples of indexing improvement. They are not actual benchmarks of any kind, but more of rough estimations of improvements in a couple of example repos.
 
 | Before      | After      |
 | ----------- | ---------- |
