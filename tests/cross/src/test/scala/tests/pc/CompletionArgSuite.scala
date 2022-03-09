@@ -231,6 +231,35 @@ class CompletionArgSuite extends BaseCompletionSuite {
     ""
   )
 
+  checkSnippet( // see: https://github.com/scalameta/metals/issues/2400
+    "explicit-dollar",
+    """
+      |object Main {
+      |  def test($foo: Int, $bar: Int): Int = ???
+      |  test($f@@)
+      |}
+      |""".stripMargin,
+    """|$$foo = 
+       |""".stripMargin,
+    topLines = Option(1)
+  )
+
+  // known issue: the second parameter with $ become | (returned from compiler)
+  // see: https://github.com/scalameta/metals/issues/3690
+  checkSnippet(
+    "explicit-dollar-autofill".tag(IgnoreScala3),
+    """
+      |object Main {
+      |  def test($foo: Int, $bar: Int): Int = ???
+      |  test($f@@)
+      |}
+      |""".stripMargin,
+    """|$$foo = 
+       |$$foo = ${1:???}, | = ${2:???}
+       |""".stripMargin,
+    topLines = Option(2)
+  )
+
   check(
     "arg14",
     s"""|object Main {

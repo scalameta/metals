@@ -84,7 +84,8 @@ class CompletionProvider(
       }
       val label = member match {
         case _: NamedArgMember =>
-          s"$ident = "
+          val escaped = if (isSnippet) ident.replace("$", "$$") else ident
+          s"$escaped = "
         case o: OverrideDefMember =>
           o.label
         case o: TextEditMember =>
