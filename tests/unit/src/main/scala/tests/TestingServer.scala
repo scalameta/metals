@@ -1352,6 +1352,10 @@ final class TestingServer(
     )
     server.references(params).asScala.map { r =>
       r.asScala
+        .sortBy { l =>
+          val start = l.getRange().getStart()
+          (start.getLine(), start.getCharacter())
+        }
         .map { l =>
           val path = l.getUri.toAbsolutePath
           val shortPath =

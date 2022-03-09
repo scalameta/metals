@@ -129,11 +129,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  // I marked this as flaky because if I fix this locally, it ends up failing
-  // in CI and vice versa. The order of the references on 524 550 don't seem to
-  // be consistent.
-  // TODO https://github.com/scalameta/metals/issues/3689
-  test("dependencies".flaky) {
+  test("dependencies") {
     cleanWorkspace()
     for {
       _ <- initialize(
