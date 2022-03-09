@@ -7,7 +7,7 @@ class OrganizeImportsLspSuite
     extends BaseCodeActionLspSuite("OrganizeImports") {
   val sourceKind: String = SourceOrganizeImports.kind
   val quickFixKind: String = OrganizeImportsQuickFix.kind
-  val scalacOption: List[String] = List("-Ywarn-unused-import")
+  val scalacOption: List[String] = List("-Wunused")
   def scalafixConf(path: String = "/.scalafix.conf"): String =
     s"""|$path
         |rules = [

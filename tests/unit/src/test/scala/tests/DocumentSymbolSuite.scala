@@ -53,7 +53,7 @@ abstract class DocumentSymbolSuite(
             .asScala
 
           val flatSymbols =
-            documentSymbols.toSymbolInformation(file.file.toURI.toString)
+            documentSymbols.toSeq.toSymbolInformation(file.file.toURI.toString)
           val textDocument = s.TextDocument(
             schema = s.Schema.SEMANTICDB4,
             language = s.Language.SCALA,

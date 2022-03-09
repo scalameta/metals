@@ -71,7 +71,7 @@ class WorkspaceSearchVisitor(
         )
       )
     }
-    result.asScala
+    result.asScala.toSeq
   }
   private val byNameLength = new ju.Comparator[l.SymbolInformation] {
     def compare(x: l.SymbolInformation, y: l.SymbolInformation): Int = {

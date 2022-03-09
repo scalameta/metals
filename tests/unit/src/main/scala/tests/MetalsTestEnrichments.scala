@@ -65,7 +65,7 @@ object MetalsTestEnrichments {
               symbols += defn.toCached
             }
         }
-        wsp.didChange(source, symbols)
+        wsp.didChange(source, symbols.toSeq)
       }
     }
     def indexLibraries(libraries: Seq[Library]): Unit = {

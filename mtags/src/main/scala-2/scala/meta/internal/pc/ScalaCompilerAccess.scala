@@ -50,7 +50,7 @@ class ScalaCompilerAccess(
       newCompiler
     ) {
 
-  def newReporter() = new StoreReporter
+  def newReporter = new StoreReporter
 
   protected def handleSharedCompilerException(
       t: Throwable

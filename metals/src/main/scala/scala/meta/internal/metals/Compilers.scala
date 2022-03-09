@@ -301,7 +301,7 @@ class Compilers(
       .complete(offsetParams)
       .asScala
       .map(list =>
-        list.getItems.asScala
+        list.getItems.asScala.toSeq
           .map(
             toDebugCompletionItem(
               _,
@@ -725,7 +725,7 @@ class Compilers(
   ): PresentationCompiler = {
     newCompiler(
       mtags,
-      scalac.getOptions().asScala,
+      scalac.getOptions().asScala.toSeq,
       classpath,
       search,
       scalac.getTarget.getUri

@@ -8,7 +8,6 @@ import scala.tools.scalap.scalax.rules.scalasig._
 
 import scala.meta.internal.scalacp._
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scala.{Descriptor => d}
 import scala.meta.internal.semanticdb.Scala.{DisplayNames => dn}
 import scala.meta.internal.semanticdb.Scala.{Names => n}

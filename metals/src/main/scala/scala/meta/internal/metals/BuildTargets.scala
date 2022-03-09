@@ -260,7 +260,7 @@ final class BuildTargets(
       info(scalac.getTarget()).foreach { info =>
         info.asScalaBuildTarget.foreach { scalaBuildTarget =>
           val sbtTarget = info.asSbtBuildTarget
-          val autoImports = sbtTarget.map(_.getAutoImports.asScala)
+          val autoImports = sbtTarget.map(_.getAutoImports.asScala.toSeq)
           scalaTargetInfo(scalac.getTarget) = ScalaTarget(
             info,
             scalaBuildTarget,
@@ -500,7 +500,11 @@ final class BuildTargets(
       query: BuildTargetIdentifier,
       roots: List[BuildTargetIdentifier]
   ): Boolean = {
-    BuildTargets.isInverseDependency(query, roots, inverseDependencies.get)
+    BuildTargets.isInverseDependency(
+      query,
+      roots,
+      inverseDependencies.get(_).map(_.toSeq)
+    )
   }
   def inverseDependencyLeaves(
       target: BuildTargetIdentifier
@@ -515,7 +519,10 @@ final class BuildTargets(
   private def computeInverseDependencies(
       target: BuildTargetIdentifier
   ): BuildTargets.InverseDependencies = {
-    BuildTargets.inverseDependencies(List(target), inverseDependencies.get)
+    BuildTargets.inverseDependencies(
+      List(target),
+      inverseDependencies.get(_).map(_.toSeq)
+    )
   }
 
   def addDependencySource(

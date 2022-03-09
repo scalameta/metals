@@ -182,7 +182,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
         }
       }
     )
-    result
+    result.toSeq
   }
 
   private def isClassfile(path: Path): Boolean = {

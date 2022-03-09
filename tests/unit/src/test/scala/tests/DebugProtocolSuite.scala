@@ -373,12 +373,12 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -404,12 +404,12 @@ class DebugProtocolSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.4"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
            |package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {}
            |}
            |""".stripMargin
@@ -417,7 +417,7 @@ class DebugProtocolSuite
       _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
       _ <- server.didSave("a/src/main/scala/a/Foo.scala") { _ =>
         """|package a
-           |class Foo extends org.scalatest.FunSuite {
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {
            |    val a : Int = ""
            |  }

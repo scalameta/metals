@@ -37,14 +37,16 @@ val scala212CompilerOptions = List(
 logo := Welcome.logo
 usefulTasks := Welcome.tasks
 
+ThisBuild / scalafixScalaBinaryVersion := scalaBinaryVersion.value
+
 inThisBuild(
   List(
     version ~= { dynVer =>
       if (isCI) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    scalaVersion := V.scala212,
-    crossScalaVersions := List(V.scala212),
+    scalaVersion := V.scala213,
+    crossScalaVersions := List(V.scala213),
     scalacOptions ++= List(
       "-target:jvm-1.8",
       "-Yrangepos"
@@ -143,7 +145,7 @@ commands ++= Seq(
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
-    "interfaces/publishLocal" :: s"++${V.scala212} metals/publishLocal" :: publishMtags
+    "interfaces/publishLocal" :: s"++${V.scala213} metals/publishLocal" :: publishMtags
   },
   Command.command("cross-test-latest-nightly") { s =>
     val max =
@@ -177,7 +179,7 @@ lazy val V = new {
   val bloop = "1.4.13"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
-  val coursier = "2.0.16"
+  val coursier = "2.1.0-M5"
   val coursierInterfaces = "1.0.6"
   val debugAdapter = "2.0.13"
   val genyVersion = "0.7.1"
@@ -491,7 +493,9 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2"
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2",
+      "org.scala-lang.modules" %% "scala-xml" % "2.0.1",
+      "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -538,6 +542,7 @@ lazy val `sbt-metals` = project
       "semanticdbVersion" -> V.semanticdb,
       "supportedScala2Versions" -> V.scala2Versions
     ),
+    scalaVersion := V.scala212,
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}")
   )
   .enablePlugins(BuildInfoPlugin, SbtPlugin)
@@ -551,12 +556,9 @@ lazy val input = project
     libraryDependencies ++= List(
       // these projects have macro annotations
       "org.scalameta" %% "scalameta" % V.scalameta,
-      "io.circe" %% "circe-derivation-annotations" % "0.9.0-M5"
+      "io.circe" %% "circe-derivation-annotations" % "0.13.0-M5"
     ),
-    scalacOptions += "-P:semanticdb:synthetics:on",
-    addCompilerPlugin(
-      "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
-    )
+    scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations")
   )
   .disablePlugins(ScalafixPlugin)
 
@@ -747,10 +749,6 @@ lazy val bench = project
     run / fork := true,
     publish / skip := true,
     moduleName := "metals-bench",
-    libraryDependencies ++= List(
-      // for measuring memory usage
-      "org.spire-math" %% "clouseau" % "0.2.2"
-    ),
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     buildInfoPackage := "bench",
     Jmh / bspEnabled := false

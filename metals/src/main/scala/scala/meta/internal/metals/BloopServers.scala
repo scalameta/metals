@@ -145,7 +145,7 @@ final class BloopServers(
       override def write(byte: Int): Unit = byte.toChar match {
         case c => b.append(c)
       }
-      def logs = b.lines.toList
+      def logs = b.result.linesIterator
     }
 
     val launcher =

@@ -38,7 +38,7 @@ class DocumentSymbolProvider(trees: Trees) {
       }
       new SymbolTraverser().symbols(tree).asScala
     }
-    val symbols = result.getOrElse(Nil)
+    val symbols = result.getOrElse(Nil).toSeq
 
     if (supportsHierarchicalDocumentSymbols.get()) {
       Left(symbols.asJava)

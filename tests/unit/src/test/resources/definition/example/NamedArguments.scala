@@ -7,7 +7,7 @@ case class User/*NamedArguments.scala*/(
     }
 )
 object NamedArguments/*NamedArguments.scala*/ {
-  val susan/*NamedArguments.scala*/ = "Susan"
+  final val susan/*NamedArguments.scala*/ = "Susan"
   val user1/*NamedArguments.scala*/ =
     User/*NamedArguments.scala*/
       .apply/*NamedArguments.scala fallback to example.User#*/(
@@ -27,8 +27,8 @@ object NamedArguments/*NamedArguments.scala*/ {
   ) def b/*NamedArguments.scala*/ = 1
 
   // vararg
-  List/*List.scala*/(
-    xs/*List.scala*/ = 2
+  List/*package.scala*/(
+    elems/*Factory.scala*/ = 2
   )
 
 }
