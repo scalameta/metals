@@ -238,7 +238,7 @@ class CompletionsProvider(
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
       case CompletionValue.NamedArg(label, _) =>
-        mkItem(ident, ident.replace("$", "\\$")) // escape $ for snippet
+        mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) => mkItem(label, text)
       case _ => mkItem(ident, ident.backticked)
     end match

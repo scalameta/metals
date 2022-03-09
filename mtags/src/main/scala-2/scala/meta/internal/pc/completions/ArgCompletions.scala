@@ -120,7 +120,7 @@ trait ArgCompletions { this: MetalsGlobal =>
         val editText = allParams.zipWithIndex
           .collect {
             case (param, index) if !param.hasDefault => {
-              s"${Identifier.backtickWrap(param.name).replace("$", "\\$")} = $${${index + 1}${findDefaultValue(param)}}"
+              s"${Identifier.backtickWrap(param.name).replace("$", "$$")} = $${${index + 1}${findDefaultValue(param)}}"
             }
           }
           .mkString(", ")
