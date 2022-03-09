@@ -244,7 +244,9 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Option(1)
   )
 
-  checkSnippet( // known issue: the second parameter with $ become | (returned from compiler)
+  // known issue: the second parameter with $ become | (returned from compiler)
+  // see: https://github.com/scalameta/metals/issues/3690
+  checkSnippet(
     "explicit-dollar-autofill".tag(IgnoreScala3),
     """
       |object Main {
