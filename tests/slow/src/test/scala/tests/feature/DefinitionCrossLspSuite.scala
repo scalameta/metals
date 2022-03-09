@@ -29,10 +29,7 @@ class DefinitionCrossLspSuite
     }
   }
 
-  // TODO MIGRATE I can't reproduce this locally. In CI this fails every time,
-  // but I it always passes locally
-  // https://github.com/scalameta/metals/issues/3688
-  test("underscore".ignore) {
+  test("underscore") {
     cleanDatabase()
     for {
       _ <- initialize(
@@ -59,8 +56,9 @@ class DefinitionCrossLspSuite
            |}
            |""".stripMargin
       )
-      _ = server.didOpen("a/src/main/scala/a/Main.scala")
-      _ = server.didOpen("a/src/main/scala/a/Test.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Test.scala")
+      _ = assertNoDiagnostics()
       _ = server.assertReferenceDefinitionBijection()
     } yield ()
   }
