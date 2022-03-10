@@ -79,10 +79,12 @@ object FileWatcher {
     def collect(path: AbsolutePath): Unit = {
       if (buildTargets.isInsideSourceRoot(path)) {
         () // Do nothing, already covered by a source root
-      } else if (path.isScalaOrJava) {
-        sourceFilesToWatch.add(path.toNIO)
-      } else {
-        sourceDirectoriesToWatch.add(path.toNIO)
+      } else if (!buildTargets.checkIfGeneratedSource(path.toNIO)) {
+        if (path.isScalaOrJava) {
+          sourceFilesToWatch.add(path.toNIO)
+        } else {
+          sourceDirectoriesToWatch.add(path.toNIO)
+        }
       }
     }
     // Watch the source directories for "goto definition" index.

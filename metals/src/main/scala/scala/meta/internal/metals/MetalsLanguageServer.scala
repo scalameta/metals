@@ -2461,6 +2461,7 @@ class MetalsLanguageServer(
       worksheetProvider.reset()
       symbolSearch.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
+      buildTargets.addWorkspaceBuildSources(i.sources)
       buildTargets.addScalacOptions(i.scalacOptions)
       buildTargets.addJavacOptions(i.javacOptions)
       for {
