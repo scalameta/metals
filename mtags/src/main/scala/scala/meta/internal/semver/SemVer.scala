@@ -1,79 +1,66 @@
 package scala.meta.internal.semver
 
-import scala.util.Try
-
 object SemVer {
 
   case class Version(
       major: Int,
       minor: Int,
       patch: Int,
-      releaseCandidate: Option[Int],
-      milestone: Option[Int]
+      releaseCandidate: Option[Int] = None,
+      milestone: Option[Int] = None,
+      nightlyDate: Option[Int] = None
   ) {
     def >(that: Version): Boolean = {
-      lazy val baseVersionEqual =
-        this.major == this.major && this.minor == that.minor && this.patch == that.patch
+      val diff = toList
+        .zip(that.toList)
+        .collectFirst {
+          case (a, b) if a - b != 0 => a - b
+        }
+        .getOrElse(0)
+      diff > 0
+    }
 
-      this.major > that.major ||
-      (this.major == that.major && this.minor > that.minor) ||
-      (this.major == that.major && this.minor == that.minor && this.patch > that.patch) ||
-      // 3.0.0-RC1 > 3.0.0-M1
-      baseVersionEqual && this.releaseCandidate.isDefined && that.milestone.isDefined ||
-      // 3.0.0 > 3.0.0-M2 and 3.0.0 > 3.0.0-RC1
-      baseVersionEqual && (this.milestone.isEmpty && this.releaseCandidate.isEmpty && (that.milestone.isDefined || that.releaseCandidate.isDefined)) ||
-      // 3.0.0-RC2 > 3.0.0-RC1
-      baseVersionEqual && comparePreRelease(
-        that,
-        (v: Version) => v.releaseCandidate
-      ) ||
-      // 3.0.0-M2 > 3.0.0-M1
-      baseVersionEqual && comparePreRelease(that, (v: Version) => v.milestone)
+    def <(that: Version): Boolean =
+      that > this
 
+    private def toList: List[Int] = {
+      val rcMilestonePart =
+        releaseCandidate
+          .map(v => List(1, v))
+          .orElse(milestone.map(v => List(0, v)))
+          .getOrElse(List(2, 0))
+
+      List(major, minor, patch) ++ rcMilestonePart ++
+        List(nightlyDate.getOrElse(Int.MaxValue))
     }
 
     def >=(that: Version): Boolean = this > that || this == that
-
-    private def comparePreRelease(
-        that: Version,
-        preRelease: Version => Option[Int]
-    ): Boolean = {
-      val thisPrerelease = preRelease(this)
-      val thatPrerelease = preRelease(that)
-      this.major == that.major && this.minor == that.minor && this.patch == that.patch &&
-      thisPrerelease.isDefined && thatPrerelease.isDefined && thisPrerelease
-        .zip(thatPrerelease)
-        .exists { case (a, b) => a > b }
-    }
 
     override def toString: String =
       List(
         Some(s"$major.$minor.$patch"),
         releaseCandidate.map(s => s"-RC$s"),
-        milestone.map(s => s"-M$s")
+        milestone.map(s => s"-M$s"),
+        nightlyDate.map(d => s"-$d-NIGHTLY")
       ).flatten.mkString("")
 
   }
 
   object Version {
     def fromString(version: String): Version = {
-      val Array(major, minor, patch) =
-        version.replaceAll("(-|\\+).+$", "").split('.').map(_.toInt)
-
-      val prereleaseString = version.stripPrefix(s"$major.$minor.$patch")
-
-      def fromSuffix(name: String) = {
-        if (prereleaseString.startsWith(name))
-          Try(
-            prereleaseString.stripPrefix(name).replaceAll("\\-.*", "").toInt
-          ).toOption
-        else None
-      }
-      val releaseCandidate = fromSuffix("-RC")
-      val milestone = fromSuffix("-M")
-
-      Version(major, minor, patch, releaseCandidate, milestone)
+      val parts = version.split("\\.|-")
+      val Array(major, minor, patch) = parts.take(3).map(_.toInt)
+      val (rc, milestone) = parts
+        .lift(3)
+        .map { v =>
+          if (v.startsWith("RC")) (Some(v.stripPrefix("RC").toInt), None)
+          else (None, Some(v.stripPrefix("M").toInt))
+        }
+        .getOrElse((None, None))
+      val date = parts.lift(5).map(_.toInt)
+      Version(major, minor, patch, rc, milestone, date)
     }
+
   }
 
   def isCompatibleVersion(minimumVersion: String, version: String): Boolean = {
