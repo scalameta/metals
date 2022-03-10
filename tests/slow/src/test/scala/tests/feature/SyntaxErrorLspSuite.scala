@@ -358,9 +358,9 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ <- server.didOpen("a/src/main/scala/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/A.scala:2:14: error: Cannot prove that (1 : Int) =:= (2 : Int).
+        """|a/src/main/scala/A.scala:2:9: error: Cannot prove that (1 : Int) =:= (2 : Int).
            |val x = mark[1 =:= 2]
-           |             ^^^^^^^
+           |        ^^^^^^^^^^^^^
            |""".stripMargin
       )
     } yield ()
