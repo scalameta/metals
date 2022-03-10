@@ -24,7 +24,7 @@ import com.typesafe.config.ConfigSyntax
 
 class JavaInteractiveSemanticdb(
     javac: AbsolutePath,
-    jdkVersion: JavaInteractiveSemanticdb.JdkVersion,
+    jdkVersion: JdkVersion,
     pluginJars: List[Path],
     workspace: AbsolutePath,
     buildTargets: BuildTargets
@@ -197,7 +197,7 @@ object JavaInteractiveSemanticdb {
 
     val javac = pathToJavac(jdkHome)
 
-    getJavaVersionFromJavaHome(jdkHome) match {
+    JdkVersion.getJavaVersionFromJavaHome(jdkHome) match {
       case Some(version) if javac.exists =>
         val pluginJars = Embedded.downloadSemanticdbJavac
         val instance = new JavaInteractiveSemanticdb(
@@ -216,7 +216,18 @@ object JavaInteractiveSemanticdb {
     }
   }
 
-  private def getJavaVersionFromJavaHome(
+}
+
+case class JdkVersion(
+    major: Int
+) {
+
+  def hasJigsaw: Boolean = major >= 9
+}
+
+object JdkVersion {
+
+  def getJavaVersionFromJavaHome(
       javaHome: AbsolutePath
   ): Option[JdkVersion] = {
 
@@ -232,7 +243,6 @@ object JavaInteractiveSemanticdb {
             .getString("JAVA_VERSION")
             .stripPrefix("\"")
             .stripSuffix("\"")
-          scribe.info(s"Parse release: ${version}")
           JdkVersion.parse(version)
         } catch {
           case NonFatal(e) =>
@@ -244,40 +254,28 @@ object JavaInteractiveSemanticdb {
 
     def jdk8Fallback: Option[JdkVersion] = {
       val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
-      if (rtJar.exists) Some(JdkVersion(1, 8))
+      if (rtJar.exists) Some(JdkVersion(8))
       else None
     }
 
     fromReleaseFile.orElse(jdk8Fallback)
   }
 
-  case class JdkVersion(
-      major: Int,
-      minor: Int
-  ) {
+  def parse(v: String): Option[JdkVersion] = {
+    val numbers = v
+      .split('-')
+      .head
+      .split('.')
+      .toList
+      .take(2)
+      .map(s => Try(s.toInt).toOption)
 
-    def hasJigsaw: Boolean = major >= 11 || (minor == 9 && major == 1)
-  }
-
-  object JdkVersion {
-
-    def parse(v: String): Option[JdkVersion] = {
-      val numbers = v
-        .split('-')
-        .head
-        .split('.')
-        .toList
-        .take(2)
-        .map(s => Try(s.toInt).toOption)
-
-      numbers match {
-        case Some(single) :: Nil =>
-          if (single > 10) Some(JdkVersion(single, 0))
-          else Some(JdkVersion(1, single))
-        case Some(major) :: Some(minor) :: _ =>
-          Some(JdkVersion(major, minor))
-        case _ => None
-      }
+    numbers match {
+      case Some(1) :: Some(minor) :: _ =>
+        Some(JdkVersion(minor))
+      case Some(single) :: _ =>
+        Some(JdkVersion(single))
+      case _ => None
     }
   }
 }
