@@ -72,7 +72,9 @@ object CompletionValue:
   case class Keyword(label: String, insertText: String) extends CompletionValue
 
   def fromCompiler(completion: Completion): List[CompletionValue] =
-    completion.symbols.map(Compiler(completion.label, _))
+    def undoBacktick(label: String): String =
+      label.stripPrefix("`").stripSuffix("`")
+    completion.symbols.map(Compiler(undoBacktick(completion.label), _))
 
   def namedArg(label: String, sym: Symbol)(using Context): CompletionValue =
     NamedArg(label, sym.info.widenTermRefExpr)

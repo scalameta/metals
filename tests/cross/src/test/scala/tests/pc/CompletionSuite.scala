@@ -949,7 +949,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      "3.1" ->
+      ">=3.1.0" ->
         """|Some scala
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
@@ -976,7 +976,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      "3.1" ->
+      ">=3.1.0" ->
         """|Some scala
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]

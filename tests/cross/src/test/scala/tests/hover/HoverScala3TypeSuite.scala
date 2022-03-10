@@ -54,7 +54,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     """|case Red: Red
        |""".stripMargin.hover,
     compat = Map(
-      "3.1.3-RC1" ->
+      ">=3.1.3-RC1-bin-20220301-fae7c09-NIGHTLY" ->
         """|case Red: Color
            |""".stripMargin.hover
     )
@@ -81,7 +81,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin,
     "",
     compat = Map(
-      "3.1.3-RC1" ->
+      ">=3.1.3-RC1-bin-20220301-fae7c09-NIGHTLY" ->
         """|case Blue: Color
            |""".stripMargin.hover
     )
