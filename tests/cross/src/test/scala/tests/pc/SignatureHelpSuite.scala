@@ -728,7 +728,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|map[G[_$3]](fn: A => G[A])(implicit T: last-arg3.TypeClass[F]): G[A]
+        """|map[G[_$3]](fn: A => G[A])(using T: last-arg3.TypeClass[F]): G[A]
            |            ^^^^^^^^^^^^^
            |""".stripMargin
     )
@@ -747,8 +747,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     compat = Map(
       // TODO type signatures are not yet supported
       "3" ->
-        """|empty[T](implicit evidence$4: scala.reflect.ClassTag[T]): Array[T]
-           |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        """|empty[T](using evidence$4: scala.reflect.ClassTag[T]): Array[T]
+           |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )

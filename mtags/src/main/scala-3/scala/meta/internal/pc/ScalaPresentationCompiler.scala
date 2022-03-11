@@ -305,7 +305,7 @@ case class ScalaPresentationCompiler(
     val paramLists = signature.paramss
       .map { paramList =>
         val labels = paramList.map(_.show)
-        val prefix = if paramList.exists(_.isImplicit) then "implicit " else ""
+        val prefix = if paramList.exists(_.isImplicit) then "using " else ""
         labels.mkString(prefix, ", ", "")
       }
       .mkString("(", ")(", ")")
