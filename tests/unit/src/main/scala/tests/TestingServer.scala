@@ -371,8 +371,8 @@ final class TestingServer(
       loc: munit.Location
   ): Unit = {
     val compare = workspaceReferences()
-    assert(compare.definition.nonEmpty)
-    assert(compare.references.nonEmpty)
+    assert(compare.definition.nonEmpty, "Definitions should not be empty")
+    assert(compare.references.nonEmpty, "References should not be empty")
     Assertions.assertNoDiff(
       compare.referencesFormat,
       compare.definitionFormat
