@@ -118,9 +118,9 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.ivy.ant.IvyCacheFileset Class
        |org.apache.parquet.Files Class
        |org.apache.spark.SparkFiles Object
-       |org.apache.spark.sql.execution.command.ListFilesCommand Class
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
+       |org.jline.builtins.Completers#FilesCompleter Class
        |scala.meta.internal.io.ListFiles Class
        |""".stripMargin
   )
@@ -136,9 +136,9 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.LowPrioritySQLImplicits Interface
        |org.apache.spark.sql.SQLImplicits Class
        |org.json4s.Implicits Interface
-       |scala.collection.convert.ToJavaImplicits Interface
-       |scala.collection.convert.ToScalaImplicits Interface
        |scala.concurrent.ExecutionContext.Implicits Object
+       |scala.math.Equiv.ExtraImplicits Interface
+       |scala.math.Equiv.Implicits Object
        |scala.math.Fractional.ExtraImplicits Interface
        |scala.math.Fractional.Implicits Object
        |scala.math.Integral.ExtraImplicits Interface
@@ -163,11 +163,6 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.collection.concurrent.TrieMap Object
        |scala.collection.concurrent.TrieMapIterator Class
        |scala.collection.concurrent.TrieMapSerializationEnd Object
-       |scala.collection.immutable.HashMap.HashTrieMap Class
-       |scala.collection.parallel.mutable.ParTrieMap Class
-       |scala.collection.parallel.mutable.ParTrieMap Object
-       |scala.collection.parallel.mutable.ParTrieMapCombiner Interface
-       |scala.collection.parallel.mutable.ParTrieMapSplitter Class
        |""".stripMargin
   )
 

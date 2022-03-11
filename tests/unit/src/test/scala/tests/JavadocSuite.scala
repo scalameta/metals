@@ -165,8 +165,8 @@ class JavadocSuite extends BaseSuite {
         |[#javadoc](#javadoc)
         |
         |**Parameters**
-        |- `url`: an absolute URL giving the base location of the image
         |- `name`: the location of the image, relative to the url argument
+        |- `url`: an absolute URL giving the base location of the image
         |
         |**Returns:** the image at the specified URL
         |

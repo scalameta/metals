@@ -23,9 +23,9 @@ class DefinitionCrossLspSuite
     }
   }
 
-  if (super.isValidScalaVersionForEnv(BuildInfo.scala213)) {
-    test("2.13") {
-      basicDefinitionTest(BuildInfo.scala213)
+  if (super.isValidScalaVersionForEnv(BuildInfo.scala212)) {
+    test("2.12") {
+      basicDefinitionTest(BuildInfo.scala212)
     }
   }
 
@@ -56,8 +56,9 @@ class DefinitionCrossLspSuite
            |}
            |""".stripMargin
       )
-      _ = server.didOpen("a/src/main/scala/a/Main.scala")
-      _ = server.didOpen("a/src/main/scala/a/Test.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Test.scala")
+      _ = assertNoDiagnostics()
       _ = server.assertReferenceDefinitionBijection()
     } yield ()
   }

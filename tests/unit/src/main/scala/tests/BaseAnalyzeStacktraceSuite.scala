@@ -51,7 +51,7 @@ abstract class BaseAnalyzeStacktraceSuite(name: String)
         lenses = server.analyzeStacktrace(stacktrace)
         output =
           lenses.map { cl =>
-            val line = cl.getCommand().getArguments.asScala match {
+            val line = cl.getCommand().getArguments.asScala.toSeq match {
               case Seq(locationParser.Jsonized(location)) =>
                 location.getRange().getStart().getLine()
             }

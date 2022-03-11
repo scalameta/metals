@@ -22,7 +22,17 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
           |object Main {
           |  Option(1).he@@ad
           |}""".stripMargin,
-        """override def head: Int""".hover
+        """|```scala
+           |def head: Int
+           |```
+           |Selects the first element of this iterable collection.
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           |
+           |**Returns:** the first element of this iterable collection.
+           |
+           |**Throws**
+           |- `NoSuchElementException`:
+           |""".stripMargin.hover
       )
     } yield ()
   }
@@ -31,7 +41,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
     for {
       _ <- initialize(
         s"""|/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/Main.scala
             |object Main extends App {
             |  // @@
@@ -45,7 +55,17 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
           |object Main {
           |  Option(1).he@@ad
           |}""".stripMargin,
-        """override def head: Int""".hover
+        """|```scala
+           |def head: Int
+           |```
+           |Selects the first element of this iterable collection.
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           |
+           |**Returns:** the first element of this iterable collection.
+           |
+           |**Throws**
+           |- `NoSuchElementException`:
+           |""".stripMargin.hover
       )
     } yield ()
   }
@@ -151,7 +171,17 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
           |object Main {
           |  Option(1).he@@ad
           |}""".stripMargin,
-        """override def head: Int""".hover,
+        """|```scala
+           |def head: Int
+           |```
+           |Selects the first element of this iterable collection.
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           |
+           |**Returns:** the first element of this iterable collection.
+           |
+           |**Throws**
+           |- `NoSuchElementException`:
+           |""".stripMargin.hover,
         root = workspace.resolve(Directories.readonly)
       )
     } yield ()

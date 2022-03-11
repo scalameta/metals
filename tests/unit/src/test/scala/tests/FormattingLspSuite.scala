@@ -20,7 +20,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |version=${V.scalafmtVersion}
             |runner.dialect = scala213
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/a/src/main/scala/a/Main.scala
             |object FormatMe {
             | val x = 1  }
@@ -43,7 +43,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     for {
       _ <- initialize(
         s"""|/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/a/src/main/scala/a/Main.scala
             |object FormatMe {
             | val x = 1  }
@@ -77,7 +77,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     for {
       _ <- initialize(
         s"""|/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/a/src/main/scala/a/Main.scala
             |object FormatMe {
             | val x = 1  }
@@ -99,7 +99,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     for {
       _ <- initialize(
         s"""|/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/project/.scalafmt.conf
             |maxColumn=100
             |version=${V.scalafmtVersion}
@@ -140,7 +140,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |maxColumn=30
             |trailingCommas=never
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/a/src/main/scala/a/Main.scala
             |case class User(
             |  name: String,
@@ -169,7 +169,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
            |version="does-not-exist"
            |runner.dialect = scala213
            |/metals.json
-           |{"a":{"scalaVersion" : ${V.scala212}}}
+           |{"a":{"scalaVersion" : ${V.scala213}}}
            |/Main.scala
            |object  Main
            |""".stripMargin,
@@ -195,7 +195,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |runner.dialect = scala213
             |align=does-not-exist
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/Main.scala
             |object  Main
             |""".stripMargin,
@@ -232,7 +232,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |  "UserSpec.scala$$"
             |]
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/Main.scala
             |  object   Main
             |/UserSpec.scala
@@ -274,7 +274,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |version=${V.scalafmtVersion}
             |runner.dialect = scala213
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/project/plugins.sbt
             |  object   Plugins
             |""".stripMargin,
@@ -305,7 +305,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|/.scalafmt.conf
             |maxColumn=40
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/Main.scala
             |object   Main
             |""".stripMargin,
@@ -332,7 +332,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
           server.textContents(".scalafmt.conf"),
           s"""|version = "${V.scalafmtVersion}"
               |maxColumn=40
-              |runner.dialect = scala212
+              |runner.dialect = scala213
               |""".stripMargin
         )
       }
@@ -493,7 +493,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|/.scalafmt.conf
             |maxColumn=40
             |/metals.json
-            |{"a":{"scalaVersion" : ${V.scala212}}}
+            |{"a":{"scalaVersion" : ${V.scala213}}}
             |/Main.scala
             |object   Main
             |""".stripMargin,

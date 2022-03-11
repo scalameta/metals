@@ -106,7 +106,7 @@ final class Ammonite(
           }
           _ <- indexWorkspace()
           toCompile = buffers.open.toSeq.filter(_.isAmmoniteScript)
-          _ <- Future.sequence[Unit, List](
+          _ <- Future.sequence(
             compilations
               .cascadeCompileFiles(toCompile) ::
               compilers.load(toCompile) ::

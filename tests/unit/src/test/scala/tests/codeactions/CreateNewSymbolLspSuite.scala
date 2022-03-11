@@ -20,12 +20,11 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
-        |${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
+    s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
+        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
-    selectedActionIndex = 4,
+    selectedActionIndex = 3,
     pickedKind = "scala-case-class",
     newFile = "a/src/main/scala/a/Location.scala" ->
       """|package a
@@ -40,12 +39,11 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
-        |${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
+    s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
+        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
-    selectedActionIndex = 4,
+    selectedActionIndex = 3,
     pickedKind = "scala-trait",
     newFile = "a/src/main/scala/a/Location.scala" ->
       s"""|package a
@@ -62,15 +60,14 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |
        |<<case class School(name: Missing, location: Location)>>
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
-        |${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
+    s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
+        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
         |${CreateNewSymbol.title("Missing")}
         |${CreateNewSymbol.title("Location")}
         |${ExtractRenameMember.renameFileAsClassTitle(fileName = "A.scala", memberName = "School")}
         |""".stripMargin,
-    selectedActionIndex = 4,
+    selectedActionIndex = 3,
     pickedKind = "scala-class",
     newFile = "a/src/main/scala/a/Missing.scala" ->
       s"""|package a

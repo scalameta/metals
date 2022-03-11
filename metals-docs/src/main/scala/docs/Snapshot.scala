@@ -25,10 +25,10 @@ object Snapshot {
   private implicit val localDateTimeOrdering: Ordering[LocalDateTime] =
     Ordering.fromLessThan[LocalDateTime]((a, b) => a.compareTo(b) < 0)
 
-  def latest(repo: String): Snapshot = {
+  def latest(repo: String, binaryVersion: String): Snapshot = {
     if (System.getenv("CI") != null) {
       try {
-        fetchLatest(repo)
+        fetchLatest(repo, binaryVersion)
       } catch {
         case NonFatal(e) =>
           scribe.error("unexpected error fetching SNAPSHOT version", e)
@@ -45,25 +45,29 @@ object Snapshot {
   /**
    * Returns the latest published snapshot release, or the current release if.
    */
-  private def fetchLatest(repo: String): Snapshot = {
+  private def fetchLatest(repo: String, binaryVersion: String): Snapshot = {
     val url =
-      s"https://oss.sonatype.org/content/repositories/$repo/org/scalameta/metals_2.12/"
+      s"https://oss.sonatype.org/content/repositories/$repo/org/scalameta/metals_$binaryVersion/"
     // maven-metadata.xml is consistently outdated so we scrape the "Last modified" column
     // of the HTML page that lists all snapshot releases instead.
     val doc = Jsoup.connect(url).get
-    val snapshots: Seq[Snapshot] = doc.select("tr").asScala.flatMap { tr =>
-      val lastModified =
-        tr.select("td:nth-child(2)").text()
-      val version =
-        tr.select("td:nth-child(1)").text().stripSuffix("/")
-      if (lastModified.nonEmpty && !version.contains("maven-metadata")) {
-        val date: ZonedDateTime =
-          ZonedDateTime.parse(lastModified, zdtFormatter)
-        List(Snapshot(version, date.toLocalDateTime))
-      } else {
-        List()
+    val snapshots: Seq[Snapshot] = doc
+      .select("tr")
+      .asScala
+      .flatMap { tr =>
+        val lastModified =
+          tr.select("td:nth-child(2)").text()
+        val version =
+          tr.select("td:nth-child(1)").text().stripSuffix("/")
+        if (lastModified.nonEmpty && !version.contains("maven-metadata")) {
+          val date: ZonedDateTime =
+            ZonedDateTime.parse(lastModified, zdtFormatter)
+          List(Snapshot(version, date.toLocalDateTime))
+        } else {
+          List()
+        }
       }
-    }
+      .toSeq
     if (snapshots.isEmpty) {
       val doc = Jsoup.connect(url + "maven-metadata.xml").get
       val latest = doc.select("latest").text().trim

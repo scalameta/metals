@@ -129,7 +129,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  test("dependencies", withoutVirtualDocs = true) {
+  test("dependencies") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -179,28 +179,51 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
             |$optionSourcePath:34:30: info: reference
             |  def empty[A] : Option[A] = None
             |                             ^^^^
-            |$optionSourcePath:230:18: info: reference
+            |$optionSourcePath:41:28: info: reference
+            |    if (cond) Some(a) else None
+            |                           ^^^^
+            |$optionSourcePath:157:40: info: reference
+            |  final def isEmpty: Boolean = this eq None
+            |                                       ^^^^
+            |$optionSourcePath:242:18: info: reference
             |    if (isEmpty) None else Some(f(this.get))
             |                 ^^^^
-            |$optionSourcePath:271:18: info: reference
+            |$optionSourcePath:283:18: info: reference
             |    if (isEmpty) None else f(this.get)
             |                 ^^^^
-            |$optionSourcePath:274:18: info: reference
+            |$optionSourcePath:304:18: info: reference
             |    if (isEmpty) None else ev(this.get)
             |                 ^^^^
-            |$optionSourcePath:289:43: info: reference
+            |$optionSourcePath:319:43: info: reference
             |    if (isEmpty || p(this.get)) this else None
             |                                          ^^^^
-            |$optionSourcePath:304:44: info: reference
+            |$optionSourcePath:334:44: info: reference
             |    if (isEmpty || !p(this.get)) this else None
             |                                           ^^^^
-            |$optionSourcePath:432:42: info: reference
+            |$optionSourcePath:462:42: info: reference
             |    if (!isEmpty) pf.lift(this.get) else None
             |                                         ^^^^
-            |$optionSourcePath:527:13: info: reference
+            |$optionSourcePath:504:34: info: reference
+            |    if (isEmpty || that.isEmpty) None else Some((this.get, that.get))
+            |                                 ^^^^
+            |$optionSourcePath:524:8: info: reference
+            |      (None, None)
+            |       ^^^^
+            |$optionSourcePath:524:14: info: reference
+            |      (None, None)
+            |             ^^^^
+            |$optionSourcePath:550:8: info: reference
+            |      (None, None, None)
+            |       ^^^^
+            |$optionSourcePath:550:14: info: reference
+            |      (None, None, None)
+            |             ^^^^
+            |$optionSourcePath:550:20: info: reference
+            |      (None, None, None)
+            |                   ^^^^
+            |$optionSourcePath:626:13: info: reference
             |case object None extends Option[Nothing] {
-            |            ^^^^
-            |""".stripMargin
+            |            ^^^^""".stripMargin
       )
     } yield ()
   }
@@ -303,16 +326,17 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.concurrent.Future
            |java.util.concurrent.Future
            |scala.sys.process.ProcessImpl#Future
+           |scala.jdk.FutureConverters.FutureOps
            |java.util.concurrent.FutureTask
-           |scala.collection.parallel.FutureTasks
            |java.io.ObjectStreamClass#EntryFuture
            |java.util.concurrent.RunnableFuture
            |java.util.concurrent.ExecutorCompletionService#QueueingFuture
            |java.util.concurrent.ScheduledFuture
+           |scala.jdk.FutureConverters
+           |scala.jdk.javaapi.FutureConverters
            |java.util.concurrent.CompletableFuture
            |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
-           |scala.collection.parallel.FutureThreadPoolTasks
-           |java.util.concurrent.RunnableScheduledFuture""".stripMargin
+           |""".stripMargin
       )
       _ <- server.didChangeConfiguration(
         """|{
@@ -327,9 +351,12 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         """|scala.concurrent.Future
            |scala.concurrent.Future
            |scala.sys.process.ProcessImpl#Future
-           |scala.collection.parallel.FutureTasks
+           |scala.jdk.FutureConverters.FutureOps
            |java.io.ObjectStreamClass#EntryFuture
-           |scala.collection.parallel.FutureThreadPoolTasks""".stripMargin
+           |scala.jdk.FutureConverters
+           |scala.jdk.javaapi.FutureConverters
+           |scala.concurrent.impl.FutureConvertersImpl
+           |""".stripMargin
       )
     } yield ()
   }

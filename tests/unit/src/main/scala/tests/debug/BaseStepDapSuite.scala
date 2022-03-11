@@ -111,7 +111,7 @@ abstract class BaseStepDapSuite(
         s"$scalaLibDependency${if (useVirtualDocuments) "!" else ""}/scala/Predef.scala"
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(jarDep, line = 404)(Continue)
+        .atDependency(jarDep, line = 427)(Continue)
     }
   )
 

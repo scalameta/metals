@@ -17,6 +17,7 @@ import java.{util => ju}
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
@@ -49,6 +50,7 @@ import scala.meta.internal.decorations.SyntheticsDecorationProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -194,6 +196,7 @@ class MetalsLanguageServer(
   )
   private val fileWatcher = register(
     new FileWatcher(
+      initialConfig,
       () => workspace,
       buildTargets,
       fileWatchFilter,
@@ -1800,7 +1803,7 @@ class MetalsLanguageServer(
           )
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
-        val args = params.getArguments.asScala
+        val args = params.getArguments.asScala.toSeq
         import DebugProvider.DebugParametersJsonParsers._
         val debugSessionParams: Future[b.DebugSessionParams] = args match {
           case Seq(debugSessionParamsParser.Jsonized(params))
@@ -2188,7 +2191,7 @@ class MetalsLanguageServer(
     def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
       case change if !change.isFailed =>
         Future
-          .sequence[Unit, List](
+          .sequence(
             compilations
               .cascadeCompileFiles(buffers.open.toSeq)
               .ignoreValue ::
@@ -2304,7 +2307,7 @@ class MetalsLanguageServer(
       }
     )
     try {
-      val parSourcesToIndex = sourcesToIndex.par
+      val parSourcesToIndex = sourcesToIndex.toSeq.par
       parSourcesToIndex.tasksupport = new ForkJoinTaskSupport(threadPool)
       parSourcesToIndex.foreach(f =>
         indexSourceFile(f.source, Some(f.sourceItem), f.targets.headOption)
@@ -2382,7 +2385,7 @@ class MetalsLanguageServer(
               )
             }
         }
-        workspaceSymbols.didChange(source, symbols)
+        workspaceSymbols.didChange(source, symbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
         // we cannot use `symbols` for expiring the cache for all symbols in the source.

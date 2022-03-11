@@ -133,7 +133,7 @@ class DebugProvider(
 
     // long timeout, since server might take a while to compile the project
     val connectToServer = () => {
-      val targets = parameters.getTargets().asScala
+      val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
         buildServer
@@ -152,7 +152,7 @@ class DebugProvider(
     }
 
     val proxyFactory = { () =>
-      val targets = parameters.getTargets.asScala
+      val targets = parameters.getTargets.asScala.toSeq
         .map(_.getUri)
         .map(new BuildTargetIdentifier(_))
       val debugAdapter =
@@ -506,7 +506,7 @@ class DebugProvider(
           new b.DebugSessionParams(
             singletonList(target.getId()),
             b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE,
-            Unit.toJson
+            ().toJson
           )
         )
       case None =>

@@ -24,7 +24,7 @@ class SbtServerSuite
   val preBspVersion = "1.3.13"
   val supportedMetaBuildVersion = "1.6.0-M1"
   val supportedBspVersion = V.sbtVersion
-  val scalaVersion = V.scala212
+  val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
   override def currentDigest(
@@ -38,7 +38,7 @@ class SbtServerSuite
           |sbt.version=$preBspVersion
           |/build.sbt
           |${SbtBuildLayout.commonSbtSettings}
-          |scalaVersion := "${V.scala212}"
+          |scalaVersion := "${V.scala213}"
           |""".stripMargin
     )
     for {
@@ -69,7 +69,7 @@ class SbtServerSuite
     def sbtBspPlugin = workspace.resolve("project/metals.sbt")
     def sbtJdiPlugin = workspace.resolve("project/project/metals.sbt")
     cleanWorkspace()
-    writeLayout(SbtBuildLayout("", V.scala212))
+    writeLayout(SbtBuildLayout("", V.scala213))
     for {
       _ <- server.initialize()
       _ <- server.initialized()
@@ -96,7 +96,7 @@ class SbtServerSuite
   test("reload") {
     cleanWorkspace()
     for {
-      _ <- initialize(SbtBuildLayout("", V.scala212))
+      _ <- initialize(SbtBuildLayout("", V.scala213))
       // reload build after build.sbt changes
       _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt") { text =>
@@ -112,7 +112,7 @@ class SbtServerSuite
         client.showMessages.clear()
       }
       _ <- server.didSave("build.sbt") { _ =>
-        s"""scalaVersion := "${V.scala212}"
+        s"""scalaVersion := "${V.scala213}"
            |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
            |""".stripMargin
       }
@@ -138,7 +138,7 @@ class SbtServerSuite
             |import sbt.internal.bsp.BuildTargetIdentifier
             |import java.net.URI
             |${SbtBuildLayout.commonSbtSettings}
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |Compile / bspTargetIdentifier := {
             |  BuildTargetIdentifier(new URI("debug"))
             |}

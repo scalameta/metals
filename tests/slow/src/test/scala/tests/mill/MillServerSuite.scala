@@ -20,7 +20,7 @@ class MillServerSuite
 
   val preBspVersion = "0.9.10"
   val supportedBspVersion = V.millVersion
-  val scalaVersion = V.scala212
+  val scalaVersion = V.scala213
   val buildTool: MillBuildTool = MillBuildTool(() => userConfig)
 
   override def currentDigest(

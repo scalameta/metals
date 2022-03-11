@@ -455,4 +455,13 @@ class HoverTermSuite extends BaseHoverSuite {
       "3" -> "case CONTINUE: FileVisitResult".hover
     )
   )
+
+  check(
+    "toplevel".tag(IgnoreScalaVersion.forLessThan("3.1.3-RC1")),
+    """|
+       |val (first, <<se@@cond>>) = (1, false)
+       |""".stripMargin,
+    "val second: Boolean".hover,
+    automaticPackage = false
+  )
 }

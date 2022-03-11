@@ -22,13 +22,30 @@ class PathTrie private (root: Node) {
       (segments, node) match {
         case (_, Leaf) => true
         case (Nil, _) => false
-        case (head :: tail, Single(segment, child)) =>
+        case (head :: tail, Single(segment, child, _)) =>
           if (head == segment) go(tail, child) else false
-        case (head :: tail, Multi(children)) =>
+        case (head :: tail, Multi(children, _)) =>
           children.get(head).fold(false)(go(tail, _))
       }
     }
     go(segments, root)
+  }
+
+  def longestPrefixes(fsRoot: Path, maxRoots: Int): Iterable[Path] = {
+    def go(acc: Path, node: Node, availableRoots: Int): Iterable[Path] =
+      node match {
+        case Leaf => acc :: Nil
+        case Single(segment, child, terminal) =>
+          if (terminal) acc :: Nil
+          else go(acc.resolve(segment), child, availableRoots)
+        case Multi(children, terminal) =>
+          if (terminal || children.size > availableRoots) acc :: Nil
+          else
+            children.flatMap { case (segment, child) =>
+              go(acc.resolve(segment), child, availableRoots / children.size)
+            }
+      }
+    go(fsRoot, root, maxRoots)
   }
 }
 
@@ -36,11 +53,14 @@ object PathTrie {
   private sealed trait Node
 
   private case object Leaf extends Node
-  private case class Single(segment: String, child: Node) extends Node
-  private case class Multi(children: Map[String, Node]) extends Node
+  private case class Single(segment: String, child: Node, terminal: Boolean)
+      extends Node
+  private case class Multi(children: Map[String, Node], terminal: Boolean)
+      extends Node
 
   def apply(paths: Set[Path]): PathTrie = {
     def construct(paths: Set[List[String]]): Node = {
+      val terminal = paths.contains(Nil)
       val groupedNonEmptyPaths =
         paths
           .filter(_.nonEmpty)
@@ -51,13 +71,13 @@ object PathTrie {
       groupedNonEmptyPaths match {
         case Nil => Leaf
         case singleGroup :: Nil =>
-          Single(singleGroup._1, construct(singleGroup._2))
+          Single(singleGroup._1, construct(singleGroup._2), terminal)
         case _ =>
           val children = groupedNonEmptyPaths.map {
             case (topSegment, tailSegments) =>
               topSegment -> construct(tailSegments)
           }.toMap
-          Multi(children)
+          Multi(children, terminal)
       }
     }
 

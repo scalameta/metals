@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 
 import com.swoval.files.FileTreeDataViews.CacheObserver
@@ -32,6 +33,7 @@ import com.swoval.files.FileTreeRepository
  *    get the notifications directly from the OS instead of through the editor via LSP.
  */
 final class FileWatcher(
+    config: MetalsServerConfig,
     workspaceDeferred: () => AbsolutePath,
     buildTargets: BuildTargets,
     watchFilter: Path => Boolean,
@@ -51,6 +53,7 @@ final class FileWatcher(
     disposeAction.map(_.apply())
 
     val newDispose = startWatch(
+      config,
       workspaceDeferred().toNIO,
       collectFilesToWatch(buildTargets),
       onFileWatchEvent,
@@ -101,6 +104,7 @@ object FileWatcher {
    *
    * Contains platform specific file watch initialization logic
    *
+   * @param config metals server configuration
    * @param workspace current project workspace directory
    * @param filesToWatch source files and directories to watch
    * @param callback to execute on FileWatchEvent
@@ -109,27 +113,39 @@ object FileWatcher {
    * @return a dispose action resources used by file watching
    */
   private def startWatch(
+      config: MetalsServerConfig,
       workspace: Path,
       filesToWatch: FilesToWatch,
       callback: FileWatcherEvent => Unit,
       watchFilter: Path => Boolean
   ): () => Unit = {
     if (scala.util.Properties.isMac) {
-      // Due to a hard limit on the number of FSEvents streams that can be opened on macOS,
-      // only the root workspace directory is registered for a recursive watch.
+      // Due to a hard limit on the number of FSEvents streams that can be
+      // opened on macOS, only up to 32 longest common prefixes of the files to
+      // watch are registered for a recursive watch.
       // However, the events are then filtered to receive only relevant events
-      // and also to hash only revelevant files when watching for changes
+      // and also to hash only relevant files when watching for changes
 
       val trie = PathTrie(
         filesToWatch.sourceFiles ++ filesToWatch.sourceDirectories ++ filesToWatch.semanticdDirectories
       )
       val isWatched = trie.containsPrefixOf _
 
+      // Select up to `maxRoots` longest prefixes of all files in the trie for
+      // watching. Watching the root of the workspace may have bad performance
+      // implications if it contains many other projects that we don't need to
+      // watch (eg. in a monorepo)
+      val watchRoots =
+        trie.longestPrefixes(workspace.getRoot(), config.macOsMaxWatchRoots)
+
       val repo = initFileTreeRepository(
         path => watchFilter(path) && isWatched(path),
         callback
       )
-      repo.register(workspace, Int.MaxValue)
+      watchRoots.foreach { root =>
+        scribe.debug(s"Registering root for file watching: $root")
+        repo.register(root, Int.MaxValue)
+      }
       () => repo.close()
     } else {
       // Other OSes register all the files and directories individually

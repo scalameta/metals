@@ -40,7 +40,7 @@ trait ArgCompletions { this: MetalsGlobal =>
     lazy val allParams: List[Symbol] = {
       baseParams.iterator.filterNot { param =>
         isNamed(param.name) ||
-        param.name.containsChar('$') // exclude synthetic parameters
+        param.isSynthetic
       }.toList
     }
     lazy val params: List[Symbol] =
@@ -119,8 +119,9 @@ trait ArgCompletions { this: MetalsGlobal =>
       ) {
         val editText = allParams.zipWithIndex
           .collect {
-            case (param, index) if !param.hasDefault =>
-              s"${Identifier.backtickWrap(param.name)} = $${${index + 1}${findDefaultValue(param)}}"
+            case (param, index) if !param.hasDefault => {
+              s"${Identifier.backtickWrap(param.name).replace("$", "$$")} = $${${index + 1}${findDefaultValue(param)}}"
+            }
           }
           .mkString(", ")
         val edit = new l.TextEdit(editRange, editText)

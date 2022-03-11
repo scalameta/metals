@@ -132,7 +132,7 @@ final class ForwardingMetalsBuildClient(
       }
 
     if (otherChanges.nonEmpty)
-      onBuildChanged(otherChanges)
+      onBuildChanged(otherChanges.toSeq)
   }
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}

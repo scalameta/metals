@@ -142,6 +142,7 @@ final class Compilations(
 
     val groupedTargetIds = buildTargets.allBuildTargetIds
       .groupBy(buildTargets.buildServerOf(_))
+      .toSeq
     Future
       .traverse(groupedTargetIds) { case (connectionOpt, targetIds) =>
         clean(connectionOpt, targetIds)

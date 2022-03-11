@@ -224,6 +224,7 @@ final class TestingServer(
           dependencySources
             .getItems()
             .asScala
+            .toSeq
             .flatMap(_.getSources().asScala)
         }
       case None =>
@@ -370,8 +371,8 @@ final class TestingServer(
       loc: munit.Location
   ): Unit = {
     val compare = workspaceReferences()
-    assert(compare.definition.nonEmpty)
-    assert(compare.references.nonEmpty)
+    assert(compare.definition.nonEmpty, "Definitions should not be empty")
+    assert(compare.references.nonEmpty, "References should not be empty")
     Assertions.assertNoDiff(
       compare.referencesFormat,
       compare.definitionFormat
@@ -1351,6 +1352,10 @@ final class TestingServer(
     )
     server.references(params).asScala.map { r =>
       r.asScala
+        .sortBy { l =>
+          val start = l.getRange().getStart()
+          (start.getLine(), start.getCharacter())
+        }
         .map { l =>
           val path = l.getUri.toAbsolutePath
           val shortPath =
@@ -1446,7 +1451,7 @@ final class TestingServer(
       schema = s.Schema.SEMANTICDB4,
       uri = input.path,
       text = input.text,
-      occurrences = occurrences
+      occurrences = occurrences.toSeq
     )
   }
 
@@ -1472,7 +1477,8 @@ final class TestingServer(
     for {
       documentSymbols <- server.documentSymbol(params).asScala
     } yield {
-      val symbols = documentSymbols.getLeft.asScala.toSymbolInformation(uri)
+      val symbols =
+        documentSymbols.getLeft.asScala.toSeq.toSymbolInformation(uri)
       val textDocument = s.TextDocument(
         schema = s.Schema.SEMANTICDB4,
         language = s.Language.SCALA,

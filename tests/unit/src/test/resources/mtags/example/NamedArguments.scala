@@ -7,7 +7,7 @@ case class User/*example.User#*/(
     }
 )
 object NamedArguments/*example.NamedArguments.*/ {
-  val susan/*example.NamedArguments.susan.*/ = "Susan"
+  final val susan/*example.NamedArguments.susan.*/ = "Susan"
   val user1/*example.NamedArguments.user1.*/ =
     User
       .apply(
@@ -28,7 +28,7 @@ object NamedArguments/*example.NamedArguments.*/ {
 
   // vararg
   List(
-    xs = 2
+    elems = 2
   )
 
 }

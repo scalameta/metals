@@ -1,65 +1,58 @@
-package scala.meta.internal.pc
+package scala.meta.internal.pc.printer
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.IndexedContext
+import scala.meta.internal.pc.Params
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.EvidenceParamName
 import dotty.tools.dotc.core.NameOps.*
-import dotty.tools.dotc.core.Names.*
-import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.*
+import dotty.tools.dotc.printing.Printer
 import dotty.tools.dotc.printing.RefinedPrinter
-import org.eclipse.lsp4j.CompletionItemKind
+import dotty.tools.dotc.printing.Texts.Text
 
-class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
+class MetalsPrinter(names: ShortenedNames, dotcPrinter: DotcPrinter)(using
+    Context
+):
 
   private val defaultWidth = 1000
 
-  override def nameString(name: Name): String =
-    super.nameString(name.stripModuleClassSuffix)
-
-  def typeString(tpw: Type): String =
-    toText(tpw).mkString(defaultWidth, false)
-
-  def expressionTypeString(tpw: Type, history: ShortenedNames): Option[String] =
+  def expressionType(tpw: Type)(using Context): Option[String] =
     tpw match
       case t: PolyType =>
-        expressionTypeString(t.resType, history)
+        expressionType(t.resType)
       case t: MethodType =>
-        expressionTypeString(t.resType, history)
+        expressionType(t.resType)
       case i: ImportType =>
-        expressionTypeString(i.expr.typeOpt, history)
+        expressionType(i.expr.typeOpt)
       case c: ConstantType =>
-        Some(typeString(shortType(c.underlying, history)))
+        Some(tpe(c.underlying))
       case _ if !tpw.isErroneous =>
-        Some(typeString(shortType(tpw, history)))
+        Some(tpe(tpw))
       case _ => None
 
-  /**
-   * for
-   * - method: method signature
-   *   - e.g. `[A: Ordering](x: List[Int]): A`
-   * - otherwise: its shortened type
-   *   - e.g. ` java.lang.String` ` Symbols.Symbol`
-   */
-  def hoverDetailString(
-      sym: Symbol,
-      history: ShortenedNames,
-      info: Type
-  )(using Context): String =
+  def tpe(tpe: Type): String =
+    val short = names.shortType(tpe)
+    if short.isErroneous then "Any"
+    else dotcPrinter.tpe(short)
+
+  def hoverSymbol(sym: Symbol, info: Type)(using Context): String =
     val typeSymbol = info.typeSymbol
 
-    def shortTypeString: String =
-      val short = shortType(info, history)
-      s"${typeString(short)}"
+    def shortTypeString: String = tpe(info)
 
     def ownerTypeString: String =
       typeSymbol.owner.fullNameBackticked
 
-    def name: String = nameString(sym)
+    def name: String = dotcPrinter.name(sym)
 
     sym match
       case p if p.is(Flags.Package) =>
@@ -73,48 +66,31 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
        * let's instead use that space to show the full path.
        */
       case o if typeSymbol.is(Flags.Module) => // enum
-        s"${keyString(o)} $name: $ownerTypeString"
+        s"${dotcPrinter.keywords(o)} $name: $ownerTypeString"
       case m if m.is(Flags.Method) =>
-        defaultMethodSignature(m, history, info)
+        defaultMethodSignature(m, info)
       case _ =>
         val implicitKeyword =
           if sym.is(Flags.Implicit) then List("implicit") else Nil
         val finalKeyword = if sym.is(Flags.Final) then List("final") else Nil
-        val keyOrEmpty = keyString(sym)
+        val keyOrEmpty = dotcPrinter.keywords(sym)
         val keyword = if keyOrEmpty.nonEmpty then List(keyOrEmpty) else Nil
         (implicitKeyword ::: finalKeyword ::: keyword ::: (s"$name:" :: shortTypeString :: Nil))
           .mkString(" ")
     end match
-  end hoverDetailString
+  end hoverSymbol
 
-  def typeDetailString(tpe: Type, history: ShortenedNames): String =
-    val short = shortType(tpe, history)
-    if short.isErroneous then "Any"
-    else typeString(short)
-
-  /**
-   * Calculate the string for "detail" field in CompletionItem.
-   *
-   * for class or module, it's package name that it belongs to (e.g. "scala.collection" for "scala.collection.Seq")
-   * otherwise, it's shortened type/method signature
-   * e.g. "[A: Ordering](x: List[Int]): A", " java.lang.String"
-   *
-   * @param sym The symbol for completion item.
-   */
-  def completionDetailString(
-      sym: Symbol,
-      history: ShortenedNames
-  ): String =
+  def completionSymbol(sym: Symbol): String =
     val info = sym.info.widenTermRefExpr
     val typeSymbol = info.typeSymbol
 
-    if sym.is(Flags.Package) || sym.isClass then " " + fullNameString(sym.owner)
+    if sym.is(Flags.Package) || sym.isClass then
+      " " + dotcPrinter.fullName(sym.owner)
     else if sym.is(Flags.Module) || typeSymbol.is(Flags.Module) then
-      " " + fullNameString(typeSymbol.owner)
+      " " + dotcPrinter.fullName(typeSymbol.owner)
     else if sym.is(Flags.Method) then
-      defaultMethodSignature(sym, history, info, onlyMethodParams = true)
-    else typeDetailString(info, history)
-  end completionDetailString
+      defaultMethodSignature(sym, info, onlyMethodParams = true)
+    else tpe(info)
 
   /**
    * Compute method signature for the given (method) symbol.
@@ -123,9 +99,8 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
    *         e.g. "[A: Ordering](a: A, b: B): collection.mutable.Map[A, B]"
    *              ": collection.mutable.Map[A, B]" for no-arg method
    */
-  def defaultMethodSignature(
+  private def defaultMethodSignature(
       gsym: Symbol,
-      shortenedNames: ShortenedNames,
       gtpe: Type,
       onlyMethodParams: Boolean = false
   ): String =
@@ -141,8 +116,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
 
     lazy val implicitEvidencesByTypeParam: Map[Symbol, List[String]] =
       constructImplicitEvidencesByTypeParam(
-        implicitEvidenceParams.toList,
-        shortenedNames
+        implicitEvidenceParams.toList
       )
 
     def label(paramss: List[List[Symbol]]) = {
@@ -156,8 +130,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
           else
             paramLabel(
               param,
-              implicitEvidencesByTypeParam,
-              shortenedNames
+              implicitEvidencesByTypeParam
             ) :: Nil
         }
         // Remove empty params
@@ -168,10 +141,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
     val paramLabelss = label(methodParams)
     val extLabelss = label(extParams)
 
-    val shortenedType = shortType(gtpe.finalResultType, shortenedNames)
-    val returnType =
-      if shortenedType.isErroneous then "Any"
-      else typeString(shortenedType)
+    val returnType = tpe(gtpe.finalResultType)
     def extensionSignatureString =
       val extensionSignature = paramssString(extLabelss, extParams)
       if extParams.nonEmpty then
@@ -264,13 +234,10 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
    */
   private def paramLabel(
       param: Symbol,
-      implicitEvidences: Map[Symbol, List[String]],
-      shortenedNames: ShortenedNames
-  )(using Context): String =
-    val keywordName = nameString(param)
-    val paramTypeString = typeString(
-      shortType(param.info, shortenedNames)
-    )
+      implicitEvidences: Map[Symbol, List[String]]
+  ): String =
+    val keywordName = dotcPrinter.name(param)
+    val paramTypeString = tpe(param.info)
     if param.isTypeParam then
       // pretty context bounds
       // e.g. f[A](a: A, b: A)(implicit evidence$1: Ordering[A])
@@ -285,11 +252,7 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
       // print only type string
       // e.g. "using Ord[T]" instead of "using x$0: Ord[T]"
       paramTypeString
-    else
-      val paramTypeString = typeString(
-        shortType(param.info, shortenedNames)
-      )
-      s"${keywordName}: ${paramTypeString}"
+    else s"${keywordName}: ${paramTypeString}"
     end if
   end paramLabel
 
@@ -300,10 +263,9 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
    * @return mapping from type param to its context bounds (e.g. Map(A -> List("Ordering")) )
    */
   private def constructImplicitEvidencesByTypeParam(
-      implicitEvidenceParams: List[Symbol],
-      shortenedNames: ShortenedNames
+      implicitEvidenceParams: List[Symbol]
   ): Map[Symbol, List[String]] =
-    val result = collection.mutable.Map.empty[Symbol, ListBuffer[String]]
+    val result = mutable.Map.empty[Symbol, mutable.ListBuffer[String]]
     implicitEvidenceParams.iterator
       .map(_.info)
       .collect {
@@ -313,10 +275,25 @@ class SymbolPrinter(using ctx: Context) extends RefinedPrinter(ctx):
           (tycon, tparam.asInstanceOf[Symbol])
       }
       .foreach { case (tycon, tparam) =>
-        val buf = result.getOrElseUpdate(tparam, ListBuffer.empty[String])
-        buf += typeString(shortType(tycon, shortenedNames))
+        val buf =
+          result.getOrElseUpdate(tparam, mutable.ListBuffer.empty[String])
+        buf += tpe(tycon)
       }
     result.map(kv => (kv._1, kv._2.toList)).toMap
   end constructImplicitEvidencesByTypeParam
+end MetalsPrinter
 
-end SymbolPrinter
+object MetalsPrinter:
+
+  def standard(indexed: IndexedContext): MetalsPrinter =
+    import indexed.ctx
+    MetalsPrinter(new ShortenedNames(indexed), DotcPrinter.Std())
+
+  def forInferredType(
+      shortenedNames: ShortenedNames,
+      indexed: IndexedContext
+  ): MetalsPrinter =
+    import shortenedNames.indexedContext.ctx
+    MetalsPrinter(shortenedNames, DotcPrinter.ForInferredType(indexed))
+
+end MetalsPrinter

@@ -4,7 +4,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 
-class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
+class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
 
   checkWorksheetDeps(
     "imports-inside",
@@ -64,7 +64,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
              |  body(
              |    p("This is a big paragraph of text")
              |  )
-             |) // : scalatags.Text.TypedTag[String] = TypedTag("html",List(WrappedArray(TypedTag("body",List(WrappedArray(TypedTag("p",Li…
+             |) // : scalatags.Text.TypedTag[String] = TypedTag(tag = "html",modifiers = List(ArraySeq(TypedTag(tag = "body",modifiers = L…
              |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
              |""".stripMargin
         )
@@ -89,7 +89,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala212) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.workspaceErrorShowMessages,
-        "Error downloading com.lihaoyi:scalatags_2.12:0.999.0"
+        "Error downloading com.lihaoyi:scalatags_2.13:0.999.0"
       )
     } yield ()
   }

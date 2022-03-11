@@ -26,7 +26,7 @@ class SbtBloopLspSuite
     with ScriptsAssertions {
 
   val sbtVersion = V.sbtVersion
-  val scalaVersion = V.scala212
+  val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, () => userConfig)
 
   override def currentDigest(
@@ -40,7 +40,7 @@ class SbtBloopLspSuite
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -81,7 +81,7 @@ class SbtBloopLspSuite
     for {
       _ <- initialize(
         s"""|/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
@@ -97,7 +97,7 @@ class SbtBloopLspSuite
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -126,7 +126,7 @@ class SbtBloopLspSuite
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala212}"
+            |scalaVersion := "${V.scala213}"
             |/src/main/scala/reload/Main.scala
             |package reload
             |object Main extends App {
@@ -169,7 +169,7 @@ class SbtBloopLspSuite
            |sbt.version=$sbtVersion
            |/build.sbt
            |version := "1.0"
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |""".stripMargin,
         expectError = true
       )
@@ -209,7 +209,7 @@ class SbtBloopLspSuite
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.sbt") { _ =>
-        s"""scalaVersion := "${V.scala212}" """
+        s"""scalaVersion := "${V.scala213}" """
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -230,7 +230,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |lazy val a = project.settings(scalaVersion := "2.12.4")
            |lazy val b = project.settings(scalaVersion := "2.12.3")
            |lazy val c = project.settings(scalaVersion := "2.11.11")
@@ -287,7 +287,7 @@ class SbtBloopLspSuite
       }
       _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didSave("build.sbt")(_ =>
-        s"""scalaVersion := "${V.scala212}" """
+        s"""scalaVersion := "${V.scala213}" """
       )
       _ = {
         val expected = ClientCommands.ReloadDoctor.id :: Nil
@@ -309,7 +309,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |/.sbtopts
            |-J-Xlog:gc:gc_log
            |""".stripMargin
@@ -330,7 +330,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |/.jvmopts
            |-Xms1536M
            |-Xmx1536M
@@ -350,7 +350,7 @@ class SbtBloopLspSuite
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "${V.scala212}"
+           |scalaVersion := "${V.scala213}"
            |scalacOptions ++= List(
            |  "-Xfatal-warnings",
            |  "-Ywarn-unused"
@@ -391,7 +391,7 @@ class SbtBloopLspSuite
          |/project/build.properties
          |sbt.version=$sbtVersion
          |/build.sbt
-         |scalaVersion := "${V.scala212}"
+         |scalaVersion := "${V.scala213}"
          |""".stripMargin
     )
     for {
@@ -532,7 +532,7 @@ class SbtBloopLspSuite
             |import sbt._
             |import Keys._
             |object Deps {
-            |  val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
+            |  val scalatest = "org.scalatest" %% "scalatest" % "3.2.4"
             |}
          """.stripMargin
       )
@@ -542,7 +542,7 @@ class SbtBloopLspSuite
            |val scalatest: ModuleID
            |```
            |```range
-           |val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
+           |val scalatest = "org.scalatest" %% "scalatest" % "3.2.4"
            |```
            |""".stripMargin
       _ = assertNoDiff(hoverRes, expectedHoverRes)

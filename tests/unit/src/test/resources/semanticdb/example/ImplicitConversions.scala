@@ -11,7 +11,7 @@ class ImplicitConversions/*example.ImplicitConversions#*/ {
 
   // extension methods
   message/*example.ImplicitConversions#message.*/
-    .stripSuffix/*scala.collection.immutable.StringLike#stripSuffix().*/("h")
+    .stripSuffix/*scala.collection.StringOps#stripSuffix().*/("h")
   tuple/*example.ImplicitConversions#tuple.*/ +/*scala.Predef.any2stringadd#`+`().*/ "Hello"
 
   // implicit conversions
@@ -21,7 +21,7 @@ class ImplicitConversions/*example.ImplicitConversions#*/ {
   s/*scala.StringContext#s().*/"Hello $message/*example.ImplicitConversions#message.*/ $number/*example.ImplicitConversions#number.*/"
   s/*scala.StringContext#s().*/"""Hello
      |$message/*example.ImplicitConversions#message.*/
-     |$number/*example.ImplicitConversions#number.*/""".stripMargin/*scala.collection.immutable.StringLike#stripMargin(+1).*/
+     |$number/*example.ImplicitConversions#number.*/""".stripMargin/*scala.collection.StringOps#stripMargin(+1).*/
 
   val a/*example.ImplicitConversions#a.*/: Int/*scala.Int#*/ = char/*scala.Char#toInt().*/
   val b/*example.ImplicitConversions#b.*/: Long/*scala.Long#*/ = char/*scala.Char#toLong().*/

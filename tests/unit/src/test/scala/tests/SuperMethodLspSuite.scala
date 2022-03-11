@@ -290,7 +290,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
         50 -> (new Position(
           60,
           6
-        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.12-0.12.0-sources.jar/io/circe/Decoder.scala")
+        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.13-0.12.0-sources.jar/io/circe/Decoder.scala")
       )
 
       (context, assertions) = parseWithUri(code, path)
@@ -307,7 +307,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       uri: String
   ): (Map[Int, (Position, String)], Map[Int, Option[Int]]) = {
     val (mapping, asserts) = parse(code)
-    (mapping.mapValues((_, uri)), asserts)
+    (mapping.mapValues((_, uri)).toMap, asserts)
   }
 
   private def parse(

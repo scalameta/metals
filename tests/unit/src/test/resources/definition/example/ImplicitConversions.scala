@@ -11,17 +11,17 @@ class ImplicitConversions/*ImplicitConversions.scala*/ {
 
   // extension methods
   message/*ImplicitConversions.scala*/
-    .stripSuffix/*StringLike.scala*/("h")
+    .stripSuffix/*StringOps.scala*/("h")
   tuple/*ImplicitConversions.scala*/ +/*Predef.scala*/ "Hello"
 
   // implicit conversions
   val x/*ImplicitConversions.scala*/: Int/*Int.scala*/ = message/*ImplicitConversions.scala*/
 
   // interpolators
-  s/*StringContext.scala*/"Hello $message/*ImplicitConversions.scala*/ $number/*ImplicitConversions.scala*/"
-  s/*StringContext.scala*/"""Hello
+  s/*StringContext.scala fallback to scala.StringContext#*/"Hello $message/*ImplicitConversions.scala*/ $number/*ImplicitConversions.scala*/"
+  s/*StringContext.scala fallback to scala.StringContext#*/"""Hello
      |$message/*ImplicitConversions.scala*/
-     |$number/*ImplicitConversions.scala*/""".stripMargin/*StringLike.scala*/
+     |$number/*ImplicitConversions.scala*/""".stripMargin/*StringOps.scala*/
 
   val a/*ImplicitConversions.scala*/: Int/*Int.scala*/ = char/*Char.scala*/
   val b/*ImplicitConversions.scala*/: Long/*Long.scala*/ = char/*Char.scala*/

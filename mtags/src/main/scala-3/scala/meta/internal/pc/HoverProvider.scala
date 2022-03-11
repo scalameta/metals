@@ -5,6 +5,7 @@ import java.{util as ju}
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
@@ -55,26 +56,22 @@ object HoverProvider:
         case Nil =>
           ju.Optional.empty()
         case symbols @ (symbol :: _) =>
-          val printer = SymbolPrinter()
           val docComments =
             symbols.flatMap(ParsedComment.docOf(_))
-          val history = driver.compilationUnits.get(uri) match
-            case Some(unit) =>
-              val newctx =
-                ctx.fresh.setCompilationUnit(unit)
-              val context =
+          val printerContext =
+            driver.compilationUnits.get(uri) match
+              case Some(unit) =>
+                val newctx =
+                  ctx.fresh.setCompilationUnit(unit)
                 MetalsInteractive.contextOfPath(enclosing)(using newctx)
-              new ShortenedNames(IndexedContext(context))
-            case None => new ShortenedNames(IndexedContext(ctx))
+              case None => ctx
+          val printer = MetalsPrinter.standard(IndexedContext(printerContext))
+
           val hoverString =
             tpw match
               // https://github.com/lampepfl/dotty/issues/8891
               case tpw: ImportType =>
-                printer.hoverDetailString(
-                  symbol,
-                  history,
-                  symbol.paramRef
-                )
+                printer.hoverSymbol(symbol, symbol.paramRef)
               case _ =>
                 val (tpe, sym) =
                   if symbol.isType then (symbol.typeRef, symbol)
@@ -84,13 +81,13 @@ object HoverProvider:
                   if tpe != NoType then tpe
                   else tpw
 
-                printer.hoverDetailString(sym, history, finalTpe)
+                printer.hoverSymbol(sym, finalTpe)
             end match
           end hoverString
 
           val docString =
             docComments.map(_.renderAsMarkdown).mkString("\n")
-          printer.expressionTypeString(exprTpw, history) match
+          printer.expressionType(exprTpw) match
             case Some(expressionType) =>
               val forceExpressionType =
                 !pos.span.isZeroExtent || (

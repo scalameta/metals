@@ -24,7 +24,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |/build.sc
            |import mill._, scalalib._
            |object foo extends ScalaModule {
-           |  def scalaVersion = "${V.scala212}"
+           |  def scalaVersion = "${V.scala213}"
            |}
         """.stripMargin
       )
@@ -47,7 +47,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         text +
           s"""|
               |object bar extends ScalaModule {
-              |  def scalaVersion = "${V.scala212}"
+              |  def scalaVersion = "${V.scala213}"
               |}
               |""".stripMargin
       }
@@ -74,7 +74,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |/build.sc
            |import mill._, scalalib._
            |object foo extends ScalaModule {
-           |  def scalaVersion = "${V.scala212}"
+           |  def scalaVersion = "${V.scala213}"
            |  /*DEPS*/
            |}
            |/foo/src/reload/Main.scala
@@ -90,7 +90,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ <- server.didSave("build.sc") { text =>
         text.replace(
           "/*DEPS*/",
-          "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.4\")"
+          "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.9\")"
         )
       }
       _ <-
@@ -129,7 +129,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
         s"""
            |import mill._, scalalib._
            |object foo extends ScalaModule {
-           |  def scalaVersion = "${V.scala212}"
+           |  def scalaVersion = "${V.scala213}"
            |}
         """.stripMargin
       }
@@ -152,7 +152,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |/build.sc
            |import mill._, scalalib._
            |object foo extends ScalaModule {
-           |  def scalaVersion = "${V.scala212}"
+           |  def scalaVersion = "${V.scala213}"
            |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
            |}
            |/foo/src/Warning.scala

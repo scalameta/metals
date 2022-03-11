@@ -6,8 +6,9 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
-  lazy val snapshot: Snapshot = Snapshot.latest("snapshots")
-  lazy val release: Snapshot = Snapshot.latest("releases")
+  lazy val snapshot: Snapshot = Snapshot.latest("snapshots", "2.13")
+  // NOTE: That when we release 0.11.3 we need to update this to 2.13
+  lazy val release: Snapshot = Snapshot.latest("releases", "2.12")
   def releasesResolverTable: String = {
     <table>
       <thead>
@@ -82,7 +83,7 @@ object Docs {
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
           "SCALA211_VERSION" -> V.scala211,
-          "SCALA_VERSION" -> V.scala212
+          "SCALA_VERSION" -> V.scala213
         )
       )
       .withOut(docsOut)
