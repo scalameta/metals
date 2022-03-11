@@ -6,6 +6,9 @@ import java.nio.file.Paths
 import java.util.concurrent.CancellationException
 
 import scala.collection.mutable
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 import scala.{meta => m}
 
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
@@ -91,6 +94,32 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       }
   }
 
+  implicit class XtensionURIMtags(value: URI) {
+    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
+    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
+      val path =
+        if (value.getScheme() == "jar")
+          Try {
+            AbsolutePath(Paths.get(value))
+          } match {
+            case Success(path) => path
+            case Failure(_) =>
+              // don't close - put up with the resource staying open so all AbsolutePath methods don't have to be wrapped
+              m.internal.io.PlatformFileIO.newFileSystem(
+                value,
+                new java.util.HashMap[String, String]()
+              )
+              AbsolutePath(Paths.get(value))
+          }
+        else
+          AbsolutePath(Paths.get(value))
+      if (followSymlink)
+        path.dealias
+      else
+        path
+    }
+  }
+
   implicit class XtensionStringMtags(value: String) {
 
     def stripBackticks: String = value.stripPrefix("`").stripSuffix("`")
@@ -98,14 +127,14 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
       value.size > 1 && value.head == '`' && value.last == '`'
     def toAbsolutePath: AbsolutePath = toAbsolutePath(true)
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
-      val decodedUriStr =
-        URLDecoder.decode(value.stripPrefix("metals:"), "UTF-8")
-      val decodedUri = URI.create(decodedUriStr)
-      val path = AbsolutePath(Paths.get(decodedUri))
-      if (followSymlink)
-        path.dealias
+      // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
+      // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
+      if (value.toUpperCase.startsWith("JAR%3AFILE"))
+        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
+      else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
+        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
       else
-        path
+        URI.create(value.stripPrefix("metals:")).toAbsolutePath(followSymlink)
     }
     def lastIndexBetween(
         char: Char,

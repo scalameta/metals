@@ -21,4 +21,11 @@ class MetalsEnrichmentsSuite extends BaseSuite {
     val expected = Seq("a", "a/b", "a/b/c").map(RelativePath.apply)
     assertEquals(relativeCreated, expected)
   }
+
+  test("uri-to-absolute-path") {
+    val uri =
+      "file:///Users/happyMetalsUser/hello%20space%20world/src/main/scala/Main.scala"
+    val path = uri.toAbsolutePath
+    assert(path.toString().contains("hello space world"))
+  }
 }
