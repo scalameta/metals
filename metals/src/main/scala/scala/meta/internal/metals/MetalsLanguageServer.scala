@@ -2461,15 +2461,13 @@ class MetalsLanguageServer(
       worksheetProvider.reset()
       symbolSearch.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
-      buildTargets.addWorkspaceBuildSources(i.sources)
       buildTargets.addScalacOptions(i.scalacOptions)
       buildTargets.addJavacOptions(i.javacOptions)
       for {
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
       } {
-        val sourceItemPath = source.getUri.toAbsolutePath(followSymlink = false)
-        buildTargets.addSourceItem(sourceItemPath, item.getTarget)
+        buildTargets.addSourceItem(source, item.getTarget)
       }
       check()
       buildTools

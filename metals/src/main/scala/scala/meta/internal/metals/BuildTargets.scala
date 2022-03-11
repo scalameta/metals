@@ -1,10 +1,8 @@
 package scala.meta.internal.metals
 
 import java.lang.{Iterable => JIterable}
-import java.net.URI
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.{util => ju}
@@ -25,8 +23,8 @@ import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.JavacOptionsResult
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.SourceItem
 import ch.epfl.scala.bsp4j.SourceItemKind
-import ch.epfl.scala.bsp4j.SourcesResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 
 /**
@@ -54,7 +52,8 @@ final class BuildTargets(
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
-  private var buildTargetGeneratedDirs: List[AbsolutePath] = Nil
+  private val buildTargetGeneratedDirs: mutable.Set[AbsolutePath] =
+    mutable.Set.empty
   private val sourceJarNameToJarFile = TrieMap.empty[String, AbsolutePath]
   private val isSourceRoot =
     ConcurrentHashSet.empty[AbsolutePath]
@@ -101,6 +100,7 @@ final class BuildTargets(
     scalaTargetInfo.clear()
     inverseDependencies.clear()
     buildTargetSources.clear()
+    buildTargetGeneratedDirs.clear()
     inverseDependencySources.clear()
     sourceJarNameToJarFile.clear()
     isSourceRoot.clear()
@@ -197,6 +197,20 @@ final class BuildTargets(
     queue.add(buildTarget)
   }
 
+  def addSourceItem(
+      sourceItem: SourceItem,
+      buildTarget: BuildTargetIdentifier
+  ): Unit = {
+    val sourceItemPath = sourceItem.getUri.toAbsolutePath(followSymlink = false)
+    if (
+      sourceItem.getKind() == SourceItemKind.DIRECTORY &&
+      sourceItem.getGenerated()
+    ) {
+      buildTargetGeneratedDirs += sourceItemPath
+    }
+    addSourceItem(sourceItemPath, buildTarget)
+  }
+
   def onCreate(source: AbsolutePath): Unit = {
     for {
       buildTarget <- sourceBuildTargets(source)
@@ -259,26 +273,6 @@ final class BuildTargets(
         buf += target.getId
       }
     }
-  }
-
-  def addWorkspaceBuildSources(result: SourcesResult): Unit = {
-    val generatedDirs = result
-      .getItems()
-      .asScala
-      .flatMap { items =>
-        items
-          .getSources()
-          .asScala
-          .collect {
-            case item
-                if (item.getKind() == SourceItemKind.DIRECTORY && item
-                  .getGenerated()) =>
-              AbsolutePath(Paths.get(new URI(item.getUri())))
-          }
-          .toList
-      }
-      .toList
-    buildTargetGeneratedDirs = generatedDirs
   }
 
   def checkIfGeneratedSource(source: Path): Boolean = {
