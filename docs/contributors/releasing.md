@@ -46,9 +46,9 @@ you will need to make sure everything is included there.
 
 ### Update Metals version
 
-- Update Metals SNAPSHOT version in `build.sbt` and the default version in
-  Github issue templates.
-- Update `./bin/test-release.sh` - remove any unsupported Scala versions and
+- `build.sbt` - update `localSnapshotVersion`
+- `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
+- `./bin/test-release.sh` - remove any unsupported Scala versions and
   add newly supported ones. This will be needed later to test the new release.
 - `.github/workflows/mtags-auto-release.yml` - update `metals_version` and `metals_ref`
 
@@ -122,7 +122,7 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
 - Announce the new release with the link to the release notes:
   - on [Discord](https://discord.com/invite/RFpSVth)
 
-## tl;dr release steps
+## Sanity check
 
 - [ ] draft release notes and create with PR with them
 - [ ] bump Metals version
