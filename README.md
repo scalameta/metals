@@ -26,7 +26,6 @@ The current maintainers (people who can merge pull requests) are:
 - Adrien Piquerez - [`@adpi2`](https://github.com/adpi2)
 - Arthur McGibbon - [`@Arthurm1`](https://github.com/Arthurm1)
 - Chris Kipp - [`@ckipp01`](https://github.com/ckipp01)
-- Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 - Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
 - Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 - Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
@@ -35,6 +34,7 @@ The current maintainers (people who can merge pull requests) are:
 Past maintainers:
 
 - Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
+- Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 - Johan Mudsam - [`@mudsam`](https://github.com/mudsam)
 - Krzysztof Bochenek - [`@kpbochenek`](https://github.com/kpbochenek)
 - Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
