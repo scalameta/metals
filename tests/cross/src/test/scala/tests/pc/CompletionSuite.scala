@@ -1456,4 +1456,21 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(3)
   )
 
+  checkEdit(
+    "tab-indented",
+    s"""|package x
+        |object Foo {
+        |	def bar: Int =
+        |		42.@@
+        |}
+        |""".stripMargin,
+    s"""|package x
+        |object Foo {
+        |	def bar: Int =
+        |		42.toInt
+        |}
+        |""".stripMargin,
+    filter = _.startsWith("toInt")
+  )
+
 }

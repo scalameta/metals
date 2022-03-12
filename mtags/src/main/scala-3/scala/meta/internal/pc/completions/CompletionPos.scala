@@ -25,12 +25,13 @@ case class CompletionPos(
 
   def toEditRange: l.Range =
     def toPos(offset: Int): l.Position =
-      new l.Position(
-        cursorPos.source.offsetToLine(offset),
-        cursorPos.source.column(offset)
-      )
+      val lineStartOffest = cursorPos.source.startOfLine(offset)
+      val line = cursorPos.source.offsetToLine(lineStartOffest)
+      val column = offset - lineStartOffest
+      new l.Position(line, column)
 
     new l.Range(toPos(start), toPos(end))
+  end toEditRange
 end CompletionPos
 
 object CompletionPos:
