@@ -105,9 +105,14 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionStatusCode(code: b.StatusCode) {
+    def isOK: Boolean = code == b.StatusCode.OK
+    def isError: Boolean = code == b.StatusCode.ERROR
+  }
+
   implicit class XtensionCompileResult(result: b.CompileResult) {
-    def isOK: Boolean = result.getStatusCode == b.StatusCode.OK
-    def isError: Boolean = result.getStatusCode == b.StatusCode.ERROR
+    def isOK: Boolean = result.getStatusCode.isOK
+    def isError: Boolean = result.getStatusCode.isError
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {

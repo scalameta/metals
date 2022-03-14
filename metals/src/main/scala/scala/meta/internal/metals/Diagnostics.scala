@@ -21,6 +21,11 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
 
+private final case class CompilationStatus(
+    code: bsp4j.StatusCode,
+    errors: Int
+)
+
 /**
  * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.
  *
@@ -54,8 +59,8 @@ final class Diagnostics(
     new ConcurrentLinkedQueue[AbsolutePath]()
   private val compileTimer =
     TrieMap.empty[BuildTargetIdentifier, Timer]
-  private val compilationErrors =
-    TrieMap.empty[BuildTargetIdentifier, Int]
+  private val compilationStatus =
+    TrieMap.empty[BuildTargetIdentifier, CompilationStatus]
 
   def reset(): Unit = {
     val keys = diagnostics.keys
@@ -75,11 +80,17 @@ final class Diagnostics(
     }
   }
 
-  def onFinishCompileBuildTarget(report: bsp4j.CompileReport): Unit = {
+  def onFinishCompileBuildTarget(
+      report: bsp4j.CompileReport,
+      statusCode: bsp4j.StatusCode
+  ): Unit = {
     publishDiagnosticsBuffer()
+
     val target = report.getTarget()
     compileTimer.remove(target)
-    compilationErrors.update(target, report.getErrors())
+
+    val status = CompilationStatus(statusCode, report.getErrors())
+    compilationStatus.update(target, status)
   }
 
   def onSyntaxError(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
@@ -169,8 +180,11 @@ final class Diagnostics(
     )
   }
 
-  def getCompilationErrors(buildTarget: BuildTargetIdentifier): Int = {
-    compilationErrors.getOrElse(buildTarget, 0)
+  def hasCompilationErrors(buildTarget: BuildTargetIdentifier): Boolean = {
+    compilationStatus
+      .get(buildTarget)
+      .map(status => status.code.isError || status.errors > 0)
+      .getOrElse(false)
   }
 
   def hasSyntaxError(path: AbsolutePath): Boolean =

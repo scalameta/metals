@@ -417,10 +417,10 @@ final class Doctor(
   private def extractCompilationStatus(
       targetId: BuildTargetIdentifier
   ): DoctorStatus = {
-    val errors = diagnostics.getCompilationErrors(targetId)
-    if (errors > 0)
+    if (diagnostics.hasCompilationErrors(targetId))
       DoctorStatus.error
-    else DoctorStatus.check
+    else
+      DoctorStatus.check
   }
 
   private def extractJavaInfo(
