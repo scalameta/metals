@@ -54,6 +54,8 @@ final class Diagnostics(
     new ConcurrentLinkedQueue[AbsolutePath]()
   private val compileTimer =
     TrieMap.empty[BuildTargetIdentifier, Timer]
+  private val compilationErrors =
+    TrieMap.empty[BuildTargetIdentifier, Int]
 
   def reset(): Unit = {
     val keys = diagnostics.keys
@@ -73,9 +75,11 @@ final class Diagnostics(
     }
   }
 
-  def onFinishCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
+  def onFinishCompileBuildTarget(report: bsp4j.CompileReport): Unit = {
     publishDiagnosticsBuffer()
+    val target = report.getTarget()
     compileTimer.remove(target)
+    compilationErrors.update(target, report.getErrors())
   }
 
   def onSyntaxError(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
@@ -163,6 +167,10 @@ final class Diagnostics(
       path,
       diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]())
     )
+  }
+
+  def getCompilationErrors(buildTarget: BuildTargetIdentifier): Int = {
+    compilationErrors.getOrElse(buildTarget, 0)
   }
 
   def hasSyntaxError(path: AbsolutePath): Boolean =

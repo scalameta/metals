@@ -24,7 +24,7 @@ sealed trait DoctorExplanation {
   def incorrectMessage: String
 
   /**
-   * Whether or not the incorrect message needs to be shown along witht he
+   * Whether or not the incorrect message needs to be shown along with he
    * correct one.
    *
    * @param allTargetsInfo
@@ -32,12 +32,22 @@ sealed trait DoctorExplanation {
   def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean
 
   /**
-   * Takes in a builder and returns a builder with the explanations attatched.
+   * Takes in a builder and returns a builder with the explanations attached.
    *
    * @param html The builder your're working with.
    * @param allTargetsInfo
    */
-  def toHtml(html: HtmlBuilder, allTargetsInfo: Seq[DoctorTargetInfo])
+  def toHtml(
+      html: HtmlBuilder,
+      allTargetsInfo: Seq[DoctorTargetInfo]
+  ): HtmlBuilder =
+    explanation(
+      html,
+      title,
+      correctMessage,
+      incorrectMessage,
+      show(allTargetsInfo)
+    )
 
   /**
    * Take the results and return them in Json
@@ -45,7 +55,13 @@ sealed trait DoctorExplanation {
    * @param allTargetsInfo
    * @return
    */
-  def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj
+  def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj =
+    explanation(
+      title,
+      correctMessage,
+      incorrectMessage,
+      show(allTargetsInfo)
+    )
 
   /**
    * Take the values and creates an html explanation for them.
@@ -90,6 +106,17 @@ sealed trait DoctorExplanation {
 }
 
 object DoctorExplanation {
+
+  case object CompilationStatus extends DoctorExplanation {
+    val title = "Compilation status:"
+    val correctMessage: String =
+      s"${Icons.unicode.check} - code is compiling"
+    val incorrectMessage: String =
+      s"${Icons.unicode.error} - code isn't compiling, open problems tab to see detailed compilation errors"
+
+    def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
+      allTargetsInfo.exists(_.compilationStatus.isCorrect == false)
+  }
   case object Diagnostics extends DoctorExplanation {
     val title = "Diagnostics:"
     val correctMessage: String =
@@ -99,23 +126,6 @@ object DoctorExplanation {
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.diagnosticsStatus.isCorrect == false)
-
-    def toHtml(html: HtmlBuilder, allTargetsInfo: Seq[DoctorTargetInfo]): Unit =
-      explanation(
-        html,
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
-
-    def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj =
-      explanation(
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
   }
 
   case object Interactive extends DoctorExplanation {
@@ -127,23 +137,6 @@ object DoctorExplanation {
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.interactiveStatus.isCorrect == false)
-
-    def toHtml(html: HtmlBuilder, allTargetsInfo: Seq[DoctorTargetInfo]): Unit =
-      explanation(
-        html,
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
-
-    def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj =
-      explanation(
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
   }
 
   case object SemanticDB extends DoctorExplanation {
@@ -156,23 +149,6 @@ object DoctorExplanation {
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.indexesStatus.isCorrect == false)
-
-    def toHtml(html: HtmlBuilder, allTargetsInfo: Seq[DoctorTargetInfo]): Unit =
-      explanation(
-        html,
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
-
-    def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj =
-      explanation(
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
   }
 
   case object Debugging extends DoctorExplanation {
@@ -184,23 +160,6 @@ object DoctorExplanation {
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.debuggingStatus.isCorrect == false)
-
-    def toHtml(html: HtmlBuilder, allTargetsInfo: Seq[DoctorTargetInfo]): Unit =
-      explanation(
-        html,
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
-
-    def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj =
-      explanation(
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
   }
 
   case object JavaSupport extends DoctorExplanation {
@@ -212,23 +171,6 @@ object DoctorExplanation {
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.javaStatus.isCorrect == false)
-
-    def toHtml(html: HtmlBuilder, allTargetsInfo: Seq[DoctorTargetInfo]): Unit =
-      explanation(
-        html,
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
-
-    def toJson(allTargetsInfo: Seq[DoctorTargetInfo]): Obj =
-      explanation(
-        title,
-        correctMessage,
-        incorrectMessage,
-        show(allTargetsInfo)
-      )
   }
 
 }

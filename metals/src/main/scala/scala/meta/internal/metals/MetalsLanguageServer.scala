@@ -424,6 +424,7 @@ class MetalsLanguageServer(
           report => {
             didCompileTarget(report)
             compilers.didCompile(report)
+            doctor.check()
           },
           changes => {
             quickConnectToBuildServer().onComplete {
@@ -713,6 +714,7 @@ class MetalsLanguageServer(
         doctor = new Doctor(
           workspace,
           buildTargets,
+          diagnostics,
           languageClient,
           () => bspSession,
           () => bspConnector.resolve(),

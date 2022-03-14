@@ -178,7 +178,7 @@ final class ForwardingMetalsBuildClient(
           report <- params.asCompileReport
           compilation <- compilations.remove(report.getTarget)
         } {
-          diagnostics.onFinishCompileBuildTarget(report.getTarget)
+          diagnostics.onFinishCompileBuildTarget(report)
           didCompile(report)
           val target = report.getTarget
           compilation.promise.trySuccess(report)
