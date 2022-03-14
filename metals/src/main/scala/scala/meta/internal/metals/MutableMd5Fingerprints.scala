@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -14,19 +15,22 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
   private case class Fingerprint(text: String, md5: String)
   private val fingerprints =
     new ConcurrentHashMap[AbsolutePath, ConcurrentLinkedQueue[Fingerprint]]()
-  def add(path: AbsolutePath, text: String): Unit = {
-    val md5 = MD5.compute(text)
+  def add(
+      path: AbsolutePath,
+      text: String,
+      md5: Option[String] = None
+  ): Unit = {
     val value = fingerprints.computeIfAbsent(
       path,
       { _ =>
         new ConcurrentLinkedQueue()
       }
     )
-    value.add(Fingerprint(text, md5))
+    value.add(Fingerprint(text, md5.getOrElse(MD5.compute(text))))
   }
 
   override def lookupText(path: AbsolutePath, md5: String): Option[String] = {
-    for {
+    val currentLookup = for {
       prints <- Option(fingerprints.get(path))
       fingerprint <- prints.asScala.find(_.md5 == md5)
     } yield {
@@ -34,8 +38,17 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
       prints.clear()
       prints.add(fingerprint)
       fingerprint.text
-
     }
+
+    currentLookup.orElse {
+      val text = FileIO.slurp(path, StandardCharsets.UTF_8)
+      val currentMD5 = MD5.compute(text)
+      if (md5 == currentMD5) {
+        add(path, text, Some(md5))
+        Some(text)
+      } else None
+    }
+
   }
 
   override def loadLastValid(
