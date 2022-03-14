@@ -123,6 +123,7 @@ object MetalsEnrichments
         onUnchanged = () => Some(dirty),
         onNoMatch = () => None
       )
+
     def toLocation(dirty: l.Location): Option[l.Location] =
       foldResult(
         pos => {
@@ -139,6 +140,7 @@ object MetalsEnrichments
         () => Some(dirty),
         () => None
       )
+
     def foldResult[B](
         onPosition: m.Position => B,
         onUnchanged: () => B,
@@ -158,15 +160,19 @@ object MetalsEnrichments
   implicit class XtensionScalaFuture[A](future: Future[A]) {
     def asCancelable: CancelableFuture[A] =
       CancelableFuture(future)
+
     def asJava: CompletableFuture[A] =
       FutureConverters.toJava(future).toCompletableFuture
+
     def asJavaObject: CompletableFuture[Object] =
       future.asJava.asInstanceOf[CompletableFuture[Object]]
+
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =
       future.map(_ => ())
+
     def withObjectValue: Future[Object] =
       future.asInstanceOf[Future[Object]]
 
@@ -177,6 +183,7 @@ object MetalsEnrichments
         scribe.error(s"Unexpected error while $doingWhat", e)
       }
     }
+
     def logError(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[A] = {
@@ -234,6 +241,7 @@ object MetalsEnrichments
           case Nil => Nil
         }
       }
+
       loop(lst)
     }
   }
@@ -242,6 +250,7 @@ object MetalsEnrichments
 
     def toSymbolInformation(uri: String): List[l.SymbolInformation] = {
       val buf = List.newBuilder[l.SymbolInformation]
+
       def loop(s: l.DocumentSymbol, owner: String): Unit = {
         buf += new l.SymbolInformation(
           s.getName,
@@ -261,6 +270,7 @@ object MetalsEnrichments
         }
         s.getChildren.forEach { child => loop(child, newOwner) }
       }
+
       symbol.foreach { s => loop(s, Symbols.RootPackage) }
       buf.result()
     }
@@ -272,9 +282,11 @@ object MetalsEnrichments
       val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
       Input.VirtualFile(uri, text)
     }
+
     def isSemanticdb: Boolean =
       path.getFileName.toString.endsWith(".semanticdb")
   }
+
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
@@ -290,6 +302,7 @@ object MetalsEnrichments
         accum.resolve(filename.toString)
       }
     }
+
     def isDependencySource(workspace: AbsolutePath): Boolean = {
       (isLocalFileSystem(workspace) &&
         isInReadonlyDirectory(workspace)) || isJarFileSystem
@@ -492,6 +505,7 @@ object MetalsEnrichments
         else
           createDirectoriesRec(absolutePath.parent, absolutePath +: toCreate)
       }
+
       createDirectoriesRec(path, Nil)
     }
 
@@ -594,6 +608,7 @@ object MetalsEnrichments
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
+
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
       MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)
 
@@ -636,6 +651,42 @@ object MetalsEnrichments
 
     def lineAtIndex(index: Int): Int =
       indexToLspPosition(index).getLine
+//
+//    /**
+//     * @param pos the position at which non-blank text starts
+//     * @return the length of indentation at the beginning of this string
+//     */
+//    def indentationLength(pos: Position): Int = {
+//      val lineStart = pos.start - pos.startColumn
+//      val blankCharsString = value.takeWhile(c => c == '\t' || c == ' ')
+//      blankCharsString.size - lineStart
+//    }
+//
+//    /**
+//     * @param pos the position at which non-blank text starts
+//     * @return the indentation at the beginning of this string
+//     */
+//    def getIndentation(pos: Position): String = {
+//      val blank = getIndentationBlankCharAtPosition(pos)
+//      pprint.log("indentation char at position is '"+blank+"'")
+//      getIndentationAtPositionWithBlankChar(pos, blank)
+//    }
+//
+//    /**
+//     * @param pos      the position at which non-blank text starts
+//     * @param blankChar the blank Char with which the indentation String is built
+//     * @return the indentation at the beginning of this string with the blankChar
+//     */
+//    def getIndentationAtPositionWithBlankChar(
+//        pos: Position,
+//        blankChar: Char
+//    ): String =
+//      blankChar.stringRepeat(value.indentationLength(pos = pos))
+//
+//    def getIndentationBlankCharAtPosition(pos: Position): Char = {
+//      if (value(pos.start - pos.startColumn) == '\t') '\t' else ' '
+//    }
+
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
@@ -656,12 +707,14 @@ object MetalsEnrichments
         .map { occ => occ.toLocation(uri) }
     }
   }
+
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
     def formatMessage(uri: String, hint: String): String = {
       val severity = d.getSeverity.toString.toLowerCase()
       s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
     }
   }
+
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
     def toLSP: l.DiagnosticSeverity =
       l.DiagnosticSeverity.forValue(sev.getValue)
@@ -698,6 +751,7 @@ object MetalsEnrichments
         range.getEnd.getLine,
         range.getEnd.getCharacter
       )
+
     def toLSP: l.Range =
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
   }
@@ -706,6 +760,7 @@ object MetalsEnrichments
     def toLocation(uri: String): l.Location = {
       occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLocation(uri)
     }
+
     def encloses(
         pos: l.Position,
         includeLastCharacter: Boolean = false
@@ -730,6 +785,7 @@ object MetalsEnrichments
     def getQuery(key: String): Option[String] =
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
+
   implicit class XtensionClasspath(classpath: List[String]) {
     def toAbsoluteClasspath: Iterator[AbsolutePath] = {
       classpath.iterator
@@ -737,6 +793,7 @@ object MetalsEnrichments
         .filter(p => Files.exists(p.toNIO))
     }
   }
+
   implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
     def targetroot: AbsolutePath = {
       item.getOptions.asScala
@@ -845,6 +902,7 @@ object MetalsEnrichments
         option.startsWith(soughtOption)
       }
     }
+
     def isJVM: Boolean = {
       // FIXME: https://github.com/scalacenter/bloop/issues/700
       !item.getOptions.asScala.exists(_.isNonJVMPlatformOption)
@@ -952,7 +1010,9 @@ object MetalsEnrichments
   }
 
   implicit class XtensionTreeTokenStream(tree: m.Tree) {
+
     import scala.meta._
+
     def leadingTokens: Iterator[m.Token] =
       tree.origin match {
         case Origin.Parsed(input, dialect, pos) =>

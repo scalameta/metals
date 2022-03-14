@@ -44,7 +44,8 @@ final class CodeActionProvider(
     new InsertInferredType(trees, compilers),
     new PatternMatchRefactor(trees),
     new RewriteBracesParensCodeAction(trees),
-    new ExtractValueCodeAction(trees, buffers)
+    new ExtractValueCodeAction(trees, buffers),
+    new CreateCompanionObjectCodeAction(trees, buffers)
   )
 
   def codeActions(
