@@ -73,7 +73,8 @@ final case class Indexer(
     userConfig: () => UserConfiguration,
     sh: ScheduledExecutorService,
     symbolDocs: Docstrings,
-    scalaVersionSelector: ScalaVersionSelector
+    scalaVersionSelector: ScalaVersionSelector,
+    buildTargetsData: TargetData
 ) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -181,28 +182,47 @@ final case class Indexer(
   }
 
   private def indexWorkspace(check: () => Unit): Unit = {
-    val i =
-      (ammonite().lastImportedBuild :: lastImportedBuilds()).reduce(_ ++ _)
+    val lastImportedBuilds0 = lastImportedBuilds()
     timerProvider.timedThunk(
-      "updated build targets",
+      "reset stuff",
       clientConfig.initialConfig.statistics.isIndex
     ) {
-      buildTargets.reset()
+      buildTargetsData.reset()
       interactiveSemanticdbs().reset()
       buildClient().reset()
       semanticDBIndexer().reset()
       treeView().reset()
       worksheetProvider().reset()
       symbolSearch().reset()
-      buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
-      buildTargets.addScalacOptions(i.scalacOptions)
-      buildTargets.addJavacOptions(i.javacOptions)
-      for {
-        item <- i.sources.getItems.asScala
-        source <- item.getSources.asScala
-      } {
-        buildTargets.addSourceItem(source, item.getTarget)
+    }
+    val allBuildTargetsData = Seq(
+      (
+        "main",
+        buildTargetsData,
+        if (lastImportedBuilds0.isEmpty) ImportedBuild.empty
+        else lastImportedBuilds0.reduce(_ ++ _)
+      )
+    )
+    for ((name, data, importedBuild) <- allBuildTargetsData)
+      timerProvider.timedThunk(
+        s"updated $name build targets",
+        clientConfig.initialConfig.statistics.isIndex
+      ) {
+        data.reset()
+        data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
+        data.addScalacOptions(importedBuild.scalacOptions)
+        data.addJavacOptions(importedBuild.javacOptions)
+        for {
+          item <- importedBuild.sources.getItems.asScala
+          source <- item.getSources.asScala
+        } {
+          data.addSourceItem(source, item.getTarget)
+        }
       }
+    timerProvider.timedThunk(
+      "post update build targets stuff",
+      clientConfig.initialConfig.statistics.isIndex
+    ) {
       check()
       buildTools()
         .loadSupported()
@@ -233,18 +253,36 @@ final case class Indexer(
     ) {
       semanticDBIndexer().onTargetRoots()
     }
-    timerProvider.timedThunk(
-      "indexed workspace sources",
-      clientConfig.initialConfig.statistics.isIndex
-    ) {
-      indexWorkspaceSources()
-    }
-    timerProvider.timedThunk(
-      "indexed library sources",
-      clientConfig.initialConfig.statistics.isIndex
-    ) {
-      indexDependencySources(i.dependencySources)
-    }
+    for ((name, data, _) <- allBuildTargetsData)
+      timerProvider.timedThunk(
+        s"indexed workspace $name sources",
+        clientConfig.initialConfig.statistics.isIndex
+      ) {
+        indexWorkspaceSources(data)
+      }
+    var usedJars = Set.empty[AbsolutePath]
+    for ((name, data, importedBuild) <- allBuildTargetsData)
+      timerProvider.timedThunk(
+        "indexed library sources",
+        clientConfig.initialConfig.statistics.isIndex
+      ) {
+        usedJars ++= indexJdkSources(data, importedBuild.dependencySources)
+        usedJars ++= indexDependencySources(
+          data,
+          importedBuild.dependencySources
+        )
+      }
+    // Schedule removal of unused toplevel symbols from cache
+    if (usedJars.nonEmpty)
+      sh.schedule(
+        new Runnable {
+          override def run(): Unit = {
+            tables().jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+          }
+        },
+        2,
+        TimeUnit.SECONDS
+      )
 
     focusedDocument().foreach { doc =>
       buildTargets
@@ -260,7 +298,11 @@ final case class Indexer(
       }
   }
 
-  def indexWorkspaceSources(): Unit = {
+  def indexWorkspaceSources(data: Seq[TargetData]): Unit = {
+    for (data0 <- data.iterator)
+      indexWorkspaceSources(data0)
+  }
+  def indexWorkspaceSources(data: TargetData): Unit = {
     case class SourceToIndex(
         source: AbsolutePath,
         sourceItem: AbsolutePath,
@@ -268,11 +310,13 @@ final case class Indexer(
     )
     val sourcesToIndex = mutable.ListBuffer.empty[SourceToIndex]
     for {
-      (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
+      (sourceItem, targets) <- data.sourceItemsToBuildTarget
       source <- sourceItem.listRecursive
       if source.isScalaOrJava
     } {
-      targets.asScala.foreach(buildTargets.linkSourceFile(_, source))
+      targets.asScala.foreach { target =>
+        data.linkSourceFile(target, source)
+      }
       sourcesToIndex += SourceToIndex(source, sourceItem, targets.asScala)
     }
     val threadPool = new ForkJoinPool(
@@ -285,38 +329,30 @@ final case class Indexer(
       val parSourcesToIndex = sourcesToIndex.toSeq.par
       parSourcesToIndex.tasksupport = new ForkJoinTaskSupport(threadPool)
       parSourcesToIndex.foreach(f =>
-        indexSourceFile(f.source, Some(f.sourceItem), f.targets.headOption)
+        indexSourceFile(
+          f.source,
+          Some(f.sourceItem),
+          f.targets.headOption,
+          Seq(data)
+        )
       )
     } finally threadPool.shutdown()
   }
 
   private def indexDependencySources(
+      data: TargetData,
       dependencySources: b.DependencySourcesResult
-  ): Unit = {
+  ): Set[AbsolutePath] = {
     // Track used Jars so that we can
     // remove cached symbols from Jars
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
-    val jdkSources = JdkSources(userConfig().javaHome)
-    jdkSources match {
-      case Right(zip) =>
-        usedJars += zip
-        addSourceJarSymbols(zip)
-      case Left(notFound) =>
-        val candidates = notFound.candidates.mkString(", ")
-        scribe.warn(
-          s"Could not find java sources in $candidates. Java symbols will not be available."
-        )
-    }
     val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
-      _ = jdkSources.foreach(source =>
-        buildTargets.addDependencySource(source, item.getTarget)
-      )
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
       path = sourceUri.toAbsolutePath
-      _ = buildTargets.addDependencySource(path, item.getTarget)
+      _ = data.addDependencySource(path, item.getTarget)
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)
@@ -343,22 +379,43 @@ final case class Indexer(
           scribe.error(s"error processing $sourceUri", e)
       }
     }
-    // Schedule removal of unused toplevel symbols from cache
-    sh.schedule(
-      new Runnable {
-        override def run(): Unit = {
-          tables().jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
-        }
-      },
-      2,
-      TimeUnit.SECONDS
-    )
+    usedJars.toSet
+  }
+
+  private def indexJdkSources(
+      data: TargetData,
+      dependencySources: b.DependencySourcesResult
+  ): Set[AbsolutePath] = {
+    // Track used Jars so that we can
+    // remove cached symbols from Jars
+    // that are not used
+    val usedJars = mutable.HashSet.empty[AbsolutePath]
+    val jdkSources = JdkSources(userConfig().javaHome)
+    jdkSources match {
+      case Right(zip) =>
+        usedJars += zip
+        addSourceJarSymbols(zip)
+      case Left(notFound) =>
+        val candidates = notFound.candidates.mkString(", ")
+        scribe.warn(
+          s"Could not find java sources in $candidates. Java symbols will not be available."
+        )
+    }
+    for {
+      item <- dependencySources.getItems.asScala
+    } {
+      jdkSources.foreach(source =>
+        data.addDependencySource(source, item.getTarget)
+      )
+    }
+    usedJars.toSet
   }
 
   private def indexSourceFile(
       source: AbsolutePath,
       sourceItem: Option[AbsolutePath],
-      targetOpt: Option[b.BuildTargetIdentifier]
+      targetOpt: Option[b.BuildTargetIdentifier],
+      data: Seq[TargetData]
   ): Unit = {
 
     try {
@@ -367,8 +424,13 @@ final case class Indexer(
         val dialect = {
           val scalaVersion =
             targetOpt
-              .flatMap(buildTargets.scalaTarget)
-              .map(_.scalaVersion)
+              .flatMap(id =>
+                data.iterator
+                  .flatMap(_.buildTargetInfo.get(id).iterator)
+                  .find(_ => true)
+                  .flatMap(_.asScalaBuildTarget)
+              )
+              .map(_.getScalaVersion())
               .getOrElse(
                 scalaVersionSelector.fallbackScalaVersion(
                   source.isAmmoniteScript
@@ -443,7 +505,12 @@ final case class Indexer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceItem(path), None)
+      indexSourceFile(
+        path,
+        buildTargets.inverseSourceItem(path),
+        None,
+        Seq(buildTargetsData)
+      )
     }
   }
 
