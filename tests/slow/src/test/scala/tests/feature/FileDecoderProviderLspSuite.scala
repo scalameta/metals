@@ -402,7 +402,7 @@ class FileDecoderProviderSbtLspSuite
     result =>
       FileDecoderProviderLspSuite.filterSections(
         result,
-        Set("Target", "Scala Version", "Base Directory")
+        Set("Target", "Scala Version", "Base Directory", "Source Directories")
       )
   )
 }
@@ -1301,5 +1301,11 @@ object FileDecoderProviderLspSuite {
         |  ${V.scala3}
         |
         |Base Directory
-        |  file:@workspace/a/""".stripMargin // sbt return "files:/...""
+        |  file:@workspace/a/
+        |
+        |Source Directories
+        |  @workspace/a/src/main/java
+        |  @workspace/a/src/main/scala
+        |  @workspace/a/src/main/scala-3
+        |  @workspace/a/target/scala-${V.scala3}/src_managed/main (generated)""".stripMargin
 }
