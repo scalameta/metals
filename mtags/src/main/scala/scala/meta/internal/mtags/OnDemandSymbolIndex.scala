@@ -25,7 +25,7 @@ import scala.meta.io.AbsolutePath
 final class OnDemandSymbolIndex(
     dialectBuckets: TrieMap[Dialect, SymbolIndexBucket],
     onError: PartialFunction[Throwable, Unit],
-    toIndexSource: AbsolutePath => Option[AbsolutePath]
+    toIndexSource: AbsolutePath => AbsolutePath
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
   var indexedSources = 0L
@@ -140,7 +140,7 @@ object OnDemandSymbolIndex {
       onError: PartialFunction[Throwable, Unit] = { case NonFatal(e) =>
         throw e
       },
-      toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
+      toIndexSource: AbsolutePath => AbsolutePath = identity
   ): OnDemandSymbolIndex =
     new OnDemandSymbolIndex(TrieMap.empty, onError, toIndexSource)
 }
