@@ -5,7 +5,6 @@ import java.nio.file.Path
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -218,10 +217,6 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       .toList
   }
 
-  case class SourceItem(path: AbsolutePath, generated: Boolean) {
-    override def toString: String =
-      s"$path${if (generated) " (generated)" else ""}"
-  }
   private def getSources(target: BuildTarget): List[String] = {
     buildTargets.sourceItemsToBuildTargets
       .filter(_._2.iterator.asScala.contains(target.getId()))
