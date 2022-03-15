@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -263,7 +264,7 @@ final class Ammonite(
       case Success(()) =>
     }
 
-    val docs = (doc.toSeq ++ focusedDocument().toSeq ++ buffers.open.toSeq)
+    val docs = doc.toSeq ++ focusedDocument().toSeq ++ buffers.open.toSeq
     val commandScriptOpt = docs
       .find(_.isAmmoniteScript)
       .map { ammScript => Future.fromTry(command(ammScript).toTry) }
@@ -341,11 +342,14 @@ object Ammonite {
   def adjustLspData(scalaCode: String): AdjustLspData =
     AdjustedLspData.create(adjustPosition(scalaCode))
 
+  private val threadCounter = new AtomicInteger
   private def logOutputThread(
       is: InputStream,
       stopSendingOutput: => Boolean
   ): Thread =
-    new Thread {
+    new Thread(
+      s"ammonite-bsp-server-stderr-to-metals-log-${threadCounter.incrementAndGet()}"
+    ) {
       setDaemon(true)
       val buf = Array.ofDim[Byte](2048)
       override def run(): Unit = {
@@ -382,7 +386,7 @@ object Ammonite {
             .directory(workspace.toFile)
         }
       val os = new ClosableOutputStream(proc.getOutputStream, "Ammonite")
-      @volatile var stopSendingOutput = false
+      var stopSendingOutput = false
       val sendOutput =
         Ammonite.logOutputThread(proc.getErrorStream, stopSendingOutput)
       sendOutput.start()
