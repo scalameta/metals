@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.lang.{Iterable => JIterable}
 import java.net.URLClassLoader
+import java.nio.file.Path
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.{util => ju}
@@ -22,6 +23,8 @@ import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.JavacOptionsResult
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.SourceItem
+import ch.epfl.scala.bsp4j.SourceItemKind
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 
 /**
@@ -49,6 +52,8 @@ final class BuildTargets(
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
+  private val buildTargetGeneratedDirs: TrieMap[AbsolutePath, Unit] =
+    TrieMap.empty[AbsolutePath, Unit]
   private val sourceJarNameToJarFile = TrieMap.empty[String, AbsolutePath]
   private val isSourceRoot =
     ConcurrentHashSet.empty[AbsolutePath]
@@ -95,6 +100,7 @@ final class BuildTargets(
     scalaTargetInfo.clear()
     inverseDependencies.clear()
     buildTargetSources.clear()
+    buildTargetGeneratedDirs.clear()
     inverseDependencySources.clear()
     sourceJarNameToJarFile.clear()
     isSourceRoot.clear()
@@ -191,6 +197,20 @@ final class BuildTargets(
     queue.add(buildTarget)
   }
 
+  def addSourceItem(
+      sourceItem: SourceItem,
+      buildTarget: BuildTargetIdentifier
+  ): Unit = {
+    val sourceItemPath = sourceItem.getUri.toAbsolutePath(followSymlink = false)
+    if (
+      sourceItem.getKind() == SourceItemKind.DIRECTORY &&
+      sourceItem.getGenerated()
+    ) {
+      buildTargetGeneratedDirs(sourceItemPath) = ()
+    }
+    addSourceItem(sourceItemPath, buildTarget)
+  }
+
   def onCreate(source: AbsolutePath): Unit = {
     for {
       buildTarget <- sourceBuildTargets(source)
@@ -253,6 +273,12 @@ final class BuildTargets(
         buf += target.getId
       }
     }
+  }
+
+  def checkIfGeneratedSource(source: Path): Boolean = {
+    buildTargetGeneratedDirs.keys.exists(generatedDir =>
+      source.startsWith(generatedDir.toNIO)
+    )
   }
 
   def addScalacOptions(result: ScalacOptionsResult): Unit = {
