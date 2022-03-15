@@ -426,17 +426,11 @@ class MetalsLanguageServer(
             compilers.didCompile(report)
             doctor.check()
           },
-          changes => {
-            quickConnectToBuildServer().onComplete {
-              case Failure(e) =>
-                scribe.warn("Error refreshing build", e)
-              case Success(_) =>
-                scribe.info("Refreshed build after change")
-            }
+          onBuildTargetDidCompile = { target =>
+            treeView.onBuildTargetDidCompile(target)
+            worksheetProvider.onBuildTargetDidCompile(target)
           },
-          () => treeView,
-          () => worksheetProvider,
-          () => ammonite
+          onBuildTargetDidChangeFunc = maybeQuickConnectToBuildServer
         )
         shellRunner = register(
           new ShellRunner(languageClient, () => userConfig, time, statusBar)
@@ -2187,6 +2181,28 @@ class MetalsLanguageServer(
       buildServerPromise.trySuccess(())
       change
     }
+  }
+
+  private def maybeQuickConnectToBuildServer(
+      params: b.DidChangeBuildTarget
+  ): Unit = {
+    val (ammoniteChanges, otherChanges) =
+      params.getChanges.asScala.partition(
+        _.getTarget.getUri.isAmmoniteScript
+      )
+    if (ammoniteChanges.nonEmpty)
+      ammonite.importBuild().onComplete {
+        case Success(()) =>
+        case Failure(exception) =>
+          scribe.error("Error re-importing Ammonite build", exception)
+      }
+    if (otherChanges.nonEmpty)
+      quickConnectToBuildServer().onComplete {
+        case Failure(e) =>
+          scribe.warn("Error refreshing build", e)
+        case Success(_) =>
+          scribe.info("Refreshed build after change")
+      }
   }
 
   private def autoConnectToBuildServer(): Future[BuildChange] = {
