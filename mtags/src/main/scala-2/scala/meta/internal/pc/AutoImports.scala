@@ -60,7 +60,7 @@ trait AutoImports { this: MetalsGlobal =>
             )
           }
 
-        def forAmmoniteScript =
+        def forScript =
           for {
             obj <- lastVisitedParentTrees.collectFirst { case mod: ModuleDef =>
               mod
@@ -100,7 +100,7 @@ trait AutoImports { this: MetalsGlobal =>
         def fileStart =
           AutoImportPosition(findStart(text, 0), 0, padTop = false)
 
-        (if (pos.source.path.endsWith(".sc.scala")) forAmmoniteScript else None)
+        (if (pos.source.path.endsWith(".sc.scala")) forScript else None)
           .orElse(forScalaSource)
           .orElse(Some(fileStart))
     }

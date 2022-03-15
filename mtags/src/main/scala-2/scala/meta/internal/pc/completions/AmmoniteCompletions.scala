@@ -35,7 +35,7 @@ trait AmmoniteCompletions { this: MetalsGlobal =>
         val filename = pos.source.file.name
           .split("/")
           .last
-          .stripSuffix(".sc.scala")
+          .stripSuffix(".amm.sc.scala")
 
         val split = pos.source.file.name
           .split("\\$file")

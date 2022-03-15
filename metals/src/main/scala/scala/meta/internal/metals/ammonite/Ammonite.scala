@@ -419,9 +419,9 @@ object Ammonite {
 
       val input = {
         val input0 = path.toInput
-        // ensuring the path ends with ".sc.scala" so that the PC has a way to know
+        // ensuring the path ends with ".amm.sc.scala" so that the PC has a way to know
         // what we're giving it originates from an Ammonite script
-        input0.copy(path = input0.path.stripSuffix(".scala") + ".sc.scala")
+        input0.copy(path = input0.path.stripSuffix(".scala") + ".amm.sc.scala")
       }
 
       /*
