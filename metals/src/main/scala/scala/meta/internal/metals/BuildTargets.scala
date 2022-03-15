@@ -52,8 +52,8 @@ final class BuildTargets(
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
-  private val buildTargetGeneratedDirs: mutable.Set[AbsolutePath] =
-    mutable.Set.empty
+  private val buildTargetGeneratedDirs: TrieMap[AbsolutePath, Unit] =
+    TrieMap.empty[AbsolutePath, Unit]
   private val sourceJarNameToJarFile = TrieMap.empty[String, AbsolutePath]
   private val isSourceRoot =
     ConcurrentHashSet.empty[AbsolutePath]
@@ -206,7 +206,7 @@ final class BuildTargets(
       sourceItem.getKind() == SourceItemKind.DIRECTORY &&
       sourceItem.getGenerated()
     ) {
-      buildTargetGeneratedDirs += sourceItemPath
+      buildTargetGeneratedDirs(sourceItemPath) = ()
     }
     addSourceItem(sourceItemPath, buildTarget)
   }
@@ -276,7 +276,7 @@ final class BuildTargets(
   }
 
   def checkIfGeneratedSource(source: Path): Boolean = {
-    buildTargetGeneratedDirs.exists(generatedDir =>
+    buildTargetGeneratedDirs.keys.exists(generatedDir =>
       source.startsWith(generatedDir.toNIO)
     )
   }
