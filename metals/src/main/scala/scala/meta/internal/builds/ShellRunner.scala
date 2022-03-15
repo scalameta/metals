@@ -89,8 +89,8 @@ class ShellRunner(
       directory,
       redirectErrorOutput,
       env,
-      processOut,
-      processErr,
+      Some(processOut),
+      Some(processErr),
       propagateError
     )
     // NOTE(olafur): older versions of VS Code don't respect cancellation of

@@ -78,8 +78,8 @@ class JavaInteractiveSemanticdb(
       workDir,
       false,
       Map.empty,
-      outLine => stdout += outLine,
-      errLine => stdout += errLine
+      Some(outLine => stdout += outLine),
+      Some(errLine => stdout += errLine)
     )
 
     val future = ps.complete.recover { case NonFatal(e) =>
