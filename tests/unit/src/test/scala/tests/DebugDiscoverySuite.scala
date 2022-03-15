@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
+import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
 import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
@@ -121,6 +122,37 @@ class DebugDiscoverySuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assert(output.contains("All tests in a.Foo passed"))
+  }
+
+  test("no-run-or-test") {
+    val notATestPath = "a/src/main/scala/a/NotATest.scala"
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${notATestPath}
+           |package a
+           |class NotATest {
+           |    print("I'm not a test!")
+           |    System.exit(0)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(notATestPath)
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugDiscoveryParams(
+            server.toPath(notATestPath).toURI.toString,
+            "runOrTestFile"
+          ).toJson
+        )
+        .recover { case e @ DebugProvider.NoRunOptionException => e }
+    } yield assertNoDiff(
+      result.toString(),
+      DebugProvider.NoRunOptionException.toString()
+    )
   }
 
   test("run-multiple") {

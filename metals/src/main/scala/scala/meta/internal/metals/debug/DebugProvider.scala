@@ -595,6 +595,11 @@ class DebugProvider(
       )
     case e @ DotEnvFileParser.InvalidEnvFileException(_) =>
       languageClient.showMessage(Messages.errorMessageParams(e.getMessage()))
+
+    case e @ NoRunOptionException =>
+      languageClient.showMessage(
+        Messages.errorMessageParams(e.getMessage())
+      )
   }
 
   private def parseSessionName(
