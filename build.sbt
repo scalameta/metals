@@ -362,7 +362,7 @@ val mtagsSettings = List(
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.2",
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
       ("org.scalameta" %% "scalameta" % V.scalameta)
         .cross(CrossVersion.for3Use2_13)
