@@ -10,6 +10,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.{Map => MMap}
 
+import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -20,6 +21,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourceItem
 import ch.epfl.scala.bsp4j.SourceItemKind
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
+import org.eclipse.{lsp4j => l}
 
 final class TargetData {
 
@@ -53,13 +55,20 @@ final class TargetData {
     new mutable.HashMap[BuildTargetIdentifier, BuildServerConnection]
   def sourceBuildTargets(
       sourceItem: AbsolutePath
-  ): Option[Iterable[BuildTargetIdentifier]] =
-    sourceItemsToBuildTarget.collectFirst {
-      case (source, buildTargets)
-          if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
-            sourceItem.toNIO.startsWith(source.toNIO) =>
-        buildTargets.asScala
-    }
+  ): Option[Iterable[BuildTargetIdentifier]] = {
+    val valueOrNull = sourceBuildTargetsCache.get(sourceItem)
+    if (valueOrNull == null) {
+      val value = sourceItemsToBuildTarget.collectFirst {
+        case (source, buildTargets)
+            if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
+              sourceItem.toNIO.startsWith(source.toNIO) =>
+          buildTargets.asScala
+      }
+      val prevOrNull = sourceBuildTargetsCache.putIfAbsent(sourceItem, value)
+      if (prevOrNull == null) value
+      else prevOrNull
+    } else valueOrNull
+  }
 
   def allTargetRoots: Iterator[AbsolutePath] = {
     val scalaTargetRoots = scalaTargetInfo.map(_._2.targetroot)
@@ -80,6 +89,14 @@ final class TargetData {
     scalaTargetInfo.get(id)
   def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
     javaTargetInfo.get(id)
+
+  private val sourceBuildTargetsCache =
+    new util.concurrent.ConcurrentHashMap[AbsolutePath, Option[
+      Iterable[BuildTargetIdentifier]
+    ]]
+
+  val actualSources: MMap[AbsolutePath, TargetData.MappedSource] =
+    TrieMap.empty[AbsolutePath, TargetData.MappedSource]
 
   def targetRoots(buildTarget: BuildTargetIdentifier): List[AbsolutePath] = {
     val javaRoot = javaTargetRoot(buildTarget).toList
@@ -151,6 +168,7 @@ final class TargetData {
       new ConcurrentLinkedQueue()
     )
     queue.add(buildTarget)
+    sourceBuildTargetsCache.clear()
   }
 
   def addSourceItem(
@@ -175,6 +193,7 @@ final class TargetData {
   def reset(): Unit = {
     sourceItemsToBuildTarget.values.foreach(_.clear())
     sourceItemsToBuildTarget.clear()
+    sourceBuildTargetsCache.clear()
     buildTargetInfo.clear()
     javaTargetInfo.clear()
     scalaTargetInfo.clear()
@@ -240,6 +259,12 @@ final class TargetData {
     inverseDependencySources(sourcesJar) = acc + target
   }
 
+  def addMappedSource(
+      path: AbsolutePath,
+      mapped: TargetData.MappedSource
+  ): Unit =
+    actualSources(path) = mapped
+
   def resetConnections(
       idToConn: List[(BuildTargetIdentifier, BuildServerConnection)]
   ): Unit = {
@@ -255,4 +280,15 @@ final class TargetData {
       linkSourceFile(buildTarget, source)
     }
   }
+}
+
+object TargetData {
+
+  trait MappedSource {
+    def path: AbsolutePath
+    def update(
+        content: String
+    ): (Input.VirtualFile, l.Position => l.Position, AdjustLspData)
+  }
+
 }

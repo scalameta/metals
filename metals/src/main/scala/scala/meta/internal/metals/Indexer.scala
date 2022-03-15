@@ -414,7 +414,7 @@ final case class Indexer(
 
     try {
       val sourceToIndex0 =
-        sourceMapper.mappedTo(source, targetOpt).getOrElse(source)
+        sourceMapper.mappedTo(source).getOrElse(source)
       if (sourceToIndex0.exists) {
         val dialect = {
           val scalaVersion =

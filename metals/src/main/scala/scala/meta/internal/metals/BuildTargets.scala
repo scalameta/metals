@@ -71,6 +71,9 @@ final class BuildTargets() {
   private def allBuildTargetIdsInternal
       : Iterator[(TargetData, BuildTargetIdentifier)] =
     data.fromIterators(d => d.allBuildTargetIds.iterator.map((d, _)))
+  def mappedTo(path: AbsolutePath): Option[TargetData.MappedSource] =
+    data.fromOptions(_.actualSources.get(path))
+
   def allBuildTargetIds: Seq[BuildTargetIdentifier] =
     allBuildTargetIdsInternal.map(_._2).toVector
 
