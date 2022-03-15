@@ -6,8 +6,11 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import munit.TestOptions
 import tests.BaseLspSuite
 import tests.SbtBuildLayout
+import tests.SbtServerInitializer
 
-class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
+class FileDecoderProviderLspSuite
+    extends BaseLspSuite("fileDecoderProvider")
+    with FileDecoderProviderLspSpec {
 
   check(
     "tasty-single",
@@ -371,6 +374,40 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
         Set("Target", "Scala Version", "Base Directory")
       )
   )
+
+}
+
+class FileDecoderProviderSbtLspSuite
+    extends BaseLspSuite("sbtFileDecoderProvider", SbtServerInitializer)
+    with FileDecoderProviderLspSpec {
+
+  checkBuildTarget(
+    "sbt-buildtarget",
+    SbtBuildLayout(
+      s"""|/a/src/main/scala/Main.scala
+          |package a
+          |class A {
+          |  def foo(): Unit = ()
+          |}
+          |/b/src/main/scala/Main.scala
+          |package b
+          |class B {
+          |  def foo(): Unit = ()
+          |}
+          |""".stripMargin,
+      V.scala3
+    ),
+    "a", // buildTarget, see: SbtBuildLayout
+    Right(FileDecoderProviderLspSuite.sbtBuildTargetResponse),
+    result =>
+      FileDecoderProviderLspSuite.filterSections(
+        result,
+        Set("Target", "Scala Version", "Base Directory")
+      )
+  )
+}
+
+trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
 
   /**
    * @param expected - we can use "@workspace" to represent the workspace directory
@@ -1255,4 +1292,14 @@ object FileDecoderProviderLspSuite {
         |
         |Base Directory
         |  file://@workspace/a/""".stripMargin
+
+  def sbtBuildTargetResponse: String =
+    s"""|Target
+        |  a
+        |
+        |Scala Version
+        |  ${V.scala3}
+        |
+        |Base Directory
+        |  file:@workspace/a/""".stripMargin // sbt return "files:/...""
 }
