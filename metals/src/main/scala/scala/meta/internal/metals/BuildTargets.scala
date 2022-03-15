@@ -11,7 +11,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
@@ -21,9 +20,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 /**
  * In-memory cache for looking up build server metadata.
  */
-final class BuildTargets(
-    ammoniteBuildServer: BuildTargetIdentifier => Option[BuildServerConnection]
-) {
+final class BuildTargets() {
   private var workspace = PathIO.workingDirectory
   def setWorkspaceDirectory(newWorkspace: AbsolutePath): Unit = {
     workspace = newWorkspace
@@ -440,11 +437,8 @@ final class BuildTargets(
 
   def buildServerOf(
       id: BuildTargetIdentifier
-  ): Option[BuildServerConnection] = {
-    ammoniteBuildServer(id).orElse(
-      data.fromOptions(_.targetToConnection.get(id))
-    )
-  }
+  ): Option[BuildServerConnection] =
+    data.fromOptions(_.targetToConnection.get(id))
 
   def addData(data: TargetData): Unit =
     dataLock.synchronized {
@@ -453,18 +447,6 @@ final class BuildTargets(
 }
 
 object BuildTargets {
-
-  def withAmmonite(ammonite: () => Ammonite): BuildTargets = {
-    val ammoniteBuildServerF =
-      (id: BuildTargetIdentifier) =>
-        if (Ammonite.isAmmBuildTarget(id)) ammonite().buildServer
-        else None
-
-    new BuildTargets(ammoniteBuildServerF)
-  }
-
-  def withoutAmmonite: BuildTargets =
-    new BuildTargets(_ => None)
 
   def isInverseDependency(
       query: BuildTargetIdentifier,

@@ -162,7 +162,7 @@ class MetalsLanguageServer(
     new ExcludedPackagesHandler(userConfig.excludedPackages)
   var ammonite: Ammonite = _
   private val mainBuildTargetsData = new TargetData
-  val buildTargets: BuildTargets = BuildTargets.withAmmonite(() => ammonite)
+  val buildTargets: BuildTargets = new BuildTargets()
   buildTargets.addData(mainBuildTargetsData)
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
@@ -783,6 +783,7 @@ class MetalsLanguageServer(
             scalaVersionSelector
           )
         )
+        buildTargets.addData(ammonite.buildTargetsData)
         if (clientConfig.isTreeViewProvider) {
           treeView = new MetalsTreeViewProvider(
             () => workspace,
@@ -2316,8 +2317,19 @@ class MetalsLanguageServer(
     timerProvider,
     () => scalafixProvider,
     indexingPromise,
-    () => ammonite,
-    () => lastImportedBuilds,
+    () =>
+      Seq(
+        Indexer.BuildTool(
+          "main",
+          mainBuildTargetsData,
+          ImportedBuild.fromList(lastImportedBuilds)
+        ),
+        Indexer.BuildTool(
+          "ammonite",
+          ammonite.buildTargetsData,
+          ammonite.lastImportedBuild
+        )
+      ),
     clientConfig,
     definitionIndex,
     () => referencesProvider,
@@ -2339,7 +2351,6 @@ class MetalsLanguageServer(
     sh,
     symbolDocs,
     scalaVersionSelector,
-    mainBuildTargetsData,
     sourceMapper
   )
 

@@ -85,4 +85,9 @@ object ImportedBuild {
         dependencySources
       )
     }
+
+  def fromList(data: Seq[ImportedBuild]): ImportedBuild =
+    if (data.isEmpty) empty
+    else if (data.lengthCompare(1) == 0) data.head
+    else data.reduce(_ ++ _)
 }

@@ -23,7 +23,6 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
@@ -51,8 +50,7 @@ final case class Indexer(
     timerProvider: TimerProvider,
     scalafixProvider: () => ScalafixProvider,
     indexingPromise: Promise[Unit],
-    ammonite: () => Ammonite,
-    lastImportedBuilds: () => List[ImportedBuild],
+    buildData: () => Seq[Indexer.BuildTool],
     clientConfig: ClientConfiguration,
     definitionIndex: OnDemandSymbolIndex,
     referencesProvider: () => ReferenceProvider,
@@ -74,7 +72,6 @@ final case class Indexer(
     sh: ScheduledExecutorService,
     symbolDocs: Docstrings,
     scalaVersionSelector: ScalaVersionSelector,
-    buildTargetsData: TargetData,
     sourceMapper: SourceMapper
 ) {
 
@@ -183,12 +180,10 @@ final case class Indexer(
   }
 
   private def indexWorkspace(check: () => Unit): Unit = {
-    val lastImportedBuilds0 = lastImportedBuilds()
     timerProvider.timedThunk(
       "reset stuff",
       clientConfig.initialConfig.statistics.isIndex
     ) {
-      buildTargetsData.reset()
       interactiveSemanticdbs().reset()
       buildClient().reset()
       semanticDBIndexer().reset()
@@ -196,19 +191,14 @@ final case class Indexer(
       worksheetProvider().reset()
       symbolSearch().reset()
     }
-    val allBuildTargetsData = Seq(
-      (
-        "main",
-        buildTargetsData,
-        if (lastImportedBuilds0.isEmpty) ImportedBuild.empty
-        else lastImportedBuilds0.reduce(_ ++ _)
-      )
-    )
-    for ((name, data, importedBuild) <- allBuildTargetsData)
+    val allBuildTargetsData = buildData()
+    for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
-        s"updated $name build targets",
+        s"updated ${buildTool.name} build targets",
         clientConfig.initialConfig.statistics.isIndex
       ) {
+        val data = buildTool.data
+        val importedBuild = buildTool.importedBuild
         data.reset()
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
         data.addScalacOptions(importedBuild.scalacOptions)
@@ -254,23 +244,26 @@ final case class Indexer(
     ) {
       semanticDBIndexer().onTargetRoots()
     }
-    for ((name, data, _) <- allBuildTargetsData)
+    for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
-        s"indexed workspace $name sources",
+        s"indexed workspace ${buildTool.name} sources",
         clientConfig.initialConfig.statistics.isIndex
       ) {
-        indexWorkspaceSources(data)
+        indexWorkspaceSources(buildTool.data)
       }
     var usedJars = Set.empty[AbsolutePath]
-    for ((name, data, importedBuild) <- allBuildTargetsData)
+    for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
         "indexed library sources",
         clientConfig.initialConfig.statistics.isIndex
       ) {
-        usedJars ++= indexJdkSources(data, importedBuild.dependencySources)
+        usedJars ++= indexJdkSources(
+          buildTool.data,
+          buildTool.importedBuild.dependencySources
+        )
         usedJars ++= indexDependencySources(
-          data,
-          importedBuild.dependencySources
+          buildTool.data,
+          buildTool.importedBuild.dependencySources
         )
       }
     // Schedule removal of unused toplevel symbols from cache
@@ -503,16 +496,20 @@ final case class Indexer(
   def reindexWorkspaceSources(
       paths: Seq[AbsolutePath]
   ): Unit = {
+    val data = buildData().map(_.data)
     for {
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(
-        path,
-        buildTargets.inverseSourceItem(path),
-        None,
-        Seq(buildTargetsData)
-      )
+      indexSourceFile(path, buildTargets.inverseSourceItem(path), None, data)
     }
   }
+}
+
+object Indexer {
+  final case class BuildTool(
+      name: String,
+      data: TargetData,
+      importedBuild: ImportedBuild
+  )
 }
