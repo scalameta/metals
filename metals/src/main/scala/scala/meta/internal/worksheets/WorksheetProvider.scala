@@ -480,7 +480,7 @@ object WorksheetProvider {
       pos => {
         new Position(pos.getLine() - 1, pos.getCharacter() - ident.size)
       },
-      filterOutLocations = { loc => !loc.getUri().isWorksheet }
+      doAdjust = { loc => loc.getUri().isWorksheet }
     )
     Some((modifiedInput, adjustLspData))
   }

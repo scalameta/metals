@@ -74,17 +74,18 @@ trait AdjustLspData {
 
 case class AdjustedLspData(
     adjustPosition: Position => Position,
-    filterOutLocations: Location => Boolean
+    doAdjust: Location => Boolean
 ) extends AdjustLspData {
 
   override def adjustLocations(
       locations: ju.List[Location]
   ): ju.List[Location] = {
-    locations.asScala.collect {
-      case loc if !filterOutLocations(loc) =>
+    locations.asScala.foreach { loc =>
+      if (doAdjust(loc))
         loc.setRange(adjustRange(loc.getRange()))
-        loc
-    }.asJava
+    }
+
+    locations
   }
   override def adjustPos(pos: Position): Position = adjustPosition(pos)
 
@@ -121,7 +122,7 @@ object AdjustedLspData {
 
   def create(
       f: Position => Position,
-      filterOutLocations: Location => Boolean = _ => false
+      doAdjust: Location => Boolean = _ => true
   ): AdjustLspData =
     AdjustedLspData(
       pos => {
@@ -130,7 +131,7 @@ object AdjustedLspData {
           pos
         else newPos
       },
-      filterOutLocations
+      doAdjust
     )
 
   val default: AdjustLspData = DefaultAdjustedData

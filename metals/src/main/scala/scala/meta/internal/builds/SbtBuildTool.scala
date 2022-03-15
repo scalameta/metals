@@ -359,7 +359,7 @@ object SbtBuildTool {
       pos => {
         new Position(pos.getLine() - appendLineSize, pos.getCharacter())
       },
-      filterOutLocations = { loc => !loc.getUri().isSbt }
+      doAdjust = { loc => loc.getUri().isSbt }
     )
     (modifiedInput, adjustRequest, adjustLspData)
   }
