@@ -7,6 +7,7 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
@@ -36,8 +37,11 @@ class ProblemResolver(
     }
   }
 
-  def recommendation(java: JavaTarget): Option[String] = {
-    findProblem(java).map(_.message)
+  def recommendation(
+      java: JavaTarget,
+      scalaTarget: Option[ScalaTarget]
+  ): Option[String] = {
+    findProblem(java, scalaTarget).map(_.message)
   }
 
   def recommendation(scala: ScalaTarget): Option[String] = {
@@ -77,11 +81,15 @@ class ProblemResolver(
     }
     for {
       target <- javaTargets
-      issue <- findProblem(target)
+      issue <- findProblem(
+        target,
+        scalaTargets.find(_.info.getId() == target.info.getId())
+      )
     } yield {
       issue match {
         case _: JavaSemanticDBDisabled => misconfiguredProjects += 1
         case _: MissingJavaSourceRoot => misconfiguredProjects += 1
+        case _: WrongJavaReleaseVersion => misconfiguredProjects += 1
         case _: MissingJavaTargetRoot => misconfiguredProjects += 1
       }
     }
@@ -235,7 +243,8 @@ class ProblemResolver(
   }
 
   private def findProblem(
-      javaTarget: JavaTarget
+      javaTarget: JavaTarget,
+      scalaTarget: Option[ScalaTarget]
   ): Option[JavaProblem] = {
     if (!javaTarget.isSemanticdbEnabled)
       Some(
@@ -252,6 +261,32 @@ class ProblemResolver(
           "-Xplugin:semanticdb -targetroot:javac-classes-directory"
         )
       )
-    else None
+    else isWrongJavaRelease(javaTarget, scalaTarget)
+  }
+
+  private def isWrongJavaRelease(
+      javaTarget: JavaTarget,
+      scalaTarget: Option[ScalaTarget]
+  ): Option[JavaProblem] = {
+    def buildJavaVersion =
+      for {
+        target <- scalaTarget
+        javaHome <- target.jvmHome
+        version <-
+          JdkVersion.getJavaVersionFromJavaHome(javaHome.toAbsolutePath)
+      } yield version
+
+    val releaseVersion = javaTarget.releaseVersion.flatMap(JdkVersion.parse)
+    releaseVersion.zip(buildJavaVersion) match {
+      case Some((releaseVersion, jvmHomeVersion))
+          if jvmHomeVersion.major < releaseVersion.major =>
+        Some(
+          WrongJavaReleaseVersion(
+            jvmHomeVersion.toString(),
+            releaseVersion.major.toString()
+          )
+        )
+      case _ => None
+    }
   }
 }

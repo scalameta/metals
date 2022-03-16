@@ -432,7 +432,10 @@ final class Doctor(
       if (javaTarget.isSemanticdbEnabled)
         (DoctorStatus.check, None)
       else
-        (DoctorStatus.alert, problemResolver.recommendation(javaTarget))
+        (
+          DoctorStatus.alert,
+          problemResolver.recommendation(javaTarget, scalaTarget = None)
+        )
 
     val canRun = javaTarget.info.getCapabilities().getCanRun()
     val canTest = javaTarget.info.getCapabilities().getCanTest()
@@ -456,24 +459,31 @@ final class Doctor(
   }
 
   private def extractScalaTargetInfo(
-      target: ScalaTarget,
+      scalaTarget: ScalaTarget,
       javaTarget: Option[JavaTarget]
   ): DoctorTargetInfo = {
-    val scalaVersion = target.scalaVersion
+    val scalaVersion = scalaTarget.scalaVersion
     val interactive =
       if (mtagsResolver.isSupportedScalaVersion(scalaVersion))
         DoctorStatus.check
       else
         DoctorStatus.error
 
-    val isSemanticdbNeeded = !target.isSemanticdbEnabled
+    val isSemanticdbNeeded = !scalaTarget.isSemanticdbEnabled
     val indexes =
       if (isSemanticdbNeeded) DoctorStatus.error else DoctorStatus.check
 
-    val compilationStatus = extractCompilationStatus(target.info.getId())
-    val recommendedFix = problemResolver.recommendation(target)
+    val compilationStatus = extractCompilationStatus(scalaTarget.info.getId())
+
+    val recommendedFix = problemResolver
+      .recommendation(scalaTarget)
+      .orElse {
+        javaTarget.flatMap(target =>
+          problemResolver.recommendation(target, Some(scalaTarget))
+        )
+      }
     val (targetType, diagnosticsStatus) =
-      target.sbtVersion match {
+      scalaTarget.sbtVersion match {
         case Some(sbt) =>
           (s"sbt $sbt", DoctorStatus.alert)
         case None =>
@@ -485,24 +495,24 @@ final class Doctor(
       case Some(target) =>
         (
           DoctorStatus.alert,
-          problemResolver.recommendation(target)
+          problemResolver.recommendation(target, Some(scalaTarget))
         )
       case None => (DoctorStatus.alert, None)
     }
 
-    val canRun = target.info.getCapabilities().getCanRun()
-    val canTest = target.info.getCapabilities().getCanTest()
+    val canRun = scalaTarget.info.getCapabilities().getCanRun()
+    val canTest = scalaTarget.info.getCapabilities().getCanTest()
     val debugging =
-      if (canRun && canTest && !target.isSbt) DoctorStatus.check
+      if (canRun && canTest && !scalaTarget.isSbt) DoctorStatus.check
       else DoctorStatus.error
     val sbtRecommendation =
-      if (target.isSbt)
+      if (scalaTarget.isSbt)
         Some("Diagnostics and debugging for sbt are not supported currently.")
       else None
     DoctorTargetInfo(
-      target.displayName,
-      target.dataKind,
-      target.baseDirectory,
+      scalaTarget.displayName,
+      scalaTarget.dataKind,
+      scalaTarget.baseDirectory,
       targetType,
       compilationStatus,
       diagnosticsStatus,
