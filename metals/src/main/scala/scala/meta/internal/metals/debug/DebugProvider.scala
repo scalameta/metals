@@ -348,6 +348,28 @@ class DebugProvider(
   }
 
   /**
+   * When given the already formed params (most likely from a code lens) make
+   * sure the workspace doesn't have any errors which would cause the debug
+   * session to not actually work, but fail silently.
+   */
+  def ensureNoWorkspaceErrors(
+      params: DebugSessionParams
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val result =
+      if (
+        params.getTargets().asScala.toList.exists { target =>
+          buildClient.buildHasErrors(target)
+        }
+      ) {
+        Future.failed(WorkspaceErrorsException)
+      } else {
+        Future.successful(params)
+      }
+    result.failed.foreach(reportErrors)
+    result
+  }
+
+  /**
    * Given fully unresolved params this figures out the runType that was passed
    * in and then discovers either the main methods for the build target the
    * path belongs to or finds the tests for the current file or build target
