@@ -1,6 +1,7 @@
 package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
@@ -221,6 +222,33 @@ class Scala3CodeActionLspSuite
        |  method2(newValue)
        |}
        |""".stripMargin
+  )
+
+  check(
+    "insert companion object of braceless enum inside parent object",
+    """|object Baz:
+         |  enum F<<>>oo:
+         |    case a
+         |    def fooMethod(): Unit = {
+         |      val a = 3
+         |    }
+         |
+         |  class Bar {}
+         |""",
+    s"""|${CreateCompanionObjectCodeAction.companionObjectCreation}
+        |""".stripMargin,
+    """|object Baz:
+         |  enum Foo:
+         |    case a
+         |    def fooMethod(): Unit = {
+         |      val a = 3
+         |    }
+         |
+         |  object Foo:
+         |    ???
+         |
+         |  class Bar {}
+         |"""
   )
 
   def checkExtractedMember(

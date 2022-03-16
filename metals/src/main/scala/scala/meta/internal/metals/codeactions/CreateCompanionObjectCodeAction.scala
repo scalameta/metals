@@ -1,8 +1,8 @@
 package scala.meta.internal.metals.codeactions
 
-import java.util.Scanner
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
 import scala.meta.Defn
 import scala.meta.Template
 import scala.meta.Tree
@@ -14,12 +14,14 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.{lsp4j => l}
 
 /**
- * look at the
+ * It creates braceless or braceful companion objects for classes, traits, and enums
+ * Then navigates to the position of the created object!
  *
  * @param trees
  */
@@ -48,7 +50,7 @@ class CreateCompanionObjectCodeAction(
         None
 
     applyTree.collect { case tree: Tree =>
-      val name = getName(tree)
+      val name = getNameOfClassTraitOrEnumTree(tree)
 
       findCompanionObject(tree, name) match {
         case Some(comanionObject) =>
@@ -74,14 +76,10 @@ class CreateCompanionObjectCodeAction(
   private def getIndentationForPositionInDocument(
       treePos: Position,
       document: String
-  ) = {
-    val scanner = new Scanner(document)
-
-    (0 to treePos.startLine)
-      .map(_ => scanner.nextLine())
-      .last
+  ): String =
+    document
+      .substring(treePos.start - treePos.endColumn + 1, treePos.start)
       .takeWhile(_.isWhitespace)
-  }
 
   private def hasBraces(tree: Tree, document: String): Boolean = {
     tree.children
@@ -92,7 +90,7 @@ class CreateCompanionObjectCodeAction(
     //  document(tree.pos.end-1) == '}'
   }
 
-  private def getName(tree: Tree): String = {
+  private def getNameOfClassTraitOrEnumTree(tree: Tree): String = {
     tree match {
       case classDefinition: Defn.Class => classDefinition.name.value
       case traitDefinition: Defn.Trait => traitDefinition.name.value
@@ -195,14 +193,8 @@ class CreateCompanionObjectCodeAction(
     })
 
   private def applyWithSingleFunction: Tree => Boolean = {
-    case _: Defn.Class =>
-      true
-    case _: Defn.Trait =>
-      true
-    case _: Defn.Enum =>
-      true
-    case _ =>
-      false
+    case _: Defn.Class | _: Defn.Trait | _: Defn.Enum => true
+    case _ => false
   }
 }
 
