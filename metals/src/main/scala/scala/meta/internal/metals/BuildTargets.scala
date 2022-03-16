@@ -280,6 +280,8 @@ final class BuildTargets(
       source.startsWith(generatedDir.toNIO)
     )
   }
+  def checkIfGeneratedDir(path: AbsolutePath): Boolean =
+    buildTargetGeneratedDirs.contains(path)
 
   def addScalacOptions(result: ScalacOptionsResult): Unit = {
     result.getItems.asScala.foreach { scalac =>
