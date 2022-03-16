@@ -1810,7 +1810,7 @@ class MetalsLanguageServer(
         val debugSessionParams: Future[b.DebugSessionParams] = args match {
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
-            Future.successful(params)
+            debugProvider.ensureNoWorkspaceErrors(params)
 
           case Seq(mainClassParamsParser.Jsonized(params))
               if params.mainClass != null =>
