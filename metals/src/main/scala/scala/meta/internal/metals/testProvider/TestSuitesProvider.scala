@@ -17,6 +17,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
@@ -27,10 +28,15 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
+import scala.meta.internal.metals.debug.JUnit4
+import scala.meta.internal.metals.debug.MUnit
+import scala.meta.internal.metals.debug.Unknown
+import scala.meta.internal.parsing.Trees
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
     buildTargetClasses: BuildTargetClasses,
+    trees: Trees,
     symbolIndex: GlobalSymbolIndex,
     semanticdbs: Semanticdbs,
     buffers: Buffers,
@@ -42,6 +48,7 @@ final class TestSuitesProvider(
 
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
+  private val munitTestFinder = new MunitTestFinder(trees)
 
   private def isEnabled =
     clientConfig.isTestExplorerProvider() &&
@@ -142,7 +149,9 @@ final class TestSuitesProvider(
         metadata <- index.getMetadata(path).toList
         events = {
           val suites = metadata.entries.map(_.suiteInfo).distinct
-          getTestCasesForSuites(path, suites, textDocument)
+          val canResolve = suites.exists(_.framework.canResolveChildren)
+          if (canResolve) getTestCasesForSuites(path, suites, textDocument)
+          else Seq.empty
         }
         buildTarget <- metadata.entries.map(_.buildTarget).distinct
       } yield {
@@ -158,26 +167,31 @@ final class TestSuitesProvider(
       path: AbsolutePath,
       suites: Seq[TestSuiteInfo],
       textDocument: Option[TextDocument]
-  ): Seq[AddTestCases] =
-    for {
-      // if text document isn't defined try to fetch it from semanticdbs
-      doc <- textDocument
-        .orElse(semanticdbs.textDocument(path).documentIncludingStale)
-        .toSeq
-      suite <- suites
-    } yield {
-      val testCases = junitTestFinder.findTests(doc, path, suite.symbol)
+  ): Seq[AddTestCases] = {
+    suites.flatMap { suite =>
+      val testCases = suite.framework match {
+        case JUnit4 =>
+          // if text document isn't defined try to fetch it from semanticdbs
+          textDocument
+            .orElse(semanticdbs.textDocument(path).documentIncludingStale)
+            .map(doc => junitTestFinder.findTests(doc, path, suite.symbol))
+            .getOrElse(Vector.empty)
+        case MUnit =>
+          munitTestFinder.findTests(path, suite.fullyQualifiedName)
+        case Unknown => Vector.empty
+      }
 
       if (testCases.nonEmpty) {
         index.setHasTestCasesGranularity(path)
-      }
-
-      AddTestCases(
-        suite.fullyQualifiedName.value,
-        suite.className.value,
-        testCases.asJava
-      )
+        val event = AddTestCases(
+          suite.fullyQualifiedName.value,
+          suite.className.value,
+          testCases.asJava
+        )
+        Some(event)
+      } else None
     }
+  }
 
   /**
    * Find test suites for all build targets in current projects and update caches.
@@ -206,13 +220,17 @@ final class TestSuitesProvider(
           javac
         )
       }
-
+    
     val deletedSuites = removeStaleTestSuites(symbolsPerTarget)
     val addedEntries = getTestEntries(symbolsPerTarget)
 
     val addedTestCases = addedEntries.mapValues {
       _.flatMap { entry =>
-        if (buffers.contains(entry.path))
+        if (
+          buffers.contains(
+            entry.path
+          ) && entry.suiteInfo.framework.canResolveChildren
+        )
           getTestCasesForSuites(entry.path, List(entry.suiteInfo), None)
         else Seq.empty
       }
@@ -240,7 +258,8 @@ final class TestSuitesProvider(
     // when test suite is deleted it has to be removed from cache
     symbolsPerTargets.map {
       case SymbolsPerTarget(buildTarget, testSymbols, _) =>
-        val fromBSP = testSymbols.values.toSet.map(FullyQualifiedName)
+        val fromBSP =
+          testSymbols.values.map(info => FullyQualifiedName(info.fqcn)).toSet
         val cached = index.getSuiteNames(buildTarget)
         val diff = (cached -- fromBSP)
         val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
@@ -267,15 +286,15 @@ final class TestSuitesProvider(
         .readOnlySnapshot()
         .toList
         .foldLeft(List.empty[TestEntry]) {
-          case (entries, (symbol, fullyQualifiedClassName)) =>
-            val fullyQualifiedName = FullyQualifiedName(fullyQualifiedClassName)
+          case (entries, (symbol, testSymbolInfo)) =>
+            val fullyQualifiedName = FullyQualifiedName(testSymbolInfo.fqcn)
             if (cachedSuites.contains(fullyQualifiedName)) entries
             else {
               val entryOpt = computeTestEntry(
                 currentTarget.target,
                 mtags.Symbol(symbol),
                 fullyQualifiedName,
-                currentTarget.hasJunitOnClasspath
+                testSymbolInfo
               )
               entryOpt match {
                 case Some(entry) =>
@@ -317,13 +336,12 @@ final class TestSuitesProvider(
 
   /**
    * Get test entry for the given (builTarget, symbol).
-   * @param hasJunitOnClasspath - for now only junit test classes can resolve
    */
   private def computeTestEntry(
       buildTarget: BuildTarget,
       symbol: mtags.Symbol,
       fullyQualifiedName: FullyQualifiedName,
-      hasJunitOnClasspath: Boolean
+      testSymbolInfo: BuildTargetClasses.TestSymbolInfo
   ): Option[TestEntry] = {
     val symbolDefinition = symbolIndex
       .definition(symbol)
@@ -343,11 +361,12 @@ final class TestSuitesProvider(
           className,
           symbol.value,
           location,
-          canResolveChildren = hasJunitOnClasspath
+          canResolveChildren = testSymbolInfo.framework.canResolveChildren
         )
 
         val suiteInfo = TestSuiteInfo(
           fullyQualifiedName,
+          testSymbolInfo.framework,
           ClassName(className),
           symbol
         )

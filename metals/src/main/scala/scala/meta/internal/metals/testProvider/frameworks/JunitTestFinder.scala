@@ -15,7 +15,7 @@ class JunitTestFinder {
       doc: TextDocument,
       path: AbsolutePath,
       suiteSymbol: mtags.Symbol
-  ): List[TestCaseEntry] = {
+  ): Vector[TestCaseEntry] = {
     val uri = path.toURI
 
     def isMethodWithTestAnnotation(symbol: SymbolInformation) =
@@ -40,7 +40,7 @@ class JunitTestFinder {
             .map(location => TestCaseEntry(symbol.displayName, location))
       }
       .flatten
-      .toList
+      .toVector
   }
 
 }

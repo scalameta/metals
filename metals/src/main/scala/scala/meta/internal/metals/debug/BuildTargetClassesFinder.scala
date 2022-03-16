@@ -58,7 +58,8 @@ class BuildTargetClassesFinder(
       className,
       buildTarget,
       buildTargetClasses.findTestClassByName(_),
-      buildTargetClasses.classesOf(_).testClasses.values,
+      // buildTargetClasses.classesOf(_).testClasses).values.map(_.fqcn),
+      ???,
       { clazz: String => clazz }
     )
 

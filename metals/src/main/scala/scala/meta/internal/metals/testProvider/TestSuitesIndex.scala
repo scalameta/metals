@@ -12,6 +12,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.JavacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import scala.meta.internal.metals.debug.TestFramework
 
 final case class FullyQualifiedName(value: String) extends AnyVal
 final case class ClassName(value: String) extends AnyVal
@@ -20,7 +21,7 @@ private[testProvider] final case class SymbolsPerTarget private (
     target: BuildTarget,
     testSymbols: TrieMap[
       BuildTargetClasses.Symbol,
-      BuildTargetClasses.FullyQualifiedClassName
+      BuildTargetClasses.TestSymbolInfo
     ],
     private val classpath: List[String]
 ) {
@@ -37,7 +38,7 @@ object SymbolsPerTarget {
       target: BuildTarget,
       testSymbols: TrieMap[
         BuildTargetClasses.Symbol,
-        BuildTargetClasses.FullyQualifiedClassName
+        BuildTargetClasses.TestSymbolInfo
       ],
       scalac: Option[ScalacOptionsItem],
       javac: Option[JavacOptionsItem]
@@ -68,6 +69,7 @@ private[testProvider] final case class TestEntry(
 
 private[testProvider] final case class TestSuiteInfo(
     fullyQualifiedName: FullyQualifiedName,
+    framework: TestFramework,
     className: ClassName,
     symbol: mtags.Symbol
 )

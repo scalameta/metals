@@ -621,6 +621,7 @@ class MetalsLanguageServer(
         testProvider = new TestSuitesProvider(
           buildTargets,
           buildTargetClasses,
+          trees,
           definitionIndex,
           semanticdbs,
           buffers,

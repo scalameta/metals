@@ -682,6 +682,15 @@ object MetalsEnrichments
       else
         None
     }
+
+    def toMeta(input: m.Input): m.Position =
+      m.Position.Range(
+        input,
+        range.startLine,
+        range.startCharacter,
+        range.endLine,
+        range.endCharacter,
+      )
   }
 
   implicit class XtensionRangeBsp(range: b.Range) {

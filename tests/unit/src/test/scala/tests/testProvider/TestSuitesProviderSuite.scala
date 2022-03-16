@@ -72,6 +72,48 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   testDiscover(
+    "discover-single-munit",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "libraryDependencies" : [ "org.scalameta::munit:0.7.29" ],
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
+        |  }
+        |}
+        |
+        |/app/src/main/scala/a/b/c/MunitTestSuite.scala
+        |package a.b
+        |package c
+        |
+        |class MunitTestSuite extends munit.FunSuite {
+        |  test("test1") {
+        |  }
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
+    () => {
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              "a.b.c.MunitTestSuite",
+              "MunitTestSuite",
+              "a/b/c/MunitTestSuite#",
+              QuickLocation(
+                classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
+                (3, 6, 3, 20)
+              ).toLsp,
+              canResolveChildren = true
+            )
+          ).asJava
+        )
+      )
+    }
+  )
+
+  testDiscover(
     "discover-multiple-suites",
     s"""|/metals.json
         |{
@@ -167,7 +209,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   testDiscover(
-    "discover-test-cases",
+    "discover-test-cases-junit",
     s"""|/metals.json
         |{
         |  "app": {
@@ -208,6 +250,82 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       )
     },
     () => Some(classUriFor("app/src/main/scala/JunitTestSuite.scala"))
+  )
+
+  testDiscover(
+    "discover-test-cases-munit",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "libraryDependencies" : ["org.scalameta::munit:0.7.29" ],
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
+        |  }
+        |}
+        |
+        |/app/src/main/scala/a/b/c/MunitTestSuite.scala
+        |package a.b
+        |package c
+        |
+        |class MunitTestSuite extends munit.FunSuite {
+        |  test("test1") {
+        |  }
+        |
+        |  check("check-test", 2, 2)
+        |
+        |  check("another-check", 2, 2)
+        |
+        |  def check(name: String, n1: Int, n2: Int = 1) = {
+        |    test(name) {
+        |      assertEquals(n1, n2)
+        |    }
+        |  }
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
+    () => {
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestCases(
+              "a.b.c.MunitTestSuite",
+              "MunitTestSuite",
+              Vector(
+                TestCaseEntry(
+                  "test1",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (4, 2, 4, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "check-test",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (7, 2, 7, 7)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "another-check",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (9, 2, 9, 7)
+                  ).toLsp
+                )
+              ).asJava
+            )
+          ).asJava
+        )
+      )
+    },
+    () => Some(classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"))
   )
 
   checkEvents(
