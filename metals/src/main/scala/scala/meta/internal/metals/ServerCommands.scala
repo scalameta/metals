@@ -560,11 +560,15 @@ case class DebugUnresolvedMainClassParams(
     @Nullable envFile: String = null
 )
 
-final case class DebugScalaTestSelectionParams(
+final case class ScalaTestSuitesDebugRequest(
     @Nullable target: b.BuildTargetIdentifier,
-    @Nullable classes: java.util.List[ScalaTestSuiteSelection],
+    requestData: ScalaTestSuites
+)
+
+final case class ScalaTestSuites(
+    suites: java.util.List[ScalaTestSuiteSelection],
     jvmOptions: java.util.List[String],
-    env: java.util.Map[String, String]
+    environmentVariables: java.util.List[String]
 )
 
 final case class ScalaTestSuiteSelection(

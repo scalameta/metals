@@ -25,7 +25,6 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugDiscoveryParams
-import scala.meta.internal.metals.DebugScalaTestSelectionParams
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
@@ -36,6 +35,8 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaTestSuites
+import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -545,26 +546,26 @@ class DebugProvider(
    * defined and supported SCALA_TEST_SUITES request kind.
    */
   def resolveTestSelectionParams(
-      params: DebugScalaTestSelectionParams
+      request: ScalaTestSuitesDebugRequest
   ): Future[b.DebugSessionParams] = {
-    buildTargets.info(params.target) match {
+    buildTargets.info(request.target) match {
       case Some(buildTarget) =>
         val debugSession =
           if (supportsTestSelection())
             new b.DebugSessionParams(
               singletonList(buildTarget.getId),
               DebugProvider.ScalaTestSelection,
-              params.toJson
+              request.requestData.toJson
             )
           else
             new b.DebugSessionParams(
               singletonList(buildTarget.getId),
               b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-              params.classes.map(_.className).toJson
+              request.requestData.suites.map(_.className).toJson
             )
         Future.successful(debugSession)
       case None =>
-        Future.failed(BuildTargetNotFoundException(params.target.getUri))
+        Future.failed(BuildTargetNotFoundException(request.target.getUri))
     }
   }
 
@@ -637,8 +638,8 @@ class DebugProvider(
           case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
             Success("attach-remote-debug-session")
           case DebugProvider.ScalaTestSelection =>
-            json.as[DebugScalaTestSelectionParams].map { params =>
-              params.classes.asScala
+            json.as[ScalaTestSuites].map { params =>
+              params.suites.asScala
                 .map(suite =>
                   s"${suite.className}(${suite.tests.asScala.mkString(", ")})"
                 )
@@ -818,8 +819,8 @@ object DebugProvider {
     lazy val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
     lazy val mainClassParamsParser =
       new JsonParser.Of[DebugUnresolvedMainClassParams]
-    lazy val testSelectionParamsParser =
-      new JsonParser.Of[DebugScalaTestSelectionParams]
+    lazy val testSuitesParamsParser =
+      new JsonParser.Of[ScalaTestSuitesDebugRequest]
     lazy val testClassParamsParser =
       new JsonParser.Of[DebugUnresolvedTestClassParams]
     lazy val attachRemoteParamsParser =
@@ -828,7 +829,7 @@ object DebugProvider {
       new JsonParser.Of[DebugDiscoveryParams]
   }
 
-  val ScalaTestSelection = "scala-test-selection"
+  val ScalaTestSelection = "scala-test-suites-selection"
 
   case object WorkspaceErrorsException
       extends Exception(
