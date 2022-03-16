@@ -9,12 +9,11 @@ final case class DoctorResults(
     targets: Option[Seq[DoctorTargetInfo]],
     explanations: List[Obj]
 ) {
-  private val version = 1
   def toJson: Obj = {
     val json = ujson.Obj(
       "title" -> title,
       "headerText" -> headerText,
-      "version" -> version
+      "version" -> DoctorResults.version
     )
     messages.foreach(messageList =>
       json("messages") = messageList.map(_.toJson)
@@ -23,6 +22,11 @@ final case class DoctorResults(
     json("explanations") = explanations
     json
   }
+}
+
+object DoctorResults {
+  // Version of the Doctor json that is returned.
+  val version = 2
 }
 
 final case class DoctorMessage(title: String, recommendations: List[String]) {
@@ -56,6 +60,7 @@ final case class DoctorTargetInfo(
   def toJson: Obj =
     ujson.Obj(
       "buildTarget" -> name,
+      "compilationStatus" -> compilationStatus.explanation,
       "targetType" -> targetType,
       "diagnostics" -> diagnosticsStatus.explanation,
       "interactive" -> interactiveStatus.explanation,
