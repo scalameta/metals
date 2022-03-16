@@ -3,7 +3,9 @@ id: releasing
 title: Making a release
 ---
 
-## Metals 
+## Metals
+
+### Tag the release
 
 - Choose the right version number:
 
@@ -14,51 +16,52 @@ title: Making a release
   For most releases bumping `z` is enough especially that Metals not being used
   as a library anywhere and do not have a public API.
 
-- Tag the release:
-
   - The tag must be called `vx.y.z`, e.g. `v3.0.0`.
   - `git tag -a vx.y.z -m "vx.y.z"`
 
-  You will need the tag to fill in some information in the release notes. It can
-  always be deleted and tagged again if you want to include more commits.
+  You will need the tag to fill in some information in the release notes.
+  It can always be deleted and tagged again if you want to include more commits.
+  `git tag -d vx.y.z`
 
   Please wait with pushing the tag until the release notes are accepted.
 
-- Draft the release notes:
+### Draft the release notes
 
-  - You might use `./bin/merged_prs.sc` script to generate merged PRs list
-    between two last release tags. It can be run using ammonite:
+You might use `./bin/merged_prs.sc` script to generate merged PRs list
+between two last release tags. It can be run using ammonite:
 
-  ```
-  cs install ammonite
-  amm ./bin/merged_prs.sc <tag1> <tag2> "<github_api_token>"
-  ```
+```
+cs install ammonite
+amm ./bin/merged_prs.sc <tag1> <tag2> "<github_api_token>"
+```
 
-  It will need a basic github API token to run, which may be specified via
-  environment variable `GITHUB_TOKEN` or via the last argument.
+It will need a basic github API token to run, which may be specified via
+environment variable `GITHUB_TOKEN` or via the last argument.
 
-  The script will generate a new markdown file in `website/blog` filled with a
-  basic release template.
+The script will generate a new markdown file in `website/blog` filled with a
+basic release template.
 
-  Alternatively, you can copy `website/blog/2020-11-10-lithium.md` as a
-  template.
+You can fill in the number of closed issues from the last milestone, though
+you will need to make sure everything is included there.
 
-  You can fill in the number of closed issues from the last milestone, though
-  you will need to make sure everything is included there.
+### Update Metals version
 
-  - Update Metals SNAPSHOT version in `build.sbt` and the default version in
-    Github issue templates.
-  - Update `./bin/test-release.sh` - remove any unsupported Scala versions and
-    add newly supported ones. This will be needed later to test the new release.
-  - Open a PR to the repo.
-  - https://github.com/scalameta/metals/releases/new.
+- `build.sbt` - update `localSnapshotVersion`
+- `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
+- `./bin/test-release.sh` - remove any unsupported Scala versions and
+  add newly supported ones. This will be needed later to test the new release.
+- `.github/workflows/mtags-auto-release.yml` - update `metals_version` and `metals_ref`
 
-- Start the release process:
+### Open a PR with release notes
 
-  - `git push upstream --tags`
-  - Do not create a release on GitHub just yet. Creating a release on GitHub
-    sends out a notification to repository watchers, and the release isn't ready
-    for that yet.
+Open the PR to the repo https://github.com/scalameta/metals/releases/new.
+
+### Start the release process:
+
+- `git push upstream --tags` will trigger release workflow
+- Do not create a release on GitHub just yet. Creating a release on GitHub
+  sends out a notification to repository watchers, and the release isn't ready
+  for that yet.
 
 - Wait for
   [the Github Actions job](https://github.com/scalameta/metals/actions?query=workflow%3ARelease)
@@ -72,6 +75,8 @@ title: Making a release
     released 3.2.1, so all its tickets went straight to 3.3.0).
   - Create the milestone or milestones corresponding to future releases. For
     example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.
+
+### Before official release
 
 - Verify the Sonatype release:
 
@@ -103,6 +108,8 @@ title: Making a release
       the release. This will start github actions job and publish the extension
       to both the Visual Studio Code Code Marketplace and openvsx.
 
+### Official release
+
 - Publish the release on GitHub:
 
   - https://github.com/scalameta/metals/releases
@@ -112,18 +119,24 @@ title: Making a release
   - Once the VS Code extension has been updated on the Marketplace, click
     "Publish release".
 
-- Update version numbers in:
-  - `build.sbt` - update `localSnapshotVersion`
-  - `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
-  - `.github/workflows/mtags-auto-release.yml` - update `metals_version` and `metals_ref`
-
 - Announce the new release with the link to the release notes:
   - on [Discord](https://discord.com/invite/RFpSVth)
+
+## Sanity check
+
+- [ ] draft release notes and create with PR with them
+- [ ] bump Metals version
+- [ ] push a tag to the repository
+- [ ] merge PR with release notes
+- [ ] check if artifacts are published to the sonatype
+- [ ] update downstream projects like metals-vscode
+- [ ] do release on GitHub
+- [ ] announce it
 
 ## Add new Scala version support to the existing release
 
 - If it's a Scala2 you need to release semanticdb plugin for it first.
-  
+
   - Find out which scalameta version the existing release uses
   - In scalameta project:
     - checkout on the tag for this version
@@ -134,4 +147,3 @@ title: Making a release
 - Release mtags artifact.
   Open [`Mtags auto release` action page](https://github.com/scalameta/metals/actions/workflows/mtags-auto-release.yml),
   click `Run Workflow`, specify Scala version and confirm.
-  

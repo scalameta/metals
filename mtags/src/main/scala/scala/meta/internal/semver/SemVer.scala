@@ -1,5 +1,7 @@
 package scala.meta.internal.semver
 
+import scala.util.Try
+
 object SemVer {
 
   case class Version(
@@ -54,10 +56,15 @@ object SemVer {
         .lift(3)
         .map { v =>
           if (v.startsWith("RC")) (Some(v.stripPrefix("RC").toInt), None)
-          else (None, Some(v.stripPrefix("M").toInt))
+          else if (v.startsWith("M")) (None, Some(v.stripPrefix("M").toInt))
+          else (None, None)
         }
         .getOrElse((None, None))
-      val date = parts.lift(5).map(_.toInt)
+      // specific condition for Scala 3 nightlies - 3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY
+      val date =
+        if (parts.lift(7).contains("NIGHTLY"))
+          parts.lift(5).flatMap(d => Try(d.toInt).toOption)
+        else None
       Version(major, minor, patch, rc, milestone, date)
     }
 

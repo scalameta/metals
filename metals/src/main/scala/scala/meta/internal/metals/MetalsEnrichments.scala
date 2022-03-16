@@ -1,8 +1,6 @@
 package scala.meta.internal.metals
 
 import java.io.IOException
-import java.net.URI
-import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -27,9 +25,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Failure
 import scala.util.Properties
-import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
@@ -109,9 +105,14 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionStatusCode(code: b.StatusCode) {
+    def isOK: Boolean = code == b.StatusCode.OK
+    def isError: Boolean = code == b.StatusCode.ERROR
+  }
+
   implicit class XtensionCompileResult(result: b.CompileResult) {
-    def isOK: Boolean = result.getStatusCode == b.StatusCode.OK
-    def isError: Boolean = result.getStatusCode == b.StatusCode.ERROR
+    def isOK: Boolean = result.getStatusCode.isOK
+    def isError: Boolean = result.getStatusCode.isError
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
@@ -538,32 +539,6 @@ object MetalsEnrichments
 
   }
 
-  implicit class XtensionURI(value: URI) {
-    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
-    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
-      val path =
-        if (value.getScheme() == "jar")
-          Try {
-            AbsolutePath(Paths.get(value))
-          } match {
-            case Success(path) => path
-            case Failure(_) =>
-              // don't close - put up with the resource staying open so all AbsolutePath methods don't have to be wrapped
-              m.internal.io.PlatformFileIO.newFileSystem(
-                value,
-                new java.util.HashMap[String, String]()
-              )
-              AbsolutePath(Paths.get(value))
-          }
-        else
-          AbsolutePath(Paths.get(value))
-      if (followSymlink)
-        path.dealias
-      else
-        path
-    }
-  }
-
   implicit class XtensionString(value: String) {
 
     /**
@@ -619,16 +594,8 @@ object MetalsEnrichments
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
-    def toAbsolutePath(followSymlink: Boolean): AbsolutePath = {
-      // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
-      // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
-      if (value.toUpperCase.startsWith("JAR%3AFILE"))
-        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
-      else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
-        URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
-      else
-        URI.create(value.stripPrefix("metals:")).toAbsolutePath(followSymlink)
-    }
+    def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
+      MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)
 
     def indexToLspPosition(index: Int): l.Position = {
       var i = 0

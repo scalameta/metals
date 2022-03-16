@@ -94,13 +94,37 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "issue",
+    expression = ".@@",
+    expectedCompletions = "",
+    expectedEdit = "",
+    topLines = Some(4),
+    noResults = true
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  case class Preceding(num: Int)
+       |
+       |  def main(args: Array[String]): Unit = {
+       |    val x = 3
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,
       expectedCompletions: String,
       expectedEdit: String,
       main: Option[String] = None,
-      topLines: Option[Int] = None
+      topLines: Option[Int] = None,
+      noResults: Boolean = false
   )(
       source: String
   )(implicit loc: Location): Unit = {
@@ -130,27 +154,31 @@ class CompletionDapSuite
           .take(topLines.getOrElse(targets.size))
           .mkString("\n")
         assertNoDiff(completionItems, expectedCompletions)
-        val firstItem = completer.response.getTargets().head
-        val start = firstItem.getStart()
-        val originalExpression =
-          expression
-            .replace("@@", "")
-        val fullResult = originalExpression.substring(0, start) +
-          firstItem.getText() +
-          originalExpression.substring(start + firstItem.getLength())
+        completer.response.getTargets().headOption match {
+          case Some(firstItem) =>
+            val start = firstItem.getStart()
+            val originalExpression =
+              expression
+                .replace("@@", "")
+            val fullResult = originalExpression.substring(0, start) +
+              firstItem.getText() +
+              originalExpression.substring(start + firstItem.getLength())
 
-        val selection = Option(firstItem.getSelectionStart())
+            val selection = Option(firstItem.getSelectionStart())
 
-        selection match {
-          case Some(selectionStart) =>
-            val cursorPosition = selectionStart + firstItem.getStart()
-            val resultWithCursor =
-              fullResult.substring(0, cursorPosition) +
-                "@@" +
-                fullResult.substring(cursorPosition)
-            assertNoDiff(resultWithCursor, expectedEdit)
-          case None =>
-            assertNoDiff(fullResult, expectedEdit)
+            selection match {
+              case Some(selectionStart) =>
+                val cursorPosition = selectionStart + firstItem.getStart()
+                val resultWithCursor =
+                  fullResult.substring(0, cursorPosition) +
+                    "@@" +
+                    fullResult.substring(cursorPosition)
+                assertNoDiff(resultWithCursor, expectedEdit)
+              case None =>
+                assertNoDiff(fullResult, expectedEdit)
+            }
+          case _ =>
+            assert(noResults, "There were no completions returned")
         }
       }
     }

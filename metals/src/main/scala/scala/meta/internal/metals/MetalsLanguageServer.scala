@@ -424,6 +424,7 @@ class MetalsLanguageServer(
           report => {
             didCompileTarget(report)
             compilers.didCompile(report)
+            doctor.check()
           },
           changes => {
             quickConnectToBuildServer().onComplete {
@@ -713,6 +714,7 @@ class MetalsLanguageServer(
         doctor = new Doctor(
           workspace,
           buildTargets,
+          diagnostics,
           languageClient,
           () => bspSession,
           () => bspConnector.resolve(),
@@ -2467,8 +2469,7 @@ class MetalsLanguageServer(
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
       } {
-        val sourceItemPath = source.getUri.toAbsolutePath(followSymlink = false)
-        buildTargets.addSourceItem(sourceItemPath, item.getTarget)
+        buildTargets.addSourceItem(source, item.getTarget)
       }
       check()
       buildTools

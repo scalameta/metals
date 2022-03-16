@@ -176,7 +176,7 @@ lazy val V = new {
   val ammonite213Version = "2.13.7"
 
   val ammonite = "2.5.2"
-  val bloop = "1.4.13-43-2580f21c"
+  val bloop = "1.4.13-45-7848b602"
   val bloopNightly = bloop
   val bsp = "2.0.0-M15"
   val coursier = "2.1.0-M5"
@@ -189,17 +189,17 @@ lazy val V = new {
   val jsoup = "1.14.3"
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
-  val mill = "0.10.0"
+  val mill = "0.10.1"
   val mdoc = "2.3.1"
   val munit = "0.7.29"
   val organizeImportRule = "0.6.0"
-  val pprint = "0.7.1"
+  val pprint = "0.7.2"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.9.34"
   val scalafmt = "3.4.0"
   val scalameta = "4.5.0"
-  val scribe = "3.8.0"
+  val scribe = "3.8.2"
   val semanticdb = scalameta
   val qdox = "2.0.1"
 
@@ -441,7 +441,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.16.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.6.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "8.5.1",
+      "org.flywaydb" % "flyway-core" % "8.5.3",
       "com.h2database" % "h2" % "2.0.206",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.4.0",
