@@ -45,6 +45,7 @@ final case class DoctorTargetInfo(
     dataKind: String,
     baseDirectory: String,
     targetType: String,
+    compilationStatus: DoctorStatus,
     diagnosticsStatus: DoctorStatus,
     interactiveStatus: DoctorStatus,
     indexesStatus: DoctorStatus,
