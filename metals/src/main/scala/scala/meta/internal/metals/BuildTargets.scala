@@ -85,6 +85,10 @@ final class BuildTargets(
       )
       if (isScala2) score <<= 1
 
+      val isScala213Version =
+        scalaTarget(t).exists(info => info.scalaBinaryVersion == "2.13")
+      if (isScala213Version) score <<= 1
+
       score
   }
 
