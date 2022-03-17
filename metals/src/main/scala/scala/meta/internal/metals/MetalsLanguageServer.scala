@@ -689,7 +689,8 @@ class MetalsLanguageServer(
           clientConfig,
           semanticdbs,
           compilers,
-          () => bspSession.exists(_.main.isBloopOrSbt)
+          () => bspSession.exists(_.main.isBloopOrSbt),
+          statusBar
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -1838,11 +1839,15 @@ class MetalsLanguageServer(
         }
         val session = for {
           params <- debugSessionParams
-          server <- debugProvider.start(
-            params,
-            scalaVersionSelector
+          server <- statusBar.trackFuture(
+            "Starting debug server",
+            debugProvider.start(
+              params,
+              scalaVersionSelector
+            )
           )
         } yield {
+          statusBar.addMessage("Started debug server!")
           cancelables.add(server)
           DebugSession(server.sessionName, server.uri.toString)
         }
