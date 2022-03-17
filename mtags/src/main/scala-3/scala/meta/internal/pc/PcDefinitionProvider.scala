@@ -35,6 +35,7 @@ import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
+import dotty.tools.dotc.core.Constants.Constant
 
 class PcDefinitionProvider(
     driver: InteractiveDriver,
@@ -43,21 +44,25 @@ class PcDefinitionProvider(
 ):
 
   def definitions(): DefinitionResult =
-    val uri = params.uri
-    val filePath = Paths.get(uri)
-    val diagnostics = driver.run(
-      uri,
-      SourceFile.virtual(filePath.toString, params.text)
-    )
-    val unit = driver.currentCtx.run.units.head
-    val tree = unit.tpdTree
+    if params.isWhitespace then DefinitionResultImpl.empty
+    else
+      val uri = params.uri
+      val filePath = Paths.get(uri)
+      val diagnostics = driver.run(
+        uri,
+        SourceFile.virtual(filePath.toString, params.text)
+      )
+      val unit = driver.currentCtx.run.units.head
+      val tree = unit.tpdTree
 
-    val pos = driver.sourcePosition(params)
-    val path =
-      Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
-    given ctx: Context = driver.localContext(params)
-    val indexedContext = IndexedContext(ctx)
-    findDefinitions(tree, path, pos, driver, indexedContext)
+      val pos = driver.sourcePosition(params)
+      val path =
+        Interactive.pathTo(driver.openedTrees(uri), pos)(using
+          driver.currentCtx
+        )
+      given ctx: Context = driver.localContext(params)
+      val indexedContext = IndexedContext(ctx)
+      findDefinitions(tree, path, pos, driver, indexedContext)
   end definitions
 
   private def findDefinitions(
@@ -139,6 +144,9 @@ class PcDefinitionProvider(
         val sym = target.symbol
         if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
         else List(target.symbol)
+
+      case Literal(Constant(())) :: tl =>
+        Nil
 
       case head :: tl =>
         if head.symbol.is(Synthetic) then enclosingSymbols(tl, pos, indexed)

@@ -121,4 +121,10 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
     def backticked: String =
       KeywordWrapper.Scala3.backtickWrap(s)
 
+  extension (params: OffsetParams)
+    def isWhitespace: Boolean =
+      params.offset() < 0 ||
+        params.offset() >= params.text().length ||
+        params.text().charAt(params.offset()).isWhitespace
+
 end MtagsEnrichments

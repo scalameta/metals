@@ -39,7 +39,8 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|object Main {
+        """|
+           |object Main {
            |  for {
            |    <<x>> <- List(1)
            |    y <- 1.to(x)
@@ -176,8 +177,9 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|object Main {
-           |  new/*java/io/File#`<init>`(+2). File.java*/ java.io.File("")
+        """|
+           |object Main {
+           |  ne/*java/io/File#`<init>`(+2). File.java*/w java.io.File("")
            |}
            |""".stripMargin
     )
@@ -336,7 +338,8 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|object Main {
+        """|
+           |object Main {
            |  List(1).foldLeft(0)(_ + _)
            |}
            |""".stripMargin
@@ -428,5 +431,42 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |}
            |""".stripMargin
     )
+  )
+
+  check(
+    "no-definition-1",
+    """|
+       |object Main {
+       |  @@
+       |  def foo() = {
+       |    // this is a comment
+       |  } 
+       |  println(foo())
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "no-definition-2",
+    """|
+       |object Main {
+       |  def foo() = {
+       |    @@// this is a comment
+       |  } 
+       |  println(foo())
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "no-definition-3",
+    """|
+       |object Main {
+       |  def foo() = {
+       |    // th@@is is a comment
+       |  } 
+       |  println(foo())
+       |}
+       |""".stripMargin
   )
 }
