@@ -15,6 +15,7 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Denotations
 import dotty.tools.dotc.core.Denotations.Denotation
@@ -35,7 +36,6 @@ import dotty.tools.dotc.util.NoSourcePosition
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
-import dotty.tools.dotc.core.Constants.Constant
 
 class PcDefinitionProvider(
     driver: InteractiveDriver,

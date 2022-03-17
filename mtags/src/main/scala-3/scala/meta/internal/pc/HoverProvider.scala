@@ -2,11 +2,13 @@ package scala.meta.internal.pc
 
 import java.{util as ju}
 
+import scala.jdk.javaapi.OptionConverters.toJava
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.RangeParams
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
@@ -22,11 +24,22 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.Hover
 
 object HoverProvider:
 
   def hover(
+      params: OffsetParams,
+      driver: InteractiveDriver
+  ): ju.Optional[Hover] = params match
+    case range: RangeParams =>
+      toJava(range.trimWhitespaceInRange).flatMap(hoverOffset(_, driver))
+    case _ if params.isWhitespace => ju.Optional.empty()
+    case _ =>
+      hoverOffset(params, driver)
+
+  private def hoverOffset(
       params: OffsetParams,
       driver: InteractiveDriver
   ): ju.Optional[Hover] =
@@ -52,61 +65,77 @@ object HoverProvider:
     if tp.isError || tpw == NoType || tpw.isError || path.isEmpty then
       ju.Optional.empty()
     else
-      Interactive.enclosingSourceSymbols(enclosing, pos) match
-        case Nil =>
+      val span = Span(params.offset)
+      enclosing match
+        // matches only if the cursor is over the definition name
+        case (tree: ValOrDefDef) :: _
+            if !tree.nameSpan.contains(
+              span
+            ) && tree.symbol.denot.kindString == "val" && !tree.symbol.denot.is(
+              Flags.Case
+            ) =>
           ju.Optional.empty()
-        case symbols @ (symbol :: _) =>
-          val docComments =
-            symbols.flatMap(ParsedComment.docOf(_))
-          val printerContext =
-            driver.compilationUnits.get(uri) match
-              case Some(unit) =>
-                val newctx =
-                  ctx.fresh.setCompilationUnit(unit)
-                MetalsInteractive.contextOfPath(enclosing)(using newctx)
-              case None => ctx
-          val printer = MetalsPrinter.standard(IndexedContext(printerContext))
+        case (tree: Literal) :: _ if !params.isInstanceOf[RangeParams] =>
+          ju.Optional.empty()
+        case _ =>
+          Interactive.enclosingSourceSymbols(enclosing, pos) match
+            case Nil =>
+              ju.Optional.empty()
+            case symbols @ (symbol :: _) =>
+              val docComments =
+                symbols.flatMap(ParsedComment.docOf(_))
+              val printerContext =
+                driver.compilationUnits.get(uri) match
+                  case Some(unit) =>
+                    val newctx =
+                      ctx.fresh.setCompilationUnit(unit)
+                    MetalsInteractive.contextOfPath(enclosing)(using newctx)
+                  case None => ctx
+              val printer =
+                MetalsPrinter.standard(IndexedContext(printerContext))
 
-          val hoverString =
-            tpw match
-              // https://github.com/lampepfl/dotty/issues/8891
-              case tpw: ImportType =>
-                printer.hoverSymbol(symbol, symbol.paramRef)
-              case _ =>
-                val (tpe, sym) =
-                  if symbol.isType then (symbol.typeRef, symbol)
-                  else seenFrom(enclosing.head, symbol)
+              val hoverString =
+                tpw match
+                  // https://github.com/lampepfl/dotty/issues/8891
+                  case tpw: ImportType =>
+                    printer.hoverSymbol(symbol, symbol.paramRef)
+                  case _ =>
+                    val (tpe, sym) =
+                      if symbol.isType then (symbol.typeRef, symbol)
+                      else seenFrom(enclosing.head, symbol)
 
-                val finalTpe =
-                  if tpe != NoType then tpe
-                  else tpw
+                    val finalTpe =
+                      if tpe != NoType then tpe
+                      else tpw
 
-                printer.hoverSymbol(sym, finalTpe)
-            end match
-          end hoverString
+                    printer.hoverSymbol(sym, finalTpe)
+                end match
+              end hoverString
 
-          val docString =
-            docComments.map(_.renderAsMarkdown).mkString("\n")
-          printer.expressionType(exprTpw) match
-            case Some(expressionType) =>
-              val forceExpressionType =
-                !pos.span.isZeroExtent || (
-                  !hoverString.endsWith(
-                    expressionType
-                  ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
-                )
-              val content = HoverMarkup(
-                expressionType,
-                hoverString,
-                docString,
-                forceExpressionType
-              )
-              ju.Optional.of(new Hover(content.toMarkupContent))
-            case _ =>
-              ju.Optional.empty
+              val docString =
+                docComments.map(_.renderAsMarkdown).mkString("\n")
+              printer.expressionType(exprTpw) match
+                case Some(expressionType) =>
+                  val forceExpressionType =
+                    !pos.span.isZeroExtent || (
+                      !hoverString.endsWith(
+                        expressionType
+                      ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
+                    )
+                  val content = HoverMarkup(
+                    expressionType,
+                    hoverString,
+                    docString,
+                    forceExpressionType
+                  )
+                  ju.Optional.of(new Hover(content.toMarkupContent))
+                case _ =>
+                  ju.Optional.empty
+              end match
           end match
+      end match
     end if
-  end hover
+  end hoverOffset
 
   private def qual(tree: Tree): Tree =
     tree match
