@@ -14,6 +14,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StacktraceAnalyzer
+import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
@@ -41,7 +42,8 @@ private[debug] final class DebugProxy(
     debugAdapter: MetalsDebugAdapter,
     stackTraceAnalyzer: StacktraceAnalyzer,
     compilers: Compilers,
-    stripColor: Boolean
+    stripColor: Boolean,
+    statusBar: StatusBar
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -68,18 +70,25 @@ private[debug] final class DebugProxy(
       .andThen { case _ => cancel() }
   }
 
+  private val initialized = Promise[Unit]()
+
   private val handleClientMessage: MessageConsumer = {
     case null =>
       () // ignore
     case _ if cancelled.get() =>
       () // ignore
     case request @ InitializeRequest(args) =>
+      statusBar.trackFuture(
+        "Initializing debugger",
+        initialized.future
+      )
       clientAdapter = ClientConfigurationAdapter.initialize(args)
       server.send(request)
     case request @ LaunchRequest(debugMode) =>
       this.debugMode = debugMode
       server.send(request)
     case request @ RestartRequest(_) =>
+      initialized.trySuccess(())
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)
       outputTerminated = true
@@ -134,8 +143,7 @@ private[debug] final class DebugProxy(
         }
         .withTimeout(5, TimeUnit.SECONDS)
 
-    case message =>
-      server.send(message)
+    case message => server.send(message)
   }
 
   private def assembleResponse(
@@ -179,11 +187,13 @@ private[debug] final class DebugProxy(
       lastFrames = args.getStackFrames()
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
+      initialized.trySuccess(())
       val analyzedMessage = stackTraceAnalyzer
         .fileLocationFromLine(output.getOutput())
         .map(DebugProtocol.stacktraceOutputResponse(output, _))
         .getOrElse(message)
       client.consume(analyzedMessage)
+
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       // As long as the color codes are valid this should correctly strip
@@ -192,11 +202,15 @@ private[debug] final class DebugProxy(
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
       client.consume(message)
-    case message => client.consume(message)
+
+    case message =>
+      initialized.trySuccess(())
+      client.consume(message)
   }
 
   def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
+      initialized.trySuccess(())
       scribe.info(s"Canceling debug proxy for [$sessionName]")
       exitStatus.trySuccess(Terminated)
       Cancelable.cancelAll(List(client, server))
@@ -224,7 +238,8 @@ private[debug] object DebugProxy {
       stackTraceAnalyzer: StacktraceAnalyzer,
       compilers: Compilers,
       workspace: AbsolutePath,
-      stripColor: Boolean
+      stripColor: Boolean,
+      status: StatusBar
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -247,7 +262,8 @@ private[debug] object DebugProxy {
       debugAdapter,
       stackTraceAnalyzer,
       compilers,
-      stripColor
+      stripColor,
+      status
     )
   }
 
