@@ -289,9 +289,9 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  "".substring(1@@)
       |}
     """.stripMargin,
-    """|substring(beginIndex: Int, endIndex: Int): String
-       |substring(beginIndex: Int): String
+    """|substring(beginIndex: Int): String
        |          ^^^^^^^^^^^^^^^
+       |substring(beginIndex: Int, endIndex: Int): String
        |""".stripMargin
   )
   check(
@@ -301,11 +301,11 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  String.valueOf(1@@)
       |}
     """.stripMargin,
-    """|valueOf(d: Double): String
+    """|valueOf(i: Int): String
+       |        ^^^^^^
+       |valueOf(d: Double): String
        |valueOf(f: Float): String
        |valueOf(l: Long): String
-       |valueOf(i: Int): String
-       |        ^^^^^^
        |valueOf(c: Char): String
        |valueOf(b: Boolean): String
        |valueOf(data: Array[Char], offset: Int, count: Int): String
