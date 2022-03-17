@@ -18,8 +18,12 @@ jobs:
           LAST_NIGHTLY_POS=$(grep -n $LAST_NIGHTLY_MTAG  all_nightly | cut -d ":" -f1)
           LAST_NIGHTLY_POS=$(($LAST_NIGHTLY_POS+1))
           NEW_NIGHTLIES=$(tail -n +$LAST_NIGHTLY_POS all_nightly)
-          while IFS= read -r version; do
-            gh workflow run mtags-auto-release.yml -f scala_version=$version
-          done <<< "$NEW_NIGHTLIES"
+          if [ ! -z $NEW_NIGHTLIES ]; then
+            while IFS= read -r version; do
+              gh workflow run mtags-auto-release.yml -f scala_version=$version
+            done <<< "$NEW_NIGHTLIES"
+          else
+            ecjo "No new releases found"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
