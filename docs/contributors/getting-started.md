@@ -3,16 +3,19 @@ id: getting-started
 title: Contributing to Metals
 ---
 
-Whenever you are stuck or unsure, please open an issue or
-[ask us on Discord](https://discord.gg/DwTc8xbNDd). This project follows
-[Scalameta's contribution guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md).
+Whenever you are stuck or unsure, please open an issue or [ask us on
+Discord](https://discord.gg/DwTc8xbNDd). This project follows [Scalameta's
+contribution
+guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md)
+and the [Scala CoC](https://scala-lang.org/conduct/).
 
 ## Requirements
 
 You will need the following applications installed:
 
-- Java 11 or 8 - Make sure `JAVA_HOME` points to a Java 11 or 8 installation.
-  Metals will need to build and run on _both_.
+- Java 17, 11 or 8 - Make sure `JAVA_HOME` points to a Java 17, 11 or 8 installation.
+  Metals will need to build and run on _all of them_, with support for 8
+  probably being dropped in the near future.
 - `git`
 - `sbt` (for building a local version of the server)
 
@@ -36,7 +39,7 @@ You will need the following applications installed:
 - `docs` documentation markdown for the Metals website.
 - `metals-docs` methods used for generating documentation across multiple pages
   in `docs`.
-- `website` holds the static site configuraton, style and blogs posts for the
+- `website` holds the static site configuration, style and blogs posts for the
   Metals website.
 
 ## Git hooks
@@ -54,9 +57,8 @@ repository:
 
 - [scalameta/metals-vscode](https://github.com/scalameta/metals-vscode/): the
   Visual Studio Code extension for Metals.
-- [scalameta/coc-metals](https://github.com/scalameta/coc-metals/): the
-  [coc.nvim](https://github.com/neoclide/coc.nvim) Vim/Nvim extension for
-  Metals.
+- [scalameta/nvim-metals](https://github.com/scalameta/nvim-metals/): the Neovim
+    extension for Metals using the built-in LSP support of Neovim.
 - [scalameta/metals-eclipse](https://github.com/scalameta/metals-eclipse/): the
   Eclipse extension for Metals.
 - [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
@@ -65,7 +67,9 @@ repository:
   the main Metals repository
 - [scalacenter/bloop](https://github.com/scalacenter/bloop/): build server for
   compilation.
-- [scala/scala](https://github.com/scala/scala/): presentation compiler.
+- [scala/scala](https://github.com/scala/scala/): Scala 2 presentation compiler.
+- [lampepfl/dotty](https://github.com/lampepfl/dotty): Scala 3 presentation
+    compiler.
 - [scalameta/scalafmt](https://github.com/scalameta/scalafmt/): code formatting.
 - [scalacenter/scalafix](https://github.com/scalacenter/scalafix/): code
   refactoring and linting.
@@ -104,14 +108,18 @@ following command:
 code tests/unit/target/e2e/warnings/deprecated-scala
 ```
 
-If you are using VS Code, make sure to update the "Server Version" setting to
-use your locally published version of Metals.
-
 ## Manual tests
 
 Some functionality is best to manually test through an editor. A common workflow
 while iterating on a new feature is to run `publishLocal` and then open an
 editor in a small demo build.
+
+It's important to note that `sbt publishLocal` will create artifacts only for
+the Scala version currently used in Metals and trying to use the snapshot
+version with any other Scala version will not work. In that case you need to run
+a full cross publish with `sbt +publishLocal`, however this will take quite some
+time, so you may want to target a specific version to publish like `++3.1.1
+mtags/publishLocal`.
 
 ### Visual Studio Code
 
@@ -130,30 +138,35 @@ When you make changes in the Metals Scala codebase
 - execute the "Metals: Restart server" command in Visual Studio Code (via
   command palette)
 
-It's important to note that `sbt publishLocal` will create artifacts only for
-the Scala version currently used in Metals and trying to use the snapshot
-version with any other Scala version will not work. In that case you need to run
-a full cross publish with `sbt +publishLocal`.
+### Vim/Neovim
 
-### Vim
+If using `nvim-metals`:
 
-First, follow the [`vim` installation instruction](../editors/vim.md).
-
-If you're using coc-metals:
+You'll want to make sure to read the docs
+[here](https://github.com/scalameta/nvim-metals/blob/main/doc/metals.txt) and
+take a look at the example configuration
+[here](https://github.com/scalameta/nvim-metals/discussions/39) if you haven't
+already set everything up.
 
 - run `sbt publishLocal`
-- open `:CocConfig` and put your new snapshot version in
-  `metals.serverVersion`.
-- you will then be prompted to reload, which will restart the server.
+- set the `serverVersion` in your `settings` table that you pass in to your
+    metals config.
+- Open your workspace and trigger a `:MetalsUpdate` followed by a
+    `:MetalsRestart`. NOTE: that every time you publish locally you'll want to
+    trigger this again.
 
-If you publish again, you then just need to execute the `metals.restartServer command`.
+If using `coc-metals`:
+
+  - after the publish local set your `metals.serverVersion` in your
+      `:CocConfig`.
+  - execute the `metals.restartServer command`
 
 If you are using another Vim client, write a `new-metals-vim` script that builds
 a new `metals-vim` bootstrap script using the locally published version.
 
 ```sh
 coursier bootstrap \
-  --java-opt -Dmetals.client=vim-lsc \
+  --java-opt -Dmetals.client=<<NAME_OF_CLIENT>> \
   org.scalameta:metals_2.12:@LOCAL_VERSION@ \ # double-check version here
   -r bintray:scalacenter/releases \
   -o /usr/local/bin/metals-vim -f
