@@ -63,7 +63,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |""".stripMargin
   )
 
-  check(
+  checkNoAction(
     "existing-companion-object-with-parent",
     """|object Bar{
        |  class Fo<<>>o{
@@ -79,24 +79,7 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
        |  }
        |
        |}
-       |""".stripMargin,
-    s"""|${CreateCompanionObjectCodeAction.companionObjectInfo}
-        |""".stripMargin,
-    """object Bar{
-      |  class Foo{
-      |
-      |  }
-      |
-      |  object Foo {
-      |
-      |  }
-      |
-      |  object Baz{
-      |
-      |  }
-      |
-      |}
-      |""".stripMargin
+       |""".stripMargin
   )
 
   check(

@@ -49,17 +49,15 @@ class CreateCompanionObjectCodeAction(
       else
         None
 
-    applyTree.collect { case tree: Tree =>
+    applyTree.flatMap { tree =>
       val name = getNameOfClassTraitOrEnumTree(tree)
 
-      findCompanionObject(tree, name) match {
-        case Some(comanionObject) =>
-          buildShowingCompanionObjectCodeAction(comanionObject, uri)
-        case None =>
-          val document = buffers.get(path).getOrElse("")
-          val indentationString =
-            getIndentationForPositionInDocument(tree.pos, document)
+      if (!hasCompanionObject(tree, name)) {
+        val document = buffers.get(path).getOrElse("")
+        val indentationString =
+          getIndentationForPositionInDocument(tree.pos, document)
 
+        Some(
           buildCreatingCompanionObjectCodeAction(
             path,
             tree,
@@ -68,7 +66,8 @@ class CreateCompanionObjectCodeAction(
             name,
             hasBraces(tree, document)
           )
-      }
+        )
+      } else None
     }.toSeq
 
   }
@@ -151,23 +150,6 @@ class CreateCompanionObjectCodeAction(
     codeAction
   }
 
-  private def buildShowingCompanionObjectCodeAction(
-      companionObject: Defn.Object,
-      uri: String
-  ): l.CodeAction = {
-    val codeAction = new l.CodeAction()
-    codeAction.setTitle(CreateCompanionObjectCodeAction.companionObjectInfo)
-    codeAction.setCommand(
-      buildCommandForNavigatingToCompanionObject(
-        uri,
-        companionObject.pos.toLSP.getStart
-      )
-    )
-
-    codeAction.setKind(this.kind)
-    codeAction
-  }
-
   private def buildCommandForNavigatingToCompanionObject(
       uri: String,
       companionObjectPosion: l.Position
@@ -182,15 +164,17 @@ class CreateCompanionObjectCodeAction(
 
   }
 
-  private def findCompanionObject(
+  private def hasCompanionObject(
       tree: Tree,
       name: String
-  ): Option[Defn.Object] =
-    tree.parent.flatMap(_.children.collectFirst {
-      case potentialCompanionObject: Defn.Object
-          if (potentialCompanionObject.name.value == name) =>
-        potentialCompanionObject
-    })
+  ): Boolean =
+    tree.parent
+      .flatMap(_.children.collectFirst {
+        case potentialCompanionObject: Defn.Object
+            if (potentialCompanionObject.name.value == name) =>
+          potentialCompanionObject
+      })
+      .isDefined
 
   private def applyWithSingleFunction: Tree => Boolean = {
     case _: Defn.Class | _: Defn.Trait | _: Defn.Enum => true
@@ -200,5 +184,4 @@ class CreateCompanionObjectCodeAction(
 
 object CreateCompanionObjectCodeAction {
   val companionObjectCreation = "Create companion object"
-  val companionObjectInfo = "Show companion object"
 }

@@ -651,41 +651,44 @@ object MetalsEnrichments
 
     def lineAtIndex(index: Int): Int =
       indexToLspPosition(index).getLine
+
+//        /**
+//         * @param pos the position at which non-blank text starts
+//         * @return the length of indentation at the beginning of this string
+//         */
+//        def indentationLength(pos: Position): Int = {
+//          val lineStart = pos.start - pos.startColumn
+//                var i = lineStart
+//                while (i < value.length() && (value(i) == '\t' || value(i) == ' ')) {
+//                  i += 1
+//                }
+//                i - lineStart
+//        }
 //
-//    /**
-//     * @param pos the position at which non-blank text starts
-//     * @return the length of indentation at the beginning of this string
-//     */
-//    def indentationLength(pos: Position): Int = {
-//      val lineStart = pos.start - pos.startColumn
-//      val blankCharsString = value.takeWhile(c => c == '\t' || c == ' ')
-//      blankCharsString.size - lineStart
-//    }
+//        /**
+//         * @param pos the position at which non-blank text starts
+//         * @return the indentation at the beginning of this string
+//         */
+//        def getIndentation(pos: Position): String = {
+//          val blank = getIndentationBlankCharAtPosition(pos)
+//          pprint.log("indentation char at position is '"+blank+"'")
+//          getIndentationAtPositionWithBlankChar(pos, blank)
+//        }
 //
-//    /**
-//     * @param pos the position at which non-blank text starts
-//     * @return the indentation at the beginning of this string
-//     */
-//    def getIndentation(pos: Position): String = {
-//      val blank = getIndentationBlankCharAtPosition(pos)
-//      pprint.log("indentation char at position is '"+blank+"'")
-//      getIndentationAtPositionWithBlankChar(pos, blank)
-//    }
+//        /**
+//         * @param pos      the position at which non-blank text starts
+//         * @param blankChar the blank Char with which the indentation String is built
+//         * @return the indentation at the beginning of this string with the blankChar
+//         */
+//        def getIndentationAtPositionWithBlankChar(
+//            pos: Position,
+//            blankChar: Char
+//        ): String =
+//          blankChar.stringRepeat(value.indentationLength(pos = pos))
 //
-//    /**
-//     * @param pos      the position at which non-blank text starts
-//     * @param blankChar the blank Char with which the indentation String is built
-//     * @return the indentation at the beginning of this string with the blankChar
-//     */
-//    def getIndentationAtPositionWithBlankChar(
-//        pos: Position,
-//        blankChar: Char
-//    ): String =
-//      blankChar.stringRepeat(value.indentationLength(pos = pos))
-//
-//    def getIndentationBlankCharAtPosition(pos: Position): Char = {
-//      if (value(pos.start - pos.startColumn) == '\t') '\t' else ' '
-//    }
+//        def getIndentationBlankCharAtPosition(pos: Position): Char = {
+//          if (value(pos.start - pos.startColumn) == '\t') '\t' else ' '
+//        }
 
   }
 
