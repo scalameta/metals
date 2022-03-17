@@ -689,7 +689,8 @@ class MetalsLanguageServer(
           clientConfig,
           semanticdbs,
           compilers,
-          () => bspSession.exists(_.main.isBloopOrSbt)
+          () => bspSession.exists(_.main.isBloopOrSbt),
+          statusBar
         )
         scalafixProvider = ScalafixProvider(
           buffers,

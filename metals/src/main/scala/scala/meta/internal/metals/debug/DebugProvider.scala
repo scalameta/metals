@@ -39,6 +39,7 @@ import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StacktraceAnalyzer
+import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -83,7 +84,8 @@ class DebugProvider(
     clientConfig: ClientConfiguration,
     semanticdbs: Semanticdbs,
     compilers: Compilers,
-    supportsTestSelection: () => Boolean
+    supportsTestSelection: () => Boolean,
+    statusBar: StatusBar
 ) {
 
   import DebugProvider._
@@ -179,7 +181,8 @@ class DebugProvider(
         stacktraceAnalyzer,
         compilers,
         workspace,
-        clientConfig.disableColorOutput()
+        clientConfig.disableColorOutput(),
+        statusBar
       )
     }
     val server = new DebugServer(sessionName, uri, proxyFactory)
