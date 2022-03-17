@@ -1838,11 +1838,15 @@ class MetalsLanguageServer(
         }
         val session = for {
           params <- debugSessionParams
-          server <- debugProvider.start(
-            params,
-            scalaVersionSelector
+          server <- statusBar.trackFuture(
+            "Starting debug server",
+            debugProvider.start(
+              params,
+              scalaVersionSelector
+            )
           )
         } yield {
+          statusBar.addMessage("Started debug server!")
           cancelables.add(server)
           DebugSession(server.sessionName, server.uri.toString)
         }
