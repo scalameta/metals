@@ -49,26 +49,21 @@ class CreateCompanionObjectCodeAction(
       else
         None
 
-    applyTree.flatMap { tree =>
-      val name = getNameOfClassTraitOrEnumTree(tree)
+    val maybeCompanionObject = for {
+      tree <- applyTree
+      name <- getNameOfClassTraitOrEnumTree(tree)
+      if !hasCompanionObject(tree, name)
+      document <- buffers.get(path)
+    } yield buildCreatingCompanionObjectCodeAction(
+      path,
+      tree,
+      uri,
+      getIndentationForPositionInDocument(tree.pos, document),
+      name,
+      hasBraces(tree, document)
+    )
 
-      if (!hasCompanionObject(tree, name)) {
-        val document = buffers.get(path).getOrElse("")
-        val indentationString =
-          getIndentationForPositionInDocument(tree.pos, document)
-
-        Some(
-          buildCreatingCompanionObjectCodeAction(
-            path,
-            tree,
-            uri,
-            indentationString,
-            name,
-            hasBraces(tree, document)
-          )
-        )
-      } else None
-    }.toSeq
+    maybeCompanionObject.toSeq
 
   }
 
@@ -86,15 +81,14 @@ class CreateCompanionObjectCodeAction(
         document(template.pos.start) == '{'
       }
       .getOrElse(false)
-    //  document(tree.pos.end-1) == '}'
   }
 
-  private def getNameOfClassTraitOrEnumTree(tree: Tree): String = {
+  private def getNameOfClassTraitOrEnumTree(tree: Tree): Option[String] = {
     tree match {
-      case classDefinition: Defn.Class => classDefinition.name.value
-      case traitDefinition: Defn.Trait => traitDefinition.name.value
-      case enumDefinition: Defn.Enum => enumDefinition.name.value
-      case _ => ""
+      case classDefinition: Defn.Class => Some(classDefinition.name.value)
+      case traitDefinition: Defn.Trait => Some(traitDefinition.name.value)
+      case enumDefinition: Defn.Enum => Some(enumDefinition.name.value)
+      case _ => None
     }
   }
 
