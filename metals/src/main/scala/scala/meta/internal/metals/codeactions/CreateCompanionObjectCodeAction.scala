@@ -25,13 +25,13 @@ import scala.meta.internal.trees.Origin.Parsed
  * @param trees
  */
 class CreateCompanionObjectCodeAction(
-                                       trees: Trees,
-                                       buffers: Buffers
-                                     ) extends CodeAction {
+    trees: Trees,
+    buffers: Buffers
+) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
-                                                                        ec: ExecutionContext
+      ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val uri = params.getTextDocument().getUri()
 
@@ -60,7 +60,7 @@ class CreateCompanionObjectCodeAction(
       getIndentationForPositionInDocument(tree.pos, document),
       name,
       hasBraces(tree, document),
-      tree.canUseBracelessSyntax( document)
+      tree.canUseBracelessSyntax(document)
     )
 
     maybeCompanionObject.toSeq
@@ -68,9 +68,9 @@ class CreateCompanionObjectCodeAction(
   }
 
   private def getIndentationForPositionInDocument(
-                                                   treePos: Position,
-                                                   document: String
-                                                 ): String =
+      treePos: Position,
+      document: String
+  ): String =
     document
       .substring(treePos.start - treePos.startColumn, treePos.start)
       .takeWhile(_.isWhitespace)
@@ -93,14 +93,14 @@ class CreateCompanionObjectCodeAction(
   }
 
   private def buildCreatingCompanionObjectCodeAction(
-                                                      path: AbsolutePath,
-                                                      tree: Tree,
-                                                      uri: String,
-                                                      indentationString: String,
-                                                      name: String,
-                                                      hasBraces: Boolean,
-                                                      bracelessOK: Boolean
-                                                    ): l.CodeAction = {
+      path: AbsolutePath,
+      tree: Tree,
+      uri: String,
+      indentationString: String,
+      name: String,
+      hasBraces: Boolean,
+      bracelessOK: Boolean
+  ): l.CodeAction = {
     val codeAction = new l.CodeAction()
     codeAction.setTitle(CreateCompanionObjectCodeAction.companionObjectCreation)
     codeAction.setKind(this.kind)
@@ -126,8 +126,9 @@ class CreateCompanionObjectCodeAction(
           |""".stripMargin
 
     pprint.log("hasBraces: " + hasBraces)
-    pprint.log("bracelessOK: "+ bracelessOK)
-    val companionObjectString = if (hasBraces || !bracelessOK) braceFulCompanion else bracelessCompanion
+    pprint.log("bracelessOK: " + bracelessOK)
+    val companionObjectString =
+      if (hasBraces || !bracelessOK) braceFulCompanion else bracelessCompanion
     pprint.log(companionObjectString)
 
     val companionObjectTextEdit = new l.TextEdit(range, companionObjectString)
@@ -150,9 +151,9 @@ class CreateCompanionObjectCodeAction(
   }
 
   private def buildCommandForNavigatingToCompanionObject(
-                                                          uri: String,
-                                                          companionObjectPosion: l.Position
-                                                        ): l.Command = {
+      uri: String,
+      companionObjectPosion: l.Position
+  ): l.Command = {
     val cursorRange = new l.Range(companionObjectPosion, companionObjectPosion)
     ServerCommands.GotoPosition.toLSP(
       new Location(
@@ -164,13 +165,13 @@ class CreateCompanionObjectCodeAction(
   }
 
   private def hasCompanionObject(
-                                  tree: Tree,
-                                  name: String
-                                ): Boolean =
+      tree: Tree,
+      name: String
+  ): Boolean =
     tree.parent
       .flatMap(_.children.collectFirst {
         case potentialCompanionObject: Defn.Object
-          if (potentialCompanionObject.name.value == name) =>
+            if (potentialCompanionObject.name.value == name) =>
           potentialCompanionObject
       })
       .isDefined
