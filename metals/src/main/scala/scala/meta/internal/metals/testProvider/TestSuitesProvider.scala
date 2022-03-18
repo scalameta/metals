@@ -262,7 +262,9 @@ final class TestSuitesProvider(
       symbolsPerTarget: List[SymbolsPerTarget]
   ): Map[BuildTarget, List[TestEntry]] = {
     val entries = symbolsPerTarget.flatMap { currentTarget =>
-      val cachedSuites = mutable.Set.empty[FullyQualifiedName]
+      // index will be updated later
+      val currentlyCached = index.getSuiteNames(currentTarget.target)
+      val cachedSuites = mutable.Set.from(currentlyCached)
       currentTarget.testSymbols
         .readOnlySnapshot()
         .toList
