@@ -34,6 +34,30 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
   )
 
   check(
+    "bracefull-companion-object-insert-for-scala2",
+    """|case class F<<>>oo()
+       |
+       |class Bar {
+       |
+       |}
+       |""".stripMargin,
+    s"""|${ExtractRenameMember.title("class", "Foo")}
+        |${CreateCompanionObjectCodeAction.companionObjectCreation}
+        |""".stripMargin,
+    """|case class Foo()
+       |
+       |object Foo {
+       |
+       |}
+       |
+       |class Bar {
+       |
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
+  )
+
+  check(
     "insert-companion-object-inside-parent-object",
     """|object Baz {
        |  class F<<>>oo {

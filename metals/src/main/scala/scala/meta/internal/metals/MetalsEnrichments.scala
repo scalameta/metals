@@ -14,7 +14,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-
 import scala.annotation.tailrec
 import scala.collection.convert.AsJavaExtensions
 import scala.collection.convert.AsScalaExtensions
@@ -29,7 +28,6 @@ import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
-
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
@@ -40,11 +38,13 @@ import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
-
 import ch.epfl.scala.{bsp4j => b}
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
+
+import scala.meta.internal.trees.Origin.Parsed
+import scala.meta.{Template, Term, Tree}
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -66,7 +66,7 @@ import org.eclipse.{lsp4j => l}
  * remember only one import.
  */
 object MetalsEnrichments
-    extends AsJavaExtensions
+  extends AsJavaExtensions
     with AsScalaExtensions
     with MtagsEnrichments {
 
@@ -142,10 +142,10 @@ object MetalsEnrichments
       )
 
     def foldResult[B](
-        onPosition: m.Position => B,
-        onUnchanged: () => B,
-        onNoMatch: () => B
-    ): B =
+                       onPosition: m.Position => B,
+                       onUnchanged: () => B,
+                       onNoMatch: () => B
+                     ): B =
       result match {
         case Right(pos) => onPosition(pos)
         case Left(EmptyResult.Unchanged) => onUnchanged()
@@ -177,16 +177,16 @@ object MetalsEnrichments
       future.asInstanceOf[Future[Object]]
 
     def logErrorAndContinue(
-        doingWhat: String
-    )(implicit ec: ExecutionContext): Future[Unit] = {
+                             doingWhat: String
+                           )(implicit ec: ExecutionContext): Future[Unit] = {
       future.ignoreValue.recover { case e =>
         scribe.error(s"Unexpected error while $doingWhat", e)
       }
     }
 
     def logError(
-        doingWhat: String
-    )(implicit ec: ExecutionContext): Future[A] = {
+                  doingWhat: String
+                )(implicit ec: ExecutionContext): Future[A] = {
       future.recover { case e =>
         scribe.error(s"Unexpected error while $doingWhat", e)
         throw e
@@ -194,13 +194,13 @@ object MetalsEnrichments
     }
 
     def withTimeout(length: Int, unit: TimeUnit)(implicit
-        ec: ExecutionContext
+                                                 ec: ExecutionContext
     ): Future[A] = {
       Future(Await.result(future, FiniteDuration(length, unit)))
     }
 
     def onTimeout(length: Int, unit: TimeUnit)(
-        action: => Unit
+      action: => Unit
     )(implicit ec: ExecutionContext): Future[A] = {
       // schedule action to execute on timeout
       future.withTimeout(length, unit).recoverWith { case e: TimeoutException =>
@@ -210,8 +210,8 @@ object MetalsEnrichments
     }
 
     def liftOption(implicit
-        ec: ExecutionContext
-    ): Future[Option[A]] = future.map(Some(_))
+                   ec: ExecutionContext
+                  ): Future[Option[A]] = future.map(Some(_))
   }
 
   implicit class XtensionJavaList[A](lst: util.List[A]) {
@@ -227,8 +227,8 @@ object MetalsEnrichments
 
   implicit class XtensionList[T](lst: List[T]) {
     def acceptFirst[R](
-        accept: T => Option[List[R]]
-    ): List[R] = {
+                        accept: T => Option[List[R]]
+                      ): List[R] = {
       @tailrec
       def loop(toCheck: List[T]): List[R] = {
         toCheck match {
@@ -360,9 +360,9 @@ object MetalsEnrichments
       toFileOnDisk0(workspace, 0)
 
     private def toFileOnDisk0(
-        workspace: AbsolutePath,
-        retryCount: Int
-    ): AbsolutePath = {
+                               workspace: AbsolutePath,
+                               retryCount: Int
+                             ): AbsolutePath = {
       def toJarMeta(jar: AbsolutePath): String = {
         val time = Files.getLastModifiedTime(jar.toNIO).toMillis()
         s"$time\n${jar.toNIO}"
@@ -497,9 +497,9 @@ object MetalsEnrichments
 
     def createAndGetDirectories(): Seq[AbsolutePath] = {
       def createDirectoriesRec(
-          absolutePath: AbsolutePath,
-          toCreate: Seq[AbsolutePath]
-      ): Seq[AbsolutePath] = {
+                                absolutePath: AbsolutePath,
+                                toCreate: Seq[AbsolutePath]
+                              ): Seq[AbsolutePath] = {
         if (absolutePath.exists)
           toCreate.map(path => AbsolutePath(Files.createDirectory(path.toNIO)))
         else
@@ -563,20 +563,20 @@ object MetalsEnrichments
     def isNonJVMPlatformOption: Boolean = {
       def isCompilerPlugin(name: String, organization: String): Boolean = {
         value.startsWith("-Xplugin:") &&
-        value.contains(name) &&
-        value.contains(organization)
+          value.contains(name) &&
+          value.contains(organization)
       }
       // Scala Native and Scala.js are not needed to navigate dependency sources
       isCompilerPlugin("nscplugin", "scala-native") ||
-      isCompilerPlugin("scalajs-compiler", "scala-js") ||
-      value.startsWith("-P:scalajs:")
+        isCompilerPlugin("scalajs-compiler", "scala-js") ||
+        value.startsWith("-P:scalajs:")
     }
 
     def lastIndexBetween(
-        char: Char,
-        lowerBound: Int,
-        upperBound: Int
-    ): Int = {
+                          char: Char,
+                          lowerBound: Int,
+                          upperBound: Int
+                        ): Int = {
       val safeLowerBound = Math.max(0, lowerBound)
       var index = upperBound
       while (index >= safeLowerBound && value(index) != char) {
@@ -627,7 +627,7 @@ object MetalsEnrichments
     }
 
     def replaceAllBetween(start: String, end: String)(
-        replacement: String
+      replacement: String
     ): String =
       if (start.isEmpty || end.isEmpty)
         value
@@ -662,7 +662,7 @@ object MetalsEnrichments
     def definesSymbol(symbol: String): Boolean = {
       textDocument.occurrences.exists { localOccurrence =>
         localOccurrence.role.isDefinition &&
-        localOccurrence.symbol == symbol
+          localOccurrence.symbol == symbol
       }
     }
 
@@ -727,9 +727,9 @@ object MetalsEnrichments
     }
 
     def encloses(
-        pos: l.Position,
-        includeLastCharacter: Boolean = false
-    ): Boolean =
+                  pos: l.Position,
+                  includeLastCharacter: Boolean = false
+                ): Boolean =
       occ.range.isDefined &&
         occ.range.get.encloses(pos, includeLastCharacter)
   }
@@ -901,8 +901,8 @@ object MetalsEnrichments
   }
 
   implicit class XtensionClientCapabilities(
-      initializeParams: Option[l.InitializeParams]
-  ) {
+                                             initializeParams: Option[l.InitializeParams]
+                                           ) {
     def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
         params <- initializeParams
@@ -952,25 +952,25 @@ object MetalsEnrichments
 
   implicit class OptionFutureTransformer[A](state: Future[Option[A]]) {
     def flatMapOption[B](
-        f: A => Future[Option[B]]
-    )(implicit ec: ExecutionContext): Future[Option[B]] =
+                          f: A => Future[Option[B]]
+                        )(implicit ec: ExecutionContext): Future[Option[B]] =
       state.flatMap(_.fold(Future.successful(Option.empty[B]))(f))
 
     def mapOption[B](
-        f: A => Future[B]
-    )(implicit ec: ExecutionContext): Future[Option[B]] =
+                      f: A => Future[B]
+                    )(implicit ec: ExecutionContext): Future[Option[B]] =
       state.flatMap(
         _.fold(Future.successful(Option.empty[B]))(f(_).liftOption)
       )
 
     def mapOptionInside[B](
-        f: A => B
-    )(implicit ec: ExecutionContext): Future[Option[B]] =
+                            f: A => B
+                          )(implicit ec: ExecutionContext): Future[Option[B]] =
       state.map(_.map(f))
 
     def flatMapOptionInside[B](
-        f: A => Option[B]
-    )(implicit ec: ExecutionContext): Future[Option[B]] =
+                                f: A => Option[B]
+                              )(implicit ec: ExecutionContext): Future[Option[B]] =
       state.map(_.flatMap(f))
   }
 
@@ -1001,9 +1001,51 @@ object MetalsEnrichments
       trailingTokens.find(predicate)
   }
 
+  implicit class XtensionTreeBraceHandler(stat: Tree) {
+    /**
+     * Check if it's possible to use braceless syntax and whether
+     * it's the preferred style in the file.
+     */
+    def canUseBracelessSyntax(source: String) = {
+
+      def allowBracelessSyntax(tree: Tree) = tree.origin match {
+        case p: Parsed => p.dialect.allowSignificantIndentation
+        case _ => false
+      }
+
+      def isNotInBraces(t: Tree): Boolean = {
+        t match {
+          case _: Template | _: Term.Block => source(t.pos.start) != '{'
+          case _ => false
+        }
+      }
+
+      // Let's try to use the style of any existing parent.
+      @tailrec
+      def existsBracelessParent(tree: Tree): Boolean = {
+        tree.parent match {
+          case Some(t) =>
+            if (isNotInBraces(t)) true
+            else existsBracelessParent(t)
+          case None => existsBracelessChild(tree)
+        }
+      }
+
+      // If we are at the top, let's check also the siblings
+      def existsBracelessChild(tree: Tree): Boolean = {
+        tree.children.exists { t =>
+          if (isNotInBraces(t)) true
+          else existsBracelessChild(t)
+        }
+      }
+
+      allowBracelessSyntax(stat) && existsBracelessParent(stat)
+    }
+  }
+
   implicit class XtensionSourceBreakpoint(
-      breakpoint: l.debug.SourceBreakpoint
-  ) {
+                                           breakpoint: l.debug.SourceBreakpoint
+                                         ) {
 
     // LSP Position is 0-based, while breakpoints are 1-based
     def toLSP = new l.Position(breakpoint.getLine() - 1, breakpoint.getColumn())
