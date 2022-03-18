@@ -31,6 +31,24 @@ class FileDecoderProviderLspSuite
   )
 
   check(
+    "tasty-single-not-for-scala2",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "scalaVersion": "${V.scala213}"
+        |  }
+        |}
+        |/app/src/main/scala/Main.scala
+        |package foo.bar.example
+        |object Main
+        |""".stripMargin,
+    "app/src/main/scala/Main.scala",
+    None,
+    "tasty-decoded",
+    Left("Decoding tasty is only supported in Scala 3 for now.")
+  )
+
+  check(
     "decode-jar",
     s"""
        |/metals.json

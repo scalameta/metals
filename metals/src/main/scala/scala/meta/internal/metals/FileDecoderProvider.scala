@@ -287,14 +287,27 @@ final class FileDecoderProvider(
     else DecoderResponse.failed(path.toURI, "Unsupported extension")
   }
 
+  private def isScala3(path: AbsolutePath): Boolean = {
+    buildTargets
+      .scalaVersion(path)
+      .exists(version => ScalaVersions.isScala3Version(version))
+  }
+
   private def decodeTasty(
       path: AbsolutePath
   ): Future[DecoderResponse] = {
-    if (path.isScala)
+    if (path.isScala && isScala3(path)) {
       selectClassFromScalaFileAndDecode(path.toURI, path, false)(
         decodeFromTastyFile
       )
-    else if (path.isTasty) {
+    } else if (path.isScala) {
+      Future.successful(
+        DecoderResponse.failed(
+          path.toURI,
+          "Decoding tasty is only supported in Scala 3 for now."
+        )
+      )
+    } else if (path.isTasty) {
       findPathInfoForClassesPathFile(path) match {
         case Some(pathInfo) => decodeFromTastyFile(pathInfo)
         case None =>
@@ -305,8 +318,11 @@ final class FileDecoderProvider(
             )
           )
       }
-    } else
-      Future.successful(DecoderResponse.failed(path.toURI, "Invalid extension"))
+    } else {
+      Future.successful(
+        DecoderResponse.failed(path.toURI, "Invalid extension")
+      )
+    }
   }
 
   private def findPathInfoFromJavaSource(
