@@ -333,7 +333,7 @@ class DestinationProvider(
       source: AbsolutePath
   ): List[BuildTargetIdentifier] = {
     def trivialSource: Option[List[BuildTargetIdentifier]] =
-      Option(buildTargets.sourceBuildTargets(source).toList).filter(_.nonEmpty)
+      buildTargets.sourceBuildTargets(source).map(_.toList).filter(_.nonEmpty)
 
     def dependencySource: Option[List[BuildTargetIdentifier]] = {
       source.jarPath

@@ -12,7 +12,7 @@ import munit.FunSuite
 abstract class BaseClassFinderSuite extends FunSuite {
   def init(scalaVersion: String): (Buffers, ClassFinder) = {
     val buffers = Buffers()
-    val buildTargets = new BuildTargets(_ => None)
+    val buildTargets = new BuildTargets()
     val selector = new ScalaVersionSelector(
       () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
       buildTargets

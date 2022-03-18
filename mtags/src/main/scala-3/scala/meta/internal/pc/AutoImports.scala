@@ -236,7 +236,7 @@ object AutoImports:
         new AutoImportPosition(offset, text, padTop)
       }
 
-    def forAmmoniteScript: Option[AutoImportPosition] =
+    def forScript: Option[AutoImportPosition] =
       ammoniteObjectBody(tree).map { tmpl =>
         val lastImportStatement =
           tmpl.body.takeWhile(_.isInstanceOf[Import]).lastOption
@@ -253,7 +253,7 @@ object AutoImports:
       AutoImportPosition(findStart(text, 0), 0, padTop = false)
 
     val ammonite =
-      if path.endsWith(".sc.scala") then forAmmoniteScript else None
+      if path.endsWith(".sc.scala") then forScript else None
     ammonite
       .orElse(forScalaSource)
       .getOrElse(fileStart)

@@ -22,7 +22,7 @@ abstract class FoldingRangeSuite(
     directory: String
 ) extends DirectoryExpectSuite(s"$directory/expect") {
   private val buffers = Buffers()
-  private val buildTargets = new BuildTargets(_ => None)
+  private val buildTargets = new BuildTargets()
   private val selector =
     new ScalaVersionSelector(
       () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
