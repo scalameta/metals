@@ -5,8 +5,12 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 import tests.BaseLspSuite
+import tests.SbtBuildLayout
+import tests.SbtServerInitializer
 
-class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
+class FileDecoderProviderLspSuite
+    extends BaseLspSuite("fileDecoderProvider")
+    with FileDecoderProviderLspSpec {
 
   check(
     "tasty-single",
@@ -337,6 +341,105 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
     Right(FileDecoderProviderLspSuite.semanticdbDetailed)
   )
 
+  checkBuildTarget(
+    "buildtarget",
+    SbtBuildLayout(
+      s"""|/metals.json
+          |{
+          |  "a": {
+          |    "scalaVersion": "${V.scala3}"
+          |  },
+          |  "b": {
+          |    "scalaVersion": "${V.scala3}"
+          |  }
+          |}
+          |/a/src/main/scala/Main.scala
+          |package a
+          |class A {
+          |  def foo(): Unit = ()
+          |}
+          |/b/src/main/scala/Main.scala
+          |package b
+          |class B {
+          |  def foo(): Unit = ()
+          |}
+          |""".stripMargin,
+      V.scala3
+    ),
+    "a", // buildTarget, see: SbtBuildLayout
+    Right(FileDecoderProviderLspSuite.buildTargetResponse),
+    result =>
+      FileDecoderProviderLspSuite.filterSections(
+        result,
+        Set("Target", "Scala Version", "Base Directory")
+      )
+  )
+
+}
+
+class FileDecoderProviderSbtLspSuite
+    extends BaseLspSuite("sbtFileDecoderProvider", SbtServerInitializer)
+    with FileDecoderProviderLspSpec {
+
+  checkBuildTarget(
+    "sbt-buildtarget",
+    SbtBuildLayout(
+      s"""|/a/src/main/scala/Main.scala
+          |package a
+          |class A {
+          |  def foo(): Unit = ()
+          |}
+          |/b/src/main/scala/Main.scala
+          |package b
+          |class B {
+          |  def foo(): Unit = ()
+          |}
+          |""".stripMargin,
+      V.scala3
+    ),
+    "a", // buildTarget, see: SbtBuildLayout
+    Right(FileDecoderProviderLspSuite.sbtBuildTargetResponse),
+    result =>
+      FileDecoderProviderLspSuite.filterSections(
+        result,
+        Set("Target", "Scala Version", "Base Directory", "Source Directories")
+      )
+  )
+}
+
+trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
+
+  /**
+   * @param expected - we can use "@workspace" to represent the workspace directory
+   *                  (can't receive it via params because it will be set at "initialize" request)
+   */
+  def checkBuildTarget(
+      testName: TestOptions,
+      input: String,
+      buildTarget: String,
+      expected: Either[String, String],
+      transformResult: String => String = identity
+  ): Unit = {
+    val extension = "metals-buildtarget"
+    test(testName) {
+      for {
+        _ <- initialize(input)
+        result <- server.executeDecodeFileCommand(
+          s"metalsDecode:file://$workspace/$buildTarget.$extension"
+        )
+      } yield {
+        assertEquals(
+          if (result.value != null) Right(transformResult(result.value))
+          else Left(transformResult(result.error)),
+          expected.fold(
+            e => Left(e),
+            v => Right(v.replaceAll("@workspace", workspace.toString))
+          )
+        )
+      }
+    }
+  }
+
   def check(
       testName: TestOptions,
       input: String,
@@ -373,6 +476,20 @@ class FileDecoderProviderLspSuite extends BaseLspSuite("fileDecoderProvider") {
 }
 
 object FileDecoderProviderLspSuite {
+  def filterSections(
+      buildTargetResult: String,
+      sections: Set[String]
+  ): String = {
+    val sep = System.lineSeparator()
+    buildTargetResult
+      .split(s"$sep$sep")
+      .filter { section =>
+        val title = section.split(sep).head
+        sections.contains(title)
+      }
+      .mkString(s"$sep$sep")
+  }
+
   private val tastySingle =
     s"""|Names:
         |   0: ASTs
@@ -1165,4 +1282,30 @@ object FileDecoderProviderLspSuite {
        |    }
        |}
        |""".stripMargin
+
+  def buildTargetResponse: String =
+    s"""|Target
+        |  a
+        |
+        |Scala Version
+        |  ${V.scala3}
+        |
+        |Base Directory
+        |  file://@workspace/a/""".stripMargin
+
+  def sbtBuildTargetResponse: String =
+    s"""|Target
+        |  a
+        |
+        |Scala Version
+        |  ${V.scala3}
+        |
+        |Base Directory
+        |  file:@workspace/a/
+        |
+        |Source Directories
+        |  @workspace/a/src/main/java
+        |  @workspace/a/src/main/scala
+        |  @workspace/a/src/main/scala-3
+        |  @workspace/a/target/scala-${V.scala3}/src_managed/main (generated)""".stripMargin
 }

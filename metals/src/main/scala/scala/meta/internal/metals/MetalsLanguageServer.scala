@@ -424,6 +424,7 @@ class MetalsLanguageServer(
           report => {
             didCompileTarget(report)
             compilers.didCompile(report)
+            doctor.check()
           },
           changes => {
             quickConnectToBuildServer().onComplete {
@@ -689,7 +690,8 @@ class MetalsLanguageServer(
           clientConfig,
           semanticdbs,
           compilers,
-          () => bspSession.exists(_.main.isBloop)
+          () => bspSession.exists(_.main.isBloopOrSbt),
+          statusBar
         )
         scalafixProvider = ScalafixProvider(
           buffers,
@@ -714,6 +716,7 @@ class MetalsLanguageServer(
         doctor = new Doctor(
           workspace,
           buildTargets,
+          diagnostics,
           languageClient,
           () => bspSession,
           () => bspConnector.resolve(),
@@ -1809,14 +1812,14 @@ class MetalsLanguageServer(
         val debugSessionParams: Future[b.DebugSessionParams] = args match {
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
-            Future.successful(params)
+            debugProvider.ensureNoWorkspaceErrors(params)
 
           case Seq(mainClassParamsParser.Jsonized(params))
               if params.mainClass != null =>
             debugProvider.resolveMainClassParams(params)
 
-          case Seq(testSelectionParamsParser.Jsonized(params))
-              if params.target != null && params.classes != null =>
+          case Seq(testSuitesParamsParser.Jsonized(params))
+              if params.target != null && params.requestData != null =>
             debugProvider.resolveTestSelectionParams(params)
 
           case Seq(testClassParamsParser.Jsonized(params))
@@ -1837,11 +1840,15 @@ class MetalsLanguageServer(
         }
         val session = for {
           params <- debugSessionParams
-          server <- debugProvider.start(
-            params,
-            scalaVersionSelector
+          server <- statusBar.trackFuture(
+            "Starting debug server",
+            debugProvider.start(
+              params,
+              scalaVersionSelector
+            )
           )
         } yield {
+          statusBar.addMessage("Started debug server!")
           cancelables.add(server)
           DebugSession(server.sessionName, server.uri.toString)
         }
@@ -2468,8 +2475,7 @@ class MetalsLanguageServer(
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
       } {
-        val sourceItemPath = source.getUri.toAbsolutePath(followSymlink = false)
-        buildTargets.addSourceItem(sourceItemPath, item.getTarget)
+        buildTargets.addSourceItem(source, item.getTarget)
       }
       check()
       buildTools

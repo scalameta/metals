@@ -37,6 +37,11 @@ case class MissingJavaSourceRoot(sourcerootOption: String) extends JavaProblem {
   override def message: String =
     s"Add the compiler option $sourcerootOption to ensure code navigation works."
 }
+case class WrongJavaReleaseVersion(current: String, needed: String)
+    extends JavaProblem {
+  override def message: String =
+    s"Build tool currently uses $current Java version, but the build definition requires $needed Java version due to `-release` flag."
+}
 
 case class MissingJavaTargetRoot(targetrootOption: String) extends JavaProblem {
   override def message: String =

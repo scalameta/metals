@@ -5,7 +5,6 @@ import java.nio.file.Path
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -218,11 +217,14 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       .toList
   }
 
-  private def getSources(target: BuildTarget): List[AbsolutePath] = {
+  private def getSources(target: BuildTarget): List[String] = {
     buildTargets.sourceItemsToBuildTargets
       .filter(_._2.iterator.asScala.contains(target.getId()))
-      .map(_._1)
       .toList
-      .sortBy(_.toString)
+      .map { case (path, _) =>
+        val generated = buildTargets.checkIfGeneratedDir(path)
+        s"$path${if (generated) " (generated)" else ""}"
+      }
+      .sorted
   }
 }

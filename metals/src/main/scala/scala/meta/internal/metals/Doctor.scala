@@ -30,6 +30,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 final class Doctor(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
     currentBuildServer: () => Option[BspSession],
     calculateNewBuildServer: () => BspResolvedResult,
@@ -256,6 +257,7 @@ final class Doctor(
         .sortBy(f => (f.baseDirectory, f.name, f.dataKind))
 
       val explanations = List(
+        DoctorExplanation.CompilationStatus.toJson(allTargetsInfo),
         DoctorExplanation.Diagnostics.toJson(allTargetsInfo),
         DoctorExplanation.Interactive.toJson(allTargetsInfo),
         DoctorExplanation.SemanticDB.toJson(allTargetsInfo),
@@ -345,6 +347,7 @@ final class Doctor(
             _.element("tr")(
               _.element("th")(_.text("Build target"))
                 .element("th")(_.text("Type"))
+                .element("th")(_.text("Compilation status"))
                 .element("th")(_.text("Diagnostics"))
                 .element("th")(_.text("Interactive"))
                 .element("th")(_.text("Semanticdb"))
@@ -356,6 +359,7 @@ final class Doctor(
         )
 
       // Additional explanations
+      DoctorExplanation.CompilationStatus.toHtml(html, allTargetsInfo)
       DoctorExplanation.Diagnostics.toHtml(html, allTargetsInfo)
       DoctorExplanation.Interactive.toHtml(html, allTargetsInfo)
       DoctorExplanation.SemanticDB.toHtml(html, allTargetsInfo)
@@ -375,6 +379,9 @@ final class Doctor(
         html.element("tr")(
           _.element("td")(_.text(targetInfo.name))
             .element("td")(_.text(targetInfo.targetType))
+            .element("td", center)(
+              _.text(targetInfo.compilationStatus.explanation)
+            )
             .element("td", center)(
               _.text(targetInfo.diagnosticsStatus.explanation)
             )
@@ -407,15 +414,28 @@ final class Doctor(
     }
   }
 
+  private def extractCompilationStatus(
+      targetId: BuildTargetIdentifier
+  ): DoctorStatus = {
+    if (diagnostics.hasCompilationErrors(targetId))
+      DoctorStatus.error
+    else
+      DoctorStatus.check
+  }
+
   private def extractJavaInfo(
       javaTarget: JavaTarget
   ): DoctorTargetInfo = {
-    val diagnostics = DoctorStatus(Icons.unicode.check, isCorrect = true)
+    val compilationStatus = extractCompilationStatus(javaTarget.info.getId())
+    val diagnosticsStatus = DoctorStatus(Icons.unicode.check, isCorrect = true)
     val (javaSupport, javaRecommendation) =
       if (javaTarget.isSemanticdbEnabled)
         (DoctorStatus.check, None)
       else
-        (DoctorStatus.alert, problemResolver.recommendation(javaTarget))
+        (
+          DoctorStatus.alert,
+          problemResolver.recommendation(javaTarget, scalaTarget = None)
+        )
 
     val canRun = javaTarget.info.getCapabilities().getCanRun()
     val canTest = javaTarget.info.getCapabilities().getCanTest()
@@ -427,7 +447,8 @@ final class Doctor(
       javaTarget.dataKind,
       javaTarget.baseDirectory,
       "Java",
-      diagnostics,
+      compilationStatus,
+      diagnosticsStatus,
       DoctorStatus.error,
       javaSupport,
       debugging,
@@ -435,27 +456,34 @@ final class Doctor(
       javaRecommendation
         .getOrElse("")
     )
-
   }
 
   private def extractScalaTargetInfo(
-      target: ScalaTarget,
+      scalaTarget: ScalaTarget,
       javaTarget: Option[JavaTarget]
-  ) = {
-    val scalaVersion = target.scalaVersion
+  ): DoctorTargetInfo = {
+    val scalaVersion = scalaTarget.scalaVersion
     val interactive =
       if (mtagsResolver.isSupportedScalaVersion(scalaVersion))
         DoctorStatus.check
       else
         DoctorStatus.error
 
-    val isSemanticdbNeeded = !target.isSemanticdbEnabled
+    val isSemanticdbNeeded = !scalaTarget.isSemanticdbEnabled
     val indexes =
       if (isSemanticdbNeeded) DoctorStatus.error else DoctorStatus.check
 
-    val recommendedFix = problemResolver.recommendation(target)
-    val (targetType, diagnostics) =
-      target.sbtVersion match {
+    val compilationStatus = extractCompilationStatus(scalaTarget.info.getId())
+
+    val recommendedFix = problemResolver
+      .recommendation(scalaTarget)
+      .orElse {
+        javaTarget.flatMap(target =>
+          problemResolver.recommendation(target, Some(scalaTarget))
+        )
+      }
+    val (targetType, diagnosticsStatus) =
+      scalaTarget.sbtVersion match {
         case Some(sbt) =>
           (s"sbt $sbt", DoctorStatus.alert)
         case None =>
@@ -467,26 +495,27 @@ final class Doctor(
       case Some(target) =>
         (
           DoctorStatus.alert,
-          problemResolver.recommendation(target)
+          problemResolver.recommendation(target, Some(scalaTarget))
         )
       case None => (DoctorStatus.alert, None)
     }
 
-    val canRun = target.info.getCapabilities().getCanRun()
-    val canTest = target.info.getCapabilities().getCanTest()
+    val canRun = scalaTarget.info.getCapabilities().getCanRun()
+    val canTest = scalaTarget.info.getCapabilities().getCanTest()
     val debugging =
-      if (canRun && canTest && !target.isSbt) DoctorStatus.check
+      if (canRun && canTest && !scalaTarget.isSbt) DoctorStatus.check
       else DoctorStatus.error
     val sbtRecommendation =
-      if (target.isSbt)
+      if (scalaTarget.isSbt)
         Some("Diagnostics and debugging for sbt are not supported currently.")
       else None
     DoctorTargetInfo(
-      target.displayName,
-      target.dataKind,
-      target.baseDirectory,
+      scalaTarget.displayName,
+      scalaTarget.dataKind,
+      scalaTarget.baseDirectory,
       targetType,
-      diagnostics,
+      compilationStatus,
+      diagnosticsStatus,
       interactive,
       indexes,
       debugging,
