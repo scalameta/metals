@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import munit.Location
 import munit.TestOptions
 
 class FindAllClassesSuite extends BaseClassFinderSuite {
@@ -119,7 +120,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       checkInnerClasses: Boolean = false,
       filename: String = "Main.scala",
       scalaVersion: String = V.scala213
-  ): Unit =
+  )(implicit loc: Location): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)
       val path = AbsolutePath(Paths.get(filename))

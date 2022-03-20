@@ -15,12 +15,16 @@ import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.JUnit4
+import scala.meta.internal.metals.debug.MUnit
+import scala.meta.internal.metals.debug.Unknown
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
@@ -28,10 +32,6 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
-import scala.meta.internal.metals.debug.JUnit4
-import scala.meta.internal.metals.debug.MUnit
-import scala.meta.internal.metals.debug.Unknown
-import scala.meta.internal.parsing.Trees
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,

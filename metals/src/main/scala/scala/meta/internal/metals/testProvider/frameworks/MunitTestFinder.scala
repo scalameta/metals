@@ -1,5 +1,8 @@
 package scala.meta.internal.metals.testProvider.frameworks
 
+import scala.annotation.tailrec
+import scala.collection.mutable
+
 import scala.meta.Defn
 import scala.meta.Lit
 import scala.meta.Pkg
@@ -10,8 +13,6 @@ import scala.meta.internal.metals.testProvider.FullyQualifiedName
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
-import scala.collection.mutable
-import scala.annotation.tailrec
 
 class MunitTestFinder(trees: Trees) {
 
@@ -43,6 +44,7 @@ class MunitTestFinder(trees: Trees) {
            * Finding these potential test methods will allow to show them to the user.
            */
           val potentialTests = cls.templ.children.collect {
+            // def check(...) = { test("") {} }
             case Defn.Def(
                   _,
                   name,
@@ -52,6 +54,16 @@ class MunitTestFinder(trees: Trees) {
                   Term.Block(
                     List(Term.Apply(Term.Apply(Term.Name("test"), _), _))
                   )
+                ) =>
+              name.value
+            // def check(...) = test("") {}
+            case Defn.Def(
+                  _,
+                  name,
+                  _,
+                  _,
+                  _,
+                  Term.Apply(Term.Apply(Term.Name("test"), _), _)
                 ) =>
               name.value
           }.toSet
@@ -82,7 +94,7 @@ class MunitTestFinder(trees: Trees) {
               val entry = TestCaseEntry(testname, location)
               testcases.addOne(entry)
 
-            // check("testname", ...) where check was previously found as a potential test function
+            // helper_function("testname", ...) where helper_function was previously found as a potential test function
             case Term.Apply(test @ Term.Name(helperFunctionName), args)
                 if potentialTests.contains(helperFunctionName) =>
               val location = test.pos.toLSP.toLocation(uri)

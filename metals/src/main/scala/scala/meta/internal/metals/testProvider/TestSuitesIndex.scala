@@ -5,6 +5,7 @@ import scala.collection.mutable
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
@@ -12,7 +13,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.JavacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import scala.meta.internal.metals.debug.TestFramework
 
 final case class FullyQualifiedName(value: String) extends AnyVal
 final case class ClassName(value: String) extends AnyVal

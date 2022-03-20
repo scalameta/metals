@@ -115,7 +115,8 @@ final class BuildTargetClasses(
       symbol <-
         symbolFromClassName(className, List(Descriptor.Term, Descriptor.Type))
     } {
-      val framework = TestFramework(item.getFramework())
+      // item.getFramework() can return null!
+      val framework = TestFramework(Option(item.getFramework()))
       val testInfo = BuildTargetClasses.TestSymbolInfo(className, framework)
       classes(target).testClasses.put(symbol, testInfo)
     }
@@ -152,12 +153,13 @@ final class BuildTargetClasses(
 
 sealed abstract class TestFramework(val canResolveChildren: Boolean)
 object TestFramework {
-  def apply(framework: String): TestFramework =
-    framework match {
+  def apply(framework: Option[String]): TestFramework = framework
+    .map {
       case "JUnit" => JUnit4
       case "munit" => MUnit
       case _ => Unknown
     }
+    .getOrElse(Unknown)
 }
 case object JUnit4 extends TestFramework(true)
 case object MUnit extends TestFramework(true)

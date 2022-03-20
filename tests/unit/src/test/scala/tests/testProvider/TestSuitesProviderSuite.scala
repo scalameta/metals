@@ -1,4 +1,4 @@
-package tests
+package tests.testProvider
 
 import scala.concurrent.Future
 
@@ -15,7 +15,9 @@ import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import munit.TestOptions
-import org.eclipse.{lsp4j => l}
+import tests.BaseLspSuite
+import tests.BuildInfo
+import tests.QuickLocation
 
 class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   override protected def initializationOptions: Some[InitializationOptions] =
@@ -429,17 +431,4 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   private def classUriFor(relativePath: String): String =
     workspace.resolve(relativePath).toURI.toString
 
-}
-
-private final case class QuickLocation(
-    uri: String,
-    range: (Int, Int, Int, Int)
-) {
-  def toLsp: l.Location = new l.Location(
-    uri,
-    new l.Range(
-      new l.Position(range._1, range._2),
-      new l.Position(range._3, range._4)
-    )
-  )
 }
