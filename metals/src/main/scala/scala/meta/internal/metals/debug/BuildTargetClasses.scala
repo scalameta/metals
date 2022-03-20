@@ -150,7 +150,7 @@ final class BuildTargetClasses(
   }
 }
 
-sealed abstract class TestFramework(val canResolveChildren: Boolean) 
+sealed abstract class TestFramework(val canResolveChildren: Boolean)
 object TestFramework {
   def apply(framework: String): TestFramework =
     framework match {

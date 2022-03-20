@@ -694,7 +694,7 @@ object MetalsEnrichments
         range.startLine,
         range.startCharacter,
         range.endLine,
-        range.endCharacter,
+        range.endCharacter
       )
   }
 

@@ -220,7 +220,7 @@ final class TestSuitesProvider(
           javac
         )
       }
-    
+
     val deletedSuites = removeStaleTestSuites(symbolsPerTarget)
     val addedEntries = getTestEntries(symbolsPerTarget)
 

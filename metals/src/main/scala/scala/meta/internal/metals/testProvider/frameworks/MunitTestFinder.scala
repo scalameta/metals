@@ -26,7 +26,7 @@ class MunitTestFinder(trees: Trees) {
      * Class definition is valid when package + class name is equal to one we are looking for
      */
     def isValid(cls: Defn.Class, currentPackage: String): Boolean =
-    s"$currentPackage.${cls.name.value}" == suiteName.value
+      s"$currentPackage.${cls.name.value}" == suiteName.value
 
     def loop(tree: Tree, currentPackage: Vector[String]): Unit = {
       val pkgString = currentPackage.mkString(".")
@@ -86,10 +86,12 @@ class MunitTestFinder(trees: Trees) {
             case Term.Apply(test @ Term.Name(helperFunctionName), args)
                 if potentialTests.contains(helperFunctionName) =>
               val location = test.pos.toLSP.toLocation(uri)
-              val testName = args.collectFirst {
-                case Lit.String(value) => value
-              }.getOrElse(helperFunctionName)
-              
+              val testName = args
+                .collectFirst { case Lit.String(value) =>
+                  value
+                }
+                .getOrElse(helperFunctionName)
+
               val entry = TestCaseEntry(testName, location)
               testcases.addOne(entry)
           }
