@@ -45,7 +45,13 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
   )(implicit
       loc: Location
   ): Unit =
-    checkEditSelection(name, "script.sc.scala", original, expected, selection)
+    checkEditSelection(
+      name,
+      "script.amm.sc.scala",
+      original,
+      expected,
+      selection
+    )
 
   def checkEditSelection(
       name: TestOptions,

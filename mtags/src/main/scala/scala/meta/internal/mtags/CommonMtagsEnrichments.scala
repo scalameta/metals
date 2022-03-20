@@ -347,7 +347,7 @@ trait CommonMtagsEnrichments {
     def isJavaFilename: Boolean =
       doc.endsWith(".java")
     def isAmmoniteGeneratedFile: Boolean =
-      doc.endsWith(".sc.scala")
+      doc.endsWith(".amm.sc.scala")
     def isAmmoniteScript: Boolean =
       isScalaScript && !isWorksheet
     def asSymbol: Symbol = Symbol(doc)

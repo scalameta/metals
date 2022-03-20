@@ -37,7 +37,7 @@ class SymbolIndexBucket(
     toplevels: TrieMap[String, Set[AbsolutePath]],
     definitions: TrieMap[String, Set[SymbolLocation]],
     sourceJars: ClasspathLoader,
-    toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None,
+    toIndexSource: AbsolutePath => AbsolutePath = identity,
     mtags: Mtags,
     dialect: Dialect
 ) {
@@ -194,7 +194,7 @@ class SymbolIndexBucket(
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
       case "scala" | "java" | "sc" =>
         val language = file.toLanguage
-        val toIndexSource0 = toIndexSource(file).getOrElse(file)
+        val toIndexSource0 = toIndexSource(file)
         val input = toIndexSource0.toInput
         val document = mtags.index(language, input, dialect)
         s.TextDocuments(List(document))
@@ -278,7 +278,7 @@ object SymbolIndexBucket {
   def empty(
       dialect: Dialect,
       mtags: Mtags,
-      toIndexSource: AbsolutePath => Option[AbsolutePath]
+      toIndexSource: AbsolutePath => AbsolutePath
   ): SymbolIndexBucket =
     new SymbolIndexBucket(
       TrieMap.empty,

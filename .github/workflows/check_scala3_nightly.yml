@@ -23,7 +23,7 @@ jobs:
               gh workflow run mtags-auto-release.yml -f scala_version=$version
             done <<< "$NEW_NIGHTLIES"
           else
-            ecjo "No new releases found"
+            echo "No new releases found"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

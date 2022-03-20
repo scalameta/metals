@@ -146,7 +146,7 @@ final class JavaFormattingProvider(
     ) {
 
       val version = for {
-        targetID <- buildTargets.sourceBuildTargets(path)
+        targetID <- buildTargets.sourceBuildTargets(path).toList.flatten
         java <- buildTargets.javaTarget(targetID)
         sourceVersion <- java.sourceVersion
         targetVersion <- java.targetVersion

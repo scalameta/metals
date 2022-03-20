@@ -16,7 +16,7 @@ object TestingWorkspaceSymbolProvider {
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(
       workspace = workspace,
-      buildTargets = BuildTargets.withoutAmmonite,
+      buildTargets = new BuildTargets(),
       index = index,
       saveClassFileToDisk = saveClassFileToDisk,
       new ExcludedPackagesHandler().isExcludedPackage,
