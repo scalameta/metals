@@ -437,7 +437,11 @@ class DebugProvider(
           new b.DebugSessionParams(
             singletonList(target),
             b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-            testClasses(target).values.toList.asJava.toJson
+            testClasses(target).values
+              .map(_.fullyQualifiedName)
+              .toList
+              .asJava
+              .toJson
           )
         }
     }
