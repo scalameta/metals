@@ -34,23 +34,14 @@ class CompanionObjectSuite extends BaseCodeActionLspSuite("companionObject") {
   )
 
   check(
-    "bracefull-companion-object-insert-for-scala2",
-    """|case class F<<>>oo()
-       |
-       |class Bar {
-       |
-       |}
-       |""".stripMargin,
-    s"""|${ExtractRenameMember.title("class", "Foo")}
+    "bracefull-companion-object-insert-for-scala2-file-end",
+    """|case class F<<>>oo()""".stripMargin,
+    s"""|${ExtractRenameMember.renameFileAsClassTitle("A.scala", "Foo")}
         |${CreateCompanionObjectCodeAction.companionObjectCreation}
         |""".stripMargin,
     """|case class Foo()
        |
        |object Foo {
-       |
-       |}
-       |
-       |class Bar {
        |
        |}
        |""".stripMargin,

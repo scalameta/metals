@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+
 import scala.annotation.tailrec
 import scala.collection.convert.AsJavaExtensions
 import scala.collection.convert.AsScalaExtensions
@@ -28,6 +29,10 @@ import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
+
+import scala.meta.Template
+import scala.meta.Term
+import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
@@ -35,16 +40,15 @@ import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.trees.Origin
+import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+
 import ch.epfl.scala.{bsp4j => b}
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
-
-import scala.meta.internal.trees.Origin.Parsed
-import scala.meta.{Template, Term, Tree}
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -1007,7 +1011,7 @@ object MetalsEnrichments
      * Check if it's possible to use braceless syntax and whether
      * it's the preferred style in the file.
      */
-    def canUseBracelessSyntax(source: String) = {
+    def canUseBracelessSyntax(source: String): Boolean = {
 
       def allowBracelessSyntax(tree: Tree) = tree.origin match {
         case p: Parsed => p.dialect.allowSignificantIndentation
@@ -1016,7 +1020,7 @@ object MetalsEnrichments
 
       def isNotInBraces(t: Tree): Boolean = {
         t match {
-          case _: Template | _: Term.Block => source(t.pos.start) != '{'
+          case _: Template | _: Term.Block => source(t.pos.start - 1) != '{'
           case _ => false
         }
       }

@@ -15,7 +15,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 
@@ -126,7 +125,7 @@ class ExtractValueCodeAction(
       val noIndentation = equalsPos.startLine == defn.body.pos.startLine
 
       // Scala 3 optional braces
-      if (canUseBracelessSyntax(stat, source)) {
+      if (stat.canUseBracelessSyntax(source)) {
         // we need to create a new indented region
         if (noIndentation) {
           Seq(
@@ -208,46 +207,6 @@ class ExtractValueCodeAction(
       i += 1
     }
     i - lineStart
-  }
-
-  /**
-   * Check if it's possible to use braceless syntax and whether
-   * it's the preferred style in the file.
-   */
-  private def canUseBracelessSyntax(stat: Tree, source: String) = {
-
-    def allowBracelessSyntax(tree: Tree) = tree.origin match {
-      case p: Parsed => p.dialect.allowSignificantIndentation
-      case _ => false
-    }
-
-    def isNotInBraces(t: Tree): Boolean = {
-      t match {
-        case _: Template | _: Term.Block => source(t.pos.start) != '{'
-        case _ => false
-      }
-    }
-
-    // Let's try to use the style of any existing parent.
-    @tailrec
-    def existsBracelessParent(tree: Tree): Boolean = {
-      tree.parent match {
-        case Some(t) =>
-          if (isNotInBraces(t)) true
-          else existsBracelessParent(t)
-        case None => existsBracelessChild(tree)
-      }
-    }
-
-    // If we are at the top, let's check also the siblings
-    def existsBracelessChild(tree: Tree): Boolean = {
-      tree.children.exists { t =>
-        if (isNotInBraces(t)) true
-        else existsBracelessChild(t)
-      }
-    }
-
-    allowBracelessSyntax(stat) && existsBracelessParent(stat)
   }
 
   @tailrec

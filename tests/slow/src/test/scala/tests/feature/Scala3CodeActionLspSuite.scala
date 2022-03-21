@@ -132,10 +132,9 @@ class Scala3CodeActionLspSuite
     """|object Main {
        |  def method2(i: Int) = ???
        |  def main = {
-       |    def inner(i : Int) = {
+       |    def inner(i : Int) =
        |      val newValue = i + 23 + 123
        |      method2(newValue)
-       |    }
        |  }
        |}
        |""".stripMargin
@@ -172,10 +171,9 @@ class Scala3CodeActionLspSuite
     """|object Main {
        |  def method2(i: Int) = ???
        |  
-       |  def main(i : Int) = {
+       |  def main(i : Int) =
        |    val newValue = i + 23 + 123
        |    method2(newValue)
-       |  }
        |}
        |""".stripMargin
   )
@@ -217,38 +215,51 @@ class Scala3CodeActionLspSuite
        |  a + 2
        |}
        |  
-       |def main(i : Int) = {
+       |def main(i : Int) =
        |  val newValue = i + 23 + 123
        |  method2(newValue)
-       |}
        |""".stripMargin
   )
 
   check(
-    "insert companion object of braceless enum inside parent object",
+    "insert-companion-object-of-braceless-enum-inside-parent-object",
     """|object Baz:
-         |  enum F<<>>oo:
-         |    case a
-         |    def fooMethod(): Unit = {
-         |      val a = 3
-         |    }
-         |
-         |  class Bar {}
-         |""",
+       |  enum F<<>>oo:
+       |    case a
+       |    def fooMethod(): Unit = {
+       |      val a = 3
+       |    }
+       |
+       |  class Bar {}
+       |""".stripMargin,
     s"""|${CreateCompanionObjectCodeAction.companionObjectCreation}
         |""".stripMargin,
     """|object Baz:
-         |  enum Foo:
-         |    case a
-         |    def fooMethod(): Unit = {
-         |      val a = 3
-         |    }
-         |
-         |  object Foo:
-         |    ???
-         |
-         |  class Bar {}
-         |"""
+       |  enum Foo:
+       |    case a
+       |    def fooMethod(): Unit = {
+       |      val a = 3
+       |    }
+       |
+       |  object Foo:
+       |    ???
+       |
+       |  class Bar {}
+       |""".stripMargin
+  )
+
+  check(
+    "insert-companion-object-of-braceless-case-class-file-end",
+    """|case class F<<>>oo()""".stripMargin,
+    s"""|${CreateCompanionObjectCodeAction.companionObjectCreation}
+        |""".stripMargin,
+    """|case class Foo()
+       |
+       |object Foo:
+       |  ???
+       |
+       |""".stripMargin,
+    fileName = "Foo.scala"
   )
 
   def checkExtractedMember(
@@ -276,6 +287,7 @@ class Scala3CodeActionLspSuite
       }
     )
   }
+
   private def getPath(name: String) = s"a/src/main/scala/a/$name"
 
 }

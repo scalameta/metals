@@ -2,7 +2,10 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.{Defn, Template, Term, Tree}
+
+import scala.meta.Defn
+import scala.meta.Template
+import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
@@ -11,12 +14,10 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.{lsp4j => l}
-
-import scala.annotation.tailrec
-import scala.meta.internal.trees.Origin.Parsed
 
 /**
  * It creates braceless or braceful companion objects for classes, traits, and enums
@@ -78,7 +79,9 @@ class CreateCompanionObjectCodeAction(
   private def hasBraces(tree: Tree, document: String): Boolean = {
     tree.children
       .collectFirst { case template: Template =>
-        document(template.pos.start) == '{'
+        if (template.pos.start < document.size)
+          document(template.pos.start) == '{'
+        else false
       }
       .getOrElse(false)
   }
@@ -107,9 +110,6 @@ class CreateCompanionObjectCodeAction(
     val treePos = tree.pos
     val rangeStart = treePos.toLSP.getEnd
     val rangeEnd = treePos.toLSP.getEnd
-
-    rangeEnd.getCharacter
-    rangeEnd.setLine(rangeEnd.getLine)
     val range = new l.Range(rangeStart, rangeEnd)
 
     val braceFulCompanion =
@@ -122,14 +122,10 @@ class CreateCompanionObjectCodeAction(
       s"""|
           |
           |${indentationString}object $name:
-          |$indentationString   ???
-          |""".stripMargin
+          |${indentationString}  ???""".stripMargin
 
-    pprint.log("hasBraces: " + hasBraces)
-    pprint.log("bracelessOK: " + bracelessOK)
     val companionObjectString =
       if (hasBraces || !bracelessOK) braceFulCompanion else bracelessCompanion
-    pprint.log(companionObjectString)
 
     val companionObjectTextEdit = new l.TextEdit(range, companionObjectString)
 
