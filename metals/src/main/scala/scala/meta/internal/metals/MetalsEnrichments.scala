@@ -1020,7 +1020,7 @@ object MetalsEnrichments
 
       def isNotInBraces(t: Tree): Boolean = {
         t match {
-          case _: Template | _: Term.Block => source(t.pos.start - 1) != '{'
+          case _: Template | _: Term.Block if  t.pos.start < source.length => source(t.pos.start) != '{'
           case _ => false
         }
       }
