@@ -190,7 +190,9 @@ final class RunTestCodeLens(
       classes.testClasses
         .get(symbol)
         .toList
-        .flatMap(symbolInfo => testCommand(target, symbolInfo.fqcn))
+        .flatMap(symbolInfo =>
+          testCommand(target, symbolInfo.fullyQualifiedName)
+        )
     else
       Nil
 

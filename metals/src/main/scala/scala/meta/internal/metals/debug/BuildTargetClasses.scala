@@ -40,7 +40,11 @@ final class BuildTargetClasses(
   def findTestClassByName(
       name: String
   ): List[(String, b.BuildTargetIdentifier)] =
-    findClassesBy(_.testClasses.values.find(_.fqcn == name).map(_.fqcn))
+    findClassesBy(
+      _.testClasses.values
+        .find(_.fullyQualifiedName == name)
+        .map(_.fullyQualifiedName)
+    )
 
   private def findClassesBy[A](
       f: Classes => Option[A]
@@ -170,7 +174,7 @@ object BuildTargetClasses {
   type FullyQualifiedClassName = String
 
   final case class TestSymbolInfo(
-      fqcn: FullyQualifiedClassName,
+      fullyQualifiedName: FullyQualifiedClassName,
       framework: TestFramework
   )
   final class Classes {

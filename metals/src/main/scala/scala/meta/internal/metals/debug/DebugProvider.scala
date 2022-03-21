@@ -322,7 +322,7 @@ class DebugProvider(
           symbolInfo <- textDocument.symbols
           symbol = symbolInfo.symbol
           testSymbolInfo <- testClasses.get(symbol)
-        } yield testSymbolInfo.fqcn
+        } yield testSymbolInfo.fullyQualifiedName
         val mains = for {
           occurrence <- textDocument.occurrences
           if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
@@ -422,7 +422,7 @@ class DebugProvider(
                 symbolInfo <- textDocument.symbols
                 symbol = symbolInfo.symbol
                 testSymbolInfo <- testClasses(target).get(symbol)
-              } yield testSymbolInfo.fqcn
+              } yield testSymbolInfo.fullyQualifiedName
             }
           }
           .map { tests =>

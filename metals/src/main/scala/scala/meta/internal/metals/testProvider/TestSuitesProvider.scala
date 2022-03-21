@@ -47,7 +47,7 @@ final class TestSuitesProvider(
     extends SemanticdbFeatureProvider {
 
   private val index = new TestSuitesIndex
-  private val junitTestFinder = new JunitTestFinder
+  private val junitTestFinder = new JunitTestFinder(semanticdbs)
   private val munitTestFinder = new MunitTestFinder(trees)
 
   private def isEnabled =
@@ -166,18 +166,12 @@ final class TestSuitesProvider(
   private def getTestCasesForSuites(
       path: AbsolutePath,
       suites: Seq[TestSuiteInfo],
-      textDocument: Option[TextDocument]
+      doc: Option[TextDocument]
   ): Seq[AddTestCases] = {
     suites.flatMap { suite =>
       val testCases = suite.framework match {
-        case JUnit4 =>
-          // if text document isn't defined try to fetch it from semanticdbs
-          textDocument
-            .orElse(semanticdbs.textDocument(path).documentIncludingStale)
-            .map(doc => junitTestFinder.findTests(doc, path, suite.symbol))
-            .getOrElse(Vector.empty)
-        case MUnit =>
-          munitTestFinder.findTests(path, suite.fullyQualifiedName)
+        case JUnit4 => junitTestFinder.findTests(doc, path, suite.symbol)
+        case MUnit => munitTestFinder.findTests(path, suite.fullyQualifiedName)
         case Unknown => Vector.empty
       }
 
@@ -226,12 +220,9 @@ final class TestSuitesProvider(
 
     val addedTestCases = addedEntries.mapValues {
       _.flatMap { entry =>
-        if (
-          buffers.contains(
-            entry.path
-          ) && entry.suiteInfo.framework.canResolveChildren
-        )
-          getTestCasesForSuites(entry.path, List(entry.suiteInfo), None)
+        val canResolve = entry.suiteInfo.framework.canResolveChildren
+        if (canResolve && buffers.contains(entry.path))
+          getTestCasesForSuites(entry.path, Vector(entry.suiteInfo), None)
         else Seq.empty
       }
     }.toMap
@@ -259,7 +250,9 @@ final class TestSuitesProvider(
     symbolsPerTargets.map {
       case SymbolsPerTarget(buildTarget, testSymbols, _) =>
         val fromBSP =
-          testSymbols.values.map(info => FullyQualifiedName(info.fqcn)).toSet
+          testSymbols.values
+            .map(info => FullyQualifiedName(info.fullyQualifiedName))
+            .toSet
         val cached = index.getSuiteNames(buildTarget)
         val diff = (cached -- fromBSP)
         val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
@@ -289,7 +282,8 @@ final class TestSuitesProvider(
         .toList
         .foldLeft(List.empty[TestEntry]) {
           case (entries, (symbol, testSymbolInfo)) =>
-            val fullyQualifiedName = FullyQualifiedName(testSymbolInfo.fqcn)
+            val fullyQualifiedName =
+              FullyQualifiedName(testSymbolInfo.fullyQualifiedName)
             if (cachedSuites.contains(fullyQualifiedName)) entries
             else {
               val entryOpt = computeTestEntry(
