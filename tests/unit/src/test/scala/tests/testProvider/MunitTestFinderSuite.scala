@@ -12,8 +12,8 @@ import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
-import tests.QuickLocation
 import tests.BuildInfo
+import tests.QuickLocation
 
 class MunitTestFinderSuite extends munit.FunSuite {
 

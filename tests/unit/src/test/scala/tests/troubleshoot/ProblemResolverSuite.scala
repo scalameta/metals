@@ -14,6 +14,7 @@ import scala.meta.internal.troubleshoot.FutureScalaVersion
 import scala.meta.internal.troubleshoot.MissingJdkSources
 import scala.meta.internal.troubleshoot.MissingSourceRoot
 import scala.meta.internal.troubleshoot.OutdatedJunitInterfaceVersion
+import scala.meta.internal.troubleshoot.OutdatedMunitInterfaceVersion
 import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.internal.troubleshoot.SemanticDBDisabled
 import scala.meta.internal.troubleshoot.UnsupportedSbtVersion
@@ -145,6 +146,34 @@ class ProblemResolverSuite extends FunSuite {
     "",
     classpatch = List("/com/github/sbt/junit-interface/0.13.2/"),
     isTestExplorerProvider = false
+  )
+
+  checkRecommendation(
+    "munit-0.x",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedMunitInterfaceVersion.message,
+    classpatch = List("/org/scalameta/munit/0.7.29/")
+  )
+
+  checkRecommendation(
+    "munit-1.0.0-M2",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedMunitInterfaceVersion.message,
+    classpatch = List("/org/scalameta/munit/1.0.0-M2/")
+  )
+
+  checkRecommendation(
+    "munit-valid",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpatch = List("/org/scalameta/munit/1.0.0-M3/")
+  )
+
+  checkRecommendation(
+    "munit-valid-2",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpatch = List("/org/scalameta/munit/1.0.1/")
   )
 
   def checkRecommendation(
