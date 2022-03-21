@@ -209,8 +209,7 @@ class NewFileProvider(
       .packageStatement(path)
       .map(_.fileContent)
       .getOrElse("")
-    val template = s"""|$pkg
-                       |@@""".stripMargin
+    val template = s"$pkg@@"
     createFileAndWriteText(path, NewFileTemplate(template))
   }
 
@@ -304,6 +303,7 @@ class NewFileProvider(
   }
 
   private def caseClassTemplate(name: String): NewFileTemplate =
-    NewFileTemplate(s"final case class $name(@@)")
+    NewFileTemplate(s"""|final case class $name(@@)
+                        |""".stripMargin)
 
 }

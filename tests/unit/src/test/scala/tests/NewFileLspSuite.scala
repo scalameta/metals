@@ -530,7 +530,9 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
       javaMinVersion: Option[String] = None
-  ): Unit = if (Properties.isJavaAtLeast(javaMinVersion.getOrElse("1.8")))
+  )(implicit loc: Location): Unit = if (
+    Properties.isJavaAtLeast(javaMinVersion.getOrElse("1.8"))
+  )
     check(testName)(
       directory,
       fileType,
@@ -552,7 +554,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
       scalaVersion: Option[String] = None
-  ): Unit = check(testName)(
+  )(implicit loc: Location): Unit = check(testName)(
     directory,
     fileType,
     fileName,
@@ -657,7 +659,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
             expectedMessages
           )
           assert(expectedFilePathAbsolute.exists)
-          assertNoDiff(
+          assertLines(
             expectedFilePathAbsolute.readText,
             expectedContent
           )
