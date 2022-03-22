@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.{Range, TextEdit}
 
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.{Term, Tree}
+import scala.meta.{Template, Term, Tree}
 
 case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
     extends OnTypeFormatter
@@ -22,13 +22,14 @@ case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
       val maybeApplyTree =
         if (params.range.getStart == params.range.getEnd)
           params.trees
-            .findLastEnclosingAt[Tree](
+            .findLastEnclosingAt(
               params.path,
-              position,
-              applyWithSingleFunction
+              params.range.getStart,
+              (_: Tree) => true
             )
         else None
       maybeApplyTree.map { applyTree =>
+        pprint.log(applyTree)
         val textEdit = new TextEdit()
         textEdit.setNewText(closingBrace)
         applyTree.pos.toLSP.getEnd
@@ -41,9 +42,9 @@ case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
     } else None
   }
 
-  private def applyWithSingleFunction: Tree => Boolean = {
-    case _: Term.Apply => true
-    case _ => false
-  }
+//  private def applyWithSingleFunction: Tree => Boolean = {
+//    case _: Term.Apply | _:Template  => true
+//    case _ => false
+//  }
 
 }
