@@ -6,11 +6,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
 import scala.meta.tokens.Tokens
-
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
+
+import scala.meta.io.AbsolutePath
 
 case class OnTypeFormatterParams(
     sourceText: String,
@@ -18,7 +19,9 @@ case class OnTypeFormatterParams(
     triggerChar: String,
     startPos: meta.Position,
     endPos: meta.Position,
-    tokens: Option[Tokens]
+    tokens: Option[Tokens],
+    trees: Trees,
+    path: AbsolutePath
 ) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
   val range = new Range(position, position)
@@ -62,7 +65,9 @@ class OnTypeFormattingProvider(
             triggerChar,
             startPos,
             endPos,
-            tokensOpt
+            tokensOpt,
+            trees,
+            path
           )
         formatters.acceptFirst(formater =>
           formater.contribute(onTypeformatterParams)
