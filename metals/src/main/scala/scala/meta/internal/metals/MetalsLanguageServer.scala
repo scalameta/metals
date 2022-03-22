@@ -1377,6 +1377,8 @@ class MetalsLanguageServer(
             semanticDBIndexer.onDelete(event.path)
           case EventType.Create | EventType.Modify =>
             semanticDBIndexer.onChange(event.path)
+          case EventType.Overflow =>
+            semanticDBIndexer.onOverflow(event.path)
         }
       }.asJava
     } else if (path.isBuild) {
