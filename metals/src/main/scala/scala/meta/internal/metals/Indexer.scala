@@ -232,6 +232,7 @@ final case class Indexer(
         // note(@tgodzik) This is needed in case of ammonite
         // where it can rarely deletes directories while we are trying to watch them
         case NonFatal(e) =>
+          fileWatcher.cancel()
           scribe.warn("File watching failed, indexes will not be updated.", e)
       }
     }
