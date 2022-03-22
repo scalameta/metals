@@ -86,11 +86,9 @@ import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
-
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.JsonElement
-import com.google.gson.JsonPrimitive
+import com.google.gson.{Gson, JsonElement, JsonPrimitive}
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
@@ -98,6 +96,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
+
+import java.io.{BufferedWriter, File, FileWriter}
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1262,6 +1262,21 @@ class MetalsLanguageServer(
         if (userConfig.excludedPackages != old.excludedPackages) {
           excludedPackageHandler.update(userConfig.excludedPackages)
           workspaceSymbols.indexClasspath()
+        }
+
+//        val source = scala.io.Source.fromFile(bloopGlobalJsonPath.toUri)
+//        val bloobGlobalJsonContent = try source.mkString finally source.close()
+//        bloobGlobalJsonContent.parseJson.getAsJsonObject
+        if (userConfig.bloopJvmProperties != old.bloopJvmProperties) { // TODO is the comparison meaningful
+          val bloopGlobalJsonPath: Path = Paths
+            .get(System.getProperty("user.home"))
+            .resolve(".bloop/bloop.json")
+          val bw = new BufferedWriter(
+            new FileWriter(bloopGlobalJsonPath.toFile)
+          )
+          val text = new Gson().toJson(userConfig.bloopJvmProperties.asJava)
+          bw.write(text)
+          bw.close()
         }
 
         userConfig.fallbackScalaVersion.foreach { version =>
