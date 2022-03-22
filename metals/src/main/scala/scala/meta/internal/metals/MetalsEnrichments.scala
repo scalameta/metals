@@ -30,6 +30,9 @@ import scala.util.Try
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.Template
+import scala.meta.Term
+import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
@@ -37,6 +40,7 @@ import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.trees.Origin
+import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -123,6 +127,7 @@ object MetalsEnrichments
         onUnchanged = () => Some(dirty),
         onNoMatch = () => None
       )
+
     def toLocation(dirty: l.Location): Option[l.Location] =
       foldResult(
         pos => {
@@ -139,6 +144,7 @@ object MetalsEnrichments
         () => Some(dirty),
         () => None
       )
+
     def foldResult[B](
         onPosition: m.Position => B,
         onUnchanged: () => B,
@@ -158,15 +164,19 @@ object MetalsEnrichments
   implicit class XtensionScalaFuture[A](future: Future[A]) {
     def asCancelable: CancelableFuture[A] =
       CancelableFuture(future)
+
     def asJava: CompletableFuture[A] =
       FutureConverters.toJava(future).toCompletableFuture
+
     def asJavaObject: CompletableFuture[Object] =
       future.asJava.asInstanceOf[CompletableFuture[Object]]
+
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =
       future.map(_ => ())
+
     def withObjectValue: Future[Object] =
       future.asInstanceOf[Future[Object]]
 
@@ -177,6 +187,7 @@ object MetalsEnrichments
         scribe.error(s"Unexpected error while $doingWhat", e)
       }
     }
+
     def logError(
         doingWhat: String
     )(implicit ec: ExecutionContext): Future[A] = {
@@ -234,6 +245,7 @@ object MetalsEnrichments
           case Nil => Nil
         }
       }
+
       loop(lst)
     }
   }
@@ -242,6 +254,7 @@ object MetalsEnrichments
 
     def toSymbolInformation(uri: String): List[l.SymbolInformation] = {
       val buf = List.newBuilder[l.SymbolInformation]
+
       def loop(s: l.DocumentSymbol, owner: String): Unit = {
         buf += new l.SymbolInformation(
           s.getName,
@@ -261,6 +274,7 @@ object MetalsEnrichments
         }
         s.getChildren.forEach { child => loop(child, newOwner) }
       }
+
       symbol.foreach { s => loop(s, Symbols.RootPackage) }
       buf.result()
     }
@@ -272,9 +286,11 @@ object MetalsEnrichments
       val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
       Input.VirtualFile(uri, text)
     }
+
     def isSemanticdb: Boolean =
       path.getFileName.toString.endsWith(".semanticdb")
   }
+
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
@@ -290,6 +306,7 @@ object MetalsEnrichments
         accum.resolve(filename.toString)
       }
     }
+
     def isDependencySource(workspace: AbsolutePath): Boolean = {
       (isLocalFileSystem(workspace) &&
         isInReadonlyDirectory(workspace)) || isJarFileSystem
@@ -492,6 +509,7 @@ object MetalsEnrichments
         else
           createDirectoriesRec(absolutePath.parent, absolutePath +: toCreate)
       }
+
       createDirectoriesRec(path, Nil)
     }
 
@@ -594,6 +612,7 @@ object MetalsEnrichments
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
+
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
       MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)
 
@@ -636,6 +655,7 @@ object MetalsEnrichments
 
     def lineAtIndex(index: Int): Int =
       indexToLspPosition(index).getLine
+
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
@@ -656,12 +676,14 @@ object MetalsEnrichments
         .map { occ => occ.toLocation(uri) }
     }
   }
+
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
     def formatMessage(uri: String, hint: String): String = {
       val severity = d.getSeverity.toString.toLowerCase()
       s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
     }
   }
+
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
     def toLSP: l.DiagnosticSeverity =
       l.DiagnosticSeverity.forValue(sev.getValue)
@@ -698,6 +720,7 @@ object MetalsEnrichments
         range.getEnd.getLine,
         range.getEnd.getCharacter
       )
+
     def toLSP: l.Range =
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
   }
@@ -706,6 +729,7 @@ object MetalsEnrichments
     def toLocation(uri: String): l.Location = {
       occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLocation(uri)
     }
+
     def encloses(
         pos: l.Position,
         includeLastCharacter: Boolean = false
@@ -730,6 +754,7 @@ object MetalsEnrichments
     def getQuery(key: String): Option[String] =
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
+
   implicit class XtensionClasspath(classpath: List[String]) {
     def toAbsoluteClasspath: Iterator[AbsolutePath] = {
       classpath.iterator
@@ -737,6 +762,7 @@ object MetalsEnrichments
         .filter(p => Files.exists(p.toNIO))
     }
   }
+
   implicit class XtensionJavacOptions(item: b.JavacOptionsItem) {
     def targetroot: AbsolutePath = {
       item.getOptions.asScala
@@ -845,6 +871,7 @@ object MetalsEnrichments
         option.startsWith(soughtOption)
       }
     }
+
     def isJVM: Boolean = {
       // FIXME: https://github.com/scalacenter/bloop/issues/700
       !item.getOptions.asScala.exists(_.isNonJVMPlatformOption)
@@ -952,7 +979,9 @@ object MetalsEnrichments
   }
 
   implicit class XtensionTreeTokenStream(tree: m.Tree) {
+
     import scala.meta._
+
     def leadingTokens: Iterator[m.Token] =
       tree.origin match {
         case Origin.Parsed(input, dialect, pos) =>
@@ -974,6 +1003,50 @@ object MetalsEnrichments
 
     def findFirstTrailing(predicate: m.Token => Boolean): Option[m.Token] =
       trailingTokens.find(predicate)
+  }
+
+  implicit class XtensionTreeBraceHandler(stat: Tree) {
+
+    /**
+     * Check if it's possible to use braceless syntax and whether
+     * it's the preferred style in the file.
+     */
+    def canUseBracelessSyntax(source: String): Boolean = {
+
+      def allowBracelessSyntax(tree: Tree) = tree.origin match {
+        case p: Parsed => p.dialect.allowSignificantIndentation
+        case _ => false
+      }
+
+      def isNotInBraces(t: Tree): Boolean = {
+        t match {
+          case _: Template | _: Term.Block if t.pos.start < source.length =>
+            source(t.pos.start) != '{'
+          case _ => false
+        }
+      }
+
+      // Let's try to use the style of any existing parent.
+      @tailrec
+      def existsBracelessParent(tree: Tree): Boolean = {
+        tree.parent match {
+          case Some(t) =>
+            if (isNotInBraces(t)) true
+            else existsBracelessParent(t)
+          case None => existsBracelessChild(tree)
+        }
+      }
+
+      // If we are at the top, let's check also the siblings
+      def existsBracelessChild(tree: Tree): Boolean = {
+        tree.children.exists { t =>
+          if (isNotInBraces(t)) true
+          else existsBracelessChild(t)
+        }
+      }
+
+      allowBracelessSyntax(stat) && existsBracelessParent(stat)
+    }
   }
 
   implicit class XtensionSourceBreakpoint(
