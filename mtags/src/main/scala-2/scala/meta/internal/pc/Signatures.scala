@@ -350,21 +350,27 @@ trait Signatures { compiler: MetalsGlobal =>
 
     def methodSignature(
         paramLabels: Iterator[Iterator[String]],
-        name: String = gsym.nameString
+        name: String = gsym.nameString,
+        printUnapply: Boolean = true
     ): String = {
-      paramLabels
+      val params = paramLabels
         .zip(mparamss.iterator)
         .map { case (params, syms) =>
           paramsKind(syms) match {
-            case Params.TypeParameterKind =>
+            // for unapply we don't ever need []
+            case Params.TypeParameterKind if printUnapply =>
               params.mkString("[", ", ", "]")
-            case Params.NormalKind =>
-              params.mkString("(", ", ", ")")
             case Params.ImplicitKind =>
               params.mkString("(implicit ", ", ", ")")
+            case _ =>
+              params.mkString("(", ", ", ")")
           }
         }
-        .mkString(name, "", s": ${returnType}")
+
+      if (printUnapply)
+        params.mkString(name, "", s": ${returnType}")
+      else
+        params.mkString
     }
     def paramsKind(syms: List[Symbol]): Params.Kind = {
       syms match {
