@@ -77,7 +77,7 @@ object FileWatcher {
       if (buildTargets.isInsideSourceRoot(path)) {
         () // Do nothing, already covered by a source root
       } else if (!buildTargets.checkIfGeneratedSource(path.toNIO)) {
-        if (path.isScalaOrJava) {
+        if (buildTargets.isSourceFile(path)) {
           sourceFilesToWatch.add(path.toNIO)
         } else {
           sourceDirectoriesToWatch.add(path.toNIO)
