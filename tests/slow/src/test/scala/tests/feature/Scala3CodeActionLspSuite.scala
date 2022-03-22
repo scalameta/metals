@@ -132,9 +132,10 @@ class Scala3CodeActionLspSuite
     """|object Main {
        |  def method2(i: Int) = ???
        |  def main = {
-       |    def inner(i : Int) =
+       |    def inner(i : Int) = {
        |      val newValue = i + 23 + 123
        |      method2(newValue)
+       |    }
        |  }
        |}
        |""".stripMargin
@@ -171,9 +172,10 @@ class Scala3CodeActionLspSuite
     """|object Main {
        |  def method2(i: Int) = ???
        |  
-       |  def main(i : Int) =
+       |  def main(i : Int) = {
        |    val newValue = i + 23 + 123
        |    method2(newValue)
+       |  }
        |}
        |""".stripMargin
   )
@@ -215,9 +217,10 @@ class Scala3CodeActionLspSuite
        |  a + 2
        |}
        |  
-       |def main(i : Int) =
+       |def main(i : Int) = {
        |  val newValue = i + 23 + 123
        |  method2(newValue)
+       |}
        |""".stripMargin
   )
 
@@ -250,10 +253,12 @@ class Scala3CodeActionLspSuite
 
   check(
     "insert-companion-object-of-braceless-case-class-file-end",
-    """|case class F<<>>oo()""".stripMargin,
+    """|case class F<<>>oo(a: Int):
+       |  def b = a""".stripMargin,
     s"""|${CreateCompanionObjectCodeAction.companionObjectCreation}
         |""".stripMargin,
-    """|case class Foo()
+    """|case class Foo(a: Int):
+       |  def b = a
        |
        |object Foo:
        |  ???
