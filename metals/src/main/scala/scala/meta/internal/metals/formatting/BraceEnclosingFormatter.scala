@@ -7,15 +7,15 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.{Term, Tree}
 
 case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
-  extends OnTypeFormatter
+    extends OnTypeFormatter
     with RangeFormatter {
 
   private val openingBrace = '{'
   private val closingBrace = "}"
 
   override def contribute(
-                           params: OnTypeFormatterParams
-                         ): Option[List[TextEdit]] = {
+      params: OnTypeFormatterParams
+  ): Option[List[TextEdit]] = {
     val position = params.position
     val triggerChar = params.triggerChar
     if (triggerChar == openingBrace) {
@@ -32,12 +32,13 @@ case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
         val textEdit = new TextEdit()
         textEdit.setNewText(closingBrace)
         applyTree.pos.toLSP.getEnd
-        textEdit.setRange(new Range(applyTree.pos.toLSP.getEnd, applyTree.pos.toLSP.getEnd))
+        textEdit.setRange(
+          new Range(applyTree.pos.toLSP.getEnd, applyTree.pos.toLSP.getEnd)
+        )
         List(textEdit)
       }
 
-    }
-    else None
+    } else None
   }
 
   private def applyWithSingleFunction: Tree => Boolean = {
