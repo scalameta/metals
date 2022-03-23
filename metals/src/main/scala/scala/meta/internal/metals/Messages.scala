@@ -296,6 +296,34 @@ object Messages {
     }
   }
 
+  object BloopGlobalJsonFilePremodified {
+    def applyAndRestart: MessageActionItem =
+      new MessageActionItem("Apply and Restart Bloop")
+    def saveButNotRestart: MessageActionItem =
+      new MessageActionItem("Save for Later")
+    def useGlobalFile: MessageActionItem =
+      new MessageActionItem("Use the Global File's JVM Properties")
+    def openGlobalJsonFile: MessageActionItem =
+      new MessageActionItem("Open the Global File")
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"""|You have previously modified the JVM settings of Bloop in its global json file,
+            |Do you want to replace them with the new properties and restart the running Bloop server?""".stripMargin
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          applyAndRestart,
+          saveButNotRestart,
+          useGlobalFile,
+          openGlobalJsonFile
+        ).asJava
+      )
+      params
+    }
+  }
+
   object BloopJvmPropertiesChange {
     def reconnect: MessageActionItem =
       new MessageActionItem("Restart Bloop")

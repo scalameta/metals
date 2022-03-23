@@ -38,7 +38,7 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
-    bloopJvmProperties: Option[Map[String, String]] = None,
+    bloopJvmProperties: Option[List[String]] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     showInferredType: Boolean = false,
@@ -448,7 +448,7 @@ object UserConfiguration {
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version")
-    val bloopJvmProperties = getStringMap("bloop-jvm-properties")
+    val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     val showInferredType =
