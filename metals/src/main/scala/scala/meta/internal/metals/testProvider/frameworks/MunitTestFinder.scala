@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.testProvider.frameworks
 
 import scala.annotation.tailrec
+import scala.collection.immutable
 import scala.collection.mutable
 
 import scala.meta.Defn
@@ -12,16 +13,22 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.testProvider.FullyQualifiedName
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 class MunitTestFinder(trees: Trees) {
 
   def findTests(
+      doc: TextDocument,
       path: AbsolutePath,
       suiteName: FullyQualifiedName
   ): Vector[TestCaseEntry] = {
     val uri = path.toURI
     val testcases = new mutable.ArrayBuffer[TestCaseEntry]()
+    val occurences = doc.occurrences
+      .filter(_.symbol.startsWith("munit/FunSuite#test"))
+      .toVector
 
     /**
      * Class definition is valid when package + class name is equal to one we are looking for
@@ -44,29 +51,21 @@ class MunitTestFinder(trees: Trees) {
            * Finding these potential test methods will allow to show them to the user.
            */
           val potentialTests = cls.templ.children.collect {
-            // def check(...) = { test("") {} }
-            case Defn.Def(
-                  _,
-                  name,
-                  _,
-                  _,
-                  _,
-                  Term.Block(
-                    List(Term.Apply(Term.Apply(Term.Name("test"), _), _))
-                  )
-                ) =>
-              name.value
-            // def check(...) = test("") {}
-            case Defn.Def(
-                  _,
-                  name,
-                  _,
-                  _,
-                  _,
-                  Term.Apply(Term.Apply(Term.Name("test"), _), _)
-                ) =>
-              name.value
+            case dfn: Defn.Def if hasTestCall(dfn, occurences) => dfn.name.value
           }.toSet
+
+          def extractFunctionName(
+              appl0: Term.Apply
+          ): Option[(Term.Name, String)] =
+            appl0.fun match {
+              case helperName: Term.Name
+                  if potentialTests.contains(helperName.value) =>
+                appl0.args
+                  .collectFirst { case Lit.String(value) => value }
+                  .map(testName => (helperName, testName))
+              case appl: Term.Apply => extractFunctionName(appl)
+              case _ => None
+            }
 
           // let's collect all tests candidates
           cls.templ.children.collect {
@@ -95,17 +94,14 @@ class MunitTestFinder(trees: Trees) {
               testcases.addOne(entry)
 
             // helper_function("testname", ...) where helper_function was previously found as a potential test function
-            case Term.Apply(test @ Term.Name(helperFunctionName), args)
-                if potentialTests.contains(helperFunctionName) =>
-              val location = test.pos.toLSP.toLocation(uri)
-              val testName = args
-                .collectFirst { case Lit.String(value) =>
-                  value
-                }
-                .getOrElse(helperFunctionName)
+            case appl: Term.Apply =>
+              val nameOpt = extractFunctionName(appl)
+              nameOpt.foreach { case (helperFunction, testName) =>
+                val location = helperFunction.pos.toLSP.toLocation(uri)
+                val entry = TestCaseEntry(testName, location)
+                testcases.addOne(entry)
+              }
 
-              val entry = TestCaseEntry(testName, location)
-              testcases.addOne(entry)
           }
 
         case Pkg(ref, children) =>
@@ -125,6 +121,29 @@ class MunitTestFinder(trees: Trees) {
 
       }
       .getOrElse(Vector.empty)
+  }
+
+  def hasTestCall(
+      tree: Tree,
+      occurences: Vector[SymbolOccurrence]
+  ): Boolean = {
+
+    @tailrec
+    def loop(acc: List[Tree]): Boolean = acc match {
+      case head :: tail =>
+        head match {
+          case term @ Term.Name("test") =>
+            val range = term.pos.toSemanticdb
+            val isValid = occurences
+              .find(occ => occ.range.exists(_.isEqual(range)))
+              .isDefined
+            if (isValid) isValid
+            else loop(tail)
+          case _ => loop(head.children ::: tail)
+        }
+      case immutable.Nil => false
+    }
+    loop(tree.children)
   }
 
   /**

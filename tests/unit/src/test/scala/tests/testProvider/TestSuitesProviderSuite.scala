@@ -255,7 +255,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   testDiscover(
-    "discover-test-cases-munit",
+    "discover-test-cases-munit".only,
     s"""|/metals.json
         |{
         |  "app": {
@@ -269,18 +269,35 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |package c
         |
         |class MunitTestSuite extends munit.FunSuite {
-        |  test("test1") {
-        |  }
+        |  test("test1") {}
+        |  test("test2".ignore) {}
+        |  test("test3".only) {}
         |
         |  check("check-test", 2, 2)
         |
-        |  check("another-check", 2, 2)
+        |  checkBraceless("check-braceless", 2, 2)
+        |
+        |  checkCurried("check-curried")(2, 2)
+        |
+        |  List("") // negative case - apply without test call
         |
         |  def check(name: String, n1: Int, n2: Int = 1) = {
         |    test(name) {
         |      assertEquals(n1, n2)
         |    }
         |  }
+        |
+        |  def checkBraceless(name: String, n1: Int, n2: Int = 1) =
+        |    test(name) {
+        |      println(name)
+        |      assertEquals(n1, n2)
+        |    }
+        |
+        |  def checkCurried(name: String)(n1: Int, n2: Int = 1) =
+        |    test(name) {
+        |      println(name)
+        |      assertEquals(n1, n2)
+        |    }
         |}
         |""".stripMargin,
     List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
@@ -304,21 +321,48 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                   ).toLsp
                 ),
                 TestCaseEntry(
+                  "test2",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (5, 2, 5, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test3",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (6, 2, 6, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
                   "check-test",
                   QuickLocation(
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (7, 2, 7, 7)
+                    (8, 2, 8, 7)
                   ).toLsp
                 ),
                 TestCaseEntry(
-                  "another-check",
+                  "check-braceless",
                   QuickLocation(
                     classUriFor(
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
-                    (9, 2, 9, 7)
+                    (10, 2, 10, 16)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "check-curried",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (12, 2, 12, 14)
                   ).toLsp
                 )
               ).asJava

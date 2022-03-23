@@ -123,28 +123,28 @@ class ProblemResolverSuite extends FunSuite {
     "novocode-junit-interface",
     scalaVersion = BuildInfo.scala213,
     OutdatedJunitInterfaceVersion.message,
-    classpatch = List("/com/novocode/junit-interface/0.11/")
+    classpath = List("/com/novocode/junit-interface/0.11/")
   )
 
   checkRecommendation(
     "github-junit-interface",
     scalaVersion = BuildInfo.scala213,
     OutdatedJunitInterfaceVersion.message,
-    classpatch = List("/com/github/sbt/junit-interface/0.13.2/")
+    classpath = List("/com/github/sbt/junit-interface/0.13.2/")
   )
 
   checkRecommendation(
     "github-junit-interface-valid",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpatch = List("/com/github/sbt/junit-interface/0.13.3/")
+    classpath = List("/com/github/sbt/junit-interface/0.13.3/")
   )
 
   checkRecommendation(
     "no-test-explorer-provider",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpatch = List("/com/github/sbt/junit-interface/0.13.2/"),
+    classpath = List("/com/github/sbt/junit-interface/0.13.2/"),
     isTestExplorerProvider = false
   )
 
@@ -152,28 +152,28 @@ class ProblemResolverSuite extends FunSuite {
     "munit-0.x",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpatch = List("/org/scalameta/munit/0.7.29/")
+    classpath = List("/org/scalameta/munit/0.7.29/")
   )
 
   checkRecommendation(
     "munit-1.0.0-M2",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpatch = List("/org/scalameta/munit/1.0.0-M2/")
+    classpath = List("/org/scalameta/munit/1.0.0-M2/")
   )
 
   checkRecommendation(
     "munit-valid",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpatch = List("/org/scalameta/munit/1.0.0-M3/")
+    classpath = List("/org/scalameta/munit/1.0.0-M3/")
   )
 
   checkRecommendation(
     "munit-valid-2",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpatch = List("/org/scalameta/munit/1.0.1/")
+    classpath = List("/org/scalameta/munit/1.0.1/")
   )
 
   def checkRecommendation(
@@ -186,7 +186,7 @@ class ProblemResolverSuite extends FunSuite {
       ),
       sbtVersion: Option[String] = None,
       invalidJavaHome: Boolean = false,
-      classpatch: List[String] = Nil,
+      classpath: List[String] = Nil,
       isTestExplorerProvider: Boolean = true
   )(implicit loc: Location): Unit = {
     test(name) {
@@ -207,7 +207,7 @@ class ProblemResolverSuite extends FunSuite {
       )
 
       val target =
-        scalaTarget(name.name, scalaVersion, scalacOpts, sbtVersion, classpatch)
+        scalaTarget(name.name, scalaVersion, scalacOpts, sbtVersion, classpath)
       val message = problemResolver.recommendation(target).getOrElse("")
 
       assertNoDiff(

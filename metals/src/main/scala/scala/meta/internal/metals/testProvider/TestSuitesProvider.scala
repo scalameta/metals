@@ -47,7 +47,7 @@ final class TestSuitesProvider(
     extends SemanticdbFeatureProvider {
 
   private val index = new TestSuitesIndex
-  private val junitTestFinder = new JunitTestFinder(semanticdbs)
+  private val junitTestFinder = new JunitTestFinder
   private val munitTestFinder = new MunitTestFinder(trees)
 
   private def isEnabled =
@@ -162,29 +162,45 @@ final class TestSuitesProvider(
 
   /**
    * Searches for test cases for a given path for a provided test suites.
+   *
+   * If semanticDB isn't defined then it'll fetched when necessary.
+   * - file was compiled and it's opened - semanticdb will be defined
+   * - suite is discovered for the first time and the file is opened - semanticDB is not defined
+   * - file which contains suites were opened, discover tests and show them to user - semanticDB is not defined
    */
   private def getTestCasesForSuites(
       path: AbsolutePath,
       suites: Seq[TestSuiteInfo],
       doc: Option[TextDocument]
   ): Seq[AddTestCases] = {
-    suites.flatMap { suite =>
-      val testCases = suite.framework match {
-        case JUnit4 => junitTestFinder.findTests(doc, path, suite.symbol)
-        case MUnit => munitTestFinder.findTests(path, suite.fullyQualifiedName)
-        case Unknown => Vector.empty
-      }
+    doc
+      .orElse(semanticdbs.textDocument(path).documentIncludingStale)
+      .map { semanticdb =>
+        suites.flatMap { suite =>
+          val testCases = suite.framework match {
+            case JUnit4 =>
+              junitTestFinder.findTests(semanticdb, path, suite.symbol)
+            case MUnit =>
+              munitTestFinder.findTests(
+                semanticdb,
+                path,
+                suite.fullyQualifiedName
+              )
+            case Unknown => Vector.empty
+          }
 
-      if (testCases.nonEmpty) {
-        index.setHasTestCasesGranularity(path)
-        val event = AddTestCases(
-          suite.fullyQualifiedName.value,
-          suite.className.value,
-          testCases.asJava
-        )
-        Some(event)
-      } else None
-    }
+          if (testCases.nonEmpty) {
+            index.setHasTestCasesGranularity(path)
+            val event = AddTestCases(
+              suite.fullyQualifiedName.value,
+              suite.className.value,
+              testCases.asJava
+            )
+            Some(event)
+          } else None
+        }
+      }
+      .getOrElse(Vector.empty)
   }
 
   /**
