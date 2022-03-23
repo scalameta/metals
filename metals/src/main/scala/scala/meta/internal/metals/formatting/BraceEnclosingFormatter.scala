@@ -19,12 +19,12 @@ case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
     val triggerChar = params.triggerChar
     if (triggerChar == openingBrace) {
       val maybeApplyTree =
-          params.trees
-            .findLastEnclosingAt[Term.Apply](
-              params.path,
-              params.range.getStart,
-              _  => true
-            )
+        params.trees
+          .findLastEnclosingAt[Term.Apply](
+            params.path,
+            params.range.getStart,
+            _ => true
+          )
 
       maybeApplyTree.map { applyTree =>
         pprint.log(applyTree)
