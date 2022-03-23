@@ -233,6 +233,10 @@ final class BuildTargets() {
         }
         Future.sequence(queries).map { results =>
           val target = results.flatten.maxByOption(buildTargetsOrder)
+          for {
+            tgt <- target
+            data <- targetData(tgt)
+          } data.addSourceItem(source, tgt)
           target
         }
       case some =>
