@@ -7,6 +7,8 @@ import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
@@ -16,6 +18,8 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.InverseSourcesParams
+import ch.epfl.scala.bsp4j.TextDocumentIdentifier
 
 /**
  * In-memory cache for looking up build server metadata.
@@ -208,6 +212,31 @@ final class BuildTargets() {
         .orElse(inferBuildTarget(source))
     } else {
       Some(orSbtBuildTarget.maxBy(buildTargetsOrder))
+    }
+  }
+
+  def inverseSourcesBsp(
+      source: AbsolutePath
+  )(implicit ec: ExecutionContext): Future[Option[BuildTargetIdentifier]] = {
+    inverseSources(source) match {
+      case None =>
+        val identifier = new TextDocumentIdentifier(
+          source.toTextDocumentIdentifier.getUri()
+        )
+        val params = new InverseSourcesParams(identifier)
+        val connections =
+          data.fromIterators(_.targetToConnection.values.toIterator).distinct
+        val queries = connections.map { connection =>
+          connection
+            .buildTargetInverseSources(params)
+            .map(_.getTargets.asScala.toList)
+        }
+        Future.sequence(queries).map { results =>
+          val target = results.flatten.maxByOption(buildTargetsOrder)
+          target
+        }
+      case some =>
+        Future.successful(some)
     }
   }
 

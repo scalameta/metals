@@ -58,7 +58,8 @@ final class Compilations(
 
   def compilationFinished(
       source: AbsolutePath
-  ): Future[Unit] = compilationFinished(expand(source).toSeq)
+  ): Future[Unit] =
+    expand(source).flatMap(targets => compilationFinished(targets.toSeq))
 
   def compileTarget(
       target: b.BuildTargetIdentifier
@@ -77,21 +78,20 @@ final class Compilations(
   def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
     def empty = new b.CompileResult(b.StatusCode.CANCELLED)
     for {
-      result <- {
-        expand(path) match {
-          case None => Future.successful(empty)
-          case Some(target) =>
-            compileBatch(target)
-              .map(res => res.getOrElse(target, empty))
-        }
+      targetOpt <- expand(path)
+      result <- targetOpt match {
+        case None => Future.successful(empty)
+        case Some(target) =>
+          compileBatch(target)
+            .map(res => res.getOrElse(target, empty))
       }
       _ <- compileWorksheets(Seq(path))
     } yield result
   }
 
   def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
-    val targets = expand(paths)
     for {
+      targets <- expand(paths)
       result <- compileBatch(targets)
       _ <- compileWorksheets(paths)
     } yield ()
@@ -105,7 +105,8 @@ final class Compilations(
 
   def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[Unit] =
     for {
-      _ <- cascadeCompile(expand(paths))
+      targets <- expand(paths)
+      _ <- cascadeCompile(targets)
       _ <- compileWorksheets(paths)
     } yield ()
 
@@ -150,25 +151,29 @@ final class Compilations(
       .ignoreValue
   }
 
-  private def expand(path: AbsolutePath): Option[b.BuildTargetIdentifier] = {
+  private def expand(
+      path: AbsolutePath
+  ): Future[Option[b.BuildTargetIdentifier]] = {
     val isCompilable =
       (path.isScalaOrJava || path.isSbt) &&
         !path.isDependencySource(workspace())
 
     if (isCompilable) {
-      val targetOpt = buildTargets.inverseSources(path)
-
-      if (targetOpt.isEmpty) {
-        scribe.warn(s"no build target for: $path")
+      val targetOpt = buildTargets.inverseSourcesBsp(path)
+      targetOpt.foreach {
+        case tgts if tgts.isEmpty => scribe.warn(s"no build target for: $path")
+        case _ =>
       }
 
       targetOpt
     } else
-      None
+      Future.successful(None)
   }
 
-  def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] =
-    paths.flatMap(expand(_)).distinct
+  def expand(paths: Seq[AbsolutePath]): Future[Seq[b.BuildTargetIdentifier]] = {
+    val expansions = paths.map(expand)
+    Future.sequence(expansions).map(_.flatten)
+  }
 
   private def compile(
       targets: Seq[b.BuildTargetIdentifier]
