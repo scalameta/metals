@@ -53,6 +53,14 @@ trait Assertions extends munit.Assertions {
     }
   }
 
+  def assertLines(obtained: String, expected: String)(implicit
+      loc: Location
+  ): Unit = {
+    if (obtained.linesIterator.toList != expected.linesIterator.toList) {
+      fail(s"obtained:<\n$obtained>\nexpected:<\n$expected>")
+    }
+  }
+
   def assertIsNotDirectory(path: AbsolutePath)(implicit loc: Location): Unit = {
     if (path.isDirectory) {
       fail(s"directory exists: $path")

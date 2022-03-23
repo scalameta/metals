@@ -39,7 +39,8 @@ object TestGroups {
       "tests.FindTextInDependencyJarsSuite", "tests.TestSuitesProviderSuite",
       "tests.classFinder.FindAllClassesSuite",
       "tests.codeactions.ExtractValueLspSuite", "tests.clients.CommandSuite",
-      "tests.JavaInteractiveSemanticdbSuite"),
+      "tests.JavaInteractiveSemanticdbSuite", "tests.SemVerSuite",
+      "tests.codeactions.CompanionObjectSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -90,7 +91,8 @@ object TestGroups {
       "tests.troubleshoot.ProblemResolverSuite", "tests.BspBuildChangedSuite",
       "tests.classFinder.ClassBreakpointSuite",
       "tests.classFinder.ClassNameResolverSuite", "tests.JavaDefinitionSuite",
-      "tests.IdentifierComparatorSuite")
+      "tests.IdentifierComparatorSuite", "tests.parsing.JavaEditDistanceSuite",
+      "tests.PathTrieSuite")
   )
 
 }
