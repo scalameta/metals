@@ -255,7 +255,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   testDiscover(
-    "discover-test-cases-munit".only,
+    "discover-test-cases-munit",
     s"""|/metals.json
         |{
         |  "app": {
