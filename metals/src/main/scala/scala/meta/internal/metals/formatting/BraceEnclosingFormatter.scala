@@ -16,18 +16,16 @@ case class BraceEnclosingFormatter(userConfig: () => UserConfiguration)
   override def contribute(
       params: OnTypeFormatterParams
   ): Option[List[TextEdit]] = {
-    val position = params.position
     val triggerChar = params.triggerChar
     if (triggerChar == openingBrace) {
       val maybeApplyTree =
-        if (params.range.getStart == params.range.getEnd)
           params.trees
-            .findLastEnclosingAt(
+            .findLastEnclosingAt[Term.Apply](
               params.path,
               params.range.getStart,
-              (_: Tree) => true
+              _  => true
             )
-        else None
+
       maybeApplyTree.map { applyTree =>
         pprint.log(applyTree)
         val textEdit = new TextEdit()
