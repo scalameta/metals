@@ -86,9 +86,11 @@ import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
+
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.{Gson, JsonElement, JsonPrimitive}
+import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
@@ -96,8 +98,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
-
-import java.io.{BufferedWriter, File, FileWriter}
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -118,6 +118,7 @@ class MetalsLanguageServer(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
+
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
       val buildShutdown = bspSession match {
@@ -285,6 +286,7 @@ class MetalsLanguageServer(
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
+
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -954,6 +956,7 @@ class MetalsLanguageServer(
   }
 
   val isInitialized = new AtomicBoolean(false)
+
   @nowarn("msg=parameter value params")
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
@@ -986,6 +989,7 @@ class MetalsLanguageServer(
   }.asJava
 
   lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
+
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
     val promise = Promise[Unit]()
@@ -1264,20 +1268,9 @@ class MetalsLanguageServer(
           workspaceSymbols.indexClasspath()
         }
 
-//        val source = scala.io.Source.fromFile(bloopGlobalJsonPath.toUri)
-//        val bloobGlobalJsonContent = try source.mkString finally source.close()
-//        bloobGlobalJsonContent.parseJson.getAsJsonObject
-        if (userConfig.bloopJvmProperties != old.bloopJvmProperties) { // TODO is the comparison meaningful
-          val bloopGlobalJsonPath: Path = Paths
-            .get(System.getProperty("user.home"))
-            .resolve(".bloop/bloop.json")
-          val bw = new BufferedWriter(
-            new FileWriter(bloopGlobalJsonPath.toFile)
-          )
-          val text = new Gson().toJson(userConfig.bloopJvmProperties.asJava)
-          bw.write(text)
-          bw.close()
-        }
+        //        val source = scala.io.Source.fromFile(bloopGlobalJsonPath.toUri)
+        //        val bloobGlobalJsonContent = try source.mkString finally source.close()
+        //        bloobGlobalJsonContent.parseJson.getAsJsonObject
 
         userConfig.fallbackScalaVersion.foreach { version =>
           if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
@@ -1316,6 +1309,13 @@ class MetalsLanguageServer(
                 old.bloopVersion.isDefined,
                 () => autoConnectToBuildServer
               )
+
+              bloopServers.ensureDesiredJvmSettings(
+                userConfig.bloopJvmProperties,
+                old.bloopJvmProperties,
+                () => autoConnectToBuildServer()
+              )
+
             } else if (
               userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
                 .exists(Ammonite.isAmmBuildTarget)
@@ -1588,6 +1588,7 @@ class MetalsLanguageServer(
       }
     }
   }
+
   def referencesResult(params: ReferenceParams): List[ReferencesResult] = {
     val timer = new Timer(time)
     val results: List[ReferencesResult] = referencesProvider.references(params)
@@ -1607,6 +1608,7 @@ class MetalsLanguageServer(
     }
     results
   }
+
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CancelTokens.future { token => compilers.completions(params, token) }

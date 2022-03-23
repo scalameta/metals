@@ -1,11 +1,15 @@
 package scala.meta.internal.metals
 
+import java.io.BufferedWriter
 import java.io.ByteArrayInputStream
+import java.io.FileWriter
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.channels.Channels
 import java.nio.channels.Pipe
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.nio.file.Paths
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -18,6 +22,7 @@ import scala.meta.io.AbsolutePath
 import bloop.bloopgun.BloopgunCli
 import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
+import com.google.gson.Gson
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**
@@ -110,6 +115,40 @@ final class BloopServers(
         .asScala
         .flatMap {
           case item if item == Messages.BloopVersionChange.reconnect =>
+            shutdownServer()
+            reconnect().ignoreValue
+          case _ =>
+            Future.successful(())
+        }
+    } else {
+      Future.successful(())
+    }
+  }
+
+  def ensureDesiredJvmSettings(
+      requestedBloopJvmProperties: Option[Map[String, String]],
+      runningBloopJvmProperties: Option[Map[String, String]],
+      reconnect: () => Future[BuildChange]
+  ): Future[Unit] = {
+
+    if (requestedBloopJvmProperties != runningBloopJvmProperties) {
+
+      val bloopGlobalJsonPath: Path = Paths
+        .get(System.getProperty("user.home"))
+        .resolve(".bloop/bloop.json")
+      val bw = new BufferedWriter(
+        new FileWriter(bloopGlobalJsonPath.toFile)
+      )
+      val text = new Gson().toJson(requestedBloopJvmProperties.asJava)
+      bw.write(text)
+      bw.close()
+      languageClient
+        .showMessageRequest(
+          Messages.BloopVersionChange.params()
+        )
+        .asScala
+        .flatMap {
+          case item if item == Messages.BloopJvmPropertiesChange.reconnect =>
             shutdownServer()
             reconnect().ignoreValue
           case _ =>

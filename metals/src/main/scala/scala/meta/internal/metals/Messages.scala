@@ -296,6 +296,27 @@ object Messages {
     }
   }
 
+  object BloopJvmPropertiesChange {
+    def reconnect: MessageActionItem =
+      new MessageActionItem("Restart Bloop")
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Bloop JVM properties were updated; do you want to restart the running Bloop server?"
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          reconnect,
+          notNow
+        ).asJava
+      )
+      params
+    }
+  }
+
   object AmmoniteJvmParametersChange {
     def restart: MessageActionItem =
       new MessageActionItem("Restart Ammonite")

@@ -1,14 +1,17 @@
 package scala.meta.internal.metals
 
 import java.util.Properties
+
 import scala.collection.mutable.ListBuffer
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
+
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
