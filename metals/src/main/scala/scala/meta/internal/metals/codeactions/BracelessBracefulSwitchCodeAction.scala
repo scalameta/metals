@@ -1,0 +1,119 @@
+package scala.meta.internal.metals.codeactions
+
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.{lsp4j => l}
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.meta.Term
+import scala.meta.internal.metals.CodeAction
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.parsing.Trees
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
+import scala.reflect.ClassTag
+
+/**
+ * Rewrite parens to brackets and vice versa.
+ * It's a transformation between Term.Apply(_, List(_: Term)) and Term.Apply(_, List(Term.Block(List(_: Term))))
+ * Term.Block is equivalent to "surrounded by braces"
+ *
+ * Parens to brackets scenarios:
+ * 1: def foo(n: Int) = ???
+ *    foo(5)           ->   foo{5}
+ * 2: x.map(a => a)    ->   x.map{a => a}
+ * 3: x.map(_ match {       x.map{_ match {
+ *      case _ => 0    ->     case _ => 0
+ *    })                    }}
+ * Brackets to parens scenarios are the opposite of the ones above.
+ */
+class BracelessBracefulSwitchCodeAction(
+    trees: Trees
+) extends CodeAction {
+  override def kind: String = l.CodeActionKind.RefactorRewrite
+
+  override def contribute(params: CodeActionParams, token: CancelToken)(implicit
+      ec: ExecutionContext
+  ): Future[Seq[l.CodeAction]] = Future {
+    val path = params.getTextDocument().getUri().toAbsolutePath
+    val range = params.getRange()
+    val applyTree =
+      if (range.getStart == range.getEnd)
+        trees
+          .findLastEnclosingAt[Term.Apply](
+            path,
+            range.getStart(),
+            applyWithSingleFunction
+          )
+      else None
+
+    applyTree
+      .map {
+        // order matter because List(Term.Block(List(_: Term))) includes in  List(t: Term)
+        case appl @ Term.Apply(_, List(Term.Block(List(_: Term)))) =>
+          switchFrom[Token.LeftBrace, Token.RightBrace](path, appl)
+
+        case appl @ Term.Apply(_, List(_: Term)) =>
+          switchFrom[Token.LeftParen, Token.RightParen](path, appl)
+
+        case _ =>
+          Nil
+      }
+      .getOrElse(Nil)
+  }
+
+  private def switchFrom[L: ClassTag, R: ClassTag](
+      path: AbsolutePath,
+      appl: Term.Apply
+  ): Seq[l.CodeAction] = {
+    val select = appl.fun
+    val term = appl.args.head match {
+      case Term.Block(List(t: Term)) => t
+      case f => f
+    }
+    val tokens = appl.tokens
+    tokens
+      .collectFirst {
+        case leftParen: L if leftParen.pos.start >= select.pos.end =>
+          tokens.collectFirst {
+            case rightParen: R if rightParen.pos.start >= term.pos.end =>
+              val isParens = leftParen.text == "("
+              val newLeft = if (isParens) "{" else "("
+              val newRight = if (isParens) "}" else ")"
+              val start = new l.TextEdit(leftParen.pos.toLSP, newLeft)
+              val end = new l.TextEdit(rightParen.pos.toLSP, newRight)
+              val codeAction = new l.CodeAction()
+              if (isParens)
+                codeAction.setTitle(RewriteBracesParensCodeAction.toBraces)
+              else
+                codeAction.setTitle(RewriteBracesParensCodeAction.toParens)
+              codeAction.setKind(this.kind)
+              codeAction.setEdit(
+                new l.WorkspaceEdit(
+                  Map(path.toURI.toString -> List(start, end).asJava).asJava
+                )
+              )
+              codeAction
+          }
+      }
+      .flatten
+      .toSeq
+  }
+
+  private def applyWithSingleFunction: Term.Apply => Boolean = {
+    // exclude case when body has more than one line (is a Block) because it cannot be rewritten to parens
+    case Term.Apply(
+          _,
+          List(Term.Block(List(Term.Function(_, _: Term.Block))))
+        ) =>
+      false
+    case Term.Apply(_, List(_: Term)) => true
+    //   Term.Apply(_, List(Term.Block(List(_: Term)))) is already included in the one above
+    case _ => false
+  }
+}
+
+object RewriteBracesParensCodeAction {
+  val toParens = "Rewrite to parenthesis"
+  val toBraces = "Rewrite to braces"
+}
