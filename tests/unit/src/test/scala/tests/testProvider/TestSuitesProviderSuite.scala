@@ -279,6 +279,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |
         |  checkCurried("check-curried")(2, 2)
         |
+        |  test("tagged".tag(new munit.Tag("tag"))) {}
+        |
         |  List("") // negative case - apply without test call
         |
         |  def check(name: String, n1: Int, n2: Int = 1) = {
@@ -363,6 +365,15 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                       "app/src/main/scala/a/b/c/MunitTestSuite.scala"
                     ),
                     (12, 2, 12, 14)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "tagged",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (14, 2, 14, 6)
                   ).toLsp
                 )
               ).asJava

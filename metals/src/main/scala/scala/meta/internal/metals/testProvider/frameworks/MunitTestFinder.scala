@@ -27,7 +27,9 @@ class MunitTestFinder(trees: Trees) {
     val uri = path.toURI
     val testcases = new mutable.ArrayBuffer[TestCaseEntry]()
     val occurences = doc.occurrences
-      .filter(_.symbol.startsWith("munit/FunSuite#test"))
+      .filter(occ =>
+        occ.symbol.startsWith("munit/") && occ.symbol.contains("test")
+      )
       .toVector
 
     /**
@@ -86,6 +88,23 @@ class MunitTestFinder(trees: Trees) {
                   Term.Apply(
                     test @ Term.Name("test"),
                     List(Term.Select(Lit.String(testname), _: Term.Name))
+                  ),
+                  _
+                ) =>
+              val location = test.pos.toLSP.toLocation(uri)
+              val entry = TestCaseEntry(testname, location)
+              testcases.addOne(entry)
+
+            // test("test2".tag(new Tag("aezkami"))) {}
+            case Term.Apply(
+                  Term.Apply(
+                    test @ Term.Name("test"),
+                    List(
+                      Term.Apply(
+                        Term.Select(Lit.String(testname), _: Term.Name),
+                        _
+                      )
+                    )
                   ),
                   _
                 ) =>
