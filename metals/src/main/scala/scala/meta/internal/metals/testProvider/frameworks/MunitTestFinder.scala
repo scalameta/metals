@@ -50,7 +50,7 @@ class MunitTestFinder(trees: Trees) {
            *     <test logic>
            *   }
            * }
-           * Finding these potential test methods will allow to show them to the user.
+           * Finding these potential test methods will allow showing them to the user.
            */
           val potentialTests = cls.templ.children.collect {
             case dfn: Defn.Def if hasTestCall(dfn, occurences) => dfn.name.value
@@ -70,47 +70,14 @@ class MunitTestFinder(trees: Trees) {
             }
 
           // let's collect all tests candidates
-          cls.templ.children.collect {
-            // test("test1") {}
-            case Term.Apply(
-                  Term.Apply(
-                    test @ Term.Name("test"),
-                    List(Lit.String(testname))
-                  ),
-                  _
-                ) =>
-              val location = test.pos.toLSP.toLocation(uri)
-              val entry = TestCaseEntry(testname, location)
-              testcases.addOne(entry)
-
-            // test("test2".ignore) {}
-            case Term.Apply(
-                  Term.Apply(
-                    test @ Term.Name("test"),
-                    List(Term.Select(Lit.String(testname), _: Term.Name))
-                  ),
-                  _
-                ) =>
-              val location = test.pos.toLSP.toLocation(uri)
-              val entry = TestCaseEntry(testname, location)
-              testcases.addOne(entry)
-
-            // test("test2".tag(new Tag("aezkami"))) {}
-            case Term.Apply(
-                  Term.Apply(
-                    test @ Term.Name("test"),
-                    List(
-                      Term.Apply(
-                        Term.Select(Lit.String(testname), _: Term.Name),
-                        _
-                      )
-                    )
-                  ),
-                  _
-                ) =>
-              val location = test.pos.toLSP.toLocation(uri)
-              val entry = TestCaseEntry(testname, location)
-              testcases.addOne(entry)
+          cls.templ.children.foreach {
+            // test("testname".only|ignore|tag) {}
+            case appl: Term.Apply if hasTestCall(appl, occurences) =>
+              getTestCallWithTestName(appl).foreach { case (test, testname) =>
+                val location = test.pos.toLSP.toLocation(uri)
+                val entry = TestCaseEntry(testname.value, location)
+                testcases.addOne(entry)
+              }
 
             // helper_function("testname", ...) where helper_function was previously found as a potential test function
             case appl: Term.Apply =>
@@ -121,6 +88,7 @@ class MunitTestFinder(trees: Trees) {
                 testcases.addOne(entry)
               }
 
+            case _ => ()
           }
 
         case Pkg(ref, children) =>
@@ -142,6 +110,37 @@ class MunitTestFinder(trees: Trees) {
       .getOrElse(Vector.empty)
   }
 
+  def getTestCallWithTestName(
+      tree: Tree
+  ): Option[(Term.Name, Lit.String)] = {
+
+    @tailrec
+    def extractLiteralName(acc: List[Tree]): Option[Lit.String] = acc match {
+      case head :: tail =>
+        head match {
+          case lit: Lit.String => Some(lit)
+          case _ => extractLiteralName(head.children ::: tail ::: acc)
+        }
+      case immutable.Nil => None
+    }
+
+    @tailrec
+    def loop(acc: List[Tree]): Option[(Term.Name, Lit.String)] = acc match {
+      case head :: tail =>
+        head match {
+          case Term.Apply(term @ Term.Name("test"), args) =>
+            extractLiteralName(args) match {
+              case Some(lit) =>
+                Some((term, lit))
+              case None => loop(tail)
+            }
+          case _ => loop(head.children ::: tail ::: acc)
+        }
+      case immutable.Nil => None
+    }
+    loop(tree.children)
+  }
+
   def hasTestCall(
       tree: Tree,
       occurences: Vector[SymbolOccurrence]
@@ -154,8 +153,7 @@ class MunitTestFinder(trees: Trees) {
           case term @ Term.Name("test") =>
             val range = term.pos.toSemanticdb
             val isValid = occurences
-              .find(occ => occ.range.exists(_.isEqual(range)))
-              .isDefined
+              .exists(occ => occ.range.exists(_.isEqual(range)))
             if (isValid) isValid
             else loop(tail)
           case _ => loop(head.children ::: tail)
