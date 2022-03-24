@@ -113,7 +113,7 @@ class BracelessBracefulSwitchCodeAction(
   }
 }
 
-object RewriteBracesParensCodeAction {
+object BracelessBracefulSwitchCodeAction {
   val toParens = "Rewrite to parenthesis"
   val toBraces = "Rewrite to braces"
 }
