@@ -22,6 +22,7 @@ import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
 import com.google.gson.Gson
 import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.ShowDocumentParams
 import org.eclipse.lsp4j.services.LanguageClient
 
 /**
@@ -187,7 +188,9 @@ final class BloopServers(
 
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.openGlobalJsonFile =>
-        Future.successful(())
+        val showDocumentParams = new ShowDocumentParams()
+        showDocumentParams.setUri(bloopGlobalJsonFile.toURI.toString)
+        languageClient.showDocument(showDocumentParams).asScala.ignoreValue
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.useGlobalFile =>
         Future.successful(())
