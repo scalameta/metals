@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.meta.Term
+import scala.meta.{Term, Tree}
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
@@ -106,7 +106,7 @@ class BracelessBracefulSwitchCodeAction(
           _,
           List(Term.Block(List(Term.Function(_, _: Term.Block))))
         ) =>
-      false
+      true
     case Term.Apply(_, List(_: Term)) => true
     //   Term.Apply(_, List(Term.Block(List(_: Term)))) is already included in the one above
     case _ => false
