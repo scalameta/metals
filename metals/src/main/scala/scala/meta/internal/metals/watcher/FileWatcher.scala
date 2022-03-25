@@ -15,7 +15,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 
-import com.swoval.files.FileTreeViews
 import com.swoval.files.FileTreeViews.Observer
 import com.swoval.files.PathWatcher
 import com.swoval.files.PathWatchers
@@ -55,7 +54,7 @@ final class FileWatcher(
     stopWatcher = startWatch(
       config,
       workspaceDeferred().toNIO,
-      collectFilesToWatch(buildTargets),
+      collectPathsToWatch(buildTargets),
       onFileWatchEvent,
       watchFilter
     )
@@ -63,38 +62,40 @@ final class FileWatcher(
 }
 
 object FileWatcher {
-  private case class FilesToWatch(
-      sourceFiles: Set[Path],
-      sourceDirectories: Set[Path],
-      semanticdDirectories: Set[Path]
+  private case class PathsToWatch(
+      files: Set[Path],
+      directories: Set[Path]
   )
 
-  private def collectFilesToWatch(buildTargets: BuildTargets): FilesToWatch = {
-    val sourceDirectoriesToWatch = mutable.Set.empty[Path]
-    val sourceFilesToWatch = mutable.Set.empty[Path]
+  private def collectPathsToWatch(buildTargets: BuildTargets): PathsToWatch = {
+    val directories = mutable.Set.empty[Path]
+    val files = mutable.Set.empty[Path]
 
     def collect(path: AbsolutePath): Unit = {
-      if (buildTargets.isInsideSourceRoot(path)) {
-        () // Do nothing, already covered by a source root
-      } else if (!buildTargets.checkIfGeneratedSource(path.toNIO)) {
-        if (buildTargets.isSourceFile(path)) {
-          sourceFilesToWatch.add(path.toNIO)
-        } else {
-          sourceDirectoriesToWatch.add(path.toNIO)
-        }
+      val shouldBeWatched =
+        !buildTargets.isInsideSourceRoot(path) &&
+          !buildTargets.checkIfGeneratedSource(path.toNIO)
+
+      if (shouldBeWatched) {
+        if (buildTargets.isSourceFile(path))
+          files.add(path.toNIO)
+        else
+          directories.add(path.toNIO)
       }
     }
+
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceRoots.foreach(collect)
     buildTargets.sourceItems.foreach(collect)
-    val semanticdbs = buildTargets.allTargetRoots
+
+    buildTargets.allTargetRoots
       .filterNot(_.isJar)
       .map(_.resolve(Directories.semanticdb).toNIO)
+      .foreach(directories.add)
 
-    FilesToWatch(
-      sourceFilesToWatch.toSet,
-      sourceDirectoriesToWatch.toSet,
-      semanticdbs.toSet
+    PathsToWatch(
+      files.toSet,
+      directories.toSet
     )
   }
 
@@ -105,7 +106,7 @@ object FileWatcher {
    *
    * @param config metals server configuration
    * @param workspace current project workspace directory
-   * @param filesToWatch source files and directories to watch
+   * @param pathsToWatch source files and directories to watch
    * @param callback to execute on FileWatchEvent
    * @param watchFilter predicate that filters which files
    *        generate a FileWatchEvent on create/delete/change
@@ -114,7 +115,7 @@ object FileWatcher {
   private def startWatch(
       config: MetalsServerConfig,
       workspace: Path,
-      filesToWatch: FilesToWatch,
+      pathsToWatch: PathsToWatch,
       callback: FileWatcherEvent => Unit,
       watchFilter: Path => Boolean
   ): () => Unit = {
@@ -129,7 +130,7 @@ object FileWatcher {
         // However, the events are then filtered to receive only relevant events
 
         val trie = PathTrie(
-          filesToWatch.sourceFiles ++ filesToWatch.sourceDirectories ++ filesToWatch.semanticdDirectories
+          pathsToWatch.files ++ pathsToWatch.directories
         )
         val isWatched = trie.containsPrefixOf _
 
@@ -154,13 +155,10 @@ object FileWatcher {
         // Other OSes register all the files and directories individually
         val watcher = initWatcher(watchFilter, watchEventQueue)
 
-        filesToWatch.sourceDirectories.foreach(
+        pathsToWatch.directories.foreach(
           watcher.register(_, Int.MaxValue)
         )
-        filesToWatch.semanticdDirectories.foreach(
-          watcher.register(_, Int.MaxValue)
-        )
-        filesToWatch.sourceFiles.foreach(watcher.register(_, -1))
+        pathsToWatch.files.foreach(watcher.register(_, -1))
 
         watcher
       }
