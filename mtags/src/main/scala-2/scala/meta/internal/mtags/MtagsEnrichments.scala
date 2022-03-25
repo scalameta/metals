@@ -160,6 +160,8 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         range.getEnd.getCharacter
       )
     }
+
+    def toLocation(uri: URI): l.Location = new l.Location(uri.toString(), range)
   }
 
   implicit class XtensionPositionLspInverse(pos: l.Position) {

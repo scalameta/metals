@@ -5,6 +5,7 @@ import scala.collection.mutable
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
@@ -20,7 +21,7 @@ private[testProvider] final case class SymbolsPerTarget private (
     target: BuildTarget,
     testSymbols: TrieMap[
       BuildTargetClasses.Symbol,
-      BuildTargetClasses.FullyQualifiedClassName
+      BuildTargetClasses.TestSymbolInfo
     ],
     private val classpath: List[String]
 ) {
@@ -37,7 +38,7 @@ object SymbolsPerTarget {
       target: BuildTarget,
       testSymbols: TrieMap[
         BuildTargetClasses.Symbol,
-        BuildTargetClasses.FullyQualifiedClassName
+        BuildTargetClasses.TestSymbolInfo
       ],
       scalac: Option[ScalacOptionsItem],
       javac: Option[JavacOptionsItem]
@@ -68,6 +69,7 @@ private[testProvider] final case class TestEntry(
 
 private[testProvider] final case class TestSuiteInfo(
     fullyQualifiedName: FullyQualifiedName,
+    framework: TestFramework,
     className: ClassName,
     symbol: mtags.Symbol
 )

@@ -1,4 +1,4 @@
-package tests
+package tests.testProvider
 
 import scala.concurrent.Future
 
@@ -15,7 +15,9 @@ import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import munit.TestOptions
-import org.eclipse.{lsp4j => l}
+import tests.BaseLspSuite
+import tests.BuildInfo
+import tests.QuickLocation
 
 class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   override protected def initializationOptions: Some[InitializationOptions] =
@@ -62,6 +64,48 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               QuickLocation(
                 classUriFor("app/src/main/scala/NoPackage.scala"),
                 (1, 6, 1, 15)
+              ).toLsp,
+              canResolveChildren = true
+            )
+          ).asJava
+        )
+      )
+    }
+  )
+
+  testDiscover(
+    "discover-single-munit",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "libraryDependencies" : [ "org.scalameta::munit:0.7.29" ],
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
+        |  }
+        |}
+        |
+        |/app/src/main/scala/a/b/c/MunitTestSuite.scala
+        |package a.b
+        |package c
+        |
+        |class MunitTestSuite extends munit.FunSuite {
+        |  test("test1") {
+        |  }
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
+    () => {
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              "a.b.c.MunitTestSuite",
+              "MunitTestSuite",
+              "a/b/c/MunitTestSuite#",
+              QuickLocation(
+                classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
+                (3, 6, 3, 20)
               ).toLsp,
               canResolveChildren = true
             )
@@ -167,7 +211,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   testDiscover(
-    "discover-test-cases",
+    "discover-test-cases-junit",
     s"""|/metals.json
         |{
         |  "app": {
@@ -208,6 +252,137 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       )
     },
     () => Some(classUriFor("app/src/main/scala/JunitTestSuite.scala"))
+  )
+
+  testDiscover(
+    "discover-test-cases-munit",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
+        |  }
+        |}
+        |
+        |/app/src/main/scala/a/b/c/MunitTestSuite.scala
+        |package a.b
+        |package c
+        |
+        |class MunitTestSuite extends munit.FunSuite {
+        |  test("test1") {}
+        |  test("test2".ignore) {}
+        |  test("test3".only) {}
+        |
+        |  check("check-test", 2, 2)
+        |
+        |  checkBraceless("check-braceless", 2, 2)
+        |
+        |  checkCurried("check-curried")(2, 2)
+        |
+        |  test("tagged".tag(new munit.Tag("tag"))) {}
+        |
+        |  List("") // negative case - apply without test call
+        |
+        |  def check(name: String, n1: Int, n2: Int = 1) = {
+        |    test(name) {
+        |      assertEquals(n1, n2)
+        |    }
+        |  }
+        |
+        |  def checkBraceless(name: String, n1: Int, n2: Int = 1) =
+        |    test(name) {
+        |      println(name)
+        |      assertEquals(n1, n2)
+        |    }
+        |
+        |  def checkCurried(name: String)(n1: Int, n2: Int = 1) =
+        |    test(name) {
+        |      println(name)
+        |      assertEquals(n1, n2)
+        |    }
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
+    () => {
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestCases(
+              "a.b.c.MunitTestSuite",
+              "MunitTestSuite",
+              Vector(
+                TestCaseEntry(
+                  "test1",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (4, 2, 4, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test2",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (5, 2, 5, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test3",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (6, 2, 6, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "check-test",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (8, 2, 8, 7)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "check-braceless",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (10, 2, 10, 16)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "check-curried",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (12, 2, 12, 14)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "tagged",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/a/b/c/MunitTestSuite.scala"
+                    ),
+                    (14, 2, 14, 6)
+                  ).toLsp
+                )
+              ).asJava
+            )
+          ).asJava
+        )
+      )
+    },
+    () => Some(classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"))
   )
 
   checkEvents(
@@ -311,17 +486,4 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   private def classUriFor(relativePath: String): String =
     workspace.resolve(relativePath).toURI.toString
 
-}
-
-private final case class QuickLocation(
-    uri: String,
-    range: (Int, Int, Int, Int)
-) {
-  def toLsp: l.Location = new l.Location(
-    uri,
-    new l.Range(
-      new l.Position(range._1, range._2),
-      new l.Position(range._3, range._4)
-    )
-  )
 }

@@ -54,12 +54,17 @@ class BuildTargetClassesFinder(
       className: String,
       buildTarget: Option[String]
   ): Try[List[(String, b.BuildTarget)]] =
-    findClassAndBuildTarget(
+    findClassAndBuildTarget[String](
       className,
       buildTarget,
       buildTargetClasses.findTestClassByName(_),
-      buildTargetClasses.classesOf(_).testClasses.values,
-      { clazz: String => clazz }
+      id =>
+        buildTargetClasses
+          .classesOf(id)
+          .testClasses
+          .values
+          .map(_.fullyQualifiedName),
+      clazz => clazz
     )
 
   private def revertToDependencies(

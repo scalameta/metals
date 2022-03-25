@@ -307,7 +307,7 @@ class DebugProvider(
       ],
       testClasses: TrieMap[
         BuildTargetClasses.Symbol,
-        BuildTargetClasses.FullyQualifiedClassName
+        BuildTargetClasses.TestSymbolInfo
       ],
       params: DebugDiscoveryParams
   )(implicit ec: ExecutionContext) = {
@@ -321,8 +321,8 @@ class DebugProvider(
         lazy val tests = for {
           symbolInfo <- textDocument.symbols
           symbol = symbolInfo.symbol
-          testClass <- testClasses.get(symbol)
-        } yield testClass
+          testSymbolInfo <- testClasses.get(symbol)
+        } yield testSymbolInfo.fullyQualifiedName
         val mains = for {
           occurrence <- textDocument.occurrences
           if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
@@ -421,8 +421,8 @@ class DebugProvider(
               for {
                 symbolInfo <- textDocument.symbols
                 symbol = symbolInfo.symbol
-                testClass <- testClasses(target).get(symbol)
-              } yield testClass
+                testSymbolInfo <- testClasses(target).get(symbol)
+              } yield testSymbolInfo.fullyQualifiedName
             }
           }
           .map { tests =>
@@ -437,7 +437,11 @@ class DebugProvider(
           new b.DebugSessionParams(
             singletonList(target),
             b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-            testClasses(target).values.toList.asJava.toJson
+            testClasses(target).values
+              .map(_.fullyQualifiedName)
+              .toList
+              .asJava
+              .toJson
           )
         }
     }

@@ -77,6 +77,7 @@ class ProblemResolver(
         case FutureSbtVersion => futureSbt = true
         case MissingJdkSources(_) => misconfiguredProjects += 1
         case OutdatedJunitInterfaceVersion => misconfiguredTestFrameworks += 1
+        case OutdatedMunitInterfaceVersion => misconfiguredTestFrameworks += 1
       }
     }
     for {
@@ -224,6 +225,31 @@ class ProblemResolver(
       case Right(_) => None
     }
 
+    // 1.0.0-M3 or higher is valid
+    def outdatedMunitInterface =
+      if (!isTestExplorerProvider()) None
+      else {
+        def isInvalid(
+            major: Int,
+            minor: Int,
+            patch: Int,
+            dep: String
+        ): Boolean = {
+          if (major == 0) true
+          else if (major == 1 && minor == 0 && patch == 0) {
+            if (dep.contains("1.0.0-M1") || dep.contains("1.0.0-M2")) true
+            else false
+          } else false
+        }
+
+        val munit = raw".*org/scalameta/munit/(\d).(\d+).(\d+).*".r
+        scalaTarget.scalac.getClasspath().asScala.collectFirst {
+          case dep @ munit(major, minor, patch)
+              if isInvalid(major.toInt, minor.toInt, patch.toInt, dep) =>
+            OutdatedMunitInterfaceVersion
+        }
+      }
+
     def outdatedJunitInterface =
       if (!isTestExplorerProvider()) None
       else {
@@ -239,6 +265,7 @@ class ProblemResolver(
 
     scalaVersionProblem
       .orElse(javaSourcesProblem)
+      .orElse(outdatedMunitInterface)
       .orElse(outdatedJunitInterface)
   }
 

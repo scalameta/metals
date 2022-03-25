@@ -141,6 +141,12 @@ trait CommonMtagsEnrichments {
       range.startLine == range.endLine &&
       range.startCharacter == range.endCharacter
     }
+    def isEqual(other: s.Range): Boolean = {
+      range.startLine == other.startLine &&
+      range.startCharacter == other.startCharacter &&
+      range.endLine == other.endLine &&
+      range.endCharacter == other.endCharacter
+    }
     def encloses(other: s.Range): Boolean = {
       val startsBeforeOrAt =
         range.startLine < other.startLine ||

@@ -40,7 +40,11 @@ final class BuildTargetClasses(
   def findTestClassByName(
       name: String
   ): List[(String, b.BuildTargetIdentifier)] =
-    findClassesBy(_.testClasses.values.find(_ == name))
+    findClassesBy(
+      _.testClasses.values
+        .find(_.fullyQualifiedName == name)
+        .map(_.fullyQualifiedName)
+    )
 
   private def findClassesBy[A](
       f: Classes => Option[A]
@@ -115,7 +119,10 @@ final class BuildTargetClasses(
       symbol <-
         symbolFromClassName(className, List(Descriptor.Term, Descriptor.Type))
     } {
-      classes(target).testClasses.put(symbol, className)
+      // item.getFramework() can return null!
+      val framework = TestFramework(Option(item.getFramework()))
+      val testInfo = BuildTargetClasses.TestSymbolInfo(className, framework)
+      classes(target).testClasses.put(symbol, testInfo)
     }
   }
 
@@ -148,13 +155,31 @@ final class BuildTargetClasses(
   }
 }
 
+sealed abstract class TestFramework(val canResolveChildren: Boolean)
+object TestFramework {
+  def apply(framework: Option[String]): TestFramework = framework
+    .map {
+      case "JUnit" => JUnit4
+      case "munit" => MUnit
+      case _ => Unknown
+    }
+    .getOrElse(Unknown)
+}
+case object JUnit4 extends TestFramework(true)
+case object MUnit extends TestFramework(true)
+case object Unknown extends TestFramework(false)
+
 object BuildTargetClasses {
   type Symbol = String
   type FullyQualifiedClassName = String
 
+  final case class TestSymbolInfo(
+      fullyQualifiedName: FullyQualifiedClassName,
+      framework: TestFramework
+  )
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
-    val testClasses = new TrieMap[Symbol, FullyQualifiedClassName]()
+    val testClasses = new TrieMap[Symbol, TestSymbolInfo]()
 
     def isEmpty: Boolean = mainClasses.isEmpty && testClasses.isEmpty
   }
