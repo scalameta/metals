@@ -259,7 +259,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     s"""|/metals.json
         |{
         |  "app": {
-        |    "libraryDependencies" : ["org.scalameta::munit:0.7.29" ],
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
         |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}

@@ -26,9 +26,11 @@ class MunitTestFinder(trees: Trees) {
   ): Vector[TestCaseEntry] = {
     val uri = path.toURI
     val testcases = new mutable.ArrayBuffer[TestCaseEntry]()
+    // depending on the munit version test method is defined in different classes
     val occurences = doc.occurrences
       .filter(occ =>
-        occ.symbol.startsWith("munit/") && occ.symbol.contains("test")
+        occ.symbol.startsWith("munit/BaseFunSuite#test") ||
+          occ.symbol.startsWith("munit/FunSuite#test")
       )
       .toVector
 
