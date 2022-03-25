@@ -15,14 +15,14 @@ import scala.util.Try
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 import bloop.bloopgun.BloopgunCli
 import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
 import org.eclipse.lsp4j.MessageActionItem
-import org.eclipse.lsp4j.ShowDocumentParams
-import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.Position
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -38,7 +38,7 @@ import org.eclipse.lsp4j.services.LanguageClient
  */
 final class BloopServers(
     client: MetalsBuildClient,
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     tables: Tables,
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
@@ -101,7 +101,6 @@ final class BloopServers(
       userDefinedOld: Boolean,
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
-    // TODO the collection and display of errors in case something goes wrong
     val correctVersionRunning = expectedVersion == runningVersion
     val changedToNoVersion = userDefinedOld && !userDefinedNew
     val versionChanged = userDefinedNew && !correctVersionRunning
@@ -181,9 +180,16 @@ final class BloopServers(
 
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.openGlobalJsonFile =>
-        val showDocumentParams = new ShowDocumentParams()
-        showDocumentParams.setUri(bloopGlobalJsonFilePath.toURI.toString)
-        languageClient.showDocument(showDocumentParams).asScala.ignoreValue
+        val position = new Position(0, 0)
+        val range = new org.eclipse.lsp4j.Range(position, position)
+        val command = ClientCommands.GotoLocation.toExecuteCommandParams(
+          ClientCommands.WindowLocation(
+            bloopGlobalJsonFilePath.toURI.toString,
+            range
+          )
+        )
+        Future.successful(languageClient.metalsExecuteClientCommand(command))
+
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.useGlobalFile =>
         Future.successful(())
@@ -268,6 +274,7 @@ final class BloopServers(
       maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
+    // TODO the collection and display of errors in case something goes wrong
     val result =
       for { // if the requestedBloopJvmProperties and bloopGlobalJsonFilePath are defined
         requestedBloopJvmProperties <- maybeRequestedBloopJvmProperties
