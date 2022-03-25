@@ -299,8 +299,6 @@ object Messages {
   object BloopGlobalJsonFilePremodified {
     def applyAndRestart: MessageActionItem =
       new MessageActionItem("Apply and Restart Bloop")
-    def saveButNotRestart: MessageActionItem =
-      new MessageActionItem("Save for Later")
     def useGlobalFile: MessageActionItem =
       new MessageActionItem("Use the Global File's JVM Properties")
     def openGlobalJsonFile: MessageActionItem =
@@ -315,7 +313,6 @@ object Messages {
       params.setActions(
         List(
           applyAndRestart,
-          saveButNotRestart,
           useGlobalFile,
           openGlobalJsonFile
         ).asJava

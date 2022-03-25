@@ -1268,10 +1268,6 @@ class MetalsLanguageServer(
           workspaceSymbols.indexClasspath()
         }
 
-        //        val source = scala.io.Source.fromFile(bloopGlobalJsonPath.toUri)
-        //        val bloobGlobalJsonContent = try source.mkString finally source.close()
-        //        bloobGlobalJsonContent.parseJson.getAsJsonObject
-
         userConfig.fallbackScalaVersion.foreach { version =>
           if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
             val params =

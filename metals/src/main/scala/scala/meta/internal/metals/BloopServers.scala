@@ -20,7 +20,6 @@ import scala.meta.io.AbsolutePath
 import bloop.bloopgun.BloopgunCli
 import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
-import com.google.gson.Gson
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.ShowDocumentParams
 import org.eclipse.lsp4j.services.LanguageClient
@@ -127,37 +126,41 @@ final class BloopServers(
   }
 
   private def writeJVMPropertiesToBloopGlobalJsonFile(
-      bloopGlobalJsonFile: File,
+      bloopGlobalJsonFilePath: AbsolutePath,
+      bloopCreatedByMetalsFilePath: AbsolutePath,
       requestedBloopJvmProperties: List[String],
-      javaHome: String
+      maybeJavaHome: Option[String]
   ): Try[Unit] = Try {
-    val bw = new BufferedWriter(
-      new FileWriter(bloopGlobalJsonFile)
+
+    val javaOptionsString =
+      s"\"javaOptions\": [${requestedBloopJvmProperties.map(property => s"\"$property\"").mkString(", ")}]"
+
+    val jvmPropertiesString = maybeJavaHome
+      .map { javaHome =>
+        s"""|{
+            | $javaOptionsString,
+            | \"javaHome\": \"$javaHome\"
+            |}""".stripMargin
+      }
+      .getOrElse(s"{$javaOptionsString}")
+    bloopGlobalJsonFilePath.writeText(jvmPropertiesString)
+    bloopCreatedByMetalsFilePath.writeText(
+      bloopGlobalJsonFilePath.toNIO.toFile.lastModified().toString
     )
-    val text = new Gson().toJson(
-      List("javaOptions" -> requestedBloopJvmProperties, "javaHome" -> javaHome)
-    )
-    bw.write(text)
-    bw.close()
   }
 
-  private def getBloopGlobalJsonLastModifiedByMetalsTime: Long = Try {
-    val source = scala.io.Source.fromFile(
-      Paths
-        .get(System.getProperty("user.home"))
-        .resolve(".bloop/created_by_metals.lock")
-        .toFile
-    )
-    val value: Long = source.mkString.toLong
-    source.close()
-    value
+  private def getBloopGlobalJsonLastModifiedByMetalsTime(
+      bloopCreatedByMetalsFilePath: AbsolutePath
+  ): Long = Try {
+    bloopCreatedByMetalsFilePath.readText.toLong
   }.getOrElse(0)
 
   private def processUserPreferenceForBloopJvmProperties(
       messageActionItem: MessageActionItem,
-      bloopGlobalJsonFile: File,
+      bloopGlobalJsonFilePath: AbsolutePath,
+      bloopCreatedByMetalsFilePath: AbsolutePath,
       requestedBloopJvmProperties: List[String],
-      javaHome: String,
+      maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
     messageActionItem match {
@@ -165,9 +168,10 @@ final class BloopServers(
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.applyAndRestart =>
         writeJVMPropertiesToBloopGlobalJsonFile(
-          bloopGlobalJsonFile,
+          bloopGlobalJsonFilePath,
+          bloopCreatedByMetalsFilePath,
           requestedBloopJvmProperties,
-          javaHome
+          maybeJavaHome
         ) match {
           case Failure(exception) => Future.failed(exception)
           case Success(_) =>
@@ -176,20 +180,9 @@ final class BloopServers(
         }
 
       case item
-          if item == Messages.BloopGlobalJsonFilePremodified.saveButNotRestart =>
-        writeJVMPropertiesToBloopGlobalJsonFile(
-          bloopGlobalJsonFile,
-          requestedBloopJvmProperties,
-          javaHome
-        ) match {
-          case Failure(exception) => Future.failed(exception)
-          case Success(_) => Future.successful(())
-        }
-
-      case item
           if item == Messages.BloopGlobalJsonFilePremodified.openGlobalJsonFile =>
         val showDocumentParams = new ShowDocumentParams()
-        showDocumentParams.setUri(bloopGlobalJsonFile.toURI.toString)
+        showDocumentParams.setUri(bloopGlobalJsonFilePath.toURI.toString)
         languageClient.showDocument(showDocumentParams).asScala.ignoreValue
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.useGlobalFile =>
@@ -198,15 +191,17 @@ final class BloopServers(
   }
 
   private def updateBloopGlobalJsonFileThenRestart(
-      bloopGlobalJsonFile: File,
+      bloopGlobalJsonFilePath: AbsolutePath,
+      bloopCreatedByMetalsFilePath: AbsolutePath,
       requestedBloopJvmProperties: List[String],
-      javaHome: String,
+      maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
     writeJVMPropertiesToBloopGlobalJsonFile(
-      bloopGlobalJsonFile,
+      bloopGlobalJsonFilePath,
+      bloopCreatedByMetalsFilePath,
       requestedBloopJvmProperties,
-      javaHome
+      maybeJavaHome
     ) match {
       case Failure(exception) => Future.failed(exception)
       case Success(_) =>
@@ -227,13 +222,30 @@ final class BloopServers(
 
   }
 
-  private def getBloopGlobalJsonFile(): Option[File] =
+  private def getBloopGlobalJsonFilePath(): Option[AbsolutePath] =
     Try {
-      Paths
-        .get(System.getProperty("user.home"))
-        .resolve(".bloop/bloop.json")
-        .toFile
+      AbsolutePath(
+        Paths
+          .get(System.getProperty("user.home"))
+          .resolve(".bloop/bloop.json")
+      )
     }.toOption
+
+  private def getBloopCreatedByMetalsFilePath(): Option[AbsolutePath] =
+    Try {
+      AbsolutePath(
+        Paths
+          .get(System.getProperty("user.home"))
+          .resolve(".bloop/created_by_metals.lock")
+      )
+    }.toOption
+
+  private def getBloopGlobalJsonLastModifiedTime(
+      bloopGlobalJsonFilePath: AbsolutePath
+  ): Long =
+    Try {
+      bloopGlobalJsonFilePath.toNIO.toFile.lastModified()
+    }.getOrElse(0)
 
   /**
    * First we check if the user requested to update the Bloop JVM properties through the extension.
@@ -256,50 +268,54 @@ final class BloopServers(
       maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
-
-    val result = for {
-      requestedBloopJvmProperties <- maybeRequestedBloopJvmProperties
-      javaHome <- maybeJavaHome
-      bloopGlobalJsonFile <- getBloopGlobalJsonFile()
-      bloopGlobalJsonLastModifiedTime <- Try(
-        bloopGlobalJsonFile.lastModified()
-      ).toOption
-      bloopGlobalJsonFileExists <- Try(bloopGlobalJsonFile.exists()).toOption
-    } yield
-      if (
-        maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties
-      ) // the properties are updated
+    val result =
+      for { // if the requestedBloopJvmProperties and bloopGlobalJsonFilePath are defined
+        requestedBloopJvmProperties <- maybeRequestedBloopJvmProperties
+        bloopGlobalJsonFilePath <- getBloopGlobalJsonFilePath()
+        bloopCreatedByMetalsFilePath <- getBloopCreatedByMetalsFilePath()
+      } yield
         if (
-          bloopGlobalJsonFileExists
-          && bloopGlobalJsonLastModifiedTime > getBloopGlobalJsonLastModifiedByMetalsTime
-        )
-          // the global json file was previously modified by the user through other means;
-          // therefore overwriting it requires user input
-          languageClient
-            .showMessageRequest(
-              Messages.BloopGlobalJsonFilePremodified.params()
+          maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties && requestedBloopJvmProperties.nonEmpty
+        ) // the properties are updated
+          if (
+            bloopGlobalJsonFilePath.exists &&
+            getBloopGlobalJsonLastModifiedTime(
+              bloopGlobalJsonFilePath
+            ) > getBloopGlobalJsonLastModifiedByMetalsTime(
+              bloopCreatedByMetalsFilePath
             )
-            .asScala
-            .flatMap {
-              processUserPreferenceForBloopJvmProperties(
-                _,
-                bloopGlobalJsonFile,
-                requestedBloopJvmProperties,
-                javaHome,
-                reconnect
-              )
-            }
-        else
-          // bloop global json file did not exist; or it was last modified by metals;
-          // hence it can get created or overwritten by Metals with no worries about overriding the user preferred settings
-          updateBloopGlobalJsonFileThenRestart(
-            bloopGlobalJsonFile,
-            requestedBloopJvmProperties,
-            javaHome,
-            reconnect
           )
-      else Future.successful(())
-    result.getOrElse(Future.successful())
+            // the global json file was previously modified by the user through other means;
+            // therefore overwriting it requires user input
+            languageClient
+              .showMessageRequest(
+                Messages.BloopGlobalJsonFilePremodified.params()
+              )
+              .asScala
+              .flatMap {
+                processUserPreferenceForBloopJvmProperties(
+                  _,
+                  bloopGlobalJsonFilePath,
+                  bloopCreatedByMetalsFilePath,
+                  requestedBloopJvmProperties,
+                  maybeJavaHome,
+                  reconnect
+                )
+              }
+          else
+            // bloop global json file did not exist; or it was last modified by metals;
+            // hence it can get created or overwritten by Metals with no worries about overriding the user preferred settings
+            updateBloopGlobalJsonFileThenRestart(
+              bloopGlobalJsonFilePath,
+              bloopCreatedByMetalsFilePath,
+              requestedBloopJvmProperties,
+              maybeJavaHome,
+              reconnect
+            )
+        else Future.successful(())
+
+    result.getOrElse(Future.successful(()))
+
   }
 
   private def connectToLauncher(
