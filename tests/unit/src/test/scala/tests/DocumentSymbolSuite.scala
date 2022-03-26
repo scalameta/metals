@@ -1,14 +1,9 @@
 package tests
 
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.DocumentSymbolProvider
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.{semanticdb => s}
 
 import tests.MetalsTestEnrichments._
@@ -28,23 +23,14 @@ abstract class DocumentSymbolSuite(
     input.scalaFiles.map { file =>
       ExpectTestCase(
         file,
-        { () =>
-          val buffers = Buffers()
-          buffers.put(file.file, file.code)
-          val buildTargets = new BuildTargets()
-          val selector =
-            new ScalaVersionSelector(
-              () =>
-                UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
-              buildTargets
-            )
+        () => {
+          val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
           val documentSymbolProvider = new DocumentSymbolProvider(
-            new Trees(
-              buildTargets,
-              buffers,
-              selector
-            )
+            trees
           )
+
+          // populate buffers
+          buffers.put(file.file, file.code)
 
           val documentSymbols = documentSymbolProvider
             .documentSymbols(file.file)

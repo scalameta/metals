@@ -216,7 +216,7 @@ class MetalsLanguageServer(
       compilations.pauseables
   )
   private val timerProvider: TimerProvider = new TimerProvider(time)
-  private val trees = new Trees(buildTargets, buffers, scalaVersionSelector)
+  private val trees = new Trees(buffers, scalaVersionSelector)
   private val documentSymbolProvider = new DocumentSymbolProvider(trees)
   private val onTypeFormattingProvider =
     new OnTypeFormattingProvider(buffers, trees, () => userConfig)

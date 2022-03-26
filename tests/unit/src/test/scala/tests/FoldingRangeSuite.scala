@@ -3,15 +3,10 @@ package tests
 import java.nio.file.Paths
 import java.util.UUID
 
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.parsing.FoldingRangeProvider
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
@@ -21,14 +16,7 @@ abstract class FoldingRangeSuite(
     scalaVersion: String,
     directory: String
 ) extends DirectoryExpectSuite(s"$directory/expect") {
-  private val buffers = Buffers()
-  private val buildTargets = new BuildTargets()
-  private val selector =
-    new ScalaVersionSelector(
-      () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
-      buildTargets
-    )
-  private val trees = new Trees(buildTargets, buffers, selector)
+  private val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
   private val foldingRangeProvider = new FoldingRangeProvider(trees, buffers)
 
   override def testCases(): List[ExpectTestCase] = {
