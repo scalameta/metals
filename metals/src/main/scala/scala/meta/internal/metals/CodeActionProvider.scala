@@ -21,13 +21,13 @@ final class CodeActionProvider(
     languageClient: MetalsLanguageClient
 )(implicit ec: ExecutionContext) {
 
-  private val extractMemberAction = new ExtractRenameMember(buffers, trees)
+  private val extractMemberAction = new ExtractRenameMember(trees)
 
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol(),
-    new StringActions(buffers, trees),
+    new StringActions(buffers),
     extractMemberAction,
     new SourceOrganizeImports(
       scalafixProvider,
@@ -38,10 +38,9 @@ final class CodeActionProvider(
     new OrganizeImportsQuickFix(
       scalafixProvider,
       buildTargets,
-      diagnostics,
-      languageClient
+      diagnostics
     ),
-    new InsertInferredType(trees, compilers),
+    new InsertInferredType(trees),
     new PatternMatchRefactor(trees),
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
@@ -69,8 +68,7 @@ final class CodeActionProvider(
   }
 
   def executeCommands(
-      codeActionCommandData: CodeActionCommandData,
-      token: CancelToken
+      codeActionCommandData: CodeActionCommandData
   ): Future[CodeActionCommandResult] = {
     codeActionCommandData match {
       case data: ExtractMemberDefinitionData =>

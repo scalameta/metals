@@ -156,8 +156,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
   private def getSingleClassPathInfo(
       path: Path,
       shortPath: Path,
-      maxFilenameSize: Int,
-      blankWarning: String
+      maxFilenameSize: Int
   ): String = {
     val filename = shortPath.toString()
     val padding = " " * (maxFilenameSize - filename.size)
@@ -182,15 +181,13 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
         path
     }
     if (classPath.nonEmpty) {
-      val blankWarning = " " * 9
       val maxFilenameSize =
         classPath.map(shortenPath(_).toString.length()).max + 5
       classPath.map(path =>
         getSingleClassPathInfo(
           path,
           shortenPath(path),
-          maxFilenameSize,
-          blankWarning
+          maxFilenameSize
         )
       )
     } else

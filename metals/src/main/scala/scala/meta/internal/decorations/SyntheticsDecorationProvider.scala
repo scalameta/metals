@@ -103,8 +103,7 @@ final class SyntheticsDecorationProvider(
             isHover = true,
             toHoverString(textDocument, params.textDocument.getUri()),
             PrinterSymtab.fromTextDocument(textDocument),
-            clientConfig.icons().rightArrow,
-            clientConfig.icons().ellipsis
+            clientConfig.icons().rightArrow
           )
           val syntheticsAtLine = for {
             synthetic <- textDocument.synthetics
@@ -129,7 +128,6 @@ final class SyntheticsDecorationProvider(
           if (syntheticsAtLine.size > 0) {
             if (clientConfig.isInlineDecorationProvider()) {
               createHoverAtPoint(
-                path,
                 syntheticsAtLine,
                 pcHover,
                 params.getPosition
@@ -189,7 +187,6 @@ final class SyntheticsDecorationProvider(
   }
 
   private def createHoverAtPoint(
-      path: AbsolutePath,
       syntheticsAtLine: Seq[(l.Range, String)],
       pcHover: Option[l.Hover],
       position: l.Position
@@ -407,8 +404,7 @@ final class SyntheticsDecorationProvider(
         isHover = false,
         toDecorationString(textDocument),
         PrinterSymtab.fromTextDocument(textDocument),
-        clientConfig.icons().rightArrow,
-        clientConfig.icons().ellipsis
+        clientConfig.icons().rightArrow
       )
 
       val decorations = for {

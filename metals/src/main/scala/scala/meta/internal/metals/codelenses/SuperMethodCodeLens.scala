@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.codelenses
 
-import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
@@ -18,7 +17,6 @@ import scala.meta.io.AbsolutePath
 import org.eclipse.{lsp4j => l}
 
 final class SuperMethodCodeLens(
-    implementationProvider: ImplementationProvider,
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     clientConfig: ClientConfiguration,

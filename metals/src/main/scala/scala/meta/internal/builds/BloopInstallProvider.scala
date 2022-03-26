@@ -1,7 +1,6 @@
 package scala.meta.internal.builds
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 /**
@@ -15,7 +14,6 @@ trait BloopInstallProvider { this: BuildTool =>
    */
   def bloopInstall(
       workspace: AbsolutePath,
-      languageClient: MetalsLanguageClient,
       systemProcess: List[String] => Future[WorkspaceLoadedStatus]
   ): Future[WorkspaceLoadedStatus] =
     systemProcess(bloopInstallArgs(workspace))

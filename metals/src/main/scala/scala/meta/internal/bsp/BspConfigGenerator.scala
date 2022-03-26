@@ -5,7 +5,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -20,7 +19,6 @@ import org.eclipse.lsp4j.MessageActionItem
 final class BspConfigGenerator(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
-    buildTools: BuildTools,
     shellRunner: ShellRunner
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(

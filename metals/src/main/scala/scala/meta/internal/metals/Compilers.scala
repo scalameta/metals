@@ -28,7 +28,6 @@ import scala.meta.pc.SymbolSearch
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -245,8 +244,7 @@ class Compilers(
   }
 
   def completionItemResolve(
-      item: CompletionItem,
-      token: CancelToken
+      item: CompletionItem
   ): Future[CompletionItem] = {
     for {
       data <- item.data
@@ -411,7 +409,7 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[SignatureHelp] =
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, _) =>
       pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
     }
 
@@ -485,7 +483,6 @@ class Compilers(
             workspaceFallback = Some(search)
           )
           newCompiler(
-            scalaTarget.scalac,
             scalaTarget,
             mtags,
             classpath,
@@ -542,7 +539,7 @@ class Compilers(
             statusBar.trackBlockingTask(
               s"${config.icons.sync}Loading presentation compiler"
             ) {
-              newCompiler(scalaTarget.scalac, scalaTarget, mtags, search)
+              newCompiler(scalaTarget, mtags, search)
             }
           }
         )
@@ -667,17 +664,16 @@ class Compilers(
       )
 
   def newCompiler(
-      scalac: ScalacOptionsItem,
       target: ScalaTarget,
       mtags: MtagsBinaries,
       search: SymbolSearch
   ): PresentationCompiler = {
-    val classpath = scalac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-    newCompiler(scalac, target, mtags, classpath, search)
+    val classpath =
+      target.scalac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
+    newCompiler(target, mtags, classpath, search)
   }
 
   def newCompiler(
-      scalac: ScalacOptionsItem,
       target: ScalaTarget,
       mtags: MtagsBinaries,
       classpath: Seq[Path],
@@ -685,10 +681,10 @@ class Compilers(
   ): PresentationCompiler = {
     newCompiler(
       mtags,
-      scalac.getOptions().asScala.toSeq,
+      target.scalac.getOptions().asScala.toSeq,
       classpath,
       search,
-      scalac.getTarget.getUri
+      target.scalac.getTarget.getUri
     )
   }
 

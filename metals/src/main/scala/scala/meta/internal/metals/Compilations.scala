@@ -92,7 +92,7 @@ final class Compilations(
   def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
     val targets = expand(paths)
     for {
-      result <- compileBatch(targets)
+      _ <- compileBatch(targets)
       _ <- compileWorksheets(paths)
     } yield ()
   }

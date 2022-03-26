@@ -12,8 +12,7 @@ class SemanticdbTreePrinter(
     isHover: Boolean,
     printSymbol: String => String,
     createSymtab: => PrinterSymtab,
-    rightArrow: String,
-    ellipsis: String
+    rightArrow: String
 ) {
 
   lazy val symtab = createSymtab

@@ -7,7 +7,9 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
 
 object TreeUtils {
-  def getTrees(scalaVersion: String): (Buffers, Trees) = getTrees(Some(scalaVersion))
+  def getTrees(scalaVersion: String): (Buffers, Trees) = getTrees(
+    Some(scalaVersion)
+  )
   def getTrees(scalaVersion: Option[String]): (Buffers, Trees) = {
     val buffers = Buffers()
     val buildTargets = new BuildTargets()

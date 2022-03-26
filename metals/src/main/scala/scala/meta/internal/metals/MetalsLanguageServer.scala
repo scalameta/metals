@@ -445,7 +445,6 @@ class MetalsLanguageServer(
         bspConfigGenerator = new BspConfigGenerator(
           workspace,
           languageClient,
-          buildTools,
           shellRunner
         )
         newProjectProvider = new NewProjectProvider(
@@ -457,7 +456,6 @@ class MetalsLanguageServer(
           workspace
         )
         bloopServers = new BloopServers(
-          workspace,
           buildClient,
           languageClient,
           tables,
@@ -569,7 +567,6 @@ class MetalsLanguageServer(
           )
 
         val goSuperLensProvider = new SuperMethodCodeLens(
-          implementationProvider,
           buffers,
           () => userConfig,
           clientConfig,
@@ -771,7 +768,6 @@ class MetalsLanguageServer(
             compilations,
             statusBar,
             diagnostics,
-            doctor,
             () => tables,
             languageClient,
             buildClient,
@@ -779,7 +775,6 @@ class MetalsLanguageServer(
             () => indexer.profiledIndexWorkspace(() => ()),
             () => workspace,
             () => focusedDocument,
-            buildTargets,
             () => buildTools,
             clientConfig.initialConfig,
             scalaVersionSelector
@@ -939,7 +934,6 @@ class MetalsLanguageServer(
         () => url,
         languageClient.underlying,
         () => server.reload(),
-        charset,
         clientConfig.icons,
         time,
         sh,
@@ -1594,7 +1588,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { token =>
       if (clientConfig.isCompletionItemResolve) {
-        compilers.completionItemResolve(item, token)
+        compilers.completionItemResolve(item)
       } else {
         Future.successful(item)
       }
@@ -1934,26 +1928,24 @@ class MetalsLanguageServer(
         }
 
       case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>
-        CancelTokens.future { token =>
-          val data = ExtractMemberDefinitionData(textDocumentParams)
-          val future = for {
-            result <- codeActionProvider.executeCommands(data, token)
-            future <- languageClient.applyEdit(result.edits).asScala
-          } yield {
-            result.goToLocation.foreach { location =>
-              languageClient.metalsExecuteClientCommand(
-                ClientCommands.GotoLocation.toExecuteCommandParams(
-                  ClientCommands.WindowLocation(
-                    location.getUri(),
-                    location.getRange()
-                  )
+        val data = ExtractMemberDefinitionData(textDocumentParams)
+        val future = for {
+          result <- codeActionProvider.executeCommands(data)
+          _ <- languageClient.applyEdit(result.edits).asScala
+        } yield {
+          result.goToLocation.foreach { location =>
+            languageClient.metalsExecuteClientCommand(
+              ClientCommands.GotoLocation.toExecuteCommandParams(
+                ClientCommands.WindowLocation(
+                  location.getUri(),
+                  location.getRange()
                 )
               )
-            }
+            )
           }
-
-          future.withObjectValue
         }
+
+        future.asJavaObject
       case cmd =>
         ServerCommands.all
           .find(command => command.id == cmd.getCommand())

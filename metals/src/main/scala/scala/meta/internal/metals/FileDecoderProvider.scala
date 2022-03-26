@@ -432,8 +432,7 @@ final class FileDecoderProvider(
     } yield foundSemanticDbPath.path
 
   private def findJavaBuildTargetMetadata(
-      targetId: BuildTargetIdentifier,
-      sourceFile: AbsolutePath
+      targetId: BuildTargetIdentifier
   ): Option[(String, AbsolutePath)] = {
     for {
       javaTarget <- buildTargets.javaTarget(targetId)
@@ -443,8 +442,7 @@ final class FileDecoderProvider(
   }
 
   private def findScalaBuildTargetMetadata(
-      targetId: BuildTargetIdentifier,
-      sourceFile: AbsolutePath
+      targetId: BuildTargetIdentifier
   ): Option[(String, AbsolutePath)] = {
     for {
       scalaTarget <- buildTargets.scalaTarget(targetId)
@@ -462,9 +460,9 @@ final class FileDecoderProvider(
       sourceRoot <- buildTargets.inverseSourceItem(sourceFile)
       (classDir, targetroot) <-
         if (sourceFile.isJava)
-          findJavaBuildTargetMetadata(targetId, sourceFile)
+          findJavaBuildTargetMetadata(targetId)
         else
-          findScalaBuildTargetMetadata(targetId, sourceFile)
+          findScalaBuildTargetMetadata(targetId)
     } yield BuildTargetMetadata(
       targetId,
       classDir.toAbsolutePath,

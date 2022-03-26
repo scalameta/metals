@@ -122,7 +122,7 @@ final class BuildTools(
     if (isSbt) SbtBuildTool.isSbtRelatedPath(workspace, path)
     else if (isGradle) GradleBuildTool.isGradleRelatedPath(workspace, path)
     else if (isMaven) MavenBuildTool.isMavenRelatedPath(workspace, path)
-    else if (isMill) MillBuildTool.isMillRelatedPath(workspace, path)
+    else if (isMill) MillBuildTool.isMillRelatedPath(path)
     else false
   }
 }

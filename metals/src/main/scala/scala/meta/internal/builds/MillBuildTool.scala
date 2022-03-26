@@ -121,7 +121,6 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
 
 object MillBuildTool {
   def isMillRelatedPath(
-      workspace: AbsolutePath,
       path: AbsolutePath
   ): Boolean = {
     val filename = path.toNIO.getFileName.toString

@@ -20,9 +20,7 @@ import org.eclipse.{lsp4j => l}
 
 sealed abstract class OrganizeImports(
     scalafixProvider: ScalafixProvider,
-    buildTargets: BuildTargets,
-    diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient
+    buildTargets: BuildTargets
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
@@ -83,9 +81,7 @@ class SourceOrganizeImports(
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
-      buildTargets,
-      diagnostics,
-      languageClient
+      buildTargets
     ) {
 
   override val kind: String = SourceOrganizeImports.kind
@@ -128,14 +124,11 @@ object SourceOrganizeImports {
 class OrganizeImportsQuickFix(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
-    diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient
+    diagnostics: Diagnostics
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
-      buildTargets,
-      diagnostics,
-      languageClient
+      buildTargets
     ) {
 
   override val kind: String = OrganizeImportsQuickFix.kind

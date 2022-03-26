@@ -101,7 +101,7 @@ final class Trees(
           case Parsed.Success(tree) =>
             trees(path) = tree
             List()
-          case _ => 
+          case _ =>
             scribe.info("Received unexpected parser result")
             List()
         }

@@ -12,7 +12,7 @@ import scala.meta.tokens.Token
 
 import org.eclipse.{lsp4j => l}
 
-class StringActions(buffers: Buffers, trees: Trees) extends CodeAction {
+class StringActions(buffers: Buffers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
