@@ -47,6 +47,7 @@ abstract class BaseLspSuite(
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
+  var onStartCompilation: () => Unit = () => ()
 
   protected def initializationOptions: Option[InitializationOptions] = None
 
@@ -118,7 +119,8 @@ abstract class BaseLspSuite(
       sh,
       time,
       initOptions,
-      mtagsResolver
+      mtagsResolver,
+      onStartCompilation
     )(ex)
     server.server.userConfig = this.userConfig
   }

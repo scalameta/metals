@@ -130,7 +130,8 @@ final class TestingServer(
     sh: ScheduledExecutorService,
     time: Time,
     initializationOptions: Option[InitializationOptions],
-    mtagsResolver: MtagsResolver
+    mtagsResolver: MtagsResolver,
+    onStartCompilation: () => Unit = () => ()
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
 
@@ -144,7 +145,8 @@ final class TestingServer(
     sh = sh,
     time = time,
     isReliableFileWatcher = System.getenv("CI") != "true",
-    mtagsResolver = mtagsResolver
+    mtagsResolver = mtagsResolver,
+    onStartCompilation = onStartCompilation
   )
   server.connectToLanguageClient(client)
 
