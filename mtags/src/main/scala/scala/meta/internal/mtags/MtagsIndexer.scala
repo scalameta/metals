@@ -10,6 +10,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
+import scala.annotation.nowarn
 
 trait MtagsIndexer {
   def language: Language
@@ -26,6 +27,7 @@ trait MtagsIndexer {
     )
   }
   // This method is intentionally non-final to allow accessing this stream directly without building a s.TextDocument.
+  @nowarn("msg=parameter value owner")
   def visitOccurrence(
       occ: s.SymbolOccurrence,
       info: s.SymbolInformation,

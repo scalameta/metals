@@ -106,7 +106,7 @@ class WorksheetProvider(
           ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
         val mdoc =
           embedded
-            .mdoc(scalaVersion, binary)
+            .mdoc(binary)
             .withClasspath(Embedded.scalaLibrary(scalaVersion).asJava)
         val ref = MdocRef(scalaVersion, mdoc)
         mdocs.update(MdocKey.Default, ref)
@@ -440,7 +440,6 @@ class WorksheetProvider(
           .asJava
         val mdoc = embedded
           .mdoc(
-            info.scalaVersion,
             ScalaVersions.scalaBinaryVersionFromFullVersion(info.scalaVersion)
           )
           .withClasspath(info.fullClasspath.distinct.asJava)

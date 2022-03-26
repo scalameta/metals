@@ -26,9 +26,7 @@ import mdoc.interfaces.Mdoc
  * - mdoc
  */
 final class Embedded(
-    statusBar: StatusBar,
-    mtagsResolver: MtagsResolver,
-    userConfig: () => UserConfiguration
+    statusBar: StatusBar
 ) extends Cancelable {
 
   private val mdocs: TrieMap[String, URLClassLoader] =
@@ -41,11 +39,11 @@ final class Embedded(
     mdocs.clear()
   }
 
-  def mdoc(scalaVersion: String, scalaBinaryVersion: String): Mdoc = {
+  def mdoc(scalaBinaryVersion: String): Mdoc = {
     val classloader = mdocs.getOrElseUpdate(
       scalaBinaryVersion,
       statusBar.trackSlowTask("Preparing worksheets") {
-        newMdocClassLoader(scalaVersion, scalaBinaryVersion)
+        newMdocClassLoader(scalaBinaryVersion)
       }
     )
     serviceLoader(
@@ -91,7 +89,6 @@ final class Embedded(
   }
 
   private def newMdocClassLoader(
-      scalaVersion: String,
       scalaBinaryVersion: String
   ): URLClassLoader = {
     val resolutionParams = ResolutionParams
@@ -103,7 +100,6 @@ final class Embedded(
     resolutionParams.addExclusion("io.get-coursier", "interface")
     val jars =
       Embedded.downloadMdoc(
-        scalaVersion,
         scalaBinaryVersion,
         Some(resolutionParams)
       )
@@ -211,7 +207,6 @@ object Embedded {
     )
 
   private def mdocDependency(
-      scalaVersion: String,
       scalaBinaryVersion: String
   ): Dependency = {
     Dependency.of(
@@ -277,12 +272,11 @@ object Embedded {
     downloadDependency(mtagsDependency(scalaVersion), Some(scalaVersion))
 
   def downloadMdoc(
-      scalaVersion: String,
       scalaBinaryVersion: String,
       resolutionParams: Option[ResolutionParams] = None
   ): List[Path] =
     downloadDependency(
-      mdocDependency(scalaVersion, scalaBinaryVersion),
+      mdocDependency(scalaBinaryVersion),
       scalaVersion = None,
       resolution = resolutionParams
     )

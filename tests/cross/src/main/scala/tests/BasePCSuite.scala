@@ -29,6 +29,7 @@ import coursierapi.Fetch
 import munit.Tag
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import scala.annotation.nowarn
 
 abstract class BasePCSuite extends BaseSuite {
 
@@ -107,9 +108,12 @@ abstract class BasePCSuite extends BaseSuite {
       snippetAutoIndent = false
     )
 
-  protected def extraDependencies(scalaVersion: String): Seq[Dependency] = Nil
+  @nowarn
+  protected def extraDependencies(scalaVersion: String): Seq[Dependency] =
+    Seq.empty
 
-  protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Nil
+  @nowarn
+  protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Seq.empty
 
   protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = None
 

@@ -19,6 +19,7 @@ import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
+import scala.annotation.nowarn
 
 object JavaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer =
@@ -88,10 +89,8 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
 
   def visitClass(
       cls: JavaClass,
-      name: String,
       pos: Position,
-      kind: Kind,
-      properties: Int
+      kind: Kind
   ): Unit = {
     tpe(
       cls.getName,
@@ -107,10 +106,8 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       val pos = toRangePosition(cls.lineNumber, cls.getName)
       visitClass(
         cls,
-        cls.getName,
         pos,
-        kind,
-        if (cls.isEnum) Property.ENUM.value else 0
+        kind
       )
       visitClasses(cls.getNestedClasses)
       visitMethods(cls)
@@ -118,13 +115,14 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       visitMembers(cls.getFields)
     }
 
+  @nowarn("msg=parameter value ctor")
   def visitConstructor(
       ctor: JavaConstructor,
       disambiguator: String,
       pos: Position,
       properties: Int
   ): Unit = {
-    super.ctor(disambiguator, pos, 0)
+    super.ctor(disambiguator, pos, properties)
   }
 
   def visitConstructors(cls: JavaClass): Unit = {
@@ -143,6 +141,7 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       }
   }
 
+  @nowarn("msg=parameter value method")
   def visitMethod(
       method: JavaMethod,
       name: String,

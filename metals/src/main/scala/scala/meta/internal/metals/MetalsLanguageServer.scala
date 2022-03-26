@@ -309,9 +309,7 @@ class MetalsLanguageServer(
     )
     embedded = register(
       new Embedded(
-        statusBar,
-        mtagsResolver,
-        () => userConfig
+        statusBar
       )
     )
     LanguageClientLogger.languageClient = Some(languageClient)

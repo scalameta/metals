@@ -50,7 +50,6 @@ object DownloadDependencies {
     scribe.info("Downloading mdoc")
     BuildInfo.supportedScala2Versions.foreach { scalaVersion =>
       Embedded.downloadMdoc(
-        scalaVersion,
         ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
       )
     }
