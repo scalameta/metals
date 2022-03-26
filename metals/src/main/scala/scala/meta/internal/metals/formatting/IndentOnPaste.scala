@@ -7,6 +7,7 @@ import scala.meta.internal.metals.UserConfiguration
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
+import scala.annotation.nowarn
 
 case class IndentOnPaste(userConfig: () => UserConfiguration)
     extends RangeFormatter {
@@ -146,6 +147,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       case (line, _) =>
         PastedLine.plainOrEmpty(normalizeSpacesAndTabs(line, opts))
     }
+    @nowarn("msg=The outer reference")
     val indents = converted.collect { case v: PastedLine.NonEmpty =>
       v.pastedIndent
     }

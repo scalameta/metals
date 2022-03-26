@@ -5,6 +5,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
+import scala.annotation.nowarn
 
 trait Keywords { this: MetalsGlobal =>
 
@@ -166,6 +167,7 @@ trait Keywords { this: MetalsGlobal =>
       case _ => false
     }
 
+  @nowarn("msg=The outer reference")
   private def isExpression(enclosing: List[Tree]): Boolean =
     enclosing match {
       case Ident(_) :: Template(_, _, _) :: _ => true

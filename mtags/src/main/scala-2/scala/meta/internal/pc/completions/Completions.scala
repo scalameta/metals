@@ -544,6 +544,7 @@ trait Completions { this: MetalsGlobal =>
       editRange: l.Range
   ): CompletionPosition = {
     object ExhaustiveMatch {
+      @nowarn("msg=The outer reference")
       def unapply(sel: Select): Option[CompletionPosition] = {
         if (!isMatchPrefix(sel.name)) None
         else if (

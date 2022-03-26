@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.{lsp4j => l}
+import scala.annotation.nowarn
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
@@ -420,6 +421,7 @@ class CompletionProvider(
           new DynamicFallbackCompletions(pos).print()
         case r => r
       }
+      @nowarn("msg=The outer reference")
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope

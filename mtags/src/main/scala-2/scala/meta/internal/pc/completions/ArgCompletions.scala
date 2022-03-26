@@ -6,6 +6,7 @@ import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
+import scala.annotation.nowarn
 
 trait ArgCompletions { this: MetalsGlobal =>
 
@@ -70,6 +71,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       isParamName(member.sym.name.toString().trim())
     }
 
+    @nowarn("msg=The outer reference")
     private def matchingTypesInScope(
         paramType: Type
     ): List[String] = {
