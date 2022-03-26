@@ -288,9 +288,13 @@ def lintingOptions(scalaVersion: String) = {
     // silence "The outer reference in this type test cannot be checked at run time." in mtags
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords).scala&msg=The outer reference:silent"
   )
+  // -Wconf is available only from 2.13.2
+  val commonFiltered =
+    if (scalaVersion == "2.13.1") common.filterNot(_.startsWith("-Wconf"))
+    else common
   crossSetting(
     scalaVersion,
-    if213 = unused213 :: common,
+    if213 = unused213 :: commonFiltered,
     if3 = unused3 :: common,
     if211 = List("-Ywarn-unused-import")
   )
