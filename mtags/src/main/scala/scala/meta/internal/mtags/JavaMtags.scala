@@ -3,6 +3,8 @@ package scala.meta.internal.mtags
 import java.io.StringReader
 import java.util.Comparator
 
+import scala.annotation.nowarn
+
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
@@ -19,7 +21,6 @@ import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
-import scala.annotation.nowarn
 
 object JavaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer =

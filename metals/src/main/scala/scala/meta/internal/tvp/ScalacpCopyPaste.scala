@@ -2,6 +2,7 @@ package scala.meta.internal.tvp
 
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.reflect.NameTransformer
 import scala.tools.scalap.scalax.rules.scalasig._
@@ -15,7 +16,6 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.internal.semanticdb.{Language => l}
 import scala.meta.internal.{semanticdb => s}
-import scala.annotation.nowarn
 
 /**
  * This class contains copy-pasted code from scala.meta.internal.scalacp with minor changes.

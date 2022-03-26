@@ -1,12 +1,12 @@
 package scala.meta.internal.pc.completions
 
+import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
-import scala.annotation.nowarn
 
 trait ArgCompletions { this: MetalsGlobal =>
 

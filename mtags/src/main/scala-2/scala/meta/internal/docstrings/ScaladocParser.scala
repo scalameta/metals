@@ -1,5 +1,6 @@
 package scala.meta.internal.docstrings
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.Map
 import scala.collection.Seq
@@ -7,7 +8,6 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 
 import scala.meta.Position
-import scala.annotation.nowarn
 
 /**
  * A fork of the Scaladoc parser in the Scala compiler with a few removed features.

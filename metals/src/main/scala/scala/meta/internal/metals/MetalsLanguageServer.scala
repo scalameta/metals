@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
@@ -95,7 +96,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
-import scala.annotation.nowarn
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,

@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import scala.annotation.nowarn
 import scala.{meta => m}
 
 import scala.meta.Name
@@ -10,7 +11,6 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.{semanticdb => s}
-import scala.annotation.nowarn
 
 trait MtagsIndexer {
   def language: Language

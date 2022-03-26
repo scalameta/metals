@@ -1,11 +1,11 @@
 package scala.meta.internal.pc
 
+import scala.annotation.nowarn
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
-import scala.annotation.nowarn
 
 trait Keywords { this: MetalsGlobal =>
 

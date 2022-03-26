@@ -3,6 +3,7 @@ package scala.meta.internal.pc.completions
 import java.net.URI
 import java.util.logging.Level
 
+import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.util.control.NonFatal
@@ -16,7 +17,6 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 
 import org.eclipse.{lsp4j => l}
-import scala.annotation.nowarn
 
 /**
  * Utility methods for completions.

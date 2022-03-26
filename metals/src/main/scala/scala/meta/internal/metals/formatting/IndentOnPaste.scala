@@ -1,4 +1,5 @@
 package scala.meta.internal.metals.formatting
+import scala.annotation.nowarn
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -7,7 +8,6 @@ import scala.meta.internal.metals.UserConfiguration
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-import scala.annotation.nowarn
 
 case class IndentOnPaste(userConfig: () => UserConfiguration)
     extends RangeFormatter {

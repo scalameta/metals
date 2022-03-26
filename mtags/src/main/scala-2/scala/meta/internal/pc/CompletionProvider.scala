@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -16,7 +17,6 @@ import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.{lsp4j => l}
-import scala.annotation.nowarn
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
