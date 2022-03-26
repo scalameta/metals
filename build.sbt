@@ -309,7 +309,8 @@ val sharedSettings = List(
     scalaVersion.value,
     if3 = List(
       "-language:implicitConversions",
-      "-Xtarget:8"
+      "-Xtarget:8",
+      "-Xsemanticdb"
     ),
     if211 = List("-Xexperimental")
   ),
