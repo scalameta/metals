@@ -18,7 +18,6 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 
@@ -35,7 +34,6 @@ final class ForwardingMetalsBuildClient(
     languageClient: MetalsLanguageClient,
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
-    buildTargetClasses: BuildTargetClasses,
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     time: Time,

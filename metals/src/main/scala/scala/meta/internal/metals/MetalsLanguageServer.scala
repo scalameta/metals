@@ -95,6 +95,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
+import scala.annotation.nowarn
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -407,7 +408,6 @@ class MetalsLanguageServer(
           buffers,
           languageClient,
           clientConfig.initialConfig.statistics,
-          () => userConfig,
           Option(workspace),
           trees
         )
@@ -415,7 +415,6 @@ class MetalsLanguageServer(
           languageClient,
           diagnostics,
           buildTargets,
-          buildTargetClasses,
           clientConfig,
           statusBar,
           time,
@@ -515,7 +514,6 @@ class MetalsLanguageServer(
           buildTargets
         )
         javaFormattingProvider = new JavaFormattingProvider(
-          workspace,
           buffers,
           () => userConfig,
           buildTargets
@@ -593,8 +591,7 @@ class MetalsLanguageServer(
           buffers,
           compilations,
           clientConfig,
-          trees,
-          semanticdbs
+          trees
         )
         syntheticsDecorator = new SyntheticsDecorationProvider(
           workspace,
@@ -946,6 +943,7 @@ class MetalsLanguageServer(
   }
 
   val isInitialized = new AtomicBoolean(false)
+  @nowarn("msg=parameter value params")
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
@@ -1400,6 +1398,7 @@ class MetalsLanguageServer(
       definitionOrReferences(position, token).map(_.locations)
     }
 
+  @nowarn("msg=parameter value position")
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
       position: TextDocumentPositionParams
@@ -1474,7 +1473,7 @@ class MetalsLanguageServer(
     CancelTokens { _ =>
       val path = params.getTextDocument.getUri.toAbsolutePath
       if (path.isJava)
-        javaFormattingProvider.format(params)
+        javaFormattingProvider.format()
       else
         onTypeFormattingProvider.format(params).asJava
     }

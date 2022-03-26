@@ -18,7 +18,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
@@ -57,8 +56,7 @@ final class RenameProvider(
     buffers: Buffers,
     compilations: Compilations,
     clientConfig: ClientConfiguration,
-    trees: Trees,
-    semanticDbs: Semanticdbs
+    trees: Trees
 )(implicit executionContext: ExecutionContext) {
 
   private val awaitingSave = new ConcurrentLinkedQueue[() => Unit]

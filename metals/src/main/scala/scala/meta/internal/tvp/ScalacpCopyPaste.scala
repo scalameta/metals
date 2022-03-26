@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.internal.semanticdb.{Language => l}
 import scala.meta.internal.{semanticdb => s}
+import scala.annotation.nowarn
 
 /**
  * This class contains copy-pasted code from scala.meta.internal.scalacp with minor changes.
@@ -22,6 +23,7 @@ import scala.meta.internal.{semanticdb => s}
  * If the `Scalacp` class was not final then we could avoid this copy-pasting. Changes are
  * documented with "// scalacp deviation" comments.
  */
+@nowarn("msg=parameter value node")
 class ScalacpCopyPaste(node: ScalaSigNode) {
   lazy val symbolCache = new ju.HashMap[Symbol, String]
   implicit class XtensionSymbolSSymbol(sym: Symbol) {
@@ -451,6 +453,7 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
       else sym.symbolName
     }
 
+    @nowarn("msg=parameter value linkMode")
     private def sig(linkMode: LinkMode): s.Signature =
       s.NoSignature // scalacp deviation
 

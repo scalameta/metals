@@ -26,7 +26,7 @@ case class RangeFormatterParams(
 trait RangeFormatter {
   def contribute(
       rangeFormatterParams: RangeFormatterParams
-  ): Option[List[TextEdit]] = None
+  ): Option[List[TextEdit]]
 }
 
 class RangeFormattingProvider(

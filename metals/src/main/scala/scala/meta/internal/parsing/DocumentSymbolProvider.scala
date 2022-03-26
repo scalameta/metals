@@ -35,6 +35,7 @@ class DocumentSymbolProvider(trees: Trees) {
       implicit val dialect = tree.origin match {
         case Origin.Parsed(_, dialect, _) => dialect
         case Origin.None => dialects.Scala213
+        case _ => dialects.Scala213
       }
       new SymbolTraverser().symbols(tree).asScala
     }

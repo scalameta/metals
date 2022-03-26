@@ -264,7 +264,7 @@ class WorksheetProvider(
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
           result.complete(
-            try Some(evaluateWorksheet(path, token))
+            try Some(evaluateWorksheet(path))
             catch onError
           )
         }
@@ -357,8 +357,7 @@ class WorksheetProvider(
   }
 
   private def evaluateWorksheet(
-      path: AbsolutePath,
-      token: CancelToken
+      path: AbsolutePath
   ): EvaluatedWorksheet = {
     val mdoc = getMdoc(path)
     val input = path.toInputFromBuffers(buffers)
@@ -468,6 +467,7 @@ object WorksheetProvider {
   }
   final case class MdocRef(scalaVersion: String, value: Mdoc)
 
+  // TODO
   def worksheetScala3Adjustments(
       originInput: Input.VirtualFile,
       path: AbsolutePath

@@ -4,7 +4,9 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
+import scala.annotation.nowarn
 
+@nowarn("msg=parameter value")
 trait TreeViewProvider {
   val Project = TreeViewProvider.Project
   val Build = TreeViewProvider.Build

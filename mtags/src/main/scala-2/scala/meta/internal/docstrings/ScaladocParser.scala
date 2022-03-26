@@ -7,6 +7,7 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 
 import scala.meta.Position
+import scala.annotation.nowarn
 
 /**
  * A fork of the Scaladoc parser in the Scala compiler with a few removed features.
@@ -1372,7 +1373,8 @@ object ScaladocParser {
       }
     }
 
-    def reportError(pos: Position, message: String): Unit = {}
+    @nowarn
+    def reportError(pos: Position, message: String): Unit = ()
   }
 
   sealed class CharReader(buffer: String) { reader =>

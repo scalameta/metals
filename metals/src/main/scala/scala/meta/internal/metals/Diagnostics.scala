@@ -43,7 +43,6 @@ final class Diagnostics(
     buffers: Buffers,
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
-    config: () => UserConfiguration,
     workspace: Option[AbsolutePath],
     trees: Trees
 ) {
@@ -220,7 +219,7 @@ final class Diagnostics(
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <- toFreshDiagnostic(edit, uri, diagnostic, snapshot)
+      freshDiagnostic <- toFreshDiagnostic(edit, diagnostic, snapshot)
     } {
       all.add(freshDiagnostic)
     }
@@ -248,7 +247,6 @@ final class Diagnostics(
   // Only needed when merging syntax errors with type errors.
   private def toFreshDiagnostic(
       edit: TokenEditDistance,
-      uri: String,
       d: Diagnostic,
       snapshot: Input
   ): Option[Diagnostic] = {

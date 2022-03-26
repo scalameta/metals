@@ -16,6 +16,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 
 import org.eclipse.{lsp4j => l}
+import scala.annotation.nowarn
 
 /**
  * Utility methods for completions.
@@ -352,6 +353,7 @@ trait Completions { this: MetalsGlobal =>
     /**
      * Returns false if this member should be excluded from completion items.
      */
+    @nowarn
     def isCandidate(member: Member): Boolean = true
 
     /**
@@ -378,6 +380,7 @@ trait Completions { this: MetalsGlobal =>
     /**
      * Returns true if this member should be sorted at the top of completion items.
      */
+    @nowarn
     def isPrioritized(m: Member): Boolean = true
 
     /**

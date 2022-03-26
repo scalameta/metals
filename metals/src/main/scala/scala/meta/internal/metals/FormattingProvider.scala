@@ -205,7 +205,7 @@ final class FormattingProvider(
 
   private def handleMissingFile(path: AbsolutePath): Future[Boolean] = {
     if (!tables.dismissedNotifications.CreateScalafmtFile.isDismissed) {
-      val params = MissingScalafmtConf.params(path)
+      val params = MissingScalafmtConf.params()
       client.showMessageRequest(params).asScala.map { item =>
         if (item == MissingScalafmtConf.createFile) {
           Files.createDirectories(path.toNIO.getParent)

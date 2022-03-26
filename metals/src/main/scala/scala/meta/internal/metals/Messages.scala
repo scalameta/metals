@@ -498,7 +498,7 @@ object Messages {
     def createScalafmtConfMessage: String =
       s"Unable to format since this workspace has no .scalafmt.conf file. " +
         s"To fix this problem, create an empty .scalafmt.conf and try again."
-    def params(path: AbsolutePath): ShowMessageRequestParams = {
+    def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(createScalafmtConfMessage)
       params.setType(MessageType.Error)

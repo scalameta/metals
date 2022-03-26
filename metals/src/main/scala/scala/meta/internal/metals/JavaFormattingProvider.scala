@@ -24,7 +24,6 @@ import org.eclipse.text.edits.MalformedTreeException
 import org.eclipse.{lsp4j => l}
 
 final class JavaFormattingProvider(
-    workspace: AbsolutePath,
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     buildTargets: BuildTargets
@@ -125,11 +124,7 @@ final class JavaFormattingProvider(
     runFormat(path, input, options, range.toMeta(input)).asJava
   }
 
-  def format(
-      params: l.DocumentOnTypeFormattingParams
-  ): util.List[l.TextEdit] = {
-    Nil.asJava
-  }
+  def format(): util.List[l.TextEdit] = java.util.Collections.emptyList()
 
   private def runFormat(
       path: AbsolutePath,
