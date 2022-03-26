@@ -3,8 +3,6 @@ package scala.meta.internal.mtags
 import java.io.StringReader
 import java.util.Comparator
 
-import scala.annotation.nowarn
-
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
@@ -116,7 +114,6 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       visitMembers(cls.getFields)
     }
 
-  @nowarn("msg=parameter value ctor")
   def visitConstructor(
       ctor: JavaConstructor,
       disambiguator: String,
@@ -142,7 +139,6 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       }
   }
 
-  @nowarn("msg=parameter value method")
   def visitMethod(
       method: JavaMethod,
       name: String,

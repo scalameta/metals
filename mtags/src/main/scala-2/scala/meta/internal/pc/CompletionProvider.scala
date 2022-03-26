@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.{util => ju}
 
-import scala.annotation.nowarn
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -421,7 +420,6 @@ class CompletionProvider(
           new DynamicFallbackCompletions(pos).print()
         case r => r
       }
-      @nowarn("msg=The outer reference")
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope

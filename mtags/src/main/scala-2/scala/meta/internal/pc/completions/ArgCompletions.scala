@@ -1,6 +1,5 @@
 package scala.meta.internal.pc.completions
 
-import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 
 import scala.meta.internal.pc.Identifier
@@ -71,7 +70,6 @@ trait ArgCompletions { this: MetalsGlobal =>
       isParamName(member.sym.name.toString().trim())
     }
 
-    @nowarn("msg=The outer reference")
     private def matchingTypesInScope(
         paramType: Type
     ): List[String] = {

@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import scala.annotation.nowarn
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -167,7 +166,6 @@ trait Keywords { this: MetalsGlobal =>
       case _ => false
     }
 
-  @nowarn("msg=The outer reference")
   private def isExpression(enclosing: List[Tree]): Boolean =
     enclosing match {
       case Ident(_) :: Template(_, _, _) :: _ => true

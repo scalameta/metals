@@ -1,6 +1,5 @@
 package scala.meta.internal.mtags
 
-import scala.annotation.nowarn
 import scala.{meta => m}
 
 import scala.meta.Name
@@ -27,7 +26,6 @@ trait MtagsIndexer {
     )
   }
   // This method is intentionally non-final to allow accessing this stream directly without building a s.TextDocument.
-  @nowarn("msg=parameter value owner")
   def visitOccurrence(
       occ: s.SymbolOccurrence,
       info: s.SymbolInformation,

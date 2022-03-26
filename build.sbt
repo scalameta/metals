@@ -279,7 +279,14 @@ def lintingOptions(scalaVersion: String) = {
   val common = List(
     // desugaring of for yield caused pattern var to complain
     // https://github.com/scala/bug/issues/10287
-    "-Wconf:msg=parameter value .+ in anonymous function:silent"
+    "-Wconf:msg=parameter value .+ in anonymous function:silent",
+    // silence unused parameters in mtags
+    "-Wconf:src=*.ScaladocParser.scala&msg=in method reportError:silent",
+    "-Wconf:src=*.Completions.scala&msg=in method (isCandidate|isPrioritized):silent",
+    "-Wconf:src=*.JavaMtags.scala&msg=in method (visitConstructor|visitMethod):silent",
+    "-Wconf:src=*.MtagsIndexer.scala&msg=in method visitOccurrence:silent",
+    // silence "The outer reference in this type test cannot be checked at run time." in mtags
+    "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords).scala&msg=The outer reference:silent"
   )
   crossSetting(
     scalaVersion,

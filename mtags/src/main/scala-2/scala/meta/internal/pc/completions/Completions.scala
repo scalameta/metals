@@ -3,7 +3,6 @@ package scala.meta.internal.pc.completions
 import java.net.URI
 import java.util.logging.Level
 
-import scala.annotation.nowarn
 import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.util.control.NonFatal
@@ -353,7 +352,6 @@ trait Completions { this: MetalsGlobal =>
     /**
      * Returns false if this member should be excluded from completion items.
      */
-    @nowarn
     def isCandidate(member: Member): Boolean = true
 
     /**
@@ -380,7 +378,6 @@ trait Completions { this: MetalsGlobal =>
     /**
      * Returns true if this member should be sorted at the top of completion items.
      */
-    @nowarn
     def isPrioritized(m: Member): Boolean = true
 
     /**
@@ -544,7 +541,6 @@ trait Completions { this: MetalsGlobal =>
       editRange: l.Range
   ): CompletionPosition = {
     object ExhaustiveMatch {
-      @nowarn("msg=The outer reference")
       def unapply(sel: Select): Option[CompletionPosition] = {
         if (!isMatchPrefix(sel.name)) None
         else if (

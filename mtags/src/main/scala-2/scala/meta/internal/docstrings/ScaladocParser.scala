@@ -1,6 +1,5 @@
 package scala.meta.internal.docstrings
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.Map
 import scala.collection.Seq
@@ -1373,7 +1372,6 @@ object ScaladocParser {
       }
     }
 
-    @nowarn
     def reportError(pos: Position, message: String): Unit = ()
   }
 
