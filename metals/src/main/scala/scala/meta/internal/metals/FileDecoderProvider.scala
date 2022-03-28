@@ -145,7 +145,7 @@ final class FileDecoderProvider(
    * metalsDecode:file:///workspacePath/buildTargetName.metals-buildtarget
    */
   def decodedFileContents(uriAsStr: String): Future[DecoderResponse] = {
-    Try(URI.create(uriAsStr)) match {
+    Try(URI.create(URIEncoderDecoder.encode(uriAsStr))) match {
       case Success(uri) =>
         uri.getScheme() match {
           case "jar" => Future { decodeJar(uriAsStr) }
@@ -269,7 +269,9 @@ final class FileDecoderProvider(
 
   private def decodeBuildTarget(uri: URI): DecoderResponse = {
     val targetName =
-      uri.toString.stripSuffix(".metals-buildtarget").split('/').last
+      URIEncoderDecoder.decode(
+        uri.toString.stripSuffix(".metals-buildtarget").split('/').last
+      )
     val text =
       new BuildTargetInfo(buildTargets).buildTargetDetails(targetName)
     DecoderResponse.success(uri, text)

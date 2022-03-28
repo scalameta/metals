@@ -6,6 +6,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 import tests.BaseLspSuite
+import tests.QuickBuildLayout
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 
@@ -362,17 +363,17 @@ class FileDecoderProviderLspSuite
 
   checkBuildTarget(
     "buildtarget",
-    SbtBuildLayout(
+    QuickBuildLayout(
       s"""|/metals.json
           |{
-          |  "a": {
+          |  "a[2.13.8]": {
           |    "scalaVersion": "${V.scala3}"
           |  },
           |  "b": {
           |    "scalaVersion": "${V.scala3}"
           |  }
           |}
-          |/a/src/main/scala/Main.scala
+          |/a[2.13.8]/src/main/scala/Main.scala
           |package a
           |class A {
           |  def foo(): Unit = ()
@@ -385,7 +386,7 @@ class FileDecoderProviderLspSuite
           |""".stripMargin,
       V.scala3
     ),
-    "a", // buildTarget, see: SbtBuildLayout
+    "a[2.13.8]", // buildTarget, see: SbtBuildLayout
     Right(FileDecoderProviderLspSuite.buildTargetResponse),
     result =>
       FileDecoderProviderLspSuite.filterSections(
@@ -1305,13 +1306,13 @@ object FileDecoderProviderLspSuite {
 
   def buildTargetResponse: String =
     s"""|Target
-        |  a
+        |  a[2.13.8]
         |
         |Scala Version
         |  ${V.scala3}
         |
         |Base Directory
-        |  file://@workspace/a/""".stripMargin
+        |  file://@workspace/a[2.13.8]/""".stripMargin
 
   def sbtBuildTargetResponse: String =
     s"""|Target

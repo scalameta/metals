@@ -100,7 +100,10 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       )
     })
     commonInfo.foreach(info => {
-      output ++= getSection("Base Directory", List(info.baseDirectory))
+      output ++= getSection(
+        "Base Directory",
+        List(URIEncoderDecoder.decode(info.baseDirectory))
+      )
       output ++= getSection("Source Directories", getSources(info))
     })
 
