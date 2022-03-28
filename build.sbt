@@ -285,8 +285,8 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.Completions.scala&msg=in method (isCandidate|isPrioritized):silent",
     "-Wconf:src=*.JavaMtags.scala&msg=in method (visitConstructor|visitMethod):silent",
     "-Wconf:src=*.MtagsIndexer.scala&msg=in method visitOccurrence:silent",
-    // silence "The outer reference in this type test cannot be checked at run time." in mtags
-    "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords).scala&msg=The outer reference:silent"
+    // silence "The outer reference in this type test cannot be checked at run time."
+    "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent"
   )
   // -Wconf is available only from 2.13.2
   val commonFiltered =

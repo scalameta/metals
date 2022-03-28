@@ -108,11 +108,11 @@ abstract class BasePCSuite extends BaseSuite {
       snippetAutoIndent = false
     )
 
-  @nowarn
+  @nowarn("msg=parameter value scalaVersion")
   protected def extraDependencies(scalaVersion: String): Seq[Dependency] =
     Seq.empty
 
-  @nowarn
+  @nowarn("msg=parameter value classpath")
   protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Seq.empty
 
   protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = None

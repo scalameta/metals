@@ -1,5 +1,4 @@
 package scala.meta.internal.metals.formatting
-import scala.annotation.nowarn
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -147,7 +146,6 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       case (line, _) =>
         PastedLine.plainOrEmpty(normalizeSpacesAndTabs(line, opts))
     }
-    @nowarn("msg=The outer reference")
     val indents = converted.collect { case v: PastedLine.NonEmpty =>
       v.pastedIndent
     }

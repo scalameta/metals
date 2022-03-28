@@ -100,12 +100,14 @@ final class Trees(
             )
           case Parsed.Success(tree) =>
             trees(path) = tree
-            List()
-          case _ =>
-            scribe.info("Received unexpected parser result")
-            List()
+            List.empty
+          case other =>
+            scribe.error(
+              s"Received unexpected parser result of class ${other.getClass().getSimpleName()}"
+            )
+            List.empty
         }
-      case _ => List()
+      case _ => List.empty
     }
   }
 
