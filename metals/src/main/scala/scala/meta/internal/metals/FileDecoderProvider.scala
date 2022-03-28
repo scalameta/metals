@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.net.URI
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import javax.annotation.Nullable
 
@@ -630,4 +631,14 @@ final class FileDecoderProvider(
           DecoderResponse.success(path.toURI, pathInfo.path.toURI.toString())
         )
     }
+}
+
+object FileDecoderProvider {
+  def createBuildTargetURI(
+      workspace: AbsolutePath,
+      buildTargetName: String
+  ): URI =
+    URI.create(
+      s"metalsDecode:${URLEncoder.encode(s"file:///${workspace.filename}/${buildTargetName}.metals-buildtarget")}"
+    )
 }

@@ -1,5 +1,6 @@
 package tests.feature
 
+import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -438,12 +439,13 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       expected: Either[String, String],
       transformResult: String => String = identity
   ): Unit = {
-    val extension = "metals-buildtarget"
     test(testName) {
       for {
         _ <- initialize(input)
         result <- server.executeDecodeFileCommand(
-          s"metalsDecode:file://$workspace/$buildTarget.$extension"
+          FileDecoderProvider
+            .createBuildTargetURI(workspace, buildTarget)
+            .toString
         )
       } yield {
         assertEquals(
