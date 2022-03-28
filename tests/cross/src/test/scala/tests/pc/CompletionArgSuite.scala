@@ -275,7 +275,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     s"""|case class A(argument: Int)
         |object Main {
         |  def foo(argument: Int): A =
-        |    A(arg@@)
+        |    A(argu@@)
         |}
         |""".stripMargin,
     """|argument: Int
@@ -299,7 +299,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  val number2 = 2
         |  val number4 = 4
         |  val number8 = 8
-        |  foo(ar@@)
+        |  foo(argu@@)
         |}
         |""".stripMargin,
     """|argument = : Int
@@ -312,7 +312,6 @@ class CompletionArgSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|argument = : Int
-           |Calendar - java.util
            |""".stripMargin
     )
   )
