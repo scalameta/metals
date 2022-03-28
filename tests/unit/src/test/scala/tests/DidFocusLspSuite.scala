@@ -68,7 +68,8 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
     } yield ()
   }
 
-  test("497") {
+  // Ignore flaky test, see the details: https://github.com/scalameta/metals/pull/3752#issuecomment-1079878023
+  test("497".ignore) {
     cleanWorkspace()
     for {
       _ <- initialize(
