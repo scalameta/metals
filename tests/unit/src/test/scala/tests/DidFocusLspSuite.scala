@@ -89,7 +89,9 @@ class DidFocusWhileCompilingLspSuite
     super.beforeEach(context)
   }
 
-  test("497") {
+  test(
+    "Trigger compilation by didFocus when current compile may affect focused buffer"
+  ) {
     cleanWorkspace()
     for {
       _ <- initialize(
