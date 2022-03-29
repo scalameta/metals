@@ -3,6 +3,12 @@ import scala.util.Try
 
 object Scala3NightlyVersions {
 
+  val broken =
+    Set(
+      "3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY",
+      "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY"
+    ).flatMap(DottyVersion.parse)
+
   /**
    * Fetches last 5 nightly releases.
    * They should come at least after the last supported scala3 version
@@ -26,7 +32,7 @@ object Scala3NightlyVersions {
         .filter(_.endsWith("NIGHTLY"))
         .flatMap(DottyVersion.parse)
         .collect {
-          case v if v > lastVersion => v
+          case v if v > lastVersion && !broken.contains(v) => v
         }
         .toList
         .sorted
