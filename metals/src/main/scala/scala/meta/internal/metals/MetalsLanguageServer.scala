@@ -180,14 +180,14 @@ class MetalsLanguageServer(
     buildTargets
   )
 
-  private val compilationCallbacks = new Subject[Try[b.CompileResult]] {}
+  private val compilationSubject = new Subject[Try[b.CompileResult]]
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
     () => workspace,
     languageClient,
     () => testProvider.refreshTestSuites(),
-    compilationCallbacks,
+    compilationSubject,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -724,7 +724,7 @@ class MetalsLanguageServer(
           mtagsResolver,
           () => userConfig.javaHome
         )
-        compilationCallbacks.addObserver { _ =>
+        compilationSubject.subscribe { _ =>
           if (clientConfig.isDoctorVisibilityProvider())
             doctor.executeRefreshDoctor()
           else ()

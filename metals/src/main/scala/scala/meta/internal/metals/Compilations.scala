@@ -223,7 +223,7 @@ final class Compilations(
     val result = compilation.asScala
       .andThen { case result =>
         updateCompiledTargetState(result)
-        compilationCallbacks.notifyObservers(result)
+        compilationCallbacks.push(result)
 
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(
