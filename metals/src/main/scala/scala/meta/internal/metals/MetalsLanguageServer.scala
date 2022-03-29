@@ -1716,6 +1716,7 @@ class MetalsLanguageServer(
           .asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
+          doctor.onVisibilityDidChange(true)
           doctor.executeRunDoctor()
         }.asJavaObject
       case ServerCommands.ListBuildTargets() =>
@@ -1967,6 +1968,14 @@ class MetalsLanguageServer(
         Future.successful(()).asJavaObject
     }
   }
+
+  @JsonNotification("metals/doctorVisibilityDidChange")
+  def doctorVisibilityDidChange(
+      params: DoctorVisibilityDidChangeParams
+  ): CompletableFuture[Unit] =
+    Future {
+      doctor.onVisibilityDidChange(params.visible)
+    }.asJava
 
   @JsonRequest("metals/treeViewChildren")
   def treeViewChildren(

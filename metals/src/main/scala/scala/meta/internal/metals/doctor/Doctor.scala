@@ -40,6 +40,7 @@ final class Doctor(
     mtagsResolver: MtagsResolver,
     javaHome: () => Option[String]
 )(implicit ec: ExecutionContext) {
+  private val isVisible = new AtomicBoolean(false)
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
     new ProblemResolver(
@@ -49,6 +50,11 @@ final class Doctor(
       javaHome,
       () => clientConfig.isTestExplorerProvider()
     )
+
+  def onVisibilityDidChange(newState: Boolean): Unit = {
+    pprint.log(newState)
+    isVisible.set(newState)
+  }
 
   /**
    * Returns a full HTML page for the HTTP client.
@@ -114,7 +120,11 @@ final class Doctor(
         case DoctorFormat.Html => buildTargetsHtml()
       }
       val params = clientCommand.toExecuteCommandParams(output)
-      languageClient.metalsExecuteClientCommand(params)
+      val shouldDisplayForVsCode = (clientConfig.isVscode && isVisible.get())
+      pprint.log(shouldDisplayForVsCode)
+      if (shouldDisplayForVsCode || !clientConfig.isVscode) {
+        languageClient.metalsExecuteClientCommand(params)
+      }
     } else {
       httpServer() match {
         case Some(server) =>
@@ -539,3 +549,7 @@ final class Doctor(
   private val noBuildTargetRecTwo =
     "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
 }
+
+case class DoctorVisibilityDidChangeParams(
+    visible: Boolean
+)

@@ -162,6 +162,8 @@ case class ClientConfiguration(initialConfig: MetalsServerConfig) {
   def disableColorOutput(): Boolean =
     initializationOptions.disableColorOutput.getOrElse(false)
 
+  def isVscode: Boolean = MetalsServerConfig.isClientVscode
+
   def codeLenseRefreshSupport(): Boolean = {
     val codeLenseRefreshSupport: Option[Boolean] = for {
       capabilities <- clientCapabilities
