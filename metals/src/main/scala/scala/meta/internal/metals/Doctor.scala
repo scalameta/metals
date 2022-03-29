@@ -21,6 +21,7 @@ import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.{lsp4j => l}
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -276,6 +277,26 @@ final class Doctor(
     ujson.write(results)
   }
 
+  private def gotoBuildTargetCommand(
+      workspace: AbsolutePath,
+      buildTargetName: String
+  ): String = {
+    val uriAsStr = FileDecoderProvider
+      .createBuildTargetURI(workspace, buildTargetName)
+      .toString
+    clientConfig
+      .commandInHtmlFormat()
+      .map(format => {
+        val range = new l.Range(
+          new l.Position(0, 0),
+          new l.Position(0, 0)
+        )
+        val location = ClientCommands.WindowLocation(uriAsStr, range)
+        ClientCommands.GotoLocation.toCommandLink(location, format)
+      })
+      .getOrElse(uriAsStr)
+  }
+
   private def resetChoiceCommand(choice: String): String = {
     val param = s"""["$choice"]"""
     s"command:metals.reset-choice?${URLEncoder.encode(param, StandardCharsets.UTF_8.name())}"
@@ -377,7 +398,7 @@ final class Doctor(
       .foreach { targetInfo =>
         val center = "style='text-align: center'"
         html.element("tr")(
-          _.element("td")(_.text(targetInfo.name))
+          _.element("td")(_.link(targetInfo.gotoCommand, targetInfo.name))
             .element("td")(_.text(targetInfo.targetType))
             .element("td", center)(
               _.text(targetInfo.compilationStatus.explanation)
@@ -444,6 +465,7 @@ final class Doctor(
       else DoctorStatus.error
     DoctorTargetInfo(
       javaTarget.displayName,
+      gotoBuildTargetCommand(workspace, javaTarget.displayName),
       javaTarget.dataKind,
       javaTarget.baseDirectory,
       "Java",
@@ -511,6 +533,7 @@ final class Doctor(
       else None
     DoctorTargetInfo(
       scalaTarget.displayName,
+      gotoBuildTargetCommand(workspace, scalaTarget.displayName),
       scalaTarget.dataKind,
       scalaTarget.baseDirectory,
       targetType,

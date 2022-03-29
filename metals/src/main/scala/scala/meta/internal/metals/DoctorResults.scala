@@ -46,6 +46,7 @@ object DoctorStatus {
 
 final case class DoctorTargetInfo(
     name: String,
+    gotoCommand: String,
     dataKind: String,
     baseDirectory: String,
     targetType: String,
@@ -60,6 +61,7 @@ final case class DoctorTargetInfo(
   def toJson: Obj =
     ujson.Obj(
       "buildTarget" -> name,
+      "gotoCommand" -> gotoCommand,
       "compilationStatus" -> compilationStatus.explanation,
       "targetType" -> targetType,
       "diagnostics" -> diagnosticsStatus.explanation,
