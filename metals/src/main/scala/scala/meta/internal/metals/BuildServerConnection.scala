@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
+import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -197,6 +198,20 @@ class BuildServerConnection private (
       params: DependencySourcesParams
   ): Future[DependencySourcesResult] = {
     register(server => server.buildTargetDependencySources(params)).asScala
+  }
+
+  def buildTargetInverseSources(
+      params: InverseSourcesParams
+  ): Future[InverseSourcesResult] = {
+    if (initialConnection.capabilities.getInverseSourcesProvider()) {
+      register(server => server.buildTargetInverseSources(params)).asScala
+    } else {
+      scribe.warn(
+        s"${initialConnection.displayName} does not support `buildTarget/inverseSources`, unable to fetch targets owning source."
+      )
+      val empty = new InverseSourcesResult(Collections.emptyList)
+      Future.successful(empty)
+    }
   }
 
   private val cancelled = new AtomicBoolean(false)
