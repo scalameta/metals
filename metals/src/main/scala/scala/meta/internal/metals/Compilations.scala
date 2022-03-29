@@ -20,7 +20,8 @@ final class Compilations(
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
-    compilationCallbacks: Subject[Unit],
+    refreshTestSuites: () => Unit,
+    compilationCallbacks: Subject[Try[b.CompileResult]],
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
 )(implicit ec: ExecutionContext) {
@@ -222,12 +223,13 @@ final class Compilations(
     val result = compilation.asScala
       .andThen { case result =>
         updateCompiledTargetState(result)
+        compilationCallbacks.notifyObservers(result)
 
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(
           targets,
           () => {
-            compilationCallbacks.notifyObservers()
+            refreshTestSuites()
             if (targets.exists(isCurrentlyFocused)) {
               languageClient.refreshModel()
             }

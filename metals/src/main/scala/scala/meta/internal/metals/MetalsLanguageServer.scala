@@ -22,6 +22,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -179,12 +180,13 @@ class MetalsLanguageServer(
     buildTargets
   )
 
-  private val compilationCallbacks = new Subject[Unit] {}
+  private val compilationCallbacks = new Subject[Try[b.CompileResult]] {}
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
     () => workspace,
     languageClient,
+    () => testProvider.refreshTestSuites(),
     compilationCallbacks,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
@@ -614,7 +616,6 @@ class MetalsLanguageServer(
           () => userConfig,
           trees
         )
-
         testProvider = new TestSuitesProvider(
           buildTargets,
           buildTargetClasses,
@@ -626,12 +627,6 @@ class MetalsLanguageServer(
           () => userConfig,
           languageClient
         )
-
-        compilationCallbacks.addObserver { _ =>
-          testProvider.refreshTestSuites()
-          ()
-        }
-
         semanticDBIndexer = new SemanticdbIndexer(
           List(
             referencesProvider,
