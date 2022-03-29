@@ -22,7 +22,6 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -167,6 +166,7 @@ class MetalsLanguageServer(
   buildTargets.addData(mainBuildTargetsData)
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
+  private var doctor: Doctor = _
 
   private val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
@@ -180,14 +180,17 @@ class MetalsLanguageServer(
     buildTargets
   )
 
-  private val compilationSubject = new Subject[Try[b.CompileResult]]
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
     () => workspace,
     languageClient,
     () => testProvider.refreshTestSuites(),
-    compilationSubject,
+    () => {
+      if (clientConfig.isDoctorVisibilityProvider())
+        doctor.executeRefreshDoctor()
+      else ()
+    },
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -280,7 +283,6 @@ class MetalsLanguageServer(
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
-  private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
@@ -724,11 +726,6 @@ class MetalsLanguageServer(
           mtagsResolver,
           () => userConfig.javaHome
         )
-        compilationSubject.subscribe { _ =>
-          if (clientConfig.isDoctorVisibilityProvider())
-            doctor.executeRefreshDoctor()
-          else ()
-        }
 
         fileDecoderProvider = new FileDecoderProvider(
           workspace,
