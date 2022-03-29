@@ -281,10 +281,10 @@ def lintingOptions(scalaVersion: String) = {
     // https://github.com/scala/bug/issues/10287
     "-Wconf:msg=parameter value .+ in anonymous function:silent",
     // silence unused parameters in mtags
-    "-Wconf:src=*.ScaladocParser.scala&msg=in method reportError:silent",
-    "-Wconf:src=*.Completions.scala&msg=in method (isCandidate|isPrioritized):silent",
-    "-Wconf:src=*.JavaMtags.scala&msg=in method (visitConstructor|visitMethod):silent",
-    "-Wconf:src=*.MtagsIndexer.scala&msg=in method visitOccurrence:silent",
+    "-Wconf:src=*.ScaladocParser.scala&msg=parameter value (pos|message) in method reportError:silent",
+    "-Wconf:src=*.Completions.scala&msg=parameter value (member|m) in method (isCandidate|isPrioritized):silent",
+    "-Wconf:src=*.JavaMtags.scala&msg=parameter value (ctor|method) in method (visitConstructor|visitMethod):silent",
+    "-Wconf:src=*.MtagsIndexer.scala&msg=parameter value owner in method visitOccurrence:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent"
   )

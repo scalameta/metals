@@ -467,10 +467,8 @@ object WorksheetProvider {
   }
   final case class MdocRef(scalaVersion: String, value: Mdoc)
 
-  // TODO
-  def worksheetScala3Adjustments(
-      originInput: Input.VirtualFile,
-      path: AbsolutePath
+  def worksheetScala3AdjustmentsForPC(
+      originInput: Input.VirtualFile
   ): Option[(Input.VirtualFile, AdjustLspData)] = {
     val ident = "  "
     val withOuter = s"""|object worksheet{
@@ -488,16 +486,14 @@ object WorksheetProvider {
   }
 
   def worksheetScala3Adjustments(
-      originInput: Input.VirtualFile,
-      uri: String
+      originInput: Input.VirtualFile
   ): Option[(Input.VirtualFile, Position => Position, AdjustLspData)] = {
-    worksheetScala3Adjustments(originInput, uri.toAbsolutePath).map {
-      case (input, adjust) =>
-        def adjustRequest(position: Position) = new Position(
-          position.getLine() + 1,
-          position.getCharacter() + 2
-        )
-        (input, adjustRequest, adjust)
+    worksheetScala3AdjustmentsForPC(originInput).map { case (input, adjust) =>
+      def adjustRequest(position: Position) = new Position(
+        position.getLine() + 1,
+        position.getCharacter() + 2
+      )
+      (input, adjustRequest, adjust)
 
     }
   }

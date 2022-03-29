@@ -41,10 +41,7 @@ final case class SourceMapper(
       } else if (
         path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)
       ) {
-        WorksheetProvider.worksheetScala3Adjustments(
-          input,
-          path.toURI.toASCIIString
-        )
+        WorksheetProvider.worksheetScala3Adjustments(input)
       } else None
 
     forScripts.getOrElse(default)

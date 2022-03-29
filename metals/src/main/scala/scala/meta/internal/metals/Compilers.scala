@@ -208,7 +208,7 @@ class Compilers(
       if (
         path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
       ) {
-        WorksheetProvider.worksheetScala3Adjustments(originInput, path)
+        WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
       } else {
         None
       }
