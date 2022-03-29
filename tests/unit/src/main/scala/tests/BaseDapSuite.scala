@@ -143,5 +143,6 @@ abstract class BaseDapSuite(
     }
   }
 
-  private final case class Breakpoint(relativePath: String, line: Int)
 }
+
+private final case class Breakpoint(relativePath: String, line: Int)

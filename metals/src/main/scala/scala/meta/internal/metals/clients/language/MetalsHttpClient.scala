@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.charset.Charset
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ScheduledExecutorService
@@ -53,7 +52,6 @@ final class MetalsHttpClient(
     url: () => String,
     initial: MetalsLanguageClient,
     triggerReload: () => Unit,
-    charset: Charset,
     icons: Icons,
     time: Time,
     sh: ScheduledExecutorService,

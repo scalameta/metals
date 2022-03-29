@@ -106,7 +106,7 @@ class WorksheetProvider(
           ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
         val mdoc =
           embedded
-            .mdoc(scalaVersion, binary)
+            .mdoc(binary)
             .withClasspath(Embedded.scalaLibrary(scalaVersion).asJava)
         val ref = MdocRef(scalaVersion, mdoc)
         mdocs.update(MdocKey.Default, ref)
@@ -264,7 +264,7 @@ class WorksheetProvider(
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
           result.complete(
-            try Some(evaluateWorksheet(path, token))
+            try Some(evaluateWorksheet(path))
             catch onError
           )
         }
@@ -357,8 +357,7 @@ class WorksheetProvider(
   }
 
   private def evaluateWorksheet(
-      path: AbsolutePath,
-      token: CancelToken
+      path: AbsolutePath
   ): EvaluatedWorksheet = {
     val mdoc = getMdoc(path)
     val input = path.toInputFromBuffers(buffers)
@@ -440,7 +439,6 @@ class WorksheetProvider(
           .asJava
         val mdoc = embedded
           .mdoc(
-            info.scalaVersion,
             ScalaVersions.scalaBinaryVersionFromFullVersion(info.scalaVersion)
           )
           .withClasspath(info.fullClasspath.distinct.asJava)
@@ -469,9 +467,8 @@ object WorksheetProvider {
   }
   final case class MdocRef(scalaVersion: String, value: Mdoc)
 
-  def worksheetScala3Adjustments(
-      originInput: Input.VirtualFile,
-      path: AbsolutePath
+  def worksheetScala3AdjustmentsForPC(
+      originInput: Input.VirtualFile
   ): Option[(Input.VirtualFile, AdjustLspData)] = {
     val ident = "  "
     val withOuter = s"""|object worksheet{
@@ -489,16 +486,14 @@ object WorksheetProvider {
   }
 
   def worksheetScala3Adjustments(
-      originInput: Input.VirtualFile,
-      uri: String
+      originInput: Input.VirtualFile
   ): Option[(Input.VirtualFile, Position => Position, AdjustLspData)] = {
-    worksheetScala3Adjustments(originInput, uri.toAbsolutePath).map {
-      case (input, adjust) =>
-        def adjustRequest(position: Position) = new Position(
-          position.getLine() + 1,
-          position.getCharacter() + 2
-        )
-        (input, adjustRequest, adjust)
+    worksheetScala3AdjustmentsForPC(originInput).map { case (input, adjust) =>
+      def adjustRequest(position: Position) = new Position(
+        position.getLine() + 1,
+        position.getCharacter() + 2
+      )
+      (input, adjustRequest, adjust)
 
     }
   }

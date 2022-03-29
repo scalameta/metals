@@ -53,7 +53,7 @@ object JavaTokens {
           start,
           end,
           source,
-          isLF = false
+          isLF
         )
         token match {
           case ITerminalSymbols.TokenNameWHITESPACE =>

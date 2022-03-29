@@ -92,7 +92,7 @@ final class Compilations(
   def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
     for {
       targets <- expand(paths)
-      result <- compileBatch(targets)
+      _ <- compileBatch(targets)
       _ <- compileWorksheets(paths)
     } yield ()
   }

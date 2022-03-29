@@ -88,10 +88,8 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
 
   def visitClass(
       cls: JavaClass,
-      name: String,
       pos: Position,
-      kind: Kind,
-      properties: Int
+      kind: Kind
   ): Unit = {
     tpe(
       cls.getName,
@@ -107,10 +105,8 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       val pos = toRangePosition(cls.lineNumber, cls.getName)
       visitClass(
         cls,
-        cls.getName,
         pos,
-        kind,
-        if (cls.isEnum) Property.ENUM.value else 0
+        kind
       )
       visitClasses(cls.getNestedClasses)
       visitMethods(cls)
@@ -124,7 +120,7 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       pos: Position,
       properties: Int
   ): Unit = {
-    super.ctor(disambiguator, pos, 0)
+    super.ctor(disambiguator, pos, properties)
   }
 
   def visitConstructors(cls: JavaClass): Unit = {

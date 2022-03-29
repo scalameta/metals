@@ -149,7 +149,6 @@ final class TestingServer(
   server.connectToLanguageClient(client)
 
   private val trees = new Trees(
-    server.buildTargets,
     buffers,
     new ScalaVersionSelector(
       () => UserConfiguration.default,

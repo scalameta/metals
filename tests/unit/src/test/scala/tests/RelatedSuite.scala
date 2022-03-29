@@ -101,7 +101,11 @@ class RelatedSuite extends BaseSuite {
       loc: Location
   ): Unit = {
     test(s"is${addNot(isTrue)}MillRelated - $relpath") {
-      checkRelated(relpath, MillBuildTool.isMillRelatedPath, isTrue)
+      checkRelated(
+        relpath,
+        (_, path) => MillBuildTool.isMillRelatedPath(path),
+        isTrue
+      )
     }
   }
   checkIsMillRelated("build.sc")

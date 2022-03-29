@@ -33,7 +33,6 @@ import org.eclipse.lsp4j.services.LanguageClient
  * https://build-server-protocol.github.io/docs/server-discovery.html
  */
 final class BloopServers(
-    workspace: AbsolutePath,
     client: MetalsBuildClient,
     languageClient: LanguageClient,
     tables: Tables,

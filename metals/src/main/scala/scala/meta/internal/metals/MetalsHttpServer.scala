@@ -38,7 +38,6 @@ import org.eclipse.lsp4j.ExecuteCommandParams
  * Http server
  */
 final class MetalsHttpServer private (
-    languageServer: MetalsLanguageServer,
     server: Undertow,
     openChannels: mutable.Set[WebSocketChannel]
 ) extends Cancelable {
@@ -141,7 +140,7 @@ object MetalsHttpServer {
       .addHttpListener(port, host)
       .setHandler(baseHandler)
       .build()
-    new MetalsHttpServer(languageServer, httpServer, openChannels)
+    new MetalsHttpServer(httpServer, openChannels)
   }
 
   def address(server: Undertow): String = {

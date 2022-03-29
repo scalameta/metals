@@ -5,7 +5,6 @@ import scala.reflect.ClassTag
 
 import scala.meta._
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.parsers.Parse
@@ -23,7 +22,6 @@ import org.eclipse.{lsp4j => l}
  * - produces diagnostics for syntax errors.
  */
 final class Trees(
-    buildTargets: BuildTargets,
     buffers: Buffers,
     scalaVersionSelector: ScalaVersionSelector
 ) {
@@ -102,9 +100,11 @@ final class Trees(
             )
           case Parsed.Success(tree) =>
             trees(path) = tree
-            List()
+            List.empty
+          case _ =>
+            List.empty
         }
-      case _ => List()
+      case _ => List.empty
     }
   }
 

@@ -48,7 +48,7 @@ class ClassFinder(trees: Trees) {
         case _: Defn.Def => "Toplevel package"
       }
 
-      def addDfn(dfn: Member, isInnerClass: Boolean = false): Unit = {
+      def addDfn(dfn: Member): Unit = {
         val suffixToStrip = if (!checkInnerClasses) "$" else ""
         val classWithPackage =
           findClassForOffset(tree, dfn.pos, path.filename, checkInnerClasses)
@@ -65,7 +65,7 @@ class ClassFinder(trees: Trees) {
         case _: Pkg | _: Pkg.Object =>
           tree.children.foreach(loop(_, isInnerClass))
         case _: Defn.Class | _: Defn.Trait | _: Defn.Object | _: Defn.Enum =>
-          addDfn(tree.asInstanceOf[Member], isInnerClass)
+          addDfn(tree.asInstanceOf[Member])
           if (checkInnerClasses)
             tree.children.foreach(loop(_, isInnerClass = true))
         case dfn: Defn.Def if !isInnerClass && !isToplevelAdded =>

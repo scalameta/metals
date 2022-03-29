@@ -6,7 +6,6 @@ import java.nio.file.StandardCopyOption
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
 trait BuildTool {
@@ -20,7 +19,6 @@ trait BuildTool {
    */
   def bloopInstall(
       workspace: AbsolutePath,
-      languageClient: MetalsLanguageClient,
       systemProcess: List[String] => Future[WorkspaceLoadedStatus]
   ): Future[WorkspaceLoadedStatus]
 

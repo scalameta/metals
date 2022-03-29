@@ -210,7 +210,6 @@ final class ImplementationProvider(
             if (fromParent.isEmpty) {
               locationFromClass(
                 bottomSymbol,
-                bottomClassSig,
                 parenClassSig,
                 search,
                 parentTextDocument
@@ -227,7 +226,6 @@ final class ImplementationProvider(
 
   private def locationFromClass(
       bottomSymbolInformation: SymbolInformation,
-      bottomClassSignature: ClassSignature,
       parentClassSig: ClassSignature,
       search: String => Option[SymbolInformation],
       parentTextDocument: Option[TextDocument]

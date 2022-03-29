@@ -11,7 +11,6 @@ import org.eclipse.{lsp4j => l}
 trait WorkspaceSymbolSearch { this: MetalsGlobal =>
 
   class CompilerSearchVisitor(
-      query: String,
       context: Context,
       visitMember: Symbol => Boolean
   ) extends SymbolSearchVisitor {

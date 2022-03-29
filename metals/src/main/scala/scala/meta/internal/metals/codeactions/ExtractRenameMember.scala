@@ -29,7 +29,6 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.{lsp4j => l}
 
 class ExtractRenameMember(
-    buffers: Buffers,
     trees: Trees
 )(implicit ec: ExecutionContext)
     extends CodeAction {

@@ -38,7 +38,6 @@ final class BloopInstall(
   ): Future[WorkspaceLoadedStatus] = {
     buildTool.bloopInstall(
       workspace,
-      languageClient,
       args => {
         scribe.info(s"running '${args.mkString(" ")}'")
         val process = runArgumentsUnconditionally(buildTool, args)

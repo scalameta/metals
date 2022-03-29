@@ -24,10 +24,10 @@ case class OnTypeFormatterParams(
   val range = new Range(position, position)
 }
 
-class OnTypeFormatter {
+abstract class OnTypeFormatter {
   def contribute(
       onTypeformatterParams: OnTypeFormatterParams
-  ): Option[List[TextEdit]] = None
+  ): Option[List[TextEdit]]
 }
 
 class OnTypeFormattingProvider(

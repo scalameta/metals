@@ -4,7 +4,7 @@ import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.semanticdb.Scala._
 
 sealed abstract class SymbolSearchCandidate {
-  final def nameLength(query: String): Int = Fuzzy.nameLength(nameString)
+  final def nameLength(): Int = Fuzzy.nameLength(nameString)
   final def innerClassDepth: Int =
     SymbolSearchCandidate.characterCount(nameString, termCharacter)
   def termCharacter: Char
@@ -37,7 +37,7 @@ object SymbolSearchCandidate {
         o2: SymbolSearchCandidate
     ): Int = {
       val byNameLength =
-        Integer.compare(o1.nameLength(query), o2.nameLength(query))
+        Integer.compare(o1.nameLength(), o2.nameLength())
       if (byNameLength != 0) byNameLength
       else {
         val byInnerclassDepth =

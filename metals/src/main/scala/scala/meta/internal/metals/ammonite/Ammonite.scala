@@ -43,7 +43,6 @@ final class Ammonite(
     compilations: Compilations,
     statusBar: StatusBar,
     diagnostics: Diagnostics,
-    doctor: Doctor,
     tables: () => Tables,
     languageClient: MetalsLanguageClient,
     buildClient: ForwardingMetalsBuildClient,
@@ -51,7 +50,6 @@ final class Ammonite(
     indexWorkspace: () => Future[Unit],
     workspace: () => AbsolutePath,
     focusedDocument: () => Option[AbsolutePath],
-    buildTargets: BuildTargets,
     buildTools: () => BuildTools,
     config: MetalsServerConfig,
     scalaVersionSelector: ScalaVersionSelector

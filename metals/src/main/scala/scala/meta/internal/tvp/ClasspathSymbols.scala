@@ -110,7 +110,6 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
           try {
             val node = path.toClassNode
             classfileSymbols(
-              path.toNIO,
               node,
               index,
               { i =>
@@ -190,7 +189,6 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   }
 
   private def classfileSymbols(
-      path: Path,
       node: ClassNode,
       index: ClasspathIndex,
       fn: SymbolInformation => Unit

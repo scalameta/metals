@@ -501,7 +501,6 @@ class CompletionProvider(
     else {
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(
-        query,
         context,
         sym => visit(new WorkspaceMember(sym))
       )

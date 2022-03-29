@@ -573,7 +573,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
       autoIndent: String = indent,
       triggerCharacter: String = "\n",
       stripMarginEnabled: Boolean = true,
-      additionalRequests: TestingServer => Future[Unit] = server => Future {}
+      additionalRequests: TestingServer => Future[Unit] = _ => Future.unit
   )(implicit loc: Location): Unit = {
     val quote = """\u0022"""
     def unmangle(string: String): String =

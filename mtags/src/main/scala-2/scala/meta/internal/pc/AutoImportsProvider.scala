@@ -39,7 +39,7 @@ final class AutoImportsProvider(
       false
     }
 
-    val visitor = new CompilerSearchVisitor(name, context, visit)
+    val visitor = new CompilerSearchVisitor(context, visit)
 
     search.search(name, buildTargetIdentifier, visitor)
 

@@ -31,12 +31,10 @@ class JavadocIndexer(
 ) extends JavaMtags(input) {
   override def visitClass(
       cls: JavaClass,
-      name: String,
       pos: Position,
-      kind: SymbolInformation.Kind,
-      properties: Int
+      kind: SymbolInformation.Kind
   ): Unit = {
-    super.visitClass(cls, name, pos, kind, properties)
+    super.visitClass(cls, pos, kind)
     fn(fromClass(currentOwner, cls))
   }
   override def visitConstructor(

@@ -55,7 +55,7 @@ object DebugProtocol {
     request
   }
 
-  def syntheticResponse[A: ClassTag](
+  def syntheticResponse(
       request: RequestMessage,
       args: SetBreakpointsResponse
   ): ResponseMessage = {

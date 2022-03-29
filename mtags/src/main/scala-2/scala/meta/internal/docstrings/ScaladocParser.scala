@@ -1372,7 +1372,7 @@ object ScaladocParser {
       }
     }
 
-    def reportError(pos: Position, message: String): Unit = {}
+    def reportError(pos: Position, message: String): Unit = ()
   }
 
   sealed class CharReader(buffer: String) { reader =>

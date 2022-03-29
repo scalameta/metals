@@ -3,6 +3,8 @@ import scala.sys.process._
 import Developers._
 import Tests._
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
 def localSnapshotVersion = "0.11.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
@@ -15,24 +17,17 @@ def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
 def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
-    if2: List[A] = Nil,
-    ifLaterThan211: List[A] = Nil,
-    if3: List[A] = Nil
+    if213: List[A] = Nil,
+    if3: List[A] = Nil,
+    if2: List[A] = Nil
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
-    case partialVersion if isScala212(partialVersion) => ifLaterThan211 ::: if2
-    case partialVersion if isScala213(partialVersion) => ifLaterThan211 ::: if2
+    case partialVersion if isScala212(partialVersion) => if2
+    case partialVersion if isScala213(partialVersion) => if2 ::: if213
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
-
-// -Xlint is unusable because of
-// https://github.com/scala/bug/issues/10448
-val scala212CompilerOptions = List(
-  "-Ywarn-unused:imports", "-Ywarn-unused:privates", "-Ywarn-unused:locals",
-  "-Ywarn-unused:patvars", "-Ywarn-unused:implicits"
-)
 
 logo := Welcome.logo
 usefulTasks := Welcome.tasks
@@ -50,7 +45,7 @@ inThisBuild(
     scalacOptions ++= List(
       "-target:jvm-1.8",
       "-Yrangepos"
-    ) ::: scala212CompilerOptions,
+    ),
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % V.organizeImportRule,
     organization := "org.scalameta",
     licenses := Seq(
@@ -276,6 +271,35 @@ lazy val V = new {
     ).toList
 }
 
+// -Xlint is unusable because of
+// https://github.com/scala/bug/issues/10448
+def lintingOptions(scalaVersion: String) = {
+  val unused213 = "-Wunused"
+  val unused3 = "-Wunused:all"
+  val common = List(
+    // desugaring of for yield caused pattern var to complain
+    // https://github.com/scala/bug/issues/10287
+    "-Wconf:msg=parameter value .+ in anonymous function:silent",
+    // silence unused parameters in mtags
+    "-Wconf:src=*.ScaladocParser.scala&msg=parameter value (pos|message) in method reportError:silent",
+    "-Wconf:src=*.Completions.scala&msg=parameter value (member|m) in method (isCandidate|isPrioritized):silent",
+    "-Wconf:src=*.JavaMtags.scala&msg=parameter value (ctor|method) in method (visitConstructor|visitMethod):silent",
+    "-Wconf:src=*.MtagsIndexer.scala&msg=parameter value owner in method visitOccurrence:silent",
+    // silence "The outer reference in this type test cannot be checked at run time."
+    "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent"
+  )
+  // -Wconf is available only from 2.13.2
+  val commonFiltered =
+    if (scalaVersion == "2.13.1") common.filterNot(_.startsWith("-Wconf"))
+    else common
+  crossSetting(
+    scalaVersion,
+    if213 = unused213 :: commonFiltered,
+    if3 = unused3 :: common,
+    if211 = List("-Ywarn-unused-import")
+  )
+}
+
 val sharedSettings = List(
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
@@ -292,13 +316,13 @@ val sharedSettings = List(
       "-Xtarget:8",
       "-Xsemanticdb"
     ),
-    if211 = List("-Xexperimental", "-Ywarn-unused-import")
+    if211 = List("-Xexperimental")
   ),
   scalacOptions --= crossSetting(
     scalaVersion.value,
-    if3 = "-Yrangepos" :: "-target:jvm-1.8" :: scala212CompilerOptions,
-    if211 = scala212CompilerOptions
-  )
+    if3 = List("-Yrangepos", "-target:jvm-1.8")
+  ),
+  scalacOptions ++= lintingOptions(scalaVersion.value)
 )
 
 publish / skip := true
@@ -557,7 +581,10 @@ lazy val input = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "io.circe" %% "circe-derivation-annotations" % "0.13.0-M5"
     ),
-    scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations")
+    scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations"),
+    scalacOptions ~= { options =>
+      options.filter(_ != "-Wunused")
+    }
   )
   .disablePlugins(ScalafixPlugin)
 

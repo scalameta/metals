@@ -51,8 +51,6 @@ trait ArgCompletions { this: MetalsGlobal =>
       .map(_.toString().trim())
       .toSet
 
-    override def isCandidate(member: Member): Boolean = true
-
     def isName(m: Member): Boolean =
       isParamName(m.sym.nameString.trim())
 

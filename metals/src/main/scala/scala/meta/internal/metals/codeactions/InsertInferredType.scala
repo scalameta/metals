@@ -8,7 +8,6 @@ import scala.meta.Enumerator
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.internal.metals.CodeAction
-import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees
@@ -16,8 +15,7 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class InsertInferredType(trees: Trees, compilers: Compilers)
-    extends CodeAction {
+class InsertInferredType(trees: Trees) extends CodeAction {
 
   import InsertInferredType._
   override def kind: String = l.CodeActionKind.QuickFix

@@ -3,23 +3,19 @@ package tests.codeactions
 import java.nio.file.Paths
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
-import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionMetaPosition
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
+import tests.TreeUtils
 
 class ExtractRenameMemberLspSuite
     extends BaseCodeActionLspSuite("extractClass") {
@@ -445,13 +441,7 @@ class ExtractRenameMemberLspSuite
       fileName: String = "A.scala"
   ): Unit =
     test(name) {
-      val buffers = Buffers()
-      val buildTargets = new BuildTargets()
-      val selector = new ScalaVersionSelector(
-        () => UserConfiguration(fallbackScalaVersion = Some(scalaVersion)),
-        buildTargets
-      )
-      val trees = new Trees(buildTargets, buffers, selector)
+      val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
       val filename = fileName
       val path = AbsolutePath(Paths.get(filename))
       val startOffset = original.indexOf("<<")
@@ -464,7 +454,7 @@ class ExtractRenameMemberLspSuite
       val pos = scala.meta.Position
         .Range(input, startOffset, endOffset - "<<".length())
         .toLSP
-      val extractRenameMember = new ExtractRenameMember(buffers, trees)
+      val extractRenameMember = new ExtractRenameMember(trees)
       buffers.put(path, sourceText)
       val textDocumentIdentifier = path.toTextDocumentIdentifier
       val codeActionParams = new CodeActionParams(
