@@ -20,7 +20,7 @@ final class Compilations(
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
-    refreshTestSuites: () => Unit,
+    compilationCallbacks: Subject[Unit],
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
 )(implicit ec: ExecutionContext) {
@@ -222,7 +222,7 @@ final class Compilations(
         classes.rebuildIndex(
           targets,
           () => {
-            refreshTestSuites()
+            compilationCallbacks.notifyObservers()
             if (targets.exists(isCurrentlyFocused)) {
               languageClient.refreshModel()
             }

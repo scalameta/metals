@@ -52,7 +52,6 @@ final class Doctor(
     )
 
   def onVisibilityDidChange(newState: Boolean): Unit = {
-    pprint.log(newState)
     isVisible.set(newState)
   }
 
@@ -121,7 +120,6 @@ final class Doctor(
       }
       val params = clientCommand.toExecuteCommandParams(output)
       val shouldDisplayForVsCode = (clientConfig.isVscode && isVisible.get())
-      pprint.log(shouldDisplayForVsCode)
       if (shouldDisplayForVsCode || !clientConfig.isVscode) {
         languageClient.metalsExecuteClientCommand(params)
       }

@@ -178,12 +178,14 @@ class MetalsLanguageServer(
     buffers,
     buildTargets
   )
+
+  private val compilationCallbacks = new Subject[Unit] {}
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
     () => workspace,
     languageClient,
-    () => testProvider.refreshTestSuites(),
+    compilationCallbacks,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -424,7 +426,6 @@ class MetalsLanguageServer(
           report => {
             didCompileTarget(report)
             compilers.didCompile(report)
-            doctor.check()
           },
           onBuildTargetDidCompile = { target =>
             treeView.onBuildTargetDidCompile(target)
@@ -613,6 +614,7 @@ class MetalsLanguageServer(
           () => userConfig,
           trees
         )
+
         testProvider = new TestSuitesProvider(
           buildTargets,
           buildTargetClasses,
@@ -624,6 +626,12 @@ class MetalsLanguageServer(
           () => userConfig,
           languageClient
         )
+
+        compilationCallbacks.addObserver { _ =>
+          testProvider.refreshTestSuites()
+          ()
+        }
+
         semanticDBIndexer = new SemanticdbIndexer(
           List(
             referencesProvider,
@@ -707,6 +715,7 @@ class MetalsLanguageServer(
           diagnostics,
           languageClient
         )
+
         doctor = new Doctor(
           workspace,
           buildTargets,
@@ -720,6 +729,8 @@ class MetalsLanguageServer(
           mtagsResolver,
           () => userConfig.javaHome
         )
+        compilationCallbacks.addObserver(_ => doctor.executeRefreshDoctor())
+
         fileDecoderProvider = new FileDecoderProvider(
           workspace,
           compilers,
