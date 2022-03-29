@@ -1,7 +1,5 @@
 package tests
 
-import scala.concurrent.Future
-
 import scala.meta.internal.metals.DidFocusResult._
 import scala.meta.internal.metals.Time
 
@@ -79,8 +77,8 @@ class DidFocusWhileCompilingLspSuite
   val compileDelayMillis = 5000
   override def time: Time = fakeTime
 
-  // sleep 10s during the compilation, so that we can make sure
-  // invoking `didFocus` during compilation.
+  // sleep 5s during the compilation, so that we can make sure
+  // calling `didFocus` during compilation.
   override def beforeEach(context: BeforeEach): Unit = {
     fakeTime = new FakeTime()
     onStartCompilation = () => {
@@ -145,7 +143,7 @@ class DidFocusWhileCompilingLspSuite
         _.replace("Int", "String")
       )
       // Wait until compilation against project a is started (before we invoke didFocus on project b)
-      _ <- Future { Thread.sleep(compileDelayMillis / 2) }
+      _ <- server.waitFor(compileDelayMillis / 2)
       // Focus before compilation of A.scala is complete.
       // And make sure didFocus during the compilation causes compilation against project b.
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
@@ -165,5 +163,4 @@ class DidFocusWhileCompilingLspSuite
       )
     } yield ()
   }
-
 }
