@@ -133,8 +133,6 @@ object MetalsServerConfig {
     System.getProperty("metals.client")
   )
 
-  val isClientVscode: Boolean = metalsClientType.contains("vscode")
-
   def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
     metalsClientType.getOrElse("default") match {

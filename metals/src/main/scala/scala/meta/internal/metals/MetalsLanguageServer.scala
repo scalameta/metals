@@ -724,7 +724,11 @@ class MetalsLanguageServer(
           mtagsResolver,
           () => userConfig.javaHome
         )
-        compilationCallbacks.addObserver(_ => doctor.executeRefreshDoctor())
+        compilationCallbacks.addObserver { _ =>
+          if (clientConfig.isDoctorVisibilityProvider())
+            doctor.executeRefreshDoctor()
+          else ()
+        }
 
         fileDecoderProvider = new FileDecoderProvider(
           workspace,

@@ -78,7 +78,7 @@ final class Doctor(
   def executeRunDoctor(): Unit = {
     executeDoctor(
       ClientCommands.RunDoctor,
-      server => {
+      onServer = server => {
         Urls.openBrowser(server.address + "/doctor")
       }
     )
@@ -102,36 +102,41 @@ final class Doctor(
   def executeRefreshDoctor(): Unit = {
     executeDoctor(
       ClientCommands.ReloadDoctor,
-      server => {
+      onServer = server => {
         server.reload()
       }
     )
   }
 
+  /**
+   * @param clientCommand RunDoctor or ReloadDoctor
+   * @param onServer piece of logic that will be executed when http server is enabled
+   */
   private def executeDoctor(
       clientCommand: ParametrizedCommand[String],
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    if (
-      clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
-    ) {
-      val output = clientConfig.doctorFormat match {
-        case DoctorFormat.Json => buildTargetsJson()
-        case DoctorFormat.Html => buildTargetsHtml()
-      }
-      val params = clientCommand.toExecuteCommandParams(output)
-      val shouldDisplayForVsCode = (clientConfig.isVscode && isVisible.get())
-      if (shouldDisplayForVsCode || !clientConfig.isVscode) {
+    val isVisibilityProvider = clientConfig.isDoctorVisibilityProvider()
+    val shouldDisplay = isVisibilityProvider && isVisible.get()
+    if (shouldDisplay || !isVisibilityProvider) {
+      if (
+        clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
+      ) {
+        val output = clientConfig.doctorFormat match {
+          case DoctorFormat.Json => buildTargetsJson()
+          case DoctorFormat.Html => buildTargetsHtml()
+        }
+        val params = clientCommand.toExecuteCommandParams(output)
         languageClient.metalsExecuteClientCommand(params)
-      }
-    } else {
-      httpServer() match {
-        case Some(server) =>
-          onServer(server)
-        case None =>
-          scribe.warn(
-            "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
-          )
+      } else {
+        httpServer() match {
+          case Some(server) =>
+            onServer(server)
+          case None =>
+            scribe.warn(
+              "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
+            )
+        }
       }
     }
   }
