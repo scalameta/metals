@@ -223,9 +223,17 @@ final class Doctor(
       .render
   }
 
+  private def getJdkInfo(): Option[String] = {
+    for {
+      home <- javaHome().orElse(JdkSources.defaultJavaHome)
+      version <- JdkVersion.getJavaVersionFromJavaHome(AbsolutePath(home))
+    } yield s"JDK ${version.major} at $home"
+  }
+
   private def buildTargetsJson(): String = {
     val targetIds = allTargetIds()
     val buildToolHeading = selectedBuildToolMessage()
+
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
     val heading =
@@ -340,6 +348,20 @@ final class Doctor(
       html.element("p")(
         _.text(message)
       )
+    }
+
+    val jdkInfo = getJdkInfo()
+
+    jdkInfo.foreach { jdkMsg =>
+      html.element("p") { builder =>
+        builder.bold("Java version: ")
+        builder.text(jdkMsg)
+      }
+    }
+
+    html.element("p") { builder =>
+      builder.bold("Metals Server version: ")
+      builder.text(BuildInfo.metalsVersion)
     }
 
     html

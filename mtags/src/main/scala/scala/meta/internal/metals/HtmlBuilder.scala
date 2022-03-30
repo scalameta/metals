@@ -118,8 +118,14 @@ final class HtmlBuilder() {
     if (condition) fn(this)
     this
   }
+
   def text(string: String): this.type = {
     sb.append(escape(string))
+    this
+  }
+
+  def bold(string: String): this.type = {
+    sb.append(s"<b>${escape(string)}</b>")
     this
   }
 
