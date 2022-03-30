@@ -39,8 +39,7 @@ class MunitTestFinder(trees: Trees) {
      */
     def isValid(cls: Defn.Class, currentPackage: Vector[String]): Boolean = {
       val fullyQualifiedName =
-        if (currentPackage.isEmpty) cls.name.value
-        else s"${currentPackage.mkString(".")}.${cls.name.value}"
+        currentPackage.appended(cls.name.value).mkString(".")
       fullyQualifiedName == suiteName.value
     }
 
