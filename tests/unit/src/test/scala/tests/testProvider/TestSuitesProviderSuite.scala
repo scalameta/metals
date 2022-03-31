@@ -385,6 +385,51 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     () => Some(classUriFor("app/src/main/scala/a/b/c/MunitTestSuite.scala"))
   )
 
+  testDiscover(
+    "munit-no-package",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
+        |  }
+        |}
+        |
+        |/app/src/main/scala/MunitTestSuite.scala
+        |
+        |class MunitTestSuite extends munit.FunSuite {
+        |  test("test1") {}
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/MunitTestSuite.scala"),
+    () => {
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestCases(
+              "MunitTestSuite",
+              "MunitTestSuite",
+              Vector(
+                TestCaseEntry(
+                  "test1",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/MunitTestSuite.scala"
+                    ),
+                    (2, 2, 2, 6)
+                  ).toLsp
+                )
+              ).asJava
+            )
+          ).asJava
+        )
+      )
+    },
+    () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala"))
+  )
+
   checkEvents(
     "check-events",
     s"""|/metals.json

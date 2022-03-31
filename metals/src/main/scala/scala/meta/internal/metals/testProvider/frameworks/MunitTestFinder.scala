@@ -37,13 +37,15 @@ class MunitTestFinder(trees: Trees) {
     /**
      * Class definition is valid when package + class name is equal to one we are looking for
      */
-    def isValid(cls: Defn.Class, currentPackage: String): Boolean =
-      s"$currentPackage.${cls.name.value}" == suiteName.value
+    def isValid(cls: Defn.Class, currentPackage: Vector[String]): Boolean = {
+      val fullyQualifiedName =
+        currentPackage.appended(cls.name.value).mkString(".")
+      fullyQualifiedName == suiteName.value
+    }
 
     def loop(tree: Tree, currentPackage: Vector[String]): Unit = {
-      val pkgString = currentPackage.mkString(".")
       tree match {
-        case cls: Defn.Class if isValid(cls, pkgString) =>
+        case cls: Defn.Class if isValid(cls, currentPackage) =>
           /**
            * In munit, it's very popular to define helper method for tests
            * which prevents from code duplication. These method often looks like:
