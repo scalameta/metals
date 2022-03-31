@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.net.URI
 
 import scala.meta.internal.metals.clients.language.MetalsOpenWindowParams
+import scala.meta.internal.metals.doctor.DoctorResults
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 
 import ch.epfl.scala.{bsp4j => b}

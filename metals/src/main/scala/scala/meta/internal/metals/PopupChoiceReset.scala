@@ -7,6 +7,7 @@ import scala.meta.internal.bsp.BspConnector
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem

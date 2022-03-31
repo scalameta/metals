@@ -1,4 +1,7 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.doctor
+
+import scala.meta.internal.metals.HtmlBuilder
+import scala.meta.internal.metals.Icons
 
 import ujson.Obj
 
