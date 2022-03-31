@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.doctor
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -13,11 +13,26 @@ import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
 import scala.meta.internal.bsp.ResolvedNone
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.FileDecoderProvider
+import scala.meta.internal.metals.HtmlBuilder
+import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsHttpServer
+import scala.meta.internal.metals.MtagsResolver
+import scala.meta.internal.metals.ParametrizedCommand
+import scala.meta.internal.metals.PopupChoiceReset
+import scala.meta.internal.metals.ScalaTarget
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.Urls
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.DoctorFormat
-import scala.meta.internal.troubleshoot.ProblemResolver
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -236,20 +251,31 @@ final class Doctor(
       .render
   }
 
+  private def getJdkInfo(): Option[String] =
+    for {
+      version <- Option(System.getProperty("java.version"))
+      vendor <- Option(System.getProperty("java.vendor"))
+      home <- Option(System.getProperty("java.home"))
+    } yield s"$version from $vendor located at $home"
+
   private def buildTargetsJson(): String = {
     val targetIds = allTargetIds()
     val buildToolHeading = selectedBuildToolMessage()
+
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
+    val jdkInfo = getJdkInfo().map(info => s"$jdkVersionTitle$info")
+    val serverInfo = s"$serverVersionTitle${BuildInfo.metalsVersion}"
     val heading =
       List(
         buildToolHeading,
         Some(buildServerHeading),
         importBuildHeading,
+        jdkInfo,
+        Some(serverInfo),
         Some(doctorHeading)
       ).flatten
         .mkString("\n\n")
-
     val results = if (targetIds.isEmpty) {
       DoctorResults(
         doctorTitle,
@@ -353,6 +379,20 @@ final class Doctor(
       html.element("p")(
         _.text(message)
       )
+    }
+
+    val jdkInfo = getJdkInfo()
+
+    jdkInfo.foreach { jdkMsg =>
+      html.element("p") { builder =>
+        builder.bold(jdkVersionTitle)
+        builder.text(jdkMsg)
+      }
+    }
+
+    html.element("p") { builder =>
+      builder.bold(serverVersionTitle)
+      builder.text(BuildInfo.metalsVersion)
     }
 
     html
@@ -564,6 +604,8 @@ final class Doctor(
   }
 
   private val doctorTitle = "Metals Doctor"
+  private val jdkVersionTitle = "Metals Java: "
+  private val serverVersionTitle = "Metals Server version: "
   private val doctorHeading =
     "These are the installed build targets for this workspace. " +
       "One build target corresponds to one classpath. For example, normally one sbt project maps to " +

@@ -1,4 +1,4 @@
-package scala.meta.internal.troubleshoot
+package scala.meta.internal.metals.doctor
 
 import scala.collection.mutable.ListBuffer
 
