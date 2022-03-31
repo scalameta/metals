@@ -22,8 +22,6 @@ import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JavaTarget
-import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsHttpServer
@@ -253,12 +251,12 @@ final class Doctor(
       .render
   }
 
-  private def getJdkInfo(): Option[String] = {
+  private def getJdkInfo(): Option[String] =
     for {
-      home <- javaHome().orElse(JdkSources.defaultJavaHome)
-      version <- JdkVersion.getJavaVersionFromJavaHome(AbsolutePath(home))
-    } yield s"JDK ${version.major} at $home"
-  }
+      version <- Option(System.getProperty("java.version"))
+      vendor <- Option(System.getProperty("java.vendor"))
+      home <- Option(System.getProperty("java.home"))
+    } yield s"$version from $vendor located at $home"
 
   private def buildTargetsJson(): String = {
     val targetIds = allTargetIds()
@@ -266,8 +264,8 @@ final class Doctor(
 
     val (buildServerHeading, _) = selectedBuildServerMessage()
     val importBuildHeading = selectedImportBuildMessage()
-    val jdkInfo = getJdkInfo()
-    val serverInfo = s"Metals server version: ${BuildInfo.metalsVersion}"
+    val jdkInfo = getJdkInfo().map(info => s"$jdkVersionTitle$info")
+    val serverInfo = s"$serverVersionTitle${BuildInfo.metalsVersion}"
     val heading =
       List(
         buildToolHeading,
@@ -387,13 +385,13 @@ final class Doctor(
 
     jdkInfo.foreach { jdkMsg =>
       html.element("p") { builder =>
-        builder.bold("Java version: ")
+        builder.bold(jdkVersionTitle)
         builder.text(jdkMsg)
       }
     }
 
     html.element("p") { builder =>
-      builder.bold("Metals Server version: ")
+      builder.bold(serverVersionTitle)
       builder.text(BuildInfo.metalsVersion)
     }
 
@@ -606,6 +604,8 @@ final class Doctor(
   }
 
   private val doctorTitle = "Metals Doctor"
+  private val jdkVersionTitle = "Metals Java: "
+  private val serverVersionTitle = "Metals Server version: "
   private val doctorHeading =
     "These are the installed build targets for this workspace. " +
       "One build target corresponds to one classpath. For example, normally one sbt project maps to " +
