@@ -99,46 +99,48 @@ about below, and others used to be server properties that have been migrated to
 
 The currently available settings for `InitializationOptions` are listed below.
 
-```js
-    "InitializationOptions": {
-      "compilerOptions":{
-        "completionCommand": string,
-        "isCompletionItemDetailEnabled": boolean,
-        "isCompletionItemDocumentationEnabled": boolean,
-        "isCompletionItemResolve": boolean,
-        "isHoverDocumentationEnabled": boolean,
-        "isSignatureHelpDocumentationEnabled": boolean,
-        "overrideDefFormat": "ascii" | "unicode",
-        "parameterHintsCommand": string,
-        "snippetAutoIndent": boolean,
+```typescript
+    interface InitializationOptions: {
+      compilerOptions: {
+        completionCommand?: string;
+        isCompletionItemDetailEnabled?: boolean;
+        isCompletionItemDocumentationEnabled?: boolean;
+        isCompletionItemResolve?: boolean;
+        isHoverDocumentationEnabled?: boolean;
+        isSignatureHelpDocumentationEnabled?: boolean;
+        overrideDefFormat?: "ascii" | "unicode";
+        parameterHintsCommand?: string;
+        snippetAutoIndent?: boolean;
       }
-      "copyWorksheetOutputProvider": boolean,
-      "debuggingProvider": boolean,
-      "decorationProvider": boolean,
-      "didFocusProvider": boolean,
-      "disableColorOutput" boolean,
-      "doctorProvider": "json" | "html",
-      "executeClientCommandProvider": boolean,
-      "globSyntax": "vscode" | "uri"
-      "icons": "octicons" | "vscode" | "unicode",
-      "inlineDecorationProvider": boolean,
-      "inputBoxProvider": boolean,
-      "isExitOnShutdown" : boolean,
-      "isHttpEnabled": boolean,
-      "commandInHtmlFormat": "vscode" | "sublime",
-      "openFilesOnRenameProvider": boolean,
-      "openNewWindowProvider": boolean,
-      "quickPickProvider": boolean,
-      "renameFileThreshold": number,
-      "slowTaskProvider": boolean,
-      "statusBarProvider": "on" | "off" | "show-message" | "log-message",
-      "treeViewProvider": boolean
+      debuggingProvider?: boolean;
+      decorationProvider?: boolean;
+      inlineDecorationProvider?: boolean;
+      didFocusProvider?: boolean;
+      doctorProvider?: "json" | "html";
+      executeClientCommandProvider?: boolean;
+      globSyntax?: "vscode" | "uri";
+      icons?: "vscode" | "octicons" | "atom" | "unicode";
+      inputBoxProvider?: boolean;
+      isVirtualDocumentSupported?: boolean;
+      isExitOnShutdown?: boolean;
+      isHttpEnabled?: boolean;
+      openFilesOnRenameProvider?: boolean;
+      quickPickProvider?: boolean;
+      renameFileThreshold?: number;
+      slowTaskProvider?: boolean;
+      statusBarProvider?: "on" | "off" | "log-message" | "show-message";
+      treeViewProvider?: boolean;
+      testExplorerProvider?: boolean;
+      openNewWindowProvider?: boolean;
+      copyWorksheetOutputProvider?: boolean;
+      commandInHtmlFormat?: "vscode" | "sublime";
+      doctorVisibilityProvider?: boolean;
     }
 ```
 
 You can also always check these in the
 [`InitializationOptions.scala`](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/metals/InitializationOptions.scala)
-file where you'll find all of the options and descriptions.
+file where you'll find all of the options and descriptions. Alternatively you can check out the typescript equivalent - [`MetalsInitializationOptions.ts`](https://github.com/scalameta/metals-languageclient/blob/main/src/interfaces/MetalsInitializationOptions.ts)
 
 ##### `compilerOptions.completionCommand`
 
@@ -403,6 +405,16 @@ Boolean value signifying whether or not the client supports the
 
 Default value: `false`
 
+##### `testExplorerProvider`
+
+Boolean value to signify whether or not the client implements the Test Explorer.
+
+##### `doctorVisibilityProvider`
+
+Boolean value to signify whether or not the client implements the `"metals/doctorVisibilityDidChange"`.
+This JSON notification is used to keep track of doctor state. If client implements this provider then Metals server
+will send updates to the doctor view.
+
 #### Experimental Capabilities
 
 All of the features that used to be set with `experimental` can now all be set
@@ -511,6 +523,7 @@ Returns `Hover` for specified text document and position - [lsp spec](https://mi
 
 Metals also support an extended version of this method that supports hover for selection range.
 The extended stucture of request params is the following:
+
 ```ts
 interface HoverExtParams {
   textDocument: TextDocumentIdentifier;
@@ -519,7 +532,6 @@ interface HoverExtParams {
   range?: Range;
 }
 ```
-
 
 ### `workspace/didChangeWatchedFiles`
 
@@ -1014,7 +1026,7 @@ _Request_:
 /**
  * Currenly, only `pattern` field is used for search.
  * See: https://github.com/scalameta/metals/issues/3234
- */ 
+ */
 interface TextSearchQuery {
     /**
 		 * The text pattern to search for.

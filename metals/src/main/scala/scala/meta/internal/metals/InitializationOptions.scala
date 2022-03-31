@@ -48,6 +48,7 @@ import org.eclipse.{lsp4j => l}
  *                                    copy results to the local buffer.
  * @param disableColorOutput in the situation where your DAP client may not handle color codes in
  *                            the output, you can enable this to strip them.
+ * @param doctorVisibilityProvider if the clients implements `metals/doctorVisibilityDidChange`
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -73,7 +74,8 @@ final case class InitializationOptions(
     testExplorerProvider: Option[Boolean],
     openNewWindowProvider: Option[Boolean],
     copyWorksheetOutputProvider: Option[Boolean],
-    disableColorOutput: Option[Boolean]
+    disableColorOutput: Option[Boolean],
+    doctorVisibilityProvider: Option[Boolean]
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -87,6 +89,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -163,7 +166,9 @@ object InitializationOptions {
       openNewWindowProvider = jsonObj.getBooleanOption("openNewWindowProvider"),
       copyWorksheetOutputProvider =
         jsonObj.getBooleanOption("copyWorksheetOutputProvider"),
-      disableColorOutput = jsonObj.getBooleanOption("disableColorOutput")
+      disableColorOutput = jsonObj.getBooleanOption("disableColorOutput"),
+      doctorVisibilityProvider =
+        jsonObj.getBooleanOption("doctorVisibilityProvider")
     )
   }
 
