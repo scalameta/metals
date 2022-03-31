@@ -167,6 +167,7 @@ class MetalsLanguageServer(
   buildTargets.addData(mainBuildTargetsData)
   private val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
+  private var doctor: Doctor = _
 
   private val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
@@ -179,12 +180,18 @@ class MetalsLanguageServer(
     buffers,
     buildTargets
   )
+
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
     () => workspace,
     languageClient,
     () => testProvider.refreshTestSuites(),
+    () => {
+      if (clientConfig.isDoctorVisibilityProvider())
+        doctor.executeRefreshDoctor()
+      else ()
+    },
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
@@ -277,7 +284,6 @@ class MetalsLanguageServer(
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
-  private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
@@ -421,7 +427,6 @@ class MetalsLanguageServer(
           report => {
             didCompileTarget(report)
             compilers.didCompile(report)
-            doctor.check()
           },
           onBuildTargetDidCompile = { target =>
             treeView.onBuildTargetDidCompile(target)
@@ -699,6 +704,7 @@ class MetalsLanguageServer(
           diagnostics,
           languageClient
         )
+
         doctor = new Doctor(
           workspace,
           buildTargets,
@@ -712,6 +718,7 @@ class MetalsLanguageServer(
           mtagsResolver,
           () => userConfig.javaHome
         )
+
         fileDecoderProvider = new FileDecoderProvider(
           workspace,
           compilers,
@@ -1707,6 +1714,7 @@ class MetalsLanguageServer(
           .asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
+          doctor.onVisibilityDidChange(true)
           doctor.executeRunDoctor()
         }.asJavaObject
       case ServerCommands.ListBuildTargets() =>
@@ -1956,6 +1964,14 @@ class MetalsLanguageServer(
         Future.successful(()).asJavaObject
     }
   }
+
+  @JsonNotification("metals/doctorVisibilityDidChange")
+  def doctorVisibilityDidChange(
+      params: DoctorVisibilityDidChangeParams
+  ): CompletableFuture[Unit] =
+    Future {
+      doctor.onVisibilityDidChange(params.visible)
+    }.asJava
 
   @JsonRequest("metals/treeViewChildren")
   def treeViewChildren(

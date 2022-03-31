@@ -41,6 +41,7 @@ final class Doctor(
     mtagsResolver: MtagsResolver,
     javaHome: () => Option[String]
 )(implicit ec: ExecutionContext) {
+  private val isVisible = new AtomicBoolean(false)
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
     new ProblemResolver(
@@ -50,6 +51,10 @@ final class Doctor(
       javaHome,
       () => clientConfig.isTestExplorerProvider()
     )
+
+  def onVisibilityDidChange(newState: Boolean): Unit = {
+    isVisible.set(newState)
+  }
 
   /**
    * Returns a full HTML page for the HTTP client.
@@ -73,7 +78,7 @@ final class Doctor(
   def executeRunDoctor(): Unit = {
     executeDoctor(
       ClientCommands.RunDoctor,
-      server => {
+      onServer = server => {
         Urls.openBrowser(server.address + "/doctor")
       }
     )
@@ -97,33 +102,41 @@ final class Doctor(
   def executeRefreshDoctor(): Unit = {
     executeDoctor(
       ClientCommands.ReloadDoctor,
-      server => {
+      onServer = server => {
         server.reload()
       }
     )
   }
 
+  /**
+   * @param clientCommand RunDoctor or ReloadDoctor
+   * @param onServer piece of logic that will be executed when http server is enabled
+   */
   private def executeDoctor(
       clientCommand: ParametrizedCommand[String],
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    if (
-      clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
-    ) {
-      val output = clientConfig.doctorFormat match {
-        case DoctorFormat.Json => buildTargetsJson()
-        case DoctorFormat.Html => buildTargetsHtml()
-      }
-      val params = clientCommand.toExecuteCommandParams(output)
-      languageClient.metalsExecuteClientCommand(params)
-    } else {
-      httpServer() match {
-        case Some(server) =>
-          onServer(server)
-        case None =>
-          scribe.warn(
-            "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
-          )
+    val isVisibilityProvider = clientConfig.isDoctorVisibilityProvider()
+    val shouldDisplay = isVisibilityProvider && isVisible.get()
+    if (shouldDisplay || !isVisibilityProvider) {
+      if (
+        clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
+      ) {
+        val output = clientConfig.doctorFormat match {
+          case DoctorFormat.Json => buildTargetsJson()
+          case DoctorFormat.Html => buildTargetsHtml()
+        }
+        val params = clientCommand.toExecuteCommandParams(output)
+        languageClient.metalsExecuteClientCommand(params)
+      } else {
+        httpServer() match {
+          case Some(server) =>
+            onServer(server)
+          case None =>
+            scribe.warn(
+              "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
+            )
+        }
       }
     }
   }
@@ -562,3 +575,7 @@ final class Doctor(
   private val noBuildTargetRecTwo =
     "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
 }
+
+case class DoctorVisibilityDidChangeParams(
+    visible: Boolean
+)
