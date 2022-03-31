@@ -13,11 +13,12 @@ jobs:
           apps: ""
       - name: "Query maven-central"
         run: |
-          echo "3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY" > broken
-          echo "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY" >> broken
+          BROKEN=broken
+          echo "3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY" > $BROKEN
+          echo "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY" >> $BROKEN
 
-          cs complete org.scala-lang:scala3-compiler_3: | grep NIGHTLY | grep -v -f partial.list | sort > all_nightly
-          LAST_NIGHTLY_MTAG=$(cs complete org.scalameta:mtags_3 | grep NIGHTLY | grep -v -f broken | sort | tail -n 1 | cut -d "_" -f2)
+          cs complete org.scala-lang:scala3-compiler_3: | grep NIGHTLY | grep -v -f $BROKEN | sort > all_nightly
+          LAST_NIGHTLY_MTAG=$(cs complete org.scalameta:mtags_3 | grep NIGHTLY | grep -v -f $BROKEN | sort | tail -n 1 | cut -d "_" -f2)
           LAST_NIGHTLY_POS=$(grep -n $LAST_NIGHTLY_MTAG  all_nightly | cut -d ":" -f1)
           LAST_NIGHTLY_POS=$(($LAST_NIGHTLY_POS+1))
           NEW_NIGHTLIES=$(tail -n +$LAST_NIGHTLY_POS all_nightly)
