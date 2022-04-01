@@ -111,7 +111,8 @@ class MetalsLanguageServer(
       BspServers.globalInstallDirectories,
     sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     isReliableFileWatcher: Boolean = true,
-    mtagsResolver: MtagsResolver = MtagsResolver.default()
+    mtagsResolver: MtagsResolver = MtagsResolver.default(),
+    onStartCompilation: () => Unit = () => ()
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -195,7 +196,8 @@ class MetalsLanguageServer(
       else ()
     },
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
-    worksheets => onWorksheetChanged(worksheets)
+    worksheets => onWorksheetChanged(worksheets),
+    onStartCompilation
   )
   private val fileWatcher = register(
     new FileWatcher(

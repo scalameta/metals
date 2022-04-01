@@ -23,7 +23,8 @@ final class Compilations(
     refreshTestSuites: () => Unit,
     afterCompilation: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
-    compileWorksheets: Seq[AbsolutePath] => Future[Unit]
+    compileWorksheets: Seq[AbsolutePath] => Future[Unit],
+    onStartCompilation: () => Unit
 )(implicit ec: ExecutionContext) {
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
@@ -211,7 +212,6 @@ final class Compilations(
         CancelableFuture.sequence(futures).map(_.flatten.toMap)
     }
   }
-
   private def compile(
       connection: BuildServerConnection,
       targets: Seq[b.BuildTargetIdentifier]
@@ -219,6 +219,8 @@ final class Compilations(
     val params = new b.CompileParams(targets.asJava)
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
+
+    onStartCompilation()
 
     val result = compilation.asScala
       .andThen { case result =>
