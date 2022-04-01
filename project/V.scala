@@ -26,7 +26,7 @@ object V {
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
   val mill = "0.10.2"
-  val mdoc = "2.3.1"
+  val mdoc = "2.3.2"
   val munit = "0.7.29"
   val organizeImportRule = "0.6.0"
   val pprint = "0.7.3"
