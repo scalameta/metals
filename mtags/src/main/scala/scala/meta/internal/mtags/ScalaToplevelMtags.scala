@@ -204,7 +204,7 @@ class ScalaToplevelMtags(
     currentOwner = owner
     acceptTrivia()
     scanner.curr.token match {
-      case IDENTIFIER | BACKQUOTED_IDENT =>
+      case IDENTIFIER =>
         val paths = parsePath()
         paths.foreach { path => pkg(path.name, path.pos) }
         true
@@ -339,7 +339,7 @@ class ScalaToplevelMtags(
    */
   def newIdentifier: Identifier = {
     scanner.curr.token match {
-      case IDENTIFIER | BACKQUOTED_IDENT => // OK
+      case IDENTIFIER => // OK
       case _ => fail("identifier")
     }
     val pos = newPosition
