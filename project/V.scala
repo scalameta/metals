@@ -29,7 +29,7 @@ object V {
   val mdoc = "2.3.1"
   val munit = "0.7.29"
   val organizeImportRule = "0.6.0"
-  val pprint = "0.7.2"
+  val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.9.34"
