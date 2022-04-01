@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     name: "Upload LSIF"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: coursier/setup-action@v1.2.0-M2
       - run: cs install --contrib lsif-java
       - run: lsif-java index
