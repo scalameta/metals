@@ -42,7 +42,7 @@ jobs:
           - os: windows-latest
             CACHE_PATH: ~\AppData\Local\Coursier\Cache\v1
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: olafurpg/setup-scala@v13
         with:
           java-version: ${{ matrix.java }}
@@ -116,7 +116,7 @@ jobs:
             name: Formatting
             os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: olafurpg/setup-scala@v13
         with:
           java-version: "adopt@1.11"
