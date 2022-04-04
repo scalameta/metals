@@ -20,6 +20,7 @@ import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.interactive.SourceTree
 import dotty.tools.dotc.util.ParsedComment
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Hover
@@ -37,6 +38,7 @@ object HoverProvider:
     given ctx: Context = driver.currentCtx
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
+    val source = driver.openedFiles.get(uri)
 
     def typeFromPath(path: List[Tree]) =
       if path.isEmpty then NoType else path.head.tpe
@@ -49,8 +51,45 @@ object HoverProvider:
     val exprTp = typeFromPath(enclosing)
     val exprTpw = exprTp.widenTermRefExpr
 
-    if tp.isError || tpw == NoType || tpw.isError || path.isEmpty then
-      ju.Optional.empty()
+    /**
+     * Check if the given `sourcePos` is on the name of enclosing tree.
+     * ```
+     * // For example, if the postion is on `foo`, returns true
+     * def foo(x: Int) = { ... }
+     *      ^
+     *
+     * // On the other hand, it points to non-name position, return false.
+     * def foo(x: Int) = { ... }
+     *  ^
+     * ```
+     * @param path - path to the position given by `Interactive.pathTo`
+     */
+    def isHoveringOnName(path: List[Tree], sourcePos: SourcePosition): Boolean =
+      def contains(tree: Tree): Boolean = tree match
+        case tree: NameTree =>
+          source.fold(false) { s =>
+            SourceTree(tree, s).namePos.contains(sourcePos)
+          }
+        // TODO: check the positions for NamedArg and Import
+        case _: NamedArg => true
+        case _: Import => true
+        case app: (Apply | TypeApply) => contains(app.fun)
+        case _ => false
+      end contains
+
+      val enclosing = path
+        .dropWhile(t => !t.symbol.exists && !t.isInstanceOf[NamedArg])
+        .headOption
+        .getOrElse(EmptyTree)
+      contains(enclosing)
+    end isHoveringOnName
+
+    if tp.isError || tpw == NoType || tpw.isError || path.isEmpty ||
+      (pos.start == pos.end && !isHoveringOnName(
+        enclosing,
+        pos
+      )) // don't check isHoveringOnName for RangeHover
+    then ju.Optional.empty()
     else
       Interactive.enclosingSourceSymbols(enclosing, pos) match
         case Nil =>
