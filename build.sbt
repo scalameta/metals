@@ -171,7 +171,8 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.JavaMtags.scala&msg=parameter value (ctor|method) in method (visitConstructor|visitMethod):silent",
     "-Wconf:src=*.MtagsIndexer.scala&msg=parameter value owner in method visitOccurrence:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
-    "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent"
+    "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
+    "-Wconf:src=*.BasePCSuite.scala&msg=parameter value (scalaVersion|classpath) in method (extraDependencies|scalacOptions):silent"
   )
   // -Wconf is available only from 2.13.2
   val commonFiltered =
@@ -180,7 +181,7 @@ def lintingOptions(scalaVersion: String) = {
   crossSetting(
     scalaVersion,
     if213 = unused213 :: commonFiltered,
-    if3 = unused3 :: common,
+    if3 = unused3 :: Nil,
     if211 = List("-Ywarn-unused-import")
   )
 }
