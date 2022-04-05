@@ -86,6 +86,13 @@ class SemanticdbTreePrinter(
         } else {
           s"${printType(tpe)} {${printScope(scope)}}"
         }
+      case s.MatchType(scrutinee, cases) =>
+        val casesStr = cases
+          .map { caseType =>
+            s"${printType(caseType.key)} => ${printType(caseType.body)}"
+          }
+          .mkString(", ")
+        s"${printType(scrutinee)} match { ${casesStr} }"
     }
 
   def printScope(scope: Option[s.Scope]): String = {
