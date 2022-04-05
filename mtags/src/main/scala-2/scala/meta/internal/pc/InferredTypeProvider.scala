@@ -60,14 +60,20 @@ final class InferredTypeProvider(
     def prettyType(tpe: Type) =
       metalsToLongString(tpe.widen.finalResultType, history)
 
+    def findNameEnd(start: Int, name: Name): Int = {
+      // dropLocal will remove a space that might appear at the of a name in some places
+      val identLength = name.dropLocal.length
+      val backtickInc = if (params.text().charAt(start) == '`') 2 else 0
+      start + identLength + backtickInc
+    }
+
     typedTree match {
       /* `val a = 1` or `var b = 2`
        *     turns into
        * `val a: Int = 1` or `var b: Int = 2`
        */
       case vl @ ValDef(_, name, tpt, _) if !vl.symbol.isParameter =>
-        // dropLocal will remove a space that might appear at the of a name in some places
-        val nameEnd = tpt.pos.start + name.dropLocal.length()
+        val nameEnd = findNameEnd(tpt.pos.start, name)
         val nameEndPos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLSP
         val typeNameEdit = new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
         typeNameEdit :: additionalImports
@@ -77,7 +83,7 @@ final class InferredTypeProvider(
        * `.map((a: Int) => a + a)`
        */
       case vl @ ValDef(_, name, tpt, _) if vl.symbol.isParameter =>
-        val nameEnd = vl.pos.start + name.length()
+        val nameEnd = findNameEnd(vl.pos.start, name)
         val namePos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLSP
 
         def leftParenStart = vl.pos.withEnd(vl.pos.start).toLSP
@@ -120,7 +126,7 @@ final class InferredTypeProvider(
        * `def a[T](param : Int): Int = param`
        */
       case DefDef(_, name, _, _, tpt, rhs) =>
-        val nameEnd = tpt.pos.start + name.length()
+        val nameEnd = findNameEnd(tpt.pos.start, name)
 
         // search for `)` or `]` or defaut to name's end to insert type
         val searchString = params
@@ -148,7 +154,7 @@ final class InferredTypeProvider(
         def openingParenPos = body.pos.withEnd(body.pos.start)
         def openingParen = new TextEdit(openingParenPos.toLSP, "(")
 
-        val insertStart = bind.pos.start + name.length()
+        val insertStart = findNameEnd(bind.pos.start, name)
         val insertPos = bind.pos.withEnd(insertStart).withStart(insertStart)
 
         /* In case it's an infix pattern match
