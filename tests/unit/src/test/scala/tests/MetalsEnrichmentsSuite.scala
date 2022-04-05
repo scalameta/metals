@@ -35,4 +35,5 @@ class MetalsEnrichmentsSuite extends BaseSuite {
     val path = uri.toAbsolutePath
     assert(path.toString().contains("hello space+world"))
   }
+
 }
