@@ -22,6 +22,7 @@ import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JavaTarget
+import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsHttpServer
@@ -162,7 +163,9 @@ final class Doctor(
   def check(): Unit = {
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
-    val summary = problemResolver.problemMessage(scalaTargets, javaTargets)
+    val summary = problemResolver
+      .problemMessage(scalaTargets, javaTargets)
+      .orElse(deprecatedJavaVersion())
     executeReloadDoctor(summary)
     summary match {
       case Some(problem) =>
@@ -174,6 +177,9 @@ final class Doctor(
           hasProblems.set(true)
           languageClient.showMessageRequest(params).asScala.foreach { item =>
             if (item == CheckDoctor.moreInformation) {
+              if (clientConfig.isDoctorVisibilityProvider()) {
+                isVisible.set(true)
+              }
               executeRunDoctor()
             } else if (item == CheckDoctor.dismissForever) {
               notification.dismissForever()
@@ -251,12 +257,26 @@ final class Doctor(
       .render
   }
 
+  /**
+   * Java 8 is deprecated and in the future Metals will require Java >=11
+   */
+  private def deprecatedJavaVersion(): Option[String] = for {
+    versionString <- Option(System.getProperty("java.version"))
+    version <- JdkVersion.parse(versionString)
+    if version.major < 11
+  } yield "Running Metals on Java 8 is deprecated. In the future Metals will require Java 11"
+
   private def getJdkInfo(): Option[String] =
     for {
       version <- Option(System.getProperty("java.version"))
       vendor <- Option(System.getProperty("java.vendor"))
-      home <- Option(System.getProperty("java.home"))
-    } yield s"$version from $vendor located at $home"
+      // java.home points to the installation directory for Java Runtime Environment
+      // https://docs.oracle.com/javase/tutorial/essential/environment/sysprop.html
+      jreHome <- Option(System.getProperty("java.home"))
+    } yield {
+      val home = jreHome.stripSuffix(s"/jre")
+      s"$version from $vendor located at $home"
+    }
 
   private def buildTargetsJson(): String = {
     val targetIds = allTargetIds()
@@ -272,6 +292,7 @@ final class Doctor(
         Some(buildServerHeading),
         importBuildHeading,
         jdkInfo,
+        deprecatedJavaVersion(),
         Some(serverInfo),
         Some(doctorHeading)
       ).flatten
@@ -387,6 +408,17 @@ final class Doctor(
       html.element("p") { builder =>
         builder.bold(jdkVersionTitle)
         builder.text(jdkMsg)
+      }
+    }
+
+    deprecatedJavaVersion().foreach { deprecatedJdk =>
+      html.element("p") { builder =>
+        builder.text(Icons.unicode.alert)
+        builder.text(Icons.unicode.alert)
+        builder.bold(deprecatedJdk)
+        builder.text(" ")
+        builder.text(Icons.unicode.alert)
+        builder.text(Icons.unicode.alert)
       }
     }
 
