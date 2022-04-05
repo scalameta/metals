@@ -133,8 +133,13 @@ trait MtagsEnrichments extends CommonMtagsEnrichments {
         URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
       else if (value.toUpperCase.startsWith("JAR:FILE%3A"))
         URLDecoder.decode(value, "UTF-8").toAbsolutePath(followSymlink)
-      else
-        URI.create(value.stripPrefix("metals:")).toAbsolutePath(followSymlink)
+      else if (value.toUpperCase.startsWith("JAR"))
+        URI.create(value).toAbsolutePath(followSymlink)
+      else {
+        val stripped = value.stripPrefix("metals:")
+        val percentEncoded = URIEncoderDecoder.encode(stripped)
+        URI.create(percentEncoded).toAbsolutePath(followSymlink)
+      }
     }
     def lastIndexBetween(
         char: Char,
