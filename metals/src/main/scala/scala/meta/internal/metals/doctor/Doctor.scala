@@ -264,7 +264,7 @@ final class Doctor(
     versionString <- Option(System.getProperty("java.version"))
     version <- JdkVersion.parse(versionString)
     if version.major < 11
-  } yield "Running Metals on Java 8 is deprecated. In the future Metals will require Java 11"
+  } yield s"Running Metals on Java ${version.major} is deprecated. In the future Metals will require Java 11 or higher"
 
   private def getJdkInfo(): Option[String] =
     for {

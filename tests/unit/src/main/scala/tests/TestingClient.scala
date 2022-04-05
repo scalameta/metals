@@ -297,7 +297,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     }
 
     CompletableFuture.completedFuture {
-      messageRequests.addLast(params.getMessage)
+      val message = params.getMessage
+      if (!message.startsWith("Running Metals on Java 8 is deprecated")) {
+        messageRequests.addLast(message)
+      }
       showMessageRequestHandler(params).getOrElse {
         if (isSameMessage(ImportBuildChanges.params)) {
           importBuildChanges
