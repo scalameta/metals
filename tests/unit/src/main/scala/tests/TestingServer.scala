@@ -435,9 +435,11 @@ final class TestingServer(
         new ReferenceContext(true)
       )
       val obtainedLocations = server.referencesResult(params)
-      references ++= obtainedLocations.locations.map(l =>
-        newRef(obtainedLocations.symbol, l)
-      )
+      references ++= obtainedLocations.flatMap { result =>
+        result.locations.map { l =>
+          newRef(result.symbol, l)
+        }
+      }
       definition ++= expectedLocations.map(l => newRef(ref.symbol, l))
     }
     WorkspaceSymbolReferences(

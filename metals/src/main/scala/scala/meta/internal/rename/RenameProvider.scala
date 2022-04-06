@@ -102,6 +102,14 @@ final class RenameProvider(
           params.getPosition()
         )
 
+        lazy val definitionTextParams =
+          definition.locations.asScala.map { l =>
+            new TextDocumentPositionParams(
+              new TextDocumentIdentifier(l.getUri()),
+              l.getRange().getStart()
+            )
+          }
+
         val symbolOccurrence =
           definitionProvider
             .symbolOccurrence(source, textParams.getPosition)
@@ -153,8 +161,9 @@ final class RenameProvider(
             implementationProvider
               .topMethodParents(occurence.symbol, defSemanticdb)
           txtParams <- {
-            if (parentSymbols.isEmpty) List(textParams)
-            else parentSymbols.map(toTextParams)
+            if (parentSymbols.nonEmpty) parentSymbols.map(toTextParams)
+            else if (definitionTextParams.nonEmpty) definitionTextParams
+            else List(textParams)
           }
           isJava = definitionPath.isJava
           currentReferences =
@@ -171,7 +180,7 @@ final class RenameProvider(
                 findRealRange = findRealRange(newName),
                 includeSynthetic
               )
-              .locations
+              .flatMap(_.locations)
           definitionLocation = {
             if (parentSymbols.isEmpty)
               definition.locations.asScala
@@ -335,7 +344,7 @@ final class RenameProvider(
             toReferenceParams(loc, includeDeclaration = false),
             findRealRange = findRealRange(newName)
           )
-          .locations :+ loc
+          .flatMap(_.locations) :+ loc
     } yield companionLocs
     results.toList
   }
@@ -384,7 +393,7 @@ final class RenameProvider(
               findRealRange = findRealRange(newName),
               includeSynthetic
             )
-            .locations
+            .flatMap(_.locations)
       } yield loc
     } else {
       Nil

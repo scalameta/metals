@@ -1519,14 +1519,14 @@ class MetalsLanguageServer(
   def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ => referencesResult(params).locations.asJava }
+    CancelTokens { _ => referencesResult(params).flatMap(_.locations).asJava }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
   // user to run references again to see updated results.
   private def compileAndLookForNewReferences(
       params: ReferenceParams,
-      result: ReferencesResult
+      result: List[ReferencesResult]
   ): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val old = path.toInputFromBuffers(buffers)
@@ -1555,13 +1555,17 @@ class MetalsLanguageServer(
         case None =>
         case Some(p) =>
           val newResult = referencesProvider.references(p)
-          val diff = newResult.locations.length - result.locations.length
-          val isSameSymbol = newResult.symbol == result.symbol
-          if (isSameSymbol && diff > 0) {
+          val diff = newResult
+            .flatMap(_.locations)
+            .length - result.flatMap(_.locations).length
+          val diffSyms: Set[String] =
+            newResult.map(_.symbol).toSet -- result.map(_.symbol).toSet
+          if (diffSyms.nonEmpty && diff > 0) {
             import scala.meta.internal.semanticdb.Scala._
-            val name = newResult.symbol.desc.name.value
+            val names =
+              diffSyms.map(sym => s"'${sym.desc.name.value}'").mkString(" and ")
             val message =
-              s"Found new symbol references for '$name', try running again."
+              s"Found new symbol references for $names, try running again."
             scribe.info(message)
             statusBar
               .addMessage(clientConfig.icons.info + message)
@@ -1569,22 +1573,24 @@ class MetalsLanguageServer(
       }
     }
   }
-  def referencesResult(params: ReferenceParams): ReferencesResult = {
+  def referencesResult(params: ReferenceParams): List[ReferencesResult] = {
     val timer = new Timer(time)
-    val result = referencesProvider.references(params)
+    val results: List[ReferencesResult] = referencesProvider.references(params)
     if (clientConfig.initialConfig.statistics.isReferences) {
-      if (result.symbol.isEmpty) {
+      if (results.forall(_.symbol.isEmpty)) {
         scribe.info(s"time: found 0 references in $timer")
       } else {
         scribe.info(
-          s"time: found ${result.locations.length} references to symbol '${result.symbol}' in $timer"
+          s"time: found ${results.flatMap(_.locations).length} references to symbol '${results
+            .map(_.symbol)
+            .mkString("and")}' in $timer"
         )
       }
     }
-    if (result.symbol.nonEmpty) {
-      compileAndLookForNewReferences(params, result)
+    if (results.nonEmpty) {
+      compileAndLookForNewReferences(params, results)
     }
-    result
+    results
   }
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
@@ -2450,8 +2456,8 @@ class MetalsLanguageServer(
               positionParams.getPosition(),
               new ReferenceContext(false)
             )
-            val result = referencesResult(refParams)
-            if (result.locations.isEmpty) {
+            val results = referencesResult(refParams)
+            if (results.flatMap(_.locations).isEmpty) {
               // Fallback again to the original behavior that returns
               // the definition location itself if no reference locations found,
               // for avoiding the confusing messages like "No definition found ..."
@@ -2459,8 +2465,8 @@ class MetalsLanguageServer(
             } else {
               Future.successful(
                 DefinitionResult(
-                  locations = result.locations.asJava,
-                  symbol = result.symbol,
+                  locations = results.flatMap(_.locations).asJava,
+                  symbol = results.head.symbol,
                   definition = None,
                   semanticdb = None
                 )

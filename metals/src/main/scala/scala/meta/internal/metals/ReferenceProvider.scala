@@ -88,30 +88,29 @@ final class ReferenceProvider(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true
-  ): ReferencesResult = {
+  ): List[ReferencesResult] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
-        val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
-          definition.positionOccurrence(source, params.getPosition, doc)
-        maybeOccurrence match {
-          case Some(occurrence) =>
-            val alternatives =
-              referenceAlternatives(occurrence.symbol, source, doc)
-            val locations = references(
-              source,
-              params,
-              doc,
-              distance,
-              occurrence,
-              alternatives,
-              params.getContext.isIncludeDeclaration,
-              findRealRange,
-              includeSynthetics
-            )
-            ReferencesResult(occurrence.symbol, locations)
-          case None =>
-            ReferencesResult.empty
+        val results: List[ResolvedSymbolOccurrence] =
+          definition.positionOccurrences(source, params.getPosition, doc)
+        results.map { result =>
+          val occurrence = result.occurrence.get
+          val distance = result.distance
+          val alternatives =
+            referenceAlternatives(occurrence.symbol, source, doc)
+          val locations = references(
+            source,
+            params,
+            doc,
+            distance,
+            occurrence,
+            alternatives,
+            params.getContext.isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics
+          )
+          ReferencesResult(occurrence.symbol, locations)
         }
       case None =>
         // NOTE(olafur): we block here instead of returning a Future because it
@@ -119,7 +118,9 @@ final class ReferenceProvider(
         // its dependencies (including rename provider) asynchronous. The remote
         // language server returns `Future.successful(None)` when it's disabled
         // so this isn't even blocking for normal usage of Metals.
-        remote.referencesBlocking(params).getOrElse(ReferencesResult.empty)
+        List(
+          remote.referencesBlocking(params).getOrElse(ReferencesResult.empty)
+        )
     }
   }
 

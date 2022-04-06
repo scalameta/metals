@@ -196,6 +196,38 @@ final class DefinitionProvider(
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
+  def positionOccurrences(
+      source: AbsolutePath,
+      dirtyPosition: Position,
+      snapshot: TextDocument
+  ): List[ResolvedSymbolOccurrence] = {
+    // Convert dirty buffer position to snapshot position in "source"
+    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
+    val snapshotPosition = sourceDistance.toOriginal(
+      dirtyPosition.getLine,
+      dirtyPosition.getCharacter
+    )
+
+    // Find matching symbol occurrence in SemanticDB snapshot
+    val occurrence = for {
+      queryPosition <- snapshotPosition.toPosition(dirtyPosition)
+    } yield {
+      val occs = snapshot.occurrences
+        .filter(_.encloses(queryPosition, true))
+      // In case of macros we might need to get the postion from the presentation compiler
+      if (occs.isEmpty)
+        fromMtags(source, queryPosition).toList
+      else occs
+    }
+
+    occurrence
+      .getOrElse(Nil)
+      .map { occ =>
+        ResolvedSymbolOccurrence(sourceDistance, Some(occ))
+      }
+      .toList
+  }
+
   private def definitionFromSnapshot(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
