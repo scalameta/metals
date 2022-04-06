@@ -6,7 +6,6 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
-import scala.annotation.nowarn
 import scala.collection.Seq
 import scala.util.control.NonFatal
 
@@ -108,11 +107,9 @@ abstract class BasePCSuite extends BaseSuite {
       snippetAutoIndent = false
     )
 
-  @nowarn("msg=parameter value scalaVersion")
   protected def extraDependencies(scalaVersion: String): Seq[Dependency] =
     Seq.empty
 
-  @nowarn("msg=parameter value classpath")
   protected def scalacOptions(classpath: Seq[Path]): Seq[String] = Seq.empty
 
   protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = None
