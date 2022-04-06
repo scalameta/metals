@@ -112,7 +112,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "interpolator-apply",
+    "interpolator-apply".tag(IgnoreScala3),
     """
       |object a {
       |  implicit class Xtension(s: StringContext) {
@@ -228,7 +228,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "for-flatMap",
+    "for-flatMap".tag(IgnoreScala3),
     """
       |object a {
       |  <<for {
@@ -240,14 +240,11 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Option[String]
        |def flatMap[B](f: Int => Option[B]): Option[B]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3" -> "val <local a$>: (x: Int): Boolean".hover
-    )
+       |""".stripMargin.hover
   )
 
   check(
-    "for-map",
+    "for-map".tag(IgnoreScala3),
     """
       |object a {
       |  for {
@@ -259,14 +256,11 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Option[String]
        |final def map[B](f: Int => B): Option[B]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3" -> "val <local a$>: (y: Int): String".hover
-    )
+       |""".stripMargin.hover
   )
 
   check(
-    "for-keyword",
+    "for-keyword".tag(IgnoreScala3),
     """
       |object a {
       |  <<fo@@r {
@@ -282,7 +276,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "for-yield-keyword",
+    "for-yield-keyword".tag(IgnoreScala3),
     """
       |object a {
       |  for {
@@ -294,10 +288,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Option[String]
        |final def map[B](f: Long => B): Option[B]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3" -> "val <local a$>: (y: Long): String".hover
-    )
+       |""".stripMargin.hover
   )
 
   check(
