@@ -85,10 +85,8 @@ object HoverProvider:
     end isHoveringOnName
 
     if tp.isError || tpw == NoType || tpw.isError || path.isEmpty ||
-      (pos.start == pos.end && !isHoveringOnName(
-        enclosing,
-        pos
-      )) // don't check isHoveringOnName for RangeHover
+      (pos.isPoint // don't check isHoveringOnName for RangeHover
+        && !isHoveringOnName(enclosing, pos))
     then ju.Optional.empty()
     else
       Interactive.enclosingSourceSymbols(enclosing, pos) match
@@ -146,6 +144,9 @@ object HoverProvider:
           end match
     end if
   end hover
+
+  extension (pos: SourcePosition)
+    private def isPoint: Boolean = pos.start == pos.end
 
   private def qual(tree: Tree): Tree =
     tree match
