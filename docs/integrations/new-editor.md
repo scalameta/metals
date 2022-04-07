@@ -1062,3 +1062,21 @@ interface FindTextInDependencyJarsRequest(
 _Response_:
 
 - result: `Location[]`
+
+### `metals/doctorVisibilityDidChange`
+
+When the client opens the doctor view, it will send in `visible: true` to the
+server and then `visible: false` when the doctor view is closed. This will
+ensure that the doctor checks aren't calculated on the server side when they
+aren't needed to since the won't be seen by the client anyways.
+
+_Notification_:
+
+- method: `metals/doctorVisibilityDidChange`
+- params: `DoctorVisibilityDidChangeParams`
+
+```ts
+interface DoctorVisibilityDidChangeParams {
+  visible: boolean;
+}
+```
