@@ -62,11 +62,13 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
     test(name) {
       cleanWorkspace()
       for {
-        _ <- initialize(s"""/metals.json
-                           |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
-                           |$scalafixConf
-                           |/$path
-                           |$fileContent""".stripMargin)
+        _ <- initialize(
+          s"""/metals.json
+             |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
+             |$scalafixConf
+             |/$path
+             |$fileContent""".stripMargin
+        )
         _ <- server.didOpen(path)
         _ <- {
           configuration match {

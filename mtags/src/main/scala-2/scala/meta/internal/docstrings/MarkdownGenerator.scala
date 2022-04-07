@@ -118,7 +118,7 @@ object MarkdownGenerator {
     blocks
       .map((b: Block) =>
         s"${this.listBlockIndent(b, bullet, listLevel)}${this
-          .blockToMarkdown(b, listLevel + 1)}"
+            .blockToMarkdown(b, listLevel + 1)}"
       )
       .mkString
 

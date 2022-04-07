@@ -285,7 +285,7 @@ class Compilers(
     // insert expression at the start of breakpoint's line and move the lines one down
     val modified =
       s"${oldText.substring(0, lineStart)};${expression
-        .getText()}\n${" " * indentation}${oldText.substring(lineStart)}"
+          .getText()}\n${" " * indentation}${oldText.substring(lineStart)}"
 
     val offsetParams = CompilerOffsetParams(
       path.toURI,
