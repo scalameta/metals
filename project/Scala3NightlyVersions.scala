@@ -6,7 +6,8 @@ object Scala3NightlyVersions {
   val broken =
     Set(
       "3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY",
-      "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY"
+      "3.2.0-RC1-bin-20220308-29073f1-NIGHTLY",
+      "3.1.3-RC1-bin-20220406-73cda0c-NIGHTLY"
     ).flatMap(DottyVersion.parse)
 
   /**
