@@ -264,9 +264,9 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
           .collect {
             case file if (file.isFile) =>
               s"""|/${file
-                .toRelative(tmpDirectory)
-                .toString()
-                .replace('\\', '/')}
+                   .toRelative(tmpDirectory)
+                   .toString()
+                   .replace('\\', '/')}
                   |${file.readText}
                   |""".stripMargin
           }
