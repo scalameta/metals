@@ -43,16 +43,14 @@ object ClientCommands {
         |  /**
         |   * Contains decisions that were made about what build tool or build server
         |   * the user has chosen. There is also other brief information about understanding
-        |   * the Doctor placed in here as well.
+        |   * the Doctor placed in here as well. (since version 3 (replaces headerText))
         |   */
-        |   headerText: string;
+        |   header: DoctorHeader;
         |   /**
         |    * If build targets are detected in your workspace, they will be listed here with
         |    * the status of related functionality of Metals for each build target.
         |    */
         |   targets?: DoctorBuildTarget[];
-        |   /** Messages given if build targets cannot be found */
-        |   messages?: DoctorRecommendation[];
         |   /** Messages given if build targets cannot be found */
         |   messages?: DoctorRecommendation[];
         |   /** Explanations for the various statuses present in the doctor */
@@ -61,10 +59,28 @@ object ClientCommands {
         |
         |```
         |```json
+        |export interface DoctorHeader {
+        |  /** if Metals detected multiple build tools, this specifies the one the user has chosen */
+        |  buildTool?: string;
+        |  /** the build server that is being used */
+        |  buildServer: string;
+        |  /** if the user has turned the import prompt off, this will include a message on
+        |   *  how to get it back.
+        |   */
+        |  importBuildStatus?: string;
+        |  /** java version and location information */
+        |  jdkInfo?: string;
+        |  /** the version of the server that is being used */
+        |  serverInfo: string;
+        |  /** small description on what a build target is */
+        |  buildTargetDescription: string;
+        |}
+        |```
+        |```json
         |export interface DoctorBuildTarget {
         |  /** Name of the build target */
         |  buildTarget: string;
-        |  /** Status of compilation for build this build target */
+        |  /** Status of compilation for build this build target (since version 2) */
         |  compilationStatus: string;
         |  /** Can contain Scala version, sbt version or Java */
         |  targetType: string;
