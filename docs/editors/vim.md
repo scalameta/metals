@@ -67,7 +67,6 @@ plugin manager like vundle works too, but requires slightly different configurat
 following settings.
 
 ```vim
-call plug#begin()
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 ```
 
