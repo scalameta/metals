@@ -273,7 +273,8 @@ Possible values:
 
 - `html`: (default): Metals will return html that can be rendered directly in
   the browser or web view
-- `json`: json representation of the information returned by Doctor
+- `json`: json representation of the information returned by Doctor. See the
+    json format [here](#run-doctor).
 
 ##### `executeClientCommandProvider`
 

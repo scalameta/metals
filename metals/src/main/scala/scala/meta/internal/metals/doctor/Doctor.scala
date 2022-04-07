@@ -266,20 +266,19 @@ final class Doctor(
     val importBuildHeading = selectedImportBuildMessage()
     val jdkInfo = getJdkInfo().map(info => s"$jdkVersionTitle$info")
     val serverInfo = s"$serverVersionTitle${BuildInfo.metalsVersion}"
-    val heading =
-      List(
+    val header =
+      DoctorHeader(
         buildToolHeading,
-        Some(buildServerHeading),
+        buildServerHeading,
         importBuildHeading,
         jdkInfo,
-        Some(serverInfo),
-        Some(doctorHeading)
-      ).flatten
-        .mkString("\n\n")
+        serverInfo,
+        buildTargetDescription
+      )
     val results = if (targetIds.isEmpty) {
       DoctorResults(
         doctorTitle,
-        heading,
+        header,
         Some(
           List(
             DoctorMessage(
@@ -307,7 +306,7 @@ final class Doctor(
 
       DoctorResults(
         doctorTitle,
-        heading,
+        header,
         None,
         Some(allTargetsInfo),
         explanations
@@ -397,7 +396,7 @@ final class Doctor(
 
     html
       .element("p")(
-        _.text(doctorHeading)
+        _.text(buildTargetDescription)
       )
 
     val targetIds = allTargetIds()
@@ -606,7 +605,7 @@ final class Doctor(
   private val doctorTitle = "Metals Doctor"
   private val jdkVersionTitle = "Metals Java: "
   private val serverVersionTitle = "Metals Server version: "
-  private val doctorHeading =
+  private val buildTargetDescription =
     "These are the installed build targets for this workspace. " +
       "One build target corresponds to one classpath. For example, normally one sbt project maps to " +
       "two build targets: main and test."
