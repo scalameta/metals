@@ -63,7 +63,7 @@ Language Server Protocol support to Vim/Nvim  to communicate with the Metals
 language server.
 
 Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used (another
-plugin manager like vundle works too), update your `~/.vimrc` to include the
+plugin manager like vundle works too, but requires slightly different configuration), update your `~/.vimrc` (or, in case of Neovim, `~/.config/nvim/init.vim`) to include the
 following settings.
 
 ```vim
