@@ -171,46 +171,54 @@ final class DefinitionProvider(
     } yield (symbolOccurrence, currentDocument)
   }
 
-  def positionOccurrence(
+  /** Convert dirty buffer position to snapshot position in "source" */
+  private def positionOccurrenceQuery(
       source: AbsolutePath,
       dirtyPosition: Position,
       snapshot: TextDocument
-  ): ResolvedSymbolOccurrence = {
-    // Convert dirty buffer position to snapshot position in "source"
+  ): (TokenEditDistance, Option[Position]) = {
     val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
       dirtyPosition.getCharacter
     )
+    (sourceDistance, snapshotPosition.toPosition(dirtyPosition))
+  }
 
-    // Find matching symbol occurrence in SemanticDB snapshot
+  def positionOccurrence(
+      source: AbsolutePath,
+      dirtyPosition: Position,
+      snapshot: TextDocument
+  ): ResolvedSymbolOccurrence = {
+    val (sourceDistance, queryPositionOpt) =
+      positionOccurrenceQuery(source, dirtyPosition, snapshot)
+
     val occurrence = for {
-      queryPosition <- snapshotPosition.toPosition(dirtyPosition)
+      queryPosition <- queryPositionOpt
       occurrence <-
         snapshot.occurrences
           .find(_.encloses(queryPosition, true))
           // In case of macros we might need to get the postion from the presentation compiler
           .orElse(fromMtags(source, queryPosition))
     } yield occurrence
-
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
+  /**
+   * Find all SymbolOccurrences for the given position.
+   * Multiple symbols might be attached, for example
+   * extension parameter. see: https://github.com/scalameta/metals/issues/3133
+   */
   def positionOccurrences(
       source: AbsolutePath,
       dirtyPosition: Position,
       snapshot: TextDocument
   ): List[ResolvedSymbolOccurrence] = {
-    // Convert dirty buffer position to snapshot position in "source"
-    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
-    val snapshotPosition = sourceDistance.toOriginal(
-      dirtyPosition.getLine,
-      dirtyPosition.getCharacter
-    )
-
-    // Find matching symbol occurrence in SemanticDB snapshot
-    val occurrence = for {
-      queryPosition <- snapshotPosition.toPosition(dirtyPosition)
+    val (sourceDistance, queryPositionOpt) =
+      positionOccurrenceQuery(source, dirtyPosition, snapshot)
+    // Find matching symbol occurrences in SemanticDB snapshot
+    val occurrence = (for {
+      queryPosition <- queryPositionOpt
     } yield {
       val occs = snapshot.occurrences
         .filter(_.encloses(queryPosition, true))
@@ -218,14 +226,11 @@ final class DefinitionProvider(
       if (occs.isEmpty)
         fromMtags(source, queryPosition).toList
       else occs
-    }
+    }).getOrElse(Nil)
 
-    occurrence
-      .getOrElse(Nil)
-      .map { occ =>
-        ResolvedSymbolOccurrence(sourceDistance, Some(occ))
-      }
-      .toList
+    occurrence.map { occ =>
+      ResolvedSymbolOccurrence(sourceDistance, Some(occ))
+    }.toList
   }
 
   private def definitionFromSnapshot(

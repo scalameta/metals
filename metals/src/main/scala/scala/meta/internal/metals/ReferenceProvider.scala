@@ -84,6 +84,13 @@ final class ReferenceProvider(
     }
   }
 
+  /**
+   * Find references for the given params.
+   *
+   * @return - All found list of references, it is a list of result because
+   *           in some cases, multiple symbols are attached to the given position.
+   *           (e.g. exntesion parameter). See: https://github.com/scalameta/scalameta/issues/2443
+   */
   def references(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
