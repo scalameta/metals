@@ -86,8 +86,8 @@ class SemanticdbTreePrinter(
         } else {
           s"${printType(tpe)} {${printScope(scope)}}"
         }
-      case s.MatchType(scrutinee, _) =>
-        s"${printType(scrutinee)} match { ... }"
+      case s.MatchType(scrutinee, cases) =>
+        s"${printType(scrutinee)} match { ${cases.size} cases }"
     }
 
   def printScope(scope: Option[s.Scope]): String = {
