@@ -27,7 +27,8 @@ object SystemProcess {
       env: Map[String, String],
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
-      propagateError: Boolean = false
+      propagateError: Boolean = false,
+      threadNamePrefix: String = ""
   ): SystemProcess = {
 
     try {
@@ -38,7 +39,13 @@ object SystemProcess {
 
       builder.redirectErrorStream(redirectErrorOutput)
       val ps = builder.start()
-      wrapProcess(ps, redirectErrorOutput, processOut, processErr)
+      wrapProcess(
+        ps,
+        redirectErrorOutput,
+        processOut,
+        processErr,
+        threadNamePrefix
+      )
     } catch {
       case NonFatal(e) =>
         if (propagateError) throw e
@@ -54,9 +61,14 @@ object SystemProcess {
       ps: Process,
       redirectErrorOutput: Boolean,
       processOut: String => Unit,
-      processErr: String => Unit
+      processErr: String => Unit,
+      threadNamePrefix: String
   ): SystemProcess = {
-    def readOutput(stream: InputStream, f: String => Unit): Thread = {
+    def readOutput(
+        name: String,
+        stream: InputStream,
+        f: String => Unit
+    ): Thread = {
       val filter = AnsiFilter()
       val thread = new Thread {
         override def run(): Unit = {
@@ -72,6 +84,8 @@ object SystemProcess {
           }
         }
       }
+      if (threadNamePrefix.nonEmpty)
+        thread.setName(s"$threadNamePrefix-$name")
       thread.setDaemon(true)
       thread.start()
       thread
@@ -81,9 +95,9 @@ object SystemProcess {
     ps.getOutputStream().close
 
     val outReaders = List(
-      Some(readOutput(ps.getInputStream(), processOut(_))),
+      Some(readOutput("stdout", ps.getInputStream(), processOut(_))),
       if (redirectErrorOutput) None
-      else Some(readOutput(ps.getErrorStream(), processErr(_)))
+      else Some(readOutput("stderr", ps.getErrorStream(), processErr(_)))
     ).flatten
 
     new SystemProcess {
