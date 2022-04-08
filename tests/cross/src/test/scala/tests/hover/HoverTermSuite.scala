@@ -112,7 +112,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "interpolator-apply".tag(IgnoreScala3),
+    "interpolator-apply",
     """
       |object a {
       |  implicit class Xtension(s: StringContext) {

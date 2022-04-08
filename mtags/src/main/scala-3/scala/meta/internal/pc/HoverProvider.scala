@@ -66,6 +66,13 @@ object HoverProvider:
      */
     def isHoveringOnName(path: List[Tree], sourcePos: SourcePosition): Boolean =
       def contains(tree: Tree): Boolean = tree match
+        // e.g. interpolator-apply num"... $foo" has tree like
+        // Select(Select(Apply(Ident(Xtension), List(...)), num), apply)
+        case select: Select =>
+          source.fold(false) { s =>
+            SourceTree(select, s).namePos.contains(sourcePos)
+          }
+          || contains(select.qualifier)
         case tree: NameTree =>
           source.fold(false) { s =>
             SourceTree(tree, s).namePos.contains(sourcePos)
