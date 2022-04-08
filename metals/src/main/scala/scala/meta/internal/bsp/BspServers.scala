@@ -21,6 +21,7 @@ import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -65,23 +66,31 @@ final class BspServers(
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
-      val process = new ProcessBuilder(details.getArgv)
-        .directory(projectDirectory.toFile)
-        .start()
+      scribe.info(s"Running BSP server ${details.getArgv}")
+
+      val proc = SystemProcess.run(
+        details.getArgv.asScala.toList,
+        projectDirectory,
+        redirectErrorOutput = false,
+        Map(),
+        processOut = None,
+        processErr = Some(l => scribe.info("BSP server: " + l)),
+        discardInput = false,
+        threadNamePrefix = s"bsp-${details.getName}"
+      )
 
       val output = new ClosableOutputStream(
-        process.getOutputStream,
+        proc.outputStream,
         s"${details.getName} output stream"
       )
       val input = new QuietInputStream(
-        process.getInputStream,
+        proc.inputStream,
         s"${details.getName} input stream"
       )
 
       val finished = Promise[Unit]()
-      Future {
-        process.waitFor()
-        finished.success(())
+      proc.complete.ignoreValue.onComplete { res =>
+        finished.tryComplete(res)
       }
 
       Future.successful {
@@ -90,7 +99,7 @@ final class BspServers(
           output,
           input,
           List(
-            Cancelable(() => process.destroy())
+            Cancelable(() => proc.cancel)
           ),
           finished
         )
