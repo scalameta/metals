@@ -234,6 +234,8 @@ out-of-the-box.
 **Few steps**: installing Metals requires a few custom steps and minimal
 configuration to work.
 
+_You can find instructions on how to install Metals for your editor on its specific page._
+
 ## Build import
 
 **✅**: it is possible to import a build such as an sbt project directly from
