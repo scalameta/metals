@@ -215,21 +215,21 @@ object FileWatcher {
         val path = event.getTypedPath.getPath
         if (watchFilter(path)) {
           event.getKind match {
-            case Kind.Create => {
-              queue.add(FileWatcherEvent.create(path))
-            }
-            case Kind.Modify => {
-              queue.add(FileWatcherEvent.modify(path))
-            }
-            case Kind.Delete => {
+            // Swoval PathWatcher may not disambiguate between create and modify events on macOS
+            // due to how underlying OS APIs work. However such fidelity is not needed for metals.
+            // If the distinction between create and modify is important some time in the future,
+            // you may wish to use FileTreeRepository, which needs much more memory because
+            // it caches the whole watched file tree.
+            case Kind.Create =>
+              queue.add(FileWatcherEvent.createOrModify(path))
+            case Kind.Modify =>
+              queue.add(FileWatcherEvent.createOrModify(path))
+            case Kind.Delete =>
               queue.add(FileWatcherEvent.delete(path))
-            }
-            case Kind.Overflow => {
+            case Kind.Overflow =>
               queue.add(FileWatcherEvent.overflow(path))
-            }
-            case Kind.Error => {
+            case Kind.Error =>
               scribe.error("File watcher encountered an unknown error")
-            }
           }
         }
       }
