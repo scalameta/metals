@@ -49,6 +49,8 @@ case class ScalaPresentationCompiler(
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
+  private val forbiddenDoubleOptions = Set("-release")
+
   val compilerAccess: CompilerAccess[StoreReporter, InteractiveDriver] =
     Scala3CompilerAccess(
       config,
@@ -58,10 +60,19 @@ case class ScalaPresentationCompiler(
       using ec
     )
 
+  private def removeDoubleOptions(options: List[String]): List[String] =
+    options match
+      case head :: _ :: tail if forbiddenDoubleOptions(head) =>
+        removeDoubleOptions(tail)
+      case head :: tail => head :: removeDoubleOptions(tail)
+      case Nil => options
+
   def newDriver: InteractiveDriver =
     val implicitSuggestionTimeout = List("-Ximport-suggestion-timeout", "0")
     val defaultFlags = List("-color:never")
-    val filteredOptions = options.filterNot(forbiddenOptions)
+    val filteredOptions = removeDoubleOptions(
+      options.filterNot(forbiddenOptions)
+    )
     val settings =
       filteredOptions ::: defaultFlags ::: implicitSuggestionTimeout ::: "-classpath" :: classpath
         .mkString(
