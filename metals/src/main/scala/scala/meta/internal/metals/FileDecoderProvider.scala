@@ -25,6 +25,7 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassWithPos
 import scala.meta.io.AbsolutePath

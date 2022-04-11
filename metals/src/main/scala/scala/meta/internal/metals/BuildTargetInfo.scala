@@ -5,6 +5,7 @@ import java.nio.file.Path
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.URIEncoderDecoder
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

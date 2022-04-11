@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.URIEncoderDecoder
+import scala.meta.internal.mtags.URIEncoderDecoder
 
 class UriEncoderDecoderSuite extends BaseSuite {
 
