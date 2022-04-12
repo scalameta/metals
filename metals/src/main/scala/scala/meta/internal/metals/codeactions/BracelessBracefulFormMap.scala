@@ -5,10 +5,15 @@ import scala.meta.internal.metals.codeactions.BracelessEnd.BracelessEnd
 import scala.meta.internal.metals.codeactions.BracelessOpening.BracelessOpening
 
 object BracelessBracefulFormMap {
-    val map: Map[BraceHolder, BracelessOpeningAndEnd] = Map(BraceHolder.method -> BracelessOpeningAndEnd(BracelessOpening.empty, BracelessEnd.empty) )
+  val map: Map[BraceHolder, BracelessOpeningAndEnd] = Map(
+    BraceHolder.method -> BracelessOpeningAndEnd(
+      BracelessOpening.empty,
+      BracelessEnd.empty
+    )
+  )
 }
 
-object BraceHolder extends Enumeration  {
+object BraceHolder extends Enumeration {
   type BraceHolder = Value
   val ifToken = Value("if")
   val elseToken = Value("else")
@@ -22,11 +27,10 @@ object BracelessOpening extends Enumeration {
   type BracelessOpening = Value
   val colon, empty, emptyOrColon = Value
 }
- object BracelessEnd extends  Enumeration {
-   type BracelessEnd = Value
-   val empty, endIf, endElse, endTry, endCatch, endFinally, endMethod = Value
+object BracelessEnd extends Enumeration {
+  type BracelessEnd = Value
+  val empty, endIf, endElse, endTry, endCatch, endFinally, endMethod = Value
 
- }
+}
 
-
-case class BracelessOpeningAndEnd(opening:BracelessOpening, end: BracelessEnd)
+case class BracelessOpeningAndEnd(opening: BracelessOpening, end: BracelessEnd)

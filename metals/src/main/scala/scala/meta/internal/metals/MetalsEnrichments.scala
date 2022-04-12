@@ -1007,16 +1007,16 @@ object MetalsEnrichments
 
   implicit class XtensionTreeBraceHandler(stat: Tree) {
 
+    def allowBracelessSyntax = stat.origin match {
+      case p: Parsed => p.dialect.allowSignificantIndentation
+      case _ => false
+    }
+
     /**
      * Check if it's possible to use braceless syntax and whether
      * it's the preferred style in the file.
      */
     def canUseBracelessSyntax(source: String): Boolean = {
-
-      def allowBracelessSyntax(tree: Tree) = tree.origin match {
-        case p: Parsed => p.dialect.allowSignificantIndentation
-        case _ => false
-      }
 
       def isNotInBraces(t: Tree): Boolean = {
         t match {
@@ -1045,7 +1045,7 @@ object MetalsEnrichments
         }
       }
 
-      allowBracelessSyntax(stat) && existsBracelessParent(stat)
+      allowBracelessSyntax && existsBracelessParent(stat)
     }
   }
 

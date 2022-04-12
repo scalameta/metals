@@ -1,119 +1,241 @@
 package scala.meta.internal.metals.codeactions
 
-import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.{CodeActionParams, TextEdit}
+import org.eclipse.{lsp4j, lsp4j => l}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.meta.{Term, Tree}
-import scala.meta.internal.metals.CodeAction
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.{Buffers, CodeAction}
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-import scala.meta.tokens.Token
-import scala.reflect.ClassTag
+import scala.meta.{Defn, Pkg, Template, Term, Tree}
 
-/**
- * Rewrite parens to brackets and vice versa.
- * It's a transformation between Term.Apply(_, List(_: Term)) and Term.Apply(_, List(Term.Block(List(_: Term))))
- * Term.Block is equivalent to "surrounded by braces"
- *
- * Parens to brackets scenarios:
- * 1: def foo(n: Int) = ???
- *    foo(5)           ->   foo{5}
- * 2: x.map(a => a)    ->   x.map{a => a}
- * 3: x.map(_ match {       x.map{_ match {
- *      case _ => 0    ->     case _ => 0
- *    })                    }}
- * Brackets to parens scenarios are the opposite of the ones above.
- */
 class BracelessBracefulSwitchCodeAction(
-    trees: Trees
+    trees: Trees,
+    buffers: Buffers
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
+
+  def createCodeActionForBraceableTree(
+      hasBraces: (Tree, String) => Boolean,
+      path: AbsolutePath,
+      braceableTree: Tree,
+      braceableBranch: Tree,
+      bracelessStart: String,
+      bracelessEnd: String,
+      document: String
+  ) = {
+    if (hasBraces(braceableTree, document)) {
+      if (braceableTree.allowBracelessSyntax) {
+        // TODO `canUseBracelessSyntax` should be replaced by`canBeSyntacticallyBraceless`
+        // TODO Important: autoIndentDocument()
+        val braceableBranchLSPPos = braceableBranch.pos.toLSP
+        val braceableBranchStart = braceableBranchLSPPos.getStart
+        val braceableBranchEnd = braceableBranchLSPPos.getEnd
+        val startTextEdit = new TextEdit(
+          new l.Range(braceableBranchStart, braceableBranchStart),
+          bracelessStart
+        )
+        val endTextEdit = new TextEdit(
+          new l.Range(braceableBranchEnd, braceableBranchEnd),
+          bracelessEnd
+        )
+        val codeAction = new l.CodeAction()
+        codeAction.setTitle(BracelessBracefulSwitchCodeAction.goBraceless)
+        codeAction.setKind(this.kind)
+        codeAction.setEdit(
+          new l.WorkspaceEdit(
+            Map(
+              path.toURI.toString -> List(startTextEdit, endTextEdit).asJava
+            ).asJava
+          )
+        )
+        Some(codeAction)
+      } else {
+        None
+      }
+    } else {
+      // TODO Important: autoIndentDocument()
+      val braceableBranchLSPPos = braceableBranch.pos.toLSP
+      val braceableBranchStart = braceableBranchLSPPos.getStart
+      val braceableBranchEnd = braceableBranchLSPPos.getEnd
+      val startBraceTextEdit = new TextEdit(
+        new l.Range(braceableBranchStart, braceableBranchStart),
+        "{"
+      )
+      val endBraceTextEdit = new TextEdit(
+        new l.Range(braceableBranchEnd, braceableBranchEnd),
+        s"""|${document(braceableBranch.pos.end)}
+            |${getIndentationForPositionInDocument(braceableBranch.pos, document)}}""".stripMargin
+      )
+      val codeAction = new l.CodeAction()
+      codeAction.setTitle(BracelessBracefulSwitchCodeAction.goBraceFul)
+      codeAction.setKind(this.kind)
+      codeAction.setEdit(
+        new l.WorkspaceEdit(
+          Map(
+            path.toURI.toString -> List(
+              startBraceTextEdit,
+              endBraceTextEdit
+            ).asJava
+          ).asJava
+        )
+      )
+      Some(codeAction)
+    }
+  }
 
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
-    val applyTree =
+    val maybeTree =
       if (range.getStart == range.getEnd)
         trees
-          .findLastEnclosingAt[Term.Apply](
+          .findLastEnclosingAt[Tree](
             path,
             range.getStart(),
             applyWithSingleFunction
           )
       else None
 
-    applyTree
-      .map {
-        // order matter because List(Term.Block(List(_: Term))) includes in  List(t: Term)
-        case appl @ Term.Apply(_, List(Term.Block(List(_: Term)))) =>
-          switchFrom[Token.LeftBrace, Token.RightBrace](path, appl)
-
-        case appl @ Term.Apply(_, List(_: Term)) =>
-          switchFrom[Token.LeftParen, Token.RightParen](path, appl)
-
-        case _ =>
-          Nil
-      }
-      .getOrElse(Nil)
-  }
-
-  private def switchFrom[L: ClassTag, R: ClassTag](
-      path: AbsolutePath,
-      appl: Term.Apply
-  ): Seq[l.CodeAction] = {
-    val select = appl.fun
-    val term = appl.args.head match {
-      case Term.Block(List(t: Term)) => t
-      case f => f
-    }
-    val tokens = appl.tokens
-    tokens
-      .collectFirst {
-        case leftParen: L if leftParen.pos.start >= select.pos.end =>
-          tokens.collectFirst {
-            case rightParen: R if rightParen.pos.start >= term.pos.end =>
-              val isParens = leftParen.text == "("
-              val newLeft = if (isParens) "{" else "("
-              val newRight = if (isParens) "}" else ")"
-              val start = new l.TextEdit(leftParen.pos.toLSP, newLeft)
-              val end = new l.TextEdit(rightParen.pos.toLSP, newRight)
-              val codeAction = new l.CodeAction()
-              if (isParens)
-                codeAction.setTitle(RewriteBracesParensCodeAction.toBraces)
-              else
-                codeAction.setTitle(RewriteBracesParensCodeAction.toParens)
-              codeAction.setKind(this.kind)
-              codeAction.setEdit(
-                new l.WorkspaceEdit(
-                  Map(path.toURI.toString -> List(start, end).asJava).asJava
+    val result =
+      for {
+        tree <- maybeTree
+        document <- buffers.get(path)
+      } yield {
+        tree match {
+          case _: Pkg => None
+          case classDefn: Defn.Class =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = classDefn,
+              braceableBranch = classDefn.templ,
+              document = document,
+              bracelessStart = ":",
+              bracelessEnd = ""
+            )
+          case objectDefn: Defn.Object =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = objectDefn,
+              braceableBranch = objectDefn.templ,
+              document = document,
+              bracelessStart = ":",
+              bracelessEnd = ""
+            )
+          case traitDefn: Defn.Trait =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = traitDefn,
+              braceableBranch = traitDefn.templ,
+              document = document,
+              bracelessStart = ":",
+              bracelessEnd = ""
+            )
+          case enumDefn: Defn.Enum =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = enumDefn,
+              braceableBranch = enumDefn.templ,
+              document = document,
+              bracelessStart = ":",
+              bracelessEnd = ""
+            )
+          case valDefn: Defn.Val =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = valDefn,
+              braceableBranch = valDefn.rhs,
+              document = document,
+              bracelessStart = "",
+              bracelessEnd = ""
+            )
+          case varDefn: Defn.Var =>
+            varDefn.rhs
+              .map(rhs =>
+                createCodeActionForBraceableTree(
+                  hasBraces = hasBraces,
+                  path = path,
+                  braceableTree = varDefn,
+                  braceableBranch = rhs,
+                  document = document,
+                  bracelessStart = "",
+                  bracelessEnd = ""
                 )
               )
-              codeAction
-          }
+              .flatten
+          case defDefn: Defn.Def =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = defDefn,
+              braceableBranch = defDefn.body,
+              document = document,
+              bracelessStart = "",
+              bracelessEnd = ""
+            )
+          case _: Term.Try | _: Term.If | _: Term.For | _: Term.Match |
+              _: Term.While =>
+            None
+          case _: Defn.GivenAlias => None
+          case _: Template | _: Term.Block => None
+        }
       }
-      .flatten
-      .toSeq
+    result.flatten.toSeq
   }
 
-  private def applyWithSingleFunction: Term.Apply => Boolean = {
-    // exclude case when body has more than one line (is a Block) because it cannot be rewritten to parens
-    case Term.Apply(
-          _,
-          List(Term.Block(List(Term.Function(_, _: Term.Block))))
-        ) =>
+  private def hasBraces(tree: Tree, document: String): Boolean = {
+    tree.children
+      .collectFirst {
+        case template: Template =>
+          if (template.pos.start < document.size)
+            document(template.pos.start) == '{'
+          else false
+        case rhs: Tree =>
+          if (rhs.pos.start < document.size)
+            document(rhs.pos.start) == '{'
+          else false
+        case body: Tree =>
+          if (body.pos.start < document.size)
+            document(body.pos.start) == '{'
+          else false
+
+      }
+      .getOrElse(false)
+  }
+
+  private def getIndentationForPositionInDocument(
+      treePos: Position,
+      document: String
+  ): String =
+    document
+      .substring(treePos.start - treePos.startColumn, treePos.start)
+      .takeWhile(_.isWhitespace)
+
+  private def applyWithSingleFunction: Tree => Boolean = {
+    case _: Pkg | _: Defn.Class | _: Defn.Enum | _: Defn.Trait |
+        _: Defn.Object =>
       true
-    case Term.Apply(_, List(_: Term)) => true
-    //   Term.Apply(_, List(Term.Block(List(_: Term)))) is already included in the one above
+    case _: Defn.GivenAlias | _: Defn.Val | _: Defn.Var | _: Defn.Def => true
+    case _: Term.Try | _: Term.If | _: Term.For | _: Term.Match |
+        _: Term.While =>
+      true
+    //   case _:Template | _: Term.Block => true
     case _ => false
   }
 }
 
 object BracelessBracefulSwitchCodeAction {
-  val toParens = "Rewrite to parenthesis"
-  val toBraces = "Rewrite to braces"
+  val goBraceFul = "Add braces"
+  val goBraceless = "Remove braces"
 }
