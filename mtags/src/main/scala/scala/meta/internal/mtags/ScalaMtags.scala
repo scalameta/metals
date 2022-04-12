@@ -283,8 +283,20 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
             }
           }
         case t: Defn.ExtensionGroup =>
-          // t.params are ignored - don't know which symbol/owner they should have
-          // need to wait for https://github.com/lampepfl/dotty/issues/11690
+          // Register extension parameters for each extension methods (in addDeclDef and addDefnDef)
+          // For example, `s` has two symbols
+          // - ...package.asInt().(s) and
+          // - ...package.double().(s)
+          // ```
+          // package example
+          // extension (s: String) {
+          //   def asInt: Int = s.toInt
+          //   def double: String = s * 2
+          // end extension
+          // ```
+          // see: https://github.com/scalameta/scalameta/issues/2443
+          //      https://github.com/lampepfl/dotty/issues/11690
+          val extensionParamss = t.paramss
           val (owner, overloads) =
             if (isPackageOwner)
               topleveSourceData
@@ -297,7 +309,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
                 t,
                 t.name,
                 Nil,
-                t.paramss,
+                t.paramss ++ extensionParamss,
                 Kind.CONSTRUCTOR,
                 overloads
               )
@@ -308,7 +320,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
                 t,
                 t.name,
                 Nil,
-                t.paramss,
+                t.paramss ++ extensionParamss,
                 Kind.CONSTRUCTOR,
                 overloads
               )

@@ -9,7 +9,7 @@ extension/*<no symbol>*/ (s/*Extension.scala fallback to example.Extension$packa
 }
 
 trait AbstractExtension/*Extension.scala*/ {
-  extension/*<no symbol>*/ (d/*Extension.scala fallback to example.AbstractExtension#*/: Double/*Double.scala*/) {
+  extension/*<no symbol>*/ (d/*Extension.scala*/: Double/*Double.scala*/) {
     def abc/*Extension.scala*/: String/*Predef.scala*/
   }
 }
