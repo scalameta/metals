@@ -18,19 +18,6 @@ class WorksheetModifier extends StringModifier {
       case "vscode" =>
         "as a decoration at the end of the line." ->
           "hover on the decoration to expand the decoration."
-      case "vim" =>
-        """|differently depending on whether you are using Neovim or Vim. If 
-           |using Vim, you will see them appear as comments at the end of
-           |the line. If you're using Nvim you will see this as virtual text.
-           |Keep in mind that if you're using coc-metals with Nvim you'll need
-           |to make sure `codeLens.enable` is set to `true`.""".stripMargin ->
-          """|hover on the comment if you're in Vim or expand the virtual text by
-             |using the `coc-metals-expand-decoration` command. The default for this
-             |is:
-             |```vim
-             |nmap <Leader>ws <Plug>(coc-metals-expand-decoration)
-             |```
-             |""".stripMargin
       case _ =>
         "as a comment as the end of the line." -> "hover on the comment to expand."
     }

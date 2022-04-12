@@ -282,9 +282,6 @@ buffer.
 
 ## Completions
 
-**✅ Vim**: auto-import and snippets require
-[coc.nvim](https://github.com/neoclide/coc.nvim) client.
-
 Use code completions to explore APIs, implement interfaces, generate exhaustive
 pattern matches and more.
 

@@ -14,10 +14,11 @@ everything, there are some steps that might need to be done manually.
 
 Everything inside Metals uses Coursier to download its dependencies:
 
-- The Visual Studio Code and coc-metals extensions use Coursier bootstrap to
-  download Metals server - Coursier boostrap is a minimal file, which only
-  purpose is to download a full Coursier version. It's used to keep the
-  extension size down to a minimum.
+- The Visual Studio Code and `nvim-metals` extensions both use Coursier to
+  download Metals server, although they do it slightly different. The VS Code
+  extension has a Coursier boostrap file, which is used to is to download a full
+  Coursier version. It's used to keep the extension size down to a minimum,
+  whereas `nvim-metals` requires Coursier to be installed on the users machine.
 - Metals uses Coursier api to download dependencies needed for a particular
   Scala version
 - Bloop uses Coursier api to download the SemanticDB plugin
@@ -88,15 +89,16 @@ In case you need to add custom repositories to resolve Metals server artifacts
 you can use the `COURSIER_REPOSITORIES` environment variable. This will tell
 Coursier to try to download artifacts from your private artifact repository.
 This is also available as a setting in the Metals Visual Studio Code and
-coc-metals extensions.
+`nvim-metals` extensions.
 
 ## Proxy settings
 
 In some cases, workspaces might require a proxy in order to resolve the needed
 artifacts. Depending on the way Metals server is started, proxy settings can be
 specified using properties inside a `.jvmopts` file and
-`metals.serverProperties` (for Visual Studio Code or coc-metals extensions) or
-via properties for Coursier and Metals invocations.
+`metals.serverProperties` for Visual Studio Code or `serverProperties` in your
+settings table for `nvim-metals`, or via properties for Coursier and Metals
+invocations.
 
 However, because proxy properties might vary between workspaces and a Bloop
 server must work for multiple clients at the same time they are not forwarded to
