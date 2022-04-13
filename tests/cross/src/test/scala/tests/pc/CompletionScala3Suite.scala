@@ -8,7 +8,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
     Some(IgnoreScala2)
 
   check(
-    "issue-3625".tag(IgnoreScalaVersion.forLessThan("3.1.2")),
+    "issue-3625".tag(IgnoreScalaVersion.forLessThan("3.1.3-RC1")),
     """|package a
        |
        |object Test:
