@@ -17,6 +17,8 @@ import scala.meta.tokens.{Token as T}
 import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
@@ -24,6 +26,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
+import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.TextEdit
 
 /**
@@ -121,9 +124,10 @@ final class InferredTypeProvider(
        */
       case Some(vl @ ValDef(sym, tpt, _)) =>
         val isParam = path.tail.headOption.exists(_.symbol.isAnonymousFunction)
-        def baseEdit(withParens: Boolean) =
+        def baseEdit(withParens: Boolean): TextEdit =
+          val endPos = findNamePos(params.text, vl).endPos
           new TextEdit(
-            vl.namePos.endPos.toLSP,
+            endPos.toLSP,
             ": " + printType(tpt.tpe) + {
               if withParens then ")" else ""
             }
@@ -134,7 +138,7 @@ final class InferredTypeProvider(
             toCheckFor: Char,
             blockStartPos: SourcePosition
         ) =
-          val text = params.text.toString()
+          val text = params.text
           val isParensFunction: Boolean = text(applyEndingPos) == toCheckFor
 
           val alreadyHasParens =
@@ -250,5 +254,42 @@ final class InferredTypeProvider(
         Nil
     end match
   end inferredTypeEdits
+
+  private def findNamePos(text: String, tree: untpd.NamedDefTree)(using
+      Context
+  ): SourcePosition =
+    val realName = tree.name.stripModuleClassSuffix.toString.toList
+
+    // `NamedDefTree.namePos` is incorrect for bacticked names
+    @tailrec
+    def lookup(
+        idx: Int,
+        start: Option[(Int, List[Char])],
+        withBacktick: Boolean
+    ): Option[SourcePosition] =
+      start match
+        case Some((start, nextMatch :: left)) =>
+          if text.charAt(idx) == nextMatch then
+            lookup(idx + 1, Some((start, left)), withBacktick)
+          else lookup(idx + 1, None, withBacktick = false)
+        case Some((start, Nil)) =>
+          val end = if withBacktick then idx + 1 else idx
+          val pos = tree.source.atSpan(Span(start, end, start))
+          Some(pos)
+        case None if idx < text.length =>
+          val ch = text.charAt(idx)
+          if ch == realName.head then
+            lookup(idx + 1, Some((idx, realName.tail)), withBacktick)
+          else if ch == '`' then lookup(idx + 1, None, withBacktick = true)
+          else lookup(idx + 1, None, withBacktick = false)
+        case _ =>
+          None
+
+    val macthedByText =
+      if realName.nonEmpty then lookup(tree.sourcePos.start, None, false)
+      else None
+
+    macthedByText.getOrElse(tree.namePos)
+  end findNamePos
 
 end InferredTypeProvider

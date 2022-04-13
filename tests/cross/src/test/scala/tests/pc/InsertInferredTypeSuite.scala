@@ -478,6 +478,39 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
     )
   )
 
+  checkEdit(
+    "backticks-1",
+    """|object O{
+       |  val <<`bar`>> = 42
+       |}""".stripMargin,
+    """|object O{
+       |  val `bar`: Int = 42
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "backticks-2",
+    """|object O{
+       |  def <<`bar`>> = 42
+       |}""".stripMargin,
+    """|object O{
+       |  def `bar`: Int = 42
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "backticks-3",
+    """|object O{
+       |  List(1).map(<<`a`>> => a + 1)
+       |}""".stripMargin,
+    """|object O{
+       |  List(1).map((`a`: Int) => a + 1)
+       |}
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
