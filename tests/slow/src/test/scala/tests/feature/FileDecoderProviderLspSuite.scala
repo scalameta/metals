@@ -953,9 +953,10 @@ object FileDecoderProviderLspSuite {
         |  #14 = Utf8               Code
         |  #15 = Utf8               LineNumberTable
         |  #16 = Utf8               LocalVariableTable
-        |  #17 = Utf8               SourceFile
-        |  #18 = Utf8               TASTY
-        |  #19 = Utf8               Scala
+        |  #17 = Utf8               Signature
+        |  #18 = Utf8               SourceFile
+        |  #19 = Utf8               TASTY
+        |  #20 = Utf8               Scala
         |{
         |  public foo.bar.example.Foo();
         |    descriptor: ()V
@@ -983,6 +984,7 @@ object FileDecoderProviderLspSuite {
         |      LocalVariableTable:
         |        Start  Length  Slot  Name   Signature
         |            0       3     0  this   Lfoo/bar/example/Foo;
+        |    Signature: #13                          // ()I
         |}
         |SourceFile: "Main.scala"
         |  TASTY: length = 0x10 (unknown attribute)
