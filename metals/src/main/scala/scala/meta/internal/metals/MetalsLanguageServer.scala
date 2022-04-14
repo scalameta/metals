@@ -1582,8 +1582,8 @@ class MetalsLanguageServer(
       } else {
         scribe.info(
           s"time: found ${results.flatMap(_.locations).length} references to symbol '${results
-            .map(_.symbol)
-            .mkString("and")}' in $timer"
+              .map(_.symbol)
+              .mkString("and")}' in $timer"
         )
       }
     }
