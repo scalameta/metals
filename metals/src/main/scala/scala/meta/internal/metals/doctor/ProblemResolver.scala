@@ -227,7 +227,7 @@ class ProblemResolver(
 
     // 1.0.0-M3 or higher is valid
     def outdatedMunitInterface =
-      if (!isTestExplorerProvider()) None
+      if (!isTestExplorerProvider() || scalaTarget.isSbt) None
       else {
         def isInvalid(
             major: Int,
@@ -242,7 +242,7 @@ class ProblemResolver(
           } else false
         }
 
-        val munit = raw".*org/scalameta/munit/(\d).(\d+).(\d+).*".r
+        val munit = raw".*org/scalameta/munit_.*/(\d).(\d+).(\d+).*".r
         scalaTarget.scalac.getClasspath().asScala.collectFirst {
           case dep @ munit(major, minor, patch)
               if isInvalid(major.toInt, minor.toInt, patch.toInt, dep) =>
@@ -251,7 +251,7 @@ class ProblemResolver(
       }
 
     def outdatedJunitInterface =
-      if (!isTestExplorerProvider()) None
+      if (!isTestExplorerProvider() || scalaTarget.isSbt) None
       else {
         val novocode = ".*com/novocode/junit-interface.*".r
         val junit = raw".*com/github/sbt/junit-interface/(\d).(\d+).(\d+).*".r
