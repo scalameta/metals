@@ -178,6 +178,35 @@ class MetalsGlobal(
       this(string + ".", string)
   }
 
+  private def backtickify(
+      tpe: Type,
+      loop: (Type, Option[ShortName]) => Type,
+      withPrefix: Boolean
+  ): Type =
+    tpe match {
+      case TypeRef(pre, sym, args)
+          if Identifier.needsBacktick(sym.decodedName) &&
+            sym != definitions.ByNameParamClass && // `=> T` is OK
+            !sym.isPackageObject &&
+            !definitions.isRepeated(sym) &&
+            !sym.isAbstractType &&
+            sym.owner != definitions.ScalaPackageClass =>
+        val rawPrettyName = Identifier.backtickWrap(sym.decodedName)
+        val prefix = if (withPrefix) pre.prefixString else ""
+        if (args.isEmpty) {
+          new PrettyType(prefix + rawPrettyName)
+        } else {
+          val typeArgsStr =
+            args.map(arg => loop(arg, None)).map(_.toString()).mkString(", ")
+          new PrettyType(prefix + s"$rawPrettyName[$typeArgsStr]")
+        }
+      case TypeRef(p, sym, args) =>
+        val pre = if (withPrefix) p else NoPrefix
+        TypeRef(pre, sym, args.map(arg => loop(arg, None)))
+      case _ =>
+        tpe
+    }
+
   /**
    * Shortens fully qualified package prefixes to make type signatures easier to read.
    *
@@ -196,7 +225,7 @@ class MetalsGlobal(
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
           if (history.isSymbolInScope(sym, pre)) {
-            TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+            backtickify(tpe, loop, false)
           } else {
             val ownerSymbol = pre.termSymbol
             def hasConflictingMembersInScope =
@@ -255,11 +284,12 @@ class MetalsGlobal(
                         )
                       }
                     } else {
-                      TypeRef(
+                      val preparedType = TypeRef(
                         loop(pre, Some(ShortName(sym))),
                         sym,
                         args.map(arg => loop(arg, None))
                       )
+                      backtickify(preparedType, loop, true)
                     }
                 }
             }
