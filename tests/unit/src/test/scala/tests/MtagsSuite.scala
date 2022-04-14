@@ -63,24 +63,21 @@ abstract class MtagsSuite(
     }
   }
 }
-object MtagsSuite {
-  def hasScala2SemanticdbBug(file: InputFile): Boolean = {
-    // don't assert fidelity where semanticdb-scalac has known bugs and mtags is correct.
-    List(
-      "ImplicitClasses",
-      "PatternMatching",
-      "ImplicitConversions",
-      "MacroAnnotation"
-    ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
-  }
-}
 
 class MtagsScala2Suite
     extends MtagsSuite(
       InputProperties.scala2(),
       "mtags",
       dialects.Scala213,
-      MtagsSuite.hasScala2SemanticdbBug
+      (file: InputFile) => {
+        // don't assert fidelity where semanticdb-scalac has known bugs and mtags is correct.
+        List(
+          "ImplicitClasses",
+          "PatternMatching",
+          "ImplicitConversions",
+          "MacroAnnotation"
+        ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
+      }
     )
 class MtagsScala3Suite
     extends MtagsSuite(
