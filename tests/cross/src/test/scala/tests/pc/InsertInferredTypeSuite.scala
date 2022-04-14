@@ -848,6 +848,72 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin,
   )
 
+  checkEdit(
+    "backticks-4".tag(IgnoreScala3),
+    """|case class `Foo-Foo`(i: Int)
+       |object O{
+       |  val <<foo>> = `Foo-Foo`(1)
+       |}""".stripMargin,
+    """|case class `Foo-Foo`(i: Int)
+       |object O{
+       |  val foo: `Foo-Foo` = `Foo-Foo`(1)
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "backticks-5".tag(IgnoreScala3),
+    """|object A{
+       |  case class `Foo-Foo`(i: Int)
+       |}
+       |object O{
+       |  val <<foo>> = A.`Foo-Foo`(1)
+       |}""".stripMargin,
+    """|object A{
+       |  case class `Foo-Foo`(i: Int)
+       |}
+       |object O{
+       |  val foo: A.`Foo-Foo` = A.`Foo-Foo`(1)
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "backticks-6".tag(IgnoreScala3),
+    """|object A{
+       |  case class `Foo-Foo`[A](i: A)
+       |}
+       |object O{
+       |  val <<foo>> = A.`Foo-Foo`(1)
+       |}""".stripMargin,
+    """|object A{
+       |  case class `Foo-Foo`[A](i: A)
+       |}
+       |object O{
+       |  val foo: A.`Foo-Foo`[Int] = A.`Foo-Foo`(1)
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "backticks-7".tag(IgnoreScala3),
+    """|object A{
+       |  class `x-x`
+       |  case class Foo[A](i: A)
+       |}
+       |object O{
+       |  val <<foo>> = A.Foo(new A.`x-x`)
+       |}""".stripMargin,
+    """|object A{
+       |  class `x-x`
+       |  case class Foo[A](i: A)
+       |}
+       |object O{
+       |  val foo: A.Foo[A.`x-x`] = A.Foo(new A.`x-x`)
+       |}
+       |""".stripMargin,
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,

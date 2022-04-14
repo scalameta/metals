@@ -256,6 +256,26 @@ class MetalsGlobal(
       this(string + ".", string)
   }
 
+  private def backtickify(tpe: Type): Type = {
+    def backtickifySymbol(sym: Symbol) =
+      if (
+        Identifier.needsBacktick(sym.name.decoded)
+        && sym.owner != definitions.ScalaPackageClass
+      ) {
+        val name0: sym.NameType = sym.rawname
+        val name: Name = name0.newName(Identifier.backtickWrap(name0))
+        sym.setName(name)
+      } else sym
+
+    tpe match {
+      case TypeRef(p, sym, args) =>
+        TypeRef(backtickify(p), backtickifySymbol(sym), args.map(backtickify))
+      case SingleType(tpe, sym) =>
+        SingleType(backtickify(tpe), backtickifySymbol(sym))
+      case _ => tpe
+    }
+  }
+
   /**
    * Shortens fully qualified package prefixes to make type signatures easier to read.
    *
@@ -449,7 +469,7 @@ class MetalsGlobal(
 
     longType match {
       case ThisType(_) => longType
-      case _ => loop(longType, None)
+      case _ => backtickify(loop(longType, None))
     }
   }
 
