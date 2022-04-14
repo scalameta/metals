@@ -1562,4 +1562,24 @@ class CompletionSuite extends BaseCompletionSuite {
     topLines = Some(1),
   )
 
+  check(
+    "backtick-type".tag(IgnoreScala3),
+    s"""|package b
+        |class `t-t`
+        |package a {
+        |  object `B-A` {
+        |    class `x-x`
+        |    case class Foo[A](i: A) {
+        |      def add(d: => `t-t`) = this
+        |    }
+        |  }
+        |}
+        |
+        |class O(ddddd : a.`B-A`.Foo[a.`B-A`.`x-x`]) {
+        |  val foo = ddddd.a@@
+        |}""".stripMargin,
+    "add(d: => `t-t`): `B-A`.Foo[`B-A`.`x-x`]",
+    topLines = Some(1),
+  )
+
 }
