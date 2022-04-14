@@ -19,7 +19,7 @@ abstract class MtagsSuite(
     directory: String,
     dialect: Dialect,
     exclude: InputFile => Boolean,
-    ignoreUnknwonSymbols: Boolean = false,
+    ignoreUnknownSymbols: Boolean = false,
     ignoreAssertion: Boolean = false
 ) extends DirectoryExpectSuite(directory) {
 
@@ -38,7 +38,7 @@ abstract class MtagsSuite(
               val pos = input.toPosition(occ)
               pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
           }
-          if (!ignoreUnknwonSymbols && unknownSymbols.nonEmpty) {
+          if (!ignoreUnknownSymbols && unknownSymbols.nonEmpty) {
             fail(unknownSymbols.mkString("\n"))
           }
           if (file.isScala && !ignoreAssertion && !exclude(file)) {
@@ -88,8 +88,8 @@ class MtagsScala3Suite
       "mtags-scala3",
       dialects.Scala3,
       _ => false,
-      // Do not asesrt unknown symbols and compare to semanticdb,
+      // Do not assert unknown symbols and compare to semanticdb,
       // There're still lot to improve in mtags for Scala3
-      ignoreUnknwonSymbols = true,
+      ignoreUnknownSymbols = true,
       ignoreAssertion = true
     )
