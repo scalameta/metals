@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
+import scala.xml.Comment
 
 case class Digest(
     md5: String,
@@ -107,19 +108,23 @@ object Digest {
       file: AbsolutePath,
       digest: MessageDigest
   ): Boolean = {
+
     import scala.xml.XML
     def digestElement(node: Node): Boolean = {
-      digest.update(node.label.getBytes())
-      for {
-        attr <- node.attributes
-        _ = digest.update(attr.key.getBytes())
-        value <- attr.value
-      } digest.update(value.toString().getBytes())
+      node match {
+        case _: Comment => true
+        case _ =>
+          for {
+            attr <- node.attributes
+            _ = digest.update(attr.key.getBytes())
+            value <- attr.value
+          } digest.update(value.toString().getBytes())
 
-      val chldrenSuccessful: Seq[Boolean] = (for {
-        child <- node.child
-      } yield digestElement(child)).toSeq
-      chldrenSuccessful.forall(p => p)
+          val chldrenSuccessful: Seq[Boolean] = (for {
+            child <- node.child
+          } yield digestElement(child)).toSeq
+          chldrenSuccessful.forall(p => p)
+      }
     }
     try {
       val xml = XML.loadFile(file.toNIO.toFile)
