@@ -32,7 +32,7 @@ object V {
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalafix = "0.9.34"
+  val scalafix = "0.10.0"
   val scalafmt = "3.4.3"
   val scalameta = "4.5.3"
   val scribe = "3.8.2"
