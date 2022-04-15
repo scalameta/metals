@@ -173,14 +173,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  ne@@w java.io.File("")
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  new/*java/io/File#`<init>`(+2). File.java*/ java.io.File("")
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -188,14 +181,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main ex@@tends java.io.Serializable {
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |object <<Main>> extends java.io.Serializable {
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -428,5 +414,41 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
            |}
            |""".stripMargin
     )
+  )
+  check(
+    "no-definition-1",
+    """|
+       |object Main {
+       |  @@
+       |  def foo() = {
+       |    // this is a comment
+       |  }
+       |  println(foo())
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "no-definition-2",
+    """|
+       |object Main {
+       |  def foo() = {
+       |    @@// this is a comment
+       |  }
+       |  println(foo())
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "no-definition-3",
+    """|
+       |object Main {
+       |  def foo() = {
+       |    // th@@is is a comment
+       |  }
+       |  println(foo())
+       |}
+       |""".stripMargin
   )
 }

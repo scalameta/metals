@@ -140,9 +140,16 @@ class PcDefinitionProvider(
         if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
         else List(target.symbol)
 
-      case head :: tl =>
+      case path @ head :: tl =>
         if head.symbol.is(Synthetic) then enclosingSymbols(tl, pos, indexed)
-        else if head.symbol != NoSymbol then List(head.symbol)
+        else if head.symbol != NoSymbol then
+          if MetalsInteractive.isOnName(
+              path,
+              pos,
+              indexed.ctx.source
+            ) || MetalsInteractive.isForSynthetic(head)
+          then List(head.symbol)
+          else Nil
         else
           val recovered = recoverError(head, indexed)
           if recovered.isEmpty then enclosingSymbols(tl, pos, indexed)
