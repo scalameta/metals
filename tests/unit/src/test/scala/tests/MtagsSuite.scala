@@ -19,8 +19,7 @@ abstract class MtagsSuite(
     directory: String,
     dialect: Dialect,
     exclude: InputFile => Boolean,
-    ignoreUnknownSymbols: Boolean = false,
-    ignoreAssertion: Boolean = false
+    ignoreUnknownSymbols: Boolean = false
 ) extends DirectoryExpectSuite(directory) {
 
   override lazy val input: InputProperties = inputProperties
@@ -41,7 +40,7 @@ abstract class MtagsSuite(
           if (!ignoreUnknownSymbols && unknownSymbols.nonEmpty) {
             fail(unknownSymbols.mkString("\n"))
           }
-          if (file.isScala && !ignoreAssertion && !exclude(file)) {
+          if (file.isScala && !exclude(file)) {
             // assert mtags produces same results as semanticdb-scalac
             val semanticdb = classpath.textDocument(file.file).get
             val globalDefinitions = semanticdb.occurrences.filter { occ =>
@@ -84,9 +83,8 @@ class MtagsScala3Suite
       InputProperties.scala3(),
       "mtags-scala3",
       dialects.Scala3,
-      _ => false,
+      _ => true,
       // Do not assert unknown symbols and compare to semanticdb,
       // There're still lot to improve in mtags for Scala3
-      ignoreUnknownSymbols = true,
-      ignoreAssertion = true
+      ignoreUnknownSymbols = true
     )
