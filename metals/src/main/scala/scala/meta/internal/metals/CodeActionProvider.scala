@@ -45,7 +45,8 @@ final class CodeActionProvider(
     new PatternMatchRefactor(trees),
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
-    new CreateCompanionObjectCodeAction(trees, buffers)
+    new CreateCompanionObjectCodeAction(trees, buffers),
+    new BracelessBracefulSwitchCodeAction(trees, buffers)
   )
 
   def codeActions(

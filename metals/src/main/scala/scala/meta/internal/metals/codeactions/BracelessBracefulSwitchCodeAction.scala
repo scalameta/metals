@@ -1,10 +1,11 @@
 package scala.meta.internal.metals.codeactions
 
 import org.eclipse.lsp4j.{CodeActionParams, TextEdit}
-import org.eclipse.{lsp4j, lsp4j => l}
+import org.eclipse.{lsp4j => l}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.meta.inputs.Position
+import scala.meta.internal.metals.Directories.log
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{Buffers, CodeAction}
 import scala.meta.internal.parsing.Trees
@@ -19,74 +20,7 @@ class BracelessBracefulSwitchCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
-  def createCodeActionForBraceableTree(
-      hasBraces: (Tree, String) => Boolean,
-      path: AbsolutePath,
-      braceableTree: Tree,
-      braceableBranch: Tree,
-      bracelessStart: String,
-      bracelessEnd: String,
-      document: String
-  ) = {
-    if (hasBraces(braceableTree, document)) {
-      if (braceableTree.allowBracelessSyntax) {
-        // TODO `canUseBracelessSyntax` should be replaced by`canBeSyntacticallyBraceless`
-        // TODO Important: autoIndentDocument()
-        val braceableBranchLSPPos = braceableBranch.pos.toLSP
-        val braceableBranchStart = braceableBranchLSPPos.getStart
-        val braceableBranchEnd = braceableBranchLSPPos.getEnd
-        val startTextEdit = new TextEdit(
-          new l.Range(braceableBranchStart, braceableBranchStart),
-          bracelessStart
-        )
-        val endTextEdit = new TextEdit(
-          new l.Range(braceableBranchEnd, braceableBranchEnd),
-          bracelessEnd
-        )
-        val codeAction = new l.CodeAction()
-        codeAction.setTitle(BracelessBracefulSwitchCodeAction.goBraceless)
-        codeAction.setKind(this.kind)
-        codeAction.setEdit(
-          new l.WorkspaceEdit(
-            Map(
-              path.toURI.toString -> List(startTextEdit, endTextEdit).asJava
-            ).asJava
-          )
-        )
-        Some(codeAction)
-      } else {
-        None
-      }
-    } else {
-      // TODO Important: autoIndentDocument()
-      val braceableBranchLSPPos = braceableBranch.pos.toLSP
-      val braceableBranchStart = braceableBranchLSPPos.getStart
-      val braceableBranchEnd = braceableBranchLSPPos.getEnd
-      val startBraceTextEdit = new TextEdit(
-        new l.Range(braceableBranchStart, braceableBranchStart),
-        "{"
-      )
-      val endBraceTextEdit = new TextEdit(
-        new l.Range(braceableBranchEnd, braceableBranchEnd),
-        s"""|${document(braceableBranch.pos.end)}
-            |${getIndentationForPositionInDocument(braceableBranch.pos, document)}}""".stripMargin
-      )
-      val codeAction = new l.CodeAction()
-      codeAction.setTitle(BracelessBracefulSwitchCodeAction.goBraceFul)
-      codeAction.setKind(this.kind)
-      codeAction.setEdit(
-        new l.WorkspaceEdit(
-          Map(
-            path.toURI.toString -> List(
-              startBraceTextEdit,
-              endBraceTextEdit
-            ).asJava
-          ).asJava
-        )
-      )
-      Some(codeAction)
-    }
-  }
+
 
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
@@ -198,20 +132,90 @@ class BracelessBracefulSwitchCodeAction(
     tree.children
       .collectFirst {
         case template: Template =>
-          if (template.pos.start < document.size)
+         // if (template.pos.start < document.size) {
             document(template.pos.start) == '{'
-          else false
+        //  } else false
         case rhs: Tree =>
-          if (rhs.pos.start < document.size)
+    //      if (rhs.pos.start < document.size)
             document(rhs.pos.start) == '{'
-          else false
+      //    else false
         case body: Tree =>
-          if (body.pos.start < document.size)
+   //       if (body.pos.start < document.size)
             document(body.pos.start) == '{'
-          else false
+    //      else false
 
       }
       .getOrElse(false)
+  }
+
+  def createCodeActionForBraceableTree(
+                                        hasBraces: (Tree, String) => Boolean,
+                                        path: AbsolutePath,
+                                        braceableTree: Tree,
+                                        braceableBranch: Tree,
+                                        bracelessStart: String,
+                                        bracelessEnd: String,
+                                        document: String
+                                      ) = {
+    if (hasBraces(braceableTree, document)) {
+      if (braceableTree.allowBracelessSyntax) {
+        // TODO Important: autoIndentDocument()
+        val braceableBranchLSPPos = braceableBranch.pos.toLSP
+        val braceableBranchStart = braceableBranchLSPPos.getStart
+    //    braceableBranchStart.setCharacter(braceableBranchStart.getCharacter -1 )
+        val braceableBranchEnd = braceableBranchLSPPos.getEnd
+     //   braceableBranchEnd.setCharacter(braceableBranchEnd.getCharacter -1 )
+        val startTextEdit = new TextEdit(
+          new l.Range(braceableBranchStart, braceableBranchStart),
+          bracelessStart
+        )
+        val endTextEdit = new TextEdit(
+          new l.Range(braceableBranchEnd, braceableBranchEnd),
+          bracelessEnd
+        )
+        val codeAction = new l.CodeAction()
+        codeAction.setTitle(BracelessBracefulSwitchCodeAction.goBraceless)
+        codeAction.setKind(this.kind)
+        codeAction.setEdit(
+          new l.WorkspaceEdit(
+            Map(
+              path.toURI.toString -> List(startTextEdit, endTextEdit).asJava
+            ).asJava
+          )
+        )
+        Some(codeAction)
+      } else {
+        None
+      }
+    } else {
+      // TODO Important: autoIndentDocument()
+      val braceableBranchLSPPos = braceableBranch.pos.toLSP
+      val braceableBranchStart = braceableBranchLSPPos.getStart
+      val braceableBranchEnd = braceableBranchLSPPos.getEnd
+      val startBraceTextEdit = new TextEdit(
+        new l.Range(braceableBranchStart, braceableBranchStart),
+        "{"
+      )
+      val endBraceTextEdit = new TextEdit(
+        new l.Range(braceableBranchEnd, braceableBranchEnd),
+        s"""|${document(braceableBranch.pos.end)}
+            |${getIndentationForPositionInDocument(braceableBranch.pos, document)}}""".stripMargin
+      )
+      val codeAction = new l.CodeAction()
+      codeAction.setTitle(BracelessBracefulSwitchCodeAction.goBraceFul)
+      codeAction.setKind(this.kind)
+      codeAction.setEdit(
+        new l.WorkspaceEdit(
+          Map(
+            path.toURI.toString -> List(
+              startBraceTextEdit,
+              endBraceTextEdit
+            ).asJava
+          ).asJava
+        )
+      )
+      Some(codeAction)
+    }
   }
 
   private def getIndentationForPositionInDocument(
