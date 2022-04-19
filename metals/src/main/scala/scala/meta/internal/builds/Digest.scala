@@ -112,6 +112,7 @@ object Digest {
     import scala.xml.XML
     def digestElement(node: Node): Boolean = {
       node match {
+        // ignore comments, see MavenDigestSuite for example
         case _: Comment => true
         case _ =>
           for {
