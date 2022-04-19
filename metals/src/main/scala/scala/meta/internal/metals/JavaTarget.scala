@@ -6,6 +6,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.JavacOptionsItem
 
 case class JavaTarget(
@@ -33,6 +34,8 @@ case class JavaTarget(
   def isTargetrootDeclared: Boolean = javac.isTargetrootDeclared
 
   def classDirectory: String = javac.getClassDirectory()
+
+  def id: BuildTargetIdentifier = info.getId()
 
   def releaseVersion: Option[String] = javac.releaseVersion
 

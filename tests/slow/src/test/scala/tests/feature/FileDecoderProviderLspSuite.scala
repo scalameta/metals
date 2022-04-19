@@ -187,11 +187,7 @@ class FileDecoderProviderLspSuite
       str
         .replace("\\", "/")
         .replaceAll(
-          "(No such file ).*(\\/foo\\/bar\\/example\\/Main\\.class)",
-          "$1$2"
-        )
-        .replaceAll(
-          "(CannotLoadClassException: ).*(\\/foo\\/bar\\/example\\/Main\\.class )",
+          "[\\s\\S]*(Can't load the class specified:)[\\s]*(org.benf.cfr.reader.util.CannotLoadClassException:.*foo\\/bar\\/example\\/Main\\.class)[\\s\\S]*",
           "$1$2"
         )
   )
@@ -882,9 +878,7 @@ object FileDecoderProviderLspSuite {
         |""".stripMargin
 
   private val cfrMissing =
-    s"""|Can't load the class specified:
-        |org.benf.cfr.reader.util.CannotLoadClassException: /foo/bar/example/Main.class - java.io.IOException: No such file /foo/bar/example/Main.class
-        |""".stripMargin
+    "Can't load the class specified:org.benf.cfr.reader.util.CannotLoadClassException: foo/bar/example/Main.class - java.io.IOException: No such file foo/bar/example/Main.class"
 
   private val cfrToplevel =
     s"""|/*

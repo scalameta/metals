@@ -110,6 +110,11 @@ final class BuildTargets() {
   ): Option[List[AbsolutePath]] =
     data.fromOptions(_.targetJarClasspath(id))
 
+  def targetClasspath(
+      id: BuildTargetIdentifier
+  ): Option[List[String]] =
+    data.fromOptions(_.targetClasspath(id))
+
   def targetClassDirectories(
       id: BuildTargetIdentifier
   ): List[String] =

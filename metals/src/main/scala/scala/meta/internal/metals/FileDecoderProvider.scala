@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
 import java.net.URI
 import java.net.URLEncoder
@@ -525,16 +526,74 @@ final class FileDecoderProvider(
   ): Future[DecoderResponse] = {
     val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
     val cfrMain = "org.benf.cfr.reader.Main"
-    val args = List("--analyseas", "CLASS", s"""${path.toNIO.toString}""")
+
+    val buildTarget = buildTargets
+      .inferBuildTarget(path)
+      .orElse(
+        buildTargets.allScala
+          .find(buildTarget =>
+            path.isInside(buildTarget.classDirectory.toAbsolutePath)
+          )
+          .map(_.id)
+      )
+      .orElse(
+        buildTargets.allJava
+          .find(buildTarget =>
+            path.isInside(buildTarget.classDirectory.toAbsolutePath)
+          )
+          .map(_.id)
+      )
+    val classpaths = buildTarget
+      .flatMap(id =>
+        buildTargets
+          .targetClasspath(id)
+          .map(path => path.toAbsoluteClasspath.toList)
+      )
+      .getOrElse(Nil)
+    val classesDirs = buildTarget
+      .map(id =>
+        buildTargets.targetClassDirectories(id).toAbsoluteClasspath.toList
+      )
+      .getOrElse(Nil)
+    val extraClassPaths = classesDirs ::: classpaths
+    val extraClassPath =
+      if (extraClassPaths.nonEmpty)
+        List("--extraclasspath", extraClassPaths.mkString(File.pathSeparator))
+      else Nil
+
+    // if the class file is in the classes dir then use that classes dir to allow CFR to use the other classes
+    val (parent, className) = classesDirs
+      .find(classesPath => path.isInside(classesPath))
+      .map(classesPath => {
+        val classPath = path.toRelative(classesPath)
+        val className = classPath.toString
+        (classesPath, className)
+      })
+      .getOrElse({
+        val parent = path.parent
+        val className = path.filename
+        (parent, className)
+      })
+
+    val args = extraClassPath :::
+      List(
+        // elideScala - must be lowercase - hide @@ScalaSignature and serialVersionUID for aesthetic reasons
+        "--elidescala",
+        "true",
+        // analyseAs - must be lowercase
+        "--analyseas",
+        "CLASS",
+        s"$className"
+      )
+
     val sbOut = new StringBuilder()
     val sbErr = new StringBuilder()
-
     try {
       shellRunner
         .runJava(
           cfrDependency,
           cfrMain,
-          path.parent,
+          parent,
           args,
           redirectErrorOutput = false,
           s => {
@@ -549,7 +608,10 @@ final class FileDecoderProvider(
         )
         .map(_ => {
           if (sbErr.nonEmpty)
-            DecoderResponse.failed(path.toURI, sbErr.toString)
+            DecoderResponse.failed(
+              path.toURI,
+              s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}"
+            )
           else
             DecoderResponse.success(path.toURI, sbOut.toString)
         })
