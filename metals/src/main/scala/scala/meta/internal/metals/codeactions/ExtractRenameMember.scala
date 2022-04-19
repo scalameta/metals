@@ -143,7 +143,10 @@ class ExtractRenameMember(
     nodes.toList
   }
 
-  case class EndableMember(member: Member, endMarker: Option[Term.EndMarker])
+  case class EndableMember(
+      member: Member,
+      maybeEndMarker: Option[Term.EndMarker]
+  )
 
   private def isSealed(t: Tree): Boolean = t match {
     case node: Defn.Trait => node.mods.exists(_.isInstanceOf[Mod.Sealed])
@@ -242,11 +245,13 @@ class ExtractRenameMember(
 
     val structure = pkg.toList.mkString("\n") ::
       imports.mkString("\n") ::
-      endableMember.member.toString ::
-      endableMember.endMarker.map(_.toString()).getOrElse("") ::
-      maybeCompanionEndableMember.map(_.member.toString).getOrElse("") ::
+      endableMember.member.toString + endableMember.maybeEndMarker
+        .map(endMarker => "\n" + endMarker.toString())
+        .getOrElse("") ::
       maybeCompanionEndableMember
-        .flatMap(_.endMarker.map(_.toString()))
+        .map(_.member.toString)
+        .getOrElse("") + maybeCompanionEndableMember
+        .flatMap(_.maybeEndMarker.map(endMarker => "\n" + endMarker.toString()))
         .getOrElse("") :: Nil
 
     val preDefinitionLines = pkg.toList.length + imports.length
@@ -436,10 +441,10 @@ class ExtractRenameMember(
       removeTreeEdits(endableMember.member) ++ maybeEndableMemberCompanion
         .map(_.member)
         .map(removeTreeEdits)
-        .getOrElse(Nil) ++ endableMember.endMarker
+        .getOrElse(Nil) ++ endableMember.maybeEndMarker
         .map(removeTreeEdits)
         .getOrElse(Nil) ++ maybeEndableMemberCompanion
-        .flatMap(_.endMarker)
+        .flatMap(_.maybeEndMarker)
         .map(removeTreeEdits)
         .getOrElse(Nil)
     )
