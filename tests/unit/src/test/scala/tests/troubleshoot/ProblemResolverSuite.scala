@@ -149,31 +149,49 @@ class ProblemResolverSuite extends FunSuite {
   )
 
   checkRecommendation(
-    "munit-0.x",
+    "no-test-explorer-for-sbt",
+    scalaVersion = BuildInfo.scala213,
+    "",
+    classpath = List(
+      "org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar",
+      "/com/github/sbt/junit-interface/0.13.2/"
+    ),
+    sbtVersion = Some(BuildInfo.sbtVersion)
+  )
+
+  checkRecommendation(
+    "munit_2.13-0.x",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpath = List("/org/scalameta/munit/0.7.29/")
+    classpath = List("org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29.jar")
+  )
+
+  checkRecommendation(
+    "munit_3-0.x",
+    scalaVersion = BuildInfo.scala213,
+    OutdatedMunitInterfaceVersion.message,
+    classpath = List("org/scalameta/munit_3/0.7.29/munit_3-0.7.29.jar")
   )
 
   checkRecommendation(
     "munit-1.0.0-M2",
     scalaVersion = BuildInfo.scala213,
     OutdatedMunitInterfaceVersion.message,
-    classpath = List("/org/scalameta/munit/1.0.0-M2/")
+    classpath = List("org/scalameta/munit_2.13/1.0.0-M2/")
   )
 
   checkRecommendation(
     "munit-valid",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpath = List("/org/scalameta/munit/1.0.0-M3/")
+    classpath = List("org/scalameta/munit_2.13/1.0.0-M3/")
   )
 
   checkRecommendation(
     "munit-valid-2",
     scalaVersion = BuildInfo.scala213,
     "",
-    classpath = List("/org/scalameta/munit/1.0.1/")
+    classpath = List("org/scalameta/munit_2.13/1.0.1/")
   )
 
   def checkRecommendation(
