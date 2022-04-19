@@ -146,7 +146,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   private def dummyClassfiles(
       root: Path,
       path: Path
-  ): Seq[TreeViewSymbolInformation] = {
+  ): collection.Seq[TreeViewSymbolInformation] = {
     val result = mutable.ListBuffer.empty[TreeViewSymbolInformation]
     def isDone = result.lengthCompare(1) > 0
     Files.walkFileTree(
@@ -181,7 +181,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
         }
       }
     )
-    result.toSeq
+    result
   }
 
   private def isClassfile(path: Path): Boolean = {
