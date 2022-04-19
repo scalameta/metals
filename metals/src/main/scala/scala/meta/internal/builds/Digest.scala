@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.security.MessageDigest
 
 import scala.util.control.NonFatal
+import scala.xml.Comment
 import scala.xml.Node
 
 import scala.meta.internal.builds.Digest.Status
@@ -13,7 +14,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
-import scala.xml.Comment
 
 case class Digest(
     md5: String,
