@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
-import java.io._
+import java.io.ByteArrayInputStream
+import java.io.OutputStream
+import java.io.PrintStream
 import java.nio.channels.Channels
 import java.nio.channels.Pipe
 import java.nio.charset.StandardCharsets
@@ -22,6 +24,7 @@ import bloop.bloopgun.BloopgunCli
 import bloop.bloopgun.core.Shell
 import bloop.launcher.LauncherMain
 import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
 
 /**
@@ -228,23 +231,15 @@ final class BloopServers(
 
   }
 
-  private def getBloopGlobalJsonFilePath(): Option[AbsolutePath] =
+  private def getBloopFilePath(fileName: String): Option[AbsolutePath] = {
     Try {
       AbsolutePath(
         Paths
           .get(System.getProperty("user.home"))
-          .resolve(".bloop/bloop.json")
+          .resolve(s".bloop/$fileName")
       )
     }.toOption
-
-  private def getBloopCreatedByMetalsFilePath(): Option[AbsolutePath] =
-    Try {
-      AbsolutePath(
-        Paths
-          .get(System.getProperty("user.home"))
-          .resolve(".bloop/created_by_metals.lock")
-      )
-    }.toOption
+  }
 
   private def getBloopGlobalJsonLastModifiedTime(
       bloopGlobalJsonFilePath: AbsolutePath
@@ -254,19 +249,29 @@ final class BloopServers(
     }.getOrElse(0)
 
   /**
-   * First we check if the user requested to update the Bloop JVM properties through the extension.
-   * <p>If so, we also check if the Bloop's Global Json file exists and if it was pre-modified by the user.
-   * <p>Then, through consultation with the user through appropriate dialogues we decide if we should
+   * First we check if the user requested to update the Bloop JVM
+   * properties through the extension.
+   * <p>If so, we also check if the Bloop's Global Json file exists
+   * and if it was pre-modified by the user.
+   * <p>Then, through consultation with the user through appropriate
+   * dialogues we decide if we should
    * <ul>
-   * <li>overwrite the contents of the Bloop Global Json file with the requested JVM properties and Metal's JavaHome variables; and then restart the Bloop server</li>
+   * <li>overwrite the contents of the Bloop Global Json file with the
+   * requested JVM properties and Metal's JavaHome variables; and then
+   * restart the Bloop server</li>
    * <li>or alternatively, leave things untouched</li>
    * </ul>
    *
-   * @param maybeRequestedBloopJvmProperties Bloop JVM Properties requested through the Metals Extension settings
+   * @param maybeRequestedBloopJvmProperties Bloop JVM Properties requested
+   *                                         through the Metals Extension settings
    * @param maybeRunningBloopJvmProperties
-   * @param maybeJavaHome                    Metals' `javaHome`, which Bloop should also preferebly use
-   * @param reconnect                        function to connect back to the build server.
-   * @return `Future.successful` if the purpose is achieved or `Future.failure` if a problem occured such as lacking enough permissions to open or write to files
+   * @param maybeJavaHome                    Metals' `javaHome`, which Bloop
+   *                                         should also preferebly use
+   * @param reconnect                        function to connect back to the
+   *                                         build server.
+   * @return `Future.successful` if the purpose is achieved or `Future.failure`
+   *         if a problem occured such as lacking enough permissions to open or
+   *         write to files
    */
   def ensureDesiredJvmSettings(
       maybeRequestedBloopJvmProperties: Option[List[String]],
@@ -274,16 +279,17 @@ final class BloopServers(
       maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
-    // TODO the collection and display of errors in case something goes wrong
     val result =
       for { // if the requestedBloopJvmProperties and bloopGlobalJsonFilePath are defined
         requestedBloopJvmProperties <- maybeRequestedBloopJvmProperties
-        bloopGlobalJsonFilePath <- getBloopGlobalJsonFilePath()
-        bloopCreatedByMetalsFilePath <- getBloopCreatedByMetalsFilePath()
+        bloopGlobalJsonFilePath <- getBloopFilePath(fileName = "bloop.json")
+        bloopCreatedByMetalsFilePath <- getBloopFilePath(fileName =
+          "created_by_metals.lock"
+        )
       } yield
         if (
           maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties && requestedBloopJvmProperties.nonEmpty
-        ) // the properties are updated
+        ) { // the properties are updated
           if (
             bloopGlobalJsonFilePath.exists &&
             getBloopGlobalJsonLastModifiedTime(
@@ -291,7 +297,7 @@ final class BloopServers(
             ) > getBloopGlobalJsonLastModifiedByMetalsTime(
               bloopCreatedByMetalsFilePath
             )
-          )
+          ) {
             // the global json file was previously modified by the user through other means;
             // therefore overwriting it requires user input
             languageClient
@@ -307,19 +313,35 @@ final class BloopServers(
                   requestedBloopJvmProperties,
                   maybeJavaHome,
                   reconnect
-                )
+                ) andThen {
+                  case Failure(exception) =>
+                    languageClient.showMessage(
+                      MessageType.Error,
+                      exception.getMessage
+                    )
+                  case Success(_) => Future.successful()
+                }
               }
-          else
+          } else {
             // bloop global json file did not exist; or it was last modified by metals;
-            // hence it can get created or overwritten by Metals with no worries about overriding the user preferred settings
+            // hence it can get created or overwritten by Metals with no worries
+            // about overriding the user preferred settings
             updateBloopGlobalJsonFileThenRestart(
               bloopGlobalJsonFilePath,
               bloopCreatedByMetalsFilePath,
               requestedBloopJvmProperties,
               maybeJavaHome,
               reconnect
-            )
-        else Future.successful(())
+            ) andThen {
+              case Failure(exception) =>
+                languageClient.showMessage(
+                  MessageType.Error,
+                  exception.getMessage
+                )
+              case Success(_) => Future.successful()
+            }
+          }
+        } else Future.successful(())
 
     result.getOrElse(Future.successful(()))
 

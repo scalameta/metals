@@ -329,7 +329,7 @@ object Messages {
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"Bloop JVM properties were updated; do you want to restart the running Bloop server?"
+        s"New Bloop JVM properties detected. Bloop will need to be restarted in order for them to take effect."
       )
       params.setType(MessageType.Warning)
       params.setActions(
