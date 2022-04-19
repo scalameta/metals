@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.debug
 
+import java.io.File
 import java.net.URI
 import java.nio.file.Paths
 
@@ -9,6 +10,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -17,12 +19,36 @@ private[debug] final class SourcePathAdapter(
     workspace: AbsolutePath,
     sources: Set[AbsolutePath],
     buildTargets: BuildTargets,
-    saveJarFileToDisk: Boolean
+    supportVirtualDocuments: Boolean
 ) {
+  // when virtual documents are supported there is no need to save jars on disk
+  private val saveJarFileToDisk = !supportVirtualDocuments
   private val dependencies = workspace.resolve(Directories.dependencies)
+
   def toDapURI(sourcePath: AbsolutePath): Option[URI] = {
     if (sources.contains(sourcePath)) Some(sourcePath.toURI)
-    else {
+    else if (supportVirtualDocuments) {
+      val sourceFileJarPath = workspace.toNIO
+        .relativize(sourcePath.toNIO)
+        .toString
+        .stripPrefix("jar:")
+      val decodedPath =
+        URIEncoderDecoder.decode(sourceFileJarPath).toAbsolutePath
+      val parts = decodedPath.toNIO.iterator().asScala.map(_.toString).toVector
+      val jarPartIndex = parts.indexWhere(path => path.endsWith(".jar!"))
+      val jarPath = AbsolutePath(
+        parts
+          .take(jarPartIndex + 1)
+          .mkString(File.separator, File.separator, "")
+          .stripSuffix("!")
+      )
+      val relative = parts.drop(jarPartIndex + 1).mkString(File.separator)
+
+      val sourceURI = FileIO.withJarFileSystem(jarPath, create = false)(root =>
+        root.resolve(relative).toURI
+      )
+      Some(sourceURI)
+    } else {
       // if sourcePath is a dependency source file
       // we retrieve the original source jar and we build the uri innside the source jar filesystem
       for {
@@ -60,11 +86,16 @@ private[debug] object SourcePathAdapter {
   def apply(
       buildTargets: BuildTargets,
       targets: Seq[BuildTargetIdentifier],
-      saveJarFileToDisk: Boolean
+      supportVirtualDocuments: Boolean
   ): SourcePathAdapter = {
     val workspace = buildTargets.workspaceDirectory(targets.head).get
     val sources =
       targets.flatMap(buildTargets.buildTargetTransitiveSources).toSet
-    new SourcePathAdapter(workspace, sources, buildTargets, saveJarFileToDisk)
+    new SourcePathAdapter(
+      workspace,
+      sources,
+      buildTargets,
+      supportVirtualDocuments
+    )
   }
 }
