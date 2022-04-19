@@ -121,10 +121,7 @@ object Digest {
             value <- attr.value
           } digest.update(value.toString().getBytes())
 
-          val chldrenSuccessful: Seq[Boolean] = (for {
-            child <- node.child
-          } yield digestElement(child)).toSeq
-          chldrenSuccessful.forall(p => p)
+          node.child.forall(digestElement)
       }
     }
     try {

@@ -33,7 +33,7 @@ final class BuildTargets() {
   private val dataLock = new Object
   private var data: BuildTargets.DataSeq =
     BuildTargets.DataSeq((new TargetData) :: Nil)
-  def allWritableData = data.writableDataIterator.toSeq
+  def allWritableData = data.list
 
   val buildTargetsOrder: BuildTargetIdentifier => Int = {
     (t: BuildTargetIdentifier) =>
@@ -369,12 +369,12 @@ final class BuildTargets() {
       allWorkspaceJars.map(_.toNIO.toUri().toURL()).toArray,
       null
     )
-    lazy val classpaths: Seq[(BuildTargetIdentifier, Seq[AbsolutePath])] =
+    lazy val classpaths: Seq[(BuildTargetIdentifier, Iterator[AbsolutePath])] =
       allBuildTargetIdsInternal.toVector.map { case (data, id) =>
         id -> data
           .targetClasspath(id)
-          .map(_.toAbsoluteClasspath.toSeq)
-          .getOrElse(Seq.empty)
+          .map(_.toAbsoluteClasspath)
+          .getOrElse(Iterator.empty)
       }
 
     try {
@@ -422,7 +422,7 @@ final class BuildTargets() {
     BuildTargets.isInverseDependency(
       query,
       roots,
-      id => data.fromOptions(_.inverseDependencies.get(id).map(_.toSeq))
+      id => data.fromOptions(_.inverseDependencies.get(id))
     )
   }
   def inverseDependencyLeaves(
@@ -440,7 +440,7 @@ final class BuildTargets() {
   ): BuildTargets.InverseDependencies = {
     BuildTargets.inverseDependencies(
       List(target),
-      id => data.fromOptions(_.inverseDependencies.get(id).map(_.toSeq))
+      id => data.fromOptions(_.inverseDependencies.get(id))
     )
   }
 
@@ -487,7 +487,9 @@ object BuildTargets {
   def isInverseDependency(
       query: BuildTargetIdentifier,
       roots: List[BuildTargetIdentifier],
-      inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
+      inverseDeps: BuildTargetIdentifier => Option[
+        collection.Seq[BuildTargetIdentifier]
+      ]
   ): Boolean = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     @tailrec
@@ -525,7 +527,9 @@ object BuildTargets {
    */
   def inverseDependencies(
       root: List[BuildTargetIdentifier],
-      inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
+      inverseDeps: BuildTargetIdentifier => Option[
+        collection.Seq[BuildTargetIdentifier]
+      ]
   ): InverseDependencies = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val leaves = mutable.Set.empty[BuildTargetIdentifier]
