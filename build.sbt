@@ -403,7 +403,7 @@ lazy val metals = project
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.2",
-      "org.scala-lang.modules" %% "scala-xml" % "2.0.1",
+      "org.scala-lang.modules" %% "scala-xml" % "2.1.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
     ),
     buildInfoPackage := "scala.meta.internal.metals",

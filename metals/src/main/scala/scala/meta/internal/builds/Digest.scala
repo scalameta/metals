@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.security.MessageDigest
 
 import scala.util.control.NonFatal
+import scala.xml.Comment
 import scala.xml.Node
 
 import scala.meta.internal.builds.Digest.Status
@@ -107,19 +108,24 @@ object Digest {
       file: AbsolutePath,
       digest: MessageDigest
   ): Boolean = {
+
     import scala.xml.XML
     def digestElement(node: Node): Boolean = {
-      digest.update(node.label.getBytes())
-      for {
-        attr <- node.attributes
-        _ = digest.update(attr.key.getBytes())
-        value <- attr.value
-      } digest.update(value.toString().getBytes())
+      node match {
+        // ignore comments, see MavenDigestSuite for example
+        case _: Comment => true
+        case _ =>
+          for {
+            attr <- node.attributes
+            _ = digest.update(attr.key.getBytes())
+            value <- attr.value
+          } digest.update(value.toString().getBytes())
 
-      val chldrenSuccessful: Seq[Boolean] = (for {
-        child <- node.child
-      } yield digestElement(child)).toSeq
-      chldrenSuccessful.forall(p => p)
+          val chldrenSuccessful: Seq[Boolean] = (for {
+            child <- node.child
+          } yield digestElement(child)).toSeq
+          chldrenSuccessful.forall(p => p)
+      }
     }
     try {
       val xml = XML.loadFile(file.toNIO.toFile)
