@@ -489,12 +489,16 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       case TypeRef(
             _,
             cls,
-            TypeRef(_, _, args) :: Nil
+            TypeRef(_, symbol, args) :: Nil
           )
           if isUnapplyMethod &&
-            (cls == definitions.OptionClass || cls == definitions.SomeClass) &&
-            args.nonEmpty =>
-        List(args.map(_.typeSymbol))
+            (cls == definitions.OptionClass || cls == definitions.SomeClass) =>
+        // tuple unapply results
+        if (args.nonEmpty && definitions.isTupleSymbol(symbol))
+          List(args.map(_.typeSymbol))
+        // otherwise it's a single unapply result
+        else
+          List(List(symbol))
       case _ =>
         if (method.typeParams.isEmpty) method.paramLists
         else method.typeParams :: method.paramLists
