@@ -220,7 +220,7 @@ object MetalsInteractive:
 
       // f@@oo.bar
       case Select(target, _) :: _
-          if target.symbol.isDefinedInSource &&
+          if target.span.isSourceDerived &&
             target.sourcePos.contains(pos) =>
         List(target.symbol)
 
