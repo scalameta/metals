@@ -149,14 +149,8 @@ class HoverTermSuite extends BaseHoverSuite {
     compat = Map(
       // https://github.com/lampepfl/dotty/issues/8835
       "3" ->
-        """|**Expression type**:
-           |```scala
-           |Xtension#num
-           |```
-           |**Symbol signature**:
-           |```scala
+        """|Xtension#num
            |object num: `interpolator-unapply`.a.Xtension
-           |```
            |""".stripMargin.hover
     )
   )
@@ -173,9 +167,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|```scala
-           |def <init>(name: String, age: Int): Foo
-           |```
+        """|def <init>(name: String, age: Int): Foo
            |""".stripMargin.hover
     )
   )
@@ -193,14 +185,8 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|**Expression type**:
-           |```scala
-           |Foo[Int]
-           |```
-           |**Symbol signature**:
-           |```scala
+        """|Foo[Int]
            |def <init>[T](name: String, age: T): Foo[T]
-           |```
            |""".stripMargin.hover
     )
   )
