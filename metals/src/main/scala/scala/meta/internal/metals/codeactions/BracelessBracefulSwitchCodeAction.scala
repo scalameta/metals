@@ -20,8 +20,6 @@ class BracelessBracefulSwitchCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
-
-
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
@@ -96,7 +94,7 @@ class BracelessBracefulSwitchCodeAction(
             )
           case varDefn: Defn.Var =>
             varDefn.rhs
-              .map(rhs =>
+              .flatMap(rhs =>
                 createCodeActionForBraceableTree(
                   hasBraces = hasBraces,
                   path = path,
@@ -107,7 +105,6 @@ class BracelessBracefulSwitchCodeAction(
                   bracelessEnd = ""
                 )
               )
-              .flatten
           case defDefn: Defn.Def =>
             createCodeActionForBraceableTree(
               hasBraces = hasBraces,
@@ -118,9 +115,80 @@ class BracelessBracefulSwitchCodeAction(
               bracelessStart = "",
               bracelessEnd = ""
             )
-          case _: Term.Try | _: Term.If | _: Term.For | _: Term.Match |
-              _: Term.While =>
-            None
+          case termTry: Term.Try =>
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = termTry,
+              braceableBranch = termTry.expr,
+              document = document,
+              bracelessStart = "",
+              bracelessEnd = ""
+            )
+            termTry.catchp.flatMap(catchp => // TODO
+              createCodeActionForBraceableTree(
+                hasBraces = hasBraces,
+                path = path,
+                braceableTree = termTry,
+                braceableBranch = catchp,
+                document = document,
+                bracelessStart = "",
+                bracelessEnd = ""
+              )
+            )
+
+            termTry.finallyp.flatMap(finallyP => // TODO
+              createCodeActionForBraceableTree(
+                hasBraces = hasBraces,
+                path = path,
+                braceableTree = termTry,
+                braceableBranch = finallyP,
+                document = document,
+                bracelessStart = "",
+                bracelessEnd = ""
+              )
+            )
+
+          case termIf: Term.If =>
+            createCodeActionForBraceableTree( // TODO
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = termIf,
+              braceableBranch = termIf.thenp,
+              document = document,
+              bracelessStart = "then",
+              bracelessEnd = ""
+            )
+            createCodeActionForBraceableTree( // TODO
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = termIf,
+              braceableBranch = termIf.elsep,
+              document = document,
+              bracelessStart = "then",
+              bracelessEnd = ""
+            )
+          case termFor: Term.For => // TODO
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = termFor,
+              braceableBranch = termFor.body,
+              document = document,
+              bracelessStart = "do",
+              bracelessEnd = ""
+            )
+          case _: Term.Match => None
+          case termWhile: Term.While => // TODO
+            createCodeActionForBraceableTree(
+              hasBraces = hasBraces,
+              path = path,
+              braceableTree = termWhile,
+              braceableBranch = termWhile.body,
+              document = document,
+              bracelessStart = "do",
+              bracelessEnd = ""
+            )
           case _: Defn.GivenAlias => None
           case _: Template | _: Term.Block => None
         }
@@ -132,39 +200,39 @@ class BracelessBracefulSwitchCodeAction(
     tree.children
       .collectFirst {
         case template: Template =>
-         // if (template.pos.start < document.size) {
-            document(template.pos.start) == '{'
+          // if (template.pos.start < document.size) {
+          document(template.pos.start) == '{'
         //  } else false
         case rhs: Tree =>
-    //      if (rhs.pos.start < document.size)
-            document(rhs.pos.start) == '{'
-      //    else false
+          //      if (rhs.pos.start < document.size)
+          document(rhs.pos.start) == '{'
+        //    else false
         case body: Tree =>
-   //       if (body.pos.start < document.size)
-            document(body.pos.start) == '{'
-    //      else false
+          //       if (body.pos.start < document.size)
+          document(body.pos.start) == '{'
+        //      else false
 
       }
       .getOrElse(false)
   }
 
   def createCodeActionForBraceableTree(
-                                        hasBraces: (Tree, String) => Boolean,
-                                        path: AbsolutePath,
-                                        braceableTree: Tree,
-                                        braceableBranch: Tree,
-                                        bracelessStart: String,
-                                        bracelessEnd: String,
-                                        document: String
-                                      ) = {
+      hasBraces: (Tree, String) => Boolean,
+      path: AbsolutePath,
+      braceableTree: Tree,
+      braceableBranch: Tree,
+      bracelessStart: String,
+      bracelessEnd: String,
+      document: String
+  ) = {
     if (hasBraces(braceableTree, document)) {
       if (braceableTree.allowBracelessSyntax) {
         // TODO Important: autoIndentDocument()
         val braceableBranchLSPPos = braceableBranch.pos.toLSP
         val braceableBranchStart = braceableBranchLSPPos.getStart
-    //    braceableBranchStart.setCharacter(braceableBranchStart.getCharacter -1 )
+        //    braceableBranchStart.setCharacter(braceableBranchStart.getCharacter -1 )
         val braceableBranchEnd = braceableBranchLSPPos.getEnd
-     //   braceableBranchEnd.setCharacter(braceableBranchEnd.getCharacter -1 )
+        //   braceableBranchEnd.setCharacter(braceableBranchEnd.getCharacter -1 )
         val startTextEdit = new TextEdit(
           new l.Range(braceableBranchStart, braceableBranchStart),
           bracelessStart
