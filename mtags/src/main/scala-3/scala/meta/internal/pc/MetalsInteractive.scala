@@ -205,7 +205,8 @@ object MetalsInteractive:
 
       // f@@oo.bar
       case Select(target, _) :: _
-          if !target.symbol.is(Synthetic) && target.sourcePos.contains(pos) =>
+          if target.symbol.isDefinedInSource &&
+            target.sourcePos.contains(pos) =>
         List(target.symbol)
 
       case path @ head :: tl =>
