@@ -57,6 +57,7 @@ object HoverProvider:
     else
       val skipCheckOnName =
         !pos.isPoint // don't check isHoveringOnName for RangeHover
+      // println(enclosing.headOption)
       MetalsInteractive.enclosingSymbols(
         enclosing,
         pos,

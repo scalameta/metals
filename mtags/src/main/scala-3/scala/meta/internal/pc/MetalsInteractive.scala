@@ -203,6 +203,11 @@ object MetalsInteractive:
         if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
         else List(target.symbol)
 
+      // L@@ft(...)
+      case (head @ Apply(TypeApply(Select(target, name), _), _)) :: _
+          if target.sourcePos.contains(pos) && name == StdNames.nme.apply =>
+        List(head.symbol)
+
       // f@@oo.bar
       case Select(target, _) :: _
           if target.symbol.isDefinedInSource &&
@@ -226,6 +231,7 @@ object MetalsInteractive:
           if recovered.isEmpty then
             enclosingSymbols(tl, pos, indexed, skipCheckOnName)
           else recovered
+        end if
       case Nil => Nil
     end match
   end enclosingSymbols
