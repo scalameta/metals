@@ -886,19 +886,4 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     )
   )
 
-  check(
-    "explicit-unapply",
-    """
-      |object And {
-      |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
-      |}
-      |object a {
-      |  And.unapply(@@)
-      |}
-  """.stripMargin,
-    """|unapply[A](a: A): Some[(A, A)]
-       |           ^^^^
-       | """.stripMargin
-  )
-
 }

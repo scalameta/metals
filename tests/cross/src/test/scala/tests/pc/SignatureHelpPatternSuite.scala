@@ -37,8 +37,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(value: A)
-       | ^^^^^^^^
+    """|(A)
+       | ^
        |""".stripMargin
   )
 
@@ -150,9 +150,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    """|(String)
-       | ^^^^^^
-       |(Char)
+    """|(List[A])
+       | ^^^^^^^
        |""".stripMargin
   )
 
@@ -192,6 +191,57 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     // `pat3` without regressing signature help in othere cases like partial functions that
     // generate qualifiers with offset positions.
     ""
+  )
+
+  check(
+    "pat5",
+    """
+      |object OpenBrowserCommand {
+      |  def unapply(command: String): Option[Int] = {
+      |    Some(1)
+      |  }
+      |
+      |  "" match {
+      |    case OpenBrowserCommand(@@) =>
+      |  }
+      |}
+    """.stripMargin,
+    """|(Int)
+       | ^^^
+       |""".stripMargin
+  )
+
+  check(
+    "pat6",
+    """
+      |object OpenBrowserCommand {
+      |  def unapply(command: String): Option[Option[Int]] = {
+      |    Some(Some(1))
+      |  }
+      |
+      |  "" match {
+      |    case OpenBrowserCommand(@@) =>
+      |  }
+      |}
+    """.stripMargin,
+    """|(Option[A])
+       | ^^^^^^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "pat-negative",
+    """
+      |object And {
+      |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
+      |}
+      |object a {
+      |  And.unapply(@@)
+      |}
+    """.stripMargin,
+    """|unapply[A](a: A): Some[(A, A)]
+       |           ^^^^
+       | """.stripMargin
   )
 
 }
