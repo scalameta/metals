@@ -1,16 +1,17 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
+
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.ContextOps.*
-import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.CyclicReference
 import dotty.tools.dotc.core.Denotations.Denotation
 import dotty.tools.dotc.core.Denotations.MultiPreDenotation
 import dotty.tools.dotc.core.Denotations.PreDenotation
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
