@@ -494,7 +494,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           if isUnapplyMethod &&
             (cls == definitions.OptionClass || cls == definitions.SomeClass) =>
         // tuple unapply results
-        if (args.nonEmpty && definitions.isTupleSymbol(symbol))
+        if (definitions.isTupleSymbol(symbol))
           List(args.map(_.typeSymbol))
         // otherwise it's a single unapply result
         else
