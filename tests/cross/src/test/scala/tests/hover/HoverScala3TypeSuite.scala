@@ -96,7 +96,8 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |  val color = <<Col@@or>>.Red
        |
        |""".stripMargin,
-    """|enum Color: enums3.SimpleEnum
+    """|Color
+       |enum Color: enums3.SimpleEnum
        |""".stripMargin.hover
   )
 

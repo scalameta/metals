@@ -123,13 +123,19 @@ object MetalsInteractive:
       case select: Select =>
         // using `nameSpan` as SourceTree for Select (especially symbolic-infix e.g. `::` of `1 :: Nil`) miscalculate positions
         select.nameSpan.contains(sourcePos.span)
+      case tree: Ident =>
+        tree.sourcePos.contains(sourcePos)
+      case tree: NamedDefTree =>
+        tree.namePos.contains(sourcePos)
       case tree: NameTree =>
         SourceTree(tree, source).namePos.contains(sourcePos)
       // TODO: check the positions for NamedArg and Import
+      // case ident: Ident =>
+      //   ident.sourcePos.contains
       case _: NamedArg => true
       case _: Import => true
       case app: (Apply | TypeApply) => contains(app.fun)
-      case _ => false
+      case other => false
     end contains
 
     val enclosing = path
@@ -156,15 +162,14 @@ object MetalsInteractive:
       case gtree: Select if isForComprehensionSyntheticName(gtree) => true
       case _ => false
 
-
   @tailrec
   def enclosingSymbols(
       path: List[Tree],
       pos: SourcePosition,
-      indexed: IndexedContext
+      indexed: IndexedContext,
+      skipCheckOnName: Boolean = false
   ): List[Symbol] =
     import indexed.ctx
-    println(path.headOption)
     path match
       // For a named arg, find the target `DefDef` and jump to the param
       case NamedArg(name, _) :: Apply(fn, _) :: _ =>
@@ -197,19 +202,27 @@ object MetalsInteractive:
         if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
         else List(target.symbol)
 
+      // f@@oo.bar
+      case Select(target, _) :: _
+          if !target.symbol.is(Synthetic) && target.sourcePos.contains(pos) =>
+        List(target.symbol)
+
       case path @ head :: tl =>
-        if head.symbol.is(Synthetic) then enclosingSymbols(tl, pos, indexed)
+        if head.symbol.is(Synthetic) then
+          enclosingSymbols(tl, pos, indexed, skipCheckOnName)
         else if head.symbol != NoSymbol then
-          if MetalsInteractive.isOnName(
+          if skipCheckOnName ||
+            (MetalsInteractive.isOnName(
               path,
               pos,
               indexed.ctx.source
-            ) || MetalsInteractive.isForSynthetic(head)
+            ) || MetalsInteractive.isForSynthetic(head))
           then List(head.symbol)
           else Nil
         else
           val recovered = recoverError(head, indexed)
-          if recovered.isEmpty then enclosingSymbols(tl, pos, indexed)
+          if recovered.isEmpty then
+            enclosingSymbols(tl, pos, indexed, skipCheckOnName)
           else recovered
       case Nil => Nil
     end match
