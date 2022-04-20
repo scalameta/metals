@@ -204,9 +204,19 @@ object MetalsInteractive:
         else List(target.symbol)
 
       // L@@ft(...)
-      case (head @ Apply(TypeApply(Select(target, name), _), _)) :: _
-          if target.sourcePos.contains(pos) && name == StdNames.nme.apply =>
+      case (head @ ApplySelect(select)) :: _
+          if select.qualifier.sourcePos.contains(pos) &&
+            select.name == StdNames.nme.apply =>
         List(head.symbol)
+
+      // for comprehension
+      case (head @ ApplySelect(select)) :: _ if isForSynthetic(head) =>
+        // If the cursor is on the qualifier, return the symbol for it
+        // `for { x <- List(1).head@@Option }`  returns the symbol of `headOption`
+        if select.qualifier.sourcePos.contains(pos) then
+          List(select.qualifier.symbol)
+        // Otherwise, returns the symbol of for synthetics such as "withFilter"
+        else List(head.symbol)
 
       // f@@oo.bar
       case Select(target, _) :: _
@@ -219,11 +229,11 @@ object MetalsInteractive:
           enclosingSymbols(tl, pos, indexed, skipCheckOnName)
         else if head.symbol != NoSymbol then
           if skipCheckOnName ||
-            (MetalsInteractive.isOnName(
+            MetalsInteractive.isOnName(
               path,
               pos,
               indexed.ctx.source
-            ) || MetalsInteractive.isForSynthetic(head))
+            )
           then List(head.symbol)
           else Nil
         else
@@ -256,4 +266,12 @@ object MetalsInteractive:
       case ident: Ident => indexed.findSymbol(ident.name).toList.flatten
       case _ => Nil
   end recoverError
+
+  object ApplySelect:
+    def unapply(tree: Tree): Option[Select] = Option(tree).collect {
+      case select: Select => select
+      case Apply(select: Select, _) => select
+      case Apply(TypeApply(select: Select, _), _) => select
+    }
+  end ApplySelect
 end MetalsInteractive

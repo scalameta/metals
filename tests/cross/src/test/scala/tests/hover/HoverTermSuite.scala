@@ -355,6 +355,25 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
+    "for-method",
+    """
+      |object a {
+      |  for {
+      |    x <- <<List(1).headOp@@tion>>
+      |  } yield x
+      |}
+      |""".stripMargin,
+    """|override def headOption: Option[Int]
+       |""".stripMargin.hover,
+    compat = Map(
+      "3" ->
+        """|Option[Int]
+           |def headOption: Option[A]
+           |""".stripMargin.hover
+    )
+  )
+
+  check(
     "object",
     """
       |import java.nio.file._

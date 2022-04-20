@@ -10,7 +10,6 @@ import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.*
 import dotty.tools.dotc.core.NameOps.*
@@ -57,7 +56,6 @@ object HoverProvider:
     else
       val skipCheckOnName =
         !pos.isPoint // don't check isHoveringOnName for RangeHover
-      // println(enclosing.headOption)
       MetalsInteractive.enclosingSymbols(
         enclosing,
         pos,
