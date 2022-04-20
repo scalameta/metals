@@ -1,9 +1,16 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
+import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.ContextOps.*
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.CyclicReference
+import dotty.tools.dotc.core.Denotations.Denotation
+import dotty.tools.dotc.core.Denotations.MultiPreDenotation
+import dotty.tools.dotc.core.Denotations.PreDenotation
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
@@ -149,4 +156,83 @@ object MetalsInteractive:
       case gtree: Select if isForComprehensionSyntheticName(gtree) => true
       case _ => false
 
+
+  @tailrec
+  def enclosingSymbols(
+      path: List[Tree],
+      pos: SourcePosition,
+      indexed: IndexedContext
+  ): List[Symbol] =
+    import indexed.ctx
+    println(path.headOption)
+    path match
+      // For a named arg, find the target `DefDef` and jump to the param
+      case NamedArg(name, _) :: Apply(fn, _) :: _ =>
+        val funSym = fn.symbol
+        if funSym.is(Synthetic) && funSym.owner.is(CaseClass) then
+          List(funSym.owner.info.member(name).symbol)
+        else
+          val classTree = funSym.topLevelClass.asClass.rootTree
+          val paramSymbol =
+            for
+              DefDef(_, paramss, _, _) <- tpd
+                .defPath(funSym, classTree)
+                .lastOption
+              param <- paramss.flatten.find(_.name == name)
+            yield param.symbol
+          List(paramSymbol.getOrElse(fn.symbol))
+      case (_: untpd.ImportSelector) :: (imp: Import) :: _ =>
+        importedSymbols(imp, _.span.contains(pos.span))
+
+      case (imp: Import) :: _ =>
+        importedSymbols(imp, _.span.contains(pos.span))
+
+      // wildcard param
+      case head :: _ if (head.symbol.is(Param) && head.symbol.is(Synthetic)) =>
+        List(head.symbol)
+
+      case (head @ Select(target, name)) :: _
+          if head.symbol.is(Synthetic) && name == StdNames.nme.apply =>
+        val sym = target.symbol
+        if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
+        else List(target.symbol)
+
+      case path @ head :: tl =>
+        if head.symbol.is(Synthetic) then enclosingSymbols(tl, pos, indexed)
+        else if head.symbol != NoSymbol then
+          if MetalsInteractive.isOnName(
+              path,
+              pos,
+              indexed.ctx.source
+            ) || MetalsInteractive.isForSynthetic(head)
+          then List(head.symbol)
+          else Nil
+        else
+          val recovered = recoverError(head, indexed)
+          if recovered.isEmpty then enclosingSymbols(tl, pos, indexed)
+          else recovered
+      case Nil => Nil
+    end match
+  end enclosingSymbols
+
+  private def recoverError(
+      tree: Tree,
+      indexed: IndexedContext
+  ): List[Symbol] =
+    import indexed.ctx
+
+    def extractSymbols(d: PreDenotation): List[Symbol] =
+      d match
+        case multi: MultiPreDenotation =>
+          extractSymbols(multi.denot1) ++ extractSymbols(multi.denot2)
+        case d: Denotation => List(d.symbol)
+        case _ => List.empty
+
+    tree match
+      case select: Select =>
+        extractSymbols(select.qualifier.typeOpt.member(select.name))
+          .filter(_ != NoSymbol)
+      case ident: Ident => indexed.findSymbol(ident.name).toList.flatten
+      case _ => Nil
+  end recoverError
 end MetalsInteractive
