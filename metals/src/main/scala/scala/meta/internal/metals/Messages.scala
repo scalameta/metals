@@ -296,6 +296,52 @@ object Messages {
     }
   }
 
+  object BloopGlobalJsonFilePremodified {
+    def applyAndRestart: MessageActionItem =
+      new MessageActionItem("Apply and Restart Bloop")
+    def useGlobalFile: MessageActionItem =
+      new MessageActionItem("Use the Global File's JVM Properties")
+    def openGlobalJsonFile: MessageActionItem =
+      new MessageActionItem("Open the Global File")
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"""|You have previously modified the JVM settings of Bloop in its global json file,
+            |Do you want to replace them with the new properties and restart the running Bloop server?""".stripMargin
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          applyAndRestart,
+          useGlobalFile,
+          openGlobalJsonFile
+        ).asJava
+      )
+      params
+    }
+  }
+
+  object BloopJvmPropertiesChange {
+    def reconnect: MessageActionItem =
+      new MessageActionItem("Restart Bloop")
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"New Bloop JVM properties detected. Bloop will need to be restarted in order for them to take effect."
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          reconnect,
+          notNow
+        ).asJava
+      )
+      params
+    }
+  }
+
   object AmmoniteJvmParametersChange {
     def restart: MessageActionItem =
       new MessageActionItem("Restart Ammonite")

@@ -118,6 +118,7 @@ class MetalsLanguageServer(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
+
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
       val buildShutdown = bspSession match {
@@ -285,6 +286,7 @@ class MetalsLanguageServer(
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
+
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -954,6 +956,7 @@ class MetalsLanguageServer(
   }
 
   val isInitialized = new AtomicBoolean(false)
+
   @nowarn("msg=parameter value params")
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
@@ -986,6 +989,7 @@ class MetalsLanguageServer(
   }.asJava
 
   lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
+
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
     val promise = Promise[Unit]()
@@ -1301,6 +1305,14 @@ class MetalsLanguageServer(
                 old.bloopVersion.isDefined,
                 () => autoConnectToBuildServer
               )
+
+              bloopServers.ensureDesiredJvmSettings(
+                userConfig.bloopJvmProperties,
+                old.bloopJvmProperties,
+                userConfig.javaHome,
+                () => autoConnectToBuildServer()
+              )
+
             } else if (
               userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
                 .exists(Ammonite.isAmmBuildTarget)
@@ -1573,6 +1585,7 @@ class MetalsLanguageServer(
       }
     }
   }
+
   def referencesResult(params: ReferenceParams): List[ReferencesResult] = {
     val timer = new Timer(time)
     val results: List[ReferencesResult] = referencesProvider.references(params)
@@ -1592,6 +1605,7 @@ class MetalsLanguageServer(
     }
     results
   }
+
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CancelTokens.future { token => compilers.completions(params, token) }

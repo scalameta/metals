@@ -38,6 +38,7 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
+    bloopJvmProperties: Option[List[String]] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     showInferredType: Boolean = false,
@@ -176,6 +177,15 @@ object UserConfiguration {
         "Version of Bloop",
         """|This version will be used for the Bloop build tool plugin, for any supported build tool,
            |while importing in Metals as well as for running the embedded server""".stripMargin
+      ),
+      UserConfigurationOption(
+        "bloop-jvm-properties",
+        """["-Xmx1G"].""",
+        """["-Xmx1G"]""",
+        "Bloop JVM Properties",
+        """|Optional list of JVM properties to pass along to the Bloop server.
+           |Please follow this guide for the format https://scalacenter.github.io/bloop/docs/server-reference#global-settings-for-the-server"
+           |""".stripMargin
       ),
       UserConfigurationOption(
         "super-method-lenses-enabled",
@@ -438,6 +448,7 @@ object UserConfiguration {
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version")
+    val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     val showInferredType =
@@ -492,6 +503,7 @@ object UserConfiguration {
           worksheetCancelTimeout,
           bloopSbtAlreadyInstalled,
           bloopVersion,
+          bloopJvmProperties,
           ammoniteProperties,
           superMethodLensesEnabled,
           showInferredType,
