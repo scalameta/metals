@@ -6,7 +6,8 @@ import scala.meta.internal.metals.ServerCommands
 
 class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
 
-  test("basic") {
+  // https://github.com/scalameta/metals/issues/3801
+  test("basic".flaky) {
     cleanWorkspace()
     for {
       _ <- initialize(
