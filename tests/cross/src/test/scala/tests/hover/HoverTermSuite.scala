@@ -166,7 +166,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|def <init>(name: String, age: Int): Foo
+        """|def this(name: String, age: Int): Foo
            |""".stripMargin.hover
     )
   )
@@ -185,7 +185,7 @@ class HoverTermSuite extends BaseHoverSuite {
     compat = Map(
       "3" ->
         """|Foo[Int]
-           |def <init>[T](name: String, age: T): Foo[T]
+           |def this[T](name: String, age: T): Foo[T]
            |""".stripMargin.hover
     )
   )
