@@ -15,6 +15,7 @@ import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.SourceTree
 import dotty.tools.dotc.util.SourceFile
@@ -163,20 +164,33 @@ object MetalsInteractive:
       case gtree: Select if isForComprehensionSyntheticName(gtree) => true
       case _ => false
 
-  @tailrec
   def enclosingSymbols(
       path: List[Tree],
       pos: SourcePosition,
       indexed: IndexedContext,
       skipCheckOnName: Boolean = false
   ): List[Symbol] =
+    enclosingSymbolsWithExpressionType(path, pos, indexed, skipCheckOnName)
+      .map(_._1)
+
+  /** Returns the list of tuple enclosing symbol and
+    * the symbol's expression type if possible.
+    */
+  @tailrec
+  def enclosingSymbolsWithExpressionType(
+      path: List[Tree],
+      pos: SourcePosition,
+      indexed: IndexedContext,
+      skipCheckOnName: Boolean = false
+  ): List[(Symbol, Type)] =
     import indexed.ctx
     path match
       // For a named arg, find the target `DefDef` and jump to the param
       case NamedArg(name, _) :: Apply(fn, _) :: _ =>
         val funSym = fn.symbol
         if funSym.is(Synthetic) && funSym.owner.is(CaseClass) then
-          List(funSym.owner.info.member(name).symbol)
+          val sym = funSym.owner.info.member(name).symbol
+          List((sym, sym.info))
         else
           val classTree = funSym.topLevelClass.asClass.rootTree
           val paramSymbol =
@@ -186,44 +200,50 @@ object MetalsInteractive:
                 .lastOption
               param <- paramss.flatten.find(_.name == name)
             yield param.symbol
-          List(paramSymbol.getOrElse(fn.symbol))
+          val sym = paramSymbol.getOrElse(fn.symbol)
+          List((sym, sym.info))
 
       case (_: untpd.ImportSelector) :: (imp: Import) :: _ =>
-        importedSymbols(imp, _.span.contains(pos.span))
+        importedSymbols(imp, _.span.contains(pos.span)).map(sym =>
+          (sym, sym.info)
+        )
 
       case (imp: Import) :: _ =>
-        importedSymbols(imp, _.span.contains(pos.span))
+        importedSymbols(imp, _.span.contains(pos.span)).map(sym =>
+          (sym, sym.info)
+        )
 
       // wildcard param
       case head :: _ if (head.symbol.is(Param) && head.symbol.is(Synthetic)) =>
-        List(head.symbol)
+        List((head.symbol, head.typeOpt))
 
       case (head @ Select(target, name)) :: _
           if head.symbol.is(Synthetic) && name == StdNames.nme.apply =>
         val sym = target.symbol
-        if sym.is(Synthetic) && sym.is(Module) then List(sym.companionClass)
-        else List(target.symbol)
+        if sym.is(Synthetic) && sym.is(Module) then
+          List((sym.companionClass, sym.companionClass.info))
+        else List((target.symbol, target.typeOpt))
 
       // L@@ft(...)
       case (head @ ApplySelect(select)) :: _
           if (select.qualifier.sourcePos.contains(pos) &&
             select.name == StdNames.nme.apply) =>
-        List(head.symbol)
+        List((head.symbol, head.typeOpt))
 
       // for comprehension
       case (head @ ApplySelect(select)) :: _ if isForSynthetic(head) =>
         // If the cursor is on the qualifier, return the symbol for it
         // `for { x <- List(1).head@@Option }`  returns the symbol of `headOption`
         if select.qualifier.sourcePos.contains(pos) then
-          List(select.qualifier.symbol)
+          List((select.qualifier.symbol, select.qualifier.typeOpt))
         // Otherwise, returns the symbol of for synthetics such as "withFilter"
-        else List(head.symbol)
+        else List((head.symbol, head.typeOpt))
 
       // f@@oo.bar
       case Select(target, _) :: _
           if target.span.isSourceDerived &&
             target.sourcePos.contains(pos) =>
-        List(target.symbol)
+        List((target.symbol, target.typeOpt))
 
       // Anonymous class definition
       // class Foo(...)
@@ -235,11 +255,11 @@ object MetalsInteractive:
       case (ApplySelect(Select(New(ident), _))) ::
           (_: Template) ::(TypeDef(name, _)) :: _
           if name == StdNames.tpnme.ANON_CLASS =>
-        List(ident.symbol)
+        List((ident.symbol, ident.typeOpt))
 
       case path @ head :: tl =>
         if head.symbol.is(Synthetic) then
-          enclosingSymbols(tl, pos, indexed, skipCheckOnName)
+          enclosingSymbolsWithExpressionType(tl, pos, indexed, skipCheckOnName)
         else if head.symbol != NoSymbol then
           if skipCheckOnName ||
             MetalsInteractive.isOnName(
@@ -247,17 +267,22 @@ object MetalsInteractive:
               pos,
               indexed.ctx.source
             )
-          then List(head.symbol)
+          then List((head.symbol, head.typeOpt))
           else Nil
         else
           val recovered = recoverError(head, indexed)
           if recovered.isEmpty then
-            enclosingSymbols(tl, pos, indexed, skipCheckOnName)
-          else recovered
+            enclosingSymbolsWithExpressionType(
+              tl,
+              pos,
+              indexed,
+              skipCheckOnName
+            )
+          else recovered.map(sym => (sym, sym.info))
         end if
       case Nil => Nil
     end match
-  end enclosingSymbols
+  end enclosingSymbolsWithExpressionType
 
   private def recoverError(
       tree: Tree,

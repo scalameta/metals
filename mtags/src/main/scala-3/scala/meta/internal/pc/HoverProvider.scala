@@ -48,15 +48,13 @@ object HoverProvider:
     val tpw = tp.widenTermRefExpr
     // For expression we need to find all enclosing applies to get the exact generic type
     val enclosing = expandRangeToEnclosingApply(path, pos)
-    val exprTp = typeFromPath(enclosing)
-    val exprTpw = exprTp.widenTermRefExpr
 
     if tp.isError || tpw == NoType || tpw.isError || path.isEmpty
     then ju.Optional.empty()
     else
       val skipCheckOnName =
         !pos.isPoint // don't check isHoveringOnName for RangeHover
-      MetalsInteractive.enclosingSymbols(
+      MetalsInteractive.enclosingSymbolsWithExpressionType(
         enclosing,
         pos,
         indexedContext,
@@ -64,9 +62,11 @@ object HoverProvider:
       ) match
         case Nil =>
           ju.Optional.empty()
-        case symbols @ (symbol :: _) =>
+        case symbols @ (symbolWithTpe :: _) =>
+          val symbol = symbolWithTpe._1
+          val exprTpw = symbolWithTpe._2.widenTermRefExpr
           val docComments =
-            symbols.flatMap(ParsedComment.docOf(_))
+            symbols.map(_._1).flatMap(ParsedComment.docOf(_))
           val printerContext =
             driver.compilationUnits.get(uri) match
               case Some(unit) =>

@@ -249,7 +249,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|Boolean
+        """|Option[Int]#WithFilter
            |def withFilter(p: A => Boolean): Option.this.WithFilter
            |""".stripMargin.hover
     )
@@ -271,7 +271,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|String
+        """|Option[String]
            |def map[B](f: A => B): Option[B]
            |""".stripMargin.hover
     )
@@ -309,7 +309,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|String
+        """|Option[String]
            |def map[B](f: A => B): Option[B]
            |""".stripMargin.hover
     )
@@ -330,7 +330,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin.hover,
     compat = Map(
       "3" ->
-        """|Boolean
+        """|Option[Int]#WithFilter
            |def withFilter(p: A => Boolean): Option.this.WithFilter
            """.stripMargin.hover
     )
