@@ -187,6 +187,7 @@ object MetalsInteractive:
               param <- paramss.flatten.find(_.name == name)
             yield param.symbol
           List(paramSymbol.getOrElse(fn.symbol))
+
       case (_: untpd.ImportSelector) :: (imp: Import) :: _ =>
         importedSymbols(imp, _.span.contains(pos.span))
 
@@ -205,8 +206,8 @@ object MetalsInteractive:
 
       // L@@ft(...)
       case (head @ ApplySelect(select)) :: _
-          if select.qualifier.sourcePos.contains(pos) &&
-            select.name == StdNames.nme.apply =>
+          if (select.qualifier.sourcePos.contains(pos) &&
+            select.name == StdNames.nme.apply) =>
         List(head.symbol)
 
       // for comprehension
@@ -223,6 +224,18 @@ object MetalsInteractive:
           if target.span.isSourceDerived &&
             target.sourcePos.contains(pos) =>
         List(target.symbol)
+
+      // Anonymous class definition
+      // class Foo(...)
+      // new F@@oo(...) {
+      //   val x = ...
+      // }
+      // returns the symbols of `Foo` class instead of its constructor
+      // for Scala2 compatibility, see HoverTermSuite#new-anon
+      case (ApplySelect(Select(New(ident), _))) ::
+          (_: Template) ::(TypeDef(name, _)) :: _
+          if name == StdNames.tpnme.ANON_CLASS =>
+        List(ident.symbol)
 
       case path @ head :: tl =>
         if head.symbol.is(Synthetic) then
