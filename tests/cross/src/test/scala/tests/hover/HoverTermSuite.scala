@@ -149,8 +149,7 @@ class HoverTermSuite extends BaseHoverSuite {
     compat = Map(
       // https://github.com/lampepfl/dotty/issues/8835
       "3" ->
-        """|Xtension#num
-           |object num: `interpolator-unapply`.a.Xtension
+        """|object num: `interpolator-unapply`.a.Xtension
            |""".stripMargin.hover
     )
   )
@@ -370,8 +369,7 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|FileVisitResult
-           |enum FileVisitResult: java.nio.file
+        """|enum FileVisitResult: java.nio.file
            |""".stripMargin.hover
     )
   )
@@ -396,8 +394,7 @@ class HoverTermSuite extends BaseHoverSuite {
     automaticPackage = false,
     compat = Map(
       "3" ->
-        """|Foo
-           |object Foo: app.Outer
+        """|object Foo: app.Outer
            |""".stripMargin.hover
     )
   )

@@ -100,9 +100,10 @@ object HoverProvider:
             case Some(expressionType) =>
               val forceExpressionType =
                 !pos.span.isZeroExtent || (
-                  !hoverString.endsWith(
-                    expressionType
-                  ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
+                  !hoverString.endsWith(expressionType) &&
+                    !symbol.isType &&
+                    !symbol.is(Module) &&
+                    !symbol.flags.isAllOf(EnumCase)
                 )
               val content = HoverMarkup(
                 expressionType,
