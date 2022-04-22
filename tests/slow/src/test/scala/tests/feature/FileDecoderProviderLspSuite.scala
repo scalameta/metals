@@ -1,5 +1,8 @@
 package tests.feature
 
+import java.net.URLEncoder
+import java.nio.file.Path
+
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -64,19 +67,20 @@ class FileDecoderProviderLspSuite
        |}
        |/a/src/main/scala/a/Main.scala
        |package a
-       |import com.microsoft.java.debug.core.protocol.Events._
+       |import com.microsoft.java.debug.core.LoggerFactory
        |
        |object Main {
-       |  val a : ExitedEvent = null
+       |  val a : LoggerFactory = null
        |  println(a)
        |}
        |""".stripMargin,
     "a/src/main/scala/a/Main.scala",
     None,
     "file-decode",
-    Right(FileDecoderProviderLspSuite.EventsJarFile),
+    Right(FileDecoderProviderLspSuite.LoggerFactoryJarFile),
     customUri = Some(
-      s"jar:${coursierCacheDir.toUri}/v1/https/repo1.maven.org/maven2/ch/epfl/scala/com-microsoft-java-debug-core/0.21.0%2B1-7f1080f1/com-microsoft-java-debug-core-0.21.0%2B1-7f1080f1-sources.jar!/com/microsoft/java/debug/core/protocol/Events.java"
+      // uri is encoded because coursier encodes it - this is not Metals/BSP encoding it.
+      s"jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/ch/epfl/scala/com-microsoft-java-debug-core/0.21.0%2B1-7f1080f1/com-microsoft-java-debug-core-0.21.0%2B1-7f1080f1-sources.jar!/com/microsoft/java/debug/core/LoggerFactory.java"
     )
   )
 
@@ -319,6 +323,36 @@ class FileDecoderProviderLspSuite
     "javap-verbose",
     Right(FileDecoderProviderLspSuite.javapVerbose),
     str => str.substring(str.indexOf("Compiled from"), str.length())
+  )
+
+  check(
+    "semanticdb-jar-compact",
+    s"""
+       |/metals.json
+       |{
+       |  "a": {
+       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
+       |    "libraryDependencies": ["org.scalameta::munit:0.7.29"]
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |import munit.Printable
+       |
+       |object Main {
+       |  val a : Printable = null
+       |  println(a)
+       |}
+       |""".stripMargin,
+    "a/src/main/scala/a/Main.scala",
+    None,
+    "decode",
+    Right(
+      FileDecoderProviderLspSuite.PrintableSemanticDBFile(coursierCacheDir)
+    ),
+    customUri = Some(
+      s"metalsDecode:jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala.semanticdb-compact"
+    )
   )
 
   check(
@@ -1056,255 +1090,60 @@ object FileDecoderProviderLspSuite {
         |[3:13..3:17) => scala/Unit#
         |""".stripMargin
 
-  val EventsJarFile: String =
+  val LoggerFactoryJarFile: String =
     """|/*******************************************************************************
-       |* Copyright (c) 2017 Microsoft Corporation and others.
-       |* All rights reserved. This program and the accompanying materials
-       |* are made available under the terms of the Eclipse Public License v1.0
-       |* which accompanies this distribution, and is available at
-       |* http://www.eclipse.org/legal/epl-v10.html
-       |*
-       |* Contributors:
-       |*     Microsoft Corporation - initial API and implementation
-       |*******************************************************************************/
+       | * Copyright (c) 2017 Microsoft Corporation and others.
+       | * All rights reserved. This program and the accompanying materials
+       | * are made available under the terms of the Eclipse Public License v1.0
+       | * which accompanies this distribution, and is available at
+       | * http://www.eclipse.org/legal/epl-v10.html
+       | *
+       | * Contributors:
+       | *     Microsoft Corporation - initial API and implementation
+       | *******************************************************************************/
        |
-       |package com.microsoft.java.debug.core.protocol;
+       |package com.microsoft.java.debug.core;
        |
-       |import com.microsoft.java.debug.core.protocol.Types.Source;
+       |import java.util.logging.Logger;
        |
-       |/**
-       | * The event types defined by VSCode Debug Protocol.
-       | */
-       |public class Events {
-       |    public static class DebugEvent {
-       |        public String type;
-       |
-       |        public DebugEvent(String type) {
-       |            this.type = type;
-       |        }
-       |    }
-       |
-       |    public static class InitializedEvent extends DebugEvent {
-       |        public InitializedEvent() {
-       |            super("initialized");
-       |        }
-       |    }
-       |
-       |    public static class StoppedEvent extends DebugEvent {
-       |        public long threadId;
-       |        public String reason;
-       |        public String description;
-       |        public String text;
-       |        public boolean allThreadsStopped;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public StoppedEvent(String reason, long threadId) {
-       |            super("stopped");
-       |            this.reason = reason;
-       |            this.threadId = threadId;
-       |            allThreadsStopped = false;
-       |        }
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public StoppedEvent(String reason, long threadId, boolean allThreadsStopped) {
-       |            this(reason, threadId);
-       |            this.allThreadsStopped = allThreadsStopped;
-       |        }
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public StoppedEvent(String reason, long threadId, boolean allThreadsStopped, String description, String text) {
-       |            this(reason, threadId, allThreadsStopped);
-       |            this.description = description;
-       |            this.text = text;
-       |        }
-       |    }
-       |
-       |    public static class ContinuedEvent extends DebugEvent {
-       |        public long threadId;
-       |        public boolean allThreadsContinued;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public ContinuedEvent(long threadId) {
-       |            super("continued");
-       |            this.threadId = threadId;
-       |        }
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public ContinuedEvent(long threadId, boolean allThreadsContinued) {
-       |            this(threadId);
-       |            this.allThreadsContinued = allThreadsContinued;
-       |        }
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public ContinuedEvent(boolean allThreadsContinued) {
-       |            super("continued");
-       |            this.allThreadsContinued = allThreadsContinued;
-       |        }
-       |    }
-       |
-       |    public static class ExitedEvent extends DebugEvent {
-       |        public int exitCode;
-       |
-       |        public ExitedEvent(int code) {
-       |            super("exited");
-       |            this.exitCode = code;
-       |        }
-       |    }
-       |
-       |    public static class TerminatedEvent extends DebugEvent {
-       |        public boolean restart;
-       |
-       |        public TerminatedEvent() {
-       |            super("terminated");
-       |        }
-       |
-       |        public TerminatedEvent(boolean restart) {
-       |            this();
-       |            this.restart = restart;
-       |        }
-       |    }
-       |
-       |    public static class ThreadEvent extends DebugEvent {
-       |        public String reason;
-       |        public long threadId;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public ThreadEvent(String reason, long threadId) {
-       |            super("thread");
-       |            this.reason = reason;
-       |            this.threadId = threadId;
-       |        }
-       |    }
-       |
-       |    public static class OutputEvent extends DebugEvent {
-       |        public enum Category {
-       |            console, stdout, stderr, telemetry
-       |        }
-       |
-       |        public Category category;
-       |        public String output;
-       |        public int variablesReference;
-       |        public Source source;
-       |        public int line;
-       |        public int column;
-       |        public Object data;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public OutputEvent(Category category, String output) {
-       |            super("output");
-       |            this.category = category;
-       |            this.output = output;
-       |        }
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public OutputEvent(Category category, String output, Source source, int line) {
-       |            super("output");
-       |            this.category = category;
-       |            this.output = output;
-       |            this.source = source;
-       |            this.line = line;
-       |        }
-       |
-       |        public static OutputEvent createConsoleOutput(String output) {
-       |            return new OutputEvent(Category.console, output);
-       |        }
-       |
-       |        public static OutputEvent createStdoutOutput(String output) {
-       |            return new OutputEvent(Category.stdout, output);
-       |        }
-       |
-       |        /**
-       |         * Construct an stdout output event with source info.
-       |         */
-       |        public static OutputEvent createStdoutOutputWithSource(String output, Source source, int line) {
-       |            return new OutputEvent(Category.stdout, output, source, line);
-       |        }
-       |
-       |        public static OutputEvent createStderrOutput(String output) {
-       |            return new OutputEvent(Category.stderr, output);
-       |        }
-       |
-       |        /**
-       |         * Construct an stderr output event with source info.
-       |         */
-       |        public static OutputEvent createStderrOutputWithSource(String output, Source source, int line) {
-       |            return new OutputEvent(Category.stderr, output, source, line);
-       |        }
-       |
-       |        public static OutputEvent createTelemetryOutput(String output) {
-       |            return new OutputEvent(Category.telemetry, output);
-       |        }
-       |    }
-       |
-       |    public static class BreakpointEvent extends DebugEvent {
-       |        public String reason;
-       |        public Types.Breakpoint breakpoint;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public BreakpointEvent(String reason, Types.Breakpoint breakpoint) {
-       |            super("breakpoint");
-       |            this.reason = reason;
-       |            this.breakpoint = breakpoint;
-       |        }
-       |    }
-       |
-       |    public static class HotCodeReplaceEvent extends DebugEvent {
-       |        public enum ChangeType {
-       |            ERROR, WARNING, STARTING, END, BUILD_COMPLETE
-       |        }
-       |
-       |        public ChangeType changeType;
-       |        public String message;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public HotCodeReplaceEvent(ChangeType changeType, String message) {
-       |            super("hotcodereplace");
-       |            this.changeType = changeType;
-       |            this.message = message;
-       |        }
-       |    }
-       |
-       |    public static class UserNotificationEvent extends DebugEvent {
-       |        public enum NotificationType {
-       |            ERROR, WARNING, INFORMATION
-       |        }
-       |
-       |        public NotificationType notificationType;
-       |        public String message;
-       |
-       |        /**
-       |         * Constructor.
-       |         */
-       |        public UserNotificationEvent(NotificationType notifyType, String message) {
-       |            super("usernotification");
-       |            this.notificationType = notifyType;
-       |            this.message = message;
-       |        }
-       |    }
+       |@FunctionalInterface
+       |public interface LoggerFactory {
+       |    Logger create(String name);
        |}
        |""".stripMargin
+
+  def PrintableSemanticDBFile(coursierCacheDir: Path): String = {
+    val jarURI = URLEncoder.encode(
+      s"jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Printable.scala"
+    )
+    s"""|$jarURI
+        |${"-" * jarURI.length}
+        |
+        |Summary:
+        |Schema => SemanticDB v4
+        |Uri => $jarURI
+        |Text => non-empty
+        |Language => Scala
+        |Symbols => 4 entries
+        |Occurrences => 8 entries
+        |
+        |Symbols:
+        |munit/Printable# => trait Printable extends AnyRef { +1 decls }
+        |munit/Printable#print(). => abstract method print(out: StringBuilder, indent: Int): Unit
+        |munit/Printable#print().(indent) => param indent: Int
+        |munit/Printable#print().(out) => param out: StringBuilder
+        |
+        |Occurrences:
+        |[0:8..0:13): munit <= munit/
+        |[5:6..5:15): Printable <= munit/Printable#
+        |[6:6..6:11): print <= munit/Printable#print().
+        |[6:12..6:15): out <= munit/Printable#print().(out)
+        |[6:17..6:30): StringBuilder => scala/package.StringBuilder#
+        |[6:32..6:38): indent <= munit/Printable#print().(indent)
+        |[6:40..6:43): Int => scala/Int#
+        |[6:46..6:50): Unit => scala/Unit#
+        |""".stripMargin
+  }
 
   def buildTargetResponse: String =
     s"""|Target
