@@ -132,12 +132,10 @@ object MetalsInteractive:
       case tree: NameTree =>
         SourceTree(tree, source).namePos.contains(sourcePos)
       // TODO: check the positions for NamedArg and Import
-      // case ident: Ident =>
-      //   ident.sourcePos.contains
       case _: NamedArg => true
       case _: Import => true
       case app: (Apply | TypeApply) => contains(app.fun)
-      case other => false
+      case _ => false
     end contains
 
     val enclosing = path
@@ -173,9 +171,10 @@ object MetalsInteractive:
     enclosingSymbolsWithExpressionType(path, pos, indexed, skipCheckOnName)
       .map(_._1)
 
-  /** Returns the list of tuple enclosing symbol and
-    * the symbol's expression type if possible.
-    */
+  /**
+   * Returns the list of tuple enclosing symbol and
+   * the symbol's expression type if possible.
+   */
   @tailrec
   def enclosingSymbolsWithExpressionType(
       path: List[Tree],

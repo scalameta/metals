@@ -181,13 +181,7 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|Foo[Int]
        |def this(name: String, age: T): Foo[T]
-       |""".stripMargin.hover,
-    compat = Map(
-      "3" ->
-        """|Foo[Int]
-           |def this[T](name: String, age: T): Foo[T]
-           |""".stripMargin.hover
-    )
+       |""".stripMargin.hover
   )
 
   check(
@@ -348,6 +342,9 @@ class HoverTermSuite extends BaseHoverSuite {
     """|override def headOption: Option[Int]
        |""".stripMargin.hover,
     compat = Map(
+      "2.12" ->
+        """|def headOption: Option[Int]
+           |""".stripMargin.hover,
       "3" ->
         """|Option[Int]
            |def headOption: Option[A]
