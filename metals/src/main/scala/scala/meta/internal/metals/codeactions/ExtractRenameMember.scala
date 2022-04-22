@@ -49,25 +49,43 @@ class ExtractRenameMember(
         val defnAtCursor =
           definitions.find(_.member.name.pos.toLSP.overlapsWith(range))
 
+        def canRenameDefn(defn: Member): Boolean = {
+          val differentNames = defn.name.value != fileName
+          val newFileUri = newPathFromClass(uri, defn)
+
+          differentNames && !newFileUri.exists && defnAtCursor.exists(
+            _.member.equals(defn)
+          )
+        }
+
+        def canExtractDefn(defn: Member): Boolean = {
+          val differentNames = defn.name.value != fileName
+          val notExtendsSealedOrSealed = notSealed(defn, sealedNames)
+          val companion = definitions.find(c => {
+            !c.equals(defn) && c.member.name.value.equals(defn.name.value)
+          })
+          val companionNotSealed =
+            companion.exists(endableMember =>
+              notSealed(endableMember.member, sealedNames)
+            ) || companion.isEmpty
+
+          val newFileUri = newPathFromClass(uri, defn)
+
+          differentNames && notExtendsSealedOrSealed && companionNotSealed && !newFileUri.exists
+        }
+
         definitions match {
           case Nil => Nil
           case head :: Nil
               if canRenameDefn(
-                head.member,
-                fileName,
-                defnAtCursor.map(_.member),
-                uri
+                head.member
               ) =>
             Seq(renameFileAsMemberAction(uri, head.member))
           case _ =>
             val codeActionOpt = for {
               defn <- defnAtCursor
               if canExtractDefn(
-                defn.member,
-                fileName,
-                sealedNames,
-                definitions.map(_.member),
-                uri
+                defn.member
               )
               memberType <- getMemberType(defn.member)
               title = ExtractRenameMember.title(
@@ -84,40 +102,6 @@ class ExtractRenameMember(
 
   }
 
-  private def canRenameDefn(
-      defn: Member,
-      fileName: String,
-      defnAtCursor: Option[Member],
-      uri: String
-  ): Boolean = {
-    val differentNames = defn.name.value != fileName
-    val newFileUri = newPathFromClass(uri, defn)
-
-    differentNames && !newFileUri.exists && defnAtCursor.exists(
-      _.equals(defn)
-    )
-  }
-
-  private def canExtractDefn(
-      defn: Member,
-      fileName: String,
-      sealedNames: List[String],
-      definitions: List[Member],
-      uri: String
-  ): Boolean = {
-    val differentNames = defn.name.value != fileName
-    val notExtendsSealedOrSealed = notSealed(defn, sealedNames)
-    val companion = definitions.find(c => {
-      !c.equals(defn) && c.name.value.equals(defn.name.value)
-    })
-    val companionNotSealed =
-      companion.exists(notSealed(_, sealedNames)) || companion.isEmpty
-
-    val newFileUri = newPathFromClass(uri, defn)
-
-    differentNames && notExtendsSealedOrSealed && companionNotSealed && !newFileUri.exists
-  }
-
   private def membersDefinitions(tree: Tree): List[EndableMember] = {
     val nodes: ListBuffer[EndableMember] = ListBuffer()
 
@@ -130,9 +114,11 @@ class ExtractRenameMember(
         case o: Defn.Object => nodes += EndableMember(o, None)
         case e: Defn.Enum => nodes += EndableMember(e, None)
         case endMarker: Term.EndMarker =>
-          val last = nodes.last
-          nodes.remove(nodes.size - 1)
-          nodes += EndableMember(last.member, Some(endMarker))
+          if (nodes.size > 0) {
+            val last = nodes.remove(nodes.size - 1)
+            nodes += EndableMember(last.member, Some(endMarker))
+          }
+
         case s: Source =>
           super.apply(s)
         case _ =>
@@ -243,15 +229,17 @@ class ExtractRenameMember(
 
     val pkg: Option[Pkg] = mergedTermsOpt.map(t => Pkg(ref = t, stats = Nil))
 
+    def marker(endableMember: EndableMember) = endableMember.maybeEndMarker
+      .map(endMarker => "\n" + endMarker.toString())
+      .getOrElse("")
+
     val structure = pkg.toList.mkString("\n") ::
       imports.mkString("\n") ::
-      endableMember.member.toString + endableMember.maybeEndMarker
-        .map(endMarker => "\n" + endMarker.toString())
-        .getOrElse("") ::
+      endableMember.member.toString + marker(endableMember) ::
       maybeCompanionEndableMember
         .map(_.member.toString)
         .getOrElse("") + maybeCompanionEndableMember
-        .flatMap(_.maybeEndMarker.map(endMarker => "\n" + endMarker.toString()))
+        .map(marker)
         .getOrElse("") :: Nil
 
     val preDefinitionLines = pkg.toList.length + imports.length
@@ -337,25 +325,25 @@ class ExtractRenameMember(
     codeAction
   }
 
-  private def isCompanion(
-      member: Member
-  )(candidateCompanion: EndableMember): Boolean = {
-    val differentMemberWithSameName =
-      !candidateCompanion.member.equals(member) &&
-        candidateCompanion.member.name.value.equals(member.name.value)
-    member match {
-      case _: Defn.Object => differentMemberWithSameName
-      case _ =>
-        candidateCompanion.member
-          .isInstanceOf[Defn.Object] && differentMemberWithSameName
-    }
-  }
-
   def executeCommand(
       data: ExtractMemberDefinitionData
   ): Future[CodeActionCommandResult] = Future {
     val uri = data.uri
     val params = data.params
+
+    def isCompanion(
+        member: Member
+    )(candidateCompanion: EndableMember): Boolean = {
+      val differentMemberWithSameName =
+        !candidateCompanion.member.equals(member) &&
+          candidateCompanion.member.name.value.equals(member.name.value)
+      member match {
+        case _: Defn.Object => differentMemberWithSameName
+        case _ =>
+          candidateCompanion.member
+            .isInstanceOf[Defn.Object] && differentMemberWithSameName
+      }
+    }
 
     val pos = params.getPosition
     val range = new l.Range(pos, pos)
@@ -438,15 +426,12 @@ class ExtractRenameMember(
       .map(removeTreeEdits)
 
     packageEdit.getOrElse(
-      removeTreeEdits(endableMember.member) ++ maybeEndableMemberCompanion
-        .map(_.member)
-        .map(removeTreeEdits)
-        .getOrElse(Nil) ++ endableMember.maybeEndMarker
-        .map(removeTreeEdits)
-        .getOrElse(Nil) ++ maybeEndableMemberCompanion
-        .flatMap(_.maybeEndMarker)
-        .map(removeTreeEdits)
-        .getOrElse(Nil)
+      removeTreeEdits(endableMember.member) ++
+        (maybeEndableMemberCompanion
+          .map(_.member)
+          ++ endableMember.maybeEndMarker
+          ++ maybeEndableMemberCompanion
+            .flatMap(_.maybeEndMarker)).flatMap(removeTreeEdits)
     )
 
   }
