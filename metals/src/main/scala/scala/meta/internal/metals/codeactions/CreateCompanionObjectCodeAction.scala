@@ -1,10 +1,13 @@
 package scala.meta.internal.metals.codeactions
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Defn
+import scala.meta.Member
 import scala.meta.Template
+import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
@@ -51,15 +54,15 @@ class CreateCompanionObjectCodeAction(
 
     val maybeCompanionObject = for {
       tree <- applyTree
-      name <- getNameOfClassTraitOrEnumTree(tree)
-      if !hasCompanionObject(tree, name)
+      nameAndType <- getNameAndTypeOfClassTraitOrEnumTree(tree)
+      if !hasCompanionObject(tree, nameAndType)
       document <- buffers.get(path)
     } yield buildCreatingCompanionObjectCodeAction(
       path,
       tree,
       uri,
       getIndentationForPositionInDocument(tree.pos, document),
-      name,
+      nameAndType,
       hasBraces(tree, document),
       tree.canUseBracelessSyntax(document)
     )
@@ -86,11 +89,18 @@ class CreateCompanionObjectCodeAction(
       .getOrElse(false)
   }
 
-  private def getNameOfClassTraitOrEnumTree(tree: Tree): Option[String] = {
+  case class TreeNameAndType(name: String, treeType: String)
+
+  private def getNameAndTypeOfClassTraitOrEnumTree(
+      tree: Tree
+  ): Option[TreeNameAndType] = {
     tree match {
-      case classDefinition: Defn.Class => Some(classDefinition.name.value)
-      case traitDefinition: Defn.Trait => Some(traitDefinition.name.value)
-      case enumDefinition: Defn.Enum => Some(enumDefinition.name.value)
+      case classDefinition: Defn.Class =>
+        Some(TreeNameAndType(classDefinition.name.value, "class"))
+      case traitDefinition: Defn.Trait =>
+        Some(TreeNameAndType(traitDefinition.name.value, "trait"))
+      case enumDefinition: Defn.Enum =>
+        Some(TreeNameAndType(enumDefinition.name.value, "enum"))
       case _ => None
     }
   }
@@ -100,28 +110,32 @@ class CreateCompanionObjectCodeAction(
       tree: Tree,
       uri: String,
       indentationString: String,
-      name: String,
+      nameAndType: TreeNameAndType,
       hasBraces: Boolean,
       bracelessOK: Boolean
   ): l.CodeAction = {
     val codeAction = new l.CodeAction()
     codeAction.setTitle(CreateCompanionObjectCodeAction.companionObjectCreation)
     codeAction.setKind(this.kind)
+    val maybeEndMarkerEndPos =
+      getEndMarker(tree, nameAndType).map(_.pos.toLSP.getEnd)
     val treePos = tree.pos
-    val rangeStart = treePos.toLSP.getEnd
-    val rangeEnd = treePos.toLSP.getEnd
-    val range = new l.Range(rangeStart, rangeEnd)
+    val rangeStart =
+      maybeEndMarkerEndPos.getOrElse(treePos.toLSP.getEnd)
+
+    val range = new l.Range(rangeStart, rangeStart)
 
     val braceFulCompanion =
       s"""|
           |
-          |${indentationString}object $name {
+          |${indentationString}object ${nameAndType.name} {
           |
           |${indentationString}}""".stripMargin
+
     val bracelessCompanion =
       s"""|
           |
-          |${indentationString}object $name:
+          |${indentationString}object ${nameAndType.name}:
           |${indentationString}  ???""".stripMargin
 
     val companionObjectString =
@@ -130,7 +144,7 @@ class CreateCompanionObjectCodeAction(
     val companionObjectTextEdit = new l.TextEdit(range, companionObjectString)
 
     val companionObjectStartPosition = new l.Position()
-    companionObjectStartPosition.setLine(rangeEnd.getLine + 3)
+    companionObjectStartPosition.setLine(rangeStart.getLine + 3)
 
     codeAction.setCommand(
       buildCommandForNavigatingToCompanionObject(
@@ -162,15 +176,50 @@ class CreateCompanionObjectCodeAction(
 
   private def hasCompanionObject(
       tree: Tree,
-      name: String
+      nameAndType: TreeNameAndType
   ): Boolean =
     tree.parent
       .flatMap(_.children.collectFirst {
         case potentialCompanionObject: Defn.Object
-            if (potentialCompanionObject.name.value == name) =>
+            if (potentialCompanionObject.name.value == nameAndType.name) =>
           potentialCompanionObject
       })
       .isDefined
+
+  case class MemberAndType(member: Member, memeberType: String)
+
+  private def getEndMarker(
+      tree: Tree,
+      nameAndType: TreeNameAndType
+  ): Option[Term.EndMarker] = {
+    val nodes: ListBuffer[MemberAndType] = ListBuffer()
+    tree.parent.flatMap {
+      _.children.flatMap {
+        {
+          case c: Defn.Class =>
+            nodes += MemberAndType(c, "class")
+            None
+          case t: Defn.Trait =>
+            nodes += MemberAndType(t, "trait")
+            None
+          case o: Defn.Object =>
+            nodes += MemberAndType(o, "object")
+            None
+          case e: Defn.Enum =>
+            nodes += MemberAndType(e, "enum")
+            None
+          case endMarker: Term.EndMarker =>
+            val last = nodes.remove(nodes.size - 1)
+            if (
+              last.member.name.value == endMarker.name.value && last.member.name.value == nameAndType.name && last.memeberType == nameAndType.treeType
+            )
+              Some(endMarker)
+            else None
+          case _ => None
+        }
+      }.headOption
+    }
+  }
 
   private def applyWithSingleFunction: Tree => Boolean = {
     case _: Defn.Class | _: Defn.Trait | _: Defn.Enum => true
