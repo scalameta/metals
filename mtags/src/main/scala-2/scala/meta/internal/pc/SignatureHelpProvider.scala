@@ -99,8 +99,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       case termNames.unapply =>
         symbol.paramLists match {
           case (head :: Nil) :: Nil =>
-            symbol.info.finalResultType match {
-              case TypeRef(
+            qual.tpe.finalResultType match {
+              case tp @ TypeRef(
                     _,
                     cls,
                     tpe @ TypeRef(_, _, args) :: Nil
@@ -117,13 +117,13 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                     a == b.tpe ||
                     b.tpe.typeSymbol.isTypeParameter
                   }
-                if (isAlignedTypes) {
-                  ctor.info
+                if (isAlignedTypes && ctor.owner.isCaseClass) {
+                  tp.memberType(ctor)
                 } else {
-                  symbol.info
+                  qual.tpe
                 }
               case _ =>
-                symbol.info
+                qual.tpe
             }
           case _ =>
             symbol.info
@@ -461,7 +461,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         toSignatureInformation(
           t,
           method,
-          tpe,
+          if (!t.call.isUnapplyMethod) tpe else method.info,
           paramss,
           isActiveSignature,
           shortenedNames
@@ -499,6 +499,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         // otherwise it's a single unapply result
         else
           List(List(symbol))
+      case _ if isUnapplyMethod =>
+        method.paramLists.map(_.map(_.tpe.typeSymbol))
       case _ =>
         if (method.typeParams.isEmpty) method.paramLists
         else method.typeParams :: method.paramLists

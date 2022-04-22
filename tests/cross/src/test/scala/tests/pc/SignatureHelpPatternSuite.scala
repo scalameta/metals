@@ -37,8 +37,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(A)
-       | ^
+    """|(Int)
+       | ^^^
        |""".stripMargin
   )
 
@@ -52,8 +52,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(a: T, b: T)
-       | ^^^^
+    """|(Any, Any)
+       | ^^^
        |""".stripMargin
   )
 
@@ -67,8 +67,43 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(a: C[T])
-       | ^^^^^^^
+    """|(Any)
+       | ^^^
+       |""".stripMargin
+  )
+
+  check(
+    "generic4",
+    """
+      |  case class Two[A, B](a: A, b: B)
+      |  object Main {
+      |    new Two(1, "") match {
+      |      case Two(@@) =>
+      |    }
+      |  }
+      |""".stripMargin,
+    """|(Int, String)
+       | ^^^
+       |""".stripMargin
+  )
+
+  check(
+    "generic5",
+    """
+      |class Two[A, B](a: A, b: B)
+      |object Two {
+      |  def unapply[A, B](t: Two[A, B]): Option[(A, B)] = None
+      |}
+      |
+      |object Main {
+      |  val tp = new Two(1, "") 
+      |  tp match {
+      |    case Two(@@) =>
+      |  }
+      |}
+      |""".stripMargin,
+    """|(Int, String)
+       | ^^^
        |""".stripMargin
   )
 
@@ -117,8 +152,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |    case Person(@@)
       |}
     """.stripMargin,
-    """|(name: String, age: Int)
-       | ^^^^^^^^^^^^
+    """|(String, Int)
+       | ^^^^^^
        | """.stripMargin
   )
 
@@ -135,8 +170,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    """|(name: String, age: Int)
-       | ^^^^^^^^^^^^
+    """|(String, Int)
+       | ^^^^^^
        | """.stripMargin
   )
 
@@ -166,10 +201,10 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |    case And("", s@@)
       |  }
       |}
-  """.stripMargin,
-    """|(A, A)
-       |    ^
-       | """.stripMargin
+      |""".stripMargin,
+    """|(String, String)
+       |         ^^^^^^
+       |""".stripMargin
   )
 
   check(
