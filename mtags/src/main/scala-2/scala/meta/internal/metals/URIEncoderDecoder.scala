@@ -2,14 +2,16 @@ package scala.meta.internal.mtags
 
 object URIEncoderDecoder {
 
+  // Some encoding schemes encode `:` (although not the first one as that indicates scheme).
+  // Currently Metals doesn't encode `:` but does decode it
   private val toEscape: Map[Char, String] =
-    Set('"', '<', '>', '&', '\'', '[', ']', '{', '}', ' ')
+    Set('"', '<', '>', '&', '\'', '[', ']', '{', '}', ' ', '+', '!')
       .map(char => char -> ("%" + char.toHexString))
       .toMap
 
   private val toDecode: Map[String, Char] = toEscape.map { case (k, v) =>
     v -> k
-  }
+  } + ("%3a" -> ':')
 
   def encode(args: String): String = {
     args.flatMap { char =>

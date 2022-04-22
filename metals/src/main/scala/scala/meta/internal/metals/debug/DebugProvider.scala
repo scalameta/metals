@@ -162,7 +162,7 @@ class DebugProvider(
           MetalsDebugAdapter.`2.x`(
             buildTargets,
             targets,
-            saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported()
+            supportVirtualDocuments = clientConfig.isVirtualDocumentSupported()
           )
         } else {
           MetalsDebugAdapter.`1.x`(

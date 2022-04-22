@@ -64,10 +64,10 @@ private[debug] object MetalsDebugAdapter {
   def `2.x`(
       buildTargets: BuildTargets,
       targets: Seq[BuildTargetIdentifier],
-      saveJarFileToDisk: Boolean
+      supportVirtualDocuments: Boolean
   ): MetalsDebugAdapter2x = {
     val sourcePathAdapter =
-      SourcePathAdapter(buildTargets, targets, saveJarFileToDisk)
+      SourcePathAdapter(buildTargets, targets, supportVirtualDocuments)
     new MetalsDebugAdapter2x(sourcePathAdapter)
   }
 }
