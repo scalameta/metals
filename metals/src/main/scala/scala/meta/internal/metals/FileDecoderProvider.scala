@@ -24,11 +24,13 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metap.DocumentPrinter
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassWithPos
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
 import scala.meta.metap.Settings
@@ -85,6 +87,7 @@ final class FileDecoderProvider(
     userConfig: () => UserConfiguration,
     shellRunner: ShellRunner,
     fileSystemSemanticdbs: FileSystemSemanticdbs,
+    interactiveSemanticdbs: InteractiveSemanticdbs,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
     classFinder: ClassFinder
@@ -150,7 +153,12 @@ final class FileDecoderProvider(
     Try(URI.create(URIEncoderDecoder.encode(uriAsStr))) match {
       case Success(uri) =>
         uri.getScheme() match {
-          case "jar" => Future { decodeJar(uriAsStr) }
+          case "jar" =>
+            val jarURI = convertJarStrToURI(uriAsStr)
+            if (semanticdbExtensions.exists(uriAsStr.endsWith))
+              decodeMetalsFile(jarURI)
+            else
+              Future { decodeJar(jarURI) }
           case "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
@@ -169,13 +177,16 @@ final class FileDecoderProvider(
     }
   }
 
-  private def decodeJar(uriAsStr: String): DecoderResponse = {
+  private def convertJarStrToURI(uriAsStr: String): URI = {
 
     /**
      *  URI.create will decode the string, which means ZipFileSystemProvider will not work
      *  Related stack question: https://stackoverflow.com/questions/9873845/java-7-zip-file-system-provider-doesnt-seem-to-accept-spaces-in-uri
      */
-    val uri = new URI("jar", uriAsStr.stripPrefix("jar:"), null)
+    new URI("jar", uriAsStr.stripPrefix("jar:"), null)
+  }
+
+  private def decodeJar(uri: URI): DecoderResponse = {
     Try {
       val path = uri.toAbsolutePath
       FileIO.slurp(path, StandardCharsets.UTF_8)
@@ -185,11 +196,21 @@ final class FileDecoderProvider(
     }
   }
 
+  private val semanticdbExtensions = Set(
+    "semanticdb-compact",
+    "semanticdb-detailed",
+    "semanticdb-proto"
+  )
+
   private def decodeMetalsFile(
       uri: URI
   ): Future[DecoderResponse] = {
-    val supportedExtensions = Set("javap", "javap-verbose", "tasty-decoded",
-      "semanticdb-compact", "semanticdb-detailed", "semanticdb-proto", "cfr")
+    val supportedExtensions = Set(
+      "javap",
+      "javap-verbose",
+      "tasty-decoded",
+      "cfr"
+    ) ++ semanticdbExtensions
     val additionalExtension = uri.toString().split('.').toList.last
     if (supportedExtensions(additionalExtension)) {
       val stripped = toFile(uri, s".$additionalExtension")
@@ -284,10 +305,16 @@ final class FileDecoderProvider(
       format: Format
   ): DecoderResponse = {
     if (path.isScalaOrJava)
-      findSemanticDbPathInfo(path)
-        .mapLeft(s => DecoderResponse.failed(path.toURI, s))
-        .map(decodeFromSemanticDBFile(_, format))
-        .fold(identity, identity)
+      interactiveSemanticdbs
+        .textDocument(path)
+        .documentIncludingStale
+        .map(decodeFromSemanticDBTextDocument(path, _, format))
+        .getOrElse(
+          findSemanticDbPathInfo(path)
+            .mapLeft(s => DecoderResponse.failed(path.toURI, s))
+            .map(decodeFromSemanticDBFile(_, format))
+            .fold(identity, identity)
+        )
     else if (path.isSemanticdb) decodeFromSemanticDBFile(path, format)
     else DecoderResponse.failed(path.toURI, "Unsupported extension")
   }
@@ -622,9 +649,9 @@ final class FileDecoderProvider(
     }
   }
 
-  private def decodeFromSemanticDBFile(
+  private def decodeFromSemanticDB(
       path: AbsolutePath,
-      format: Format
+      decode: Reporter => Unit
   ): DecoderResponse =
     Try {
       val out = new ByteArrayOutputStream()
@@ -634,12 +661,7 @@ final class FileDecoderProvider(
       try {
         val reporter =
           Reporter().withOut(psOut).withErr(psErr)
-        val settings =
-          Settings()
-            .withPaths(List(path.toNIO))
-            .withFormat(format)
-        val main = new Main(settings, reporter)
-        main.process()
+        decode(reporter)
         val output = new String(out.toByteArray)
         val error = new String(err.toByteArray)
         if (error.isEmpty)
@@ -651,10 +673,39 @@ final class FileDecoderProvider(
         psErr.close()
       }
     } match {
-      case Failure(exception) =>
-        DecoderResponse.failed(path.toString(), exception)
+      case Failure(exception) => DecoderResponse.failed(path.toURI, exception)
       case Success(value) => DecoderResponse.success(path.toURI, value)
     }
+
+  private def decodeFromSemanticDBTextDocument(
+      path: AbsolutePath,
+      document: TextDocument,
+      format: Format
+  ): DecoderResponse =
+    decodeFromSemanticDB(
+      path,
+      reporter => {
+        val settings = Settings().withFormat(format)
+        val printer = new DocumentPrinter(settings, reporter, document)
+        printer.print()
+      }
+    )
+
+  private def decodeFromSemanticDBFile(
+      path: AbsolutePath,
+      format: Format
+  ): DecoderResponse =
+    decodeFromSemanticDB(
+      path,
+      reporter => {
+        val settings =
+          Settings()
+            .withPaths(List(path.toNIO))
+            .withFormat(format)
+        val main = new Main(settings, reporter)
+        main.process()
+      }
+    )
 
   private def decodeFromTastyFile(
       pathInfo: PathInfo

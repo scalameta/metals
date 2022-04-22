@@ -732,6 +732,7 @@ class MetalsLanguageServer(
           () => userConfig,
           shellRunner,
           fileSystemSemanticdbs,
+          interactiveSemanticdbs,
           languageClient,
           clientConfig,
           classFinder
