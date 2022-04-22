@@ -32,9 +32,13 @@ final class FileSystemSemanticdbs(
       val paths = for {
         buildTarget <- buildTargets.inverseSources(file)
         workspace <- buildTargets.workspaceDirectory(buildTarget)
-        targetroot <-
-          if (file.toLanguage.isScala) buildTargets.scalaTargetRoot(buildTarget)
-          else buildTargets.javaTargetRoot(buildTarget)
+        targetroot <- {
+          val javaRoot =
+            if (file.toLanguage.isJava)
+              buildTargets.javaTargetRoot(buildTarget)
+            else None
+          javaRoot orElse buildTargets.scalaTargetRoot(buildTarget)
+        }
       } yield {
         (workspace, targetroot)
       }

@@ -61,6 +61,7 @@ def assertSemanticdbForScala2 = Def.task {
   val sv = scalaVersion.value
   val project = thisProject.value
   val config = configuration.value
+  val jOptions = javacOptions.value
 
   assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
   assertPlugin(sOptions, s"semanticdb-scalac", sv, BuildInfo.semanticdbVersion)
@@ -69,6 +70,11 @@ def assertSemanticdbForScala2 = Def.task {
   assertOption(sOptions, "-P:semanticdb:failures:warning")
   assertOptionValue(sOptions, "-P:semanticdb:sourceroot", sourceRoot.toString)
   assertOptionValue(sOptions, "-P:semanticdb:targetroot", targetRoot.toString)
+
+  assert(
+    jOptions.exists(_.startsWith("-Xplugin:semanticdb")),
+    "no javac-semanticdb plugin"
+  )
 }
 
 def assertSemanticdbForScala3 = Def.taskDyn {

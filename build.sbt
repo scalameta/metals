@@ -449,7 +449,8 @@ lazy val `sbt-metals` = project
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
       "semanticdbVersion" -> V.semanticdb,
-      "supportedScala2Versions" -> V.scala2Versions
+      "supportedScala2Versions" -> V.scala2Versions,
+      "javaSemanticdbVersion" -> V.javaSemanticdb
     ),
     scalaVersion := V.scala212,
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}")
