@@ -65,6 +65,7 @@ class Scala3CodeActionLspSuite
        |   case Red   extends Color(0xFF0000)
        |   case Green extends Color(0x00FF00)
        |   case Blue  extends Color(0x0000FF)
+       |end Color
        |""".stripMargin,
     s"""|${ExtractRenameMember.title("enum", "Color")}""".stripMargin,
     """|package a
@@ -80,6 +81,7 @@ class Scala3CodeActionLspSuite
           |   case Red   extends Color(0xFF0000)
           |   case Green extends Color(0x00FF00)
           |   case Blue  extends Color(0x0000FF)
+          |end Color
           |""".stripMargin
     )
   )
