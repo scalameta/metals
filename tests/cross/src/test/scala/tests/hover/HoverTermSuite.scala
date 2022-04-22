@@ -211,7 +211,10 @@ class HoverTermSuite extends BaseHoverSuite {
       |  }
       |}
       |""".stripMargin,
-    "class Foo: Foo".hover
+    "class Foo: Foo".hover,
+    compat = Map(
+      "3" -> "def this(name: String, age: Int): Foo".hover
+    )
   )
 
   check(
