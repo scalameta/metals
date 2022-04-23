@@ -288,7 +288,8 @@ final class BloopServers(
         )
       } yield
         if (
-          maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties && requestedBloopJvmProperties.nonEmpty
+          maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties &&
+          !(requestedBloopJvmProperties.isEmpty && maybeRunningBloopJvmProperties.isEmpty)
         ) { // the properties are updated
           if (
             bloopGlobalJsonFilePath.exists &&
