@@ -241,6 +241,15 @@ object ClientCommands {
       |""".stripMargin
   )
 
+  val CreateLibraryFileSystem = new ParametrizedCommand[String](
+    "metals-create-library-filesystem",
+    "Create Library FS",
+    """|Notifies the client that it should create an empty
+       |filesystem to navigate jar dependencies
+       |""".stripMargin,
+    arguments = """`string`, the URI root of the filesystem.""".stripMargin
+  )
+
   val RefreshModel = new Command(
     "metals-model-refresh",
     "Refresh model",
@@ -325,6 +334,7 @@ object ClientCommands {
       FocusDiagnostics,
       GotoLocation,
       EchoCommand,
+      CreateLibraryFileSystem,
       RefreshModel,
       ShowStacktrace,
       CopyWorksheetOutput,

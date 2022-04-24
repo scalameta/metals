@@ -27,6 +27,8 @@ import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.doctor.Doctor
+import scala.meta.internal.metals.filesystem.MetalsFileSystem
+import scala.meta.internal.metals.urlstreamhandler.MetalsURLStreamHandlerFactory
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
@@ -43,6 +45,7 @@ import ch.epfl.scala.{bsp4j => b}
 final case class Indexer(
     workspaceReload: () => WorkspaceReload,
     doctor: () => Doctor,
+    lspFileSystemProvider: () => LSPFileSystemProvider,
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
@@ -252,6 +255,8 @@ final case class Indexer(
       ) {
         indexWorkspaceSources(buildTool.data)
       }
+    // register metalsfs url handler before indexing jars/jdks
+    MetalsURLStreamHandlerFactory.register
     var usedJars = Set.empty[AbsolutePath]
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
@@ -267,6 +272,11 @@ final case class Indexer(
           buildTool.importedBuild.dependencySources
         )
       }
+    buildTargets.allWorkspaceJars.foreach(
+      MetalsFileSystem.metalsFS.getOrElseUpdateWorkspaceJar(_)
+    )
+    // create library FS after jars have been indexed
+    lspFileSystemProvider().createLibraryFileSystem()
     // Schedule removal of unused toplevel symbols from cache
     if (usedJars.nonEmpty)
       sh.schedule(
@@ -346,16 +356,20 @@ final case class Indexer(
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
-      path = sourceUri.toAbsolutePath
-      _ = data.addDependencySource(path, item.getTarget)
+      directPath = sourceUri.toAbsolutePath
+      mappedPath =
+        if (directPath.isJar)
+          MetalsFileSystem.metalsFS.getOrElseUpdateSourceJar(directPath)
+        else directPath
+      _ = data.addDependencySource(mappedPath, item.getTarget)
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)
       try {
-        if (path.isJar) {
-          usedJars += path
-          addSourceJarSymbols(path)
-        } else if (path.isDirectory) {
+        if (mappedPath.isJar) {
+          usedJars += mappedPath
+          addSourceJarSymbols(mappedPath)
+        } else if (mappedPath.isDirectory) {
           val dialect = buildTargets
             .scalaTarget(item.getTarget)
             .map(scalaTarget =>
@@ -365,9 +379,9 @@ final case class Indexer(
               )
             )
             .getOrElse(Scala213)
-          definitionIndex.addSourceDirectory(path, dialect)
+          definitionIndex.addSourceDirectory(mappedPath, dialect)
         } else {
-          scribe.warn(s"unexpected dependency: $path")
+          scribe.warn(s"unexpected dependency: $mappedPath")
         }
       } catch {
         case NonFatal(e) =>
@@ -388,20 +402,24 @@ final case class Indexer(
     val jdkSources = JdkSources(userConfig().javaHome)
     jdkSources match {
       case Right(zip) =>
-        usedJars += zip
-        addSourceJarSymbols(zip)
+        val metalsFSZip = MetalsFileSystem.metalsFS.getOrElseUpdateJDK(zip)
+        usedJars += metalsFSZip
+        addSourceJarSymbols(metalsFSZip)
       case Left(notFound) =>
         val candidates = notFound.candidates.mkString(", ")
         scribe.warn(
           s"Could not find java sources in $candidates. Java symbols will not be available."
         )
     }
+
     for {
       item <- dependencySources.getItems.asScala
     } {
-      jdkSources.foreach(source =>
-        data.addDependencySource(source, item.getTarget)
-      )
+      jdkSources.foreach(source => {
+        val metalsFSZip =
+          MetalsFileSystem.metalsFS.getOrElseUpdateJDK(source)
+        data.addDependencySource(metalsFSZip, item.getTarget)
+      })
     }
     usedJars.toSet
   }

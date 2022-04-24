@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.collection.mutable.ListBuffer
@@ -154,7 +155,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
     val sourceJarName = jarName.replace(".jar", "-sources.jar")
     buildTargets
       .sourceJarFile(sourceJarName)
-      .exists(_.toFile.exists())
+      .exists(path => path.exists)
   }
 
   private def getSingleClassPathInfo(
@@ -164,7 +165,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
   ): String = {
     val filename = shortPath.toString()
     val padding = " " * (maxFilenameSize - filename.size)
-    val status = if (path.toFile.exists) {
+    val status = if (Files.exists(path)) {
       val blankWarning = " " * 9
       if (path.toFile().isDirectory() || jarHasSource(filename))
         blankWarning

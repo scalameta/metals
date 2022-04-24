@@ -1,5 +1,7 @@
 package scala.meta.internal.tvp
 
+import java.net.URI
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -8,7 +10,8 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 case class TreeViewSymbolInformation(
     symbol: String,
     kind: SymbolInformation.Kind,
-    properties: Int = 0
+    properties: Int = 0,
+    uri: Option[URI]
 ) {
   def isVal: Boolean = kind.isMethod && properties.isVal
   def isVar: Boolean = kind.isMethod && properties.isVar
@@ -23,7 +26,8 @@ case class TreeViewSymbolInformation(
           else if (s.isType) k.CLASS
           else if (s.isTypeParameter) k.TYPE_PARAMETER
           else k.UNKNOWN_KIND,
-          0
+          0,
+          None
         )
         info :: loop(s.owner)
       }

@@ -5,7 +5,7 @@ import java.io.File
 import java.io.PrintStream
 import java.net.URI
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
@@ -19,11 +19,11 @@ import scala.util.control.NonFatal
 
 import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.filesystem.MetalsFileSystemProvider
 import scala.meta.internal.metap.DocumentPrinter
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -129,22 +129,23 @@ final class FileDecoderProvider(
    * semanticdb:
    * metalsDecode:file:///somePath/someFile.java.semanticdb-compact
    * metalsDecode:file:///somePath/someFile.java.semanticdb-detailed
+   * metalsDecode:file:///somePath/someFile.java.semanticdb-proto
    *
    * metalsDecode:file:///somePath/someFile.scala.semanticdb-compact
    * metalsDecode:file:///somePath/someFile.scala.semanticdb-detailed
+   * metalsDecode:file:///somePath/someFile.scala.semanticdb-proto
    *
    * metalsDecode:file:///somePath/someFile.java.semanticdb.semanticdb-compact
    * metalsDecode:file:///somePath/someFile.java.semanticdb.semanticdb-detailed
+   * metalsDecode:file:///somePath/someFile.java.semanticdb.semanticdb-proto
    *
    * metalsDecode:file:///somePath/someFile.scala.semanticdb.semanticdb-compact
    * metalsDecode:file:///somePath/someFile.scala.semanticdb.semanticdb-detailed
+   * metalsDecode:file:///somePath/someFile.scala.semanticdb.semanticdb-proto
    *
    * tasty:
    * metalsDecode:file:///somePath/someFile.scala.tasty-decoded
    * metalsDecode:file:///somePath/someFile.tasty.tasty-decoded
-   *
-   * jar:
-   * metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
    *
    * build target:
    * metalsDecode:file:///workspacePath/buildTargetName.metals-buildtarget
@@ -153,13 +154,8 @@ final class FileDecoderProvider(
     Try(URI.create(URIEncoderDecoder.encode(uriAsStr))) match {
       case Success(uri) =>
         uri.getScheme() match {
-          case "jar" =>
-            val jarURI = convertJarStrToURI(uriAsStr)
-            if (semanticdbExtensions.exists(uriAsStr.endsWith))
-              decodeMetalsFile(jarURI)
-            else
-              Future { decodeJar(jarURI) }
-          case "file" => decodeMetalsFile(uri)
+          case "file" | MetalsFileSystemProvider.scheme =>
+            decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
           case _ =>
@@ -174,25 +170,6 @@ final class FileDecoderProvider(
         Future.successful(
           DecoderResponse.failed(uriAsStr, s"$uriAsStr is an invalid URI")
         )
-    }
-  }
-
-  private def convertJarStrToURI(uriAsStr: String): URI = {
-
-    /**
-     *  URI.create will decode the string, which means ZipFileSystemProvider will not work
-     *  Related stack question: https://stackoverflow.com/questions/9873845/java-7-zip-file-system-provider-doesnt-seem-to-accept-spaces-in-uri
-     */
-    new URI("jar", uriAsStr.stripPrefix("jar:"), null)
-  }
-
-  private def decodeJar(uri: URI): DecoderResponse = {
-    Try {
-      val path = uri.toAbsolutePath
-      FileIO.slurp(path, StandardCharsets.UTF_8)
-    } match {
-      case Failure(exception) => DecoderResponse.failed(uri, exception)
-      case Success(value) => DecoderResponse.success(uri, value)
     }
   }
 
@@ -304,7 +281,7 @@ final class FileDecoderProvider(
       path: AbsolutePath,
       format: Format
   ): DecoderResponse = {
-    if (path.isScalaOrJava)
+    if (path.isScalaOrJava || path.isClassfile)
       interactiveSemanticdbs
         .textDocument(path)
         .documentIncludingStale
@@ -510,6 +487,13 @@ final class FileDecoderProvider(
   private def decodeJavapFromClassFile(
       verbose: Boolean
   )(path: AbsolutePath): Future[DecoderResponse] = {
+    // javap doesn't understand the metals filesystem so save to disk
+    val (workDir, pathOnDisk) = if (path.isMetalsFileSystem) {
+      val workDir = AbsolutePath(Files.createTempDirectory("metals-javap"))
+      val classFile = workDir.resolve(path.filename)
+      Files.copy(path.toNIO, classFile.toNIO)
+      (Some(workDir), classFile)
+    } else (None, path)
     try {
       val defaultArgs = List("-private")
       val args = if (verbose) "-verbose" :: defaultArgs else defaultArgs
@@ -519,9 +503,9 @@ final class FileDecoderProvider(
         .run(
           "Decode using javap",
           JavaBinary(userConfig().javaHome, "javap") :: args ::: List(
-            path.filename
+            pathOnDisk.filename
           ),
-          path.parent,
+          pathOnDisk.parent,
           redirectErrorOutput = false,
           Map.empty,
           s => {
@@ -536,6 +520,7 @@ final class FileDecoderProvider(
           logInfo = false
         )
         .map(_ => {
+          workDir.foreach(_.deleteRecursively())
           if (sbErr.nonEmpty)
             DecoderResponse.failed(path.toURI, sbErr.toString)
           else
@@ -543,6 +528,7 @@ final class FileDecoderProvider(
         })
     } catch {
       case NonFatal(e) =>
+        workDir.foreach(_.deleteRecursively())
         scribe.error(e.toString())
         Future.successful(DecoderResponse.failed(path.toURI, e))
     }
@@ -550,104 +536,8 @@ final class FileDecoderProvider(
 
   private def decodeCFRFromClassFile(
       path: AbsolutePath
-  ): Future[DecoderResponse] = {
-    val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
-    val cfrMain = "org.benf.cfr.reader.Main"
-
-    val buildTarget = buildTargets
-      .inferBuildTarget(path)
-      .orElse(
-        buildTargets.allScala
-          .find(buildTarget =>
-            path.isInside(buildTarget.classDirectory.toAbsolutePath)
-          )
-          .map(_.id)
-      )
-      .orElse(
-        buildTargets.allJava
-          .find(buildTarget =>
-            path.isInside(buildTarget.classDirectory.toAbsolutePath)
-          )
-          .map(_.id)
-      )
-    val classpaths = buildTarget
-      .flatMap(id =>
-        buildTargets
-          .targetClasspath(id)
-          .map(path => path.toAbsoluteClasspath.toList)
-      )
-      .getOrElse(Nil)
-    val classesDirs = buildTarget
-      .map(id =>
-        buildTargets.targetClassDirectories(id).toAbsoluteClasspath.toList
-      )
-      .getOrElse(Nil)
-    val extraClassPaths = classesDirs ::: classpaths
-    val extraClassPath =
-      if (extraClassPaths.nonEmpty)
-        List("--extraclasspath", extraClassPaths.mkString(File.pathSeparator))
-      else Nil
-
-    // if the class file is in the classes dir then use that classes dir to allow CFR to use the other classes
-    val (parent, className) = classesDirs
-      .find(classesPath => path.isInside(classesPath))
-      .map(classesPath => {
-        val classPath = path.toRelative(classesPath)
-        val className = classPath.toString
-        (classesPath, className)
-      })
-      .getOrElse({
-        val parent = path.parent
-        val className = path.filename
-        (parent, className)
-      })
-
-    val args = extraClassPath :::
-      List(
-        // elideScala - must be lowercase - hide @@ScalaSignature and serialVersionUID for aesthetic reasons
-        "--elidescala",
-        "true",
-        // analyseAs - must be lowercase
-        "--analyseas",
-        "CLASS",
-        s"$className"
-      )
-
-    val sbOut = new StringBuilder()
-    val sbErr = new StringBuilder()
-    try {
-      shellRunner
-        .runJava(
-          cfrDependency,
-          cfrMain,
-          parent,
-          args,
-          redirectErrorOutput = false,
-          s => {
-            sbOut.append(s)
-            sbOut.append(Properties.lineSeparator)
-          },
-          s => {
-            sbErr.append(s)
-            sbErr.append(Properties.lineSeparator)
-          },
-          propagateError = true
-        )
-        .map(_ => {
-          if (sbErr.nonEmpty)
-            DecoderResponse.failed(
-              path.toURI,
-              s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}"
-            )
-          else
-            DecoderResponse.success(path.toURI, sbOut.toString)
-        })
-    } catch {
-      case NonFatal(e) =>
-        scribe.error(e.toString())
-        Future.successful(DecoderResponse.failed(path.toURI, e))
-    }
-  }
+  ): Future[DecoderResponse] =
+    FileDecoderProvider.decodeCFRFromClassFile(shellRunner, buildTargets, path)
 
   private def decodeFromSemanticDB(
       path: AbsolutePath,
@@ -690,7 +580,6 @@ final class FileDecoderProvider(
         printer.print()
       }
     )
-
   private def decodeFromSemanticDBFile(
       path: AbsolutePath,
       format: Format
@@ -755,4 +644,122 @@ object FileDecoderProvider {
     URI.create(
       s"metalsDecode:${URLEncoder.encode(s"file:///${workspace.filename}/${buildTargetName}.metals-buildtarget")}"
     )
+
+  def decodeCFRFromClassFile(
+      shellRunner: ShellRunner,
+      buildTargets: BuildTargets,
+      path: AbsolutePath
+  )(implicit ec: ExecutionContext): Future[DecoderResponse] = {
+
+    val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
+    val cfrMain = "org.benf.cfr.reader.Main"
+
+    val buildTarget = buildTargets
+      .inferBuildTarget(path)
+      .orElse(
+        buildTargets.allScala
+          .find(buildTarget =>
+            path.isInside(buildTarget.classDirectory.toAbsolutePath)
+          )
+          .map(_.id)
+      )
+      .orElse(
+        buildTargets.allJava
+          .find(buildTarget =>
+            path.isInside(buildTarget.classDirectory.toAbsolutePath)
+          )
+          .map(_.id)
+      )
+    val classpaths = buildTarget
+      .flatMap(id =>
+        buildTargets
+          .targetClasspath(id)
+          .map(path => path.toAbsoluteClasspath.toList)
+      )
+      .getOrElse(Nil)
+    val classesDirs = buildTarget
+      .map(id =>
+        buildTargets.targetClassDirectories(id).toAbsoluteClasspath.toList
+      )
+      .getOrElse(Nil)
+    val extraClassPaths = classesDirs ::: classpaths
+    val extraClassPath =
+      if (extraClassPaths.nonEmpty)
+        List("--extraclasspath", extraClassPaths.mkString(File.pathSeparator))
+      else Nil
+
+    // CFR doesn't understand the metals filesystem so save to disk
+    val (workDir, parent, className) = if (path.isMetalsFileSystem) {
+      val workDir = AbsolutePath(Files.createTempDirectory("metals-cfr"))
+      val classFile = workDir.resolve(path.filename)
+      Files.copy(path.toNIO, classFile.toNIO)
+      val parent = classFile.parent
+      val className = classFile.filename
+      (Some(workDir), parent, className)
+    } else
+      // if the class file is in the classes dir then use that classes dir to allow CFR to use the other classes
+      classesDirs
+        .find(classesPath => path.isInside(classesPath))
+        .map(classesPath => {
+          val classPath = path.toRelative(classesPath)
+          val className = classPath.toString
+          (None, classesPath, className)
+        })
+        .getOrElse({
+          val parent = path.parent
+          val className = path.filename
+          (None, parent, className)
+        })
+
+    val args = extraClassPath :::
+      List(
+        // elideScala - must be lowercase - hide @@ScalaSignature and serialVersionUID for aesthetic reasons
+        "--elidescala",
+        "true",
+        // useNameTable - must be lowercase - produced `void` variables which meant the output can't be recompiled in interactivesemanticdb
+        "--usenametable",
+        "false",
+        // analyseAs - must be lowercase
+        "--analyseas",
+        "CLASS",
+        s"$className"
+      )
+    val sbOut = new StringBuilder()
+    val sbErr = new StringBuilder()
+
+    try {
+      shellRunner
+        .runJava(
+          cfrDependency,
+          cfrMain,
+          parent,
+          args,
+          redirectErrorOutput = false,
+          s => {
+            sbOut.append(s)
+            sbOut.append(Properties.lineSeparator)
+          },
+          s => {
+            sbErr.append(s)
+            sbErr.append(Properties.lineSeparator)
+          },
+          propagateError = true
+        )
+        .map(_ => {
+          workDir.foreach(_.deleteRecursively())
+          if (sbErr.nonEmpty)
+            DecoderResponse.failed(
+              path.toURI,
+              s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}"
+            )
+          else
+            DecoderResponse.success(path.toURI, sbOut.toString)
+        })
+    } catch {
+      case NonFatal(e) =>
+        workDir.foreach(_.deleteRecursively())
+        scribe.error(e.toString())
+        Future.successful(DecoderResponse.failed(path.toURI, e))
+    }
+  }
 }

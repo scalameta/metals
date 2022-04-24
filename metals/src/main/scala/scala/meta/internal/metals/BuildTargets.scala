@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.filesystem.MetalsPath
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
@@ -92,6 +93,9 @@ final class BuildTargets() {
 
   def allJava: Iterator[JavaTarget] =
     data.fromIterators(_.allJava)
+
+  def allJDKs: Iterator[String] =
+    data.fromIterators(_.allJDKs).distinct
 
   def info(id: BuildTargetIdentifier): Option[BuildTarget] =
     data.fromOptions(_.info(id))
@@ -267,7 +271,8 @@ final class BuildTargets() {
     } yield imports
 
   /**
-   * Tries to guess what build target this readonly file belongs to from the symbols it defines.
+   * Tries to guess what build target this metalsfs or readonly file belongs
+   * to from the symbols it defines.
    *
    * By default, we rely on carefully recording what build target produced what
    * files in the `.metals/readonly/` directory. This approach has the problem
@@ -276,65 +281,59 @@ final class BuildTargets() {
    * - a new metals feature forgot to record the build target
    * - a user removes `.metals/metals.h2.db`
    *
-   * When encountering an unknown `readonly/` file we do the following steps to
+   * When encountering an unknown `readonly/` or metalfs file we do the following steps to
    * infer what build target it belongs to:
    *
    * - check if file is in `.metals/readonly/dependencies/${source-jar-name}`
+   * - check if the file is a jdk file
    * - find the build targets that have a sourceDependency with that name
-   *
-   * Otherwise if it's a jar file we find a build target it belongs to.
+   * - find the build targets that have a workspace jar with that name as class files can be viewed
    *
    * This approach is not glamorous but it seems to work reasonably well.
    */
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    if (source.isJarFileSystem) {
-      for {
-        jarName <- source.jarPath.map(_.filename)
-        sourceJarFile <- sourceJarFile(jarName)
-        buildTargetId <- inverseDependencySource(sourceJarFile).headOption
-      } yield buildTargetId
-    } else {
-      val readonly = workspace.resolve(Directories.readonly)
-      source.toRelativeInside(readonly) match {
-        case Some(rel) =>
-          val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
-          names match {
-            case Directories.dependenciesName :: jarName :: _ =>
-              // match build target by source jar name
-              sourceJarFile(jarName)
-                .flatMap(inverseDependencySource(_).headOption)
-            case _ => None
-          }
-        case None =>
-          // else it can be a source file inside a jar
-          val fromJar = jarPath(source)
-            .flatMap { jar =>
-              allBuildTargetIdsInternal.find { case (_, id) =>
-                targetJarClasspath(id).exists(_.contains(jar))
-              }
-            }
-          fromJar.map { case (data0, id) =>
-            data0.addSourceItem(source, id)
-            id
-          }
-      }
+    // source could be on metalFS or in readonly area
+    val metalsPath = source.toNIO match {
+      case metalsPath: MetalsPath => Some(metalsPath)
+      case _ =>
+        val readonly = workspace.resolve(Directories.readonly)
+        source.toRelativeInside(readonly) match {
+          case Some(rel) => Some(MetalsPath.fromReadOnly(rel))
+          case None => None
+        }
     }
+    metalsPath.flatMap(metalsPath => {
+      // check JDK - any build target is OK
+      if (metalsPath.isJDK)
+        allBuildTargetIdsInternal.headOption.map(_._2)
+      else {
+        // check source jars
+        for {
+          jarName <- metalsPath.jarName
+          jarPath <- sourceJarFile(jarName)
+          buildTargetId <- inverseDependencySource(jarPath).headOption
+        } yield buildTargetId
+      }.orElse({
+        // check workspace jars
+        // TODO speed this up - we're iterating over all build targets and all classpath entries - create inverseDependencySource equivalent
+        val targetIds = for {
+          targetId <- allBuildTargetIds
+          classpathEntries <- targetJarClasspath(targetId).toList
+          classpathEntry <- classpathEntries
+          jarName <- metalsPath.jarName
+          if classpathEntry.filename == jarName
+        } yield targetId
+        targetIds.headOption
+      })
+    })
   }
 
   def findByDisplayName(name: String): Option[BuildTarget] = {
     data
       .fromIterators(_.buildTargetInfo.valuesIterator)
       .find(_.getDisplayName() == name)
-  }
-
-  private def jarPath(source: AbsolutePath): Option[AbsolutePath] = {
-    source.jarPath.map { sourceJarPath =>
-      sourceJarPath.parent.resolve(
-        source.filename.replace("-sources.jar", ".jar")
-      )
-    }
   }
 
   /**

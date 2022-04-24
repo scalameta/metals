@@ -1,6 +1,5 @@
 package scala.meta.internal.mtags
 
-import java.io.UncheckedIOException
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 
@@ -58,18 +57,11 @@ class SymbolIndexBucket(
 
   def addSourceJar(jar: AbsolutePath): List[(String, AbsolutePath)] = {
     if (sourceJars.addEntry(jar)) {
-      FileIO.withJarFileSystem(jar, create = false) { root =>
-        try {
-          root.listRecursive.toList.flatMap {
-            case source if source.isScala =>
-              addSourceFile(source, None).map(sym => (sym, source))
-            case _ =>
-              List.empty
-          }
-        } catch {
-          // this happens in broken jars since file from FileWalker should exists
-          case _: UncheckedIOException => Nil
-        }
+      jar.listRecursive.toList.flatMap {
+        case source if source.isScala =>
+          addSourceFile(source, Some(jar)).map(sym => (sym, source))
+        case _ =>
+          List.empty
       }
     } else
       List.empty
