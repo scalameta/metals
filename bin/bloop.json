@@ -1,0 +1,3 @@
+{
+  "javaOptions": ["-Xmx1G", "-Xss16m"]
+}
