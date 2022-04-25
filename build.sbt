@@ -261,14 +261,14 @@ val mtagsSettings = List(
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
-    "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat
+    "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
+    "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
   ),
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     if3 = List(

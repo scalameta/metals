@@ -36,7 +36,8 @@ class Docstrings(index: GlobalSymbolIndex):
 
   private def indexSymbol(symbol: String): Unit = {}
 
-  private def indexSymbolDefinition(defn: SymbolDefinition): Unit = {}
+  private def indexSymbolDefinition(defn: SymbolDefinition): Unit = {
+  }
 end Docstrings
 
 object Docstrings:
