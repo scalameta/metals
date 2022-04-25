@@ -234,6 +234,7 @@ class Scala3CodeActionLspSuite
        |    def fooMethod(): Unit = {
        |      val a = 3
        |    }
+       |  end Foo
        |
        |  class Bar {}
        |""".stripMargin,
@@ -245,6 +246,7 @@ class Scala3CodeActionLspSuite
        |    def fooMethod(): Unit = {
        |      val a = 3
        |    }
+       |  end Foo
        |
        |  object Foo:
        |    ???
