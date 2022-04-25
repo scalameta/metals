@@ -7,6 +7,8 @@ import scala.util.control.NonFatal
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
@@ -28,7 +30,8 @@ object HoverProvider:
 
   def hover(
       params: OffsetParams,
-      driver: InteractiveDriver
+      driver: InteractiveDriver,
+      search: SymbolSearch
   ): ju.Optional[Hover] =
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
@@ -62,10 +65,8 @@ object HoverProvider:
       ) match
         case Nil =>
           ju.Optional.empty()
-        case symbols @ ((symbol, tpe) :: _) =>
+        case symbolTpes @ ((symbol, tpe) :: _) =>
           val exprTpw = tpe.widenTermRefExpr
-          val docComments =
-            symbols.map(_._1).flatMap(ParsedComment.docOf(_))
           val printerContext =
             driver.compilationUnits.get(uri) match
               case Some(unit) =>
@@ -93,8 +94,10 @@ object HoverProvider:
             end match
           end hoverString
 
-          val docString =
-            docComments.map(_.renderAsMarkdown).mkString("\n")
+          val docString = symbolTpes
+            .flatMap(symTpe => symbolDocumentation(symTpe._1, search))
+            .map(_.docstring)
+            .mkString("\n")
           printer.expressionType(exprTpw) match
             case Some(expressionType) =>
               val forceExpressionType =
@@ -163,4 +166,16 @@ object HoverProvider:
       case _ =>
         List(EmptyTree)
   end expandRangeToEnclosingApply
+
+  private def symbolDocumentation(symbol: Symbol, search: SymbolSearch)(using
+      Context
+  ): Option[SymbolDocumentation] =
+    val sym = SemanticdbSymbols.symbolName(
+      if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
+        symbol.owner
+      else symbol
+    )
+    val documentation = search.documentation(sym)
+    if documentation.isPresent then Some(documentation.get())
+    else None
 end HoverProvider

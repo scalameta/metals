@@ -262,7 +262,7 @@ val mtagsSettings = List(
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
-    "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
+    "org.jsoup" % "jsoup" % V.jsoup // for extracting HTML from javadocs
   ),
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
