@@ -742,7 +742,7 @@ object ScaladocParser {
         else {
           jumpWhitespace()
           jump(style)
-          val p = Paragraph(inline(isInlineEnd = false))
+          val p = Paragraph(parseInline(isInlineEnd = false))
           blockEnded("end of list line")
           Some(p)
         }
@@ -786,7 +786,7 @@ object ScaladocParser {
     def title(): Block = {
       jumpWhitespace()
       val inLevel = repeatJump('=')
-      val text = inline(check("=" * inLevel))
+      val text = parseInline(check("=" * inLevel))
       val outLevel = repeatJump('=', inLevel)
       if (inLevel != outLevel)
         reportError(pos, "unbalanced or unclosed heading")
@@ -904,7 +904,7 @@ object ScaladocParser {
         jumpCellStartMark()
 
         val content = Paragraph(
-          inline(
+          parseInline(
             isInlineEnd = checkInlineEnd,
             textTransform = decodeEscapedCellMark
           )
@@ -969,7 +969,7 @@ object ScaladocParser {
           // Case 3
           storeContents()
           skipStartMark()
-          val content = inline(
+          val content = parseInline(
             isInlineEnd = checkInlineEnd,
             textTransform = decodeEscapedCellMark
           )
@@ -1107,12 +1107,12 @@ object ScaladocParser {
     def para(): Block = {
       val p =
         if (summaryParsed)
-          Paragraph(inline(isInlineEnd = false))
+          Paragraph(parseInline(isInlineEnd = false))
         else {
           val s = summary()
           val r =
             if (checkParaEnded()) List(s)
-            else List(s, inline(isInlineEnd = false))
+            else List(s, parseInline(isInlineEnd = false))
           summaryParsed = true
           Paragraph(Chain(r))
         }
@@ -1135,7 +1135,7 @@ object ScaladocParser {
           return ""
       }
 
-      do {
+      while ({
         val str = readUntil { char == safeTagMarker || char == endOfText }
         nextChar()
 
@@ -1154,12 +1154,13 @@ object ScaladocParser {
           }
           case _ => ;
         }
-      } while (stack.nonEmpty && char != endOfText)
+        (stack.nonEmpty && char != endOfText)
+      }) ()
 
       list mkString ""
     }
 
-    def inline(
+    private def parseInline(
         isInlineEnd: => Boolean,
         textTransform: String => String = identity
     ): Inline = {
@@ -1229,35 +1230,35 @@ object ScaladocParser {
 
     def bold(): Inline = {
       jump("'''")
-      val i = inline(check("'''"))
+      val i = parseInline(check("'''"))
       jump("'''")
       Bold(i)
     }
 
     def italic(): Inline = {
       jump("''")
-      val i = inline(check("''"))
+      val i = parseInline(check("''"))
       jump("''")
       Italic(i)
     }
 
     def monospace(): Inline = {
       jump("`")
-      val i = inline(check("`"))
+      val i = parseInline(check("`"))
       jump("`")
       Monospace(i)
     }
 
     def underline(): Inline = {
       jump("__")
-      val i = inline(check("__"))
+      val i = parseInline(check("__"))
       jump("__")
       Underline(i)
     }
 
     def superscript(): Inline = {
       jump("^")
-      val i = inline(check("^"))
+      val i = parseInline(check("^"))
       if (jump("^")) {
         Superscript(i)
       } else {
@@ -1267,13 +1268,13 @@ object ScaladocParser {
 
     def subscript(): Inline = {
       jump(",,")
-      val i = inline(check(",,"))
+      val i = parseInline(check(",,"))
       jump(",,")
       Subscript(i)
     }
 
     def summary(): Inline = {
-      val i = inline(checkSentenceEnded())
+      val i = parseInline(checkSentenceEnded())
       Summary(
         if (jump("."))
           Chain(List(i, Text(".")))
