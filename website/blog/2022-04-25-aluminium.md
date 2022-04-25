@@ -32,8 +32,8 @@ We're happy to announce the release of Metals v0.11.3.
 </tbody>
 </table>
 
-This release uses a new version of [Bloop](https://github.com/scalacenter/bloop/blob/main/notes/v1.5.0.md). 
-This should fix a few bugs regarding e.g. stale diagnostics in Scala 3. Moreover, the new release brings also 
+This release uses a new version of [Bloop](https://github.com/scalacenter/bloop/blob/main/notes/v1.5.0.md).
+This should fix a few bugs regarding e.g. stale diagnostics in Scala 3. Moreover, the new release brings also
 a few UX improvements regarding Doctor view and running/debugging your code.
 
 For full details: https://github.com/scalameta/metals/milestone/48?closed=1
@@ -56,6 +56,8 @@ give Metals a try!
 - Show better unnaply signatures
 - Provide an easier way to configure bloop settings
 - Better MUnit support in Test Explorer
+- Better sbt BSP integration
+- Improved Scala3 support
 
 ## Add more information to the Doctor view
 
@@ -132,6 +134,22 @@ Test Explorer in Metals is now able to detect some single test cases for [MUnit]
 Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 More information about current MUnit support status can be found at this [issue](https://github.com/scalameta/metals/issues/3771).
+
+## Better sbt BSP integration
+
+Metals now doesn't run compilation when sbt generates files under the `src-managed` directory.
+This improvement fixed the continuous compilation when using sbt BSP and some sbt-plugins generate files on compile.
+For more details, see [\#2183](https://github.com/scalameta/metals/issues/2183).
+
+## Improved Scala3 support
+
+Metals 0.11.3 now includes some better Scala3 supports in go-to-definition, rename symbols, and displaying hover.
+
+For more information, check out the following pull requests:
+
+- [Don't show a tooltip on hover if cursor is not on a symbol by tanishiking · Pull Request #3792 · scalameta/metals](https://github.com/scalameta/metals/pull/3792)
+- [fix: (Scala3) Don't navigate to enclosing symbols on go-to-definition if cursor is not on symbol by tanishiking · Pull Request #3807 · scalameta/metals](https://github.com/scalameta/metals/pull/3807)
+- [fix: Rename extension parameter in Scala3 by tanishiking · Pull Request #3800 · scalameta/metals](https://github.com/scalameta/metals/pull/3800)
 
 ## Contributors
 
