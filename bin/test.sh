@@ -5,9 +5,7 @@ function bloop_version {
 }
 
 mkdir -p ~/.bloop
-touch ~/.bloop/.jvmopts
-echo "-Xss16m" >> ~/.bloop/.jvmopts
-echo "-Xmx1G"  >> ~/.bloop/.jvmopts
+cp bin/bloop.json ~/.bloop/bloop.json
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
 ./coursier launch ch.epfl.scala:bloopgun-core_2.13:$(bloop_version) -- about
 
