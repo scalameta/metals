@@ -1310,7 +1310,9 @@ class MetalsLanguageServer(
               bloopServers.ensureDesiredJvmSettings(
                 userConfig.bloopJvmProperties,
                 old.bloopJvmProperties,
-                userConfig.javaHome,
+                old.javaHome,
+                userConfig.bloopJavaHome,
+                old.bloopJavaHome,
                 () => autoConnectToBuildServer()
               )
 

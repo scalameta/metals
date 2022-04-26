@@ -276,7 +276,9 @@ final class BloopServers(
   def ensureDesiredJvmSettings(
       maybeRequestedBloopJvmProperties: Option[List[String]],
       maybeRunningBloopJvmProperties: Option[List[String]],
-      maybeJavaHome: Option[String],
+      maybeRunningMetalsJavaHome: Option[String],
+      maybeRequestedBloopJavaHome: Option[String],
+      maybeRunningBloopJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
     val result =

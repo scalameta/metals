@@ -39,6 +39,7 @@ case class UserConfiguration(
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
     bloopJvmProperties: Option[List[String]] = None,
+    bloopJavaHome: Option[String] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     showInferredType: Boolean = false,
@@ -449,6 +450,8 @@ object UserConfiguration {
     val bloopVersion =
       getStringKey("bloop-version")
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
+    val bloopJavaHome =
+      getStringKey("bloop-java-home")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     val showInferredType =
@@ -504,6 +507,7 @@ object UserConfiguration {
           bloopSbtAlreadyInstalled,
           bloopVersion,
           bloopJvmProperties,
+          bloopJavaHome,
           ammoniteProperties,
           superMethodLensesEnabled,
           showInferredType,
