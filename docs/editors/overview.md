@@ -27,7 +27,6 @@ functionality.
     <td align="center">Vim</td>
     <td align="center">Sublime Text</td>
     <td align="center">Emacs</td>
-    <td align="center">Eclipse</td>
   </tr>
 </thead>
 <tbody>
@@ -37,7 +36,6 @@ functionality.
     <td align="center">Single click</td>
     <td align="center">Single click</td>
     <td align="center">Few steps</td>
-    <td align="center">Few steps</td>
   </tr>
   <tr>
     <td>Build import</td>
@@ -45,11 +43,9 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">Requires browser</td>
   </tr>
   <tr>
     <td>Diagnostics</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -61,7 +57,6 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Completions</td>
@@ -69,11 +64,9 @@ functionality.
     <td align="center">✅*</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Hover</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -85,7 +78,6 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">❌</td>
-    <td align="center">❌</td>
   </tr>
   <tr>
     <td>Parameter hints</td>
@@ -93,11 +85,9 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center"></td>
   </tr>
   <tr>
     <td>Find references</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -109,11 +99,9 @@ functionality.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
-    <td align="center"></td>
   </tr>
   <tr>
     <td>Find implementations</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -125,11 +113,9 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Code actions</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -141,14 +127,12 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">Comments</td>
-    <td align="center">Comments</td>
   </tr>
   <tr>
     <td>Document symbols</td>
     <td align="center">✅</td>
     <td align="center">Flat</td>
     <td align="center">Flat</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
   <tr>
@@ -157,7 +141,6 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center"></td>
   </tr>
   <tr>
     <td>Formatting</td>
@@ -165,7 +148,6 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">✅*</td>
   </tr>
   <tr>
     <td>Folding</td>
@@ -173,11 +155,9 @@ functionality.
     <td align="center">✅</td>
     <td align="center"> </td>
     <td align="center">✅</td>
-    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Highlight</td>
-    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -189,7 +169,6 @@ functionality.
     <td align="center">✅</td>
     <td align="center">Status bar, Input box, Decoration protocol, Did focus</td>
     <td align="center">Status bar</td>
-    <td align="center">Status bar, Slow task</td>
   </tr>
   <tr>
      <td>Organize imports</td>
@@ -197,7 +176,6 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center"></td>
   </tr>
   <tr>
      <td>Implicit decorations</td>
@@ -205,7 +183,6 @@ functionality.
      <td align="center">Shown in hover</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">Shown in hover</td>
   </tr>
   <tr>
      <td>Source file analyzer</td>
@@ -213,14 +190,12 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">❌</td>
-     <td align="center">❌</td>
   </tr>
   <tr>
      <td>Find text in dependency JAR files</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">❌</td>
      <td align="center">❌</td>
   </tr>
 </tbody>
@@ -374,9 +349,6 @@ according to the configuration defined in `.scalafmt.conf`.
 
 Learn how to configure Scalafmt at
 https://scalameta.org/scalafmt/docs/configuration.html.
-
-**✅ Eclipse**: `.scalafmt.conf` must be created manually and the editor will
-not ask to create `.scalafmt.conf` if it doesn't exist.
 
 ![Formatting](https://user-images.githubusercontent.com/1408093/50635748-b0894880-0f53-11e9-913b-acfd5f505351.gif)
 
