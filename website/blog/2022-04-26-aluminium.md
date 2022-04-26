@@ -158,32 +158,59 @@ Big thanks to everybody who contributed to this release or reported an issue!
 ```
 $ git shortlog -sn --no-merges v0.11.2..v0.11.3
     32	Rikito Taniguchi
-    29	Scala Steward
-    17	Tomasz Godzik
-    15	Vadim Chelyshov
-    14	Kamil Podsiadło
+    30	Scala Steward
+    19	Tomasz Godzik
+    17	Vadim Chelyshov
+    15	Kamil Podsiadło
+    15	zmerr
     12	ckipp01
     11	Alexandre Archambault
-    10	zmerr
      5	Kamil Podsiadlo
      4	Martin Duhem
+     3	Arthur McGibbon
      3	tgodzik
-     2	Arthur McGibbon
      2	Georg Pfuetzenreuter
+     1	Gabriele Petronella
      1	Chris Kipp
      1	dependabot[bot]
-     1	Gabriele Petronella
      1	Jens Petersen
 ```
 
 ## Merged PRs
 
-## [v0.11.3](https://github.com/scalameta/metals/tree/v0.11.3) (2022-04-21)
+## [v0.11.3](https://github.com/scalameta/metals/tree/v0.11.3) (2022-04-26)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.11.2...v0.11.3)
 
 **Merged pull requests:**
 
+- fix: create comption object after end marker
+  [\#3866](https://github.com/scalameta/metals/pull/3866)
+  ([dos65](https://github.com/dos65))
+- feature: sbt-BSP - enable java-semanticdb plugin
+  [\#3861](https://github.com/scalameta/metals/pull/3861)
+  ([dos65](https://github.com/dos65))
+- Use bloop.json instead of .jvmopts for Bloop memory properties
+  [\#3864](https://github.com/scalameta/metals/pull/3864)
+  ([tgodzik](https://github.com/tgodzik))
+- handles the removal of jvm properties case
+  [\#3863](https://github.com/scalameta/metals/pull/3863)
+  ([zmerr](https://github.com/zmerr))
+- Properly infer types for unapply signature help
+  [\#3862](https://github.com/scalameta/metals/pull/3862)
+  ([tgodzik](https://github.com/tgodzik))
+- Add semantic db info display on jar files
+  [\#3843](https://github.com/scalameta/metals/pull/3843)
+  ([Arthurm1](https://github.com/Arthurm1))
+- correct handling of end marker relocation on extract member
+  [\#3847](https://github.com/scalameta/metals/pull/3847)
+  ([zmerr](https://github.com/zmerr))
+- Fix breakpoints in virtual docs
+  [\#3846](https://github.com/scalameta/metals/pull/3846)
+  ([kpodsiad](https://github.com/kpodsiad))
+- Update scalafmt-core to 3.5.2
+  [\#3858](https://github.com/scalameta/metals/pull/3858)
+  ([scala-steward](https://github.com/scala-steward))
 - Mark CancelCompileLspSuite as flaky
   [\#3857](https://github.com/scalameta/metals/pull/3857)
   ([tgodzik](https://github.com/tgodzik))
@@ -487,7 +514,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - docs: make release instruction more structured
   [\#3700](https://github.com/scalameta/metals/pull/3700)
   ([kpodsiad](https://github.com/kpodsiad))
-- Fix DefinitionCrossLspSuite
+-  Fix DefinitionCrossLspSuite
   [\#3692](https://github.com/scalameta/metals/pull/3692)
   ([tgodzik](https://github.com/tgodzik))
 - chore(docs): get snapshot version for docs from 2.13 now
