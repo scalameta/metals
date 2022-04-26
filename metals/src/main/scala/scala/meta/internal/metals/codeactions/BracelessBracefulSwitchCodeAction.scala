@@ -239,21 +239,19 @@ class BracelessBracefulSwitchCodeAction(
       .map { expectedOpenBracePrecedingIndex =>
         braceContainingTree.tokens
           .find(token => token.start > expectedOpenBracePrecedingIndex)
-          .map(token => token.text == "{")
-          .getOrElse(false)
+          .exists(token => token.text == "{")
       }
       .orElse(
         maybeExpectedOpenBraceSupercedingIndex.map {
           expectedOpenBraceSupercedingIndex =>
             braceContainingTree.tokens
               .findLast(token => token.end > expectedOpenBraceSupercedingIndex)
-              .map(token => token.text == "{")
-              .getOrElse(false)
+              .exists(token => token.text == "{")
         }
       )
       .orElse(
         maybeExpectedBraceStartIndex.map(expectedOpenBraceIndex =>
-          if (expectedOpenBraceIndex < document.size) {
+          if (expectedOpenBraceIndex < document.length) {
             document(expectedOpenBraceIndex) == '{'
           } else false
         )
@@ -301,9 +299,9 @@ class BracelessBracefulSwitchCodeAction(
     //  val braceableBranchLSPPos = braceableBranch.pos.toLSP
     val braceableBranchStart = expectedBraceStartPos
     val braceableBranchStartEnd = expectedBraceStartPos
-    braceableBranchStartEnd.setCharacter(
-      braceableBranchStart.getCharacter + bracelessStart.length
-    )
+//    braceableBranchStartEnd.setCharacter(
+//      braceableBranchStart.getCharacter + bracelessStart.length
+//    )
 
     val braceableBranchEndStart = expectedBraceEndPose
     val braceableBranchEnd = expectedBraceEndPose
