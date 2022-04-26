@@ -264,9 +264,8 @@ final class BloopServers(
    *
    * @param maybeRequestedBloopJvmProperties Bloop JVM Properties requested
    *                                         through the Metals Extension settings
-   * @param maybeRunningBloopJvmProperties
-   * @param maybeJavaHome                    Metals' `javaHome`, which Bloop
-   *                                         should also preferebly use
+   * @param maybeRequestedMetalsJavaHome     Metals' requested `javaHome`, which Bloop
+   *                                         should also preferably use
    * @param reconnect                        function to connect back to the
    *                                         build server.
    * @return `Future.successful` if the purpose is achieved or `Future.failure`
@@ -295,7 +294,9 @@ final class BloopServers(
           .getOrElse(List.empty)
         if maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties ||
           maybeRequestedBloopJavaHome != maybeRunningBloopJavaHome ||
-          maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome
+          (maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome &&
+            maybeRunningBloopJavaHome.isEmpty) // update Bloop JavaHome to Metals' JavaHome
+        // only when Bloop does not have a preferred different one!
       } yield updateBloopJvmProperties(
         requestedBloopJvmProperties,
         bloopGlobalJsonFilePath,
