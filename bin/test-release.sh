@@ -6,10 +6,12 @@ argumentsRest=${@:2}
 suffix=${argumentsRest:-}
 
 coursier fetch \
+  org.scalameta:metals_2.13:$version \
   org.scalameta:mtags_3.0.1:$version \
   org.scalameta:mtags_3.0.2:$version \
   org.scalameta:mtags_3.1.0:$version \
-  org.scalameta:metals_2.12:$version \
+  org.scalameta:mtags_3.1.1:$version \
+  org.scalameta:mtags_3.1.2:$version \
   org.scalameta:mtags_2.13.1:$version \
   org.scalameta:mtags_2.13.2:$version \
   org.scalameta:mtags_2.13.3:$version \
