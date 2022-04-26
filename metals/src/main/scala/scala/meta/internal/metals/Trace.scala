@@ -63,7 +63,14 @@ object Trace {
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING // don't append infinitely to existing file
           )
-          Some(new PrintWriter(fos))
+          // logs are flooded with build/taskProgress logs which are pretty useless
+          // don't log them
+          val printWriter = new PrintWriter(fos) {
+            override def print(str: String): Unit =
+              if (str.contains("build/taskProgress")) ()
+              else super.print(str)
+          }
+          Some(printWriter)
         case _ :: tail =>
           setupPrintWriter(tail)
         case Nil =>
