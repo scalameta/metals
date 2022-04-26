@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.Defn
 import scala.meta.Template
+import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
@@ -56,7 +57,7 @@ class CreateCompanionObjectCodeAction(
       document <- buffers.get(path)
     } yield buildCreatingCompanionObjectCodeAction(
       path,
-      tree,
+      endPosOfTree(tree),
       uri,
       getIndentationForPositionInDocument(tree.pos, document),
       name,
@@ -66,6 +67,19 @@ class CreateCompanionObjectCodeAction(
 
     maybeCompanionObject.toSeq
 
+  }
+
+  private def endPosOfTree(t: Tree): l.Position = {
+    val endMarkerPos: Option[Position] =
+      t.parent.flatMap { p =>
+        // check if tree just after t is its end marker
+        val possibleEndMarker = p.children.dropWhile(_ != t).tail.headOption
+        possibleEndMarker match {
+          case Some(marker: Term.EndMarker) => Some(marker.pos)
+          case _ => None
+        }
+      }
+    endMarkerPos.getOrElse(t.pos).toLSP.getEnd
   }
 
   private def getIndentationForPositionInDocument(
@@ -97,7 +111,7 @@ class CreateCompanionObjectCodeAction(
 
   private def buildCreatingCompanionObjectCodeAction(
       path: AbsolutePath,
-      tree: Tree,
+      pos: l.Position,
       uri: String,
       indentationString: String,
       name: String,
@@ -107,10 +121,7 @@ class CreateCompanionObjectCodeAction(
     val codeAction = new l.CodeAction()
     codeAction.setTitle(CreateCompanionObjectCodeAction.companionObjectCreation)
     codeAction.setKind(this.kind)
-    val treePos = tree.pos
-    val rangeStart = treePos.toLSP.getEnd
-    val rangeEnd = treePos.toLSP.getEnd
-    val range = new l.Range(rangeStart, rangeEnd)
+    val range = new l.Range(pos, pos)
 
     val braceFulCompanion =
       s"""|
@@ -130,7 +141,7 @@ class CreateCompanionObjectCodeAction(
     val companionObjectTextEdit = new l.TextEdit(range, companionObjectString)
 
     val companionObjectStartPosition = new l.Position()
-    companionObjectStartPosition.setLine(rangeEnd.getLine + 3)
+    companionObjectStartPosition.setLine(pos.getLine + 3)
 
     codeAction.setCommand(
       buildCommandForNavigatingToCompanionObject(
