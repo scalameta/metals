@@ -63,8 +63,8 @@ give Metals a try!
 
 Thanks to the joined effort of [\#3772](https://github.com/scalameta/metals/pull/3772), [\#3763](https://github.com/scalameta/metals/pull/3763) and [\#3710](https://github.com/scalameta/metals/pull/3710) the Doctor view currently:
 
-- shows Metals server version and information about Java used to run Metals server
-- displays compilation status of project
+- shows the Metals server version and information about Java used to run the Metals server
+- displays the compilation status of project
 - allows to navigate to the build target info for each target
 
 ![new-doctor-view](https://imgur.com/ByzzlM8.png)
@@ -84,7 +84,7 @@ Starting a debug session is a complex task, which requires a few steps:
 - Metals has to compile your project and create a debug session
 - debugger has to be initialized (configuration, breakpoints, etc.)
 
-Very often each of these steps needs even a few seconds in order to complete.
+Very often each of these steps takes up to a few seconds in order to complete.
 Until now, the user had no idea what is happening because Metals didn't show any progress indicator.
 [ckipp01](https://github.com/ckipp01) addressed this problem and added a status bar for each of the steps.
 
@@ -101,7 +101,7 @@ or running tests in the current file:
 ![run-tests](https://imgur.com/BtbOubC.gif)
 Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
-It is also possible to just press `F5` in file and Metals will execute main class or run tests in the current file.
+It is also possible to just press `F5` in file and Metals will execute main class or run tests in the current file if no run configuration is defined.
 
 However, this command was silently failing when there was no class or test to run in the file.
 This is no longer the case, now Metals will display proper error message in this scenario.
@@ -137,8 +137,8 @@ More information about current MUnit support status can be found at this [issue]
 
 ## Better sbt BSP integration
 
-Metals now doesn't run compilation when sbt generates files under the `src-managed` directory.
-This improvement fixed the continuous compilation when using sbt BSP and some sbt-plugins generate files on compile.
+From this release Metals will no longer run the compilation when sbt generates files under the `src-managed` directory.
+The previous behaviour was related to some of the source generating sbt plugins. When used with sbt BSP users would experience  continuous compilation.
 For more details, see [\#2183](https://github.com/scalameta/metals/issues/2183).
 
 ## Improved Scala3 support
