@@ -48,6 +48,22 @@ object MetalsPlugin extends AutoPlugin {
         )
     },
     javaSemanticdbEnabled := bspEnabled.value,
+    javaHome := {
+      javaHome.value match {
+        case None =>
+          // In case if jdk is >= 17 we need to set `javaHome` explicitly
+          // to force sbt creating ForkJavaCompiler.
+          // Otherwise it creates LocalJavaCompiler that ignores `-J` flags
+          // and semanticdb plugin fails compilation
+          // See sbt.internal.inc.javac.JavaCompiler.directOrFork
+          // https://github.com/sbt/zinc/blob/dd1f3596494b4c4d7a19256bc921e765d3dc12c8/internal/zinc-compile-core/src/main/scala/sbt/internal/inc/javac/JavaCompiler.scala#L41-L67
+          JdkVersion.getJavaVersionFromJavaHome(processJavaHome) match {
+            case Some(v) if v.major >= 17 => Some(processJavaHome)
+            case _ => None
+          }
+        case defined @ Some(_) => defined
+      }
+    },
     javacOptions ++= {
       if (javaSemanticdbEnabled.value)
         javaSemanticdbOptions.value
@@ -63,6 +79,8 @@ object MetalsPlugin extends AutoPlugin {
         Nil
     }
   )
+
+  private def processJavaHome: File = file(System.getProperty("java.home"))
 
   def requiresSemanticdb: Def.Initialize[Boolean] = Def.setting {
     bspEnabled.value &&
@@ -89,9 +107,8 @@ object MetalsPlugin extends AutoPlugin {
       } else Nil
     }
     Def.setting {
-      val defined = javaHome.value
-      val value = defined.getOrElse(file(System.getProperty("java.home")))
-      JdkVersion.getJavaVersionFromJavaHome(value) match {
+      val explicit = javaHome.value
+      JdkVersion.inferJavaVersion(explicit) match {
         case None => Seq.empty
         case Some(version) =>
           val sourceRoot = (ThisBuild / baseDirectory).value
@@ -109,6 +126,11 @@ object MetalsPlugin extends AutoPlugin {
   }
 
   object JdkVersion {
+
+    def inferJavaVersion(explicitJavaHome: Option[File]): Option[JdkVersion] =
+      getJavaVersionFromJavaHome(
+        explicitJavaHome.getOrElse(processJavaHome)
+      )
 
     def getJavaVersionFromJavaHome(
         javaHome: File
