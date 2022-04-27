@@ -4,8 +4,9 @@ title: Contributing to Metals
 ---
 
 Whenever you are stuck or unsure, please open an issue or [ask us on
-Discord](https://discord.gg/DwTc8xbNDd). This project follows [Scalameta's
-contribution
+Discord](https://discord.gg/DwTc8xbNDd) or [on our Matrix
+bridge](https://matrix.to/#/#scalameta:metals-contributors). This project
+follows [Scalameta's contribution
 guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md)
 and the [Scala CoC](https://scala-lang.org/conduct/).
 
@@ -243,19 +244,13 @@ already set everything up.
   `:MetalsRestart`. NOTE: that every time you publish locally you'll want to
   trigger this again.
 
-If using `coc-metals`:
-
-- after the publish local set your `metals.serverVersion` in your
-  `:CocConfig`.
-- execute the `metals.restartServer command`
-
 If you are using another Vim client, write a `new-metals-vim` script that builds
 a new `metals-vim` bootstrap script using the locally published version.
 
 ```sh
 coursier bootstrap \
   --java-opt -Dmetals.client=<<NAME_OF_CLIENT>> \
-  org.scalameta:metals_2.12:@LOCAL_VERSION@ \ # double-check version here
+  org.scalameta:metals_2.13:@LOCAL_VERSION@ \ # double-check version here
   -r bintray:scalacenter/releases \
   -o /usr/local/bin/metals-vim -f
 ```
