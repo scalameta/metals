@@ -11,7 +11,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-140140828-1"></script>
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","UA-140140828-1",{})</script>
 <link rel="search" type="application/opensearchdescription+xml" title="Metals" href="/metals/opensearch.xml"><title data-react-helmet="true">Proxy and mirrors | Metals</title><meta data-react-helmet="true" name="twitter:card" content="summary_large_image"><meta data-react-helmet="true" property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"><meta data-react-helmet="true" name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"><meta data-react-helmet="true" property="og:url" content="http://scalameta.org/metals/docs/troubleshooting/proxy"><meta data-react-helmet="true" name="docsearch:language" content="en"><meta data-react-helmet="true" name="docsearch:version" content="current"><meta data-react-helmet="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-react-helmet="true" property="og:title" content="Proxy and mirrors | Metals"><meta data-react-helmet="true" name="description" content="There are several parts inside Metals and Bloop that require resolving"><meta data-react-helmet="true" property="og:description" content="There are several parts inside Metals and Bloop that require resolving"><link data-react-helmet="true" rel="icon" href="/metals/img/favicon.ico"><link data-react-helmet="true" rel="canonical" href="http://scalameta.org/metals/docs/troubleshooting/proxy"><link data-react-helmet="true" rel="alternate" href="http://scalameta.org/metals/docs/troubleshooting/proxy" hreflang="en"><link data-react-helmet="true" rel="alternate" href="http://scalameta.org/metals/docs/troubleshooting/proxy" hreflang="x-default"><link data-react-helmet="true" rel="preconnect" href="https://BH4D9OD16A-dsn.algolia.net" crossorigin="anonymous"><link rel="stylesheet" href="/metals/assets/css/styles.6f36e828.css">
-<link rel="preload" href="/metals/assets/js/runtime~main.089cf601.js" as="script">
+<link rel="preload" href="/metals/assets/js/runtime~main.2e40b1be.js" as="script">
 <link rel="preload" href="/metals/assets/js/main.51cf8062.js" as="script">
 </head>
 <body>
@@ -21,10 +21,11 @@ additional dependencies from the internet. Inside environments behind a proxy or
 with private artifact repositories Metals might not be able to start, because it
 cannot easily download the needed dependencies.</p><p>There are multiple ways of fixing these issues, but not all of them work in all
 situations. While we are trying to make it as painless as possible to setup
-everything, there are some steps that might need to be done manually.</p><p>Everything inside Metals uses Coursier to download its dependencies:</p><ul><li>The Visual Studio Code and coc-metals extensions use Coursier bootstrap to
-download Metals server - Coursier boostrap is a minimal file, which only
-purpose is to download a full Coursier version. It&#x27;s used to keep the
-extension size down to a minimum.</li><li>Metals uses Coursier api to download dependencies needed for a particular
+everything, there are some steps that might need to be done manually.</p><p>Everything inside Metals uses Coursier to download its dependencies:</p><ul><li>The Visual Studio Code and <code>nvim-metals</code> extensions both use Coursier to
+download Metals server, although they do it slightly different. The VS Code
+extension has a Coursier boostrap file, which is used to is to download a full
+Coursier version. It&#x27;s used to keep the extension size down to a minimum,
+whereas <code>nvim-metals</code> requires Coursier to be installed on the users machine.</li><li>Metals uses Coursier api to download dependencies needed for a particular
 Scala version</li><li>Bloop uses Coursier api to download the SemanticDB plugin</li></ul><p>You can find some more information about particular topics on
 <a href="https://get-coursier.io/docs/overview" target="_blank" rel="noopener noreferrer">Coursier&#x27;s website</a>, but we will try to
 summarize the most useful solutions here.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="mirrors">Mirrors<a class="hash-link" href="#mirrors" title="Direct link to heading">​</a></h2><p>If Maven Central is not available for your workspace it might be best to use
@@ -48,11 +49,12 @@ with everything specified separately.</p><h2 class="anchor anchorWithStickyNavba
 you can use the <code>COURSIER_REPOSITORIES</code> environment variable. This will tell
 Coursier to try to download artifacts from your private artifact repository.
 This is also available as a setting in the Metals Visual Studio Code and
-coc-metals extensions.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="proxy-settings">Proxy settings<a class="hash-link" href="#proxy-settings" title="Direct link to heading">​</a></h2><p>In some cases, workspaces might require a proxy in order to resolve the needed
+<code>nvim-metals</code> extensions.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="proxy-settings">Proxy settings<a class="hash-link" href="#proxy-settings" title="Direct link to heading">​</a></h2><p>In some cases, workspaces might require a proxy in order to resolve the needed
 artifacts. Depending on the way Metals server is started, proxy settings can be
 specified using properties inside a <code>.jvmopts</code> file and
-<code>metals.serverProperties</code> (for Visual Studio Code or coc-metals extensions) or
-via properties for Coursier and Metals invocations.</p><p>However, because proxy properties might vary between workspaces and a Bloop
+<code>metals.serverProperties</code> for Visual Studio Code or <code>serverProperties</code> in your
+settings table for <code>nvim-metals</code>, or via properties for Coursier and Metals
+invocations.</p><p>However, because proxy properties might vary between workspaces and a Bloop
 server must work for multiple clients at the same time they are not forwarded to
 the Bloop itself. To make sure that Bloop uses the correct proxy settings, you
 can specify them by copying the correct <code>.jvmopts</code> file to the <code>~/.bloop</code>
@@ -75,7 +77,7 @@ and any custom resolvers your workspace has defined.</p></div><footer class="the
                     </a></li><li class="footer__item"><a href="https://twitter.com/scalameta" target="_blank">
                       <img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&style=social">
                     </a></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/metals/img/scalameta-logo.png" alt="" class="themedImage_W2Cr themedImage--light_TfLj footer__logo"><img src="/metals/img/scalameta-logo.png" alt="" class="themedImage_W2Cr themedImage--dark_oUvU footer__logo"></div><div class="footer__copyright">Copyright © 2022 Metals</div></div></div></footer></div>
-<script src="/metals/assets/js/runtime~main.089cf601.js"></script>
+<script src="/metals/assets/js/runtime~main.2e40b1be.js"></script>
 <script src="/metals/assets/js/main.51cf8062.js"></script>
 </body>
 </html>
