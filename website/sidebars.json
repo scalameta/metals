@@ -6,7 +6,6 @@
       "editors/vim",
       "editors/sublime",
       "editors/emacs",
-      "editors/eclipse",
       "editors/online-ides",
       "editors/user-configuration"
     ],

@@ -55,8 +55,6 @@ repository:
   Visual Studio Code extension for Metals.
 - [scalameta/nvim-metals](https://github.com/scalameta/nvim-metals/): the Neovim
   extension for Metals using the built-in LSP support of Neovim.
-- [scalameta/metals-eclipse](https://github.com/scalameta/metals-eclipse/): the
-  Eclipse extension for Metals.
 - [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
   parsing, tokenization.
 - [scalameta/munit](https://github.com/scalameta/munit/): Test framework used in
