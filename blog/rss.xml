@@ -4,9 +4,28 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Tue, 26 Apr 2022 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 27 Apr 2022 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
+        <item>
+            <title><![CDATA[Metals v0.11.4 - Aluminium]]></title>
+            <link>http://scalameta.org/metals/blog/2022/04/27/aluminium</link>
+            <guid>/2022/04/27/aluminium</guid>
+            <pubDate>Wed, 27 Apr 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[We're happy to announce the release of Metals v0.11.4, which includes the hotfix of the issue with cs install metals.]]></description>
+            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v0.11.4, which includes the hotfix of <a href="https://github.com/coursier/coursier/issues/2406" target="_blank" rel="noopener noreferrer">the issue with <code>cs install metals</code></a>.</p><table><tbody><tr><td>Commits since last release</td><td align="center">3</td></tr><tr><td>Merged PRs</td><td align="center">3</td></tr><tr><td>Contributors</td><td align="center">2</td></tr><tr><td>Closed issues</td><td align="center">1</td></tr><tr><td>New features</td><td align="center">0</td></tr></tbody></table><p>Metals is a language server for Scala that works with VS Code, Vim, Emacs and
+Sublime Text. Metals is developed at the
+<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com" target="_blank" rel="noopener noreferrer">VirtusLab</a>
+with the help from <a href="https://lunatech.com" target="_blank" rel="noopener noreferrer">Lunatech</a> along with contributors from
+the community.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="tldr">TL;DR<a class="hash-link" href="#tldr" title="Direct link to heading">​</a></h2><p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p><ul><li>Fix the issue with installing Metals using coursier</li></ul><h2 class="anchor anchorWithStickyNavbar_mojV" id="contributors">Contributors<a class="hash-link" href="#contributors" title="Direct link to heading">​</a></h2><p>Big thanks to everybody who contributed to this release or reported an issue!</p><div class="codeBlockContainer_I0IT theme-code-block"><div class="codeBlockContent_wNvx"><pre tabindex="0" class="prism-code language-text codeBlock_jd64 thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_mRuA"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v0.11.3..v0.11.4</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">2   Kamil Podsiadło</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">1   Vadim Chelyshov</span><br></span></code></pre><button type="button" aria-label="Copy code to clipboard" class="copyButton_wuS7 clean-btn">Copy</button></div></div><h2 class="anchor anchorWithStickyNavbar_mojV" id="merged-prs">Merged PRs<a class="hash-link" href="#merged-prs" title="Direct link to heading">​</a></h2><h2 class="anchor anchorWithStickyNavbar_mojV" id="v0114-2022-04-27"><a href="https://github.com/scalameta/metals/tree/v0.11.4" target="_blank" rel="noopener noreferrer">v0.11.4</a> (2022-04-27)<a class="hash-link" href="#v0114-2022-04-27" title="Direct link to heading">​</a></h2><p><a href="https://github.com/scalameta/metals/compare/v0.11.3...v0.11.4" target="_blank" rel="noopener noreferrer">Full Changelog</a></p><p><strong>Merged pull requests:</strong></p><ul><li>upgrade bsp4j version to a stable one
+<a href="https://github.com/scalameta/metals/pull/3872" target="_blank" rel="noopener noreferrer">#<!-- -->3872</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>chore: update server version after release
+<a href="https://github.com/scalameta/metals/pull/3869" target="_blank" rel="noopener noreferrer">#<!-- -->3869</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>docs: release notes
+<a href="https://github.com/scalameta/metals/pull/3860" target="_blank" rel="noopener noreferrer">#<!-- -->3860</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li></ul>]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[Metals v0.11.3 - Aluminium]]></title>
             <link>http://scalameta.org/metals/blog/2022/04/26/aluminium</link>
