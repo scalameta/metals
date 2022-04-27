@@ -62,9 +62,8 @@ object HoverProvider:
       ) match
         case Nil =>
           ju.Optional.empty()
-        case symbols @ (symbolWithTpe :: _) =>
-          val symbol = symbolWithTpe._1
-          val exprTpw = symbolWithTpe._2.widenTermRefExpr
+        case symbols @ ((symbol, tpe) :: _) =>
+          val exprTpw = tpe.widenTermRefExpr
           val docComments =
             symbols.map(_._1).flatMap(ParsedComment.docOf(_))
           val printerContext =
