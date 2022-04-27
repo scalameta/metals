@@ -74,6 +74,7 @@ object Bill {
   val logName = ".bill-metals.log"
 
   class Server() extends BuildServer with ScalaBuildServer {
+
     val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
     override def onConnectWithClient(server: BuildClient): Unit =
@@ -379,6 +380,10 @@ object Bill {
     override def buildTargetDependencyModules(
         params: DependencyModulesParams
     ): CompletableFuture[DependencyModulesResult] = ???
+
+    override def debugSessionStart(
+        params: DebugSessionParams
+    ): CompletableFuture[DebugSessionAddress] = ???
 
   }
 

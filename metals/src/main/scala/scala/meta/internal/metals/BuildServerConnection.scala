@@ -152,7 +152,7 @@ class BuildServerConnection private (
   }
 
   def startDebugSession(params: DebugSessionParams): Future[URI] = {
-    register(server => server.startDebugSession(params)).asScala
+    register(server => server.debugSessionStart(params)).asScala
       .map(address => URI.create(address.getUri))
   }
 
