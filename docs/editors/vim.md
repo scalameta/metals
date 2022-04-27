@@ -31,8 +31,7 @@ To get started with installation please see the `nvim-metals`
 
 Keep in mind that by default Neovim doesn't have default mappings for the
 functionality you'll want like, hovers, goto definition, method signatures, etc.
-Youc can find a full example configuration of these in the [example
-configuration](https://github.com/scalameta/nvim-metals/discussions/39).
+Youc can find a full example configuration of these in the [example configuration](https://github.com/scalameta/nvim-metals/discussions/39).
 
 For a guide on all the available features in `nvim-metals`, refer to the
 [features list](https://github.com/scalameta/nvim-metals/discussions/279).
