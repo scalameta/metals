@@ -55,6 +55,13 @@ class HoverDocSuite extends BaseHoverSuite {
            |```scala
            |def emptyList[T]: java.util.List[T]
            |```
+           |Returns an empty list (immutable).  This list is serializable.
+           |
+           |This example illustrates the type-safe way to obtain an empty list:
+           |
+           |```
+           |List<String> s = Collections.emptyList();
+           |```
            |""".stripMargin
     )
   )
