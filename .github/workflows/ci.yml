@@ -83,6 +83,11 @@ jobs:
             command: bin/test.sh 'sbt-metals/scripted; slow/testOnly -- tests.sbt.*'
             name: Sbt integration
             os: ubuntu-latest
+          - type: sbt-metals jdk17
+            command: bin/test.sh sbt-metals/scripted
+            name: Sbt-metals/scripted jdk17
+            os: ubuntu-latest
+            java: "17"
           - type: maven
             command: bin/test.sh 'slow/testOnly -- tests.maven.*'
             name: Maven integration

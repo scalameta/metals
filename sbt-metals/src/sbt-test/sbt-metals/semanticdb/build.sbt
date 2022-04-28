@@ -8,7 +8,12 @@ lazy val a = project
   .in(file("a"))
   .settings(
     scalaVersion := "2.13.5",
-    inConfig(Compile) { checkSemanticdb := assertSemanticdbForScala2.value },
+    inConfig(Compile) {
+      checkSemanticdb := {
+        assertSemanticdbForScala2.value
+        compile.value
+      }
+    },
     inConfig(Test) { checkSemanticdb := assertSemanticdbForScala2.value }
   )
 
