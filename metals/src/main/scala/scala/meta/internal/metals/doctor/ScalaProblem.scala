@@ -92,7 +92,7 @@ case object OutdatedJunitInterfaceVersion extends ScalaProblem {
 
 case object OutdatedMunitInterfaceVersion extends ScalaProblem {
   override def message: String =
-    "Test Explorer will not work properly with this version of munit, please update it to at least org.scalameta.munit.1.0.0-M3"
+    "Running single tests in Test Explorer will not work properly with this version of munit, please update it to at least org.scalameta.munit.1.0.0-M3"
 }
 
 case class MissingJdkSources(candidates: List[AbsolutePath])

@@ -116,10 +116,12 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
     }
   }
 
-  override val buildServerName: Option[String] = Some("mill-bsp")
+  override val buildServerName: Option[String] = Some(MillBuildTool.name)
 }
 
 object MillBuildTool {
+  val name: String = "mill-bsp"
+
   def isMillRelatedPath(
       path: AbsolutePath
   ): Boolean = {
