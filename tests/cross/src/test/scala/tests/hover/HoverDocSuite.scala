@@ -5,6 +5,8 @@ import tests.pc.BaseHoverSuite
 class HoverDocSuite extends BaseHoverSuite {
   override def requiresJdkSources: Boolean = true
 
+  override protected def requiresScalaLibrarySources: Boolean = true
+
   check(
     "doc",
     """object a {
@@ -62,6 +64,46 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "doc-parent",
+    """object a {
+      |  <<List(12).hea@@dOption>>
+      |}
+      |""".stripMargin,
+    // Assert that the docstring is extracted.
+    """|```scala
+       |def headOption: Option[Int]
+       |```
+       |Optionally selects the first element.
+       | $orderDependent
+       |
+       |**Returns:** the first element of this traversable collection if it is nonempty,
+       |          `None` if it is empty.
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|```scala
+           |override def headOption: Option[Int]
+           |```
+           |Optionally selects the first element.
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           |
+           |**Returns:** the first element of this iterable collection if it is nonempty,
+           |          `None` if it is empty.
+           |""".stripMargin,
+      "3" ->
+        """|```scala
+           |def headOption: Option[Int]
+           |```
+           |Optionally selects the first element.
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           |
+           |**Returns:** the first element of this iterable collection if it is nonempty,
+           |          `None` if it is empty.
            |""".stripMargin
     )
   )

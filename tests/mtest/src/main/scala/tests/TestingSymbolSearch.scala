@@ -13,6 +13,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -30,8 +31,11 @@ class TestingSymbolSearch(
     workspace: TestingWorkspaceSearch = TestingWorkspaceSearch.empty,
     index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()
 ) extends SymbolSearch {
-  override def documentation(symbol: String): Optional[SymbolDocumentation] = {
-    docs.documentation(symbol)
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols
+  ): Optional[SymbolDocumentation] = {
+    docs.documentation(symbol, parents)
   }
 
   override def definition(symbol: String, source: URI): ju.List[Location] = {

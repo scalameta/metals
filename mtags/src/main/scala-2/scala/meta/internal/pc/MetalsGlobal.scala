@@ -19,8 +19,10 @@ import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -155,13 +157,24 @@ class MetalsGlobal(
   }
 
   def symbolDocumentation(symbol: Symbol): Option[SymbolDocumentation] = {
-    val sym = compiler.semanticdbSymbol(
-      if (!symbol.isJava && symbol.isPrimaryConstructor) symbol.owner
-      else symbol
+    def toSemanticdbSymbol(sym: Symbol) = compiler.semanticdbSymbol(
+      if (!sym.isJava && sym.isPrimaryConstructor) sym.owner
+      else sym
     )
-    val documentation = search.documentation(sym)
-    if (documentation.isPresent) Some(documentation.get())
-    else None
+    val sym = toSemanticdbSymbol(symbol)
+    val documentation = search.documentation(
+      sym,
+      new ParentSymbols {
+        def parents(): util.List[String] =
+          symbol.overrides.map(toSemanticdbSymbol).asJava
+      }
+    )
+
+    if (documentation.isPresent) {
+      Some(documentation.get())
+    } else {
+      None
+    }
   }
 
   /**

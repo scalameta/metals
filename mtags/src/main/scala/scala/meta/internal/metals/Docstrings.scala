@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -19,6 +20,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 
 /**
@@ -30,7 +32,10 @@ class Docstrings(index: GlobalSymbolIndex) {
   val cache = new TrieMap[String, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
-  def documentation(symbol: String): Optional[SymbolDocumentation] = {
+  def documentation(
+      symbol: String,
+      parents: ParentSymbols
+  ): Optional[SymbolDocumentation] = {
     cache.get(symbol) match {
       case Some(value) =>
         if (value == EmptySymbolDocumentation) Optional.empty()
@@ -38,10 +43,38 @@ class Docstrings(index: GlobalSymbolIndex) {
       case None =>
         indexSymbol(symbol)
         val result = cache.get(symbol)
-        if (result.isEmpty) {
-          cache(symbol) = EmptySymbolDocumentation
+        val resultWithDocs = result match {
+          case None =>
+            cache(symbol) = EmptySymbolDocumentation
+            result
+          /* Fall back to parent scaladocs if nothing is specified for the current symbol
+           * This way we also cache the result in order not to calculate parents again.
+           */
+          case Some(value: MetalsSymbolDocumentation)
+              if value.docstring.isEmpty() =>
+            parents
+              .parents()
+              .asScala
+              .flatMap { s =>
+                if (cache.contains(s)) cache.get(s)
+                else {
+                  indexSymbol(s)
+                  cache.get(s)
+                }
+              }
+              .find(_.docstring().nonEmpty)
+              .fold {
+                result
+              } { withDocs =>
+                val updated = value.copy(docstring = withDocs.docstring())
+                cache(symbol) = updated
+                Some(updated)
+              }
+          case _ =>
+            result
+
         }
-        Optional.ofNullable(result.orNull)
+        Optional.ofNullable(resultWithDocs.orNull)
     }
   }
 

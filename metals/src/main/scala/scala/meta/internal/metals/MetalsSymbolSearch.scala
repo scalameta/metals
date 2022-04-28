@@ -9,6 +9,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -34,8 +35,11 @@ class MetalsSymbolSearch(
     dependencySourceCache.clear()
   }
 
-  override def documentation(symbol: String): Optional[SymbolDocumentation] =
-    docs.documentation(symbol)
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols
+  ): Optional[SymbolDocumentation] =
+    docs.documentation(symbol, parents)
 
   def definition(symbol: String, source: URI): ju.List[Location] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
