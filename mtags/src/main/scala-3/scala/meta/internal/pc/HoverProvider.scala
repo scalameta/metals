@@ -10,7 +10,6 @@ import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.*
 import dotty.tools.dotc.core.NameOps.*
@@ -39,6 +38,7 @@ object HoverProvider:
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
     val source = driver.openedFiles.get(uri)
+    val indexedContext = IndexedContext(ctx)
 
     def typeFromPath(path: List[Tree]) =
       if path.isEmpty then NoType else path.head.tpe
@@ -48,22 +48,24 @@ object HoverProvider:
     val tpw = tp.widenTermRefExpr
     // For expression we need to find all enclosing applies to get the exact generic type
     val enclosing = expandRangeToEnclosingApply(path, pos)
-    val exprTp = typeFromPath(enclosing)
-    val exprTpw = exprTp.widenTermRefExpr
 
-    if tp.isError || tpw == NoType || tpw.isError || path.isEmpty ||
-      (pos.isPoint // don't check isHoveringOnName for RangeHover
-        && source
-          .map(s => !MetalsInteractive.isOnName(enclosing, pos, s))
-          .getOrElse(false))
+    if tp.isError || tpw == NoType || tpw.isError || path.isEmpty
     then ju.Optional.empty()
     else
-      Interactive.enclosingSourceSymbols(enclosing, pos) match
+      val skipCheckOnName =
+        !pos.isPoint // don't check isHoveringOnName for RangeHover
+      MetalsInteractive.enclosingSymbolsWithExpressionType(
+        enclosing,
+        pos,
+        indexedContext,
+        skipCheckOnName
+      ) match
         case Nil =>
           ju.Optional.empty()
-        case symbols @ (symbol :: _) =>
+        case symbols @ ((symbol, tpe) :: _) =>
+          val exprTpw = tpe.widenTermRefExpr
           val docComments =
-            symbols.flatMap(ParsedComment.docOf(_))
+            symbols.map(_._1).flatMap(ParsedComment.docOf(_))
           val printerContext =
             driver.compilationUnits.get(uri) match
               case Some(unit) =>
@@ -97,9 +99,10 @@ object HoverProvider:
             case Some(expressionType) =>
               val forceExpressionType =
                 !pos.span.isZeroExtent || (
-                  !hoverString.endsWith(
-                    expressionType
-                  ) && !symbol.isType && !symbol.flags.isAllOf(EnumCase)
+                  !hoverString.endsWith(expressionType) &&
+                    !symbol.isType &&
+                    !symbol.is(Module) &&
+                    !symbol.flags.isAllOf(EnumCase)
                 )
               val content = HoverMarkup(
                 expressionType,
@@ -111,6 +114,7 @@ object HoverProvider:
             case _ =>
               ju.Optional.empty
           end match
+      end match
     end if
   end hover
 

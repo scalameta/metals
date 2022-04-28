@@ -96,10 +96,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     """|```scala
        |def this(x: Int): a
        |```
-       |""".stripMargin,
-    compat = Map(
-      "3" -> "def <init>(x: Int): a".hover
-    )
+       |""".stripMargin
   )
 
   check(

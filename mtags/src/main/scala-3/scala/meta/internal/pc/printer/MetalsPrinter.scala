@@ -12,6 +12,7 @@ import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameKinds.EvidenceParamName
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.Name
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.*
@@ -152,8 +153,10 @@ class MetalsPrinter(names: ShortenedNames, dotcPrinter: DotcPrinter)(using
 
     if onlyMethodParams then paramssSignature
     else
+      // For Scala2 compatibility, show "this" instead of <init> for constructor
+      val name = if gsym.isConstructor then StdNames.nme.this_ else gsym.name
       extensionSignatureString +
-        s"def ${gsym.name}" +
+        s"def $name" +
         paramssSignature
   end defaultMethodSignature
 

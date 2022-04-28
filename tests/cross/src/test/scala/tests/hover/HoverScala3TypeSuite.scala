@@ -193,7 +193,8 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     "toplevel-left",
     """|def foo = <<L@@eft>>("")
        |""".stripMargin,
-    """|final case class Left: Left
+    """|Left[String, Nothing]
+       |def apply[A, B](value: A): Left[A, B]
        |""".stripMargin.hover
   )
 }
