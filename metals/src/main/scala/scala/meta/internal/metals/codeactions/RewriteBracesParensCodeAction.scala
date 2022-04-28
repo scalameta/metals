@@ -34,6 +34,8 @@ class RewriteBracesParensCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
+  override def supportScala3: Boolean = true
+
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

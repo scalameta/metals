@@ -33,6 +33,8 @@ class ExtractRenameMember(
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
+  override def supportScala3: Boolean = true
+
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

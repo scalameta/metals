@@ -16,6 +16,8 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
 
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
+  override def supportScala3: Boolean = true
+
   private def convert(
       block: Term.Block,
       patternMatch: Term.Match,

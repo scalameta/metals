@@ -16,6 +16,8 @@ trait CodeAction {
    */
   def kind: String
 
+  def supportScala3: Boolean
+
   def contribute(
       params: l.CodeActionParams,
       token: CancelToken

@@ -27,6 +27,8 @@ class ExtractValueCodeAction(
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorExtract
 
+  override def supportScala3: Boolean = true
+
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

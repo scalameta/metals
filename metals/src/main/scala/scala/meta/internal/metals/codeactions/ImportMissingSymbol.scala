@@ -13,6 +13,8 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.QuickFix
 
+  override def supportScala3: Boolean = true
+
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken

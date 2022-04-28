@@ -16,6 +16,8 @@ class StringActions(buffers: Buffers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
+  override def supportScala3: Boolean = true
+
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken

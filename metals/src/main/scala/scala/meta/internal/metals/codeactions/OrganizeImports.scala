@@ -85,6 +85,8 @@ class SourceOrganizeImports(
     ) {
 
   override val kind: String = SourceOrganizeImports.kind
+
+  override def supportScala3: Boolean = false
   override protected val title: String = SourceOrganizeImports.title
 
   override protected def isCallAllowed(
@@ -132,6 +134,8 @@ class OrganizeImportsQuickFix(
     ) {
 
   override val kind: String = OrganizeImportsQuickFix.kind
+
+  override def supportScala3: Boolean = false
   override protected val title: String = OrganizeImportsQuickFix.title
   override protected def isCallAllowed(
       file: AbsolutePath,

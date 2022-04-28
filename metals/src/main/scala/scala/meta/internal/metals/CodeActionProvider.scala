@@ -4,6 +4,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions._
 import scala.meta.internal.parsing.Trees
@@ -60,8 +61,17 @@ final class CodeActionProvider(
         case None => true
       }
 
+    val path = params.getTextDocument().getUri().toAbsolutePath
+    val isScala3 = buildTargets
+      .scalaVersion(path)
+      .map(ScalaVersions.isScala3Version(_))
+      .getOrElse(false)
+
     val actions = allActions.collect {
-      case action if isRequestedKind(action) => action.contribute(params, token)
+      case action
+          if isRequestedKind(action) &&
+            (!isScala3 || (isScala3 && action.supportScala3)) =>
+        action.contribute(params, token)
     }
 
     Future.sequence(actions).map(_.flatten)
