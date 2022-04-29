@@ -7,8 +7,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
   lazy val snapshot: Snapshot = Snapshot.latest("snapshots", "2.13")
-  // NOTE: That when we release 0.11.3 we need to update this to 2.13
-  lazy val release: Snapshot = Snapshot.latest("releases", "2.12")
+  lazy val release: Snapshot = Snapshot.latest("releases", "2.13")
   def releasesResolverTable: String = {
     <table>
       <thead>
