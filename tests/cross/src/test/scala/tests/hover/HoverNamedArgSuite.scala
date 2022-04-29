@@ -25,7 +25,15 @@ class HoverNamedArgSuite extends BaseHoverSuite {
        |- `named`: the argument
        |""".stripMargin,
     compat = Map(
-      "3" -> "named: Int".hover
+      "3" ->
+        """|```scala
+           |named: Int
+           |```
+           |Runs foo
+           |
+           |**Parameters**
+           |- `named`: the argument
+           |""".stripMargin
     )
   )
 
