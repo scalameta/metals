@@ -2,11 +2,42 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2022-04-27T00:00:00.000Z</updated>
+    <updated>2022-04-28T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>Metals Blog</subtitle>
     <icon>http://scalameta.org/metals/img/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.11.5 - Aluminium]]></title>
+        <id>/2022/04/28/aluminium</id>
+        <link href="http://scalameta.org/metals/blog/2022/04/28/aluminium"/>
+        <updated>2022-04-28T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We're happy to announce the release of Metals v0.11.5, which brings a few of hotfixes and improves hover info for Scala 3]]></summary>
+        <content type="html"><![CDATA[<p>We're happy to announce the release of Metals v0.11.5, which brings a few of hotfixes and improves hover info for Scala 3</p><table><tbody><tr><td>Commits since last release</td><td align="center">28</td></tr><tr><td>Merged PRs</td><td align="center">7</td></tr><tr><td>Contributors</td><td align="center">5</td></tr><tr><td>Closed issues</td><td align="center">2</td></tr><tr><td>New features</td><td align="center"></td></tr></tbody></table><p>For full details: <a href="https://github.com/scalameta/metals/milestone/50?closed=1" target="_blank" rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/50?closed=1</a></p><p>Metals is a language server for Scala that works with VS Code, Vim, Emacs and
+Sublime Text. Metals is developed at the
+<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com" target="_blank" rel="noopener noreferrer">VirtusLab</a>
+with the help from <a href="https://lunatech.com" target="_blank" rel="noopener noreferrer">Lunatech</a> along with contributors from
+the community.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="tldr">TL;DR<a class="hash-link" href="#tldr" title="Direct link to heading">​</a></h2><p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p><ul><li>Fix javasemanticdb support for sbt-BSP with JDK17</li><li>Don't show MUnit warning for the Test Explorer when not necessary</li><li>[Scala3]<!-- --> Show correct tooltip on hover methods in for comprehension</li></ul><h2 class="anchor anchorWithStickyNavbar_mojV" id="contributors">Contributors<a class="hash-link" href="#contributors" title="Direct link to heading">​</a></h2><p>Big thanks to everybody who contributed to this release or reported an issue!</p><div class="codeBlockContainer_I0IT theme-code-block"><div class="codeBlockContent_wNvx"><pre tabindex="0" class="prism-code language-text codeBlock_jd64 thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_mRuA"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v0.11.4..v0.11.5</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">16  Rikito Taniguchi</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">4   Vadim Chelyshov</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">1   Kamil Podsiadlo</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">1   Tomasz Godzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">1   ckipp01</span><br></span></code></pre><button type="button" aria-label="Copy code to clipboard" class="copyButton_wuS7 clean-btn">Copy</button></div></div><h2 class="anchor anchorWithStickyNavbar_mojV" id="merged-prs">Merged PRs<a class="hash-link" href="#merged-prs" title="Direct link to heading">​</a></h2><h2 class="anchor anchorWithStickyNavbar_mojV" id="v0115-2022-04-28"><a href="https://github.com/scalameta/metals/tree/v0.11.5" target="_blank" rel="noopener noreferrer">v0.11.5</a> (2022-04-28)<a class="hash-link" href="#v0115-2022-04-28" title="Direct link to heading">​</a></h2><p><a href="https://github.com/scalameta/metals/compare/v0.11.4...v0.11.5" target="_blank" rel="noopener noreferrer">Full Changelog</a></p><p><strong>Merged pull requests:</strong></p><ul><li>fix: don't show MUnit warning for the Test Explorer when not necessary
+<a href="https://github.com/scalameta/metals/pull/3879" target="_blank" rel="noopener noreferrer">#<!-- -->3879</a>
+(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li><li>fix: sbt-metals + java semanticdb issue on jdk17
+<a href="https://github.com/scalameta/metals/pull/3876" target="_blank" rel="noopener noreferrer">#<!-- -->3876</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>[Scala3]<!-- --> Show correct tooltip on hover methods in for comprehension
+<a href="https://github.com/scalameta/metals/pull/3854" target="_blank" rel="noopener noreferrer">#<!-- -->3854</a>
+(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li><li>docs: update vim docs to no longer point people to coc-metals
+<a href="https://github.com/scalameta/metals/pull/3819" target="_blank" rel="noopener noreferrer">#<!-- -->3819</a>
+(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li><li>Remove Eclipse from the documentation
+<a href="https://github.com/scalameta/metals/pull/3868" target="_blank" rel="noopener noreferrer">#<!-- -->3868</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li><li>update versions for 0.11.4
+<a href="https://github.com/scalameta/metals/pull/3874" target="_blank" rel="noopener noreferrer">#<!-- -->3874</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li><li>0.11.4 release notes
+<a href="https://github.com/scalameta/metals/pull/3873" target="_blank" rel="noopener noreferrer">#<!-- -->3873</a>
+(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li></ul>]]></content>
+        <author>
+            <name>Vadim Chelyshov</name>
+            <uri>https://twitter.com/_dos65</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.11.4 - Aluminium]]></title>
         <id>/2022/04/27/aluminium</id>
