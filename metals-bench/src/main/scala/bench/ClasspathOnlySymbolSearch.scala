@@ -6,6 +6,7 @@ import java.{util => ju}
 
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -19,7 +20,10 @@ import org.eclipse.lsp4j.Location
  */
 class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
     extends SymbolSearch {
-  override def documentation(symbol: String): Optional[SymbolDocumentation] =
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols
+  ): Optional[SymbolDocumentation] =
     Optional.empty()
 
   def definition(symbol: String, source: URI): ju.List[Location] =

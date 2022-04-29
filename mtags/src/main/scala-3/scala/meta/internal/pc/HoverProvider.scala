@@ -4,9 +4,11 @@ import java.{util as ju}
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
@@ -170,12 +172,21 @@ object HoverProvider:
   private def symbolDocumentation(symbol: Symbol, search: SymbolSearch)(using
       Context
   ): Option[SymbolDocumentation] =
-    val sym = SemanticdbSymbols.symbolName(
-      if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
-        symbol.owner
-      else symbol
+    def toSemanticdbSymbol(symbol: Symbol) =
+      SemanticdbSymbols.symbolName(
+        if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
+          symbol.owner
+        else symbol
+      )
+    val sym = toSemanticdbSymbol(symbol)
+    // symbol.allOverriddenSymbols
+    val documentation = search.documentation(
+      sym,
+      new ParentSymbols:
+        def parents(): java.util.List[String] =
+          symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava
     )
-    val documentation = search.documentation(sym)
     if documentation.isPresent then Some(documentation.get())
     else None
+  end symbolDocumentation
 end HoverProvider

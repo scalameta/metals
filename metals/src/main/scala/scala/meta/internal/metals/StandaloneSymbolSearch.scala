@@ -11,6 +11,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearch.Result
@@ -57,11 +58,16 @@ class StandaloneSymbolSearch(
       saveSymbolFileToDisk
     )
 
-  def documentation(symbol: String): ju.Optional[SymbolDocumentation] =
+  def documentation(
+      symbol: String,
+      parents: ParentSymbols
+  ): ju.Optional[SymbolDocumentation] =
     docs
-      .documentation(symbol)
+      .documentation(symbol, parents)
       .asScala
-      .orElse(workspaceFallback.flatMap(_.documentation(symbol).asScala))
+      .orElse(
+        workspaceFallback.flatMap(_.documentation(symbol, parents).asScala)
+      )
       .asJava
 
   override def definition(x: String, source: URI): ju.List[Location] = {

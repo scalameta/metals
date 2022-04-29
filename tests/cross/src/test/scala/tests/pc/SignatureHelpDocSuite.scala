@@ -137,12 +137,64 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    """|
+    """|Applies a binary operator to a start value and all elements of this collection or iterator,
+       | going left to right.
+       |
+       | Note: will not terminate for infinite-sized collections.
+       | Note: might return different results for different runs, unless the
+       |underlying collection type is ordered or the operator is associative
+       |and commutative.
+       |
+       |
+       |**Type Parameters**
+       |- `B`: the result type of the binary operator.
+       |
+       |**Parameters**
+       |- `op`: the binary operator.
+       |- `z`: the start value.
+       |
+       |**Returns:** the result of inserting `op` between consecutive elements of this collection or iterator,
+       |          going left to right with the start value `z` on the left:
+       |
+       |```
+       |op(...op(z, x_1), x_2, ..., x_n)
+       |```
+       |          where `x, ..., x` are the elements of this collection or iterator.
+       |          Returns `z` if this collection or iterator is empty.
        |foldLeft[B](z: B)(op: (B, Int) => B): B
        |                  ^^^^^^^^^^^^^^^^^
        |  @param op (Int, Int) => Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Applies a binary operator to a start value and all elements of this collection,
+           | going left to right.
+           |
+           | Note: will not terminate for infinite-sized collections.
+           | Note: might return different results for different runs, unless the
+           |underlying collection type is ordered or the operator is associative
+           |and commutative.
+           |
+           |
+           |**Type Parameters**
+           |- `B`: the result type of the binary operator.
+           |
+           |**Parameters**
+           |- `z`: the start value.
+           |- `op`: the binary operator.
+           |
+           |**Returns:** the result of inserting `op` between consecutive elements of this collection,
+           |          going left to right with the start value `z` on the left:
+           |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
+           |           are the elements of this collection.
+           |          Returns `z` if this collection is empty.
+           |foldLeft[B](z: B)(op: (B, Int) => B): B
+           |                  ^^^^^^^^^^^^^^^^^
+           |  @param op (Int, Int) => Int
+           |""".stripMargin
+    )
   )
+
   checkDoc(
     "curry4",
     """
@@ -163,13 +215,41 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  List(1).map(x => @@)
       |}
     """.stripMargin,
-    """|
+    """|Builds a new collection by applying a function to all elements of this general collection.
+       |
+       |
+       |**Type Parameters**
+       |- `That`: the class of the returned collection. Where possible, `That` is
+       |the same class as the current collection class `Repr`, but this
+       |depends on the element type `B` being admissible for that class,
+       |which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
+       |is found.
+       |- `B`: the element type of the returned collection.
+       |
+       |**Parameters**
+       |- `bf`: an implicit value of class `CanBuildFrom` which determines
+       |the result class `That` from the current representation type `Repr` and
+       |the new element type `B`.
+       |- `f`: the function to apply to each element.
+       |
+       |**Returns:** a new general collection resulting from applying the given function
+       |                 `f` to each element of this general collection and collecting the results.
        |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
       "2.13" ->
-        """|
+        """|Builds a new collection by applying a function to all elements of this collection.
+           |
+           |
+           |**Type Parameters**
+           |- `B`: the element type of the returned collection.
+           |
+           |**Parameters**
+           |- `f`: the function to apply to each element.
+           |
+           |**Returns:** a new collection resulting from applying the given function
+           |               `f` to each element of this collection and collecting the results.
            |map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
            |""".stripMargin

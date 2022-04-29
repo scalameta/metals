@@ -13,7 +13,7 @@ public interface SymbolSearch {
     /**
      * Returns the documentation of this symbol, if any.
      */
-    Optional<SymbolDocumentation> documentation(String symbol);
+    Optional<SymbolDocumentation> documentation(String symbol, ParentSymbols parents);
 
     /**
      * Returns the definition of this symbol, if any.
