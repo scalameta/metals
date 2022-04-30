@@ -4,9 +4,11 @@ import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
 import scala.meta.pc.SymbolSearch
+import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
@@ -47,6 +49,8 @@ class MetalsPrinter(
     )
 
   private val defaultWidth = 1000
+
+  def shortenedNames: List[ShortName] = names.names
 
   def expressionType(tpw: Type)(using Context): Option[String] =
     tpw match
@@ -122,7 +126,7 @@ class MetalsPrinter(
    *         e.g. "[A: Ordering](a: A, b: B): collection.mutable.Map[A, B]"
    *              ": collection.mutable.Map[A, B]" for no-arg method
    */
-  private def defaultMethodSignature(
+  def defaultMethodSignature(
       gsym: Symbol,
       gtpe: Type,
       onlyMethodParams: Boolean = false

@@ -15,6 +15,7 @@ import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
@@ -33,7 +34,8 @@ class Completions(
     buildTargetIdentifier: String,
     completionPos: CompletionPos,
     indexedContext: IndexedContext,
-    path: List[Tree]
+    path: List[Tree],
+    config: PresentationCompilerConfig
 ):
 
   implicit val context: Context = ctx
@@ -51,14 +53,71 @@ class Completions(
           .flatMap(CompletionValue.fromCompiler)
           .filterInteresting()
 
-    val args = NamedArgCompletions.contribute(pos, path)
-    val keywords = KeywordsCompletions.contribute(path, completionPos)
-    val all = completions ++ args ++ keywords
+    val advanced = advancedCompletions(path, pos, completionPos)
+    val all = completions ++ advanced
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
     val values = application.postProcess(all.sorted(ordering))
     (values, result)
   end completions
+
+  private def advancedCompletions(
+      path: List[Tree],
+      pos: SourcePosition,
+      completionPos: CompletionPos
+  ): List[CompletionValue] =
+    // path.foreach(p => println(p.toString.take(80)))
+    path match
+      // class FooImpl extends Foo:
+      //   def |
+      case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
+          if t.parents.nonEmpty =>
+        val indexedContext = IndexedContext(
+          MetalsInteractive.contextOfPath(path)
+        )
+        val filterName =
+          if dd.name == StdNames.nme.ERROR then None
+          else Some(dd.name.show)
+        OverrideCompletions.contribute(
+          td,
+          Some(dd.symbol),
+          dd.sourcePos.start,
+          indexedContext,
+          config
+        )
+
+      // class FooImpl extends Foo:
+      //   ov|
+      case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
+          if t.parents.nonEmpty && ident.name.startsWith("o") =>
+        val indexedContext = IndexedContext(
+          MetalsInteractive.contextOfPath(path)
+        )
+        OverrideCompletions.contribute(
+          td,
+          None,
+          ident.sourcePos.start,
+          indexedContext,
+          config
+        )
+
+      case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
+          if t.parents.nonEmpty =>
+        val indexedContext = IndexedContext(
+          MetalsInteractive.contextOfPath(path)
+        )
+        OverrideCompletions.contribute(
+          td,
+          Some(sel.symbol),
+          sel.sourcePos.start,
+          indexedContext,
+          config
+        )
+
+      case _ =>
+        val args = NamedArgCompletions.contribute(pos, path)
+        val keywords = KeywordsCompletions.contribute(path, completionPos)
+        args ++ keywords
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
@@ -118,6 +177,7 @@ class Completions(
       def visit(head: CompletionValue): Boolean =
         val (id, include) =
           head match
+            case over: CompletionValue.Override => (over.label, true)
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
@@ -220,6 +280,11 @@ class Completions(
     end symbolRelevance
 
     completion match
+      case ov: CompletionValue.Override =>
+        var penalty = symbolRelevance(ov.symbol)
+        // if (!ov.symbol.is(Deferred)) penalty |= MemberOrdering.IsNotAbstract
+        penalty
+
       case CompletionValue.Workspace(_, sym) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
       case sym: CompletionValue.Symbolic =>

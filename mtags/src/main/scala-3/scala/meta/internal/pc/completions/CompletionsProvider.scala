@@ -21,6 +21,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.TextEdit
 
 class CompletionsProvider(
@@ -63,7 +64,8 @@ class CompletionsProvider(
             buildTargetIdentifier,
             completionPos,
             indexedCtx,
-            path
+            path,
+            config
           ).completions()
         val autoImportsGen = AutoImports.generator(
           completionPos.sourcePos,
@@ -191,6 +193,9 @@ class CompletionsProvider(
 
       item.setTags(completion.lspTags.asJava)
 
+      if config.isCompletionSnippetsEnabled then
+        item.setInsertTextFormat(InsertTextFormat.Snippet)
+
       item.setKind(kind)
       item
     end mkItem0
@@ -199,13 +204,17 @@ class CompletionsProvider(
         ident: String,
         value: String,
         isFromWorkspace: Boolean = false,
-        additionalEdits: List[TextEdit] = Nil
+        additionalEdits: List[TextEdit] = Nil,
+        start: Option[Int] = None
     ): CompletionItem =
       val nameEdit = new TextEdit(
-        editRange,
+        start
+          .map(s => completionPos.copy(start = s).toEditRange)
+          .getOrElse(editRange),
         value
       )
       mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
+    end mkItem
 
     def mkWorkspaceItem(
         ident: String,
@@ -247,6 +256,10 @@ class CompletionsProvider(
                   case IndexedContext.Result.InScope =>
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
+      case CompletionValue.Override(label, value, _, shortNames, start) =>
+        val additionalEdits =
+          shortNames.flatMap(name => autoImports.forSymbol(name.symbol)).flatten
+        mkItem(label, value, false, additionalEdits, Some(start))
       case CompletionValue.NamedArg(label, _) =>
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) => mkItem(label, text)

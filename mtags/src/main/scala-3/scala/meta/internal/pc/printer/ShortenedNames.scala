@@ -29,6 +29,15 @@ class ShortenedNames(val indexedContext: IndexedContext):
 
   private val history = collection.mutable.Map.empty[Name, ShortName]
 
+  /**
+   * Returns a list of shortened names
+   */
+  def names: List[ShortName] = history.values.toList
+
+  /**
+   * Returns a list of TextEdits (auto-imports) of the symbols
+   * that are shortend by "tryShortenName" method, and cached.
+   */
   def imports(autoImportsGen: AutoImportsGenerator): List[TextEdit] =
     history.values.flatMap { name =>
       autoImportsGen.forSymbol(name.symbol).toList.flatten
