@@ -19,7 +19,8 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.JavacOptionsResult
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourceItem
-import ch.epfl.scala.bsp4j.SourceItemKind
+import ch.epfl.scala.bsp4j.SourceItemKind.DIRECTORY
+import ch.epfl.scala.bsp4j.SourceItemKind.FILE
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import org.eclipse.{lsp4j => l}
 
@@ -49,6 +50,8 @@ final class TargetData {
     ConcurrentHashSet.empty[AbsolutePath]
   // if workspace contains symlinks, original source items are kept here and source items dealiased
   val originalSourceItems: util.Set[AbsolutePath] =
+    ConcurrentHashSet.empty[AbsolutePath]
+  val sourceItemFiles: util.Set[AbsolutePath] =
     ConcurrentHashSet.empty[AbsolutePath]
 
   val targetToConnection: MMap[BuildTargetIdentifier, BuildServerConnection] =
@@ -176,11 +179,16 @@ final class TargetData {
       buildTarget: BuildTargetIdentifier
   ): Unit = {
     val sourceItemPath = sourceItem.getUri.toAbsolutePath(followSymlink = false)
-    if (
-      sourceItem.getKind() == SourceItemKind.DIRECTORY &&
-      sourceItem.getGenerated()
-    ) {
-      buildTargetGeneratedDirs(sourceItemPath) = ()
+
+    sourceItem.getKind() match {
+      case DIRECTORY => {
+        if (sourceItem.getGenerated()) {
+          buildTargetGeneratedDirs(sourceItemPath) = ()
+        }
+      }
+      case FILE => {
+        sourceItemFiles.add(sourceItemPath)
+      }
     }
     addSourceItem(sourceItemPath, buildTarget)
   }
@@ -214,6 +222,10 @@ final class TargetData {
         buf += target.getId
       }
     }
+  }
+
+  def isSourceFile(source: AbsolutePath): Boolean = {
+    sourceItemFiles.contains(source)
   }
 
   def checkIfGeneratedSource(source: Path): Boolean = {

@@ -43,6 +43,24 @@ class SemanticdbIndexer(
     providers.foreach(_.onDelete(absolutePath))
   }
 
+  /**
+   * Handle EventType.OVERFLOW
+   *
+   * The overflow events comes either with a non-null or null path.
+   *
+   * In case the path is not null, we walk up the file tree to the parent `META-INF/semanticdb`
+   * parent directory and re-index all of its `*.semanticdb` children.
+   *
+   * In case of a null path, we re-index `META-INF/semanticdb` for all targets
+   */
+  def onOverflow(path: Path): Unit = {
+    if (path == null) {
+      onTargetRoots()
+    } else {
+      path.semanticdbRoot.foreach(onChangeDirectory(_))
+    }
+  }
+
   private def onChangeDirectory(dir: Path): Unit = {
     if (Files.isDirectory(dir)) {
       val stream = Files.walk(dir)

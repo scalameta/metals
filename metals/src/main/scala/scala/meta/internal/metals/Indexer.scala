@@ -181,6 +181,8 @@ final case class Indexer(
   }
 
   private def indexWorkspace(check: () => Unit): Unit = {
+    fileWatcher.cancel()
+
     timerProvider.timedThunk(
       "reset stuff",
       clientConfig.initialConfig.statistics.isIndex
@@ -225,11 +227,12 @@ final case class Indexer(
       clientConfig.initialConfig.statistics.isIndex
     ) {
       try {
-        fileWatcher.restart()
+        fileWatcher.start()
       } catch {
         // note(@tgodzik) This is needed in case of ammonite
         // where it can rarely deletes directories while we are trying to watch them
         case NonFatal(e) =>
+          fileWatcher.cancel()
           scribe.warn("File watching failed, indexes will not be updated.", e)
       }
     }
