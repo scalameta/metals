@@ -47,6 +47,17 @@ class StacktraceParseSuite extends BaseSuite {
   testConversion("p1.p2.Object$.foreach$mVc$sp", "p1/p2/Object.")
   testConversion("p1.p2.Class.foreach$mVc$sp", "p1/p2/Class#")
 
+  // non-module jdk
+  testConversion(
+    "java.util.concurrent.FutureTask.run",
+    "java/util/concurrent/FutureTask#"
+  )
+  // module jdk
+  testConversion(
+    "java.base/java.util.concurrent.FutureTask.run",
+    "java/util/concurrent/FutureTask#"
+  )
+
   def testConversion(line: String, expected: String): Unit = {
     test(line) {
       val obtained = StacktraceAnalyzer.toToplevelSymbol(line)
