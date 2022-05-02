@@ -471,6 +471,9 @@ final class BuildTargets() {
     }
   }
 
+  def isSourceFile(source: AbsolutePath): Boolean =
+    data.iterator.exists(_.isSourceFile(source))
+
   def checkIfGeneratedSource(source: Path): Boolean =
     data.iterator.exists(_.checkIfGeneratedSource(source))
   def checkIfGeneratedDir(path: AbsolutePath): Boolean =

@@ -1246,7 +1246,7 @@ class MetalsLanguageServer(
         semanticdb = targetroot.resolve(Directories.semanticdb)
         generatedFile <- semanticdb.listRecursive
       } {
-        val event = FileWatcherEvent.modify(generatedFile.toNIO)
+        val event = FileWatcherEvent.createOrModify(generatedFile.toNIO)
         didChangeWatchedFiles(event).get()
       }
     }
@@ -1374,11 +1374,12 @@ class MetalsLanguageServer(
         diagnostics.didDelete(path)
       }.asJava
     } else if (
-      isScalaOrJava && !savedFiles.isRecentlyActive(path) && !buffers
-        .contains(path)
+      isScalaOrJava &&
+      !savedFiles.isRecentlyActive(path) &&
+      !buffers.contains(path)
     ) {
       event.eventType match {
-        case EventType.Create =>
+        case EventType.CreateOrModify =>
           buildTargets.onCreate(path)
         case _ =>
       }
@@ -1388,8 +1389,10 @@ class MetalsLanguageServer(
         event.eventType match {
           case EventType.Delete =>
             semanticDBIndexer.onDelete(event.path)
-          case EventType.Create | EventType.Modify =>
+          case EventType.CreateOrModify =>
             semanticDBIndexer.onChange(event.path)
+          case EventType.Overflow =>
+            semanticDBIndexer.onOverflow(event.path)
         }
       }.asJava
     } else if (path.isBuild) {
