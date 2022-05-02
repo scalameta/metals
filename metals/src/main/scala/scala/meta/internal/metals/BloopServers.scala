@@ -264,8 +264,6 @@ final class BloopServers(
    *
    * @param maybeRequestedBloopJvmProperties Bloop JVM Properties requested
    *                                         through the Metals Extension settings
-   * @param maybeRequestedMetalsJavaHome     Metals' requested `javaHome`, which Bloop
-   *                                         should also preferably use
    * @param reconnect                        function to connect back to the
    *                                         build server.
    * @return `Future.successful` if the purpose is achieved or `Future.failure`
@@ -277,8 +275,6 @@ final class BloopServers(
       maybeRunningBloopJvmProperties: Option[List[String]],
       maybeRequestedMetalsJavaHome: Option[String],
       maybeRunningMetalsJavaHome: Option[String],
-      maybeRequestedBloopJavaHome: Option[String],
-      maybeRunningBloopJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
     val result =
@@ -287,21 +283,16 @@ final class BloopServers(
         bloopCreatedByMetalsFilePath <- getBloopFilePath(fileName =
           "created_by_metals.lock"
         )
-        maybeJavaHome = maybeRequestedBloopJavaHome.orElse(
-          maybeRequestedMetalsJavaHome
-        )
+
         requestedBloopJvmProperties = maybeRequestedBloopJvmProperties
           .getOrElse(List.empty)
         if maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties ||
-          maybeRequestedBloopJavaHome != maybeRunningBloopJavaHome ||
-          (maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome &&
-            maybeRunningBloopJavaHome.isEmpty) // update Bloop JavaHome to Metals' JavaHome
-        // only when Bloop does not have a preferred different one!
+          (maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome)
       } yield updateBloopJvmProperties(
         requestedBloopJvmProperties,
         bloopGlobalJsonFilePath,
         bloopCreatedByMetalsFilePath,
-        maybeJavaHome,
+        maybeRequestedMetalsJavaHome,
         reconnect
       )
     result.getOrElse { Future.successful() }

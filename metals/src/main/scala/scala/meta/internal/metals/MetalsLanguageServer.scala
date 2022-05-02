@@ -1312,8 +1312,6 @@ class MetalsLanguageServer(
                 old.bloopJvmProperties,
                 userConfig.javaHome,
                 old.javaHome,
-                userConfig.bloopJavaHome,
-                old.bloopJavaHome,
                 () => autoConnectToBuildServer()
               )
 
