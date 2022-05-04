@@ -77,39 +77,29 @@ class BracelessBracefulSwitchCodeAction(
               document,
               enumDefn.templ
             )
-          //          case valDefn: Defn.Val =>
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = valDefn,
-          //              braceableBranch = valDefn.rhs,
-          //              document = document,
-          //              bracelessStart = "",
-          //              bracelessEnd = ""
-          //            )
-          //          case varDefn: Defn.Var =>
-          //            varDefn.rhs
-          //              .flatMap(rhs =>
-          //                createCodeActionForBraceableTree(
-          //                  hasBraces = hasBraces,
-          //                  path = path,
-          //                  braceableTree = varDefn,
-          //                  braceableBranch = rhs,
-          //                  document = document,
-          //                  bracelessStart = "",
-          //                  bracelessEnd = ""
-          //                )
-          //              )
-          //          case defDefn: Defn.Def =>
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = defDefn,
-          //              braceableBranch = defDefn.body,
-          //              document = document,
-          //              bracelessStart = "",
-          //              bracelessEnd = ""
-          //            )
+          case valDefn: Defn.Val =>
+            createCodeActionForAssignable(
+              valDefn,
+              path,
+              document,
+              valDefn.rhs
+            )
+          case varDefn: Defn.Var =>
+            varDefn.rhs.flatMap {
+              createCodeActionForAssignable(
+                varDefn,
+                path,
+                document,
+                _
+              )
+            }
+          case defDefn: Defn.Def =>
+            createCodeActionForAssignable(
+              defDefn,
+              path,
+              document,
+              defDefn.body
+            )
           //          case termTry: Term.Try =>
           //            createCodeActionForBraceableTree(
           //              hasBraces = hasBraces,
@@ -211,6 +201,50 @@ class BracelessBracefulSwitchCodeAction(
     result.flatten.toSeq
   }
 
+  def createCodeActionForAssignable(
+      assignee: Tree,
+      path: AbsolutePath,
+      document: String,
+      assignedTerm: Term
+  ): Option[l.CodeAction] = {
+    val indentation =
+      getIndentationForPositionInDocument(assignee.pos, document)
+
+    if (
+      util.Try(assignedTerm.tokens.maxBy(_.pos.end).text).getOrElse("") == "}"
+    ) {
+      for {
+        bracePose <- util
+          .Try(assignedTerm.tokens.minBy(_.pos.start))
+          .toOption
+          .map(_.pos.toLSP.getStart)
+        if assignedTerm.allowBracelessSyntax
+      } yield createCodeActionForGoingBraceless(
+        path,
+        expectedBraceStartPos = bracePose,
+        expectedBraceEndPose = assignedTerm.pos.toLSP.getEnd,
+        bracelessStart = "",
+        bracelessEnd = ""
+      )
+
+    } else { // does not have braces
+      for {
+        bracePose <- util
+          .Try(assignedTerm.tokens.minBy(_.pos.start))
+          .toOption
+          .map(_.pos.toLSP.getStart)
+      } yield createCodeActionForGoingBraceful(
+        path,
+        expectedBraceStartPos = bracePose,
+        expectedBraceEndPose = assignee.pos.toLSP.getEnd,
+        bracelessStart = "",
+        bracelessEnd = "",
+        indentation = indentation,
+        document = document
+      )
+    }
+  }
+
   def createCodeActionForTemplateHolder(
       templateHolder: Tree,
       path: AbsolutePath,
@@ -233,13 +267,13 @@ class BracelessBracefulSwitchCodeAction(
       //      templ.tokens
       //        .find(token => token.pos.start >= expectedBraceStartPos)
       //        .exists(token => token.text == "{")
-//      hasBraces(
-//        templ,
-//        maybeExpectedOpenBracePrecedingIndex,
-//        None,
-//        Some(templ.pos.start),
-//        document
-//      )
+      //      hasBraces(
+      //        templ,
+      //        maybeExpectedOpenBracePrecedingIndex,
+      //        None,
+      //        Some(templ.pos.start),
+      //        document
+      //      )
     ) {
 
       for {
