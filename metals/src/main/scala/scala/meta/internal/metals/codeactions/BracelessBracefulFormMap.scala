@@ -15,12 +15,12 @@ object BracelessBracefulFormMap {
 
 object BraceHolder extends Enumeration {
   type BraceHolder = Value
-  val ifToken = Value("if")
-  val elseToken = Value("else")
-  val method = Value("method")
-  val tryToken = Value("try")
-  val catchToken = Value("catch")
-  val finallyToken = Value("finally")
+  val ifToken: Value = Value("if")
+  val elseToken: Value = Value("else")
+  val method: Value = Value("method")
+  val tryToken: Value = Value("try")
+  val catchToken: Value = Value("catch")
+  val finallyToken: Value = Value("finally")
 }
 
 object BracelessOpening extends Enumeration {

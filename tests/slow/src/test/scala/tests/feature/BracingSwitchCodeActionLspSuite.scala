@@ -1,11 +1,9 @@
 package tests.feature
 
-import munit.{Location, TestOptions}
-import tests.codeactions.BaseCodeActionLspSuite
-
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions._
-import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
+
+import tests.codeactions.BaseCodeActionLspSuite
 
 class BracingSwitchCodeActionLspSuite
     extends BaseCodeActionLspSuite("cross-code-actions") {

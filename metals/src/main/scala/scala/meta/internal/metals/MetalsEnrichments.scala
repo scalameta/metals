@@ -1007,7 +1007,7 @@ object MetalsEnrichments
 
   implicit class XtensionTreeBraceHandler(stat: Tree) {
 
-    def allowBracelessSyntax = stat.origin match {
+    def allowBracelessSyntax: Boolean = stat.origin match {
       case p: Parsed => p.dialect.allowSignificantIndentation
       case _ => false
     }
