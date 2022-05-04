@@ -72,9 +72,6 @@ class Completions(
       //   def |
       case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty =>
-        val indexedContext = IndexedContext(
-          MetalsInteractive.contextOfPath(path)
-        )
         val filterName =
           if dd.name == StdNames.nme.ERROR then None
           else Some(dd.name.show)
@@ -90,9 +87,6 @@ class Completions(
       //   ov|
       case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty && ident.name.startsWith("o") =>
-        val indexedContext = IndexedContext(
-          MetalsInteractive.contextOfPath(path)
-        )
         OverrideCompletions.contribute(
           td,
           None,
@@ -103,9 +97,6 @@ class Completions(
 
       case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty =>
-        val indexedContext = IndexedContext(
-          MetalsInteractive.contextOfPath(path)
-        )
         OverrideCompletions.contribute(
           td,
           Some(sel.symbol),

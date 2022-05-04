@@ -554,11 +554,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: JBoolean = ${0:???}""".stripMargin,
-    compat = Map(
-      "3" -> // TODO: should JBoolean
-        """  def foo: Boolean = ${0:???}""".stripMargin
-    )
+    """  def foo: JBoolean = ${0:???}""".stripMargin
   )
 
   checkEditLine(
