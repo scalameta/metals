@@ -154,27 +154,28 @@ class BracelessBracefulSwitchCodeAction(
           //              bracelessStart = "then",
           //              bracelessEnd = ""
           //            )
-          //          case termFor: Term.For => // TODO
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = termFor,
-          //              braceableBranch = termFor.body,
-          //              document = document,
-          //              bracelessStart = "do",
-          //              bracelessEnd = ""
-          //            )
+          case termFor: Term.For =>
+            createCodeActionForAssignable(
+              termFor,
+              path,
+              document,
+              termFor.body
+            )
+          case termForYield: Term.ForYield =>
+            createCodeActionForAssignable(
+              termForYield,
+              path,
+              document,
+              termForYield.body
+            )
           case _: Term.Match => None
-          //          case termWhile: Term.While => // TODO
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = termWhile,
-          //              braceableBranch = termWhile.body,
-          //              document = document,
-          //              bracelessStart = "do",
-          //              bracelessEnd = ""
-          //            )
+          case termWhile: Term.While =>
+            createCodeActionForAssignable(
+              termWhile,
+              path,
+              document,
+              termWhile.body
+            )
           case _: Defn.GivenAlias => None
           //          case template: Template =>
           //            createCodeActionForBraceableTree(
