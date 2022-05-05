@@ -209,6 +209,27 @@ class BracelessBracefulSwitchCodeAction(
       .getOrElse("") == "}"
   }
 
+  private def hasBraces(termBlock: Term.Block): Boolean = {
+    util
+      .Try(termBlock.stats.maxBy(_.pos.end).pos.end)
+      .getOrElse(-1) != termBlock.pos.end && util
+      .Try(termBlock.tokens.maxBy(_.pos.end).text)
+      .getOrElse("") == "}"
+  }
+
+  /**
+   * @param term the `rhs` of [[Defn.Var]] or [[Defn.Val]];
+   *             or the `body` of [[Defn.Def]]
+   * @return whether the `rhs` or `body` passed as the
+   *         argument has braces
+   */
+  private def hasAssignedTermBraces(term: Term): Boolean = {
+    term match {
+      case termBlock: Term.Block => hasBraces(termBlock)
+      case _ => false
+    }
+  }
+
   def createCodeActionForAssignable(
       assignee: Tree,
       path: AbsolutePath,
@@ -219,7 +240,8 @@ class BracelessBracefulSwitchCodeAction(
       getIndentationForPositionInDocument(assignee.pos, document)
 
     if (
-      util.Try(assignedTerm.tokens.maxBy(_.pos.end).text).getOrElse("") == "}"
+      hasAssignedTermBraces(assignedTerm)
+      // util.Try(assignedTerm.tokens.maxBy(_.pos.end).text).getOrElse("") == "}"
     ) {
       for {
         bracePose <- util
