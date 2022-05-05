@@ -48,7 +48,7 @@ class BracelessBracefulSwitchCodeAction(
         document <- buffers.get(path)
       } yield {
         tree match {
-          case _: Pkg => None.toSeq
+          case pkg: Pkg => None.toSeq
           case classDefn: Defn.Class =>
             createCodeActionForTemplateHolder(
               classDefn,
@@ -107,39 +107,25 @@ class BracelessBracefulSwitchCodeAction(
               defDefn.body,
               "def definition"
             ).toSeq
-          //          case termTry: Term.Try =>
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = termTry,
-          //              braceableBranch = termTry.expr,
-          //              document = document,
-          //              bracelessStart = "",
-          //              bracelessEnd = ""
-          //            )
-          //            termTry.catchp.flatMap(catchp => // TODO
-          //              createCodeActionForBraceableTree(
-          //                hasBraces = hasBraces,
-          //                path = path,
-          //                braceableTree = termTry,
-          //                braceableBranch = catchp,
-          //                document = document,
-          //                bracelessStart = "",
-          //                bracelessEnd = ""
-          //              )
-          //            )
-
-          //            termTry.finallyp.flatMap(finallyP => // TODO
-          //              createCodeActionForBraceableTree(
-          //                hasBraces = hasBraces,
-          //                path = path,
-          //                braceableTree = termTry,
-          //                braceableBranch = finallyP,
-          //                document = document,
-          //                bracelessStart = "",
-          //                bracelessEnd = ""
-          //              )
-          //            )
+          case termTry: Term.Try =>
+            Seq(
+              createCodeActionForAssignable(
+                termTry.expr,
+                path,
+                document,
+                termTry.expr,
+                "then expression"
+              ),
+              termTry.finallyp.flatMap(finallyp =>
+                createCodeActionForAssignable(
+                  finallyp,
+                  path,
+                  document,
+                  finallyp,
+                  "then expression"
+                )
+              )
+            ).flatten
           case caseTree: Case =>
             createCodeActionForCasesListWrapper(caseTree, path).toSeq
           case termIf: Term.If =>
@@ -525,5 +511,6 @@ class BracelessBracefulSwitchCodeAction(
 
 object BracelessBracefulSwitchCodeAction {
   def goBraceFul(subject: String): String = s"Add braces to $subject"
+
   def goBraceless(subject: String): String = s"Remove braces from $subject"
 }
