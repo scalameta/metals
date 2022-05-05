@@ -86,7 +86,7 @@ object AutoImports:
     new AutoImportsGenerator(
       pos,
       importPos,
-      indexedContext.importContext,
+      indexedContext,
       renames
     )
   end generator

@@ -186,6 +186,9 @@ object IndexedContext:
       else if ctx.owner.isClass then
         val site = ctx.owner.thisType
         (accesibleMembers(site), Map.empty)
+      else if (ctx.outer ne NoContext) && ctx.outer.owner.isClass then
+        val site = ctx.outer.owner.thisType
+        (accesibleMembers(site), Map.empty)
       else if ctx.scope != null then (ctx.scope.toList, Map.empty)
       else (List.empty, Map.empty)
 

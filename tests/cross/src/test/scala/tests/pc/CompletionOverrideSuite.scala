@@ -694,7 +694,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "cake".tag(IgnoreScala3), // too many
+    "cake",
     """|package i
        |trait Trees { this: Global =>
        |  case class Tree()
@@ -705,11 +705,16 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
+    filter = (str) => str.contains("def"), // for Scala3
+    compat = Map(
+      "3" ->
+        """override def Apply(tree: Tree): Global#Tree = ${0:???}""".stripMargin
+    )
   )
 
   checkEditLine(
-    "cake2".tag(IgnoreScala3), // too many
+    "cake2",
     """|package i2
        |trait Trees { this: Global =>
        |  case class Tree()
@@ -722,11 +727,16 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
+    filter = (str) => str.contains("def"), // for Scala3
+    compat = Map(
+      "3" ->
+        """override def Apply(tree: Tree): MyGlobal#Tree = ${0:???}""".stripMargin
+    )
   )
 
   checkEditLine(
-    "cake-generic".tag(IgnoreScala3),
+    "cake-generic",
     """|package i
        |trait Trees[T] { this: Global =>
        |  case class Tree()
@@ -737,7 +747,12 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin
+    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin,
+    filter = (str) => str.contains("def"), // for Scala3
+    compat = Map(
+      "3" ->
+        """override def Apply(tree: T): Global#Tree = ${0:???}""".stripMargin
+    )
   )
 
   check(
