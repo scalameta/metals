@@ -7,7 +7,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
 
   checkEdit(
-    "basic".tag(IgnoreScala3), // empty output
+    "basic",
     """
       |object Main extends AutoCloseable {
       |  def close@@
@@ -17,7 +17,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |object Main extends AutoCloseable {
       |  def close(): Unit = ${0:???}
       |}
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """
+          |object Main extends AutoCloseable {
+          |  def close: Unit = ${0:???}
+          |}
+          |""".stripMargin
+    )
   )
 
   checkEdit(

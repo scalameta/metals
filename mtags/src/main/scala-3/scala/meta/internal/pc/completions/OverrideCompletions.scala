@@ -34,45 +34,45 @@ object OverrideCompletions:
       config: PresentationCompilerConfig
   ): List[CompletionValue] =
     import indexedContext.ctx
-    // Java-oriented symbols doesn't have `Deferred` flags in test environment only
-
     val clazz = td.symbol.asClass
-
     val syntheticCoreMethods: Set[Name] =
       indexedContext.ctx.definitions.syntheticCoreMethods.map(_.name).toSet
     val isDecl = td.typeOpt.decls.toList.toSet
+
+    /** Is the given symbol that we're trying to complete? */
     def isSelf(sym: Symbol) = completing.fold(false)(self => self == sym)
 
-    val interestingFlags = Flags.Method | Flags.Mutable
     val flags = completing.map(_.flags & interestingFlags).getOrElse(EmptyFlags)
-    def isOverrideable(sym: SymDenotation)(using Context): Boolean =
-      !sym.is(Synthetic) &&
-        !sym.is(Artifact) &&
-        (!isDecl(sym.symbol) || isSelf(sym.symbol)) &&
-        !(sym.is(Mutable) && !sym.is(Deferred)) && // concrete var
-        (!syntheticCoreMethods(sym.name) || allowedList(sym.name)) &&
-        !sym.is(Final) &&
-        !sym.isConstructor &&
-        !sym.isSetter &&
-        !sym.name.is(
-          DefaultGetterName
-        ) && // exclude symbols desugared by default args
-        !(sym.name == StdNames.nme.ERROR) &&
-        !sym.info.finalResultType.isNullType
 
-    val overridables = td.tpe
-      .membersBasedOnFlags(
-        flags,
-        Flags.Private
-      )
+    def isOverrideable(sym: Symbol)(using Context): Boolean =
+      val overridingSymbol = sym.overridingSymbol(clazz)
+      !sym.is(Synthetic) &&
+      !sym.is(Artifact) &&
+      // not overridden in in this class, except overridden by the symbol that we're completing
+      (!isDecl(overridingSymbol) || isSelf(overridingSymbol)) &&
+      !(sym.is(Mutable) && !sym.is(Deferred)) && // concrete var
+      (!syntheticCoreMethods(sym.name) || allowedList(sym.name)) &&
+      !sym.is(Final) &&
+      !sym.isConstructor &&
+      !sym.isSetter &&
+      // exclude symbols desugared by default args
+      !sym.name.is(DefaultGetterName)
+    end isOverrideable
+
+    val overridables = td.tpe.parents
+      .flatMap { parent =>
+        parent.membersBasedOnFlags(
+          flags,
+          Flags.Private
+        )
+      }
+      .distinct
       .collect {
         case denot
             if completing
               .fold(true)(sym => denot.name.startsWith(sym.name.show)) &&
               !denot.symbol.isType =>
-          val sym = denot.symbol
-          val overridden = sym.overriddenSymbol(clazz)
-          if overridden != NoSymbol then overridden else sym
+          denot.symbol
       }
       .filter(isOverrideable)
 
@@ -107,10 +107,8 @@ object OverrideCompletions:
       shouldAddOverrideKwd: Boolean
   )(using Context): CompletionValue.Override =
     val printer = MetalsPrinter.standard(indexedContext)
-    val isOverridden =
-      sym.overridingSymbol(td.tpe.classSymbol.asClass) != NoSymbol
     val overrideKeyword: String =
-      if (!sym.isOneOf(Deferred) && !isOverridden) || shouldAddOverrideKwd
+      if !sym.isOneOf(Deferred) || shouldAddOverrideKwd
       then "override "
       // Don't insert `override` keyword if the supermethod is abstract and the
       // user did not explicitly type starting with o . See:
@@ -154,5 +152,7 @@ object OverrideCompletions:
       start
     )
   end toCompletionValue
+
+  private val interestingFlags = Flags.Method | Flags.Mutable
 
 end OverrideCompletions
