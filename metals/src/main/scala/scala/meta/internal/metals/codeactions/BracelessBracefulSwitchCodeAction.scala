@@ -201,6 +201,14 @@ class BracelessBracefulSwitchCodeAction(
     result.flatten.toSeq
   }
 
+  private def hasBraces(template: Template): Boolean = {
+    util
+      .Try(template.stats.maxBy(_.pos.end).pos.end)
+      .getOrElse(-1) != template.pos.end && util
+      .Try(template.tokens.maxBy(_.pos.end).text)
+      .getOrElse("") == "}"
+  }
+
   def createCodeActionForAssignable(
       assignee: Tree,
       path: AbsolutePath,
@@ -263,7 +271,8 @@ class BracelessBracefulSwitchCodeAction(
       .getOrElse(templ.pos.start)
     pprint.log("templ.inits: \n" + templ.inits)
     if (
-      templ.tokens.maxBy(_.pos.end).text == "}"
+      hasBraces(templ)
+      // templ.tokens.maxBy(_.pos.end).text == "}"
       //      templ.tokens
       //        .find(token => token.pos.start >= expectedBraceStartPos)
       //        .exists(token => token.text == "{")
