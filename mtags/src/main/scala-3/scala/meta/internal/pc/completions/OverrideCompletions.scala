@@ -57,6 +57,7 @@ object OverrideCompletions:
         !sym.name.is(
           DefaultGetterName
         ) && // exclude symbols desugared by default args
+        !(sym.name == StdNames.nme.ERROR) &&
         !sym.info.finalResultType.isNullType
 
     val overridables = td.tpe
@@ -67,7 +68,8 @@ object OverrideCompletions:
       .collect {
         case denot
             if completing
-              .fold(true)(sym => denot.name.startsWith(sym.name.show)) =>
+              .fold(true)(sym => denot.name.startsWith(sym.name.show)) &&
+              !denot.symbol.isType =>
           val sym = denot.symbol
           val overridden = sym.overriddenSymbol(clazz)
           if overridden != NoSymbol then overridden else sym

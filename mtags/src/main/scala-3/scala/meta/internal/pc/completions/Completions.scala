@@ -72,12 +72,11 @@ class Completions(
       //   def |
       case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty =>
-        val filterName =
-          if dd.name == StdNames.nme.ERROR then None
-          else Some(dd.name.show)
+        val completing =
+          if dd.symbol.name == StdNames.nme.ERROR then None else Some(dd.symbol)
         OverrideCompletions.contribute(
           td,
-          Some(dd.symbol),
+          completing,
           dd.sourcePos.start,
           indexedContext,
           config
@@ -94,6 +93,16 @@ class Completions(
           indexedContext,
           config
         )
+
+      case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
+        val values = OverrideCompletions.contribute(
+          td,
+          None,
+          t.sourcePos.start,
+          indexedContext,
+          config
+        )
+        values
 
       case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty =>
@@ -390,50 +399,60 @@ class Completions(
         priority(o1) - priority(o2)
       end compareInApplyParams
 
+      def compareByPriority(o1: CompletionValue, o2: CompletionValue): Int =
+        -java.lang.Boolean.compare(
+          o1.isPrioritized,
+          o2.isPrioritized
+        )
+
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
-        (o1, o2) match
-          case (
-                sym1: CompletionValue.Symbolic,
-                sym2: CompletionValue.Symbolic
-              ) =>
-            val s1 = sym1.symbol
-            val s2 = sym2.symbol
-            val byLocalSymbol = compareLocalSymbols(s1, s2)
-            if byLocalSymbol != 0 then byLocalSymbol
-            else
-              val byRelevance = compareByRelevance(o1, o2)
-              if byRelevance != 0 then byRelevance
+        val byPriority = compareByPriority(o1, o2)
+        if byPriority != 0 then byPriority
+        else
+          (o1, o2) match
+            case (
+                  sym1: CompletionValue.Symbolic,
+                  sym2: CompletionValue.Symbolic
+                ) =>
+              val s1 = sym1.symbol
+              val s2 = sym2.symbol
+              val byLocalSymbol = compareLocalSymbols(s1, s2)
+              if byLocalSymbol != 0 then byLocalSymbol
               else
-                val byFuzzy = Integer.compare(
-                  fuzzyScore(s1),
-                  fuzzyScore(s2)
-                )
-                if byFuzzy != 0 then byFuzzy
+                val byRelevance = compareByRelevance(o1, o2)
+                if byRelevance != 0 then byRelevance
                 else
-                  val byIdentifier = IdentifierComparator.compare(
-                    s1.name.show,
-                    s2.name.show
+                  val byFuzzy = Integer.compare(
+                    fuzzyScore(s1),
+                    fuzzyScore(s2)
                   )
-                  if byIdentifier != 0 then byIdentifier
+                  if byFuzzy != 0 then byFuzzy
                   else
-                    val byOwner =
-                      s1.owner.fullName.toString
-                        .compareTo(s2.owner.fullName.toString)
-                    if byOwner != 0 then byOwner
+                    val byIdentifier = IdentifierComparator.compare(
+                      s1.name.show,
+                      s2.name.show
+                    )
+                    if byIdentifier != 0 then byIdentifier
                     else
-                      val byParamCount = Integer.compare(
-                        s1.paramSymss.flatten.size,
-                        s2.paramSymss.flatten.size
-                      )
-                      if byParamCount != 0 then byParamCount
-                      else s1.detailString.compareTo(s2.detailString)
+                      val byOwner =
+                        s1.owner.fullName.toString
+                          .compareTo(s2.owner.fullName.toString)
+                      if byOwner != 0 then byOwner
+                      else
+                        val byParamCount = Integer.compare(
+                          s1.paramSymss.flatten.size,
+                          s2.paramSymss.flatten.size
+                        )
+                        if byParamCount != 0 then byParamCount
+                        else s1.detailString.compareTo(s2.detailString)
+                  end if
                 end if
               end if
-            end if
-          case _ =>
-            val byApplyParams = compareInApplyParams(o1, o2)
-            if byApplyParams != 0 then byApplyParams
-            else compareByRelevance(o1, o2)
+            case _ =>
+              val byApplyParams = compareInApplyParams(o1, o2)
+              if byApplyParams != 0 then byApplyParams
+              else compareByRelevance(o1, o2)
+        end if
 
       end compare
 

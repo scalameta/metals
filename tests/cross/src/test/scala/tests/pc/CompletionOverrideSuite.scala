@@ -161,7 +161,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   check(
-    "empty".tag(IgnoreScala3), // too much obtained
+    "empty",
     """
       |trait SuperAbstract {
       |  def aaa: Int = 2
@@ -185,7 +185,17 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def clone(): Object
        |override def finalize(): Unit
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    topLines = if (scalaVersion.startsWith("3")) Some(5) else None,
+    compat = Map(
+      "3" ->
+        """|override def aaa: Int
+           |override def bbb: Int
+           |override def equals(x$0: Any): Boolean
+           |override def hashCode: Int
+           |override def toString: String
+           |""".stripMargin
+    )
   )
 
   def implement(completion: String): String =
@@ -244,8 +254,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     )
   )
 
-  check( // <error>: Null, Main: sort
-    "sort".tag(IgnoreScala3),
+  check(
+    "sort",
     """
       |trait Super {
       |  def a: Int = 2
@@ -258,8 +268,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     // assert that `isInstanceOf` and friends are not included
-    """|def b: Int
-       |override def a: Int
+    """|override def a: Int
+       |def b: Int
        |""".stripMargin,
     topLines = Some(2),
     includeDetail = false
@@ -558,7 +568,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "path".tag(IgnoreScala3), // get `Main#Out`
+    "path",
     s"""|package path
         |abstract class Path {
         |  type Out
@@ -570,11 +580,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: Out = ${0:???}""".stripMargin
+    """  def foo: Out = ${0:???}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """  def foo: Main#Out = ${0:???}""".stripMargin
+    )
   )
 
   checkEditLine(
-    "path-alias".tag(IgnoreScala3),
+    "path-alias",
     s"""|package paththis
         |abstract class Path {
         |  type Out
@@ -587,11 +601,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: String = ${0:???}""".stripMargin
+    """  def foo: String = ${0:???}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """  def foo: Main#Out = ${0:???}""".stripMargin
+    )
   )
 
   checkEditLine(
-    "path-this".tag(IgnoreScala3),
+    "path-this",
     """|package paththis
        |abstract class Path {
        |  type Out
@@ -657,7 +675,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "existential".tag(IgnoreScala3), // existential
+    "existential",
     """|package i
        |abstract class Exist {
        |  def exist: Set[_]
@@ -667,7 +685,12 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def exist@@",
-    """def exist: Set[_] = ${0:???}""".stripMargin
+    """def exist: Set[_] = ${0:???}""".stripMargin,
+    filter = (str) => str.contains("def"), // for Scala3
+    compat = Map(
+      "3" ->
+        """def exist: Set[?] = ${0:???}""".stripMargin
+    )
   )
 
   checkEditLine(
@@ -950,7 +973,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """|hello: Int
        |override def hello: Int
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" ->
+        """|override def hello: Int
+           |hello: Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -975,8 +1004,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     topLines = Some(2),
     compat = Map(
       "3" ->
-        """|overTop: Int
-           |override def overTop: Int
+        """|override def overTop: Int
+           |override def equals(x$0: Any): Boolean
            |""".stripMargin
     )
   )
@@ -995,7 +1024,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|override def overTop: Int
+           |override def equals(x$0: Any): Boolean
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -1043,7 +1078,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   check(
-    "def-word".tag(IgnoreScala3), // exclude defnModule
+    "def-word",
     """|package z
        |abstract class Val {
        |  def hello1: Int
@@ -1058,7 +1093,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def equals(obj: Any): Boolean
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "3" ->
+        """|override val hello2: Int
+           |def hello1: Int
+           |override def equals(x$0: Any): Boolean
+           |""".stripMargin
+    )
   )
 
   checkEdit(

@@ -19,6 +19,9 @@ import org.eclipse.lsp4j.Range
 sealed trait CompletionValue:
   def label: String
 
+  /** Should this completion item is suggested on top? */
+  val isPrioritized: Boolean = false
+
   final def completionItemKind(using Context): CompletionItemKind =
     this match
       case _: CompletionValue.Keyword => CompletionItemKind.Keyword
@@ -76,9 +79,11 @@ object CompletionValue:
       symbol: Symbol,
       shortendNames: List[ShortName],
       start: Int
-  ) extends Symbolic
+  ) extends Symbolic:
+    override val isPrioritized = true
 
-  case class NamedArg(label: String, tpe: Type) extends CompletionValue
+  case class NamedArg(label: String, tpe: Type) extends CompletionValue:
+    override val isPrioritized = true
   case class Keyword(label: String, insertText: String) extends CompletionValue
 
   def fromCompiler(completion: Completion): List[CompletionValue] =
