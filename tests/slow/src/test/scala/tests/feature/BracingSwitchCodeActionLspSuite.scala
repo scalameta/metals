@@ -19,7 +19,7 @@ class BracingSwitchCodeActionLspSuite
        |class A
        |""".stripMargin,
     s"""|${ExtractRenameMember.title("object", "Main")}
-        |${BracelessBracefulSwitchCodeAction.goBraceless}""".stripMargin,
+        |${BracelessBracefulSwitchCodeAction.goBraceless("object definition")}""".stripMargin,
     """|object Main :
        |  def method2(i: Int) = ???
        |
@@ -38,7 +38,7 @@ class BracingSwitchCodeActionLspSuite
        |class A
        |""".stripMargin,
     s"""|${ExtractRenameMember.title("object", "Main")}
-        |${BracelessBracefulSwitchCodeAction.goBraceFul}""".stripMargin,
+        |${BracelessBracefulSwitchCodeAction.goBraceFul("object definition")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  def main =
@@ -61,8 +61,7 @@ class BracingSwitchCodeActionLspSuite
        |
        |class A
        |""".stripMargin,
-    s"""|${ExtractRenameMember.title("object", "Main")}
-        |${BracelessBracefulSwitchCodeAction.goBraceFul}""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBraceFul("def definition")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  
@@ -89,8 +88,7 @@ class BracingSwitchCodeActionLspSuite
        |
        |class A
        |""".stripMargin,
-    s"""|${ExtractRenameMember.title("object", "Main")}
-        |${BracelessBracefulSwitchCodeAction.goBraceless}""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBraceless("def definition")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |
