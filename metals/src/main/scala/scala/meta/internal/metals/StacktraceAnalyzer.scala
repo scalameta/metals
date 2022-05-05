@@ -202,7 +202,11 @@ class StacktraceAnalyzer(
 object StacktraceAnalyzer {
 
   def toToplevelSymbol(symbolIn: String): List[String] = {
-    val symbol = symbolIn.split('.').init.mkString("/")
+    // remove module name. Module symbols are formatted as `moduleName/symbol`
+    val modulePos = symbolIn.indexOf("/")
+    val symbolPart =
+      if (modulePos > -1) symbolIn.substring(modulePos + 1) else symbolIn
+    val symbol = symbolPart.split('.').init.mkString("/")
     /* Symbol containing `$package$` is a toplevel method and we only need to
      * find any method contained in the same file even if overloaded
      */
