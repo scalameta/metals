@@ -241,6 +241,27 @@ final class BloopServers(
     }.toOption
   }
 
+  private def maybeLoadBloopGlobalJsonFile(
+      bloopGlobalJsonFilePath: AbsolutePath
+  ): (Option[String], Option[List[String]]) = {
+    val maybeData = util.Try {
+      val source = scala.io.Source.fromFile(bloopGlobalJsonFilePath.toURI)
+      val jsonString =
+        try source.mkString
+        finally source.close()
+      ujson.read(jsonString)
+    }
+    val javaHome = maybeData.flatMap { data =>
+      util.Try(data("javaHome").str)
+    }.toOption
+    val javaOptions = maybeData.flatMap { data =>
+      util.Try {
+        data("javaOptions").arr.toList.map(_.str)
+      }
+    }
+    (javaHome, javaOptions.toOption)
+  }
+
   private def getBloopGlobalJsonLastModifiedTime(
       bloopGlobalJsonFilePath: AbsolutePath
   ): Long =
@@ -277,17 +298,21 @@ final class BloopServers(
       maybeRunningMetalsJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
+
     val result =
       for { // if  bloopGlobalJsonFilePath is defined
         bloopGlobalJsonFilePath <- getBloopFilePath(fileName = "bloop.json")
         bloopCreatedByMetalsFilePath <- getBloopFilePath(fileName =
           "created_by_metals.lock"
         )
-
+        (maybeBloopGlobalJsonJavaHome, maybeBloopGlobalJsonJvmProperties) =
+          maybeLoadBloopGlobalJsonFile(bloopGlobalJsonFilePath)
         requestedBloopJvmProperties = maybeRequestedBloopJvmProperties
           .getOrElse(List.empty)
-        if maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties ||
-          (maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome)
+        if (maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties
+          && maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties) ||
+          (maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome
+            && maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome)
       } yield updateBloopJvmProperties(
         requestedBloopJvmProperties,
         bloopGlobalJsonFilePath,
@@ -295,7 +320,9 @@ final class BloopServers(
         maybeRequestedMetalsJavaHome,
         reconnect
       )
-    result.getOrElse { Future.successful() }
+    result.getOrElse {
+      Future.successful()
+    }
   }
 
   private def updateBloopJvmProperties(
