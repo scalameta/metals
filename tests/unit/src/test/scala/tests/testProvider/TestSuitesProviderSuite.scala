@@ -440,19 +440,26 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |  }
         |}
         |
-        |/app/src/main/scala/MunitTestSuite.scala
-        |package a {
-        |  trait FirstBaseMunitSuite extends munit.FunSuite {
-        |    def firstParentCheck(name: String) = test(name) {}
-        |  }
+        |/app/src/main/scala/a/BaseMunitSuite.scala
+        |package a
+        |trait BaseMunitSuite extends munit.FunSuite {
+        |  def baseParentCheck(name: String) = test(name) {}
         |}
         |
+        |/app/src/main/scala/a/b/FirstBaseMunitSuite.scala
+        |package a.b
+        |trait FirstBaseMunitSuite extends a.BaseMunitSuite {
+        |  def firstParentCheck(name: String) = test(name) {}
+        |}
+        |
+        |/app/src/main/scala/MunitTestSuite.scala
         |trait SecondBaseMunitSuite extends munit.FunSuite {
         |  def secondParentCheck(name: String) = test(name) {}
         |}
         |
-        |class MunitTestSuite extends a.FirstBaseMunitSuite with SecondBaseMunitSuite {
+        |class MunitTestSuite extends a.b.FirstBaseMunitSuite with SecondBaseMunitSuite {
         |  test("test-1") {}
+        |  baseParentCheck("test-base")
         |  firstParentCheck("test-parent-1")
         |  secondParentCheck("test-parent-2")
         |}
@@ -474,7 +481,16 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (11, 2, 11, 6)
+                    (5, 2, 5, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test-base",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/MunitTestSuite.scala"
+                    ),
+                    (6, 2, 6, 17)
                   ).toLsp
                 ),
                 TestCaseEntry(
@@ -483,7 +499,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (12, 2, 12, 18)
+                    (7, 2, 7, 18)
                   ).toLsp
                 ),
                 TestCaseEntry(
@@ -492,7 +508,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
                     classUriFor(
                       "app/src/main/scala/MunitTestSuite.scala"
                     ),
-                    (13, 2, 13, 19)
+                    (8, 2, 8, 19)
                   ).toLsp
                 )
               ).asJava

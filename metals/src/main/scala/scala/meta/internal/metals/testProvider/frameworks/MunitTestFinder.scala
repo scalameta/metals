@@ -49,37 +49,9 @@ class MunitTestFinder(
       symbol: mtags.Symbol
   ): Vector[TestCaseEntry] = {
     val uri = path.toURI
-    // depending on the munit version test method is defined in different classes
+    val parentMethods = extractTestMethodsFromParents(doc, symbol.value)
+    // direct 'test()' occurences
     val occurences = filterOccurences(doc)
-
-    // format: off
-    // semanticDB contains information about parent classes of suite
-    val parents = doc.symbols
-      .collectFirst {
-        case SymbolInformation(symbolValue, _, _, _, _, sig: ClassSignature, _, _, _, _) if symbolValue == symbol.value =>
-          sig.parents.collect { 
-            case TypeRef(_, parentSymbol, _) if !baseParentClasses.contains(parentSymbol) => parentSymbol
-          }.toVector
-      }
-      .getOrElse(Vector.empty)
-    // format: on
-
-    // extract helper methods from parents. In order to do that we need
-    // to get both Tree and semanticDB of parent class
-    val parentMethods = (for {
-      parent <- parents
-      definition <- symbolIndex.definition(mtags.Symbol(parent))
-      tree <- trees.get(definition.path)
-      doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
-      parentClassName = parent
-        .stripPrefix("_empty_/")
-        .stripSuffix("#")
-        .replace("/", ".")
-      template <- extractTemplateFrom(tree, parentClassName)
-    } yield {
-      val occurences = filterOccurences(doc)
-      extractPotentialTestMethods(template, occurences)
-    }).flatten.toSet
 
     trees
       .get(path)
@@ -129,7 +101,56 @@ class MunitTestFinder(
   }
 
   /**
-   * Leave only occurences which are connected to the munit test method
+   * Extract helper methods from ALL class parents. In order to do that we need
+   * to get both Tree and semanticDB of parent class.
+   * It works recursively, for A where (-> means inherits from) A -> B -> C,
+   * both B and C (recursively called when computing B) will be examined.
+   * @param doc semanticDB of class represented by classSymbol
+   * @param classSymbol symbol of the given class
+   * @return all potential helper methods from all class parents
+   */
+  private def extractTestMethodsFromParents(
+      doc: TextDocument,
+      classSymbol: String
+  ): Set[String] = {
+    // format: off
+    // semanticDB contains information about DIRECT parent classes of suite
+    val parents = doc.symbols
+      .collectFirst {
+        case SymbolInformation(symbolValue, _, _, _, _, sig: ClassSignature, _, _, _, _) if symbolValue == classSymbol =>
+          sig.parents.collect { 
+            case TypeRef(_, parentSymbol, _) if !baseParentClasses.contains(parentSymbol) => parentSymbol
+          }.toVector
+      }
+      .getOrElse(Vector.empty)
+    // format: on
+
+    // call recursively extractTestMethodsFromParents
+    def fromSingleParent(parentSymbol: String) = {
+      val methods = for {
+        definition <- symbolIndex.definition(mtags.Symbol(parentSymbol))
+        tree <- trees.get(definition.path)
+        doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
+        parentClassName = parentSymbol
+          .stripPrefix("_empty_/")
+          .stripSuffix("#")
+          .replace("/", ".")
+        template <- extractTemplateFrom(tree, parentClassName)
+      } yield {
+        val occurences = filterOccurences(doc)
+        val current = extractPotentialTestMethods(template, occurences)
+        val fromParents = extractTestMethodsFromParents(doc, parentSymbol)
+        current ++ fromParents
+      }
+      methods.getOrElse(Set.empty)
+    }
+
+    parents.flatMap(fromSingleParent).toSet
+  }
+
+  /**
+   * Leave only occurences which are connected to the munit test method.
+   * Depending on the munit version, test method is defined in different classes.
    */
   private def filterOccurences(doc: TextDocument): Vector[SymbolOccurrence] =
     doc.occurrences
