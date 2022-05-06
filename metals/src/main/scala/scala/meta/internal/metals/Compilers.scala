@@ -176,6 +176,7 @@ class Compilers(
     else {
       Future {
         val targets = paths
+          .filter(_.isScalaFilename)
           .flatMap(path => buildTargets.inverseSources(path).toList)
           .distinct
         targets.foreach { target =>
@@ -193,39 +194,44 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    val pc = loadCompiler(path).getOrElse(fallbackCompiler(path))
-    pc.didClose(path.toNIO.toUri())
+    loadCompiler(path).foreach { pc =>
+      pc.didClose(path.toNIO.toUri())
+    }
   }
 
   def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
-
     def originInput =
       path
         .toInputFromBuffers(buffers)
 
-    val pc = loadCompiler(path).getOrElse(fallbackCompiler(path))
-    val inputAndAdjust =
-      if (
-        path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
-      ) {
-        WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
-      } else {
-        None
+    loadCompiler(path)
+      .map { pc =>
+        val inputAndAdjust =
+          if (
+            path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
+          ) {
+            WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
+          } else {
+            None
+          }
+
+        val (input, adjust) = inputAndAdjust.getOrElse(
+          originInput,
+          AdjustedLspData.default
+        )
+
+        for {
+          ds <-
+            pc
+              .didChange(
+                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+              )
+              .asScala
+        } yield {
+          ds.asScala.map(adjust.adjustDiagnostic).toList
+        }
       }
-
-    val (input, adjust) = inputAndAdjust.getOrElse(
-      originInput,
-      AdjustedLspData.default
-    )
-
-    for {
-      ds <-
-        pc
-          .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
-          .asScala
-    } yield {
-      ds.asScala.map(adjust.adjustDiagnostic).toList
-    }
+      .getOrElse(Future.successful(Nil))
   }
 
   def didCompile(report: CompileReport): Unit = {
@@ -271,40 +277,42 @@ class Compilers(
       expression: d.CompletionsArguments
   ): Future[Seq[d.CompletionItem]] = {
 
-    val compiler = loadCompiler(path).getOrElse(fallbackCompiler(path))
+    loadCompiler(path)
+      .map { compiler =>
+        val input = path.toInputFromBuffers(buffers)
+        val metaPos = breakpointPosition.toMeta(input)
+        val oldText = metaPos.input.text
+        val lineStart = oldText.indexWhere(
+          c => c != ' ' && c != '\t',
+          metaPos.start + 1
+        )
 
-    val input = path.toInputFromBuffers(buffers)
-    val metaPos = breakpointPosition.toMeta(input)
-    val oldText = metaPos.input.text
-    val lineStart = oldText.indexWhere(
-      c => c != ' ' && c != '\t',
-      metaPos.start + 1
-    )
+        val indentation = lineStart - metaPos.start
+        // insert expression at the start of breakpoint's line and move the lines one down
+        val modified =
+          s"${oldText.substring(0, lineStart)};${expression
+              .getText()}\n${" " * indentation}${oldText.substring(lineStart)}"
 
-    val indentation = lineStart - metaPos.start
-    // insert expression at the start of breakpoint's line and move the lines one down
-    val modified =
-      s"${oldText.substring(0, lineStart)};${expression
-          .getText()}\n${" " * indentation}${oldText.substring(lineStart)}"
-
-    val offsetParams = CompilerOffsetParams(
-      path.toURI,
-      modified,
-      lineStart + expression.getColumn(),
-      token
-    )
-    compiler
-      .complete(offsetParams)
-      .asScala
-      .map(list =>
-        list.getItems.asScala.toSeq
-          .map(
-            toDebugCompletionItem(
-              _,
-              indentation + 1
-            )
+        val offsetParams = CompilerOffsetParams(
+          path.toURI,
+          modified,
+          lineStart + expression.getColumn(),
+          token
+        )
+        compiler
+          .complete(offsetParams)
+          .asScala
+          .map(list =>
+            list.getItems.asScala.toSeq
+              .map(
+                toDebugCompletionItem(
+                  _,
+                  indentation + 1
+                )
+              )
           )
-      )
+      }
+      .getOrElse(Future.successful(Nil))
   }
 
   def completions(
@@ -320,7 +328,7 @@ class Compilers(
           adjust.adjustCompletionListInPlace(list)
           list
         }
-    }
+    }.getOrElse(Future.successful(new CompletionList(Nil.asJava)))
 
   def autoImports(
       params: TextDocumentPositionParams,
@@ -335,7 +343,7 @@ class Compilers(
           list
         }
     }
-  }
+  }.getOrElse(Future.successful(Nil.asJava))
 
   def insertInferredType(
       params: TextDocumentPositionParams,
@@ -348,7 +356,7 @@ class Compilers(
           adjust.adjustTextEdits(edits)
         }
     }
-  }
+  }.getOrElse(Future.successful(Nil.asJava))
 
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
@@ -361,7 +369,7 @@ class Compilers(
           adjust.adjustTextEdits(edits)
         }
     }
-  }
+  }.getOrElse(Future.successful(Nil.asJava))
 
   def hover(
       params: HoverExtParams,
@@ -372,7 +380,7 @@ class Compilers(
         .asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
-  }
+  }.getOrElse(Future.successful(None))
 
   def definition(
       params: TextDocumentPositionParams,
@@ -403,7 +411,7 @@ class Compilers(
             None
           )
         }
-    }
+    }.getOrElse(Future.successful(DefinitionResult.empty))
 
   def signatureHelp(
       params: TextDocumentPositionParams,
@@ -411,7 +419,7 @@ class Compilers(
   ): Future[SignatureHelp] =
     withPCAndAdjustLsp(params) { (pc, pos, _) =>
       pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
-    }
+    }.getOrElse(Future.successful(new SignatureHelp()))
 
   def selectionRange(
       params: SelectionRangeParams,
@@ -421,7 +429,7 @@ class Compilers(
       val offsetPositions: ju.List[OffsetParams] =
         positions.map(CompilerOffsetParams.fromPos(_, token))
       pc.selectionRange(offsetPositions).asScala
-    }
+    }.getOrElse(Future.successful(Nil.asJava))
   }
 
   def loadCompiler(
@@ -432,14 +440,14 @@ class Compilers(
       val target = buildTargets
         .inverseSources(path)
       target match {
-        case None =>
-          if (path.isScalaFilename) Some(fallbackCompiler(path))
-          else None
+        case None => Some(fallbackCompiler(path))
         case Some(value) => loadCompiler(value)
       }
     }
 
-    if (path.isWorksheet) loadWorksheetCompiler(path).orElse(fromBuildTarget)
+    if (!path.isScalaFilename) None
+    else if (path.isWorksheet)
+      loadWorksheetCompiler(path).orElse(fromBuildTarget)
     else fromBuildTarget
   }
 
@@ -552,57 +560,59 @@ class Compilers(
 
   private def withPCAndAdjustLsp[T](
       params: SelectionRangeParams
-  )(fn: (PresentationCompiler, ju.List[Position]) => T): T = {
+  )(fn: (PresentationCompiler, ju.List[Position]) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val compiler =
-      loadCompiler(path).getOrElse(fallbackCompiler(path))
+    loadCompiler(path).map { compiler =>
+      val input = path
+        .toInputFromBuffers(buffers)
+        .copy(path = params.getTextDocument.getUri)
 
-    val input = path
-      .toInputFromBuffers(buffers)
-      .copy(path = params.getTextDocument.getUri)
+      val positions = params.getPositions().map(_.toMeta(input))
 
-    val positions = params.getPositions().map(_.toMeta(input))
-
-    fn(compiler, positions)
+      fn(compiler, positions)
+    }
   }
 
   private def withPCAndAdjustLsp[T](
       params: TextDocumentPositionParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val compiler = loadCompiler(path).getOrElse(fallbackCompiler(path))
-
-    val (input, pos, adjust) =
-      sourceAdjustments(
-        params,
-        compiler.scalaVersion()
-      )
-    val metaPos = pos.toMeta(input)
-    fn(compiler, metaPos, adjust)
+    loadCompiler(path).map { compiler =>
+      val (input, pos, adjust) =
+        sourceAdjustments(
+          params,
+          compiler.scalaVersion()
+        )
+      val metaPos = pos.toMeta(input)
+      fn(compiler, metaPos, adjust)
+    }
   }
 
   private def withPCAndAdjustLsp[T](
       params: HoverExtParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): T = {
+  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
 
     val path = params.textDocument.getUri.toAbsolutePath
-    val compiler = loadCompiler(path).getOrElse(fallbackCompiler(path))
+    loadCompiler(path).map { compiler =>
+      if (params.range != null) {
+        val (input, range, adjust) = sourceAdjustments(
+          params,
+          compiler.scalaVersion()
+        )
+        fn(compiler, range.toMeta(input), adjust)
 
-    if (params.range != null) {
-      val (input, range, adjust) = sourceAdjustments(
-        params,
-        compiler.scalaVersion()
-      )
-      fn(compiler, range.toMeta(input), adjust)
-
-    } else {
-      val positionParams =
-        new TextDocumentPositionParams(params.textDocument, params.getPosition)
-      val (input, pos, adjust) = sourceAdjustments(
-        positionParams,
-        compiler.scalaVersion()
-      )
-      fn(compiler, pos.toMeta(input), adjust)
+      } else {
+        val positionParams =
+          new TextDocumentPositionParams(
+            params.textDocument,
+            params.getPosition
+          )
+        val (input, pos, adjust) = sourceAdjustments(
+          positionParams,
+          compiler.scalaVersion()
+        )
+        fn(compiler, pos.toMeta(input), adjust)
+      }
     }
   }
 
