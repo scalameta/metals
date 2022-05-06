@@ -48,7 +48,7 @@ class BracelessBracefulSwitchCodeAction(
         document <- buffers.get(path)
       } yield {
         tree match {
-          case pkg: Pkg => None.toSeq
+          case _: Pkg => None.toSeq
           case classDefn: Defn.Class =>
             createCodeActionForTemplateHolder(
               classDefn,
@@ -82,7 +82,7 @@ class BracelessBracefulSwitchCodeAction(
               "enum definition"
             ).toSeq
           case valDefn: Defn.Val =>
-            createCodeActionForAssignable(
+            createCodeActionForPotentialBlockHolder(
               valDefn,
               path,
               document,
@@ -91,7 +91,7 @@ class BracelessBracefulSwitchCodeAction(
             ).toSeq
           case varDefn: Defn.Var =>
             varDefn.rhs.flatMap {
-              createCodeActionForAssignable(
+              createCodeActionForPotentialBlockHolder(
                 varDefn,
                 path,
                 document,
@@ -100,7 +100,7 @@ class BracelessBracefulSwitchCodeAction(
               )
             }.toSeq
           case defDefn: Defn.Def =>
-            createCodeActionForAssignable(
+            createCodeActionForPotentialBlockHolder(
               defDefn,
               path,
               document,
@@ -109,20 +109,26 @@ class BracelessBracefulSwitchCodeAction(
             ).toSeq
           case termTry: Term.Try =>
             Seq(
-              createCodeActionForAssignable(
+              createCodeActionForPotentialBlockHolder(
                 termTry.expr,
                 path,
                 document,
                 termTry.expr,
-                "then expression"
+                "try expression"
+              ),
+              createCodeActionForCatchP(
+                termTry,
+                path,
+                document,
+                "catch expression"
               ),
               termTry.finallyp.flatMap(finallyp =>
-                createCodeActionForAssignable(
+                createCodeActionForPotentialBlockHolder(
                   finallyp,
                   path,
                   document,
                   finallyp,
-                  "then expression"
+                  "finally expression"
                 )
               )
             ).flatten
@@ -130,14 +136,14 @@ class BracelessBracefulSwitchCodeAction(
             createCodeActionForCasesListWrapper(caseTree, path).toSeq
           case termIf: Term.If =>
             Seq(
-              createCodeActionForAssignable(
+              createCodeActionForPotentialBlockHolder(
                 termIf.thenp,
                 path,
                 document,
                 termIf.thenp,
                 "then expression"
               ),
-              createCodeActionForAssignable(
+              createCodeActionForPotentialBlockHolder(
                 termIf.elsep,
                 path,
                 document,
@@ -146,7 +152,7 @@ class BracelessBracefulSwitchCodeAction(
               )
             ).flatten
           case termFor: Term.For =>
-            createCodeActionForAssignable(
+            createCodeActionForPotentialBlockHolder(
               termFor,
               path,
               document,
@@ -154,7 +160,7 @@ class BracelessBracefulSwitchCodeAction(
               "for expression"
             ).toSeq
           case termForYield: Term.ForYield =>
-            createCodeActionForAssignable(
+            createCodeActionForPotentialBlockHolder(
               termForYield,
               path,
               document,
@@ -163,7 +169,7 @@ class BracelessBracefulSwitchCodeAction(
             ).toSeq
           case _: Term.Match => None.toSeq
           case termWhile: Term.While =>
-            createCodeActionForAssignable(
+            createCodeActionForPotentialBlockHolder(
               termWhile,
               path,
               document,
@@ -172,25 +178,21 @@ class BracelessBracefulSwitchCodeAction(
             ).toSeq
           case _: Defn.GivenAlias => None.toSeq
           //          case template: Template =>
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = template,
-          //              braceableBranch = template,
-          //              document = document,
-          //              bracelessStart = ":",
-          //              bracelessEnd = ""
-          //            )
-          //          case termBlock: Term.Block =>
-          //            createCodeActionForBraceableTree(
-          //              hasBraces = hasBraces,
-          //              path = path,
-          //              braceableTree = termBlock,
-          //              braceableBranch = termBlock,
-          //              document = document,
-          //              bracelessStart = "",
-          //              bracelessEnd = ""
-          //            )
+          //            createCodeActionForTemplateHolder(
+          //              template,
+          //              path,
+          //              document,
+          //              template,
+          //              "template"
+          //            ).toSeq
+          case termBlock: Term.Block =>
+            createCodeActionForPotentialBlockHolder(
+              termBlock,
+              path,
+              document,
+              termBlock,
+              "block"
+            ).toSeq
         }
       }
     result.toSeq.flatten
@@ -213,57 +215,82 @@ class BracelessBracefulSwitchCodeAction(
   }
 
   /**
-   * @param term the `rhs` of [[Defn.Var]] or [[Defn.Val]];
-   *             or the `body` of [[Defn.Def]]
+   * @param blockEmbraceable the `rhs` of [[Defn.Var]] or [[Defn.Val]];
+   *                         or the `body` of [[Defn.Def]]
    * @return whether the `rhs` or `body` passed as the
    *         argument has braces
    */
-  private def hasAssignedTermBraces(term: Term): Boolean = {
-    term match {
+  private def isBlockEmbraceableBraced(blockEmbraceable: Term): Boolean = {
+    blockEmbraceable match {
       case termBlock: Term.Block => hasBraces(termBlock)
       case _ => false
     }
   }
 
-  def createCodeActionForAssignable(
-      assignee: Tree,
+  private def createCodeActionForCatchP(
+      termTry: Term.Try,
       path: AbsolutePath,
       document: String,
-      assignedTerm: Term,
       codeActionSubjectTitle: String
   ): Option[l.CodeAction] = {
-    val indentation =
-      getIndentationForPositionInDocument(assignee.pos, document)
-
-    if (
-      hasAssignedTermBraces(assignedTerm)
-      // util.Try(assignedTerm.tokens.maxBy(_.pos.end).text).getOrElse("") == "}"
-    ) {
-      for {
-        bracePose <- util
-          .Try(assignedTerm.tokens.minBy(_.pos.start))
+    val maybeCatchToken = util
+      .Try(
+        termTry.tokens
+          .filter(token =>
+            token.pos.end > termTry.expr.pos.end && token.text == "catch"
+          )
+          .minBy(_.pos.end)
+      )
+      .toOption
+    val potentialOpenBraceToken = maybeCatchToken
+      .flatMap(catchToken =>
+        util
+          .Try(
+            termTry.tokens
+              .filter(token =>
+                token.pos.end > catchToken.pos.end && token.text == "{"
+              )
+              .minBy(_.pos.end)
+          )
           .toOption
+      )
+    val maybeLastCaseEndToken =
+      util.Try(termTry.catchp.maxBy(_.pos.end)).toOption
+    val potentialEndBraceToken = maybeLastCaseEndToken
+      .map(_.pos.end)
+      .flatMap(casesEndPos =>
+        util
+          .Try(
+            termTry.tokens
+              .filter(token => token.pos.end > casesEndPos && token.text == "}")
+              .minBy(_.pos.end)
+          )
+          .toOption
+      )
+    if (potentialOpenBraceToken.nonEmpty) {
+      for {
+        openBracePose <- potentialOpenBraceToken
           .map(_.pos.toLSP.getStart)
-        if assignedTerm.allowBracelessSyntax
+        endBracePos <- potentialEndBraceToken.map(_.pos.toLSP.getStart)
+        if termTry.allowBracelessSyntax
       } yield createCodeActionForGoingBraceless(
         path,
-        expectedBraceStartPos = bracePose,
-        expectedBraceEndPose = assignedTerm.pos.toLSP.getEnd,
+        expectedBraceStartPos = openBracePose,
+        expectedBraceEndPose = endBracePos,
         bracelessStart = "",
         bracelessEnd = "",
         codeActionSubjectTitle
       )
-
     } else { // does not have braces
       for {
-        bracePose <- util
-          .Try(assignedTerm.tokens.minBy(_.pos.start))
-          .toOption
-          .map(_.pos.toLSP.getStart)
+        bracePose <- maybeCatchToken
+          .map(_.pos.toLSP.getEnd)
+        endBracePose <- maybeLastCaseEndToken.map(_.pos.toLSP.getEnd)
+        indentation = getIndentationForPositionInDocument(termTry.pos, document)
       } yield createCodeActionForGoingBraceful(
         path,
         expectedBraceStartPos = bracePose,
-        expectedBraceEndPose = assignee.pos.toLSP.getEnd,
+        expectedBraceEndPose = endBracePose,
         bracelessStart = "",
         bracelessEnd = "",
         indentation = indentation,
@@ -273,7 +300,63 @@ class BracelessBracefulSwitchCodeAction(
     }
   }
 
-  def createCodeActionForTemplateHolder(
+  /**
+   * @param blockHolder      the trees which can only be braced if the type of a branch of
+   *                         them is `Term.Block` and that block is braced.
+   * @param path             the path to the file containing the tree. It is used in
+   *                         contstructing the TextEdit of the code action
+   * @param document
+   * @param blockEmbraceable the branch of the main tree which can potentially have
+   *                         the type `Term.Block`; so can be braced.
+   * @param codeActionSubjectTitle
+   * @return
+   */
+  private def createCodeActionForPotentialBlockHolder(
+      blockHolder: Tree,
+      path: AbsolutePath,
+      document: String,
+      blockEmbraceable: Term,
+      codeActionSubjectTitle: String
+  ): Option[l.CodeAction] = { // the block embraceable
+    val indentation =
+      getIndentationForPositionInDocument(blockHolder.pos, document)
+
+    if (isBlockEmbraceableBraced(blockEmbraceable)) {
+      for {
+        bracePose <- util
+          .Try(blockEmbraceable.tokens.minBy(_.pos.start))
+          .toOption
+          .map(_.pos.toLSP.getStart)
+        if blockEmbraceable.allowBracelessSyntax
+      } yield createCodeActionForGoingBraceless(
+        path,
+        expectedBraceStartPos = bracePose,
+        expectedBraceEndPose = blockEmbraceable.pos.toLSP.getEnd,
+        bracelessStart = "",
+        bracelessEnd = "",
+        codeActionSubjectTitle
+      )
+
+    } else { // does not have braces
+      for {
+        bracePose <- util
+          .Try(blockEmbraceable.tokens.minBy(_.pos.start))
+          .toOption
+          .map(_.pos.toLSP.getStart)
+      } yield createCodeActionForGoingBraceful(
+        path,
+        expectedBraceStartPos = bracePose,
+        expectedBraceEndPose = blockHolder.pos.toLSP.getEnd,
+        bracelessStart = "",
+        bracelessEnd = "",
+        indentation = indentation,
+        document = document,
+        codeActionSubjectTitle = codeActionSubjectTitle
+      )
+    }
+  }
+
+  private def createCodeActionForTemplateHolder(
       templateHolder: Tree,
       path: AbsolutePath,
       document: String,
@@ -291,20 +374,7 @@ class BracelessBracefulSwitchCodeAction(
       }
       .getOrElse(templ.pos.start)
     pprint.log("templ.inits: \n" + templ.inits)
-    if (
-      hasBraces(templ)
-      // templ.tokens.maxBy(_.pos.end).text == "}"
-      //      templ.tokens
-      //        .find(token => token.pos.start >= expectedBraceStartPos)
-      //        .exists(token => token.text == "{")
-      //      hasBraces(
-      //        templ,
-      //        maybeExpectedOpenBracePrecedingIndex,
-      //        None,
-      //        Some(templ.pos.start),
-      //        document
-      //      )
-    ) {
+    if (hasBraces(templ)) {
 
       for {
         bracePose <- templ.tokens
@@ -343,35 +413,7 @@ class BracelessBracefulSwitchCodeAction(
 
   }
 
-  //  private def getBraceStartPos(braceContainingTree: Tree,
-  //                               maybeExpectedOpenBracePrecedingIndex: Option[Int],
-  //                               maybeExpectedOpenBraceSupercedingIndex: Option[Int],
-  //                               maybeExpectedBraceStartIndex: Option[Int],
-  //                               document: String): l.Position =
-  //    maybeExpectedOpenBracePrecedingIndex.map { expectedOpenBracePrecedingIndex =>
-  //      braceContainingTree.tokens
-  //        .find(token => token.start > expectedOpenBracePrecedingIndex)
-  //        .map(token => if (token.text == "{") token.pos.toLSP.getStart
-  //        else {
-  //          val result = token.pos.toLSP.getStart
-  //          result.setCharacter(result.getCharacter - 1)
-  //        }
-  //        ).getOrElse(new)
-  //    }.orElse(
-  //      maybeExpectedOpenBraceSupercedingIndex.map { expectedOpenBraceSupercedingIndex =>
-  //        braceContainingTree.tokens
-  //          .findLast(token => token.end > expectedOpenBraceSupercedingIndex)
-  //          .map(token => token.text == "{").getOrElse(false)
-  //      }
-  //    ).orElse(
-  //      maybeExpectedBraceStartIndex.map(expectedOpenBraceIndex =>
-  //        if (expectedOpenBraceIndex < document.size) {
-  //          document(expectedOpenBraceIndex) == '{'
-  //        } else false
-  //      )
-  //    ).getOrElse(false)
-
-  def createCodeActionForGoingBraceful(
+  private def createCodeActionForGoingBraceful(
       path: AbsolutePath,
       indentation: String,
       document: String,
@@ -434,7 +476,7 @@ class BracelessBracefulSwitchCodeAction(
     codeAction
   }
 
-  def createCodeActionForGoingBraceless(
+  private def createCodeActionForGoingBraceless(
       path: AbsolutePath,
       expectedBraceStartPos: l.Position,
       expectedBraceEndPose: l.Position,
@@ -481,7 +523,7 @@ class BracelessBracefulSwitchCodeAction(
     codeAction
   }
 
-  def createCodeActionForCasesListWrapper(
+  private def createCodeActionForCasesListWrapper(
       caseTree: Case,
       path: AbsolutePath
   ): Option[l.CodeAction] = {
@@ -510,7 +552,7 @@ class BracelessBracefulSwitchCodeAction(
 }
 
 object BracelessBracefulSwitchCodeAction {
-  def goBraceFul(subject: String): String = s"Add braces to $subject"
+  def goBraceFul(subject: String): String = s"Add braces to the $subject"
 
-  def goBraceless(subject: String): String = s"Remove braces from $subject"
+  def goBraceless(subject: String): String = s"Remove braces from the $subject"
 }
