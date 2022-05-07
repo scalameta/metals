@@ -32,14 +32,16 @@ class ShortenedNames(val indexedContext: IndexedContext):
   /**
    * Returns a list of shortened names
    */
-  def names: List[ShortName] = history.values.toList
+  def namesToImport: List[ShortName] =
+    import indexedContext.ctx
+    history.values.toList.filterNot(name => name.symbol.isRoot)
 
   /**
    * Returns a list of TextEdits (auto-imports) of the symbols
    * that are shortend by "tryShortenName" method, and cached.
    */
   def imports(autoImportsGen: AutoImportsGenerator): List[TextEdit] =
-    history.values.flatMap { name =>
+    namesToImport.flatMap { name =>
       autoImportsGen.forSymbol(name.symbol).toList.flatten
     }.toList
 
@@ -115,7 +117,8 @@ class ShortenedNames(val indexedContext: IndexedContext):
             ownersLeft match
               case Nil =>
                 val short = ShortName(sym)
-                TypeRef(loop(prefix, Some(short)), sym)
+                if tryShortenName(short) then TypeRef(NoPrefix, sym)
+                else TypeRef(loop(prefix, Some(short)), sym)
               case h :: tl =>
                 indexedContext.rename(h) match
                   case Some(rename) =>

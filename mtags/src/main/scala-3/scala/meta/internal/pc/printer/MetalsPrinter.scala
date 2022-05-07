@@ -50,7 +50,7 @@ class MetalsPrinter(
 
   private val defaultWidth = 1000
 
-  def shortenedNames: List[ShortName] = names.names
+  def shortenedNames: List[ShortName] = names.namesToImport
 
   def expressionType(tpw: Type)(using Context): Option[String] =
     tpw match

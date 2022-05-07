@@ -8,6 +8,9 @@ import tests.BaseCompletionSuite
 
 class CompletionOverrideConfigSuite extends BaseCompletionSuite {
 
+  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreScala3)
+
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
       _symbolPrefixes = Map(

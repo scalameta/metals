@@ -83,7 +83,7 @@ object CompletionValue:
     override val isPrioritized = true
 
   case class NamedArg(label: String, tpe: Type) extends CompletionValue:
-    override val isPrioritized = true
+    override val isPrioritized = false
   case class Keyword(label: String, insertText: String) extends CompletionValue
 
   def fromCompiler(completion: Completion): List[CompletionValue] =

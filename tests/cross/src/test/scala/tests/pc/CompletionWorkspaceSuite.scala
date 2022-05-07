@@ -78,7 +78,18 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  val x = Files
        |}
        |""".stripMargin,
-    filter = _ == "Files - java.nio.file"
+    filter = _ == "Files - java.nio.file",
+    compat = Map(
+      "3" ->
+        """|package `import-conflict`
+           |
+           |import _root_.java.nio.file.Files
+           |object Main {
+           |  val java = 42
+           |  val x = Files
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(

@@ -312,6 +312,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> // should import
         """|package a.b
+           |
+           |import a.b
            |abstract class Conflict {
            |  def self: Conflict
            |}
@@ -352,7 +354,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       "3" ->
         """|def self: a.c.Conflict
            |def selfArg: Option[a.c.Conflict]
-           |def selfPath: a.c.Conflict#Inner
+           |def selfPath: Inner
            |""".stripMargin
     )
   )
@@ -556,7 +558,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """  def foo: List[Int] = ${0:???}""".stripMargin,
     compat = Map(
       "3" -> // TODO: should we dealias it?
-        """  def foo: Main#Foobar = ${0:???}""".stripMargin
+        """  def foo: Foobar = ${0:???}""".stripMargin
     )
   )
 
@@ -588,11 +590,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     "  def foo@@",
-    """  def foo: Out = ${0:???}""".stripMargin,
-    compat = Map(
-      "3" ->
-        """  def foo: Main#Out = ${0:???}""".stripMargin
-    )
+    """  def foo: Out = ${0:???}""".stripMargin
   )
 
   checkEditLine(
@@ -612,7 +610,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """  def foo: String = ${0:???}""".stripMargin,
     compat = Map(
       "3" ->
-        """  def foo: Main#Out = ${0:???}""".stripMargin
+        """  def foo: Out = ${0:???}""".stripMargin
     )
   )
 
@@ -714,11 +712,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     "def Apply@@",
     """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def"), // for Scala3
-    compat = Map(
-      "3" ->
-        """override def Apply(tree: Tree): Global#Tree = ${0:???}""".stripMargin
-    )
+    filter = (str) => str.contains("def") // for Scala3
   )
 
   checkEditLine(
@@ -736,11 +730,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     "def Apply@@",
     """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def"), // for Scala3
-    compat = Map(
-      "3" ->
-        """override def Apply(tree: Tree): MyGlobal#Tree = ${0:???}""".stripMargin
-    )
+    filter = (str) => str.contains("def") // for Scala3
   )
 
   checkEditLine(
@@ -759,7 +749,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     filter = (str) => str.contains("def"), // for Scala3
     compat = Map(
       "3" ->
-        """override def Apply(tree: T): Global#Tree = ${0:???}""".stripMargin
+        """override def Apply(tree: T): Tree = ${0:???}""".stripMargin
     )
   )
 
