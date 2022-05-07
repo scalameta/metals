@@ -397,6 +397,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |ProcessBuilderImpl - scala.sys.process
        |CertPathBuilderResult - java.security.cert
        |PKIXBuilderParameters - java.security.cert
+       |PooledConnectionBuilder - javax.sql
        |CertPathBuilderException - java.security.cert
        |PKIXCertPathBuilderResult - java.security.cert
        |""".stripMargin
@@ -508,8 +509,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |TreePath - javax.swing.tree
        |XPathType - javax.xml.crypto.dsig.spec
        |LayoutPath - java.awt.font
+       |XPathNodes - javax.xml.xpath
        |PathMatcher - java.nio.file
-       |GeneralPath - java.awt.geom
        |XPathResult - org.w3c.dom.xpath
        |""".stripMargin
   )

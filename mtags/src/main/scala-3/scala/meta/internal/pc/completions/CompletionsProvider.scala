@@ -157,7 +157,8 @@ class CompletionsProvider(
         ident: String,
         nameEdit: TextEdit,
         isFromWorkspace: Boolean = false,
-        additionalEdits: List[TextEdit] = Nil
+        additionalEdits: List[TextEdit] = Nil,
+        filterText: Option[String] = None
     ): CompletionItem =
 
       val label =
@@ -175,7 +176,7 @@ class CompletionsProvider(
 
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
-      item.setFilterText(completion.label)
+      item.setFilterText(filterText.getOrElse(completion.label))
 
       item.setTextEdit(nameEdit)
 
@@ -205,6 +206,7 @@ class CompletionsProvider(
         value: String,
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
+        filterText: Option[String] = None,
         start: Option[Int] = None
     ): CompletionItem =
       val nameEdit = new TextEdit(
@@ -213,7 +215,7 @@ class CompletionsProvider(
           .getOrElse(editRange),
         value
       )
-      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
+      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits, filterText)
     end mkItem
 
     def mkWorkspaceItem(
@@ -256,10 +258,24 @@ class CompletionsProvider(
                   case IndexedContext.Result.InScope =>
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
-      case CompletionValue.Override(label, value, _, shortNames, start) =>
+      case CompletionValue.Override(
+            label,
+            value,
+            _,
+            shortNames,
+            filterText,
+            start
+          ) =>
         val additionalEdits =
           shortNames.flatMap(name => autoImports.forSymbol(name.symbol)).flatten
-        mkItem(label, value, false, additionalEdits, Some(start))
+        mkItem(
+          label,
+          value,
+          false,
+          additionalEdits,
+          Some(filterText),
+          Some(start)
+        )
       case CompletionValue.NamedArg(label, _) =>
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) => mkItem(label, text)

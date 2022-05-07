@@ -66,10 +66,9 @@ class Completions(
       pos: SourcePosition,
       completionPos: CompletionPos
   ): List[CompletionValue] =
-    // path.foreach(p => println(p.toString.take(80)))
     path match
       // class FooImpl extends Foo:
-      //   def |
+      //   def x|
       case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty =>
         val completing =
@@ -94,6 +93,8 @@ class Completions(
           config
         )
 
+      // class Main extends Val:
+      //    def @@
       case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
         val values = OverrideCompletions.contribute(
           td,
@@ -104,6 +105,8 @@ class Completions(
         )
         values
 
+      // class Main extends Val:
+      //    hello@@
       case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
           if t.parents.nonEmpty =>
         OverrideCompletions.contribute(

@@ -153,13 +153,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     assertSingleItem = false,
     compat = Map(
       "3" -> // TODO: param names should be file, attrs
-        """|import java.nio.file.attribute.BasicFileAttributes
-           |import java.nio.file.FileVisitResult
-           |import java.nio.file.SimpleFileVisitor
+        """|import java.nio.file.FileVisitResult
+           |import java.nio.file.attribute.BasicFileAttributes
+           |import java.nio.file.Path
            |
            |object Main {
            |  new java.nio.file.SimpleFileVisitor[java.nio.file.Path] {
-           |    def visitFile(x$0: T, x$1: BasicFileAttributes): FileVisitResult = ${0:???}
+           |    override def visitFile(x$0: Path, x$1: BasicFileAttributes): FileVisitResult = ${0:???}
            |  }
            |}
            |""".stripMargin
@@ -274,11 +274,17 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     // assert that `isInstanceOf` and friends are not included
-    """|override def a: Int
-       |def b: Int
+    """|def b: Int
+       |override def a: Int
        |""".stripMargin,
     topLines = Some(2),
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" ->
+        """|override def a: Int
+           |def b: Int
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -308,7 +314,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3" -> // should import
+      "3" ->
         """|package a.b
            |
            |import a.b
@@ -379,7 +385,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     compat = Map(
-      "3" -> // should import mutable
+      "3" ->
         """|abstract class Mutable {
            |  def foo: scala.collection.mutable.Set[Int]
            |}

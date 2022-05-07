@@ -73,14 +73,24 @@ object CompletionValue:
   case class Scope(label: String, symbol: Symbol) extends Symbolic
   case class Workspace(label: String, symbol: Symbol) extends Symbolic
 
+  /**
+   * @param shortenddNames shortened type names by `Printer`. This field should be used for autoImports
+   * @param start Starting position of the completion
+   *              this is needed, because for OverrideCompletion, completionPos
+   *              doesn't capture the "correct" starting position. For example,
+   *              when we type `override def fo@@` (where `@@` we invoke completion)
+   *              `completionPos` is `fo`, instead of `override def fo`.
+   */
   case class Override(
       label: String,
       value: String,
       symbol: Symbol,
-      shortendNames: List[ShortName],
+      shortenedNames: List[ShortName],
+      filterText: String,
       start: Int
   ) extends Symbolic:
     override val isPrioritized = true
+  end Override
 
   case class NamedArg(label: String, tpe: Type) extends CompletionValue:
     override val isPrioritized = false

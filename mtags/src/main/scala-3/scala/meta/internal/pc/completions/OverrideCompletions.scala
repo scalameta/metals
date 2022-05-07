@@ -25,6 +25,8 @@ object OverrideCompletions:
   /**
    * @param td A surrounded type definition being complete
    * @param filterName A prefix string for filtering, if None no filter
+   * @param start The starting point of the completion. For example, starting point is `*`
+   *              `*override def f|` (where `|` represents the cursor position).
    */
   def contribute(
       td: TypeDef,
@@ -42,15 +44,15 @@ object OverrideCompletions:
     /** Is the given symbol that we're trying to complete? */
     def isSelf(sym: Symbol) = completing.fold(false)(self => self == sym)
 
-    val flags = completing.map(_.flags & interestingFlags).getOrElse(EmptyFlags)
-
     def isOverrideable(sym: Symbol)(using Context): Boolean =
       val overridingSymbol = sym.overridingSymbol(clazz)
       !sym.is(Synthetic) &&
       !sym.is(Artifact) &&
       // not overridden in in this class, except overridden by the symbol that we're completing
       (!isDecl(overridingSymbol) || isSelf(overridingSymbol)) &&
-      !(sym.is(Mutable) && !sym.is(Deferred)) && // concrete var
+      !(sym.is(Mutable) && !sym.is(
+        Deferred
+      )) && // concrete var can't be override
       (!syntheticCoreMethods(sym.name) || allowedList(sym.name)) &&
       !sym.is(Final) &&
       !sym.isConstructor &&
@@ -58,7 +60,15 @@ object OverrideCompletions:
       // exclude symbols desugared by default args
       !sym.name.is(DefaultGetterName)
     end isOverrideable
+    // Given the base class `trait Foo { def foo: Int; val bar: Int; var baz: Int }`
+    // and typing `def @@` in the subclass of `Foo`,
+    // suggest `def foo` and exclude `val bar`, and `var baz` from suggestion
+    // because theyr are not method definitions (not starting from `def`).
+    val flags = completing.map(_.flags & interestingFlags).getOrElse(EmptyFlags)
 
+    // not using `td.tpe.abstractTermMembers` because those members includes
+    // the abstract members in `td.tpe`. For example, when we type `def foo@@`,
+    // `td.tpe.abstractTermMembers` contains `method foo: <error>` and it overrides the parent `foo` method.
     val overridables = td.tpe.parents
       .flatMap { parent =>
         parent.membersBasedOnFlags(
@@ -108,11 +118,9 @@ object OverrideCompletions:
   )(using Context): CompletionValue.Override =
     val printer = MetalsPrinter.standard(indexedContext)
     val overrideKeyword: String =
+      // if the overriding method is not an abstract member, add `override` keyword
       if !sym.isOneOf(Deferred) || shouldAddOverrideKwd
       then "override "
-      // Don't insert `override` keyword if the supermethod is abstract and the
-      // user did not explicitly type starting with o . See:
-      // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
       else ""
 
     val asciOverrideDef: String =
@@ -128,9 +136,8 @@ object OverrideCompletions:
     val mods = if sym.is(Lazy) then "lazy " else ""
 
     val signature =
-      // A type of `iterator` in `new Iterable[Int] { def iterato@@ }`
-      // should be seen from `Iterable[Int]` and
-      // complete `def iterator: Iterator[Int]` instead of `Iterator[A]`.
+      // `iterator` method in `new Iterable[Int] { def iterato@@ }`
+      // should be completed as `def iterator: Iterator[Int]` instead of `Iterator[A]`.
       val seenFrom = td.tpe.memberInfo(sym.symbol)
       if sym.is(Method) then
         printer.defaultMethodSignature(
@@ -144,11 +151,13 @@ object OverrideCompletions:
     val label = overrideDef + signature
     val stub = if config.isCompletionSnippetsEnabled then "${0:???}" else "???"
     val value = s"${overrideKeyword}${mods}${signature} = $stub"
+    val filterText = s"$overrideKeyword$signature"
     CompletionValue.Override(
       label,
       value,
       sym.symbol,
       printer.shortenedNames,
+      filterText,
       start
     )
   end toCompletionValue
