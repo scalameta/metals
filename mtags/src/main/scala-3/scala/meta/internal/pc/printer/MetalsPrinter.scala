@@ -131,6 +131,13 @@ class MetalsPrinter(
       gtpe: Type,
       onlyMethodParams: Boolean = false
   ): String =
+    val namess = gtpe.paramNamess
+    val infoss = gtpe.paramInfoss
+    val nameToInfo: Map[Name, Type] = (for
+      pairs <- namess.zip(infoss).map { (names, infos) => names.zip(infos) }
+      pair <- pairs
+    yield pair).toMap
+
     val (methodParams, extParams) = splitExtensionParamss(gsym)
     val paramss = methodParams ++ extParams
     lazy val implicitParams: List[Symbol] =
@@ -170,7 +177,8 @@ class MetalsPrinter(
                 param,
                 implicitEvidencesByTypeParam,
                 index,
-                defaultValues
+                defaultValues,
+                nameToInfo
               ) :: Nil
           index += 1
           lab
@@ -285,10 +293,24 @@ class MetalsPrinter(
       param: Symbol,
       implicitEvidences: Map[Symbol, List[String]],
       index: Int,
-      defaultValues: => Seq[String]
+      defaultValues: => Seq[String],
+      nameToInfo: Map[Name, Type]
   ): String =
     val keywordName = dotcPrinter.name(param)
-    val paramTypeString = tpe(param.info)
+    val info = nameToInfo
+      .get(param.name)
+      .flatMap { info =>
+        // In some cases, paramInfo becomes Nothing (e.g. CompletionOverrideSuite#cake)
+        // which is meaningless, in that case, fallback to param.info
+        if info.isNothingType then None
+        else Some(info)
+      }
+      .getOrElse(param.info)
+
+    // use `nameToInfo.get(param.name)` instead of `param.info` because
+    // param.info loses `asSeenFrom` information:
+    // parameter `f` of `foreach[U](f: A => U)` in `new scala.Traversable[Int]` should be `foreach[U](f: Int => U)`
+    val paramTypeString = tpe(info)
     if param.isTypeParam then
       // pretty context bounds
       // e.g. f[A](a: A, b: A)(implicit evidence$1: Ordering[A])

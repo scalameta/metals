@@ -96,13 +96,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
           |  }
           |}
           |""".stripMargin,
-      "3" -> // TODO: there shouldn't be import
+      "3" ->
         """
-          |import scala.collection.IterableOnceOps
-          |
           |object Main {
           |  new scala.Traversable[Int] {
-          |    override def foreach[U](f: A => U): Unit = ${0:???}
+          |    override def foreach[U](f: Int => U): Unit = ${0:???}
           |  }
           |}
           |""".stripMargin
@@ -746,11 +744,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     "def Apply@@",
     """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def"), // for Scala3
-    compat = Map(
-      "3" ->
-        """override def Apply(tree: T): Tree = ${0:???}""".stripMargin
-    )
+    filter = (str) => str.contains("def") // for Scala3
   )
 
   check(
