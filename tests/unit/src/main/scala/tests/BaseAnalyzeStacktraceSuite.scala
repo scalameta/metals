@@ -6,6 +6,7 @@ import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 
 abstract class BaseAnalyzeStacktraceSuite(name: String)
@@ -29,12 +30,13 @@ abstract class BaseAnalyzeStacktraceSuite(name: String)
   }
 
   def check(
-      name: String,
+      name: TestOptions,
       code: String,
       stacktrace: String,
       filename: String = "Main.scala",
-      scalaVersion: String = V.scala212
-  ): Unit = {
+      scalaVersion: String = V.scala213,
+      dependency: String = ""
+  )(implicit loc: munit.Location): Unit = {
     val locationParser = new JsonParser.Of[l.Location]
     test(name) {
       cleanWorkspace()
@@ -42,7 +44,12 @@ abstract class BaseAnalyzeStacktraceSuite(name: String)
         _ <- initialize(
           s"""
              |/metals.json
-             |{"a":{ "scalaVersion" : "$scalaVersion"}}
+             |{ 
+             |  "a": { 
+             |    "scalaVersion": "$scalaVersion",
+             |    "libraryDependencies": [ $dependency ]
+             |   }
+             |}
              |/a/src/main/scala/a/$filename
              |${prepare(code)}
              |""".stripMargin
