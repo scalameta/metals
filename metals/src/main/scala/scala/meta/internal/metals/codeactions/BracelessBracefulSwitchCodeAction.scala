@@ -110,7 +110,7 @@ class BracelessBracefulSwitchCodeAction(
           case termTry: Term.Try =>
             Seq(
               createCodeActionForPotentialBlockHolder(
-                termTry.expr,
+                termTry,
                 path,
                 document,
                 termTry.expr,
@@ -124,7 +124,7 @@ class BracelessBracefulSwitchCodeAction(
               ),
               termTry.finallyp.flatMap(finallyp =>
                 createCodeActionForPotentialBlockHolder(
-                  finallyp,
+                  termTry,
                   path,
                   document,
                   finallyp,
@@ -137,14 +137,14 @@ class BracelessBracefulSwitchCodeAction(
           case termIf: Term.If =>
             Seq(
               createCodeActionForPotentialBlockHolder(
-                termIf.thenp,
+                termIf,
                 path,
                 document,
                 termIf.thenp,
                 "then expression"
               ),
               createCodeActionForPotentialBlockHolder(
-                termIf.elsep,
+                termIf,
                 path,
                 document,
                 termIf.elsep,
@@ -185,9 +185,12 @@ class BracelessBracefulSwitchCodeAction(
           //              template,
           //              "template"
           //            ).toSeq
-          case termBlock: Term.Block =>
+          case termBlock: Term.Block if !termBlock.parent.exists(_ match {
+                case _: Term.Apply => true
+                case _ => false
+              }) =>
             createCodeActionForPotentialBlockHolder(
-              termBlock,
+              termBlock.parent.getOrElse(termBlock),
               path,
               document,
               termBlock,
@@ -256,13 +259,22 @@ class BracelessBracefulSwitchCodeAction(
       )
     val maybeLastCaseEndToken =
       util.Try(termTry.catchp.maxBy(_.pos.end)).toOption
+    val finallyStartPos = util
+      .Try(termTry.finallyp.map(_.pos.start))
+      .toOption
+      .flatten
+      .getOrElse(Int.MaxValue)
     val potentialEndBraceToken = maybeLastCaseEndToken
       .map(_.pos.end)
       .flatMap(casesEndPos =>
         util
           .Try(
             termTry.tokens
-              .filter(token => token.pos.end > casesEndPos && token.text == "}")
+              .filter(token =>
+                token.pos.end > casesEndPos &&
+                  token.text == "}" &&
+                  token.pos.start < finallyStartPos
+              )
               .minBy(_.pos.end)
           )
           .toOption
@@ -342,11 +354,25 @@ class BracelessBracefulSwitchCodeAction(
         bracePose <- util
           .Try(blockEmbraceable.tokens.minBy(_.pos.start))
           .toOption
-          .map(_.pos.toLSP.getStart)
+          .map(_.pos.start)
+          .flatMap(blockEmbraceableStartPos =>
+            util
+              .Try(
+                blockHolder.tokens.tokens
+                  .filter { token =>
+                    token.pos.start < blockEmbraceableStartPos && !token.text.isBlank
+                  }
+                  .maxBy(_.pos.start)
+                  .pos
+                  .toLSP
+                  .getEnd
+              )
+              .toOption
+          )
       } yield createCodeActionForGoingBraceful(
         path,
         expectedBraceStartPos = bracePose,
-        expectedBraceEndPose = blockHolder.pos.toLSP.getEnd,
+        expectedBraceEndPose = blockEmbraceable.pos.toLSP.getEnd,
         bracelessStart = "",
         bracelessEnd = "",
         indentation = indentation,
@@ -373,7 +399,6 @@ class BracelessBracefulSwitchCodeAction(
         lastInit.pos.end
       }
       .getOrElse(templ.pos.start)
-    pprint.log("templ.inits: \n" + templ.inits)
     if (hasBraces(templ)) {
 
       for {
@@ -425,23 +450,16 @@ class BracelessBracefulSwitchCodeAction(
   ): l.CodeAction = {
     // TODO Important: autoIndentDocument()
     //  val braceableBranchLSPPos = braceableBranch.pos.toLSP
-
-    pprint.log("expectedBraceStartPos: " + expectedBraceStartPos)
-    pprint.log("expectedBraceEndPose: " + expectedBraceEndPose)
     val braceableBranchStart = expectedBraceStartPos
     val braceableBranchStartEnd = new l.Position()
     braceableBranchStartEnd.setCharacter(
       expectedBraceStartPos.getCharacter + bracelessStart.length
     )
     braceableBranchStartEnd.setLine(expectedBraceStartPos.getLine)
-
-    pprint.log("braceableBranchStartEnd: " + braceableBranchStartEnd)
-
     val startBraceTextEdit = new TextEdit(
       new l.Range(braceableBranchStart, braceableBranchStartEnd),
       "{"
     )
-    pprint.log("startBraceTextEdit: \n" + startBraceTextEdit)
 
     val braceableBranchEndStart = expectedBraceEndPose
     val braceableBranchEnd = new l.Position()
@@ -449,7 +467,6 @@ class BracelessBracefulSwitchCodeAction(
       expectedBraceEndPose.getCharacter + bracelessEnd.length
     )
     braceableBranchEnd.setLine(expectedBraceEndPose.getLine)
-    pprint.log("braceableBranchEnd: " + braceableBranchEnd)
 
     val endBraceTextEdit = new TextEdit(
       new l.Range(braceableBranchEndStart, braceableBranchEnd),
@@ -457,7 +474,6 @@ class BracelessBracefulSwitchCodeAction(
           |$indentation}""".stripMargin
     )
 
-    pprint.log("endBraceTextEdit: \n" + endBraceTextEdit)
     val codeAction = new l.CodeAction()
     codeAction.setTitle(
       BracelessBracefulSwitchCodeAction.goBraceFul(codeActionSubjectTitle)
@@ -484,8 +500,7 @@ class BracelessBracefulSwitchCodeAction(
       bracelessEnd: String,
       codeActionSubjectTitle: String
   ): l.CodeAction = {
-    pprint.log("expectedBraceStartPos: " + expectedBraceStartPos)
-    pprint.log("expectedBraceEndPose: " + expectedBraceEndPose)
+
     // TODO Important: autoIndentDocument()
     val braceableBranchStart = expectedBraceStartPos
     val braceableBranchStartEnd = new l.Position()
@@ -496,8 +511,6 @@ class BracelessBracefulSwitchCodeAction(
       bracelessStart
     )
 
-    pprint.log("startTextEdit: \n" + startTextEdit)
-
     val braceableBranchEndStart = new l.Position()
     braceableBranchEndStart.setCharacter(expectedBraceEndPose.getCharacter - 1)
     braceableBranchEndStart.setLine(expectedBraceEndPose.getLine)
@@ -507,7 +520,6 @@ class BracelessBracefulSwitchCodeAction(
       new l.Range(braceableBranchEndStart, braceableBranchEnd),
       bracelessEnd
     )
-    pprint.log("endTextEdit: \n" + endTextEdit)
     val codeAction = new l.CodeAction()
     codeAction.setTitle(
       BracelessBracefulSwitchCodeAction.goBraceless(codeActionSubjectTitle)
