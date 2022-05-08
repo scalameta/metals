@@ -192,7 +192,7 @@ object AutoImports:
     end importEdit
 
     private def importName(sym: Symbol): String =
-      if indexedContext.toplevelClashes(sym) then
+      if indexedContext.importContext.toplevelClashes(sym) then
         s"_root_.${sym.fullNameBackticked}"
       else sym.fullNameBackticked
   end AutoImportsGenerator
