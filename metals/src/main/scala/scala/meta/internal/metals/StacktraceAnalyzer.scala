@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.FileWriter
 
 import scala.util.Try
+import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StacktraceAnalyzer._
@@ -146,7 +147,11 @@ class StacktraceAnalyzer(
   }
 
   private def symbolFromLine(line: String): Option[String] = Try {
-    line.substring(line.indexOf("at ") + 3, line.indexOf("("))
+    val trimmed = line.substring(line.indexOf("at ") + 3, line.indexOf("("))
+    trimmed match {
+      case regex(_, _, group3) => group3
+      case _ => trimmed
+    }
   }.toOption
 
   private def makeHtmlCommandParams(
@@ -200,6 +205,8 @@ class StacktraceAnalyzer(
 }
 
 object StacktraceAnalyzer {
+  // match on: 'apply @ a.Main$.<clinit>'' OR 'run$ @ a.Main$.run'
+  final val regex: Regex = """((\w|\$)+ @ )?(.+)""".r
 
   def toToplevelSymbol(symbolIn: String): List[String] = {
     // remove module name. Module symbols are formatted as `moduleName/symbol`

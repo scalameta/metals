@@ -74,6 +74,18 @@ class AnalyzeStacktraceLspSuite
        |""".stripMargin
   )
 
+  check(
+    "cat-effect-stactraces",
+    catsEffectCode,
+    """|java.lang.Exception
+       |        at a.Main$.$anonfun$run$1(Stacktraces.scala:10)
+       |        at apply @ a.Main$.<clinit>(Stacktraces.scala:7)
+       |        at map @ a.Main$.run(Stacktraces.scala:9)
+       |        at run$ @ a.Main$.run(Stacktraces.scala:6)
+       |""".stripMargin,
+    dependency = "\"org.typelevel::cats-effect:3.3.11\""
+  )
+
   private lazy val code: String =
     """|package a.b
        |
@@ -102,6 +114,22 @@ class AnalyzeStacktraceLspSuite
        |  val b = 4
        |}
        |
+       |""".stripMargin
+
+  private lazy val catsEffectCode =
+    """|package a
+       |
+       |import cats.effect.IOApp
+       |import cats.effect.IO
+       |
+       |<<4>>object Main extends IOApp.Simple {
+       |<<2>>  val io = IO(5)
+       |  override def run: IO[Unit] = io
+       |<<3>>      .map { _ => 
+       |<<1>>        throw new Exception
+       |        ()
+       |      }
+       |}
        |""".stripMargin
 
 }
