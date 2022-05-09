@@ -292,12 +292,12 @@ class BuildServerConnection private (
             if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
           onFail
             .map { case (defaultResult, message) =>
-              scribe.info(message)
+              scribe.info(message, t)
               Future.successful(defaultResult)
             }
             .getOrElse({
               val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
-              Future.failed(MetalsBspException(name, t.getMessage))
+              Future.failed(new MetalsBspException(name, t))
             })
       }
     CancelTokens.future(_ => actionFuture)
