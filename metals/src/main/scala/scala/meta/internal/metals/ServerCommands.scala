@@ -126,7 +126,6 @@ object ServerCommands {
     """
       |Discovers all tests in project or a file.
       |See ClientCommands.UpdateTestExplorer to see how response looks like.
-      |```
       |""".stripMargin,
     """
       |An object with uri, when request is meant to discover test cases for uri
