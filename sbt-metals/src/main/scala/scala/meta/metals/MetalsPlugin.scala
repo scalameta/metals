@@ -72,8 +72,8 @@ object MetalsPlugin extends AutoPlugin {
     },
     allDependencies ++= {
       if (javaSemanticdbEnabled.value)
-        List(
-          "com.sourcegraph" % "semanticdb-javac" % BuildInfo.javaSemanticdbVersion % Configurations.CompileInternal
+        List(Configurations.CompileInternal, Configurations.TestInternal).map(
+          "com.sourcegraph" % "semanticdb-javac" % BuildInfo.javaSemanticdbVersion % _
         )
       else
         Nil
