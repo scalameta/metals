@@ -72,8 +72,15 @@ object MetalsPlugin extends AutoPlugin {
     },
     allDependencies ++= {
       if (javaSemanticdbEnabled.value)
-        List(Configurations.CompileInternal, Configurations.TestInternal).map(
-          "com.sourcegraph" % "semanticdb-javac" % BuildInfo.javaSemanticdbVersion % _
+      val existing = ivyConfigurations.value.map(_.name).toSet
+      val configurations = Seq(
+        Configurations.CompileInternal,
+        Configurations.TestInternal,
+        Configurations.IntegrationTestInternal
+      ).map(_.name).filter(existing.contains).mkString(",")
+       List(
+          "com.sourcegraph" % "semanticdb-javac" % BuildInfo.javaSemanticdbVersion % configurations
+        )
         )
       else
         Nil
