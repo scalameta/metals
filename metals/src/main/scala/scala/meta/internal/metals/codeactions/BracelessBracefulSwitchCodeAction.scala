@@ -176,14 +176,24 @@ class BracelessBracefulSwitchCodeAction(
               "while expression"
             ).toSeq
           case _: Defn.GivenAlias => None.toSeq
-          //          case template: Template =>
-          //            createCodeActionForTemplateHolder(
-          //              template,
-          //              path,
-          //              document,
-          //              template,
-          //              "template"
-          //            ).toSeq
+          case template: Template =>
+            val title = template.parent
+              .collectFirst {
+                case _: Defn.Enum => "enum definition"
+                case _: Defn.Trait => "trait definition"
+                case _: Defn.Object => "object definition"
+                case _: Defn.Class => "class definition"
+              }
+              .getOrElse("template")
+            template.parent.flatMap {
+              createCodeActionForTemplateHolder(
+                _,
+                path,
+                document,
+                template,
+                title
+              )
+            }.toSeq
           case termBlock: Term.Block if !termBlock.parent.exists(_ match {
                 case _: Term.Apply => true
                 case _ => false
