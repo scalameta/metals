@@ -39,13 +39,14 @@ class Completions(
   implicit val context: Context = ctx
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
-    val (_, compilerCompletions) = Completion.completions(pos)
-
     val (completions, result) = path match
       // should not show completions for toplevel
       case Nil if pos.source.file.extension != "sc" =>
         (List.empty, SymbolSearch.Result.COMPLETE)
+      case Select(qual, _) :: _ if qual.tpe.isErroneous =>
+        (List.empty, SymbolSearch.Result.COMPLETE)
       case _ =>
+        val (_, compilerCompletions) = Completion.completions(pos)
         compilerCompletions
           .flatMap(CompletionValue.fromCompiler)
           .filterInteresting()
