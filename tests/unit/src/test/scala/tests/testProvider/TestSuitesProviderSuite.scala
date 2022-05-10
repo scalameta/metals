@@ -430,6 +430,96 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala"))
   )
 
+  testDiscover(
+    "munit-from-parent",
+    s"""|/metals.json
+        |{
+        |  "app": {
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
+        |    "scalaVersion": "${BuildInfo.scalaVersion}"
+        |  }
+        |}
+        |
+        |/app/src/main/scala/a/BaseMunitSuite.scala
+        |package a
+        |trait BaseMunitSuite extends munit.FunSuite {
+        |  def baseParentCheck(name: String) = test(name) {}
+        |}
+        |
+        |/app/src/main/scala/a/b/FirstBaseMunitSuite.scala
+        |package a.b
+        |trait FirstBaseMunitSuite extends a.BaseMunitSuite {
+        |  def firstParentCheck(name: String) = test(name) {}
+        |}
+        |
+        |/app/src/main/scala/MunitTestSuite.scala
+        |trait SecondBaseMunitSuite extends munit.FunSuite {
+        |  def secondParentCheck(name: String) = test(name) {}
+        |}
+        |
+        |class MunitTestSuite extends a.b.FirstBaseMunitSuite with SecondBaseMunitSuite {
+        |  test("test-1") {}
+        |  baseParentCheck("test-base")
+        |  firstParentCheck("test-parent-1")
+        |  secondParentCheck("test-parent-2")
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/MunitTestSuite.scala"),
+    () => {
+      List(
+        BuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestCases(
+              "MunitTestSuite",
+              "MunitTestSuite",
+              Vector(
+                TestCaseEntry(
+                  "test-1",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/MunitTestSuite.scala"
+                    ),
+                    (5, 2, 5, 6)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test-base",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/MunitTestSuite.scala"
+                    ),
+                    (6, 2, 6, 17)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test-parent-1",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/MunitTestSuite.scala"
+                    ),
+                    (7, 2, 7, 18)
+                  ).toLsp
+                ),
+                TestCaseEntry(
+                  "test-parent-2",
+                  QuickLocation(
+                    classUriFor(
+                      "app/src/main/scala/MunitTestSuite.scala"
+                    ),
+                    (8, 2, 8, 19)
+                  ).toLsp
+                )
+              ).asJava
+            )
+          ).asJava
+        )
+      )
+    },
+    () => Some(classUriFor("app/src/main/scala/MunitTestSuite.scala"))
+  )
+
   checkEvents(
     "check-events",
     s"""|/metals.json

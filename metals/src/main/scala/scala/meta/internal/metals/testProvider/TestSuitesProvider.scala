@@ -48,7 +48,8 @@ final class TestSuitesProvider(
 
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
-  private val munitTestFinder = new MunitTestFinder(trees)
+  private val munitTestFinder =
+    new MunitTestFinder(trees, symbolIndex, semanticdbs)
 
   private def isEnabled =
     clientConfig.isTestExplorerProvider() &&
@@ -184,7 +185,8 @@ final class TestSuitesProvider(
               munitTestFinder.findTests(
                 semanticdb,
                 path,
-                suite.fullyQualifiedName
+                suite.fullyQualifiedName,
+                suite.symbol
               )
             case Unknown => Vector.empty
           }
