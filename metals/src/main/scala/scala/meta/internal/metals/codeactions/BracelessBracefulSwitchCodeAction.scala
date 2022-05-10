@@ -2,27 +2,25 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
 import scala.meta.Defn
 import scala.meta.Pkg
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.CodeAction
+import scala.meta.internal.metals.{Buffers, CodeAction, FormattingProvider}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
 
 class BracelessBracefulSwitchCodeAction(
     trees: Trees,
-    buffers: Buffers
+    buffers: Buffers,
+    formattingProvider: FormattingProvider
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
@@ -588,6 +586,8 @@ class BracelessBracefulSwitchCodeAction(
       bracelessEnd: String,
       codeActionSubjectTitle: String
   ): l.CodeAction = {
+    val formattedStrings =
+      formattingProvider.programmaticallyFormat(path).headOption
 
     // TODO Important: autoIndentDocument()
     val braceableBranchStart = expectedBraceStartPos

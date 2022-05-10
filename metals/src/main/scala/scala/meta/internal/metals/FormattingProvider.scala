@@ -71,7 +71,9 @@ final class FormattingProvider(
   private val reporterPromise =
     new AtomicReference[Option[Promise[Boolean]]](None)
   private val cancelToken = new AtomicReference[Option[CancelChecker]](None)
+
   private def isCancelled: Boolean = cancelToken.get().exists(_.isCancelled)
+
   private def reset(token: CancelChecker): Unit = {
     reporterPromise.get().foreach(_.trySuccess(false))
     reporterPromise.set(None)
@@ -98,6 +100,14 @@ final class FormattingProvider(
     }
   }
 
+  def programmaticallyFormat(
+      path: AbsolutePath
+  ): List[String] = {
+    scalafmt = scalafmt.withReporter(activeReporter)
+    val input = path.toInputFromBuffers(buffers)
+    getFormattedStrings(path, input)
+  }
+
   def format(
       path: AbsolutePath,
       token: CancelChecker
@@ -108,12 +118,12 @@ final class FormattingProvider(
     if (!scalafmtConf.isFile) {
       handleMissingFile(scalafmtConf).map {
         case true =>
-          runFormat(path, input).asJava
+          getFormattedTextEdits(path, input).asJava
         case false =>
           Collections.emptyList[l.TextEdit]()
       }
     } else {
-      val result = runFormat(path, input)
+      val result = getFormattedTextEdits(path, input)
       if (token.isCancelled) {
         statusBar.addMessage(
           s"${icons.info}Scalafmt cancelled by editor, try saving file again"
@@ -124,7 +134,8 @@ final class FormattingProvider(
           // Wait until "update .scalafmt.conf" dialogue has completed
           // before returning future.
           promise.future.map {
-            case true if !token.isCancelled => runFormat(path, input).asJava
+            case true if !token.isCancelled =>
+              getFormattedTextEdits(path, input).asJava
             case _ => result.asJava
           }
         case None =>
@@ -133,8 +144,10 @@ final class FormattingProvider(
     }
   }
 
-  private def runFormat(path: AbsolutePath, input: Input): List[l.TextEdit] = {
-    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+  private def getFormattedStrings(
+      path: AbsolutePath,
+      input: Input
+  ): List[String] = {
     val formatted =
       try {
         scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
@@ -149,10 +162,19 @@ final class FormattingProvider(
           input.text
       }
     if (formatted != input.text) {
-      List(new l.TextEdit(fullDocumentRange, formatted))
+      List(formatted)
     } else {
       Nil
     }
+  }
+
+  private def getFormattedTextEdits(
+      path: AbsolutePath,
+      input: Input
+  ): List[l.TextEdit] = {
+    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+    getFormattedStrings(path, input).map(new l.TextEdit(fullDocumentRange, _))
+
   }
 
   private def handleMissingVersion(config: AbsolutePath): Future[Boolean] = {
@@ -409,6 +431,7 @@ final class FormattingProvider(
 
   private val activeReporter: ScalafmtReporter = new ScalafmtReporter {
     private var downloadingScalafmt = Promise[Unit]()
+
     override def error(file: Path, message: String): Unit = {
       scribe.error(s"scalafmt: $file: $message")
       if (file == scalafmtConf.toNIO) {
@@ -449,6 +472,7 @@ final class FormattingProvider(
           scribe.error(s"scalafmt: $file", e)
       }
     }
+
     override def excluded(file: Path): Unit = {
       scribe.info(
         s"scalafmt: excluded $file (to format this file, update `project.excludeFilters` in .scalafmt.conf)"
@@ -479,6 +503,7 @@ final class FormattingProvider(
       )
       System.out
     }
+
     override def downloadWriter(): PrintWriter = {
       new PrintWriter(downloadOutputStream())
     }
@@ -488,10 +513,14 @@ final class FormattingProvider(
 object FormattingProvider {
 
   sealed trait RewriteType
+
   object RewriteType {
     case object Manual extends RewriteType
+
     sealed trait Auto extends RewriteType
+
     case object GlobalDialect extends Auto
+
     case object FileOverrideDialect extends Auto
   }
 
