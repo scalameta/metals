@@ -3,7 +3,6 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.Case
 import scala.meta.Defn
 import scala.meta.Pkg
 import scala.meta.Template
@@ -49,38 +48,6 @@ class BracelessBracefulSwitchCodeAction(
       } yield {
         tree match {
           case _: Pkg => None.toSeq
-          case classDefn: Defn.Class =>
-            createCodeActionForTemplateHolder(
-              classDefn,
-              path,
-              document,
-              classDefn.templ,
-              "class definition"
-            ).toSeq
-          case objectDefn: Defn.Object =>
-            createCodeActionForTemplateHolder(
-              objectDefn,
-              path,
-              document,
-              objectDefn.templ,
-              "object definition"
-            ).toSeq
-          case traitDefn: Defn.Trait =>
-            createCodeActionForTemplateHolder(
-              traitDefn,
-              path,
-              document,
-              traitDefn.templ,
-              "trait definition"
-            ).toSeq
-          case enumDefn: Defn.Enum =>
-            createCodeActionForTemplateHolder(
-              enumDefn,
-              path,
-              document,
-              enumDefn.templ,
-              "enum definition"
-            ).toSeq
           case valDefn: Defn.Val =>
             createCodeActionForPotentialBlockHolder(
               valDefn,
@@ -132,8 +99,6 @@ class BracelessBracefulSwitchCodeAction(
                 )
               )
             ).flatten
-          case caseTree: Case =>
-            createCodeActionForCasesListWrapper(caseTree, path).toSeq
           case termIf: Term.If =>
             Seq(
               createCodeActionForPotentialBlockHolder(
@@ -331,7 +296,8 @@ class BracelessBracefulSwitchCodeAction(
         bracelessEnd = "",
         indentation = indentation,
         document = document,
-        codeActionSubjectTitle = codeActionSubjectTitle
+        codeActionSubjectTitle = codeActionSubjectTitle,
+        maybeEndMarkerPos = None
       )
     }
   }
@@ -410,7 +376,8 @@ class BracelessBracefulSwitchCodeAction(
         bracelessEnd = "",
         indentation = indentation,
         document = document,
-        codeActionSubjectTitle = codeActionSubjectTitle
+        codeActionSubjectTitle = codeActionSubjectTitle,
+        maybeEndMarkerPos = None
       )
     }
   }
@@ -480,10 +447,20 @@ class BracelessBracefulSwitchCodeAction(
         bracelessEnd = "",
         indentation = indentation,
         document = document,
-        codeActionSubjectTitle = codeActionSubjectTitle
+        codeActionSubjectTitle = codeActionSubjectTitle,
+        maybeEndMarkerPos = maybeGetEndMarkerPos(blockHolder)
       )
     }
   }
+
+  private def maybeGetEndMarkerPos(tree: Tree): Option[Position] =
+    tree.parent
+      .flatMap(parent =>
+        parent.children.dropWhile(_ != tree).tail.headOption.collectFirst {
+          case endMarker: Term.EndMarker => endMarker
+        }
+      )
+      .map(_.pos)
 
   private def createCodeActionForTemplateHolder(
       templateHolder: Tree,
@@ -535,7 +512,8 @@ class BracelessBracefulSwitchCodeAction(
         bracelessEnd = "",
         indentation = indentation,
         document = document,
-        codeActionSubjectTitle = codeActionSubjectTitle
+        codeActionSubjectTitle = codeActionSubjectTitle,
+        maybeEndMarkerPos = maybeGetEndMarkerPos(templateHolder)
       )
     }
 
@@ -549,7 +527,8 @@ class BracelessBracefulSwitchCodeAction(
       expectedBraceEndPose: l.Position,
       bracelessStart: String,
       bracelessEnd: String,
-      codeActionSubjectTitle: String
+      codeActionSubjectTitle: String,
+      maybeEndMarkerPos: Option[Position]
   ): l.CodeAction = {
     // TODO Important: autoIndentDocument()
     //  val braceableBranchLSPPos = braceableBranch.pos.toLSP
@@ -576,6 +555,12 @@ class BracelessBracefulSwitchCodeAction(
       s"""|
           |$indentation}""".stripMargin
     )
+    val maybeEndMarkerEraserTextEdit = maybeEndMarkerPos.map { endMarkerPos =>
+      new TextEdit(
+        new l.Range(endMarkerPos.toLSP.getStart, endMarkerPos.toLSP.getEnd),
+        ""
+      )
+    }.toList
 
     val codeAction = new l.CodeAction()
     codeAction.setTitle(
@@ -585,10 +570,10 @@ class BracelessBracefulSwitchCodeAction(
     codeAction.setEdit(
       new l.WorkspaceEdit(
         Map(
-          path.toURI.toString -> List(
+          path.toURI.toString -> (List(
             startBraceTextEdit,
             endBraceTextEdit
-          ).asJava
+          ) ++ maybeEndMarkerEraserTextEdit).asJava
         ).asJava
       )
     )
@@ -636,13 +621,6 @@ class BracelessBracefulSwitchCodeAction(
       )
     )
     codeAction
-  }
-
-  private def createCodeActionForCasesListWrapper(
-      caseTree: Case,
-      path: AbsolutePath
-  ): Option[l.CodeAction] = {
-    None
   }
 
   private def getIndentationForPositionInDocument(
