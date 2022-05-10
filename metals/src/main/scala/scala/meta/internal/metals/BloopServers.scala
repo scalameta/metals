@@ -244,7 +244,7 @@ final class BloopServers(
   private def maybeLoadBloopGlobalJsonFile(
       bloopGlobalJsonFilePath: AbsolutePath
   ): (Option[String], Option[List[String]]) = {
-    val maybeData = util.Try {
+    val maybeData = Try {
       val source = scala.io.Source.fromFile(bloopGlobalJsonFilePath.toURI)
       val jsonString =
         try source.mkString
@@ -252,10 +252,10 @@ final class BloopServers(
       ujson.read(jsonString)
     }
     val javaHome = maybeData.flatMap { data =>
-      util.Try(data("javaHome").str)
+      Try(data("javaHome").str)
     }.toOption
     val javaOptions = maybeData.flatMap { data =>
-      util.Try {
+      Try {
         data("javaOptions").arr.toList.map(_.str)
       }
     }
@@ -293,9 +293,7 @@ final class BloopServers(
    */
   def ensureDesiredJvmSettings(
       maybeRequestedBloopJvmProperties: Option[List[String]],
-      maybeRunningBloopJvmProperties: Option[List[String]],
       maybeRequestedMetalsJavaHome: Option[String],
-      maybeRunningMetalsJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
 
@@ -309,10 +307,8 @@ final class BloopServers(
           maybeLoadBloopGlobalJsonFile(bloopGlobalJsonFilePath)
         requestedBloopJvmProperties = maybeRequestedBloopJvmProperties
           .getOrElse(List.empty)
-        if (maybeRequestedBloopJvmProperties != maybeRunningBloopJvmProperties
-          && maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties) ||
-          (maybeRequestedMetalsJavaHome != maybeRunningMetalsJavaHome
-            && maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome)
+        if maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties ||
+          maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome
       } yield updateBloopJvmProperties(
         requestedBloopJvmProperties,
         bloopGlobalJsonFilePath,
