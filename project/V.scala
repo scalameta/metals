@@ -12,12 +12,12 @@ object V {
   val ammonite213Version = "2.13.7"
 
   val ammonite = "2.5.3"
-  val bloop = "1.5.0"
+  val bloop = "1.5.0-18-003e6c7b"
   val bloopNightly = bloop
   val bsp = "2.1.0-M1"
   val coursier = "2.1.0-M5"
   val coursierInterfaces = "1.0.6"
-  val debugAdapter = "2.1.0"
+  val debugAdapter = "2.2.0-M1"
   val genyVersion = "0.7.1"
   val gradleBloop = bloop
   val java8Compat = "1.0.2"
