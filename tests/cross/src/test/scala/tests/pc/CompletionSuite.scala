@@ -1473,4 +1473,14 @@ class CompletionSuite extends BaseCompletionSuite {
     filter = _.startsWith("toInt")
   )
 
+  check(
+    "no-completions",
+    s"""|package nocomp
+        |object Foo {
+        |  errored.@@
+        |}
+        |""".stripMargin,
+    ""
+  )
+
 }
