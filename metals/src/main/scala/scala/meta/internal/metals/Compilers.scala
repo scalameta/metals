@@ -43,6 +43,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
+import scala.meta.pc.ParamNameHintResult
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -430,6 +431,18 @@ class Compilers(
         positions.map(CompilerOffsetParams.fromPos(_, token))
       pc.selectionRange(offsetPositions).asScala
     }.getOrElse(Future.successful(Nil.asJava))
+  }
+
+  def paramNameHints(
+      path: AbsolutePath
+  ): Future[ju.List[ParamNameHintResult]] = {
+    loadCompiler(path)
+      .map { pc =>
+        val input = path.toInputFromBuffers(buffers)
+        val params = CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+        pc.paramNameHints(params).asScala
+      }
+      .getOrElse(Future.successful(Nil.asJava))
   }
 
   def loadCompiler(

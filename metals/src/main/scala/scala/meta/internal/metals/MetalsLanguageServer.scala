@@ -98,6 +98,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.decorations.DecorationOptions
+import scala.collection.convert.AsScalaExtensions
+import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
+import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -604,18 +608,6 @@ class MetalsLanguageServer(
           clientConfig,
           trees
         )
-        syntheticsDecorator = new SyntheticsDecorationProvider(
-          workspace,
-          semanticdbs,
-          buffers,
-          languageClient,
-          fingerprints,
-          charset,
-          () => focusedDocument,
-          clientConfig,
-          () => userConfig,
-          trees
-        )
         testProvider = new TestSuitesProvider(
           buildTargets,
           buildTargetClasses,
@@ -626,16 +618,6 @@ class MetalsLanguageServer(
           clientConfig,
           () => userConfig,
           languageClient
-        )
-        semanticDBIndexer = new SemanticdbIndexer(
-          List(
-            referencesProvider,
-            implementationProvider,
-            syntheticsDecorator,
-            testProvider
-          ),
-          buildTargets,
-          workspace
         )
         documentHighlightProvider = new DocumentHighlightProvider(
           definitionProvider,
@@ -671,6 +653,29 @@ class MetalsLanguageServer(
             mtagsResolver,
             sourceMapper
           )
+        )
+        syntheticsDecorator = new SyntheticsDecorationProvider(
+          workspace,
+          semanticdbs,
+          buffers,
+          languageClient,
+          fingerprints,
+          charset,
+          () => focusedDocument,
+          clientConfig,
+          () => userConfig,
+          trees,
+          compilers
+        )
+        semanticDBIndexer = new SemanticdbIndexer(
+          List(
+            referencesProvider,
+            implementationProvider,
+            syntheticsDecorator,
+            testProvider
+          ),
+          buildTargets,
+          workspace
         )
         debugProvider = new DebugProvider(
           workspace,

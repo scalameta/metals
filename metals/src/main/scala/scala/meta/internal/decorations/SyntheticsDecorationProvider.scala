@@ -47,7 +47,8 @@ final class SyntheticsDecorationProvider(
     focusedDocument: () => Option[AbsolutePath],
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
-    trees: Trees
+    trees: Trees,
+    compilers: m.internal.metals.Compilers
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
   private object Document {
@@ -61,9 +62,13 @@ final class SyntheticsDecorationProvider(
     def set(doc: TextDocument): Unit = document.set(doc)
   }
 
-  def publishSynthetics(path: AbsolutePath): Future[Unit] = Future {
+  def publishSynthetics(path: AbsolutePath): Future[Unit] = {
     val decorations = syntheticDecorations(path)
-    publish(path, decorations)
+    for {
+      hints <- paramNameHints(path)
+    } yield {
+      publish(path, decorations ++ hints)
+    }
   }
 
   override def onDelete(path: AbsolutePath): Unit = ()
@@ -77,8 +82,9 @@ final class SyntheticsDecorationProvider(
       focused <- focusedDocument()
       if path == focused || !clientConfig.isDidFocusProvider()
       textDoc <- enrichWithText(textDocument.documents.headOption, path)
+      hints <- paramNameHints(path)
     } {
-      publish(path, decorations(path, textDoc))
+      publish(path, decorations(path, textDoc) ++ hints)
     }
   }
 
@@ -146,6 +152,30 @@ final class SyntheticsDecorationProvider(
     } else {
       pcHover
     }
+
+  private def paramNameHints(
+      path: AbsolutePath
+  ): Future[Seq[DecorationOptions]] = {
+    for {
+      hints <- compilers.paramNameHints(path)
+    } yield {
+      val options = hints.map { hint =>
+        new DecorationOptions(
+          range = hint.range(),
+          renderOptions = ThemableDecorationInstanceRenderOptions(
+            before = ThemableDecorationAttachmentRenderOptions(
+              hint.contentText(),
+              color = "grey",
+              fontStyle = "italic",
+              opacity = 0.7
+            )
+          )
+        )
+      }
+      // println(s"options: ${options.asScala.toSeq}")
+      options.asScala.toSeq
+    }
+  }
 
   private def syntheticDecorations(
       path: AbsolutePath

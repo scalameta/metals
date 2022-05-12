@@ -36,6 +36,7 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import scala.meta.pc.ParamNameHintResult
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -47,6 +48,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None
 ) extends PresentationCompiler {
+
   implicit val executionContext: ExecutionContextExecutor = ec
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
@@ -140,6 +142,12 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
     }
+  }
+
+  override def paramNameHints(
+      param: VirtualFileParams
+  ): CompletableFuture[ju.List[ParamNameHintResult]] = {
+    CompletableFuture.completedFuture(new ju.ArrayList[ParamNameHintResult]())
   }
 
   override def autoImports(

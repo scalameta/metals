@@ -185,6 +185,20 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
+  override def paramNameHints(
+      params: VirtualFileParams
+  ): CompletableFuture[ju.List[ParamNameHintResult]] =
+    val empty: ju.List[ParamNameHintResult] =
+      new ju.ArrayList[ParamNameHintResult]()
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      println("scalapc")
+      new ParamNameHintProvider(
+        params,
+        pc.compiler(),
+        config
+      ).paramNameHints.asJava
+    }
+
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =

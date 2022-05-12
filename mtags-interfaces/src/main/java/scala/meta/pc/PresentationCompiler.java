@@ -96,6 +96,14 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
 
     /**
+     * Return the list of parameter name hints in the given file.
+     * Intentionally avoid returning InlayHint, so the caller can transform the return value into
+     * either InlayHint or DecorationOption.
+     * When we moved to InlayHint, this method can return InlayHint.
+     */
+    public abstract CompletableFuture<List<ParamNameHintResult>> paramNameHints(VirtualFileParams param);
+
+    /**
      * The text contents of the fiven file changed.
      */
     public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
