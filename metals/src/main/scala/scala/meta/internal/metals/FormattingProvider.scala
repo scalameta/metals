@@ -108,6 +108,24 @@ final class FormattingProvider(
     getFormattedStrings(path, input)
   }
 
+  /**
+   * @param path the path to the file containing the code,
+   *             it is only used for checking the file extension
+   *             and also checking if the file belongs to the project
+   * @param code the string of the code which is to be formatted
+   * @return `None` if there is a formatting problem, such as
+   *         the absence of a Scalafmt config file, otherwise,
+   *         the formatted code, irrespective of whether it is
+   *         identical to the input `code` or not!
+   */
+  def programmaticallyFormat(
+      path: AbsolutePath,
+      code: String
+  ): Option[String] = {
+    scalafmt = scalafmt.withReporter(activeReporter)
+    getFormattedString(path, code)
+  }
+
   def format(
       path: AbsolutePath,
       token: CancelChecker
@@ -166,6 +184,36 @@ final class FormattingProvider(
     } else {
       Nil
     }
+  }
+
+  /**
+   * @param path the path to the file containing the code,
+   *             it is only used for checking the file extension
+   *             and also checking if the file belongs to the project
+   * @param code the string of the code which is to be formatted
+   * @return `None` if there is a formatting problem, such as
+   *         the absence of a Scalafmt config file, otherwise,
+   *         the formatted code, irrespective of whether it is
+   *         identical to the input `code` or not!
+   */
+  private def getFormattedString(
+      path: AbsolutePath,
+      code: String
+  ): Option[String] = {
+
+    try {
+      Some(scalafmt.format(scalafmtConf.toNIO, path.toNIO, code))
+    } catch {
+      case e: ScalafmtDynamicError =>
+        scribe.debug(
+          s"Skipping Scalafmt due to config issue: ${e.getMessage()}"
+        )
+        // If we hit this, there is a config issue, and we just return the input.
+        // We don't need to worry about handling it here since it's handled by the
+        // reporter and showed as an error in the logs anyways.
+        None
+    }
+
   }
 
   private def getFormattedTextEdits(
