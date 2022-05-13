@@ -6,6 +6,8 @@ import java.lang.Character.isJavaIdentifierStart
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.MtagsEnrichments.*
+
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags.*
@@ -59,14 +61,13 @@ object SemanticdbSymbols:
                   // owner.typeParams.filter(_.name.containsName(value))
                   Nil
                 case Descriptor.Method(value, _) =>
-                  // TODO - need to check how to implement this properly
-                  // owner.info
-                  //   .decl(termName(value))
-                  //   .alternatives
-                  //   .iterator
-                  //   .filter(sym => semanticdbSymbol(sym) == s)
-                  //   .toList
-                  Nil
+                  owner.info
+                    .decl(termName(value))
+                    .alternatives
+                    .iterator
+                    .map(_.symbol)
+                    .filter(sym => symbolName(sym) == s)
+                    .toList
 
         parentSymbol.flatMap(tryMember)
     try loop(sym).filterNot(_ == NoSymbol)
@@ -105,8 +106,8 @@ object SemanticdbSymbols:
       val alts = decls.filter(_.isOneOf(Method | Mutable)).toList.reverse
       def find(filter: Symbol => Boolean) = alts match
         case notSym :: rest if !filter(notSym) =>
-          val idx = rest.indexWhere(filter).ensuring(_ >= 0)
-          b.append('+').append(idx + 1)
+          val idx = rest.indexWhere(filter)
+          if idx >= 0 then b.append('+').append(idx + 1)
         case _ =>
       end find
       val sig = sym.signature
@@ -133,7 +134,7 @@ object SemanticdbSymbols:
           b.append('('); addOverloadIdx(sym); b.append(").")
         else b.append('.')
 
-    if !sym.isRoot then addOwner(sym.owner)
+    if !sym.isRoot && sym != NoSymbol then addOwner(sym.owner)
     addDescriptor(sym)
   end addSymName
 

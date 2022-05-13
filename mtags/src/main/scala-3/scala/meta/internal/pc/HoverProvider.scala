@@ -4,7 +4,6 @@ import java.{util as ju}
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
@@ -76,7 +75,11 @@ object HoverProvider:
                   ctx.fresh.setCompilationUnit(unit)
                 MetalsInteractive.contextOfPath(enclosing)(using newctx)
               case None => ctx
-          val printer = MetalsPrinter.standard(IndexedContext(printerContext))
+          val printer = MetalsPrinter.standard(
+            IndexedContext(printerContext),
+            search,
+            includeDefaultParam = true
+          )
 
           val hoverString =
             tpw match
@@ -97,7 +100,7 @@ object HoverProvider:
           end hoverString
 
           val docString = symbolTpes
-            .flatMap(symTpe => symbolDocumentation(symTpe._1, search))
+            .flatMap(symTpe => search.symbolDocumentation(symTpe._1))
             .map(_.docstring)
             .mkString("\n")
           printer.expressionType(exprTpw) match
@@ -169,24 +172,4 @@ object HoverProvider:
         List(EmptyTree)
   end expandRangeToEnclosingApply
 
-  private def symbolDocumentation(symbol: Symbol, search: SymbolSearch)(using
-      Context
-  ): Option[SymbolDocumentation] =
-    def toSemanticdbSymbol(symbol: Symbol) =
-      SemanticdbSymbols.symbolName(
-        if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
-          symbol.owner
-        else symbol
-      )
-    val sym = toSemanticdbSymbol(symbol)
-    // symbol.allOverriddenSymbols
-    val documentation = search.documentation(
-      sym,
-      new ParentSymbols:
-        def parents(): java.util.List[String] =
-          symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava
-    )
-    if documentation.isPresent then Some(documentation.get())
-    else None
-  end symbolDocumentation
 end HoverProvider

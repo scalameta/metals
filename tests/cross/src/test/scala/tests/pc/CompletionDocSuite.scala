@@ -6,9 +6,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
   override def requiresScalaLibrarySources: Boolean = true
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   check(
     "java",
     """
@@ -30,7 +27,13 @@ class CompletionDocSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|join(delimiter: CharSequence, elements: CharSequence*): String
        |join(delimiter: CharSequence, elements: Iterable[_ <: CharSequence]): String
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|join(delimiter: CharSequence, elements: CharSequence*): String
+           |join(delimiter: CharSequence, elements: Iterable[? <: CharSequence]): String
+           |""".stripMargin
+    )
   )
 
   check(
@@ -46,6 +49,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     """|setValue(value: Int): Int
        |""".stripMargin
   )
+
   check(
     "java4",
     """
@@ -54,7 +58,12 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|singletonList[T](o: T): List[T]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|singletonList[T](o: T): java.util.List[T]
+           |""".stripMargin
+    )
   )
   check(
     "java5",
@@ -100,6 +109,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
          |""".stripMargin,
     includeDocs = true
   )
+
   check(
     "scala",
     """
@@ -120,7 +130,12 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|sliding[B >: Int](size: Int, step: Int = 1): Iterator[Int]#GroupedIterator[B]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|sliding[B >: Int](size: Int, step: Int = 1): $1$.GroupedIterator[B]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -139,7 +154,19 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |- `x`: the object to print.
        |println(x: Any): Unit
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "3" ->
+        """|> Prints a newline character on the default output.
+           |println: Unit
+           |> Prints out an object to the default output, followed by a newline character.
+           |
+           |
+           |**Parameters**
+           |- `x`: the object to print.
+           |println(x: Any): Unit
+           |""".stripMargin
+    )
   )
 
   val commonlyUsedTypesPre2134: String =
@@ -219,20 +246,17 @@ class CompletionDocSuite extends BaseCompletionSuite {
         s"""
            |${predefDocString(commonlyUsedTypesPost2134)}
            |Predef scala
+           |""".stripMargin,
+      "3" ->
+        s"""
+           |${predefDocString(commonlyUsedTypesPost2134)}
+           |Predef scala
+           |Predef - scala.runtime.stdLibPatches
            |""".stripMargin
     )
   )
 
-  def iteratorDocs213(withLinearSeqIterator: Boolean = true): String = {
-    val linearSeqIteratorDocs =
-      if (withLinearSeqIterator) {
-        "\n" +
-          """|> A specialized Iterator for LinearSeqs that is lazy enough for Stream and LazyList. This is accomplished by not
-             |evaluating the tail after returning the current head.
-             |LinearSeqIterator scala.collection""".stripMargin
-      } else {
-        ""
-      }
+  val iteratorDocs213: String =
     s"""|> Iterators are data structures that allow to iterate over a sequence
         |of elements. They have a `hasNext` method for checking
         |if there is a next element available, and a `next` method
@@ -263,7 +287,21 @@ class CompletionDocSuite extends BaseCompletionSuite {
         |}
         |```
         |Iterator scala.collection
-        |> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
+        |""".stripMargin
+
+  def iteratorAndSpecificIterableFactoryDocs213(
+      withLinearSeqIterator: Boolean = true
+  ): String = {
+    val linearSeqIteratorDocs =
+      if (withLinearSeqIterator) {
+        "\n" +
+          """|> A specialized Iterator for LinearSeqs that is lazy enough for Stream and LazyList. This is accomplished by not
+             |evaluating the tail after returning the current head.
+             |LinearSeqIterator scala.collection""".stripMargin
+      } else {
+        ""
+      }
+    s"""|$iteratorDocs213> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
         |AbstractIterator scala.collection
         |> Buffered iterators are iterators which provide a method `head`
         | that inspects the next element without discarding it.
@@ -365,7 +403,10 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       // LinearSeqIterator should actually not be added since it's private and it's fixed in 2.13.5
-      "2.13" -> iteratorDocs213(withLinearSeqIterator = false)
+      "2.13" -> iteratorAndSpecificIterableFactoryDocs213(
+        withLinearSeqIterator = false
+      ),
+      "3" -> iteratorDocs213
     )
   )
 
@@ -390,17 +431,19 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |  scala.concurrent.ExecutionContext.Implicits.global@@
       |}
     """.stripMargin,
-    s"""|$executionDocstringPre2134
+    s"""|$executionDocstringPost2134
         |global: ExecutionContext
         |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.11" -> s"""|$executionDocstringPre2134
-                    |global: ExecutionContextExecutor
-                    |""".stripMargin,
-      "2.13" -> s"""|$executionDocstringPost2134
-                    |global: ExecutionContext
-                    |""".stripMargin
+      "2.11" ->
+        s"""|$executionDocstringPre2134
+            |global: ExecutionContextExecutor
+            |""".stripMargin,
+      "2.12" ->
+        s"""|$executionDocstringPre2134
+            |global: ExecutionContext
+            |""".stripMargin
     )
   )
   check(
@@ -464,30 +507,29 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|> A builder for mutable sequence of characters.  This class provides an API
-       | mostly compatible with `java.lang.StringBuilder`, except where there are
-       | conflicts with the Scala collections API (such as the `reverse` method.)
+       |mostly compatible with `java.lang.StringBuilder`, except where there are
+       |conflicts with the Scala collections API (such as the `reverse` method.)
+       |
+       |$multipleResults
        |
        |
        |**See**
-       |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
-       | section on `StringBuilders` for more information.
+       |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+       |section on `StringBuilders` for more information.
        |StringBuilder scala.collection.mutable
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" ->
-        """|> A builder for mutable sequence of characters.  This class provides an API
-           |mostly compatible with `java.lang.StringBuilder`, except where there are
-           |conflicts with the Scala collections API (such as the `reverse` method.)
-           |
-           |$multipleResults
-           |
-           |
-           |**See**
-           |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
-           |section on `StringBuilders` for more information.
-           |StringBuilder scala.collection.mutable
-           |""".stripMargin
+      "2.12" -> """|> A builder for mutable sequence of characters.  This class provides an API
+                   | mostly compatible with `java.lang.StringBuilder`, except where there are
+                   | conflicts with the Scala collections API (such as the `reverse` method.)
+                   |
+                   |
+                   |**See**
+                   |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+                   | section on `StringBuilders` for more information.
+                   |StringBuilder scala.collection.mutable
+                   |""".stripMargin
     )
   )
 
@@ -550,9 +592,27 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" -> vectorDocs213
+      "2.13" -> vectorDocs213,
+      "3" -> vectorDocs213
     )
   )
+
+  val post212CatchDocs: String =
+    """|> A container class for catch/finally logic.
+       |
+       | Pass a different value for rethrow if you want to probably
+       | unwisely allow catching control exceptions and other throwables
+       | which the rest of the world may expect to get through.
+       |
+       |**Type Parameters**
+       |- `T`: result type of bodies used in try and catch blocks
+       |
+       |**Parameters**
+       |- `fin`: Finally logic which if defined will be invoked after catch logic
+       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+       |- `pf`: Partial function used when applying catch logic to determine result value
+       |Catch - scala.util.control.Exception
+       |""".stripMargin
   check(
     "scala9",
     """
@@ -577,22 +637,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" ->
-        """|> A container class for catch/finally logic.
-           |
-           | Pass a different value for rethrow if you want to probably
-           | unwisely allow catching control exceptions and other throwables
-           | which the rest of the world may expect to get through.
-           |
-           |**Type Parameters**
-           |- `T`: result type of bodies used in try and catch blocks
-           |
-           |**Parameters**
-           |- `fin`: Finally logic which if defined will be invoked after catch logic
-           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |- `pf`: Partial function used when applying catch logic to determine result value
-           |Catch - scala.util.control.Exception
-           |""".stripMargin
+      "2.13" -> post212CatchDocs,
+      "3" -> post212CatchDocs
     )
   )
 
@@ -608,7 +654,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true
   )
   check(
-    "scala11",
+    "scala11".tag(IgnoreScala3),
     """
       |object A {
       |  new scala.util.DynamicVariable@@
@@ -686,32 +732,45 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |
        |
        |**Type Parameters**
-       |- `B1`: type of the values of the new bindings, a supertype of `B`
+       |- `V1`: type of the values of the new bindings, a supertype of `V`
        |
        |**Parameters**
-       |- `key`: the key to be inserted
        |- `value`: the value to be associated with `key`
+       |- `key`: the key to be inserted
        |
        |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
-       |insert[B1 >: Int](key: Int, value: B1): TreeMap[Int,B1]
+       |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int,V1]
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.13" ->
-        """|> A new TreeMap with the entry added is returned,
-           | assuming that key is *not* in the TreeMap.
-           |
-           |
-           |**Type Parameters**
-           |- `V1`: type of the values of the new bindings, a supertype of `V`
-           |
-           |**Parameters**
-           |- `value`: the value to be associated with `key`
-           |- `key`: the key to be inserted
-           |
-           |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
-           |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int,V1]
-           |""".stripMargin
+      "2.12" -> """|> A new TreeMap with the entry added is returned,
+                   | assuming that key is *not* in the TreeMap.
+                   |
+                   |
+                   |**Type Parameters**
+                   |- `B1`: type of the values of the new bindings, a supertype of `B`
+                   |
+                   |**Parameters**
+                   |- `key`: the key to be inserted
+                   |- `value`: the value to be associated with `key`
+                   |
+                   |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
+                   |insert[B1 >: Int](key: Int, value: B1): TreeMap[Int,B1]
+                   |""".stripMargin,
+      "3" -> """|> A new TreeMap with the entry added is returned,
+                | assuming that key is *not* in the TreeMap.
+                |
+                |
+                |**Type Parameters**
+                |- `V1`: type of the values of the new bindings, a supertype of `V`
+                |
+                |**Parameters**
+                |- `value`: the value to be associated with `key`
+                |- `key`: the key to be inserted
+                |
+                |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
+                |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int, V1]
+                |""".stripMargin
     )
   )
 
