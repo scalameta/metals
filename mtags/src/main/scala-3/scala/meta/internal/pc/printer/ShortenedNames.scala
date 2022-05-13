@@ -174,6 +174,11 @@ class ShortenedNames(val indexedContext: IndexedContext):
           AndType(loop(tp1, None), loop(tp2, None))
         case or @ OrType(tp1, tp2) =>
           OrType(loop(tp1, None), loop(tp2, None), or.isSoft)
+        // Replace error type into Any
+        // Otherwise, DotcPrinter (more specifically, RefinedPrinter in Dotty) print the error type as
+        // <error ....>, that is hard to read for users.
+        // It'd be ideal to replace error types with type parameter (see: CompletionOverrideSuite#error) though
+        case t if t.isError => ctx.definitions.AnyType
         case t => t
 
       cached.putIfAbsent(key, result)

@@ -253,7 +253,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         """
           |object Main {
           |  new scala.Iterable[Unknown] {
-          |    def iterator: Any = ${0:???}
+          |    def iterator: Iterator[Any] = ${0:???}
           |  }
           |}
         """.stripMargin

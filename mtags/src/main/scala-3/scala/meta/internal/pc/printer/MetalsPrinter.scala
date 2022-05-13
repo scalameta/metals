@@ -68,8 +68,7 @@ class MetalsPrinter(
 
   def tpe(tpe: Type): String =
     val short = names.shortType(tpe)
-    if short.isErroneous then "Any"
-    else dotcPrinter.tpe(short)
+    dotcPrinter.tpe(short)
 
   def hoverSymbol(sym: Symbol, info: Type)(using Context): String =
     val typeSymbol = info.typeSymbol
