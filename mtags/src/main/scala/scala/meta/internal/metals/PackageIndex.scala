@@ -13,6 +13,7 @@ import java.util.jar.JarFile
 import java.util.logging.Level
 import java.util.logging.Logger
 
+import scala.reflect.NameTransformer
 import scala.util.Properties
 import scala.util.control.NonFatal
 
@@ -56,7 +57,7 @@ class PackageIndex() {
   def addMember(pkg: String, member: String): Unit = {
     if (!member.contains("module-info.class")) {
       val members = packages.computeIfAbsent(pkg, enterPackage)
-      members.add(member)
+      members.add(NameTransformer.decode(member))
     }
   }
 

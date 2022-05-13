@@ -360,4 +360,24 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       )
     } yield ()
   }
+
+  test("symbolic-from-classpath") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |""".stripMargin
+      )
+      _ = assertNoDiff(
+        server.workspaceSymbol("<:<"),
+        """|scala.<:<
+           |scala.<:<
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }
