@@ -149,7 +149,7 @@ class StacktraceAnalyzer(
   private def symbolFromLine(line: String): Option[String] = Try {
     val trimmed = line.substring(line.indexOf("at ") + 3, line.indexOf("("))
     trimmed match {
-      case regex(_, _, group3) => group3
+      case catEffectsStacktrace(symbol) => symbol
       case _ => trimmed
     }
   }.toOption
@@ -205,8 +205,13 @@ class StacktraceAnalyzer(
 }
 
 object StacktraceAnalyzer {
-  // match on: 'apply @ a.Main$.<clinit>'' OR 'run$ @ a.Main$.run'
-  final val regex: Regex = """((\w|\$)+ @ )?(.+)""".r
+
+  /**
+   * Match on: 'apply @ a.Main$.<clinit>'' OR 'run$ @ a.Main$.run' and etc.
+   * '[\w|\$]+ @ ' matches sequences like 'apply @ ' or 'run$ @ '.
+   * Capture group captures relevant part like 'a.Main$.run'.
+   */
+  final val catEffectsStacktrace: Regex = """[\w|\$]+ @ (.+)""".r
 
   def toToplevelSymbol(symbolIn: String): List[String] = {
     // remove module name. Module symbols are formatted as `moduleName/symbol`
