@@ -930,7 +930,8 @@ class BracelessBracefulSwitchCodeAction(
 
     val maybeFormattedParent: Option[Tree] =
       maybeFormattedString.map(parse(path, _)).flatMap {
-        case Parsed.Error(_, _, _) =>
+        case Parsed.Error(position, string, exception) =>
+          pprint.log(s"${exception.getMessage} at $position : $string")
           None
         case Parsed.Success(tree) =>
           Some(tree)
