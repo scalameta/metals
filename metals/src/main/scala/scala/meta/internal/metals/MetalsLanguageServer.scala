@@ -705,7 +705,8 @@ class MetalsLanguageServer(
           trees,
           diagnostics,
           languageClient,
-          formattingProvider
+          formattingProvider,
+          scalaVersionSelector
         )
         doctor = new Doctor(
           workspace,

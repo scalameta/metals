@@ -15,6 +15,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parsed
@@ -27,7 +28,8 @@ import org.eclipse.{lsp4j => l}
 class BracelessBracefulSwitchCodeAction(
     trees: Trees,
     buffers: Buffers,
-    formattingProvider: FormattingProvider
+    formattingProvider: FormattingProvider,
+    scalaVersionSelector: ScalaVersionSelector
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
@@ -202,6 +204,12 @@ class BracelessBracefulSwitchCodeAction(
       .getOrElse(-1) != termBlock.pos.end && util
       .Try(termBlock.tokens.maxBy(_.pos.end).text)
       .getOrElse("") == "}"
+  }
+
+  private def parse(path: AbsolutePath, code: String): Parsed[Tree] = {
+    val input = Input.VirtualFile(path.toURI.toString(), code)
+    val dialect = scalaVersionSelector.getDialect(path)
+    dialect(input).parse[Source]
   }
 
   /**
@@ -648,7 +656,7 @@ class BracelessBracefulSwitchCodeAction(
       formattingProvider.programmaticallyFormat(path, initialCode)
 
     val maybeFormattedParent: Option[Tree] =
-      maybeFormattedString.map(_.parse[Source]).flatMap {
+      maybeFormattedString.map(parse(path, _)).flatMap {
         case Parsed.Error(_, _, _) =>
           None
         case Parsed.Success(tree) =>
@@ -686,7 +694,7 @@ class BracelessBracefulSwitchCodeAction(
       formattingProvider.programmaticallyFormat(path, initialCode)
 
     val maybeFormattedMatch: Option[Term.Match] =
-      maybeFormattedString.map(_.parse[Source]).flatMap {
+      maybeFormattedString.map(parse(path, _)).flatMap {
         case Parsed.Error(_, _, _) =>
           None
         case Parsed.Success(tree) =>
@@ -918,14 +926,16 @@ class BracelessBracefulSwitchCodeAction(
       formattingProvider.programmaticallyFormat(path, initialCode)
 
     val maybeTreeIndex = Try(treeParent.children.indexOf(tree)).toOption
+    pprint.log(s"the tree index for \n$tree is:" + maybeTreeIndex)
 
     val maybeFormattedParent: Option[Tree] =
-      maybeFormattedString.map(_.parse[Source]).flatMap {
+      maybeFormattedString.map(parse(path, _)).flatMap {
         case Parsed.Error(_, _, _) =>
           None
         case Parsed.Success(tree) =>
           Some(tree)
       }
+    pprint.log(s"maybeFormattedParent is \n " + maybeFormattedParent)
 
     val maybeFormattedTree = {
       for {
@@ -970,6 +980,15 @@ class BracelessBracefulSwitchCodeAction(
       path,
       blockEmbraceable
     )
+
+    pprint.log("the formatted parent is\n" + maybeFormattedParent.get)
+    pprint.log(
+      "the formatted block holder is\n" + maybeFormattedBlockHolder.get
+    )
+    pprint.log(
+      "the formatted block embraceable is\n" + maybeFormattedBlockEmbraceable.get
+    )
+
     for {
       formattedBlockEmbraceable <- maybeFormattedBlockEmbraceable
       formattedParent <- maybeFormattedParent
@@ -982,9 +1001,11 @@ class BracelessBracefulSwitchCodeAction(
         .Try(blockEmbraceable.tokens.minBy(_.pos.start))
         .toOption
         .map(_.pos.toLSP.getStart)
-
     } yield
-      if (formattedString != initialCode)
+      if (formattedString != initialCode) {
+        pprint.log(
+          "creating code action for the fomatted block holder parent:\n" + formattedParent
+        )
         createCodeActionForGoingBracelessWithFormatting(
           path = path,
           expectedBraceStartPos = formattedBracePose,
@@ -995,7 +1016,7 @@ class BracelessBracefulSwitchCodeAction(
           formattedTree = formattedParent,
           originalTree = blockHolderParent
         )
-      else
+      } else
         createCodeActionForGoingBracelessWithoutFormatting(
           path,
           expectedBraceStartPos = defaultBracePos,
@@ -1186,7 +1207,7 @@ class BracelessBracefulSwitchCodeAction(
       formattingProvider.programmaticallyFormat(path, initialCode)
 
     val maybeFormattedTree: Option[Tree] =
-      maybeFormattedString.map(_.parse[Source]).flatMap {
+      maybeFormattedString.map(parse(path, _)).flatMap {
         case Parsed.Error(_, _, _) =>
           None
         case Parsed.Success(tree) =>
@@ -1220,7 +1241,7 @@ class BracelessBracefulSwitchCodeAction(
       formattingProvider.programmaticallyFormat(path, initialCode)
 
     val maybeFormattedTry: Option[Term.Try] =
-      maybeFormattedString.map(_.parse[Source]).flatMap {
+      maybeFormattedString.map(parse(path, _)).flatMap {
         case Parsed.Error(_, _, _) =>
           None
         case Parsed.Success(tree) =>
@@ -1241,7 +1262,7 @@ class BracelessBracefulSwitchCodeAction(
       formattingProvider.programmaticallyFormat(path, initialCode)
 
     val maybeFormattedParent: Option[Tree] =
-      maybeFormattedString.map(_.parse[Source]).flatMap {
+      maybeFormattedString.map(parse(path, _)).flatMap {
         case Parsed.Error(_, _, _) =>
           None
         case Parsed.Success(tree) =>

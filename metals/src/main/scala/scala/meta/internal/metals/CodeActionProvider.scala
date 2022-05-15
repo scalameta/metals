@@ -19,7 +19,8 @@ final class CodeActionProvider(
     trees: Trees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
-    formattingProvider: FormattingProvider
+    formattingProvider: FormattingProvider,
+    scalaVersionSelector: ScalaVersionSelector
 )(implicit ec: ExecutionContext) {
 
   private val extractMemberAction = new ExtractRenameMember(buffers, trees)
@@ -47,7 +48,12 @@ final class CodeActionProvider(
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
-    new BracelessBracefulSwitchCodeAction(trees, buffers, formattingProvider)
+    new BracelessBracefulSwitchCodeAction(
+      trees,
+      buffers,
+      formattingProvider,
+      scalaVersionSelector
+    )
   )
 
   def codeActions(

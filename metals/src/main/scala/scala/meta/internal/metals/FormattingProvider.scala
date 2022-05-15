@@ -123,7 +123,16 @@ final class FormattingProvider(
       code: String
   ): Option[String] = {
     scalafmt = scalafmt.withReporter(activeReporter)
-    getFormattedString(path, code)
+    val result = getFormattedString(path, code)
+    pprint.log(
+      s"the formatting result for\n$code\n\nis: \n\n${result.getOrElse("")}"
+    )
+    pprint.log(
+      "the equality of result with the initial code is" + result.getOrElse(
+        ""
+      ) == code
+    )
+    result
   }
 
   def format(
