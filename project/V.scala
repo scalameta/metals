@@ -25,7 +25,7 @@ object V {
   val jsoup = "1.14.3"
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
-  val mill = "0.10.3"
+  val mill = "0.10.4"
   val mdoc = "2.3.2"
   val munit = "1.0.0-M3"
   val organizeImportRule = "0.6.0"
@@ -34,7 +34,7 @@ object V {
   val sbtJdiTools = "1.1.1"
   val scalafix = "0.10.0"
   val scalafmt = "3.5.2"
-  val scalameta = "4.5.5"
+  val scalameta = "4.5.6"
   val scribe = "3.8.2"
   val semanticdb = scalameta
   val qdox = "2.0.1"
