@@ -36,8 +36,8 @@ class BracelessBracefulSwitchCodeAction(
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
-    val path = params.getTextDocument().getUri().toAbsolutePath
-    val range = params.getRange()
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val range = params.getRange
     val maybeTree =
       if (range.getStart == range.getEnd)
         trees
@@ -945,6 +945,8 @@ class BracelessBracefulSwitchCodeAction(
       } yield Try(formattedParent.children(treeIndex)).toOption
     }.flatten
 
+    pprint.log(s"maybeFormattedTree is \n " + maybeFormattedTree)
+
     val maybeBranchIndex = Try(tree.children.indexOf(branch)).toOption
     val maybeFormattedBranch: Option[Tree] = {
       for {
@@ -952,6 +954,8 @@ class BracelessBracefulSwitchCodeAction(
         branchIndex <- maybeBranchIndex
       } yield Try(formattedTree.children(branchIndex)).toOption
     }.flatten
+
+    pprint.log(s"maybeFormattedBranch is \n " + maybeFormattedBranch)
 
     (
       initialCode,
@@ -1570,11 +1574,13 @@ class BracelessBracefulSwitchCodeAction(
   ): l.CodeAction = {
     val textEditText = formattedTree
       .toString()
-      .patch(expectedBraceStartPos, bracelessStart, bracelessStart.length)
+      .patch(expectedBraceStartPos, bracelessStart, 1)
       .patch(
-        expectedBraceEndPose - 1 - 1 + bracelessStart.length,
+        expectedBraceEndPose - 1 - 1
+        /** -1  for the start brace that was removed* */
+          + bracelessStart.length,
         bracelessEnd,
-        bracelessEnd.length
+        1
       )
 
     val textEditStart = originalTree.pos.toLSP.getStart
