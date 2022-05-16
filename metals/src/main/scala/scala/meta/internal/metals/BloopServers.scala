@@ -16,6 +16,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.metals.BloopJsonUpdateCause.BloopJsonUpdateCause
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
@@ -120,10 +121,10 @@ final class BloopServers(
             shutdownServer()
             reconnect().ignoreValue
           case _ =>
-            Future.successful(())
+            Future.unit
         }
     } else {
-      Future.successful(())
+      Future.unit
     }
   }
 
@@ -195,7 +196,7 @@ final class BloopServers(
 
       case item
           if item == Messages.BloopGlobalJsonFilePremodified.useGlobalFile =>
-        Future.successful(())
+        Future.unit
     }
   }
 
@@ -204,6 +205,7 @@ final class BloopServers(
       bloopCreatedByMetalsFilePath: AbsolutePath,
       requestedBloopJvmProperties: List[String],
       maybeJavaHome: Option[String],
+      bloopJsonUpdateCause: BloopJsonUpdateCause,
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
     writeJVMPropertiesToBloopGlobalJsonFile(
@@ -216,7 +218,7 @@ final class BloopServers(
       case Success(_) =>
         languageClient
           .showMessageRequest(
-            Messages.BloopJvmPropertiesChange.params()
+            Messages.BloopJvmPropertiesChange.params(bloopJsonUpdateCause)
           )
           .asScala
           .flatMap {
@@ -225,7 +227,7 @@ final class BloopServers(
               shutdownServer()
               reconnect().ignoreValue
             case _ =>
-              Future.successful(())
+              Future.unit
           }
     }
 
@@ -307,17 +309,24 @@ final class BloopServers(
           maybeLoadBloopGlobalJsonFile(bloopGlobalJsonFilePath)
         requestedBloopJvmProperties = maybeRequestedBloopJvmProperties
           .getOrElse(List.empty)
-        if maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties ||
-          maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome
+        bloopJsonUpdateCause <-
+          if (
+            maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties
+          ) Some(BloopJsonUpdateCause.JVM_OPTS)
+          else if (maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome)
+            Some(BloopJsonUpdateCause.JAVA_HOME)
+          else None
       } yield updateBloopJvmProperties(
         requestedBloopJvmProperties,
         bloopGlobalJsonFilePath,
         bloopCreatedByMetalsFilePath,
         maybeRequestedMetalsJavaHome,
-        reconnect
+        reconnect,
+        bloopJsonUpdateCause
       )
+
     result.getOrElse {
-      Future.successful()
+      Future.unit
     }
   }
 
@@ -326,7 +335,8 @@ final class BloopServers(
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
       maybeJavaHome: Option[String],
-      reconnect: () => Future[BuildChange]
+      reconnect: () => Future[BuildChange],
+      bloopJsonUpdateCause: BloopJsonUpdateCause
   ): Future[Unit] = { // the properties are updated
     if (
       bloopGlobalJsonFilePath.exists &&
@@ -340,7 +350,7 @@ final class BloopServers(
       // therefore overwriting it requires user input
       languageClient
         .showMessageRequest(
-          Messages.BloopGlobalJsonFilePremodified.params()
+          Messages.BloopGlobalJsonFilePremodified.params(bloopJsonUpdateCause)
         )
         .asScala
         .flatMap {
@@ -357,7 +367,7 @@ final class BloopServers(
                 MessageType.Error,
                 exception.getMessage
               )
-            case Success(_) => Future.successful()
+            case Success(_) => Future.unit
           }
         }
     } else {
@@ -369,6 +379,7 @@ final class BloopServers(
         bloopCreatedByMetalsFilePath,
         requestedBloopJvmProperties,
         maybeJavaHome,
+        bloopJsonUpdateCause,
         reconnect
       ) andThen {
         case Failure(exception) =>
@@ -376,7 +387,7 @@ final class BloopServers(
             MessageType.Error,
             exception.getMessage
           )
-        case Success(_) => Future.successful()
+        case Success(_) => Future.unit
       }
     }
   }
@@ -455,6 +466,12 @@ final class BloopServers(
         throw t
       }
   }
+}
+
+object BloopJsonUpdateCause extends Enumeration {
+  type BloopJsonUpdateCause = Value
+  val JAVA_HOME: Value = Value("Metals Java Home")
+  val JVM_OPTS: Value = Value("Bloop JVM Properties")
 }
 
 object BloopServers {
