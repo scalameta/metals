@@ -102,10 +102,10 @@ final class FormattingProvider(
 
   def programmaticallyFormat(
       path: AbsolutePath
-  ): List[String] = {
+  ): (Option[String], String) = {
     scalafmt = scalafmt.withReporter(activeReporter)
-    val input = path.toInputFromBuffers(buffers)
-    getFormattedStrings(path, input)
+    val inputText = path.toInputFromBuffers(buffers).text
+    (getFormattedString(path, inputText), inputText)
   }
 
   /**

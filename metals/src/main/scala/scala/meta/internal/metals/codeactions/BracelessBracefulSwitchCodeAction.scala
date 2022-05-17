@@ -869,7 +869,8 @@ class BracelessBracefulSwitchCodeAction(
       blockHolder: Tree,
       path: AbsolutePath,
       blockEmbraceable: Term,
-      codeActionSubjectTitle: String
+      codeActionSubjectTitle: String,
+      originalIndentation: String
   ): Option[l.CodeAction] = {
 
     val (
@@ -877,7 +878,8 @@ class BracelessBracefulSwitchCodeAction(
       maybeFormattedString,
       maybeFormattedBlockHolder,
       maybeFormattedBlockEmbraceable
-    ) = formatOrphanTree(blockHolder, path, blockEmbraceable)
+    ) =
+      formatOrphanTree(blockHolder, path, blockEmbraceable, originalIndentation)
 
     for {
       formattedBlockEmbraceable <- maybeFormattedBlockEmbraceable
@@ -918,12 +920,13 @@ class BracelessBracefulSwitchCodeAction(
       tree: Tree,
       treeParent: Tree,
       path: AbsolutePath,
-      branch: Tree
+      branch: Tree,
+      parentIndentation: String
   ): (String, Option[String], Option[Tree], Option[Tree], Option[Tree]) = {
     val initialCode = treeParent.toString()
 
     val maybeFormattedString =
-      formattingProvider.programmaticallyFormat(path, initialCode)
+      getIndentedFormattedCode(path, initialCode, parentIndentation)
 
     val maybeTreeIndex = Try(treeParent.children.indexOf(tree)).toOption
     pprint.log(s"the tree index for \n$tree is:" + maybeTreeIndex)
@@ -971,7 +974,8 @@ class BracelessBracefulSwitchCodeAction(
       blockHolderParent: Tree,
       path: AbsolutePath,
       blockEmbraceable: Term,
-      codeActionSubjectTitle: String
+      codeActionSubjectTitle: String,
+      parentIndentation: String
   ): Option[l.CodeAction] = {
     val (
       initialCode,
@@ -983,7 +987,8 @@ class BracelessBracefulSwitchCodeAction(
       blockHolder,
       blockHolderParent,
       path,
-      blockEmbraceable
+      blockEmbraceable,
+      parentIndentation
     )
 
     pprint.log("the formatted parent is\n" + maybeFormattedParent.get)
@@ -1036,23 +1041,31 @@ class BracelessBracefulSwitchCodeAction(
       blockHolder: Tree,
       path: AbsolutePath,
       blockEmbraceable: Term,
-      codeActionSubjectTitle: String
+      codeActionSubjectTitle: String,
+      originalIndentation: String,
+      maybeParentIndentation: Option[String]
   ): Option[l.CodeAction] = {
     if (blockHolder.parent.isEmpty)
       createCodeActionToTakeOrphanBlockHolderBraceless(
         blockHolder,
         path,
         blockEmbraceable,
-        codeActionSubjectTitle
+        codeActionSubjectTitle,
+        originalIndentation
       )
-    else
-      createCodeActionToTakeParentedBlockHolderBraceless(
+    else {
+      for {
+        parent <- blockHolder.parent
+        parentIndentation <- maybeParentIndentation
+      } yield createCodeActionToTakeParentedBlockHolderBraceless(
         blockHolder,
-        blockHolder.parent.get,
+        parent,
         path,
         blockEmbraceable,
-        codeActionSubjectTitle
+        codeActionSubjectTitle,
+        parentIndentation
       )
+    }.flatten
   }
 
   private def createCodeActionToTakePotentialBlockHolderBraceful(
@@ -1060,10 +1073,10 @@ class BracelessBracefulSwitchCodeAction(
       path: AbsolutePath,
       document: String,
       blockEmbraceable: Term,
-      codeActionSubjectTitle: String
+      codeActionSubjectTitle: String,
+      indentation: String
   ) = {
-    val indentation =
-      getIndentationForPositionInDocument(blockHolder.pos, document)
+
     for {
       bracePose <- util
         .Try(blockEmbraceable.tokens.minBy(_.pos.start))
@@ -1113,14 +1126,21 @@ class BracelessBracefulSwitchCodeAction(
       document: String,
       blockEmbraceable: Term,
       codeActionSubjectTitle: String
-  ): Option[l.CodeAction] =
+  ): Option[l.CodeAction] = {
+    val indentation =
+      getIndentationForPositionInDocument(blockHolder.pos, document)
+    val maybeParentIndentation = blockHolder.parent.map { parent =>
+      getIndentationForPositionInDocument(parent.pos, document)
+    }
     if (isBlockEmbraceableBraced(blockEmbraceable)) {
       if (blockEmbraceable.allowBracelessSyntax)
         creatCodeActionToTakePotentialBlockHolderBraceless(
           blockHolder,
           path,
           blockEmbraceable,
-          codeActionSubjectTitle
+          codeActionSubjectTitle,
+          indentation,
+          maybeParentIndentation
         )
       else None
     } else // does not have braces
@@ -1129,8 +1149,10 @@ class BracelessBracefulSwitchCodeAction(
         path,
         document,
         blockEmbraceable,
-        codeActionSubjectTitle
+        codeActionSubjectTitle,
+        indentation
       )
+  }
 
   private def maybeGetEndMarkerPos(tree: Tree): Option[Position] =
     tree.parent
@@ -1148,6 +1170,11 @@ class BracelessBracefulSwitchCodeAction(
       templ: Template,
       codeActionSubjectTitle: String
   ): Option[l.CodeAction] = {
+    val indentation =
+      getIndentationForPositionInDocument(templateHolder.pos, document)
+    val maybeParentIndentation = templateHolder.parent.map(parent =>
+      getIndentationForPositionInDocument(parent.pos, document)
+    )
     val expectedBraceStartPos = util
       .Try {
         val lastInit = templ.inits.maxBy(init => init.pos.end)
@@ -1161,7 +1188,9 @@ class BracelessBracefulSwitchCodeAction(
           path,
           templ,
           codeActionSubjectTitle,
-          expectedBraceStartPos
+          expectedBraceStartPos,
+          indentation,
+          maybeParentIndentation
         )
       else None
     } else // does not have braces
@@ -1171,7 +1200,8 @@ class BracelessBracefulSwitchCodeAction(
         document,
         templ,
         codeActionSubjectTitle,
-        expectedBraceStartPos
+        expectedBraceStartPos,
+        indentation
       )
   }
 
@@ -1180,7 +1210,9 @@ class BracelessBracefulSwitchCodeAction(
       path: AbsolutePath,
       templ: Template,
       codeActionSubjectTitle: String,
-      expectedBraceStartPos: Int
+      expectedBraceStartPos: Int,
+      indentation: String,
+      maybeParentIndentation: Option[String]
   ): Option[l.CodeAction] = {
     if (templateHolder.parent.isEmpty)
       createCodeActionToTakeOrphanTemplateHolderBraceless(
@@ -1188,28 +1220,57 @@ class BracelessBracefulSwitchCodeAction(
         path,
         templ,
         codeActionSubjectTitle,
-        expectedBraceStartPos
+        expectedBraceStartPos,
+        indentation
       )
-    else
-      createCodeActionToTakeParentedTemplateHolderBraceless(
-        templateHolder,
-        templateHolder.parent.get,
-        path,
-        templ,
-        codeActionSubjectTitle,
-        expectedBraceStartPos
-      )
+    else {
+      {
+        for {
+          parent <- templateHolder.parent
+          parentIndentaion <- maybeParentIndentation
+        } yield createCodeActionToTakeParentedTemplateHolderBraceless(
+          templateHolder,
+          parent,
+          path,
+          templ,
+          codeActionSubjectTitle,
+          expectedBraceStartPos,
+          parentIndentaion
+        )
+      }.flatten
+    }
+
+  }
+  private def getIndentedFormattedCode(
+      path: AbsolutePath,
+      initialCode: String,
+      startLineIndentaion: String
+  ): Option[String] = {
+    formattingProvider.programmaticallyFormat(path, initialCode).flatMap {
+      formattedString =>
+        formattedString.split("\n").toList match {
+          case (firstLine: String) :: subsequentLines =>
+            Some(
+              {
+                firstLine +: subsequentLines.map(startLineIndentaion + _)
+              }.mkString("\n")
+            )
+          case (firstLine: String) :: Nil => Some(firstLine)
+          case Nil => None
+        }
+    }
   }
 
   private def formatOrphanTree(
       tree: Tree,
       path: AbsolutePath,
-      branch: Tree
+      branch: Tree,
+      originalIndentation: String
   ): (String, Option[String], Option[Tree], Option[Tree]) = {
     val initialCode = tree.toString()
 
     val maybeFormattedString =
-      formattingProvider.programmaticallyFormat(path, initialCode)
+      getIndentedFormattedCode(path, initialCode, originalIndentation)
 
     val maybeFormattedTree: Option[Tree] =
       maybeFormattedString.map(parse(path, _)).flatMap {
@@ -1300,7 +1361,8 @@ class BracelessBracefulSwitchCodeAction(
       path: AbsolutePath,
       templ: Template,
       codeActionSubjectTitle: String,
-      defaultExpectedBraceStartPos: Int
+      defaultExpectedBraceStartPos: Int,
+      indentation: String
   ): Option[l.CodeAction] = {
 
     val (
@@ -1311,7 +1373,8 @@ class BracelessBracefulSwitchCodeAction(
     ) = formatOrphanTree(
       templateHolder,
       path,
-      templ
+      templ,
+      indentation
     )
 
     for {
@@ -1365,7 +1428,8 @@ class BracelessBracefulSwitchCodeAction(
       path: AbsolutePath,
       templ: Template,
       codeActionSubjectTitle: String,
-      defaultExpectedBraceStartPos: Int
+      defaultExpectedBraceStartPos: Int,
+      parentIndentation: String
   ): Option[l.CodeAction] = {
 
     val (
@@ -1378,7 +1442,8 @@ class BracelessBracefulSwitchCodeAction(
       templateHolder,
       templateHoderParent,
       path,
-      templ
+      templ,
+      parentIndentation
     )
     for {
       formattedString <- maybeFormattedString
@@ -1434,10 +1499,10 @@ class BracelessBracefulSwitchCodeAction(
       document: String,
       templ: Template,
       codeActionSubjectTitle: String,
-      expectedBraceStartPos: Int
+      expectedBraceStartPos: Int,
+      indentation: String
   ): Option[l.CodeAction] = {
-    val indentation =
-      getIndentationForPositionInDocument(templateHolder.pos, document)
+
     for {
       colonPose <- templ.tokens
         .find(token =>
@@ -1577,6 +1642,7 @@ class BracelessBracefulSwitchCodeAction(
       .patch(expectedBraceStartPos, bracelessStart, 1)
       .patch(
         expectedBraceEndPose - 1 - 1
+
         /** -1  for the start brace that was removed* */
           + bracelessStart.length,
         bracelessEnd,
@@ -1628,6 +1694,80 @@ class BracelessBracefulSwitchCodeAction(
     case _: Template | _: Term.Block => true
     case _ => false
   }
+
+  private def findFormattedTreeInFormattedFileTree(
+      tree: Tree,
+      formattedFileTree: Tree
+  ): Option[(Tree, Tree)] = {
+    if (tree.parent.isEmpty)
+      Some(formattedFileTree, tree)
+    else {
+      for {
+        parent <- tree.parent
+        treeIndex <- Try(parent.children.indexOf(tree)).toOption
+        (formattedParent, candidateUnformattedFileTree) <-
+          findFormattedTreeInFormattedFileTree(parent, formattedFileTree)
+      } yield {
+        Try(formattedParent.children(treeIndex), parent).toOption
+      }
+    }.flatten
+  }
+
+  def treeIsWellIndented(df: Defn.Def, document: String): Unit = {
+    val indentation = Indentation(
+      getIndentationForPositionInDocument(df.pos, document)
+    )
+
+    def correctTokensIndent(
+        tokens: Iterator[Token],
+        currentIndent: Indentation,
+        countWhiteSpace: Boolean
+    ): Boolean = {
+      if (!tokens.hasNext) true
+      else {
+        tokens.next() match {
+          case _: Token.LF =>
+            correctTokensIndent(tokens, Indentation(), countWhiteSpace = true)
+          case _: Token.Space if countWhiteSpace =>
+            correctTokensIndent(
+              tokens,
+              currentIndent = Indentation(currentIndent.indentation :+ ' '),
+              countWhiteSpace = true
+            )
+          case _: Token.Tab if countWhiteSpace =>
+            correctTokensIndent(
+              tokens,
+              currentIndent = Indentation(currentIndent.indentation :+ '\t'),
+              countWhiteSpace = true
+            )
+          // is the last brace ending the block
+          case _: Token.RightBrace if !tokens.hasNext => true
+          case _ if (currentIndent <= indentation) => false
+          case _ =>
+            correctTokensIndent(
+              tokens,
+              Indentation(maxValue = true),
+              countWhiteSpace = false
+            )
+        }
+      }
+    }
+
+    val res = df.body match {
+      case b: Term.Block =>
+        correctTokensIndent(
+          b.tokens.iterator,
+          currentIndent = Indentation(maxValue = true),
+          countWhiteSpace = false
+        )
+      case _ =>
+        false
+    }
+
+    println(res)
+
+  }
+
 }
 
 object BracelessBracefulSwitchCodeAction {
