@@ -653,6 +653,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
+
+  // New completions not yet implemented for Scala 3
   check(
     "scala11".tag(IgnoreScala3),
     """

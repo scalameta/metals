@@ -405,7 +405,7 @@ trait Signatures { compiler: MetalsGlobal =>
           if (includeDefaultParam && param.isParamWithDefault) {
             val defaultValue = infoParams(index).map(_.defaultValue()) match {
               case Some(value) if !value.isEmpty => value
-              case _ => "{}"
+              case _ => "..."
             }
             s" = $defaultValue"
           } else {

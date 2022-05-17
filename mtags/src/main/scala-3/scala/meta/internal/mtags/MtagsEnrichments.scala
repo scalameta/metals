@@ -143,9 +143,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       val sym = toSemanticdbSymbol(symbol)
       val documentation = search.documentation(
         sym,
-        new ParentSymbols:
-          def parents(): java.util.List[String] =
-            symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava
+        () => symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava
       )
       if documentation.isPresent then Some(documentation.get())
       else None

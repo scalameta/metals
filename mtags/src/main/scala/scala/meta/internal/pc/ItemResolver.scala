@@ -89,7 +89,7 @@ trait ItemResolver {
       base: String,
       defaults: Seq[String]
   ): String = {
-    val matcher = "= \\{\\}".r.pattern.matcher(base)
+    val matcher = "= \\.\\.\\.".r.pattern.matcher(base)
     val out = new StringBuffer()
     val it = defaults.iterator
     while (matcher.find()) {

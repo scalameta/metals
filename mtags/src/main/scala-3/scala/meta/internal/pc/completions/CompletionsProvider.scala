@@ -179,7 +179,7 @@ class CompletionsProvider(
 
       item.setAdditionalTextEdits(additionalEdits.asJava)
 
-      val doc = completion match
+      completion match
         case v: CompletionValue.Symbolic =>
           item.setData(
             CompletionItemData(

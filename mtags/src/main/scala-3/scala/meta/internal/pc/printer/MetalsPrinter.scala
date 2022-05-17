@@ -285,11 +285,11 @@ class MetalsPrinter(
       val default =
         if includeDefaultParam && isDefaultParam then
           val defaultValue = defaultValues.lift(index) match
-            case Some(value) if includeDefaultParam && !value.isEmpty => value
-            case _ => "{}"
+            case Some(value) if !value.isEmpty => value
+            case _ => "..."
           s" = $defaultValue"
         // to be populated later, otherwise we would spend too much time in completions
-        else if isDefaultParam then " = {}"
+        else if isDefaultParam then " = ..."
         else ""
       s"$keywordName: ${paramTypeString}$default"
     end if
