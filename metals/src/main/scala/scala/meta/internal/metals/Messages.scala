@@ -335,8 +335,7 @@ object Messages {
     ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"""|Setting $bloopJsonUpdateCause will result in updating Bloop's global Json file, by Metals.
-            |But, you have previously modified this file with other values!
+        s"""|Setting $bloopJsonUpdateCause will result in updating Bloop's global Json file by Metals, which has been previously modified manually!
             |Do you want to replace them with the new properties and restart the running Bloop server?""".stripMargin
       )
       params.setType(MessageType.Warning)

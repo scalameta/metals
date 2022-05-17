@@ -246,22 +246,22 @@ final class BloopServers(
   private def maybeLoadBloopGlobalJsonFile(
       bloopGlobalJsonFilePath: AbsolutePath
   ): (Option[String], Option[List[String]]) = {
-    val maybeData = Try {
-      val source = scala.io.Source.fromFile(bloopGlobalJsonFilePath.toURI)
-      val jsonString =
-        try source.mkString
-        finally source.close()
-      ujson.read(jsonString)
-    }
-    val javaHome = maybeData.flatMap { data =>
-      Try(data("javaHome").str)
-    }.toOption
-    val javaOptions = maybeData.flatMap { data =>
-      Try {
-        data("javaOptions").arr.toList.map(_.str)
-      }
-    }
-    (javaHome, javaOptions.toOption)
+
+    val maybeLinkedHashMap =
+      bloopGlobalJsonFilePath.readTextOpt.map(ujson.read(_)).flatMap(_.objOpt)
+
+    val maybeJavaHome = for {
+      linkedHashMap <- maybeLinkedHashMap
+      javaHomeValue <- linkedHashMap.get("javaHome")
+      javaHomeStr <- javaHomeValue.strOpt
+    } yield javaHomeStr
+
+    val maybeJavaOptions = for {
+      linkedHashMap <- maybeLinkedHashMap
+      javaOptionsValue <- linkedHashMap.get("javaOptions")
+      javaOptionsValueArray <- javaOptionsValue.arrOpt
+    } yield javaOptionsValueArray.flatMap(_.strOpt).toList
+    (maybeJavaHome, maybeJavaOptions)
   }
 
   private def getBloopGlobalJsonLastModifiedTime(
