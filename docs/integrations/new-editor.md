@@ -16,7 +16,7 @@ Use [Coursier](https://github.com/coursier/coursier) to obtain the JVM classpath
 of Metals:
 
 ```sh
-coursier bootstrap org.scalameta:metals_2.12:@VERSION@ -o metals -f
+coursier bootstrap org.scalameta:metals_2.13:@VERSION@ -o metals -f
 ```
 
 (optional) It's recommended to enable JVM string de-duplication and provide a
@@ -28,7 +28,7 @@ coursier bootstrap \
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms100m \
-  org.scalameta:metals_2.12:@VERSION@ -o metals -f
+  org.scalameta:metals_2.13:@VERSION@ -o metals -f
 ```
 
 See [Metals server properties](#metals-server-properties) for additional system
