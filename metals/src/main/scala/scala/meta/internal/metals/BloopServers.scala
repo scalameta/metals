@@ -131,19 +131,25 @@ final class BloopServers(
   private def writeJVMPropertiesToBloopGlobalJsonFile(
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
-      requestedBloopJvmProperties: List[String],
+      maybeRequestedBloopJvmProperties: Option[List[String]],
       maybeJavaHome: Option[String]
   ): Try[Unit] = Try {
 
-    val javaOptionsString =
-      s"\"javaOptions\": [${requestedBloopJvmProperties.map(property => s"\"$property\"").mkString(", ")}]"
+    val javaOptionsString = maybeRequestedBloopJvmProperties
+      .map { requestedBloopJvmProperties =>
+        s"\"javaOptions\": [${requestedBloopJvmProperties.map(property => s"\"$property\"").mkString(", ")}]"
+      }
+      .getOrElse("")
 
     val jvmPropertiesString = maybeJavaHome
       .map { javaHome =>
-        s"""|{
-            | $javaOptionsString,
-            | \"javaHome\": \"$javaHome\"
-            |}""".stripMargin
+        if (javaOptionsString.isEmpty)
+          s"{ \"javaHome\": \"$javaHome\"}"
+        else
+          s"""|{
+              | $javaOptionsString,
+              | \"javaHome\": \"$javaHome\"
+              |}""".stripMargin
       }
       .getOrElse(s"{$javaOptionsString}")
     bloopGlobalJsonFilePath.writeText(jvmPropertiesString)
@@ -162,7 +168,7 @@ final class BloopServers(
       messageActionItem: MessageActionItem,
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
-      requestedBloopJvmProperties: List[String],
+      maybeRequestedBloopJvmProperties: Option[List[String]],
       maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
@@ -173,7 +179,7 @@ final class BloopServers(
         writeJVMPropertiesToBloopGlobalJsonFile(
           bloopGlobalJsonFilePath,
           bloopCreatedByMetalsFilePath,
-          requestedBloopJvmProperties,
+          maybeRequestedBloopJvmProperties,
           maybeJavaHome
         ) match {
           case Failure(exception) => Future.failed(exception)
@@ -203,7 +209,7 @@ final class BloopServers(
   private def updateBloopGlobalJsonFileThenRestart(
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
-      requestedBloopJvmProperties: List[String],
+      maybeRequestedBloopJvmProperties: Option[List[String]],
       maybeJavaHome: Option[String],
       bloopJsonUpdateCause: BloopJsonUpdateCause,
       reconnect: () => Future[BuildChange]
@@ -211,7 +217,7 @@ final class BloopServers(
     writeJVMPropertiesToBloopGlobalJsonFile(
       bloopGlobalJsonFilePath,
       bloopCreatedByMetalsFilePath,
-      requestedBloopJvmProperties,
+      maybeRequestedBloopJvmProperties,
       maybeJavaHome
     ) match {
       case Failure(exception) => Future.failed(exception)
@@ -307,8 +313,7 @@ final class BloopServers(
         )
         (maybeBloopGlobalJsonJavaHome, maybeBloopGlobalJsonJvmProperties) =
           maybeLoadBloopGlobalJsonFile(bloopGlobalJsonFilePath)
-        requestedBloopJvmProperties = maybeRequestedBloopJvmProperties
-          .getOrElse(List.empty)
+
         bloopJsonUpdateCause <-
           if (
             maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties
@@ -317,7 +322,7 @@ final class BloopServers(
             Some(BloopJsonUpdateCause.JAVA_HOME)
           else None
       } yield updateBloopJvmProperties(
-        requestedBloopJvmProperties,
+        maybeRequestedBloopJvmProperties,
         bloopGlobalJsonFilePath,
         bloopCreatedByMetalsFilePath,
         maybeRequestedMetalsJavaHome,
@@ -331,7 +336,7 @@ final class BloopServers(
   }
 
   private def updateBloopJvmProperties(
-      requestedBloopJvmProperties: List[String],
+      maybeRequestedBloopJvmProperties: Option[List[String]],
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
       maybeJavaHome: Option[String],
@@ -358,7 +363,7 @@ final class BloopServers(
             _,
             bloopGlobalJsonFilePath,
             bloopCreatedByMetalsFilePath,
-            requestedBloopJvmProperties,
+            maybeRequestedBloopJvmProperties,
             maybeJavaHome,
             reconnect
           ) andThen {
@@ -377,7 +382,7 @@ final class BloopServers(
       updateBloopGlobalJsonFileThenRestart(
         bloopGlobalJsonFilePath,
         bloopCreatedByMetalsFilePath,
-        requestedBloopJvmProperties,
+        maybeRequestedBloopJvmProperties,
         maybeJavaHome,
         bloopJsonUpdateCause,
         reconnect
