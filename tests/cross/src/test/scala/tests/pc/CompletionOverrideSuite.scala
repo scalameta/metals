@@ -17,15 +17,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |object Main extends AutoCloseable {
       |  def close(): Unit = ${0:???}
       |}
-      |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """
-          |object Main extends AutoCloseable {
-          |  def close: Unit = ${0:???}
-          |}
-          |""".stripMargin
-    )
+      |""".stripMargin
   )
 
   checkEdit(
@@ -197,8 +189,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         """|override def aaa: Int
            |override def bbb: Int
            |override def equals(x$0: Any): Boolean
-           |override def hashCode: Int
-           |override def toString: String
+           |override def hashCode(): Int
+           |override def toString(): String
            |""".stripMargin
     )
   )

@@ -14,10 +14,7 @@ class CompletionErrorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "thing(): Any",
-    topLines = Some(1),
-    compat = Map(
-      "3" -> "thing: Any"
-    )
+    topLines = Some(1)
   )
 
   check(

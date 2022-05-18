@@ -261,28 +261,30 @@ class MetalsPrinter(
   private def paramssString(
       paramLabels: Iterator[Iterator[String]],
       paramss: List[List[Symbol]]
-  )(using Context) =
+  )(using Context): Iterator[String] =
     paramLabels
-      .zip(paramss)
+      .zipAll(paramss, Nil, Nil)
       .map { case (params, syms) =>
         Params.paramsKind(syms) match
-          case Params.Kind.TypeParameter =>
+          case Params.Kind.TypeParameter if params.nonEmpty =>
             params.mkString("[", ", ", "]")
           case Params.Kind.Normal =>
             params.mkString("(", ", ", ")")
-          case Params.Kind.Using =>
+          case Params.Kind.Using if params.nonEmpty =>
             params.mkString(
               "(using ",
               ", ",
               ")"
             )
-          case Params.Kind.Implicit =>
+          case Params.Kind.Implicit if params.nonEmpty =>
             params.mkString(
               "(implicit ",
               ", ",
               ")"
             )
+          case _ => ""
       }
+  end paramssString
 
   /**
    * Construct param (both value params and type params) label string (e.g. "param1: TypeOfParam", "A: Ordering")
