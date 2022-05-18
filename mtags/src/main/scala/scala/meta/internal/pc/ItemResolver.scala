@@ -25,9 +25,24 @@ trait ItemResolver {
         item.setDetail(replaceJavaParameters(info, item.getDetail))
       }
       if (
-        item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind
+        item.getTextEdit != null && (
+          data.kind == CompletionItemData.OverrideKind ||
+            data.kind == CompletionItemData.ImplementAllKind
+        )
       ) {
         item.getTextEdit().asScala match {
+          case Left(textEdit)
+              if data.kind == CompletionItemData.ImplementAllKind =>
+            val editText = textEdit.getNewText()
+
+            val relatedEditOnly = editText.linesIterator
+              .filter(
+                _.contains(info.displayName() + "(")
+              )
+              .mkString
+            val newText =
+              replaceJavaParameters(info, relatedEditOnly)
+            textEdit.setNewText(editText.replace(relatedEditOnly, newText))
           case Left(textEdit) =>
             val newText =
               replaceJavaParameters(info, textEdit.getNewText())

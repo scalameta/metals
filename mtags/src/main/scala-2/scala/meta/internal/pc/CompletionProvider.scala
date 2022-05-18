@@ -211,8 +211,17 @@ class CompletionProvider(
       }
 
       val completionItemDataKind = member match {
+        case _: ImplementAllMember =>
+          CompletionItemData.ImplementAllKind
         case o: OverrideDefMember if o.sym.isJavaDefined =>
           CompletionItemData.OverrideKind
+        case _ =>
+          null
+      }
+
+      val additionalSymbols = member match {
+        case oam: ImplementAllMember =>
+          oam.additionalSymbols.map(semanticdbSymbol).asJava
         case _ =>
           null
       }
@@ -221,7 +230,8 @@ class CompletionProvider(
         CompletionItemData(
           semanticdbSymbol(member.sym),
           buildTargetIdentifier,
-          kind = completionItemDataKind
+          kind = completionItemDataKind,
+          additionalSymbols
         ).toJson
       )
       item.setKind(completionItemKind(member))

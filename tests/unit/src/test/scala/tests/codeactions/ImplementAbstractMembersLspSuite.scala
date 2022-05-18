@@ -219,4 +219,31 @@ class ImplementAbstractMembersLspSuite
        |}
        |""".stripMargin
   )
+
+  check(
+    "java",
+    """|package example
+       |
+       |import java.io.Externalizable
+       |
+       |object <<A>> extends Externalizable {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package example
+       |
+       |import java.io.Externalizable
+       |import java.io.ObjectOutput
+       |import java.io.ObjectInput
+       |
+       |object A extends Externalizable {
+       |
+       |  override def writeExternal(out: ObjectOutput): Unit = ???
+       |
+       |  override def readExternal(in: ObjectInput): Unit = ???
+       |
+       |}
+       |""".stripMargin
+  )
 }

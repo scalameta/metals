@@ -1,5 +1,8 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+
 import org.eclipse.lsp4j.CompletionItem
 
 class CompletionItemResolver(
@@ -7,6 +10,22 @@ class CompletionItemResolver(
 ) extends ItemResolver {
   import compiler._
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
+
+    val data = item.data.getOrElse(CompletionItemData.empty)
+
+    if (
+      data.kind == CompletionItemData.ImplementAllKind &&
+      !data.additionalSymbols.isEmpty()
+    ) {
+      data.additionalSymbols.asScala.foldLeft(item) { case (item, sym) =>
+        handleSymbol(item, sym)
+      }
+    } else {
+      handleSymbol(item, msym)
+    }
+  }
+
+  private def handleSymbol(item: CompletionItem, msym: String) = {
     val gsym = inverseSemanticdbSymbol(msym)
     if (gsym != NoSymbol) {
       symbolDocumentation(gsym).orElse(
