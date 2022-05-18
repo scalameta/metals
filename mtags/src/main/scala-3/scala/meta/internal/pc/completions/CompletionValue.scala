@@ -34,9 +34,6 @@ sealed trait CompletionValue:
         else CompletionItemKind.Field
   end completionItemKind
 
-  final def documentation(using Context): Option[String] =
-    forSymOnly(ParsedComment.docOf(_).map(_.renderAsMarkdown), None)
-
   final def lspTags(using Context): List[CompletionItemTag] =
     forSymOnly(
       sym =>

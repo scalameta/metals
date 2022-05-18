@@ -702,8 +702,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|readAttributes(x$0: Path, x$1: String, x$2: LinkOption*): java.util.Map[String, Object]
-           |readAttributes[A <: BasicFileAttributes](x$0: Path, x$1: Class[A], x$2: LinkOption*): A
+        """|readAttributes(path: Path, attributes: String, options: LinkOption*): java.util.Map[String, Object]
+           |readAttributes[A <: BasicFileAttributes](path: Path, type: Class[A], options: LinkOption*): A
            |""".stripMargin
     )
   )
@@ -1141,13 +1141,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """substring(beginIndex: Int): String
       |substring(beginIndex: Int, endIndex: Int): String
       |""".stripMargin,
-    filterText = "substring",
-    compat = Map(
-      "3" ->
-        """|substring(x$0: Int): String
-           |substring(x$0: Int, x$1: Int): String
-           |""".stripMargin
-    )
+    filterText = "substring"
   )
 
   check(

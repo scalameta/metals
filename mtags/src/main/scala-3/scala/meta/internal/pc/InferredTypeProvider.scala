@@ -12,6 +12,7 @@ import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolSearch
 import scala.meta.tokens.{Token as T}
 
 import dotty.tools.dotc.ast.Trees.*
@@ -49,7 +50,8 @@ import org.eclipse.lsp4j.TextEdit
 final class InferredTypeProvider(
     params: OffsetParams,
     driver: InteractiveDriver,
-    config: PresentationCompilerConfig
+    config: PresentationCompilerConfig,
+    symbolSearch: SymbolSearch
 ):
 
   def inferredTypeEdits(): List[TextEdit] =
@@ -77,7 +79,12 @@ final class InferredTypeProvider(
       shortenedNames.imports(autoImportsGen)
 
     def printType(tpe: Type): String =
-      val printer = MetalsPrinter.forInferredType(shortenedNames, indexedCtx)
+      val printer = MetalsPrinter.forInferredType(
+        shortenedNames,
+        indexedCtx,
+        symbolSearch,
+        includeDefaultParam = false
+      )
       printer.tpe(tpe)
 
     /*

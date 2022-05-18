@@ -520,8 +520,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  User(age = 1, @@)
       |}
     """.stripMargin,
-    """|apply(<age: Int = {}>, <name: String = {}>): User
-       |                       ^^^^^^^^^^^^^^^^^^^
+    """|apply(<age: Int = ...>, <name: String = ...>): User
+       |                        ^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -539,8 +539,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  User(name = "", @@)
       |}
     """.stripMargin,
-    """|apply(name: String = {}, age: Int = {}): User
-       |                         ^^^^^^^^^^^^^
+    """|apply(name: String = ..., age: Int = ...): User
+       |                          ^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -604,7 +604,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  new scala.util.control.Exception.Catch(@@)
       |}
     """.stripMargin,
-    """|<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = {}, rethrow: Throwable => Boolean = {}): Exception.Catch[T]
+    """|<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = ..., rethrow: Throwable => Boolean = ...): Exception.Catch[T]
        |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(

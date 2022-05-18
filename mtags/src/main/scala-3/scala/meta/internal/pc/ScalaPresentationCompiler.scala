@@ -135,14 +135,19 @@ case class ScalaPresentationCompiler(
       provider.textDocument(filename, code)
     }
 
-  // TODO NOT IMPLEMENTED
   def completionItemResolve(
       item: l.CompletionItem,
       symbol: String
   ): CompletableFuture[l.CompletionItem] =
-    CompletableFuture.completedFuture(
-      null
-    )
+    compilerAccess.withNonInterruptableCompiler(
+      item,
+      EmptyCancelToken
+    ) { access =>
+      val driver = access.compiler()
+      CompletionItemResolver.resolve(item, symbol, search, config)(using
+        driver.currentCtx
+      )
+    }
 
   def autoImports(
       name: String,
@@ -180,7 +185,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[l.TextEdit]] =
     val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-      new InferredTypeProvider(params, pc.compiler(), config)
+      new InferredTypeProvider(params, pc.compiler(), config, search)
         .inferredTypeEdits()
         .asJava
     }

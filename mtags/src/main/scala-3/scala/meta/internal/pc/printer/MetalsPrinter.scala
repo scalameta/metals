@@ -2,9 +2,11 @@ package scala.meta.internal.pc.printer
 
 import scala.collection.mutable
 
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
@@ -20,7 +22,12 @@ import dotty.tools.dotc.printing.Printer
 import dotty.tools.dotc.printing.RefinedPrinter
 import dotty.tools.dotc.printing.Texts.Text
 
-class MetalsPrinter(names: ShortenedNames, dotcPrinter: DotcPrinter)(using
+class MetalsPrinter(
+    names: ShortenedNames,
+    dotcPrinter: DotcPrinter,
+    symbolSearch: SymbolSearch,
+    includeDefaultParam: Boolean = false
+)(using
     Context
 ):
 
@@ -120,19 +127,35 @@ class MetalsPrinter(names: ShortenedNames, dotcPrinter: DotcPrinter)(using
         implicitEvidenceParams.toList
       )
 
+    lazy val defaultValues =
+      symbolSearch.symbolDocumentation(gsym) match
+        case Some(info) =>
+          (info.parameters.asScala ++ info.typeParameters.asScala)
+            .map(_.defaultValue)
+            .toSeq
+        case _ =>
+          Seq.empty
+
     def label(paramss: List[List[Symbol]]) = {
+      var index = 0
       paramss.flatMap { params =>
         val labels = params.flatMap { param =>
           // Don't show implicit evidence params
           // e.g.
           // from [A: Ordering](a: A, b: A)(implicit evidence$1: Ordering[A])
           // to   [A: Ordering](a: A, b: A): A
-          if implicitEvidenceParams.contains(param) then Nil
-          else
-            paramLabel(
-              param,
-              implicitEvidencesByTypeParam
-            ) :: Nil
+          val lab =
+            if implicitEvidenceParams.contains(param) then Nil
+            else
+              paramLabel(
+                param,
+                implicitEvidencesByTypeParam,
+                index,
+                defaultValues
+              ) :: Nil
+          index += 1
+          lab
+
         }
         // Remove empty params
         if labels.isEmpty then Nil
@@ -237,7 +260,9 @@ class MetalsPrinter(names: ShortenedNames, dotcPrinter: DotcPrinter)(using
    */
   private def paramLabel(
       param: Symbol,
-      implicitEvidences: Map[Symbol, List[String]]
+      implicitEvidences: Map[Symbol, List[String]],
+      index: Int,
+      defaultValues: => Seq[String]
   ): String =
     val keywordName = dotcPrinter.name(param)
     val paramTypeString = tpe(param.info)
@@ -255,7 +280,18 @@ class MetalsPrinter(names: ShortenedNames, dotcPrinter: DotcPrinter)(using
       // print only type string
       // e.g. "using Ord[T]" instead of "using x$0: Ord[T]"
       paramTypeString
-    else s"${keywordName}: ${paramTypeString}"
+    else
+      val isDefaultParam = param.isAllOf(DefaultParameter)
+      val default =
+        if includeDefaultParam && isDefaultParam then
+          val defaultValue = defaultValues.lift(index) match
+            case Some(value) if !value.isEmpty => value
+            case _ => "..."
+          s" = $defaultValue"
+        // to be populated later, otherwise we would spend too much time in completions
+        else if isDefaultParam then " = ..."
+        else ""
+      s"$keywordName: ${paramTypeString}$default"
     end if
   end paramLabel
 
@@ -288,15 +324,31 @@ end MetalsPrinter
 
 object MetalsPrinter:
 
-  def standard(indexed: IndexedContext): MetalsPrinter =
+  def standard(
+      indexed: IndexedContext,
+      symbolSearch: SymbolSearch,
+      includeDefaultParam: Boolean
+  ): MetalsPrinter =
     import indexed.ctx
-    MetalsPrinter(new ShortenedNames(indexed), DotcPrinter.Std())
+    MetalsPrinter(
+      new ShortenedNames(indexed),
+      DotcPrinter.Std(),
+      symbolSearch,
+      includeDefaultParam
+    )
 
   def forInferredType(
       shortenedNames: ShortenedNames,
-      indexed: IndexedContext
+      indexed: IndexedContext,
+      symbolSearch: SymbolSearch,
+      includeDefaultParam: Boolean
   ): MetalsPrinter =
     import shortenedNames.indexedContext.ctx
-    MetalsPrinter(shortenedNames, DotcPrinter.ForInferredType(indexed))
+    MetalsPrinter(
+      shortenedNames,
+      DotcPrinter.ForInferredType(indexed),
+      symbolSearch,
+      includeDefaultParam
+    )
 
 end MetalsPrinter

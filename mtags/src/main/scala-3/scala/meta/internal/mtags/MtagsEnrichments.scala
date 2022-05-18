@@ -4,12 +4,18 @@ import java.net.URI
 
 import scala.annotation.tailrec
 
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.pc.MetalsInteractive
+import scala.meta.internal.pc.SemanticdbSymbols
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.RangeParams
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.Driver
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.Symbols.*
@@ -94,6 +100,9 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
 
     def decodedName: String = sym.name.decoded
 
+    def companion: Symbol =
+      if sym.is(Module) then sym.companionClass else sym.companionModule
+
     def nameBackticked: String =
       KeywordWrapper.Scala3.backtickWrap(sym.decodedName)
 
@@ -121,4 +130,23 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
     def backticked: String =
       KeywordWrapper.Scala3.backtickWrap(s)
 
+  extension (search: SymbolSearch)
+    def symbolDocumentation(symbol: Symbol)(using
+        Context
+    ): Option[SymbolDocumentation] =
+      def toSemanticdbSymbol(symbol: Symbol) =
+        SemanticdbSymbols.symbolName(
+          if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
+            symbol.owner
+          else symbol
+        )
+      val sym = toSemanticdbSymbol(symbol)
+      val documentation = search.documentation(
+        sym,
+        () => symbol.allOverriddenSymbols.map(toSemanticdbSymbol).toList.asJava
+      )
+      if documentation.isPresent then Some(documentation.get())
+      else None
+    end symbolDocumentation
+  end extension
 end MtagsEnrichments

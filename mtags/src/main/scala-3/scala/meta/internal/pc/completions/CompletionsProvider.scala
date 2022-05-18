@@ -136,7 +136,11 @@ class CompletionsProvider(
       path: List[Tree],
       indexedContext: IndexedContext
   )(using ctx: Context): CompletionItem =
-    val printer = MetalsPrinter.standard(indexedContext)
+    val printer = MetalsPrinter.standard(
+      indexedContext,
+      search,
+      includeDefaultParam = false
+    )
     val editRange = completionPos.toEditRange
 
     // For overloaded signatures we get multiple symbols, so we need
@@ -175,9 +179,15 @@ class CompletionsProvider(
 
       item.setAdditionalTextEdits(additionalEdits.asJava)
 
-      completion.documentation
-        .filter(_.nonEmpty)
-        .foreach(doc => item.setDocumentation(doc.toMarkupContent))
+      completion match
+        case v: CompletionValue.Symbolic =>
+          item.setData(
+            CompletionItemData(
+              SemanticdbSymbols.symbolName(v.symbol),
+              buildTargetIdentifier
+            ).toJson
+          )
+        case _ => None
 
       item.setTags(completion.lspTags.asJava)
 

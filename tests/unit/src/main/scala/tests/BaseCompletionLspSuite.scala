@@ -90,18 +90,9 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "\"\".substrin@@",
-        getExpected(
-          """|substring(beginIndex: Int): String
-             |substring(beginIndex: Int, endIndex: Int): String
-             |""".stripMargin,
-          Map(
-            "3" ->
-              """|substring(x$0: Int): String
-                 |substring(x$0: Int, x$1: Int): String
-                 |""".stripMargin
-          ),
-          scalaVersion
-        )
+        """|substring(beginIndex: Int): String
+           |substring(beginIndex: Int, endIndex: Int): String
+           |""".stripMargin
       )
       _ <- assertCompletion(
         "Stream@@",
