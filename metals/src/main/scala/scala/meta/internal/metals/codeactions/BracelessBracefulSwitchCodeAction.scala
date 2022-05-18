@@ -113,7 +113,8 @@ class BracelessBracefulSwitchCodeAction(
                 path,
                 document,
                 termIf.thenp,
-                "then expression"
+                "then expression",
+                "then"
               ),
               createCodeActionForPotentialBlockHolder(
                 termIf,
@@ -145,7 +146,8 @@ class BracelessBracefulSwitchCodeAction(
               path,
               document,
               termWhile.body,
-              "while expression"
+              "while expression",
+              "do"
             ).toSeq
           case _: Defn.GivenAlias => None.toSeq
           case template: Template =>
@@ -1043,7 +1045,8 @@ class BracelessBracefulSwitchCodeAction(
       blockEmbraceable: Term,
       codeActionSubjectTitle: String,
       originalIndentation: String,
-      maybeParentIndentation: Option[String]
+      maybeParentIndentation: Option[String],
+      bracelessStart: String
   ): Option[l.CodeAction] = {
     if (blockHolder.parent.isEmpty)
       createCodeActionToTakeOrphanBlockHolderBraceless(
@@ -1074,11 +1077,13 @@ class BracelessBracefulSwitchCodeAction(
       document: String,
       blockEmbraceable: Term,
       codeActionSubjectTitle: String,
-      indentation: String
+      indentation: String,
+      bracelessStart: String
   ) = {
 
     for {
-      bracePose <- util
+
+      bracelessStartToken <- util
         .Try(blockEmbraceable.tokens.minBy(_.pos.start))
         .toOption
         .map(_.pos.start)
@@ -1090,17 +1095,40 @@ class BracelessBracefulSwitchCodeAction(
                   token.pos.start < blockEmbraceableStartPos && !token.text.isBlank
                 }
                 .maxBy(_.pos.start)
-                .pos
-                .toLSP
-                .getEnd
             )
             .toOption
         )
+      bracePose =
+        if (
+          bracelessStartToken.text == bracelessStart && bracelessStart.length > 0
+        )
+          bracelessStartToken.pos.toLSP.getStart
+        else bracelessStartToken.pos.toLSP.getEnd
+
+//      bracePose <- util
+//        .Try(blockEmbraceable.tokens.minBy(_.pos.start))
+//        .toOption
+//        .map(_.pos.start)
+//        .flatMap(blockEmbraceableStartPos =>
+//          util
+//            .Try(
+//              blockHolder.tokens.tokens
+//                .filter { token =>
+//                  token.pos.start < blockEmbraceableStartPos && !token.text.isBlank
+//                }
+//                .maxBy(_.pos.start)
+//                .pos
+//                .toLSP
+//                .getEnd
+//            )
+//            .toOption
+//        )
+
     } yield createCodeActionForGoingBraceful(
       path,
       expectedBraceStartPos = bracePose,
       expectedBraceEndPose = blockEmbraceable.pos.toLSP.getEnd,
-      bracelessStart = "",
+      bracelessStart = bracelessStart,
       bracelessEnd = "",
       indentation = indentation,
       document = document,
@@ -1125,7 +1153,8 @@ class BracelessBracefulSwitchCodeAction(
       path: AbsolutePath,
       document: String,
       blockEmbraceable: Term,
-      codeActionSubjectTitle: String
+      codeActionSubjectTitle: String,
+      bracelessStart: String = ""
   ): Option[l.CodeAction] = {
     val indentation =
       getIndentationForPositionInDocument(blockHolder.pos, document)
@@ -1140,7 +1169,8 @@ class BracelessBracefulSwitchCodeAction(
           blockEmbraceable,
           codeActionSubjectTitle,
           indentation,
-          maybeParentIndentation
+          maybeParentIndentation,
+          bracelessStart
         )
       else None
     } else // does not have braces
@@ -1150,7 +1180,8 @@ class BracelessBracefulSwitchCodeAction(
         document,
         blockEmbraceable,
         codeActionSubjectTitle,
-        indentation
+        indentation,
+        bracelessStart
       )
   }
 
