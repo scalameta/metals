@@ -74,7 +74,7 @@ object CompletionValue:
   case class Workspace(label: String, symbol: Symbol) extends Symbolic
 
   /**
-   * @param shortenddNames shortened type names by `Printer`. This field should be used for autoImports
+   * @param shortenedNames shortened type names by `Printer`. This field should be used for autoImports
    * @param start Starting position of the completion
    *              this is needed, because for OverrideCompletion, completionPos
    *              doesn't capture the "correct" starting position. For example,
