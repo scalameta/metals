@@ -192,7 +192,6 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def finalize(): Unit
        |""".stripMargin,
     includeDetail = false,
-    topLines = if (scalaVersion.startsWith("3")) Some(5) else None,
     compat = Map(
       "3" ->
         """|override def aaa: Int
@@ -696,7 +695,6 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     "def exist@@",
     """def exist: Set[_] = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def"), // for Scala3
     compat = Map(
       "3" ->
         """def exist: Set[?] = ${0:???}""".stripMargin
@@ -715,8 +713,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def") // for Scala3
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
   )
 
   checkEditLine(
@@ -733,8 +730,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def") // for Scala3
+    """override def Apply(tree: Tree): Tree = ${0:???}""".stripMargin
   )
 
   checkEditLine(
@@ -749,8 +745,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "def Apply@@",
-    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin,
-    filter = (str) => str.contains("def") // for Scala3
+    """override def Apply(tree: Int): Tree = ${0:???}""".stripMargin
   )
 
   check(
@@ -853,7 +848,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDetail = false,
     compat = Map(
-      "3" -> // should we include var and val?
+      "3" ->
         """|override var hello1: Int
            |override val hello2: Int
            |override def hello3: Int
@@ -986,13 +981,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """|hello: Int
        |override def hello: Int
        |""".stripMargin,
-    includeDetail = false,
-    compat = Map(
-      "3" ->
-        """|override def hello: Int
-           |hello: Int
-           |""".stripMargin
-    )
+    includeDetail = false
   )
 
   check(
@@ -1016,9 +1005,9 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false,
     topLines = Some(2),
     compat = Map(
-      "3" ->
-        """|override def overTop: Int
-           |override def equals(x$0: Any): Boolean
+      "3" -> // TODO: override def overTop should be top
+        """|overTop: Int
+           |override def overTop: Int
            |""".stripMargin
     )
   )
@@ -1037,13 +1026,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|override def overTop: Int
-           |override def equals(x$0: Any): Boolean
-           |""".stripMargin
-    )
+    topLines = Some(2)
   )
 
   checkEdit(
