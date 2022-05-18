@@ -31,11 +31,7 @@ final class WorkspaceSymbolProvider(
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
   var inDependencies: ClasspathSearch =
-    ClasspathSearch.fromClasspath(
-      Nil,
-      isExcludedPackage,
-      bucketSize
-    )
+    ClasspathSearch.empty
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
