@@ -973,7 +973,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """|hello: Int
        |override def hello: Int
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" ->
+        """|override def hello: Int
+           |hello: Int
+           |""".stripMargin
+    )
   )
 
   check(
@@ -997,9 +1003,9 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false,
     topLines = Some(2),
     compat = Map(
-      "3" -> // TODO: override def overTop should be top
-        """|overTop: Int
-           |override def overTop: Int
+      "3" ->
+        """|override def overTop: Int
+           |overTop: Int
            |""".stripMargin
     )
   )
@@ -1018,7 +1024,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|override def overTop: Int
+           |overTop: Int
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -1058,9 +1070,9 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false,
     topLines = Some(2),
     compat = Map(
-      "3" -> // shold flip the order
-        """|override val hello2: Int
-           |override def hello1: Int
+      "3" ->
+        """|override def hello1: Int
+           |override val hello2: Int
            |""".stripMargin
     )
   )
@@ -1084,8 +1096,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     topLines = Some(3),
     compat = Map(
       "3" ->
-        """|override val hello2: Int
-           |def hello1: Int
+        """|def hello1: Int
+           |override val hello2: Int
            |override def equals(x$0: Any): Boolean
            |""".stripMargin
     )

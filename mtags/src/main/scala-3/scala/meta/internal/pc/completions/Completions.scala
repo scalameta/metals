@@ -266,8 +266,16 @@ class Completions(
       // symbols defined in this file are more relevant
       if pos.source != sym.source || sym.is(Package) then
         relevance |= IsNotDefinedInFile
-      // fields are more relevant than non fields
-      if !hasGetter(sym) then relevance |= IsNotGetter
+
+      // fields are more relevant than non fields (such as method)
+      completion match
+        // For override-completion, we don't care fields or methods because
+        // we can override both fields and non-fields
+        case _: CompletionValue.Override =>
+        case _ if !hasGetter(sym) =>
+          relevance |= IsNotGetter
+        case _ =>
+
       // symbols whose owner is a base class are less relevant
       if sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass
       then relevance |= IsInheritedBaseMethod
