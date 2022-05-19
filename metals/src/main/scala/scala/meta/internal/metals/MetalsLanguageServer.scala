@@ -52,6 +52,7 @@ import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
+import scala.meta.internal.metals.codeactions.BracelessBracefulSwitchCodeAction
 import scala.meta.internal.metals.codeactions.ExtractMemberDefinitionData
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
@@ -114,6 +115,7 @@ class MetalsLanguageServer(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
+
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
       val buildShutdown = bspSession match {
@@ -273,6 +275,7 @@ class MetalsLanguageServer(
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
+
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -955,6 +958,7 @@ class MetalsLanguageServer(
   }
 
   val isInitialized = new AtomicBoolean(false)
+
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
@@ -986,6 +990,7 @@ class MetalsLanguageServer(
   }.asJava
 
   lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
+
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
     val promise = Promise[Unit]()
@@ -1568,6 +1573,7 @@ class MetalsLanguageServer(
       }
     }
   }
+
   def referencesResult(params: ReferenceParams): ReferencesResult = {
     val timer = new Timer(time)
     val result = referencesProvider.references(params)
@@ -1585,6 +1591,7 @@ class MetalsLanguageServer(
     }
     result
   }
+
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CancelTokens.future { token => compilers.completions(params, token) }
@@ -1930,6 +1937,44 @@ class MetalsLanguageServer(
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient
               .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
+              .asScala
+          } yield ().asInstanceOf[Object]
+        }
+
+      case ServerCommands.FormatThenRemoveBraces(textDocumentPositionParams) =>
+        CancelTokens.future { token =>
+          val uri = textDocumentPositionParams.getTextDocument().getUri()
+          val path = uri.toAbsolutePath
+          val initialFileCode = path.toInputFromBuffers(buffers).text
+          for { // ordered serial computation of these futures is crucial.
+            // so please do not assign them to `val`s before
+            // adding them to the for comprehension
+            formattingEdits <- formattingProvider.format(path, token)
+            if (!formattingEdits.isEmpty)
+            _ <- languageClient
+              .applyEdit(
+                new ApplyWorkspaceEditParams(
+                  new l.WorkspaceEdit(Map(uri -> formattingEdits).asJava)
+                )
+              )
+              .asScala
+            _ <- languageClient
+              .applyEdit(
+                new ApplyWorkspaceEditParams(
+                  new l.WorkspaceEdit(
+                    Map(
+                      uri -> BracelessBracefulSwitchCodeAction
+                        .calculateBraceRemovalEdits(
+                          path.toInputFromBuffers(buffers).text,
+                          initialFileCode,
+                          textDocumentPositionParams,
+                          trees
+                        )
+                        .asJava
+                    ).asJava
+                  )
+                )
+              )
               .asScala
           } yield ().asInstanceOf[Object]
         }

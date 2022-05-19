@@ -10,18 +10,23 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta._
+import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.codeactions.BracelessBracefulSwitchCodeAction.applyWithSingleFunction
+import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parsed
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
 
@@ -36,14 +41,16 @@ class BracelessBracefulSwitchCodeAction(
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val range = params.getRange
+    val textDocumentIdentifier = params.getTextDocument
+    val path = textDocumentIdentifier.getUri.toAbsolutePath
+    val cursorRange = params.getRange
+    val cursorPosition = cursorRange.getStart()
     val maybeTree =
-      if (range.getStart == range.getEnd)
+      if (cursorRange.getStart == cursorRange.getEnd)
         trees
           .findLastEnclosingAt[Tree](
             path,
-            range.getStart(),
+            cursorPosition,
             applyWithSingleFunction
           )
       else None
@@ -57,6 +64,8 @@ class BracelessBracefulSwitchCodeAction(
           case _: Pkg => None.toSeq
           case valDefn: Defn.Val =>
             createCodeActionForPotentialBlockHolder(
+              textDocumentIdentifier,
+              cursorPosition,
               valDefn,
               path,
               document,
@@ -66,6 +75,8 @@ class BracelessBracefulSwitchCodeAction(
           case varDefn: Defn.Var =>
             varDefn.rhs.flatMap {
               createCodeActionForPotentialBlockHolder(
+                textDocumentIdentifier,
+                cursorPosition,
                 varDefn,
                 path,
                 document,
@@ -75,6 +86,8 @@ class BracelessBracefulSwitchCodeAction(
             }.toSeq
           case defDefn: Defn.Def =>
             createCodeActionForPotentialBlockHolder(
+              textDocumentIdentifier,
+              cursorPosition,
               defDefn,
               path,
               document,
@@ -84,6 +97,8 @@ class BracelessBracefulSwitchCodeAction(
           case termTry: Term.Try =>
             Seq(
               createCodeActionForPotentialBlockHolder(
+                textDocumentIdentifier,
+                cursorPosition,
                 termTry,
                 path,
                 document,
@@ -98,6 +113,8 @@ class BracelessBracefulSwitchCodeAction(
               ),
               termTry.finallyp.flatMap(finallyp =>
                 createCodeActionForPotentialBlockHolder(
+                  textDocumentIdentifier,
+                  cursorPosition,
                   termTry,
                   path,
                   document,
@@ -109,6 +126,8 @@ class BracelessBracefulSwitchCodeAction(
           case termIf: Term.If =>
             Seq(
               createCodeActionForPotentialBlockHolder(
+                textDocumentIdentifier,
+                cursorPosition,
                 termIf,
                 path,
                 document,
@@ -117,6 +136,8 @@ class BracelessBracefulSwitchCodeAction(
                 "then"
               ),
               createCodeActionForPotentialBlockHolder(
+                textDocumentIdentifier,
+                cursorPosition,
                 termIf,
                 path,
                 document,
@@ -126,6 +147,8 @@ class BracelessBracefulSwitchCodeAction(
             ).flatten
           case termFor: Term.For =>
             createCodeActionForPotentialBlockHolder(
+              textDocumentIdentifier,
+              cursorPosition,
               termFor,
               path,
               document,
@@ -134,6 +157,8 @@ class BracelessBracefulSwitchCodeAction(
             ).toSeq
           case termForYield: Term.ForYield =>
             createCodeActionForPotentialBlockHolder(
+              textDocumentIdentifier,
+              cursorPosition,
               termForYield,
               path,
               document,
@@ -142,6 +167,8 @@ class BracelessBracefulSwitchCodeAction(
             ).toSeq
           case termWhile: Term.While =>
             createCodeActionForPotentialBlockHolder(
+              textDocumentIdentifier,
+              cursorPosition,
               termWhile,
               path,
               document,
@@ -168,17 +195,17 @@ class BracelessBracefulSwitchCodeAction(
                 title
               )
             }.toSeq
-          case termBlock: Term.Block if !termBlock.parent.exists(_ match {
-                case _: Term.Apply => true
-                case _ => false
-              }) =>
-            createCodeActionForPotentialBlockHolder(
-              termBlock.parent.getOrElse(termBlock),
-              path,
-              document,
-              termBlock,
-              "block"
-            ).toSeq
+          //          case termBlock: Term.Block if !termBlock.parent.exists(_ match {
+          //            case _: Term.Apply => true
+          //            case _ => false
+          //          }) =>
+          //            createCodeActionForPotentialBlockHolder(
+          //              termBlock.parent.getOrElse(termBlock),
+          //              path,
+          //              document,
+          //              termBlock,
+          //              "block"
+          //            ).toSeq
           case termMatch: Term.Match =>
             createCodeActionForTermMatch(
               termMatch,
@@ -867,57 +894,6 @@ class BracelessBracefulSwitchCodeAction(
     )
   }
 
-  private def createCodeActionToTakeOrphanBlockHolderBraceless(
-      blockHolder: Tree,
-      path: AbsolutePath,
-      blockEmbraceable: Term,
-      codeActionSubjectTitle: String,
-      originalIndentation: String
-  ): Option[l.CodeAction] = {
-
-    val (
-      initialCode,
-      maybeFormattedString,
-      maybeFormattedBlockHolder,
-      maybeFormattedBlockEmbraceable
-    ) =
-      formatOrphanTree(blockHolder, path, blockEmbraceable, originalIndentation)
-
-    for {
-      formattedBlockEmbraceable <- maybeFormattedBlockEmbraceable
-      formattedBlockHolder <- maybeFormattedBlockHolder
-      formattedString <- maybeFormattedString
-      bracePose <- util
-        .Try(formattedBlockEmbraceable.tokens.minBy(_.pos.start))
-        .toOption
-        .map(_.pos.start)
-      defaultBracePos <- util
-        .Try(blockEmbraceable.tokens.minBy(_.pos.start))
-        .toOption
-        .map(_.pos.toLSP.getStart)
-    } yield
-      if (formattedString != initialCode)
-        createCodeActionForGoingBracelessWithFormatting(
-          path = path,
-          expectedBraceStartPos = bracePose,
-          expectedBraceEndPose = formattedBlockEmbraceable.pos.end,
-          bracelessStart = "",
-          bracelessEnd = "",
-          codeActionSubjectTitle = codeActionSubjectTitle,
-          formattedTree = formattedBlockHolder,
-          originalTree = blockHolder
-        )
-      else
-        createCodeActionForGoingBracelessWithoutFormatting(
-          path,
-          expectedBraceStartPos = defaultBracePos,
-          expectedBraceEndPose = blockEmbraceable.pos.toLSP.getEnd,
-          bracelessStart = "",
-          bracelessEnd = "",
-          codeActionSubjectTitle
-        )
-  }
-
   def formatParentedTree(
       tree: Tree,
       treeParent: Tree,
@@ -971,104 +947,28 @@ class BracelessBracefulSwitchCodeAction(
     )
   }
 
-  private def createCodeActionToTakeParentedBlockHolderBraceless(
-      blockHolder: Tree,
-      blockHolderParent: Tree,
-      path: AbsolutePath,
-      blockEmbraceable: Term,
-      codeActionSubjectTitle: String,
-      parentIndentation: String
-  ): Option[l.CodeAction] = {
-    val (
-      initialCode,
-      maybeFormattedString,
-      maybeFormattedParent,
-      maybeFormattedBlockHolder,
-      maybeFormattedBlockEmbraceable
-    ) = formatParentedTree(
-      blockHolder,
-      blockHolderParent,
-      path,
-      blockEmbraceable,
-      parentIndentation
-    )
-
-    pprint.log("the formatted parent is\n" + maybeFormattedParent.get)
-    pprint.log(
-      "the formatted block holder is\n" + maybeFormattedBlockHolder.get
-    )
-    pprint.log(
-      "the formatted block embraceable is\n" + maybeFormattedBlockEmbraceable.get
-    )
-
-    for {
-      formattedBlockEmbraceable <- maybeFormattedBlockEmbraceable
-      formattedParent <- maybeFormattedParent
-      formattedBracePose <- util
-        .Try(formattedBlockEmbraceable.tokens.minBy(_.pos.start))
-        .toOption
-        .map(_.pos.start)
-      formattedString <- maybeFormattedString
-      defaultBracePos <- util
-        .Try(blockEmbraceable.tokens.minBy(_.pos.start))
-        .toOption
-        .map(_.pos.toLSP.getStart)
-    } yield
-      if (formattedString != initialCode) {
-        pprint.log(
-          "creating code action for the fomatted block holder parent:\n" + formattedParent
-        )
-        createCodeActionForGoingBracelessWithFormatting(
-          path = path,
-          expectedBraceStartPos = formattedBracePose,
-          expectedBraceEndPose = formattedBlockEmbraceable.pos.end,
-          bracelessStart = "",
-          bracelessEnd = "",
-          codeActionSubjectTitle = codeActionSubjectTitle,
-          formattedTree = formattedParent,
-          originalTree = blockHolderParent
-        )
-      } else
-        createCodeActionForGoingBracelessWithoutFormatting(
-          path,
-          expectedBraceStartPos = defaultBracePos,
-          expectedBraceEndPose = blockEmbraceable.pos.toLSP.getEnd,
-          bracelessStart = "",
-          bracelessEnd = "",
-          codeActionSubjectTitle
-        )
-  }
-
   private def creatCodeActionToTakePotentialBlockHolderBraceless(
-      blockHolder: Tree,
-      path: AbsolutePath,
-      blockEmbraceable: Term,
-      codeActionSubjectTitle: String,
-      originalIndentation: String,
-      maybeParentIndentation: Option[String],
-      bracelessStart: String
-  ): Option[l.CodeAction] = {
-    if (blockHolder.parent.isEmpty)
-      createCodeActionToTakeOrphanBlockHolderBraceless(
-        blockHolder,
-        path,
-        blockEmbraceable,
-        codeActionSubjectTitle,
-        originalIndentation
+      textDocumentIndentifier: l.TextDocumentIdentifier,
+      cursorPosition: l.Position,
+      codeActionSubjectTitle: String
+  ): l.CodeAction = {
+
+    val codeAction = new l.CodeAction()
+    codeAction.setTitle(
+      BracelessBracefulSwitchCodeAction.goBracelessWithFormatting(
+        codeActionSubjectTitle
       )
-    else {
-      for {
-        parent <- blockHolder.parent
-        parentIndentation <- maybeParentIndentation
-      } yield createCodeActionToTakeParentedBlockHolderBraceless(
-        blockHolder,
-        parent,
-        path,
-        blockEmbraceable,
-        codeActionSubjectTitle,
-        parentIndentation
+    )
+    codeAction.setCommand(
+      ServerCommands.FormatThenRemoveBraces.toLSP(
+        new l.TextDocumentPositionParams(
+          textDocumentIndentifier,
+          cursorPosition
+        )
       )
-    }.flatten
+    )
+    codeAction.setKind(this.kind)
+    codeAction
   }
 
   private def createCodeActionToTakePotentialBlockHolderBraceful(
@@ -1105,24 +1005,24 @@ class BracelessBracefulSwitchCodeAction(
           bracelessStartToken.pos.toLSP.getStart
         else bracelessStartToken.pos.toLSP.getEnd
 
-//      bracePose <- util
-//        .Try(blockEmbraceable.tokens.minBy(_.pos.start))
-//        .toOption
-//        .map(_.pos.start)
-//        .flatMap(blockEmbraceableStartPos =>
-//          util
-//            .Try(
-//              blockHolder.tokens.tokens
-//                .filter { token =>
-//                  token.pos.start < blockEmbraceableStartPos && !token.text.isBlank
-//                }
-//                .maxBy(_.pos.start)
-//                .pos
-//                .toLSP
-//                .getEnd
-//            )
-//            .toOption
-//        )
+      //      bracePose <- util
+      //        .Try(blockEmbraceable.tokens.minBy(_.pos.start))
+      //        .toOption
+      //        .map(_.pos.start)
+      //        .flatMap(blockEmbraceableStartPos =>
+      //          util
+      //            .Try(
+      //              blockHolder.tokens.tokens
+      //                .filter { token =>
+      //                  token.pos.start < blockEmbraceableStartPos && !token.text.isBlank
+      //                }
+      //                .maxBy(_.pos.start)
+      //                .pos
+      //                .toLSP
+      //                .getEnd
+      //            )
+      //            .toOption
+      //        )
 
     } yield createCodeActionForGoingBraceful(
       path,
@@ -1149,6 +1049,8 @@ class BracelessBracefulSwitchCodeAction(
    * @return
    */
   private def createCodeActionForPotentialBlockHolder(
+      textDocumentIdentifier: l.TextDocumentIdentifier,
+      cursorPosition: l.Position,
       blockHolder: Tree,
       path: AbsolutePath,
       document: String,
@@ -1158,19 +1060,17 @@ class BracelessBracefulSwitchCodeAction(
   ): Option[l.CodeAction] = {
     val indentation =
       getIndentationForPositionInDocument(blockHolder.pos, document)
-    val maybeParentIndentation = blockHolder.parent.map { parent =>
+    blockHolder.parent.map { parent =>
       getIndentationForPositionInDocument(parent.pos, document)
     }
     if (isBlockEmbraceableBraced(blockEmbraceable)) {
       if (blockEmbraceable.allowBracelessSyntax)
-        creatCodeActionToTakePotentialBlockHolderBraceless(
-          blockHolder,
-          path,
-          blockEmbraceable,
-          codeActionSubjectTitle,
-          indentation,
-          maybeParentIndentation,
-          bracelessStart
+        Some(
+          creatCodeActionToTakePotentialBlockHolderBraceless(
+            textDocumentIdentifier,
+            cursorPosition,
+            codeActionSubjectTitle
+          )
         )
       else None
     } else // does not have braces
@@ -1272,6 +1172,7 @@ class BracelessBracefulSwitchCodeAction(
     }
 
   }
+
   private def getIndentedFormattedCode(
       path: AbsolutePath,
       initialCode: String,
@@ -1283,7 +1184,7 @@ class BracelessBracefulSwitchCodeAction(
           case (firstLine: String) :: subsequentLines =>
             Some(
               {
-                firstLine +: subsequentLines.map(startLineIndentaion + _)
+                List(firstLine) ++ subsequentLines.map(startLineIndentaion + _)
               }.mkString("\n")
             )
           case (firstLine: String) :: Nil => Some(firstLine)
@@ -1714,18 +1615,6 @@ class BracelessBracefulSwitchCodeAction(
       .substring(treePos.start - treePos.startColumn, treePos.start)
       .takeWhile(_.isWhitespace)
 
-  private def applyWithSingleFunction: Tree => Boolean = {
-    case _: Pkg | _: Defn.Class | _: Defn.Enum | _: Defn.Trait |
-        _: Defn.Object =>
-      true
-    case _: Defn.GivenAlias | _: Defn.Val | _: Defn.Var | _: Defn.Def => true
-    case _: Term.Try | _: Term.If | _: Term.For | _: Term.Match |
-        _: Term.While =>
-      true
-    case _: Template | _: Term.Block => true
-    case _ => false
-  }
-
   private def findFormattedTreeInFormattedFileTree(
       tree: Tree,
       formattedFileTree: Tree
@@ -1802,10 +1691,237 @@ class BracelessBracefulSwitchCodeAction(
 }
 
 object BracelessBracefulSwitchCodeAction {
+  def calculateBraceRemovalEdits(
+      revisedCode: String,
+      initialFileCode: String,
+      textDocumentPositionParams: TextDocumentPositionParams,
+      trees: Trees
+  ): List[l.TextEdit] = {
+    val uri = textDocumentPositionParams.getTextDocument.getUri
+    val path = uri.toAbsolutePath
+    val initialCursorPos = textDocumentPositionParams.getPosition
+    findTheRevisedTree(
+      revisedCode,
+      initialFileCode,
+      path,
+      new l.Range(initialCursorPos, initialCursorPos),
+      trees
+    ).map { formattedTree =>
+      getBraceRemovalTextEdits(
+        formattedTree
+      )
+    }.toList
+      .flatten
+
+  }
+
+  private def getBraceRemovalTextEdits(
+      formattedTree: Tree
+  ): List[l.TextEdit] = {
+
+    formattedTree match {
+      case _: Pkg => List.empty
+      case _: Defn.Val =>
+        getTextEditsToRemoveBracesOfPotentialBlockHolder(
+          formattedTree,
+          tree => tree.asInstanceOf[Defn.Val].rhs,
+          ""
+        )
+      case varDefn: Defn.Var =>
+        varDefn.rhs
+          .map { _ =>
+            getTextEditsToRemoveBracesOfPotentialBlockHolder(
+              formattedTree,
+              tree => tree.asInstanceOf[Defn.Var].rhs.get,
+              ""
+            )
+          }
+          .toList
+          .flatten
+      case _: Defn.Def =>
+        getTextEditsToRemoveBracesOfPotentialBlockHolder(
+          formattedTree,
+          tree => tree.asInstanceOf[Defn.Def].body,
+          ""
+        )
+      case termTry: Term.Try =>
+        List(
+          getTextEditsToRemoveBracesOfPotentialBlockHolder(
+            formattedTree,
+            tree => tree.asInstanceOf[Term.Try].expr,
+            ""
+          ),
+          //            createCodeActionForCatchP(
+          //              termTry,
+          //              path,
+          //              document,
+          //              "catch expression"
+          //            ),
+          termTry.finallyp
+            .map(finallyp =>
+              getTextEditsToRemoveBracesOfPotentialBlockHolder(
+                formattedTree,
+                tree => tree.asInstanceOf[Term.Try].finallyp.get,
+                ""
+              )
+            )
+            .toList
+            .flatten
+        ).flatten
+      case _: Term.If =>
+        List(
+          getTextEditsToRemoveBracesOfPotentialBlockHolder(
+            formattedTree,
+            tree => tree.asInstanceOf[Term.If].thenp,
+            "then"
+          ),
+          getTextEditsToRemoveBracesOfPotentialBlockHolder(
+            formattedTree,
+            tree => tree.asInstanceOf[Term.If].elsep,
+            ""
+          )
+        ).flatten
+      case _: Term.For =>
+        getTextEditsToRemoveBracesOfPotentialBlockHolder(
+          formattedTree,
+          tree => tree.asInstanceOf[Term.For].body,
+          ""
+        )
+      case _: Term.ForYield =>
+        getTextEditsToRemoveBracesOfPotentialBlockHolder(
+          formattedTree,
+          tree => tree.asInstanceOf[Term.ForYield].body,
+          ""
+        )
+      case _: Term.While =>
+        getTextEditsToRemoveBracesOfPotentialBlockHolder(
+          formattedTree,
+          tree => tree.asInstanceOf[Term.While].body,
+          "do"
+        )
+      case _: Defn.GivenAlias => List.empty
+      //        case template: Template =>
+      //          val title = template.parent
+      //            .collectFirst {
+      //              case _: Defn.Enum => "enum definition"
+      //              case _: Defn.Trait => "trait definition"
+      //              case _: Defn.Object => "object definition"
+      //              case _: Defn.Class => "class definition"
+      //            }
+      //            .getOrElse("template")
+      //          template.parent.flatMap {
+      //            getTextEditsToRemoveBracesOfTemplateHolder(
+      //              _,
+      //              path,
+      //              document,
+      //              template,
+      //              title
+      //            )
+      //          }.toSeq
+      //        case termBlock: Term.Block if !termBlock.parent.exists(_ match {
+      //          case _: Term.Apply => true
+      //          case _ => false
+      //        }) =>
+      //          getTextEditsToRemoveBracesOfPotentialBlockHolder(
+      //            termBlock.parent.getOrElse(termBlock),
+      //            path,
+      //            document,
+      //            termBlock,
+      //            "block"
+      //          ).toSeq
+      //        case termMatch: Term.Match =>
+      //          createCodeActionForTermMatch(
+      //            termMatch,
+      //            path,
+      //            document,
+      //            "match cases"
+      //          )
+      case _ => List.empty
+    }
+
+  }
+
+  private def getTextEditsToRemoveBracesOfPotentialBlockHolder(
+      formattedBlockHolder: Tree,
+      generateBlockEmbraceable: Tree => Term,
+      bracelessStart: String
+  ): List[l.TextEdit] = {
+    val formattedBlockEmbraceable = generateBlockEmbraceable(
+      formattedBlockHolder
+    )
+    val expectedBraceEndPos = formattedBlockEmbraceable.pos.toLSP.getEnd
+
+    util
+      .Try(formattedBlockEmbraceable.tokens.minBy(_.pos.start))
+      .toOption
+      .map(_.pos.toLSP.getStart)
+      .map { expectedBraceStartPos =>
+        val braceableBranchStart = expectedBraceStartPos
+        val braceableBranchStartEnd = new l.Position()
+        braceableBranchStartEnd.setCharacter(
+          expectedBraceStartPos.getCharacter + 1
+        )
+        braceableBranchStartEnd.setLine(expectedBraceStartPos.getLine)
+        val startTextEdit = new TextEdit(
+          new l.Range(braceableBranchStart, braceableBranchStartEnd),
+          bracelessStart
+        )
+
+        val braceableBranchEndStart = new l.Position()
+        braceableBranchEndStart.setCharacter(
+          expectedBraceEndPos.getCharacter - 1
+        )
+        braceableBranchEndStart.setLine(expectedBraceEndPos.getLine)
+        val braceableBranchEnd = expectedBraceEndPos
+
+        val endTextEdit = new TextEdit(
+          new l.Range(braceableBranchEndStart, braceableBranchEnd),
+          ""
+        )
+        List(startTextEdit, endTextEdit)
+      }
+      .toList
+      .flatten
+  }
+
+  private def findTheRevisedTree(
+      revisedCode: String,
+      initialCode: String,
+      path: AbsolutePath,
+      range: l.Range,
+      trees: Trees
+  ): Option[Tree] = {
+
+    val revised = Input.VirtualFile(path.toURI.toString(), revisedCode)
+    val fromTree =
+      Input.VirtualFile(path.toURI.toString(), initialCode)
+    val distance = TokenEditDistance(fromTree, revised, trees)
+    distance.toRevised(range).flatMap { newRange =>
+      trees
+        .findLastEnclosingAt[Tree](
+          path,
+          newRange.getStart,
+          applyWithSingleFunction
+        )
+    }
+  }
+
+  def applyWithSingleFunction: Tree => Boolean = {
+    case _: Pkg | _: Defn.Class | _: Defn.Enum | _: Defn.Trait |
+        _: Defn.Object =>
+      true
+    case _: Defn.GivenAlias | _: Defn.Val | _: Defn.Var | _: Defn.Def => true
+    case _: Term.Try | _: Term.If | _: Term.For | _: Term.Match |
+        _: Term.While =>
+      true
+    case _: Template | _: Term.Block => true
+    case _ => false
+  }
+
   def goBraceFul(subject: String): String = s"Add braces to the $subject"
 
   def goBraceless(subject: String): String = s"Remove braces from the $subject"
 
   def goBracelessWithFormatting(subject: String): String =
-    s"Format the $subject and remove braces from it"
+    s"Format the file and remove braces from the $subject"
 }

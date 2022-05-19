@@ -456,6 +456,17 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val FormatThenRemoveBraces =
+    new ParametrizedCommand[TextDocumentPositionParams](
+      "format-then-remove-braces",
+      "Format a file, then remove the braces from the selected tree",
+      """|Whenever a user chooses the code action to remove the braces of a tree,
+         | this command is later run to first format the file and then remove the braces.
+         |""".stripMargin,
+      """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+         |""".stripMargin
+    )
+
   val GotoLog = new Command(
     "goto-log",
     "Check logs",
@@ -533,6 +544,7 @@ object ServerCommands {
       GotoSymbol,
       ImportBuild,
       InsertInferredType,
+      FormatThenRemoveBraces,
       NewScalaFile,
       NewJavaFile,
       NewScalaProject,
