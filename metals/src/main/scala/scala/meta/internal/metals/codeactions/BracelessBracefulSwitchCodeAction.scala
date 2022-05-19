@@ -1700,6 +1700,9 @@ object BracelessBracefulSwitchCodeAction {
     val uri = textDocumentPositionParams.getTextDocument.getUri
     val path = uri.toAbsolutePath
     val initialCursorPos = textDocumentPositionParams.getPosition
+
+    pprint.log("revised code is \n" + revisedCode)
+    pprint.log("initial code is \n" + initialFileCode)
     findTheRevisedTree(
       revisedCode,
       initialFileCode,
@@ -1707,6 +1710,7 @@ object BracelessBracefulSwitchCodeAction {
       new l.Range(initialCursorPos, initialCursorPos),
       trees
     ).map { formattedTree =>
+      pprint.log("formattedTree is \n" + formattedTree)
       getBraceRemovalTextEdits(
         formattedTree
       )
@@ -1892,18 +1896,21 @@ object BracelessBracefulSwitchCodeAction {
       trees: Trees
   ): Option[Tree] = {
 
-    val revised = Input.VirtualFile(path.toURI.toString(), revisedCode)
-    val fromTree =
+    val newContent = Input.VirtualFile(path.toURI.toString(), revisedCode)
+    val originalContent =
       Input.VirtualFile(path.toURI.toString(), initialCode)
-    val distance = TokenEditDistance(fromTree, revised, trees)
-    distance.toRevised(range).flatMap { newRange =>
-      trees
-        .findLastEnclosingAt[Tree](
-          path,
-          newRange.getStart,
-          applyWithSingleFunction
-        )
-    }
+    val distance = TokenEditDistance(originalContent, newContent, trees)
+    distance
+      .toRevised(range.getStart.getLine, range.getStart.getCharacter)
+      .toOption
+      .flatMap { newPosition =>
+        trees
+          .findLastEnclosingAt[Tree](
+            path,
+            newPosition.toLSP.getStart,
+            applyWithSingleFunction
+          )
+      }
   }
 
   def applyWithSingleFunction: Tree => Boolean = {

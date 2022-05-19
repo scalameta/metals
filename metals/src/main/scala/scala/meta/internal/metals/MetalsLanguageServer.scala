@@ -1965,7 +1965,7 @@ class MetalsLanguageServer(
                     Map(
                       uri -> BracelessBracefulSwitchCodeAction
                         .calculateBraceRemovalEdits(
-                          path.toInputFromBuffers(buffers).text,
+                          formattingEdits.get(0).getNewText,
                           initialFileCode,
                           textDocumentPositionParams,
                           trees
