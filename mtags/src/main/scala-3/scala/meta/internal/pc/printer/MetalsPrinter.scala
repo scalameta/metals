@@ -7,8 +7,8 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
-import scala.meta.pc.SymbolSearch
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags

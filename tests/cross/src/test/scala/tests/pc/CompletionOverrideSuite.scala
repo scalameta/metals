@@ -975,13 +975,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """|hello: Int
        |override def hello: Int
        |""".stripMargin,
-    includeDetail = false,
-    compat = Map(
-      "3" ->
-        """|override def hello: Int
-           |hello: Int
-           |""".stripMargin
-    )
+    includeDetail = false
   )
 
   check(

@@ -278,6 +278,7 @@ class Completions(
         // For override-completion, we don't care fields or methods because
         // we can override both fields and non-fields
         case _: CompletionValue.Override =>
+          relevance |= IsNotGetter
         case _ if !hasGetter(sym) =>
           relevance |= IsNotGetter
         case _ =>
@@ -374,7 +375,7 @@ class Completions(
   ): Ordering[CompletionValue] =
     new Ordering[CompletionValue]:
       val queryLower = completionPos.query.toLowerCase()
-      val fuzzyCache = mutable.Map.empty[Symbol, Int]
+      val fuzzyCache = mutable.Map.empty[CompletionValue, Int]
 
       def compareLocalSymbols(s1: Symbol, s2: Symbol): Int =
         if s1.isLocal && s2.isLocal then
@@ -389,10 +390,10 @@ class Completions(
           computeRelevancePenalty(o2, application)
         )
 
-      def fuzzyScore(o: Symbol): Int =
+      def fuzzyScore(o: CompletionValue.Symbolic): Int =
         fuzzyCache.getOrElseUpdate(
           o, {
-            val name = o.name.toString().toLowerCase()
+            val name = o.label.toLowerCase()
             if name.startsWith(queryLower) then 0
             else if name.toLowerCase().contains(queryLower) then 1
             else 2
@@ -435,8 +436,8 @@ class Completions(
               if byRelevance != 0 then byRelevance
               else
                 val byFuzzy = Integer.compare(
-                  fuzzyScore(s1),
-                  fuzzyScore(s2)
+                  fuzzyScore(sym1),
+                  fuzzyScore(sym2)
                 )
                 if byFuzzy != 0 then byFuzzy
                 else
