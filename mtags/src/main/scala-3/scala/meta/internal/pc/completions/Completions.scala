@@ -306,11 +306,6 @@ class Completions(
     end symbolRelevance
 
     completion match
-      case ov: CompletionValue.Override =>
-        var penalty = symbolRelevance(ov.symbol)
-        // if (!ov.symbol.is(Deferred)) penalty |= MemberOrdering.IsNotAbstract
-        penalty
-
       case CompletionValue.Workspace(_, sym) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
       case sym: CompletionValue.Symbolic =>
