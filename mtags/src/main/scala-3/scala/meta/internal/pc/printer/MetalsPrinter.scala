@@ -28,7 +28,8 @@ class MetalsPrinter(
     names: ShortenedNames,
     dotcPrinter: DotcPrinter,
     symbolSearch: SymbolSearch,
-    includeDefaultParam: Boolean = false
+    includeDefaultParam: MetalsPrinter.IncludeDefaultParam =
+      IncludeDefaultParam.ResolveLater
 )(using
     Context
 ):
@@ -329,14 +330,16 @@ class MetalsPrinter(
     else
       val isDefaultParam = param.isAllOf(DefaultParameter)
       val default =
-        if includeDefaultParam && isDefaultParam then
+        if includeDefaultParam == MetalsPrinter.IncludeDefaultParam.Include && isDefaultParam
+        then
           val defaultValue = defaultValues.lift(index) match
             case Some(value) if !value.isEmpty => value
             case _ => "..."
           s" = $defaultValue"
         // to be populated later, otherwise we would spend too much time in completions
-        else if isDefaultParam then " = ..."
-        else ""
+        else if includeDefaultParam == MetalsPrinter.IncludeDefaultParam.ResolveLater && isDefaultParam
+        then " = ..."
+        else "" // includeDefaultParam == Never or !isDefaultParam
       s"$keywordName: ${paramTypeString}$default"
     end if
   end paramLabel
@@ -373,7 +376,7 @@ object MetalsPrinter:
   def standard(
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
-      includeDefaultParam: Boolean
+      includeDefaultParam: IncludeDefaultParam
   ): MetalsPrinter =
     import indexed.ctx
     MetalsPrinter(
@@ -387,7 +390,7 @@ object MetalsPrinter:
       shortenedNames: ShortenedNames,
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
-      includeDefaultParam: Boolean
+      includeDefaultParam: IncludeDefaultParam
   ): MetalsPrinter =
     import shortenedNames.indexedContext.ctx
     MetalsPrinter(
@@ -396,5 +399,18 @@ object MetalsPrinter:
       symbolSearch,
       includeDefaultParam
     )
+
+  enum IncludeDefaultParam:
+    /** Include default param at `textDocument/completion` */
+    case Include
+
+    /**
+     * Include default param as "..." and populate it later at `completionItem/resolve`
+     * @see https://github.com/scalameta/metals/blob/09d62c2e2f77a63c7d21ffa19971e2bb3fc9ab34/mtags/src/main/scala/scala/meta/internal/pc/ItemResolver.scala#L88-L103
+     */
+    case ResolveLater
+
+    /** Do not add default parameter */
+    case Never
 
 end MetalsPrinter

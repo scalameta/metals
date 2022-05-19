@@ -78,7 +78,7 @@ object HoverProvider:
           val printer = MetalsPrinter.standard(
             IndexedContext(printerContext),
             search,
-            includeDefaultParam = true
+            includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Include
           )
 
           val hoverString =

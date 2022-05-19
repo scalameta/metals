@@ -83,7 +83,7 @@ final class InferredTypeProvider(
         shortenedNames,
         indexedCtx,
         symbolSearch,
-        includeDefaultParam = false
+        includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater
       )
       printer.tpe(tpe)
 

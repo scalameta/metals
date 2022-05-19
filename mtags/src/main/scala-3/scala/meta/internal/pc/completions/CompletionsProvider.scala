@@ -141,7 +141,7 @@ class CompletionsProvider(
     val printer = MetalsPrinter.standard(
       indexedContext,
       search,
-      includeDefaultParam = false
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater
     )
     val editRange = completionPos.toEditRange
 

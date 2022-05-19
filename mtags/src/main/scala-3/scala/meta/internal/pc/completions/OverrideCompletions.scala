@@ -4,6 +4,7 @@ package completions
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.Template
 import dotty.tools.dotc.ast.tpd.Tree
@@ -33,6 +34,7 @@ object OverrideCompletions:
       completing: Option[Symbol],
       start: Int,
       indexedContext: IndexedContext,
+      search: SymbolSearch,
       config: PresentationCompilerConfig
   ): List[CompletionValue] =
     import indexedContext.ctx
@@ -86,13 +88,18 @@ object OverrideCompletions:
       }
       .filter(isOverrideable)
 
+    val printer = MetalsPrinter.standard(
+      indexedContext,
+      search,
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Never
+    )
     overridables
       .map(sym =>
         toCompletionValue(
           sym.denot,
           start,
           td,
-          indexedContext,
+          printer,
           config,
           indexedContext.ctx.compilationUnit.source.content
             .startsWith("o", start)
@@ -112,11 +119,10 @@ object OverrideCompletions:
       sym: SymDenotation,
       start: Int,
       td: TypeDef,
-      indexedContext: IndexedContext,
+      printer: MetalsPrinter,
       config: PresentationCompilerConfig,
       shouldAddOverrideKwd: Boolean
   )(using Context): CompletionValue.Override =
-    val printer = MetalsPrinter.standard(indexedContext)
     val overrideKeyword: String =
       // if the overriding method is not an abstract member, add `override` keyword
       if !sym.isOneOf(Deferred) || shouldAddOverrideKwd

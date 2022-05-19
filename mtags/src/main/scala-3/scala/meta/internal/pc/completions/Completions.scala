@@ -83,6 +83,7 @@ class Completions(
           completing,
           dd.sourcePos.start,
           indexedContext,
+          search,
           config
         )
         (values, true)
@@ -96,6 +97,7 @@ class Completions(
           None,
           ident.sourcePos.start,
           indexedContext,
+          search,
           config
         )
         // include compiler-oriented completions, in case `ov` doesn't mean the prefix of `override`
@@ -109,6 +111,7 @@ class Completions(
           None,
           t.sourcePos.start,
           indexedContext,
+          search,
           config
         )
         (values, true)
@@ -122,6 +125,7 @@ class Completions(
           Some(sel.symbol),
           sel.sourcePos.start,
           indexedContext,
+          search,
           config
         )
         (values, false)
