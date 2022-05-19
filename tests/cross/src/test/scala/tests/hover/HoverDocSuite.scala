@@ -55,7 +55,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |**Symbol signature**:
            |```scala
-           |final def emptyList[T]: java.util.List[T]
+           |final def emptyList[T](): java.util.List[T]
            |```
            |Returns an empty list (immutable).  This list is serializable.
            |
