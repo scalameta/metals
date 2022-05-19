@@ -55,7 +55,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |**Symbol signature**:
            |```scala
-           |def emptyList[T]: java.util.List[T]
+           |final def emptyList[T]: java.util.List[T]
            |```
            |Returns an empty list (immutable).  This list is serializable.
            |
@@ -75,34 +75,25 @@ class HoverDocSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     // Assert that the docstring is extracted.
+
     """|```scala
-       |def headOption: Option[Int]
+       |override def headOption: Option[Int]
        |```
        |Optionally selects the first element.
-       | $orderDependent
+       | Note: might return different results for different runs, unless the underlying collection type is ordered.
        |
-       |**Returns:** the first element of this traversable collection if it is nonempty,
+       |**Returns:** the first element of this iterable collection if it is nonempty,
        |          `None` if it is empty.
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|```scala
-           |override def headOption: Option[Int]
-           |```
-           |Optionally selects the first element.
-           | Note: might return different results for different runs, unless the underlying collection type is ordered.
-           |
-           |**Returns:** the first element of this iterable collection if it is nonempty,
-           |          `None` if it is empty.
-           |""".stripMargin,
-      "3" ->
+      "2.12" ->
         """|```scala
            |def headOption: Option[Int]
            |```
            |Optionally selects the first element.
-           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           | $orderDependent
            |
-           |**Returns:** the first element of this iterable collection if it is nonempty,
+           |**Returns:** the first element of this traversable collection if it is nonempty,
            |          `None` if it is empty.
            |""".stripMargin
     )

@@ -156,6 +156,8 @@ object HoverProvider:
             case t: GenericApply
                 if t.fun.srcPos.span.contains(pos.span) && !t.tpe.isErroneous =>
               tryTail(tail).orElse(Some(enclosing))
+            case in: Inlined =>
+              tryTail(tail).orElse(Some(enclosing))
             case New(_) =>
               tail match
                 case Nil => None
