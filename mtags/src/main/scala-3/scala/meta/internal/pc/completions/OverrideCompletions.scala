@@ -65,7 +65,7 @@ object OverrideCompletions:
     // Given the base class `trait Foo { def foo: Int; val bar: Int; var baz: Int }`
     // and typing `def @@` in the subclass of `Foo`,
     // suggest `def foo` and exclude `val bar`, and `var baz` from suggestion
-    // because theyr are not method definitions (not starting from `def`).
+    // because they are not method definitions (not starting from `def`).
     val flags = completing.map(_.flags & interestingFlags).getOrElse(EmptyFlags)
 
     // not using `td.tpe.abstractTermMembers` because those members includes

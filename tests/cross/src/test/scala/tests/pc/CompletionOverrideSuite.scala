@@ -554,7 +554,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     // consider not dealiasing here.
     """  def foo: List[Int] = ${0:???}""".stripMargin,
     compat = Map(
-      "3" -> // TODO: should we dealias it?
+      "3" ->
         """  def foo: Foobar = ${0:???}""".stripMargin
     )
   )
