@@ -41,21 +41,23 @@ class Completions(
   implicit val context: Context = ctx
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
-    lazy val (completions, result) = path match
-      // should not show completions for toplevel
-      case Nil if pos.source.file.extension != "sc" =>
-        (List.empty, SymbolSearch.Result.COMPLETE)
-      case Select(qual, _) :: _ if qual.tpe.isErroneous =>
-        (List.empty, SymbolSearch.Result.COMPLETE)
-      case _ =>
-        val (_, compilerCompletions) = Completion.completions(pos)
-        compilerCompletions
-          .flatMap(CompletionValue.fromCompiler)
-          .filterInteresting()
-
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
-    val all =
-      if exclusive then advanced else completions ++ advanced
+    val (all, result) =
+      if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
+      else
+        path match
+          // should not show completions for toplevel
+          case Nil if pos.source.file.extension != "sc" =>
+            (advanced, SymbolSearch.Result.COMPLETE)
+          case Select(qual, _) :: _ if qual.tpe.isErroneous =>
+            (advanced, SymbolSearch.Result.COMPLETE)
+          case _ =>
+            val (_, compilerCompletions) = Completion.completions(pos)
+            val (compiler, result) = compilerCompletions
+              .flatMap(CompletionValue.fromCompiler)
+              .filterInteresting()
+            (advanced ++ compiler, result)
+
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
     val values = application.postProcess(all.sorted(ordering))
