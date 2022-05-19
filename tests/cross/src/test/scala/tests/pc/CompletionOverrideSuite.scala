@@ -6,6 +6,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
 
   override def requiresJdkSources: Boolean = true
 
+  override def requiresScalaLibrarySources: Boolean = true
+
   checkEdit(
     "basic",
     """

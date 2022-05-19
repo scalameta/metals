@@ -184,13 +184,19 @@ class CompletionsProvider(
 
       completion match
         case v: CompletionValue.Symbolic =>
+          val completionItemDataKind = v match
+            case _: CompletionValue.Override =>
+              CompletionItemData.OverrideKind
+            case _ => null
           item.setData(
             CompletionItemData(
               SemanticdbSymbols.symbolName(v.symbol),
-              buildTargetIdentifier
+              buildTargetIdentifier,
+              kind = completionItemDataKind
             ).toJson
           )
         case _ => None
+      end match
 
       item.setTags(completion.lspTags.asJava)
 
