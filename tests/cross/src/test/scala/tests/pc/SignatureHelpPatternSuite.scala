@@ -4,10 +4,6 @@ import tests.BaseSignatureHelpSuite
 
 class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
 
-  // @tgodzik docs not yet supported for Scala 3
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   check(
     "case",
     """
@@ -24,12 +20,18 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """|map[B](f: ((Int, Int)) => B): List[B]
            |       ^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      "3" ->
+        """|map[B](f: A => B): List[B]
+           |       ^^^^^^^^^
            |""".stripMargin
     )
   )
 
   check(
-    "generic1",
+    "generic1".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object Main {
       |  Option(1) match {
@@ -43,7 +45,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "generic2",
+    // https://github.com/lampepfl/dotty/issues/15248
+    "generic2".tag(IgnoreScala3),
     """
       |case class Two[T](a: T, b: T)
       |object Main {
@@ -58,7 +61,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "generic3",
+    // https://github.com/lampepfl/dotty/issues/15248
+    "generic3".tag(IgnoreScala3),
     """
       |case class HKT[C[_], T](a: C[T])
       |object Main {
@@ -73,7 +77,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "generic4",
+    "generic4".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |  case class Two[A, B](a: A, b: B)
       |  object Main {
@@ -84,11 +90,19 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Int, String)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|(a: Int, b: String)
+           | ^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
-    "generic5",
+    "generic5".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |class Two[A, B](a: A, b: B)
       |object Two {
@@ -108,7 +122,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "non-synthetic-unapply",
+    "non-synthetic-unapply".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |class HKT[C[_], T](a: C[T])
       |object HKT {
@@ -126,7 +142,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "non-synthetic-unapply-second",
+    "non-synthetic-unapply-second".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |class HKT[C[_], T](a: C[T])
       |object HKT {
@@ -144,7 +162,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat",
+    "pat".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |case class Person(name: String, age: Int)
       |object a {
@@ -154,11 +174,19 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|(String, Int)
        | ^^^^^^
-       | """.stripMargin
+       | """.stripMargin,
+    compat = Map(
+      "3" ->
+        """|(name: String, age: Int)
+           | ^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
-    "pat1",
+    "pat1".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |class Person(name: String, age: Int)
       |object Person {
@@ -176,7 +204,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat2",
+    "pat2".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object a {
       |  val Number = "$a, $b".r
@@ -187,11 +217,18 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|(List[A])
        | ^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|(String)
+                | ^^^^^^
+                |""".stripMargin
+    )
   )
 
   check(
-    "pat3",
+    "pat3".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object And {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
@@ -229,7 +266,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat5",
+    "pat5".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object OpenBrowserCommand {
       |  def unapply(command: String): Option[Int] = {
@@ -247,7 +286,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat6",
+    // https://github.com/lampepfl/dotty/issues/15248
+    "pat6".tag(IgnoreScala3),
     """
       |object OpenBrowserCommand {
       |  def unapply(command: String): Option[Option[Int]] = {
@@ -265,7 +305,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat-negative",
+    // https://github.com/lampepfl/dotty/issues/15248
+    "pat-negative".tag(IgnoreScala3),
     """
       |object And {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))

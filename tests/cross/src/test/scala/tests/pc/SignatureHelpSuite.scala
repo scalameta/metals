@@ -250,9 +250,17 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|apply[A](elems: A*): List[A]
            |         ^^^^^^^^^
            |""".stripMargin,
-      "3" ->
+      "3.0" ->
         """|apply[A](x: A): Option[A]
            |         ^^^^
+           |""".stripMargin,
+      "3.1" ->
+        """|apply[A](x: A): Option[A]
+           |         ^^^^
+           |""".stripMargin,
+      "3" ->
+        """|apply[A](elems: A*): CC[A]
+           |         ^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -268,7 +276,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
   check(
-    "vararg",
+    // https://github.com/lampepfl/dotty/issues/15244
+    "vararg".tag(
+      IgnoreScalaVersion.forLaterThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object a {
       |  List(1, 2@@
@@ -288,8 +299,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |""".stripMargin
     )
   )
+
   check(
-    "tparam",
+    // https://github.com/lampepfl/dotty/issues/15249
+    "tparam".tag(IgnoreScala3),
     """
       |object a {
       |  identity[I@@]
@@ -297,17 +310,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|identity[A](x: A): A
        |         ^
-       |""".stripMargin,
-    compat = Map(
-      // TODO type signatures aren't handled
-      "3" ->
-        """|identity[A](x: A): A
-           |            ^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
+    // https://github.com/lampepfl/dotty/issues/15249
     "tparam2".tag(IgnoreScala3),
     """
       |object a {
@@ -320,7 +327,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "tparam3",
+    // https://github.com/lampepfl/dotty/issues/15249
+    "tparam3".tag(IgnoreScala3),
     """
       |object a {
       |  Option[I@@]
@@ -328,16 +336,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](x: A): Option[A]
        |      ^
-       |""".stripMargin,
-    // TODO type signatures aren't handled
-    compat = Map(
-      "3" ->
-        """|apply[A](x: A): Option[A]
-           |         ^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
+    // https://github.com/lampepfl/dotty/issues/15249
     "tparam4".tag(IgnoreScala3),
     """
       |object a {
@@ -380,20 +382,16 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "error1",
+    "error1".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object a {
       |  Map[Int](1 @@-> "").map {
       |  }
       |}
     """.stripMargin,
-    "",
-    compat = Map(
-      "3" ->
-        """|->[B](y: B): (A, B)
-           |      ^^^^
-           |""".stripMargin
-    )
+    ""
   )
   check(
     "for",
@@ -505,7 +503,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     "",
     compat = Map(
-      "3" ->
+      "3.0" ->
+        """|->[B](y: B): (A, B)
+           |      ^^^^
+           |""".stripMargin,
+      "3.1" ->
         """|->[B](y: B): (A, B)
            |      ^^^^
            |""".stripMargin
@@ -734,7 +736,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "evidence",
+    // https://github.com/lampepfl/dotty/issues/15249
+    "evidence".tag(IgnoreScala3),
     """
       |object a {
       |  Array.empty[@@]
@@ -742,14 +745,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|empty[T: ClassTag]: Array[T]
        |      ^^^^^^^^^^^
-       | """.stripMargin,
-    compat = Map(
-      // TODO type signatures are not yet supported
-      "3" ->
-        """|empty[T](using evidence$4: scala.reflect.ClassTag[T]): Array[T]
-           |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin
-    )
+       | """.stripMargin
   )
 
   check(
@@ -776,6 +772,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
+    // https://github.com/lampepfl/dotty/issues/15249
     "type".tag(IgnoreScala3),
     """
       |object a {
@@ -800,19 +797,15 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "off-by-one",
+    "off-by-one".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object a {
       |  identity(42)@@
       |}
       |""".stripMargin,
-    "",
-    compat = Map(
-      "3" ->
-        """|identity[A](x: A): A
-           |            ^^^^
-           |""".stripMargin
-    )
+    ""
   )
 
   check(
@@ -828,19 +821,15 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "between-parens",
+    "between-parens".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object a {
       |  Option(1).fold(2)@@(_ + 1)
       |}
       |""".stripMargin,
-    "",
-    compat = Map(
-      "3" ->
-        """|fold[B](ifEmpty: => B)(f: A => B): B
-           |        ^^^^^^^^^^^^^
-           |""".stripMargin
-    )
+    ""
   )
 
   check(
@@ -862,7 +851,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "between-parens3",
+    "between-parens3".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object a {
       |  Option(1).fold(2)(@@_ + 1)
@@ -873,15 +864,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       "3" ->
-        """|+(x: Double): Double
-           |+(x: Float): Float
-           |+(x: Long): Long
-           |+(x: Int): Int
-           |  ^^^^^^
-           |+(x: Char): Int
-           |+(x: Short): Int
-           |+(x: Byte): Int
-           |+(x: String): String
+        """|fold[B](ifEmpty: => B)(f: A => B): B
+           |                       ^^^^^^^^^
            |""".stripMargin
     )
   )

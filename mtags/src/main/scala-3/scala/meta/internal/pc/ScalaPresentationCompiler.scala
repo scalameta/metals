@@ -20,6 +20,7 @@ import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.completions.CompletionsProvider
+import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd
@@ -240,14 +241,19 @@ case class ScalaPresentationCompiler(
       val pos = driver.sourcePosition(params)
       val trees = driver.openedTrees(uri)
 
-      // @tgodzik tpd.TypeApply doesn't seem to be handled here
-      val path =
-        Interactive
-          .pathTo(trees, pos)(using ctx)
-          .dropWhile(!_.isInstanceOf[tpd.Apply])
+      val path = Interactive.pathTo(trees, pos)(using ctx)
 
+      val updatedPath =
+        /* `.dropWhile(!_.isInstanceOf[tpd.Apply])` was moved into the compiler
+         * and breaks if we do it here for the newer versions */
+        if SemVer.isLaterVersion(
+            "3.2.0-RC1-bin-20220518-64815bb-NIGHTLY",
+            BuildInfo.scalaCompilerVersion
+          )
+        then path
+        else path.dropWhile(!_.isInstanceOf[tpd.Apply])
       val (paramN, callableN, alternatives) =
-        Signatures.callInfo(path, pos.span)(using ctx)
+        Signatures.callInfo(updatedPath, pos.span)(using ctx)
 
       val signatureInfos =
         alternatives.flatMap(Signatures.toSignature(_)(using ctx))
