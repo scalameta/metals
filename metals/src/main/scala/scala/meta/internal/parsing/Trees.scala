@@ -4,10 +4,12 @@ import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 
 import scala.meta._
+import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
 import scala.meta.parsers.Parsed
 
@@ -82,6 +84,45 @@ final class Trees(
   }
 
   /**
+   * Find last tree matching T that encloses the position.
+   *
+   * @param sourceCode the source code to load the tree for
+   * @param lspPos cursor position
+   * @param predicate predicate which T must fulfill
+   * @return found tree node of type T or None
+   */
+  def findLastEnclosingTreeInSourceCodeString[T <: Tree: ClassTag](
+      sourcePath: AbsolutePath,
+      sourceCode: String,
+      lspPos: l.Position,
+      predicate: T => Boolean = (_: T) => true
+  ): Option[T] = {
+
+    def loop(t: Tree, pos: Position): Option[T] = {
+      t match {
+        case t: T =>
+          enclosedChildren(t.children, pos)
+            .flatMap(loop(_, pos))
+            .orElse(if (predicate(t)) Some(t) else None)
+        case other =>
+          enclosedChildren(other.children, pos).flatMap(loop(_, pos))
+      }
+    }
+
+    val maybeTree: Option[Tree] = parse(sourcePath, sourceCode) match {
+      case Parsed.Error(_, _, _) =>
+        None
+      case Parsed.Success(tree) =>
+        Some(tree)
+    }
+    maybeTree.flatMap { tree =>
+      val pos = lspPos.toMeta(tree.pos.input)
+      loop(tree, pos)
+    }
+
+  }
+
+  /**
    * Parse file at the given path and return a list of errors if there are any.
    * @param path file to parse
    * @return list of errors if the file failed to parse
@@ -126,6 +167,12 @@ final class Trees(
         dialect(input).parse[Source]
       }
     }
+  }
+
+  private def parse(path: AbsolutePath, code: String): Parsed[Tree] = {
+    val input = Input.VirtualFile(path.toURI.toString(), code)
+    val dialect = scalaVersionSelector.getDialect(path)
+    dialect(input).parse[Source]
   }
 
 }

@@ -1946,37 +1946,76 @@ class MetalsLanguageServer(
           val uri = textDocumentPositionParams.getTextDocument().getUri()
           val path = uri.toAbsolutePath
           val initialFileCode = path.toInputFromBuffers(buffers).text
-          for { // ordered serial computation of these futures is crucial.
-            // so please do not assign them to `val`s before
-            // adding them to the for comprehension
-            formattingEdits <- formattingProvider.format(path, token)
-            if (!formattingEdits.isEmpty)
-            _ <- languageClient
-              .applyEdit(
-                new ApplyWorkspaceEditParams(
-                  new l.WorkspaceEdit(Map(uri -> formattingEdits).asJava)
-                )
-              )
-              .asScala
-            _ <- languageClient
-              .applyEdit(
-                new ApplyWorkspaceEditParams(
-                  new l.WorkspaceEdit(
-                    Map(
-                      uri -> BracelessBracefulSwitchCodeAction
-                        .calculateBraceRemovalEdits(
-                          formattingEdits.get(0).getNewText,
-                          initialFileCode,
-                          textDocumentPositionParams,
-                          trees
-                        )
-                        .asJava
-                    ).asJava
+
+          formattingProvider
+            .format(path, token)
+            .map(formattingEditsList =>
+              if (!formattingEditsList.isEmpty) {
+                languageClient
+                  .applyEdit(
+                    new ApplyWorkspaceEditParams(
+                      new l.WorkspaceEdit(
+                        Map(uri -> formattingEditsList).asJava
+                      )
+                    )
                   )
-                )
-              )
-              .asScala
-          } yield ().asInstanceOf[Object]
+                  .asScala
+                  .onComplete(_ =>
+                    languageClient
+                      .applyEdit(
+                        new ApplyWorkspaceEditParams(
+                          new l.WorkspaceEdit(
+                            Map(
+                              uri -> BracelessBracefulSwitchCodeAction
+                                .calculateBraceRemovalEdits(
+                                  formattingEditsList.get(0).getNewText,
+                                  initialFileCode,
+                                  textDocumentPositionParams,
+                                  trees
+                                )
+                                .asJava
+                            ).asJava
+                          )
+                        )
+                      )
+                      .asScala
+                  )
+                  .asInstanceOf[Object]
+              } else
+                ().asInstanceOf[Object]
+            )
+
+        //          for { // ordered serial computation of these futures is crucial.
+        //            // so please do not assign them to `val`s before
+        //            // adding them to the for comprehension
+        //            formattingEdits <- formattingProvider.format(path, token)
+        //            if (!formattingEdits.isEmpty)
+        //            _ <- languageClient
+        //              .applyEdit(
+        //                new ApplyWorkspaceEditParams(
+        //                  new l.WorkspaceEdit(Map(uri -> formattingEdits).asJava)
+        //                )
+        //              )
+        //              .asScala
+        //            _ <- languageClient
+        //              .applyEdit(
+        //                new ApplyWorkspaceEditParams(
+        //                  new l.WorkspaceEdit(
+        //                    Map(
+        //                      uri -> BracelessBracefulSwitchCodeAction
+        //                        .calculateBraceRemovalEdits(
+        //                          formattingEdits.get(0).getNewText,
+        //                          initialFileCode,
+        //                          textDocumentPositionParams,
+        //                          trees
+        //                        )
+        //                        .asJava
+        //                    ).asJava
+        //                  )
+        //                )
+        //              )
+        //              .asScala
+        //          } yield ().asInstanceOf[Object]
         }
 
       case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>

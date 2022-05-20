@@ -1905,8 +1905,9 @@ object BracelessBracefulSwitchCodeAction {
       .toOption
       .flatMap { newPosition =>
         trees
-          .findLastEnclosingAt[Tree](
+          .findLastEnclosingTreeInSourceCodeString[Tree](
             path,
+            revisedCode,
             newPosition.toLSP.getStart,
             applyWithSingleFunction
           )
