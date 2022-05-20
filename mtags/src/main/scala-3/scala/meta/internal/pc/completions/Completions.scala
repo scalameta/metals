@@ -10,6 +10,7 @@ import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
@@ -131,6 +132,11 @@ class Completions(
           config
         )
         (values, false)
+
+      // From Scala 3.1.3-RC3 (as far as I know), path contains
+      // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
+      case Literal(Constant(null)) :: tl =>
+        advancedCompletions(tl, pos, completionPos)
 
       case _ =>
         val args = NamedArgCompletions.contribute(pos, path)
