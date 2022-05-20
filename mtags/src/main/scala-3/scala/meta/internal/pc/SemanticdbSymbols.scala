@@ -103,7 +103,11 @@ object SemanticdbSymbols:
           decls0 ++ sym.owner.companionClass.info.decls.lookupAll(sym.name)
         else decls0
       end decls
-      val alts = decls.filter(_.isOneOf(Method | Mutable)).toList.reverse
+      // private java constructors do not have a symbol created
+      val alts = decls
+        .filter(d => d.isOneOf(Method | Mutable) && !d.is(Private))
+        .toList
+        .reverse
       def find(filter: Symbol => Boolean) = alts match
         case notSym :: rest if !filter(notSym) =>
           val idx = rest.indexWhere(filter)

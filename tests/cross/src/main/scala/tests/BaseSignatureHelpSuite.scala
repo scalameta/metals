@@ -11,7 +11,7 @@ import munit.TestOptions
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(
-      name: String,
+      name: TestOptions,
       code: String,
       expected: String,
       compat: Map[String, String] = Map.empty

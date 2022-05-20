@@ -8,10 +8,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
 
   override def requiresScalaLibrarySources: Boolean = true
 
-  // @tgodzik docs not yet supported for Scala 3
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   val foldLatestDocs: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
@@ -76,6 +72,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |                       ^^^^^^^^^^^
            |  @param ifEmpty the expression to evaluate if empty.
            |  @param f the function to apply if nonempty.
+        """.stripMargin,
+      "3" ->
+        s"""$foldLatestDocs
+           |**Parameters**
+           |- `f`: the function to apply if nonempty.
+           |- `ifEmpty`: the expression to evaluate if empty.
+           |fold[B](ifEmpty: => B)(f: A => B): B
+           |                       ^^^^^^^^^
+           |  @param ifEmpty the expression to evaluate if empty.
+           |  @param f the function to apply if nonempty.
         """.stripMargin
     )
   )
@@ -124,6 +130,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |fold[B](ifEmpty: => B)(f: Int => B): B
             |        ^^^^^^^^^^^^^
             |  @param ifEmpty String the expression to evaluate if empty.
+            |  @param f the function to apply if nonempty.
+            |""".stripMargin,
+      "3" ->
+        s"""|$foldLatestDocs
+            |**Parameters**
+            |- `f`: the function to apply if nonempty.
+            |- `ifEmpty`: the expression to evaluate if empty.
+            |fold[B](ifEmpty: => B)(f: A => B): B
+            |        ^^^^^^^^^^^^^
+            |  @param ifEmpty the expression to evaluate if empty.
             |  @param f the function to apply if nonempty.
             |""".stripMargin
     )
@@ -191,12 +207,38 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |foldLeft[B](z: B)(op: (B, Int) => B): B
            |                  ^^^^^^^^^^^^^^^^^
            |  @param op (Int, Int) => Int
+           |""".stripMargin,
+      "3" ->
+        """|Applies a binary operator to a start value and all elements of this collection,
+           | going left to right.
+           |
+           | Note: will not terminate for infinite-sized collections.
+           | Note: might return different results for different runs, unless the
+           |underlying collection type is ordered or the operator is associative
+           |and commutative.
+           |
+           |
+           |**Type Parameters**
+           |- `B`: the result type of the binary operator.
+           |
+           |**Parameters**
+           |- `z`: the start value.
+           |- `op`: the binary operator.
+           |
+           |**Returns:** the result of inserting `op` between consecutive elements of this collection,
+           |          going left to right with the start value `z` on the left:
+           |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
+           |           are the elements of this collection.
+           |          Returns `z` if this collection is empty.
+           |foldLeft[B](z: B)(op: (B, A) => B): B
+           |                  ^^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )
 
   checkDoc(
-    "curry4",
+    // https://github.com/lampepfl/dotty/issues/15244
+    "curry4".tag(IgnoreScala3),
     """
       |object a {
       |  def curry(a: Int, b: Int)(c: Int) = a
@@ -208,6 +250,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |                      ^^^^^^
        |""".stripMargin
   )
+
   checkDoc(
     "canbuildfrom",
     """
@@ -252,9 +295,25 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |               `f` to each element of this collection and collecting the results.
            |map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
+           |""".stripMargin,
+      "3" ->
+        """|Builds a new collection by applying a function to all elements of this collection.
+           |
+           |
+           |**Type Parameters**
+           |- `B`: the element type of the returned collection.
+           |
+           |**Parameters**
+           |- `f`: the function to apply to each element.
+           |
+           |**Returns:** a new collection resulting from applying the given function
+           |               `f` to each element of this collection and collecting the results.
+           |map[B](f: A => B): List[B]
+           |       ^^^^^^^^^
            |""".stripMargin
     )
   )
+
   checkDoc(
     "too-many",
     """
@@ -273,8 +332,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |apply[A](x: A): Option[A]
        |         ^^^^
        |  @param x (Int, Int, Int) the value
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      // potentially correct, discussed in https://github.com/lampepfl/dotty/issues/15244
+      "3" ->
+        """|apply[T1, T2, T3](_1: T1, _2: T2, _3: T3): (T1, T2, T3)
+           |                                  ^^^^^^
+           |""".stripMargin
+    )
   )
+
   checkDoc(
     "java5",
     """
@@ -297,9 +364,17 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |                       ^^^^
            |  @param T <T> the class of the objects in the set
            |  @param o o the sole object to be stored in the returned set.
+           |""".stripMargin,
+      "3" ->
+        """|Returns an immutable set containing only the specified object.
+           |The returned set is serializable.
+           |singleton[T](o: T): java.util.Set[T]
+           |             ^^^^
+           |  @param o o the sole object to be stored in the returned set.
            |""".stripMargin
     )
   )
+
   checkDoc(
     "default",
     """
@@ -346,9 +421,30 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |  @param pf Partial function used when applying catch logic to determine result value
            |  @param fin Finally logic which if defined will be invoked after catch logic
            |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |""".stripMargin,
+      "3" ->
+        """|A container class for catch/finally logic.
+           |
+           | Pass a different value for rethrow if you want to probably
+           | unwisely allow catching control exceptions and other throwables
+           | which the rest of the world may expect to get through.
+           |
+           |**Type Parameters**
+           |- `T`: result type of bodies used in try and catch blocks
+           |
+           |**Parameters**
+           |- `fin`: Finally logic which if defined will be invoked after catch logic
+           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |- `pf`: Partial function used when applying catch logic to determine result value
+           |Catch[T](pf: scala.util.control.Exception.Catcher[T], fin: Option[scala.util.control.Exception.Finally], rethrow: Throwable => Boolean)
+           |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |  @param pf Partial function used when applying catch logic to determine result value
+           |  @param fin Finally logic which if defined will be invoked after catch logic
+           |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
            |""".stripMargin
     )
   )
+
   check(
     "java",
     """
@@ -360,8 +456,17 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |<init>(parent: File, child: String): File
        |<init>(parent: String, child: String): File
        |<init>(pathname: String): File
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|File(uri: java.net.URI)
+                |     ^^^^^^^^^^^^^^^^^
+                |File(parent: java.io.File, child: String)
+                |File(parent: String, child: String)
+                |File(pathname: String)
+                |""".stripMargin
+    )
   )
+
   check(
     "java2",
     """
@@ -372,8 +477,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """|substring(beginIndex: Int): String
        |          ^^^^^^^^^^^^^^^
        |substring(beginIndex: Int, endIndex: Int): String
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|substring(beginIndex: Int, endIndex: Int): String
+           |substring(beginIndex: Int): String
+           |          ^^^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
+
   check(
     "java3",
     """
@@ -391,8 +504,23 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |valueOf(data: Array[Char], offset: Int, count: Int): String
        |valueOf(data: Array[Char]): String
        |valueOf(obj: Any): String
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|valueOf(d: Double): String
+           |valueOf(f: Float): String
+           |valueOf(l: Long): String
+           |valueOf(i: Int): String
+           |        ^^^^^^
+           |valueOf(c: Char): String
+           |valueOf(b: Boolean): String
+           |valueOf(data: Array[Char], offset: Int, count: Int): String
+           |valueOf(data: Array[Char]): String
+           |valueOf(obj: Object): String
+           |""".stripMargin
+    )
   )
+
   check(
     "java4",
     """
@@ -423,9 +551,22 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(l: Long): String
            |valueOf(obj: Object): String
            |valueOf(data: Array[Char], offset: Int, count: Int): String
+           |""".stripMargin,
+      "3" ->
+        """|valueOf(d: Double): String
+           |        ^^^^^^^^^
+           |valueOf(f: Float): String
+           |valueOf(l: Long): String
+           |valueOf(i: Int): String
+           |valueOf(c: Char): String
+           |valueOf(b: Boolean): String
+           |valueOf(data: Array[Char], offset: Int, count: Int): String
+           |valueOf(data: Array[Char]): String
+           |valueOf(obj: Object): String
            |""".stripMargin
     )
   )
+
   checkDoc(
     "ctor2",
     """
@@ -444,9 +585,16 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            | `A`.
            |<init>(x: Int): Some[Int]
            |       ^^^^^^
+           |""".stripMargin,
+      "3" ->
+        """|Class `Some[A]` represents existing values of type
+           | `A`.
+           |Some[A](value: A)
+           |        ^^^^^^^^
            |""".stripMargin
     )
   )
+
   checkDoc(
     "markdown",
     """
