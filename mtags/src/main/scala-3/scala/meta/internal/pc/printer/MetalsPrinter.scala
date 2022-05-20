@@ -31,6 +31,21 @@ class MetalsPrinter(
     Context
 ):
 
+  private val methodFlags =
+    Flags.commonFlags(
+      Private,
+      Protected,
+      Final,
+      Implicit,
+      Given,
+      Override,
+      Transparent,
+      Erased,
+      Inline,
+      AbsOverride,
+      Lazy
+    )
+
   private val defaultWidth = 1000
 
   def expressionType(tpw: Type)(using Context): Option[String] =
@@ -174,12 +189,16 @@ class MetalsPrinter(
     val paramssSignature = paramssString(paramLabelss, methodParams)
       .mkString("", "", s": ${returnType}")
 
+    val flags = (gsym.flags & methodFlags)
+    val flagString =
+      if !flags.isEmpty then Flags.flagsString(flags) + " " else ""
+
     if onlyMethodParams then paramssSignature
     else
       // For Scala2 compatibility, show "this" instead of <init> for constructor
       val name = if gsym.isConstructor then StdNames.nme.this_ else gsym.name
       extensionSignatureString +
-        s"def $name" +
+        s"${flagString}def $name" +
         paramssSignature
   end defaultMethodSignature
 

@@ -86,15 +86,12 @@ class RangeHoverSuite extends BaseHoverSuite {
        |  }
        |}
        |""".stripMargin,
-    """|immutable.IndexedSeq[Int]
-       |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange,
+    """|IndexedSeq[Int]
+       |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
     compat = Map(
-      "2.13" ->
-        """|IndexedSeq[Int]
-           |override def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange,
-      "3" ->
-        """|IndexedSeq[Int]
-           |def flatMap[B](f: Int => IterableOnce[B]): IndexedSeq[B]""".stripMargin.hoverRange
+      "2.12" ->
+        """|immutable.IndexedSeq[Int]
+           |def flatMap[B, That](f: Int => GenTraversableOnce[B])(implicit bf: CanBuildFrom[immutable.IndexedSeq[Int],B,That]): That""".stripMargin.hoverRange
     )
   )
 
@@ -248,5 +245,17 @@ class RangeHoverSuite extends BaseHoverSuite {
        |""".stripMargin,
     """|Int
        |def sum[B >: Int](implicit num: Numeric[B]): B""".stripMargin.hoverRange
+  )
+
+  check(
+    "transparent".tag(IgnoreScala2),
+    """|trait Foo
+       |class Bar extends Foo
+       |
+       |transparent inline def foo(i: Int): Foo = new Bar
+       |val bar = <<%<%foo(1)%>%>>
+       |""".stripMargin,
+    """|Bar
+       |inline transparent def foo(i: Int): Foo""".stripMargin.hoverRange
   )
 }

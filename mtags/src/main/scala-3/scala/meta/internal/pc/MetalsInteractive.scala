@@ -229,6 +229,10 @@ object MetalsInteractive:
             select.name == StdNames.nme.apply =>
         List((head.symbol, head.typeOpt))
 
+      // for Inlined we don't have a symbol, but it's needed to show proper type
+      case (head @ Inlined(call, bindings, expansion)) :: _ =>
+        List((call.symbol, head.typeOpt))
+
       // for comprehension
       case (head @ ApplySelect(select)) :: _ if isForSynthetic(head) =>
         // If the cursor is on the qualifier, return the symbol for it
