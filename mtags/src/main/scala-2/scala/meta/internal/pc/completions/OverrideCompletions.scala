@@ -24,6 +24,21 @@ trait OverrideCompletions { this: MetalsGlobal =>
       val detail: String
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
+  class ImplementAllMember(
+      filterText: String,
+      edit: l.TextEdit,
+      detail: String,
+      additionalTextEdits: List[l.TextEdit],
+      val additionalSymbols: List[Symbol]
+  ) extends OverrideDefMember(
+        label = "Implement all members",
+        edit,
+        filterText,
+        sym = completionsSymbol("implement"),
+        additionalTextEdits,
+        detail
+      )
+
   /**
    * An `override def` completion to implement methods from the supertype.
    *
@@ -58,7 +73,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
           text,
           text.startsWith("o", start),
           true,
-          isCandidate
+          isCandidate,
+          resolveNames = false
         )
 
         val overrideDefMembers: List[OverrideDefMember] =
@@ -84,7 +100,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
             " " * amount
           }
 
-          val implementAll: TextEditMember = new TextEditMember(
+          val implementAll = new ImplementAllMember(
             prefix,
             new l.TextEdit(
               range,
@@ -92,10 +108,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
                 .map(_.getNewText)
                 .mkString("", s"\n\n${necessaryIndent}", "\n")
             ),
-            completionsSymbol("implement"),
-            label = Some("Implement all members"),
-            detail = Some(s" (${allAbstractEdits.length} total)"),
-            additionalTextEdits = allAbstractImports.toList
+            detail = s" (${allAbstractEdits.length} total)",
+            additionalTextEdits = allAbstractImports.toList,
+            additionalSymbols = allAbstractMembers.map(_.sym)
           )
 
           implementAll :: overrideDefMembers
@@ -113,7 +128,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
       text: String,
       shouldAddOverrideKwd: Boolean,
       shouldMoveCursor: Boolean,
-      isCandidate: Symbol => Boolean
+      isCandidate: Symbol => Boolean,
+      resolveNames: Boolean
   ): List[OverrideDefMember] = {
 
     // Returns all the symbols of all transitive supertypes in the enclosing scope.
@@ -201,7 +217,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
         sym,
         history,
         info,
-        includeDocs = false,
+        includeDocs = resolveNames,
         includeDefaultParam = false,
         printLongType = false
       )
@@ -366,7 +382,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
       text,
       true,
       false,
-      isCandidate
+      isCandidate,
+      resolveNames = true
     )
 
     val allAbstractMembers = overrideMembers

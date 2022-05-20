@@ -373,4 +373,30 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = _.contains("Implement")
   )
+
+  checkEdit(
+    "java",
+    """|package example
+       |
+       |import java.io.Externalizable
+       |
+       |object Main extends Externalizable {
+       |  def@@ 
+       |}
+       |""".stripMargin,
+    """|package example
+       |
+       |import java.io.Externalizable
+       |import java.io.ObjectOutput
+       |import java.io.ObjectInput
+       |
+       |object Main extends Externalizable {
+       |  def writeExternal(out: ObjectOutput): Unit = ${0:???}
+       |
+       |  def readExternal(in: ObjectInput): Unit = ${0:???}
+       | 
+       |}
+       |""".stripMargin,
+    filter = _.contains("Implement")
+  )
 }
