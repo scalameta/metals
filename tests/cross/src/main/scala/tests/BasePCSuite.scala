@@ -13,6 +13,7 @@ import scala.meta.dialects
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.metals.RecursivelyDelete
@@ -39,30 +40,6 @@ abstract class BasePCSuite extends BaseSuite {
   protected val workspace = new TestingWorkspaceSearch
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
 
-  /**
-   * Note: (ckipp01) Normally this method comes from the `ExludedPackagesHandler`.
-   * However, we don't have access to it here and to avoid a cyclical dependcy on
-   * metals, we'll just provide this method here which will be the equivalent to the
-   * default that the handler would provide. This should be fine since we aren't
-   * actually testing any additional exclusions in the PC suites.
-   */
-  private def isExcludedPackage(pkg: String): Boolean = {
-    pkg.startsWith("META-INF/") ||
-    pkg.startsWith("images/") ||
-    pkg.startsWith("toolbarButtonGraphics/") ||
-    pkg.startsWith("jdk/") ||
-    pkg.startsWith("sun/") ||
-    pkg.startsWith("oracle/") ||
-    pkg.startsWith("java/awt/desktop/") ||
-    pkg.startsWith("org/jcp/") ||
-    pkg.startsWith("org/omg/") ||
-    pkg.startsWith("org/graalvm/") ||
-    pkg.startsWith("com/oracle/") ||
-    pkg.startsWith("com/sun/") ||
-    pkg.startsWith("com/apple/") ||
-    pkg.startsWith("apple/")
-  }
-
   protected lazy val presentationCompiler: PresentationCompiler = {
     val scalaLibrary =
       if (isScala3Version(scalaVersion))
@@ -86,7 +63,7 @@ abstract class BasePCSuite extends BaseSuite {
       indexScalaLibrary(index, scalaVersion)
     val search = new TestingSymbolSearch(
       ClasspathSearch
-        .fromClasspath(myclasspath, isExcludedPackage),
+        .fromClasspath(myclasspath, ExcludedPackagesHandler.default),
       new Docstrings(index),
       workspace,
       index

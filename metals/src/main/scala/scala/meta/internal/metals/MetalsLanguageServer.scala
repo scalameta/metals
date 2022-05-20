@@ -112,7 +112,9 @@ class MetalsLanguageServer(
     sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     isReliableFileWatcher: Boolean = true,
     mtagsResolver: MtagsResolver = MtagsResolver.default(),
-    onStartCompilation: () => Unit = () => ()
+    onStartCompilation: () => Unit = () => (),
+    classpathSearchIndexer: ClasspathSearch.Indexer =
+      ClasspathSearch.Indexer.default
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -163,8 +165,9 @@ class MetalsLanguageServer(
   private val recentlyFocusedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
-  val excludedPackageHandler: ExcludedPackagesHandler =
-    new ExcludedPackagesHandler(userConfig.excludedPackages)
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
+
   var ammonite: Ammonite = _
   private val mainBuildTargetsData = new TargetData
   val buildTargets: BuildTargets = new BuildTargets()
@@ -646,7 +649,8 @@ class MetalsLanguageServer(
           buildTargets,
           definitionIndex,
           saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
-          excludedPackageHandler.isExcludedPackage
+          () => excludedPackageHandler,
+          classpathSearchIndexer = classpathSearchIndexer
         )
         symbolSearch = new MetalsSymbolSearch(
           symbolDocs,
@@ -665,7 +669,7 @@ class MetalsLanguageServer(
             statusBar,
             sh,
             Option(params),
-            excludedPackageHandler.isExcludedPackage,
+            () => excludedPackageHandler,
             scalaVersionSelector,
             trees,
             mtagsResolver,
@@ -1265,7 +1269,10 @@ class MetalsLanguageServer(
         val old = userConfig
         userConfig = newUserConfig
         if (userConfig.excludedPackages != old.excludedPackages) {
-          excludedPackageHandler.update(userConfig.excludedPackages)
+          excludedPackageHandler =
+            ExcludedPackagesHandler.fromUserConfiguration(
+              userConfig.excludedPackages.getOrElse(Nil)
+            )
           workspaceSymbols.indexClasspath()
         }
 

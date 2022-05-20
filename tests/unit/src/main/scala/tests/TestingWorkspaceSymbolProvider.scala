@@ -19,7 +19,7 @@ object TestingWorkspaceSymbolProvider {
       buildTargets = new BuildTargets(),
       index = index,
       saveClassFileToDisk = saveClassFileToDisk,
-      new ExcludedPackagesHandler().isExcludedPackage,
+      () => ExcludedPackagesHandler.default,
       bucketSize = bucketSize
     )
   }

@@ -28,6 +28,7 @@ import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuic
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.Debug
@@ -36,6 +37,7 @@ import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DecoderResponse
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
@@ -146,7 +148,8 @@ final class TestingServer(
     time = time,
     isReliableFileWatcher = System.getenv("CI") != "true",
     mtagsResolver = mtagsResolver,
-    onStartCompilation = onStartCompilation
+    onStartCompilation = onStartCompilation,
+    classpathSearchIndexer = TestingServer.testingClasspathSearchIndexer
   )
   server.connectToLanguageClient(client)
 
@@ -1688,4 +1691,38 @@ object TestingServer {
       treeViewProvider = Some(true),
       slowTaskProvider = Some(true)
     )
+
+  // Caching is done using a key: dependency jars + excludedPackages setting + bucket size
+  // This allows to avoid indexing classpath per every test and saves ~4 min on CI.
+  // Test with a unique dependencies creates a new index while in most cases (zero deps + default excludedPackages setting)
+  // they reuse the default one.
+  val testingClasspathSearchIndexer: ClasspathSearch.Indexer =
+    new ClasspathSearch.Indexer {
+
+      private val cache: mutable.Map[
+        (collection.Seq[Path], ExcludedPackagesHandler, Int),
+        ClasspathSearch
+      ] =
+        mutable.Map.empty
+
+      override def index(
+          classpath: collection.Seq[Path],
+          excludedPackage: ExcludedPackagesHandler,
+          bucketSize: Int
+      ): ClasspathSearch = {
+        val key = (classpath, excludedPackage, bucketSize)
+        cache.get(key) match {
+          case None =>
+            val v = ClasspathSearch.Indexer.default.index(
+              classpath,
+              excludedPackage,
+              bucketSize
+            )
+            cache.update(key, v)
+            v
+          case Some(v) => v
+        }
+      }
+
+    }
 }
