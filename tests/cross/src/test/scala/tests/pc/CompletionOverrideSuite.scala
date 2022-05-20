@@ -126,7 +126,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "import".tag(IgnoreScala3), // import position is flaky
+    "import", // import position is flaky
     """
       |object Main {
       |  new java.nio.file.SimpleFileVisitor[java.nio.file.Path] {
@@ -146,14 +146,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       |""".stripMargin,
     assertSingleItem = false,
     compat = Map(
-      "3" -> // TODO: param names should be file, attrs
-        """|import java.nio.file.FileVisitResult
-           |import java.nio.file.attribute.BasicFileAttributes
+      "3" ->
+        """|import java.nio.file.attribute.BasicFileAttributes
+           |import java.nio.file.FileVisitResult
            |import java.nio.file.Path
            |
            |object Main {
            |  new java.nio.file.SimpleFileVisitor[java.nio.file.Path] {
-           |    override def visitFile(x$0: Path, x$1: BasicFileAttributes): FileVisitResult = ${0:???}
+           |    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = ${0:???}
            |  }
            |}
            |""".stripMargin

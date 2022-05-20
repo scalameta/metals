@@ -88,18 +88,14 @@ object OverrideCompletions:
       }
       .filter(isOverrideable)
 
-    val printer = MetalsPrinter.standard(
-      indexedContext,
-      search,
-      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Never
-    )
     overridables
       .map(sym =>
         toCompletionValue(
           sym.denot,
           start,
           td,
-          printer,
+          indexedContext,
+          search,
           config,
           indexedContext.ctx.compilationUnit.source.content
             .startsWith("o", start)
@@ -119,10 +115,16 @@ object OverrideCompletions:
       sym: SymDenotation,
       start: Int,
       td: TypeDef,
-      printer: MetalsPrinter,
+      indexedContext: IndexedContext,
+      search: SymbolSearch,
       config: PresentationCompilerConfig,
       shouldAddOverrideKwd: Boolean
   )(using Context): CompletionValue.Override =
+    val printer = MetalsPrinter.standard(
+      indexedContext,
+      search,
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Never
+    )
     val overrideKeyword: String =
       // if the overriding method is not an abstract member, add `override` keyword
       if !sym.isOneOf(Deferred) || shouldAddOverrideKwd

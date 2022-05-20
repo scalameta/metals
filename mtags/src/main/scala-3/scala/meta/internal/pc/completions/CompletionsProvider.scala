@@ -273,7 +273,10 @@ class CompletionsProvider(
             start
           ) =>
         val additionalEdits =
-          shortNames.flatMap(name => autoImports.forSymbol(name.symbol)).flatten
+          shortNames
+            .sortBy(nme => nme.name)
+            .flatMap(name => autoImports.forSymbol(name.symbol))
+            .flatten
         mkItem(
           label,
           value,
