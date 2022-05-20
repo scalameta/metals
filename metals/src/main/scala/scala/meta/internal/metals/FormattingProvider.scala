@@ -171,6 +171,42 @@ final class FormattingProvider(
     }
   }
 
+  def programmaticallyFormat(
+      path: AbsolutePath,
+      token: CancelChecker
+  ): Future[util.List[l.TextEdit]] = {
+    scalafmt = scalafmt.withReporter(activeReporter)
+    reset(token)
+    val input = path.toInputFromBuffers(buffers)
+    if (!scalafmtConf.isFile) {
+      handleMissingFile(scalafmtConf).map {
+        case true =>
+          getFormattedTextEdit(path, input).toList.asJava
+        case false =>
+          Collections.emptyList[l.TextEdit]()
+      }
+    } else {
+      val result = getFormattedTextEdit(path, input).toList
+      if (token.isCancelled) {
+        statusBar.addMessage(
+          s"${icons.info}Scalafmt cancelled by editor, try saving file again"
+        )
+      }
+      reporterPromise.get() match {
+        case Some(promise) =>
+          // Wait until "update .scalafmt.conf" dialogue has completed
+          // before returning future.
+          promise.future.map {
+            case true if !token.isCancelled =>
+              getFormattedTextEdit(path, input).toList.asJava
+            case _ => result.asJava
+          }
+        case None =>
+          Future.successful(result.asJava)
+      }
+    }
+  }
+
   private def getFormattedStrings(
       path: AbsolutePath,
       input: Input
@@ -231,6 +267,17 @@ final class FormattingProvider(
   ): List[l.TextEdit] = {
     val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
     getFormattedStrings(path, input).map(new l.TextEdit(fullDocumentRange, _))
+
+  }
+
+  private def getFormattedTextEdit(
+      path: AbsolutePath,
+      input: Input
+  ): Option[l.TextEdit] = {
+    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+    getFormattedString(path, input.text).map(
+      new l.TextEdit(fullDocumentRange, _)
+    )
 
   }
 

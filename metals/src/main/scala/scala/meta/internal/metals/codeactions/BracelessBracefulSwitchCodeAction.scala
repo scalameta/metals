@@ -95,56 +95,95 @@ class BracelessBracefulSwitchCodeAction(
               "def definition"
             ).toSeq
           case termTry: Term.Try =>
-            Seq(
-              createCodeActionForPotentialBlockHolder(
-                textDocumentIdentifier,
-                cursorPosition,
-                termTry,
-                path,
-                document,
-                termTry.expr,
-                "try expression"
-              ),
-              createCodeActionForCatchP(
-                termTry,
-                path,
-                document,
-                "catch expression"
-              ),
-              termTry.finallyp.flatMap(finallyp =>
-                createCodeActionForPotentialBlockHolder(
-                  textDocumentIdentifier,
-                  cursorPosition,
-                  termTry,
-                  path,
-                  document,
-                  finallyp,
-                  "finally expression"
+            val cursorLine = cursorPosition.getLine
+            val tryLine = termTry.expr.pos.toLSP.getStart.getLine
+            val distanceToTry = (cursorLine - tryLine).abs
+            val distanceToCatchP = (cursorLine - Try(
+              termTry.catchp.minBy(_.pos.start).pos.toLSP.getStart.getLine
+            ).getOrElse(Int.MaxValue)).abs
+            val distanceToFinally = (cursorLine - termTry.finallyp
+              .map(_.pos.toLSP.getStart.getLine)
+              .getOrElse(Int.MaxValue)).abs
+            Try(
+              Seq(
+                (
+                  createCodeActionForPotentialBlockHolder(
+                    textDocumentIdentifier,
+                    cursorPosition,
+                    termTry,
+                    path,
+                    document,
+                    termTry.expr,
+                    "try expression"
+                  ),
+                  distanceToTry
+                ),
+                (
+                  createCodeActionForCatchP(
+                    termTry,
+                    path,
+                    document,
+                    "catch expression"
+                  ),
+                  distanceToCatchP
+                ),
+                (
+                  termTry.finallyp.flatMap(finallyp =>
+                    createCodeActionForPotentialBlockHolder(
+                      textDocumentIdentifier,
+                      cursorPosition,
+                      termTry,
+                      path,
+                      document,
+                      finallyp,
+                      "finally expression"
+                    )
+                  ),
+                  distanceToFinally
                 )
-              )
-            ).flatten
+              ).minBy(_._2)
+            )
+              .map(_._1)
+              .toOption
+              .flatten
+              .toList
+
           case termIf: Term.If =>
-            Seq(
-              createCodeActionForPotentialBlockHolder(
-                textDocumentIdentifier,
-                cursorPosition,
-                termIf,
-                path,
-                document,
-                termIf.thenp,
-                "then expression",
-                "then"
-              ),
-              createCodeActionForPotentialBlockHolder(
-                textDocumentIdentifier,
-                cursorPosition,
-                termIf,
-                path,
-                document,
-                termIf.elsep,
-                "else expression"
-              )
-            ).flatten
+            val cursorLine = cursorPosition.getLine
+            val tryLine = termIf.thenp.pos.toLSP.getStart.getLine
+            val distanceToThen = (cursorLine - tryLine).abs
+            val distanceToElseP = (cursorLine - Try(
+              termIf.elsep.pos.toLSP.getStart.getLine
+            ).getOrElse(Int.MaxValue)).abs
+            Try(
+              Seq(
+                (
+                  createCodeActionForPotentialBlockHolder(
+                    textDocumentIdentifier,
+                    cursorPosition,
+                    termIf,
+                    path,
+                    document,
+                    termIf.thenp,
+                    "then expression",
+                    "then"
+                  ),
+                  distanceToThen
+                ),
+                (
+                  createCodeActionForPotentialBlockHolder(
+                    textDocumentIdentifier,
+                    cursorPosition,
+                    termIf,
+                    path,
+                    document,
+                    termIf.elsep,
+                    "else expression"
+                  ),
+                  distanceToElseP
+                )
+              ).minBy(_._2)
+            ).map(_._1).toOption.flatten.toList
 
           case termFor: Term.For =>
             createCodeActionForPotentialBlockHolder(
@@ -1527,6 +1566,7 @@ object BracelessBracefulSwitchCodeAction {
     ).map { formattedTree =>
       pprint.log("formattedTree is \n" + formattedTree)
       getBraceRemovalTextEdits(
+        initialCursorPos,
         formattedTree
       )
     }.toList
@@ -1535,6 +1575,7 @@ object BracelessBracefulSwitchCodeAction {
   }
 
   private def getBraceRemovalTextEdits(
+      initialCursorPos: l.Position,
       formattedTree: Tree
   ): List[l.TextEdit] = {
 
@@ -1564,42 +1605,74 @@ object BracelessBracefulSwitchCodeAction {
           ""
         )
       case termTry: Term.Try =>
-        List(
-          getTextEditsToRemoveBracesOfPotentialBlockHolder(
-            formattedTree,
-            tree => tree.asInstanceOf[Term.Try].expr,
-            ""
-          ),
-          //            createCodeActionForCatchP(
-          //              termTry,
-          //              path,
-          //              document,
-          //              "catch expression"
-          //            ),
-          termTry.finallyp
-            .map(finallyp =>
+        val cursorLine = initialCursorPos.getLine
+        val tryLine = termTry.expr.pos.toLSP.getStart.getLine
+        val distanceToTry = (cursorLine - tryLine).abs
+        (cursorLine - Try(
+          termTry.catchp.minBy(_.pos.start).pos.toLSP.getStart.getLine
+        ).getOrElse(Int.MaxValue)).abs
+        val distanceToFinally = (cursorLine - termTry.finallyp
+          .map(_.pos.toLSP.getStart.getLine)
+          .getOrElse(Int.MaxValue)).abs
+        Try(
+          List(
+            (
               getTextEditsToRemoveBracesOfPotentialBlockHolder(
                 formattedTree,
-                tree => tree.asInstanceOf[Term.Try].finallyp.get,
+                tree => tree.asInstanceOf[Term.Try].expr,
                 ""
-              )
+              ),
+              distanceToTry
+            ),
+            //            createCodeActionForCatchP(
+            //              termTry,
+            //              path,
+            //              document,
+            //              "catch expression"
+            //            ),
+            (
+              termTry.finallyp
+                .map(finallyp =>
+                  getTextEditsToRemoveBracesOfPotentialBlockHolder(
+                    formattedTree,
+                    tree => tree.asInstanceOf[Term.Try].finallyp.get,
+                    ""
+                  )
+                )
+                .toList
+                .flatten,
+              distanceToFinally
             )
-            .toList
-            .flatten
-        ).flatten
-      case _: Term.If =>
-        List(
-          getTextEditsToRemoveBracesOfPotentialBlockHolder(
-            formattedTree,
-            tree => tree.asInstanceOf[Term.If].thenp,
-            "then"
-          ),
-          getTextEditsToRemoveBracesOfPotentialBlockHolder(
-            formattedTree,
-            tree => tree.asInstanceOf[Term.If].elsep,
-            ""
-          )
-        ).flatten
+          ).minBy(_._2)._1
+        ).toOption.toList.flatten
+
+      case termIf: Term.If =>
+        val cursorLine = initialCursorPos.getLine
+        val tryLine = termIf.thenp.pos.toLSP.getStart.getLine
+        val distanceToThen = (cursorLine - tryLine).abs
+        val distanceToElseP = (cursorLine - Try(
+          termIf.elsep.pos.toLSP.getStart.getLine
+        ).getOrElse(Int.MaxValue)).abs
+        Try(
+          List(
+            (
+              getTextEditsToRemoveBracesOfPotentialBlockHolder(
+                formattedTree,
+                tree => tree.asInstanceOf[Term.If].thenp,
+                "then"
+              ),
+              distanceToThen
+            ),
+            (
+              getTextEditsToRemoveBracesOfPotentialBlockHolder(
+                formattedTree,
+                tree => tree.asInstanceOf[Term.If].elsep,
+                ""
+              ),
+              distanceToElseP
+            )
+          ).minBy(_._2)
+        ).map(_._1).toOption.toList.flatten
       case _: Term.For =>
         getTextEditsToRemoveBracesOfPotentialBlockHolder(
           formattedTree,

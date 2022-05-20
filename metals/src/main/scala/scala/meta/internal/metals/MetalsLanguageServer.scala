@@ -1948,7 +1948,7 @@ class MetalsLanguageServer(
           val initialFileCode = path.toInputFromBuffers(buffers).text
 
           formattingProvider
-            .format(path, token)
+            .programmaticallyFormat(path, token)
             .map(formattingEditsList =>
               if (!formattingEditsList.isEmpty) {
                 languageClient
