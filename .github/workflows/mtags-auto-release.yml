@@ -12,7 +12,7 @@ on:
       metals_ref:
         description: "Tag/branch-name from which run release"
         required: true
-        default: "v0.11.5"
+        default: "v0.11.5_mtags_release"
 jobs:
   test_and_release:
     runs-on: ubuntu-latest
