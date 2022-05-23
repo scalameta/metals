@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.collection.JavaConverters.*
+import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -12,10 +13,12 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.Signatures.Signature
+import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
 object SignatureHelpProvider:
@@ -51,8 +54,15 @@ object SignatureHelpProvider:
 
     val signatureInfos =
       alternatives.flatMap { denot =>
+        val updatedDenot =
+          findApply(path, pos)
+            .map { t =>
+              val pre = t.qual
+              denot.asSeenFrom(pre.tpe.widenTermRefExpr)
+            }
+            .getOrElse(denot)
         val doc = search.symbolDocumentation(denot.symbol)
-        (doc, Signatures.toSignature(denot)) match
+        (doc, Signatures.toSignature(updatedDenot)) match
           case (Some(info), Some(signature)) =>
             withDocumentation(
               info,
@@ -68,6 +78,21 @@ object SignatureHelpProvider:
       paramN
     )
   end signatureHelp
+
+  private def findApply(
+      path: List[tpd.Tree],
+      pos: SourcePosition
+  ): Option[tpd.Tree] =
+    path.find {
+      case appl: tpd.GenericApply =>
+        /* find first apply that the cursor is located in arguments and not at function name
+         * for example in:
+         *   `Option(1).fold(2)(@@_ + 1)`
+         * we want to find the tree responsible for the entire location, not just `_ + 1`
+         */
+        !appl.fun.span.contains(pos.span)
+      case _ => false
+    }
 
   private def withDocumentation(
       info: SymbolDocumentation,

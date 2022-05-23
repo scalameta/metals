@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.net.URI
 
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.pc.MetalsInteractive
@@ -14,6 +15,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.Driver
+import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
@@ -148,5 +150,22 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
       if documentation.isPresent then Some(documentation.get())
       else None
     end symbolDocumentation
+  end extension
+
+  extension (tree: Tree)
+    def qual: Tree =
+      tree match
+        case Apply(q, _) => q.qual
+        case TypeApply(q, _) => q.qual
+        case AppliedTypeTree(q, _) => q.qual
+        case Select(q, _) => q
+        case _ => tree
+
+    def seenFrom(sym: Symbol)(using Context): (Type, Symbol) =
+      try
+        val pre = tree.qual
+        val denot = sym.denot.asSeenFrom(pre.tpe.widenTermRefExpr)
+        (denot.info, sym.withUpdatedTpe(denot.info))
+      catch case NonFatal(e) => (sym.info, sym)
   end extension
 end MtagsEnrichments

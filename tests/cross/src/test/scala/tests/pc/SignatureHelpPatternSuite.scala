@@ -13,17 +13,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
-       |             ^^^^^^^^^^^^^^^^^^^^
+    """|map[B](f: ((Int, Int)) => B): List[B]
+       |       ^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|map[B](f: ((Int, Int)) => B): List[B]
-           |       ^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin,
-      "3" ->
-        """|map[B](f: A => B): List[B]
-           |       ^^^^^^^^^
+      "2.12" ->
+        """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
+           |             ^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )

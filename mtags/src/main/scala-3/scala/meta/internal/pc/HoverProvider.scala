@@ -89,7 +89,7 @@ object HoverProvider:
               case _ =>
                 val (tpe, sym) =
                   if symbol.isType then (symbol.typeRef, symbol)
-                  else seenFrom(enclosing.head, symbol)
+                  else enclosing.head.seenFrom(symbol)
 
                 val finalTpe =
                   if tpe != NoType then tpe
@@ -128,21 +128,6 @@ object HoverProvider:
 
   extension (pos: SourcePosition)
     private def isPoint: Boolean = pos.start == pos.end
-
-  private def qual(tree: Tree): Tree =
-    tree match
-      case Apply(q, _) => qual(q)
-      case TypeApply(q, _) => qual(q)
-      case AppliedTypeTree(q, _) => qual(q)
-      case Select(q, _) => q
-      case _ => tree
-
-  private def seenFrom(tree: Tree, sym: Symbol)(using Context): (Type, Symbol) =
-    try
-      val pre = qual(tree)
-      val denot = sym.denot.asSeenFrom(pre.tpe.widenTermRefExpr)
-      (denot.info, sym.withUpdatedTpe(denot.info))
-    catch case NonFatal(e) => (sym.info, sym)
 
   private def expandRangeToEnclosingApply(
       path: List[Tree],
