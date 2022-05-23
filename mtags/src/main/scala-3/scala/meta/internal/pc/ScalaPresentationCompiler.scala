@@ -232,36 +232,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { access =>
       val driver = access.compiler()
-      val uri = params.uri
-      val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
-      driver.run(uri, sourceFile)
-
-      val ctx = driver.currentCtx
-
-      val pos = driver.sourcePosition(params)
-      val trees = driver.openedTrees(uri)
-
-      val path = Interactive.pathTo(trees, pos)(using ctx)
-
-      val updatedPath =
-        /* `.dropWhile(!_.isInstanceOf[tpd.Apply])` was moved into the compiler
-         * and breaks if we do it here for the newer versions */
-        if SemVer.isLaterVersion(
-            "3.2.0-RC1-bin-20220518-64815bb-NIGHTLY",
-            BuildInfo.scalaCompilerVersion
-          )
-        then path
-        else path.dropWhile(!_.isInstanceOf[tpd.Apply])
-      val (paramN, callableN, alternatives) =
-        Signatures.callInfo(updatedPath, pos.span)(using ctx)
-
-      val signatureInfos =
-        alternatives.flatMap(Signatures.toSignature(_)(using ctx))
-      new l.SignatureHelp(
-        signatureInfos.map(signatureToSignatureInformation).asJava,
-        callableN,
-        paramN
-      )
+      SignatureHelpProvider.signatureHelp(driver, params, search)
     }
 
   override def didChange(
@@ -295,64 +266,6 @@ case class ScalaPresentationCompiler(
 
   def withWorkspace(workspace: Path): PresentationCompiler =
     copy(workspace = Some(workspace))
-
-  private def markupContent(
-      typeInfo: Option[String],
-      comments: List[ParsedComment]
-  )(using ctx: Context): l.MarkupContent =
-    val buf = new StringBuilder
-    typeInfo.foreach { info =>
-      buf.append(s"""```scala
-                    |$info
-                    |```
-                    |""".stripMargin)
-    }
-    comments.foreach { comment => buf.append(comment.renderAsMarkdown) }
-    markupContent(buf.toString)
-  end markupContent
-
-  private def markupContent(content: String): l.MarkupContent =
-    if content.isEmpty then null
-    else
-      val markup = new l.MarkupContent
-      markup.setKind("markdown")
-      markup.setValue(content.trim)
-      markup
-
-  def signatureToSignatureInformation(
-      signature: Signatures.Signature
-  ): l.SignatureInformation =
-    val paramInfoss =
-      signature.paramss.map(_.map(paramToParameterInformation))
-    val paramLists = signature.paramss
-      .map { paramList =>
-        val labels = paramList.map(_.show)
-        val prefix = if paramList.exists(_.isImplicit) then "using " else ""
-        labels.mkString(prefix, ", ", "")
-      }
-      .mkString("(", ")(", ")")
-    val tparamsLabel =
-      if signature.tparams.isEmpty then ""
-      else signature.tparams.mkString("[", ", ", "]")
-    val returnTypeLabel = signature.returnType.map(t => s": $t").getOrElse("")
-    val label = s"${signature.name}$tparamsLabel$paramLists$returnTypeLabel"
-    val documentation = signature.doc.map(markupContent)
-    val sig = new l.SignatureInformation(label)
-    sig.setParameters(paramInfoss.flatten.asJava)
-    documentation.foreach(sig.setDocumentation(_))
-    sig
-  end signatureToSignatureInformation
-
-  /**
-   * Convert `param` to `ParameterInformation`
-   */
-  private def paramToParameterInformation(
-      param: Signatures.Param
-  ): l.ParameterInformation =
-    val documentation = param.doc.map(markupContent)
-    val info = new l.ParameterInformation(param.show)
-    documentation.foreach(info.setDocumentation(_))
-    info
 
   override def isLoaded() = compilerAccess.isLoaded()
 
