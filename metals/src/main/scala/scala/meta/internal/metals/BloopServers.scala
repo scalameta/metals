@@ -131,13 +131,13 @@ final class BloopServers(
   private def writeJVMPropertiesToBloopGlobalJsonFile(
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
-      maybeRequestedBloopJvmProperties: Option[List[String]],
+      maybeBloopJvmProperties: Option[List[String]],
       maybeJavaHome: Option[String]
   ): Try[Unit] = Try {
 
-    val javaOptionsString = maybeRequestedBloopJvmProperties
-      .map { requestedBloopJvmProperties =>
-        s"\"javaOptions\": [${requestedBloopJvmProperties.map(property => s"\"$property\"").mkString(", ")}]"
+    val javaOptionsString = maybeBloopJvmProperties
+      .map { bloopJvmProperties =>
+        s"\"javaOptions\": [${bloopJvmProperties.map(property => s"\"$property\"").mkString(", ")}]"
       }
       .getOrElse("")
 
@@ -168,7 +168,7 @@ final class BloopServers(
       messageActionItem: MessageActionItem,
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
-      maybeRequestedBloopJvmProperties: Option[List[String]],
+      maybeBloopJvmProperties: Option[List[String]],
       maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange]
   ): Future[Unit] = {
@@ -179,7 +179,7 @@ final class BloopServers(
         writeJVMPropertiesToBloopGlobalJsonFile(
           bloopGlobalJsonFilePath,
           bloopCreatedByMetalsFilePath,
-          maybeRequestedBloopJvmProperties,
+          maybeBloopJvmProperties,
           maybeJavaHome
         ) match {
           case Failure(exception) => Future.failed(exception)
@@ -209,7 +209,7 @@ final class BloopServers(
   private def updateBloopGlobalJsonFileThenRestart(
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
-      maybeRequestedBloopJvmProperties: Option[List[String]],
+      maybeBloopJvmProperties: Option[List[String]],
       maybeJavaHome: Option[String],
       bloopJsonUpdateCause: BloopJsonUpdateCause,
       reconnect: () => Future[BuildChange]
@@ -217,7 +217,7 @@ final class BloopServers(
     writeJVMPropertiesToBloopGlobalJsonFile(
       bloopGlobalJsonFilePath,
       bloopCreatedByMetalsFilePath,
-      maybeRequestedBloopJvmProperties,
+      maybeBloopJvmProperties,
       maybeJavaHome
     ) match {
       case Failure(exception) => Future.failed(exception)
@@ -317,12 +317,16 @@ final class BloopServers(
         bloopJsonUpdateCause <-
           if (
             maybeRequestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties
+            && maybeRequestedBloopJvmProperties.nonEmpty
           ) Some(BloopJsonUpdateCause.JVM_OPTS)
           else if (maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome)
             Some(BloopJsonUpdateCause.JAVA_HOME)
           else None
+        maybeBloopJvmProperties = maybeRequestedBloopJvmProperties.orElse(
+          maybeBloopGlobalJsonJvmProperties
+        )
       } yield updateBloopJvmProperties(
-        maybeRequestedBloopJvmProperties,
+        maybeBloopJvmProperties,
         bloopGlobalJsonFilePath,
         bloopCreatedByMetalsFilePath,
         maybeRequestedMetalsJavaHome,
@@ -336,7 +340,7 @@ final class BloopServers(
   }
 
   private def updateBloopJvmProperties(
-      maybeRequestedBloopJvmProperties: Option[List[String]],
+      maybeBloopJvmProperties: Option[List[String]],
       bloopGlobalJsonFilePath: AbsolutePath,
       bloopCreatedByMetalsFilePath: AbsolutePath,
       maybeJavaHome: Option[String],
@@ -363,7 +367,7 @@ final class BloopServers(
             _,
             bloopGlobalJsonFilePath,
             bloopCreatedByMetalsFilePath,
-            maybeRequestedBloopJvmProperties,
+            maybeBloopJvmProperties,
             maybeJavaHome,
             reconnect
           ) andThen {
@@ -382,7 +386,7 @@ final class BloopServers(
       updateBloopGlobalJsonFileThenRestart(
         bloopGlobalJsonFilePath,
         bloopCreatedByMetalsFilePath,
-        maybeRequestedBloopJvmProperties,
+        maybeBloopJvmProperties,
         maybeJavaHome,
         bloopJsonUpdateCause,
         reconnect
