@@ -100,41 +100,10 @@ final class FormattingProvider(
     }
   }
 
-  def programmaticallyFormat(
-      path: AbsolutePath
-  ): (Option[String], String) = {
-    scalafmt = scalafmt.withReporter(activeReporter)
-    val inputText = path.toInputFromBuffers(buffers).text
-    (getFormattedString(path, inputText), inputText)
-  }
-
   /**
-   * @param path the path to the file containing the code,
-   *             it is only used for checking the file extension
-   *             and also checking if the file belongs to the project
-   * @param code the string of the code which is to be formatted
-   * @return `None` if there is a formatting problem, such as
-   *         the absence of a Scalafmt config file, otherwise,
-   *         the formatted code, irrespective of whether it is
-   *         identical to the input `code` or not!
+   * Note: This method would produce an empty list for the [[TextEdit]]s,
+   *  if the file specified at `path` is already properly formatted.
    */
-  def programmaticallyFormat(
-      path: AbsolutePath,
-      code: String
-  ): Option[String] = {
-    scalafmt = scalafmt.withReporter(activeReporter)
-    val result = getFormattedString(path, code)
-    pprint.log(
-      s"the formatting result for\n$code\n\nis: \n\n${result.getOrElse("")}"
-    )
-    pprint.log(
-      "the equality of result with the initial code is" + result.getOrElse(
-        ""
-      ) == code
-    )
-    result
-  }
-
   def format(
       path: AbsolutePath,
       token: CancelChecker
@@ -171,6 +140,13 @@ final class FormattingProvider(
     }
   }
 
+  /**
+   * if the configuration of Scalafmt for the project is properly done,
+   * this method is going to produce a List of a single TextEdit for the
+   * formatted string of the whole file, regardless of whether the file is
+   * already well formatted or not.
+   * @param path the path to the file we want to get the formatting [[TextEdit]]s for
+   */
   def programmaticallyFormat(
       path: AbsolutePath,
       token: CancelChecker
@@ -181,12 +157,12 @@ final class FormattingProvider(
     if (!scalafmtConf.isFile) {
       handleMissingFile(scalafmtConf).map {
         case true =>
-          getFormattedTextEdit(path, input).toList.asJava
+          maybeGetFormattedTextEdit(path, input).toList.asJava
         case false =>
           Collections.emptyList[l.TextEdit]()
       }
     } else {
-      val result = getFormattedTextEdit(path, input).toList
+      val result = maybeGetFormattedTextEdit(path, input).toList
       if (token.isCancelled) {
         statusBar.addMessage(
           s"${icons.info}Scalafmt cancelled by editor, try saving file again"
@@ -198,7 +174,7 @@ final class FormattingProvider(
           // before returning future.
           promise.future.map {
             case true if !token.isCancelled =>
-              getFormattedTextEdit(path, input).toList.asJava
+              maybeGetFormattedTextEdit(path, input).toList.asJava
             case _ => result.asJava
           }
         case None =>
@@ -241,7 +217,7 @@ final class FormattingProvider(
    *         the formatted code, irrespective of whether it is
    *         identical to the input `code` or not!
    */
-  private def getFormattedString(
+  private def maybeGetFormattedString(
       path: AbsolutePath,
       code: String
   ): Option[String] = {
@@ -270,12 +246,12 @@ final class FormattingProvider(
 
   }
 
-  private def getFormattedTextEdit(
+  private def maybeGetFormattedTextEdit(
       path: AbsolutePath,
       input: Input
   ): Option[l.TextEdit] = {
     val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
-    getFormattedString(path, input.text).map(
+    maybeGetFormattedString(path, input.text).map(
       new l.TextEdit(fullDocumentRange, _)
     )
 
