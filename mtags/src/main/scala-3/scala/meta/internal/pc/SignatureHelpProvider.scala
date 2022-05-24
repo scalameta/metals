@@ -37,25 +37,16 @@ object SignatureHelpProvider:
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
 
-    val path = Interactive.pathTo(trees, pos)
-
-    val updatedPath =
-      /* `.dropWhile(!_.isInstanceOf[tpd.Apply])` was moved into the compiler
-       * and breaks if we do it here for the newer versions */
-      if SemVer.isLaterVersion(
-          "3.2.0-RC1-bin-20220518-64815bb-NIGHTLY",
-          BuildInfo.scalaCompilerVersion
-        )
-      then path
-      else path.dropWhile(!_.isInstanceOf[tpd.Apply])
+    val path =
+      Interactive.pathTo(trees, pos).dropWhile(t => notCurrentApply(t, pos))
 
     val (paramN, callableN, alternatives) =
-      Signatures.callInfo(updatedPath, pos.span)
+      Signatures.callInfo(path, pos.span)
 
     val signatureInfos =
       alternatives.flatMap { denot =>
         val updatedDenot =
-          findApply(path, pos)
+          path.headOption
             .map { t =>
               val pre = t.qual
               denot.asSeenFrom(pre.tpe.widenTermRefExpr)
@@ -79,20 +70,25 @@ object SignatureHelpProvider:
     )
   end signatureHelp
 
-  private def findApply(
-      path: List[tpd.Tree],
+  private def isTuple(tree: tpd.Tree)(using Context): Boolean =
+    ctx.definitions.isTupleClass(tree.symbol.owner.companionClass)
+
+  private def notCurrentApply(
+      tree: tpd.Tree,
       pos: SourcePosition
-  ): Option[tpd.Tree] =
-    path.find {
+  )(using Context): Boolean =
+    tree match
+      case unapply: tpd.UnApply =>
+        unapply.fun.span.contains(pos.span) || isTuple(unapply)
       case appl: tpd.GenericApply =>
         /* find first apply that the cursor is located in arguments and not at function name
          * for example in:
          *   `Option(1).fold(2)(@@_ + 1)`
          * we want to find the tree responsible for the entire location, not just `_ + 1`
          */
-        !appl.fun.span.contains(pos.span)
-      case _ => false
-    }
+        appl.fun.span.contains(pos.span)
+
+      case _ => true
 
   private def withDocumentation(
       info: SymbolDocumentation,

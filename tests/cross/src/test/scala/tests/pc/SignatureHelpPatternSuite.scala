@@ -241,7 +241,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat4",
+    "pat4".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object & {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))

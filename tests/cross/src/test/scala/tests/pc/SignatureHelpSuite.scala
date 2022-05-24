@@ -239,14 +239,6 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "2.12" ->
         """|apply[A](xs: A*): List[A]
            |         ^^^^^^
-           |""".stripMargin,
-      "3.0" ->
-        """|apply[A](x: A): Option[A]
-           |         ^^^^
-           |""".stripMargin,
-      "3.1" ->
-        """|apply[A](x: A): Option[A]
-           |         ^^^^
            |""".stripMargin
     )
   )
@@ -472,17 +464,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    "",
-    compat = Map(
-      "3.0" ->
-        """|->[B](y: B): (A, B)
-           |      ^^^^
-           |""".stripMargin,
-      "3.1" ->
-        """|->[B](y: B): (A, B)
-           |      ^^^^
-           |""".stripMargin
-    )
+    ""
   )
 
   check(
