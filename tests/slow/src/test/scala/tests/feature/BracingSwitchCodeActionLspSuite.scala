@@ -12,16 +12,16 @@ class BracingSwitchCodeActionLspSuite
 
   check(
     "braceful-to-braceless-object",
-    """|object Ma<<>>in {
+    """|object Main {<<>>
        |  def method2(i: Int) = ???
        |}
        |
        |class A
        |""".stripMargin,
-    s"""|${ExtractRenameMember.title("object", "Main")}
-        |${BracelessBracefulSwitchCodeAction.goBraceless("object definition")}""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBracelessWithFormatting("object definition")}""".stripMargin,
     """|object Main :
        |  def method2(i: Int) = ???
+       |
        |
        |class A
        |""".stripMargin
@@ -29,7 +29,7 @@ class BracingSwitchCodeActionLspSuite
 
   check(
     "braceless-to-braceful-object",
-    """|object Ma<<>>in :
+    """|object Main :<<>>
        |  def method2(i: Int) = ???
        |  def main =
        |    def inner(i : Int) = method2(i)
@@ -37,13 +37,13 @@ class BracingSwitchCodeActionLspSuite
        |
        |class A
        |""".stripMargin,
-    s"""|${ExtractRenameMember.title("object", "Main")}
-        |${BracelessBracefulSwitchCodeAction.goBraceFul("object definition")}""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBraceFul("object definition")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  def main =
        |    def inner(i : Int) = method2(i)
        |}
+       |
        |
        |class A
        |""".stripMargin
@@ -61,18 +61,20 @@ class BracingSwitchCodeActionLspSuite
        |
        |class A
        |""".stripMargin,
-    s"""|${BracelessBracefulSwitchCodeAction.goBraceFul("def definition")}""".stripMargin,
+    s"""|${InsertInferredType.insertType}
+        |${BracelessBracefulSwitchCodeAction.goBraceFul("def definition")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  
-       |  def main(i : Int) = {
+       |  def main(i : Int) ={
        |    val newValue = i + 23
        |    method2(newValue)
        |  }
        |}
        |
        |class A
-       |""".stripMargin
+       |""".stripMargin,
+    1
   )
 
   check(
@@ -88,7 +90,8 @@ class BracingSwitchCodeActionLspSuite
        |
        |class A
        |""".stripMargin,
-    s"""|${BracelessBracefulSwitchCodeAction.goBraceless("def definition")}""".stripMargin,
+    s"""|${InsertInferredType.insertType}
+        |${BracelessBracefulSwitchCodeAction.goBracelessWithFormatting("def definition")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |
@@ -99,6 +102,7 @@ class BracingSwitchCodeActionLspSuite
        |}
        |
        |class A
-       |""".stripMargin
+       |""".stripMargin,
+    1
   )
 }
