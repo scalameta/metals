@@ -17,6 +17,7 @@ import dotty.tools.dotc.core.NameKinds.EvidenceParamName
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
+import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.*
@@ -203,7 +204,12 @@ class MetalsPrinter(
 
     val flags = (gsym.flags & methodFlags)
     val flagString =
-      if !flags.isEmpty then Flags.flagsString(flags) + " " else ""
+      if !flags.isEmpty then
+        val privateWithin =
+          if gsym.privateWithin != NoSymbol then gsym.privateWithin.name.show
+          else ""
+        flags.flagStrings(privateWithin).mkString(" ") + " "
+      else ""
 
     if onlyMethodParams then paramssSignature
     else
@@ -213,6 +219,22 @@ class MetalsPrinter(
         s"${flagString}def $name" +
         paramssSignature
   end defaultMethodSignature
+
+  def defaultValueSignature(
+      gsym: Symbol,
+      gtpe: Type
+  ): String =
+    val flags = (gsym.flags & methodFlags)
+    val flagString =
+      if !flags.isEmpty then
+        val privateWithin =
+          if gsym.privateWithin != NoSymbol then gsym.privateWithin.name.show
+          else ""
+        flags.flagStrings(privateWithin).mkString(" ") + " "
+      else ""
+    val prefix = if gsym.is(Mutable) then "var" else "val"
+    s"${flagString}$prefix ${gsym.name.show}: ${tpe(gtpe)}"
+  end defaultValueSignature
 
   /*
    * Check if a method is an extension method and in that case separate the parameters

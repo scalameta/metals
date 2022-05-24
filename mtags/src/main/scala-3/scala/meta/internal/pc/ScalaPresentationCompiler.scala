@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
@@ -20,6 +21,7 @@ import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.CompilerAccess
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.completions.CompletionsProvider
+import scala.meta.internal.pc.completions.OverrideCompletions
 import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
@@ -173,13 +175,20 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
-  // TODO NOT IMPLEMENTED
   def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[ju.List[l.TextEdit]] =
-    CompletableFuture.completedFuture(
-      List.empty[l.TextEdit].asJava
-    )
+    val empty: ju.List[l.TextEdit] = new ju.ArrayList[l.TextEdit]()
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      val driver = pc.compiler()
+      OverrideCompletions.implementAllAt(
+        params,
+        driver,
+        search,
+        config
+      )
+    }
+  end implementAbstractMembers
 
   override def insertInferredType(
       params: OffsetParams
