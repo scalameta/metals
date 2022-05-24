@@ -72,17 +72,9 @@ case class MissingSourceRoot(sourcerootOption: String) extends ScalaProblem {
     s"Add the compiler option $sourcerootOption to ensure code navigation works."
 }
 
-case object UnsupportedSbtVersion extends ScalaProblem {
+case class UnsupportedSbtVersion(version: String) extends ScalaProblem {
   override def message: String =
-    "Code navigation is not supported for this sbt version, please upgrade to at least 1.3.2 and reimport the build"
-}
-case object DeprecatedSbtVersion extends ScalaProblem {
-  override def message: String =
-    "Code navigation might not be supported in the future for this sbt version, please upgrade to at least 1.3.2 and reimport the build"
-}
-case object FutureSbtVersion extends ScalaProblem {
-  override def message: String =
-    "Code navigation for this sbt version is not yet supported"
+    s"Code navigation might not be supported sbt $version, please upgrade to at least 1.3.2 and reimport the build"
 }
 
 case object OutdatedJunitInterfaceVersion extends ScalaProblem {
