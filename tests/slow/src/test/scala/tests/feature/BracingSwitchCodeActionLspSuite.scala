@@ -105,4 +105,122 @@ class BracingSwitchCodeActionLspSuite
        |""".stripMargin,
     1
   )
+
+  check(
+    "braceful-to-braceless-if",
+    """|object Main {
+       |          def method2(i: Int) = ???
+       |
+       |  def main(i : Int) = {
+       |    i<<>>f ( 2 > 7 ) {
+       |      2 + 2
+       |      5 + 5
+       |    } else {
+       |      println("6")
+       |    }
+       |      val newValue = i + 23
+       |    method2(newValue)
+       |  }
+       |}
+       |
+       |class A
+       |""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBracelessWithFormatting("then expression")}""".stripMargin,
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |
+       |  def main(i : Int) = {
+       |    if ( 2 > 7 ) then
+       |      2 + 2
+       |      5 + 5
+       |    else {
+       |      println("6")
+       |    }
+       |    val newValue = i + 23
+       |    method2(newValue)
+       |  }
+       |
+       |}
+       |
+       |class A
+       |""".stripMargin
+  )
+
+  check(
+    "braceful-to-braceless-catch",
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |
+       |  def main(i : Int) = {
+       |    try {
+       |      println("1")
+       |    } ca<<>>tch {
+       |    case _ => println("2")
+       |    } finally
+       |        println("3")
+       |        println("4")
+       |    val newValue = i + 23
+       |    method2(newValue)
+       |  }
+       |}
+       |
+       |class A
+       |""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBracelessWithFormatting("catch expression")}""".stripMargin,
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |
+       |  def main(i : Int) = {
+       |    try {
+       |      println("1")
+       |    } catch
+       |        case _ => println("2")
+       |    finally
+       |      println("3")
+       |      println("4")
+       |    val newValue = i + 23
+       |    method2(newValue)
+       |  }
+       |
+       |}
+       |
+       |class A
+       |""".stripMargin
+  )
+
+  check(
+    "braceless-to-braceful-while",
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |
+       |  def main(i : Int) = {
+       |    whi<<>>le ( 2 > 7 ) do
+       |      println("2")
+       |      println("5")
+       |
+       |    val newValue = i + 23
+       |    method2(newValue)
+       |  }
+       |}
+       |
+       |class A
+       |""".stripMargin,
+    s"""|${BracelessBracefulSwitchCodeAction.goBraceFul("while expression")}""".stripMargin,
+    """|object Main {
+       |  def method2(i: Int) = ???
+       |
+       |  def main(i : Int) = {
+       |    while ( 2 > 7 ) {
+       |      println("2")
+       |      println("5")
+       |    }
+       |
+       |    val newValue = i + 23
+       |    method2(newValue)
+       |  }
+       |}
+       |
+       |class A
+       |""".stripMargin
+  )
 }
