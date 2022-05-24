@@ -19,7 +19,10 @@ Test Explorer (TE) provides two ways to interact with it:
 
 ## Integration
 
-In order to use TE, the client has to set `InitializationOptions.testExplorerProvider`. This action will deactivate code lenses for test classes and enable TE to send updates.
+In order to use TE, the client has to set
+`InitializationOptions.testExplorerProvider` and also have the user
+configuration setting `test-user-interface` set to `test explorer`. This action
+will deactivate code lenses for test classes and enable TE to send updates.
 
 The preferred way to implement TE is to implement client's command `metals-update-test-explorer`. Using this request, Metals will push all necessary updates to the client.
 
