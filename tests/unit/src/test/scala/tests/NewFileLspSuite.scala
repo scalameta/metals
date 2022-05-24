@@ -352,6 +352,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedFilePath = "a/src/main/scala/foo/Foo.scala",
     expectedContent = s"""|package foo
                           |
+                          |
                           |""".stripMargin
   )
 

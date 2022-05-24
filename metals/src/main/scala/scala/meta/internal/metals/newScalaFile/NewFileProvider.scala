@@ -209,7 +209,8 @@ class NewFileProvider(
       .packageStatement(path)
       .map(_.fileContent)
       .getOrElse("")
-    val template = s"$pkg@@"
+    val template = s"""|$pkg@@
+                       |""".stripMargin
     createFileAndWriteText(path, NewFileTemplate(template))
   }
 
