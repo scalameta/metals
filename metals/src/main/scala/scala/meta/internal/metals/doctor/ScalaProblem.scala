@@ -74,11 +74,13 @@ case class MissingSourceRoot(sourcerootOption: String) extends ScalaProblem {
 
 case object UnsupportedSbtVersion extends ScalaProblem {
   override def message: String =
-    "Code navigation is not supported for this sbt version, please upgrade to at least 1.3.2 and reimport the build"
+    "Code navigation is not supported for this sbt version, please " +
+      s"upgrade to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build"
 }
 case object DeprecatedSbtVersion extends ScalaProblem {
   override def message: String =
-    "Code navigation might not be supported in the future for this sbt version, please upgrade to at least 1.3.2 and reimport the build"
+    "Code navigation might not be supported in the future for this sbt version, " +
+      s"please upgrade to at least ${BuildInfo.minimumSupportedSbtVersion} and reimport the build"
 }
 case object FutureSbtVersion extends ScalaProblem {
   override def message: String =

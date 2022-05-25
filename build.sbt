@@ -429,6 +429,7 @@ lazy val metals = project
       "sbtJdiToolsVersion" -> V.sbtJdiTools,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
+      "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
       "supportedScala3Versions" -> V.scala3Versions,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,

@@ -115,9 +115,9 @@ class ProblemResolver(
     val deprecatedSbtMessage =
       if (deprecatedSbt) Some(Messages.DeprecatedSbtVersion.message) else None
     val unsupportedSbtMessage =
-      if (deprecatedSbt) Some(Messages.UnsupportedSbtVersion.message) else None
+      if (unsupportedSbt) Some(Messages.UnsupportedSbtVersion.message) else None
     val futureSbtMessage =
-      if (deprecatedSbt) Some(Messages.FutureSbtVersion.message) else None
+      if (futureSbt) Some(Messages.FutureSbtVersion.message) else None
 
     val semanticdbMessage =
       if (
