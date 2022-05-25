@@ -263,13 +263,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def a: Int
        |""".stripMargin,
     topLines = Some(2),
-    includeDetail = false,
-    compat = Map(
-      "3" ->
-        """|override def a: Int
-           |def b: Int
-           |""".stripMargin
-    )
+    includeDetail = false
   )
 
   checkEdit(
@@ -1012,13 +1006,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|override def overTop: Int
-           |overTop: Int
-           |""".stripMargin
-    )
+    topLines = Some(2)
   )
 
   checkEdit(
