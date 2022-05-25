@@ -54,35 +54,24 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     s"""$foldLatestDocs
        |**Parameters**
-       |- `ifEmpty`: the expression to evaluate if empty.
        |- `f`: the function to apply if nonempty.
+       |- `ifEmpty`: the expression to evaluate if empty.
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-    """.stripMargin,
+        """.stripMargin,
     compat = Map(
-      "2.12.8" -> foldOlderDocs1,
-      "2.13" ->
+      "2.12" ->
         s"""$foldLatestDocs
            |**Parameters**
-           |- `f`: the function to apply if nonempty.
            |- `ifEmpty`: the expression to evaluate if empty.
+           |- `f`: the function to apply if nonempty.
            |fold[B](ifEmpty: => B)(f: Int => B): B
            |                       ^^^^^^^^^^^
            |  @param ifEmpty the expression to evaluate if empty.
            |  @param f the function to apply if nonempty.
-        """.stripMargin,
-      "3" ->
-        s"""$foldLatestDocs
-           |**Parameters**
-           |- `f`: the function to apply if nonempty.
-           |- `ifEmpty`: the expression to evaluate if empty.
-           |fold[B](ifEmpty: => B)(f: A => B): B
-           |                       ^^^^^^^^^
-           |  @param ifEmpty the expression to evaluate if empty.
-           |  @param f the function to apply if nonempty.
-        """.stripMargin
+           |""".stripMargin
     )
   )
 
@@ -137,7 +126,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |**Parameters**
             |- `f`: the function to apply if nonempty.
             |- `ifEmpty`: the expression to evaluate if empty.
-            |fold[B](ifEmpty: => B)(f: A => B): B
+            |fold[B](ifEmpty: => B)(f: Int => B): B
             |        ^^^^^^^^^^^^^
             |  @param ifEmpty the expression to evaluate if empty.
             |  @param f the function to apply if nonempty.
@@ -230,8 +219,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
            |           are the elements of this collection.
            |          Returns `z` if this collection is empty.
-           |foldLeft[B](z: B)(op: (B, A) => B): B
-           |                  ^^^^^^^^^^^^^^^
+           |foldLeft[B](z: B)(op: (B, Int) => B): B
+           |                  ^^^^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -258,58 +247,43 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  List(1).map(x => @@)
       |}
     """.stripMargin,
-    """|Builds a new collection by applying a function to all elements of this general collection.
+    """|Builds a new collection by applying a function to all elements of this collection.
        |
        |
        |**Type Parameters**
-       |- `That`: the class of the returned collection. Where possible, `That` is
-       |the same class as the current collection class `Repr`, but this
-       |depends on the element type `B` being admissible for that class,
-       |which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
-       |is found.
        |- `B`: the element type of the returned collection.
        |
        |**Parameters**
-       |- `bf`: an implicit value of class `CanBuildFrom` which determines
-       |the result class `That` from the current representation type `Repr` and
-       |the new element type `B`.
        |- `f`: the function to apply to each element.
        |
-       |**Returns:** a new general collection resulting from applying the given function
-       |                 `f` to each element of this general collection and collecting the results.
-       |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
-       |             ^^^^^^^^^^^
+       |**Returns:** a new collection resulting from applying the given function
+       |               `f` to each element of this collection and collecting the results.
+       |map[B](f: Int => B): List[B]
+       |       ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|Builds a new collection by applying a function to all elements of this collection.
+      "2.12" ->
+        """|Builds a new collection by applying a function to all elements of this general collection.
            |
            |
            |**Type Parameters**
+           |- `That`: the class of the returned collection. Where possible, `That` is
+           |the same class as the current collection class `Repr`, but this
+           |depends on the element type `B` being admissible for that class,
+           |which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
+           |is found.
            |- `B`: the element type of the returned collection.
            |
            |**Parameters**
+           |- `bf`: an implicit value of class `CanBuildFrom` which determines
+           |the result class `That` from the current representation type `Repr` and
+           |the new element type `B`.
            |- `f`: the function to apply to each element.
            |
-           |**Returns:** a new collection resulting from applying the given function
-           |               `f` to each element of this collection and collecting the results.
-           |map[B](f: Int => B): List[B]
-           |       ^^^^^^^^^^^
-           |""".stripMargin,
-      "3" ->
-        """|Builds a new collection by applying a function to all elements of this collection.
-           |
-           |
-           |**Type Parameters**
-           |- `B`: the element type of the returned collection.
-           |
-           |**Parameters**
-           |- `f`: the function to apply to each element.
-           |
-           |**Returns:** a new collection resulting from applying the given function
-           |               `f` to each element of this collection and collecting the results.
-           |map[B](f: A => B): List[B]
-           |       ^^^^^^^^^
+           |**Returns:** a new general collection resulting from applying the given function
+           |                 `f` to each element of this general collection and collecting the results.
+           |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
+           |             ^^^^^^^^^^^
            |""".stripMargin
     )
   )

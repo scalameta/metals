@@ -13,17 +13,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
-       |             ^^^^^^^^^^^^^^^^^^^^
+    """|map[B](f: ((Int, Int)) => B): List[B]
+       |       ^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        """|map[B](f: ((Int, Int)) => B): List[B]
-           |       ^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin,
-      "3" ->
-        """|map[B](f: A => B): List[B]
-           |       ^^^^^^^^^
+      "2.12" ->
+        """|map[B, That](f: ((Int, Int)) => B)(implicit bf: CanBuildFrom[List[(Int, Int)],B,That]): That
+           |             ^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -245,7 +241,9 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat4",
+    "pat4".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    ),
     """
       |object & {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))

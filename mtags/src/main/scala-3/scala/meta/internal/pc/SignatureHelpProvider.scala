@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.collection.JavaConverters.*
+import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
@@ -12,10 +13,12 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.Signatures.Signature
+import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
 object SignatureHelpProvider:
@@ -34,25 +37,23 @@ object SignatureHelpProvider:
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
 
-    val path = Interactive.pathTo(trees, pos)
-
-    val updatedPath =
-      /* `.dropWhile(!_.isInstanceOf[tpd.Apply])` was moved into the compiler
-       * and breaks if we do it here for the newer versions */
-      if SemVer.isLaterVersion(
-          "3.2.0-RC1-bin-20220518-64815bb-NIGHTLY",
-          BuildInfo.scalaCompilerVersion
-        )
-      then path
-      else path.dropWhile(!_.isInstanceOf[tpd.Apply])
+    val path =
+      Interactive.pathTo(trees, pos).dropWhile(t => notCurrentApply(t, pos))
 
     val (paramN, callableN, alternatives) =
-      Signatures.callInfo(updatedPath, pos.span)
+      Signatures.callInfo(path, pos.span)
 
     val signatureInfos =
       alternatives.flatMap { denot =>
+        val updatedDenot =
+          path.headOption
+            .map { t =>
+              val pre = t.qual
+              denot.asSeenFrom(pre.tpe.widenTermRefExpr)
+            }
+            .getOrElse(denot)
         val doc = search.symbolDocumentation(denot.symbol)
-        (doc, Signatures.toSignature(denot)) match
+        (doc, Signatures.toSignature(updatedDenot)) match
           case (Some(info), Some(signature)) =>
             withDocumentation(
               info,
@@ -68,6 +69,26 @@ object SignatureHelpProvider:
       paramN
     )
   end signatureHelp
+
+  private def isTuple(tree: tpd.Tree)(using Context): Boolean =
+    ctx.definitions.isTupleClass(tree.symbol.owner.companionClass)
+
+  private def notCurrentApply(
+      tree: tpd.Tree,
+      pos: SourcePosition
+  )(using Context): Boolean =
+    tree match
+      case unapply: tpd.UnApply =>
+        unapply.fun.span.contains(pos.span) || isTuple(unapply)
+      case appl: tpd.GenericApply =>
+        /* find first apply that the cursor is located in arguments and not at function name
+         * for example in:
+         *   `Option(1).fold(2)(@@_ + 1)`
+         * we want to find the tree responsible for the entire location, not just `_ + 1`
+         */
+        appl.fun.span.contains(pos.span)
+
+      case _ => true
 
   private def withDocumentation(
       info: SymbolDocumentation,
