@@ -7,7 +7,9 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
 import scala.meta.internal.metals.doctor.DeprecatedScalaVersion
+import scala.meta.internal.metals.doctor.FutureSbtVersion
 import scala.meta.internal.metals.doctor.FutureScalaVersion
 import scala.meta.internal.metals.doctor.MissingJdkSources
 import scala.meta.internal.metals.doctor.MissingSourceRoot
@@ -58,16 +60,30 @@ class ProblemResolverSuite extends FunSuite {
 
   checkRecommendation(
     "unsupported-sbt-version",
-    scalaVersion = BuildInfo.scala212,
-    UnsupportedSbtVersion("1.2.0").message,
+    scalaVersion = "2.12.7",
+    UnsupportedSbtVersion.message,
     sbtVersion = Some("1.2.0")
+  )
+
+  checkRecommendation(
+    "deprecated-sbt-version",
+    scalaVersion = "2.12.8",
+    DeprecatedSbtVersion.message,
+    sbtVersion = Some("1.3.0")
+  )
+
+  checkRecommendation(
+    "future-sbt-version",
+    scalaVersion = "2.12.51",
+    FutureSbtVersion.message,
+    sbtVersion = Some("1.6.0")
   )
 
   checkRecommendation(
     "ok-sbt-version",
     scalaVersion = BuildInfo.scala212,
     "",
-    sbtVersion = Some("1.3.12")
+    sbtVersion = Some("1.6.0")
   )
 
   checkRecommendation(

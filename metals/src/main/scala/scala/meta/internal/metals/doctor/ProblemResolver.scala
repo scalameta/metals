@@ -59,6 +59,8 @@ class ProblemResolver(
     var misconfiguredProjects = 0
     var misconfiguredTestFrameworks = 0
     var unsupportedSbt = false
+    var deprecatedSbt = false
+    var futureSbt = false
 
     for {
       target <- scalaTargets
@@ -70,7 +72,9 @@ class ProblemResolver(
         case FutureScalaVersion(version) => futureVersions += version
         case _: SemanticDBDisabled => misconfiguredProjects += 1
         case _: MissingSourceRoot => misconfiguredProjects += 1
-        case _: UnsupportedSbtVersion => unsupportedSbt = true
+        case UnsupportedSbtVersion => unsupportedSbt = true
+        case DeprecatedSbtVersion => deprecatedSbt = true
+        case FutureSbtVersion => futureSbt = true
         case MissingJdkSources(_) => misconfiguredProjects += 1
         case OutdatedJunitInterfaceVersion => misconfiguredTestFrameworks += 1
         case OutdatedMunitInterfaceVersion => misconfiguredTestFrameworks += 1
@@ -108,8 +112,12 @@ class ProblemResolver(
       None
     }
 
+    val deprecatedSbtMessage =
+      if (deprecatedSbt) Some(Messages.DeprecatedSbtVersion.message) else None
     val unsupportedSbtMessage =
       if (unsupportedSbt) Some(Messages.UnsupportedSbtVersion.message) else None
+    val futureSbtMessage =
+      if (futureSbt) Some(Messages.FutureSbtVersion.message) else None
 
     val semanticdbMessage =
       if (
@@ -145,7 +153,9 @@ class ProblemResolver(
       deprecatedMessage,
       unsupportedMessage,
       futureMessage,
+      deprecatedSbtMessage,
       unsupportedSbtMessage,
+      futureSbtMessage,
       semanticdbMessage,
       testFrameworks
     ).flatten
@@ -178,12 +188,11 @@ class ProblemResolver(
       mtagsResolver.isSupportedScalaVersion(version)
 
     val scalaVersionProblem = scalaTarget.scalaVersion match {
-      case _ if scalaTarget.isSbt =>
-        scalaTarget.sbtVersion match {
-          case Some(version) if !SemVer.isCompatibleVersion("1.3.2", version) =>
-            Some(UnsupportedSbtVersion(version))
-          case _ => None
-        }
+      case version if !isSupportedScalaVersion(version) && scalaTarget.isSbt =>
+        if (ScalaVersions.isFutureVersion(version))
+          Some(FutureSbtVersion)
+        else
+          Some(UnsupportedSbtVersion)
       case version if !isSupportedScalaVersion(version) =>
         if (ScalaVersions.isFutureVersion(version))
           Some(FutureScalaVersion(version))
@@ -201,6 +210,11 @@ class ProblemResolver(
           if !scalaTarget.isSourcerootDeclared && !ScalaVersions
             .isScala3Version(scalaTarget.scalaVersion) =>
         Some(MissingSourceRoot(workspace.scalaSourcerootOption))
+      case version
+          if ScalaVersions.isDeprecatedScalaVersion(
+            version
+          ) && scalaTarget.isSbt =>
+        Some(DeprecatedSbtVersion)
       case version if ScalaVersions.isDeprecatedScalaVersion(version) =>
         Some(DeprecatedScalaVersion(version))
       case _ => None

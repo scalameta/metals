@@ -83,6 +83,10 @@ object V {
   )
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
+  // The minimum sbt version that uses a non-deprecated Scala version.
+  // Currently uses Scala 2.12.12 - update upon deprecation.
+  def minimumSupportedSbtVersion = "1.4.0"
+
   // Scala 3
   def nonDeprecatedScala3Versions =
     Seq(nextScala3RC, scala3, "3.1.1", "3.1.0", "3.0.2")
