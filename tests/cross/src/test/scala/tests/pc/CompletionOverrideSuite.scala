@@ -77,24 +77,16 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     """
       |object Main {
       |  new scala.Traversable[Int] {
-      |    def foreach[U](f: Int => U): Unit = ${0:???}
+      |    override def foreach[U](f: Int => U): Unit = ${0:???}
       |  }
       |}
       |""".stripMargin,
     compat = Map(
-      "2.13" ->
+      "2.12" ->
         """
           |object Main {
           |  new scala.Traversable[Int] {
-          |    override def foreach[U](f: Int => U): Unit = ${0:???}
-          |  }
-          |}
-          |""".stripMargin,
-      "3" ->
-        """
-          |object Main {
-          |  new scala.Traversable[Int] {
-          |    override def foreach[U](f: Int => U): Unit = ${0:???}
+          |    def foreach[U](f: Int => U): Unit = ${0:???}
           |  }
           |}
           |""".stripMargin
