@@ -148,39 +148,44 @@ class BracingSwitchCodeActionLspSuite
 
   check(
     "braceful-to-braceless-catch",
-    """|object Main {
-       |  def method2(i: Int) = ???
+    """|object
+       |Main {
+       |    def method2(i: Int) = ???
        |
-       |  def main(i : Int) = {
-       |    try {
-       |      println("1")
-       |    } ca<<>>tch {
-       |    case _ => println("2")
-       |    } finally
-       |        println("3")
-       |        println("4")
-       |    val newValue = i + 23
-       |    method2(newValue)
-       |  }
+       |
+       |
+       |    def main(i :      Int) = {
+       |                        try {
+       |        println("1")
+       |      } ca<<>>tch {
+       |          case _ => println("2")
+       |      }
+       |      finally
+       |          println("3")
+       |          println("4")
+       |      val newValue = i + 23
+       |      method2(newValue)
+       |    }
+       |
        |}
        |
        |class A
        |""".stripMargin,
     s"""|${BracelessBracefulSwitchCodeAction.goBracelessWithFormatting("catch expression")}""".stripMargin,
     """|object Main {
-       |  def method2(i: Int) = ???
+       |    def method2(i: Int) = ???
        |
-       |  def main(i : Int) = {
-       |    try {
-       |      println("1")
-       |    } catch
-       |        case _ => println("2")
-       |    finally
-       |      println("3")
-       |      println("4")
-       |    val newValue = i + 23
-       |    method2(newValue)
-       |  }
+       |    def main(i : Int) = {
+       |      try {
+       |        println("1")
+       |      } catch
+       |          case _ => println("2")
+       |      finally
+       |          println("3")
+       |          println("4")
+       |      val newValue = i + 23
+       |      method2(newValue)
+       |    }
        |
        |}
        |
