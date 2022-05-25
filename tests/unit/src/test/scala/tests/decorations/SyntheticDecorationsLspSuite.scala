@@ -696,4 +696,65 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     } yield ()
   }
+
+  // https://github.com/scalameta/metals/pull/3948
+  test("for-yield") {
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/Main.scala
+           |class Evidence
+           |
+           |final case class DataType[T](number: Int, other: T) {
+           |  def next(implicit evidence: Evidence): Int = number + 1
+           |}
+           |
+           |object Example extends App {
+           |
+           |  implicit val evidence: Evidence = ???
+           |
+           |  for {
+           |    number <- Option(5)
+           |  } yield DataType(number, "").next
+           |
+           |  Option(5).map(DataType(_, "").next)
+           |
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions-and-classes": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|class Evidence
+           |
+           |final case class DataType[T](number: Int, other: T) {
+           |  def next(implicit evidence: Evidence): Int = number + 1
+           |}
+           |
+           |object Example extends App {
+           |
+           |  implicit val evidence: Evidence = ???
+           |
+           |  for {
+           |    number: Int <- Option[Int](5)
+           |  } yield DataType[String](number, "").next(evidence)
+           |
+           |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
+           |
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

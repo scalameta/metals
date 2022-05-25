@@ -174,7 +174,7 @@ class SemanticdbTreePrinter(
       synthetic: s.Synthetic,
       userConfig: UserConfiguration,
       isInlineProvider: Boolean = false
-  ): List[(String, s.Range)] = {
+  ): Seq[(String, s.Range)] = {
 
     def isExplicitTuple(range: s.Range) =
       range.inString(textDocument.text).exists(_.startsWith("Tuple"))
@@ -185,59 +185,70 @@ class SemanticdbTreePrinter(
         syntheticString <- printTree(tree, isExplicitTuple(range)).toList
       } yield (syntheticString, range)
     }
-    synthetic.tree match {
-      /**
-       *  implicit val str = ""
-       *  def hello()(implicit a : String)
-       *  hello()<<(str)>>
-       */
-      case tree @ s.ApplyTree(_: s.OriginalTree, _)
-          if userConfig.showImplicitArguments =>
-        gatherSynthetics(tree)
 
-      /**
-       *  def hello[T](T object) = object
-       *  hello<<[String]>>("")
-       */
-      case tree @ s.TypeApplyTree(_: s.OriginalTree | _: s.SelectTree, _)
-          if userConfig.showInferredType =>
-        gatherSynthetics(tree)
-      /**
-       *  implicit def implicitFun(object: T): R = ???
-       *  def fun(r: R) = ???
-       *  fun(<<implicitFun(>>new T<<)>>)
-       */
-      case s.ApplyTree(id: s.IdTree, _)
-          if userConfig.showImplicitConversionsAndClasses =>
-        def synthetics(syntheticString: String, range: s.Range) = {
-          if (isHover && isInlineProvider)
-            List(
-              (
-                syntheticString,
-                range
-                  .withEndCharacter(range.startCharacter)
-                  .withEndLine(range.startLine)
+    def tryTree(tree: s.Tree): Seq[(String, s.Range)] =
+      tree match {
+        /**
+         *  implicit val str = ""
+         *  def hello()(implicit a : String)
+         *  hello()<<(str)>>
+         */
+        case tree @ s.ApplyTree(_: s.OriginalTree, _)
+            if userConfig.showImplicitArguments =>
+          gatherSynthetics(tree)
+
+        /**
+         *  def hello[T](T object) = object
+         *  hello<<[String]>>("")
+         */
+        case tree @ s.TypeApplyTree(_: s.OriginalTree | _: s.SelectTree, _)
+            if userConfig.showInferredType =>
+          gatherSynthetics(tree)
+        /**
+         *  implicit def implicitFun(object: T): R = ???
+         *  def fun(r: R) = ???
+         *  fun(<<implicitFun(>>new T<<)>>)
+         */
+        case s.ApplyTree(id: s.IdTree, _)
+            if userConfig.showImplicitConversionsAndClasses =>
+          def synthetics(syntheticString: String, range: s.Range) = {
+            if (isHover && isInlineProvider)
+              List(
+                (
+                  syntheticString,
+                  range
+                    .withEndCharacter(range.startCharacter)
+                    .withEndLine(range.startLine)
+                )
               )
-            )
-          else
-            List(
-              (
-                syntheticString + "(",
-                range
-                  .withEndCharacter(range.startCharacter)
-                  .withEndLine(range.startLine)
-              ),
-              (")", range)
-            )
-        }
-        for {
-          syntheticString <- printTree(id).toList
-          range <- synthetic.range.toList
-          synth <- synthetics(syntheticString, range)
-        } yield synth
+            else
+              List(
+                (
+                  syntheticString + "(",
+                  range
+                    .withEndCharacter(range.startCharacter)
+                    .withEndLine(range.startLine)
+                ),
+                (")", range)
+              )
+          }
+          for {
+            syntheticString <- printTree(id).toList
+            range <- synthetic.range.toList
+            synth <- synthetics(syntheticString, range)
+          } yield synth
 
-      case _ => Nil
-    }
+        // needed in case of synthetics inside yield of more complex synthetic trees such as for comprehensions
+        case tree @ s.ApplyTree(
+              _: s.ApplyTree | _: s.TypeApplyTree,
+              _
+            ) =>
+          tree.arguments.flatMap(tryTree)
+        case s.FunctionTree(_, body) =>
+          tryTree(body)
+        case _ => Nil
+      }
+    tryTree(synthetic.tree)
   }
 
   private def isTuple(symbol: String) = symbol.startsWith("scala/Tuple")
