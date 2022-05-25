@@ -24,7 +24,7 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
-    isExcludedPackage: String => Boolean,
+    excludedPackages: () => ExcludedPackagesHandler,
     trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
@@ -35,8 +35,8 @@ class StandaloneSymbolSearch(
     new TrieMap[AbsolutePath, ju.List[String]]()
   private val classpathSearch =
     ClasspathSearch.fromClasspath(
-      classpath.toList.map(_.toNIO),
-      isExcludedPackage
+      classpath.map(_.toNIO),
+      excludedPackages()
     )
 
   private val index = OnDemandSymbolIndex.empty()
@@ -114,7 +114,7 @@ object StandaloneSymbolSearch {
       buffers: Buffers,
       sources: Seq[Path],
       classpath: Seq[Path],
-      isExcludedPackage: String => Boolean,
+      excludedPackages: () => ExcludedPackagesHandler,
       userConfig: () => UserConfiguration,
       trees: Trees,
       buildTargets: BuildTargets,
@@ -133,7 +133,7 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
-      isExcludedPackage,
+      excludedPackages,
       trees,
       buildTargets,
       saveSymbolFileToDisk
@@ -143,7 +143,7 @@ object StandaloneSymbolSearch {
       scalaVersion: String,
       workspace: AbsolutePath,
       buffers: Buffers,
-      isExcludedPackage: String => Boolean,
+      excludedPackages: () => ExcludedPackagesHandler,
       userConfig: () => UserConfiguration,
       trees: Trees,
       buildTargets: BuildTargets,
@@ -157,7 +157,7 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
-      isExcludedPackage,
+      excludedPackages,
       trees,
       buildTargets,
       saveSymbolFileToDisk

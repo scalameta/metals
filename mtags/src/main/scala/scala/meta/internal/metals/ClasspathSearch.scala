@@ -78,24 +78,36 @@ class ClasspathSearch(
 object ClasspathSearch {
   def empty: ClasspathSearch =
     new ClasspathSearch(Array.empty)
-  def fromPackages(
-      packages: PackageIndex,
-      isExcludedPackage: String => Boolean,
-      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
-  ): ClasspathSearch = {
-    val map = CompressedPackageIndex.fromPackages(
-      packages,
-      isExcludedPackage,
-      bucketSize
-    )
-    new ClasspathSearch(map)
-  }
+
   def fromClasspath(
       classpath: collection.Seq[Path],
-      isExcludedPackage: String => Boolean,
+      excludePackages: ExcludedPackagesHandler,
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
-  ): ClasspathSearch = {
-    val packages = PackageIndex.fromClasspath(classpath, isExcludedPackage)
-    fromPackages(packages, isExcludedPackage, bucketSize)
+  ): ClasspathSearch =
+    Indexer.default.index(classpath, excludePackages, bucketSize)
+
+  trait Indexer {
+    def index(
+        classpath: collection.Seq[Path],
+        excludePackages: ExcludedPackagesHandler,
+        bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
+    ): ClasspathSearch
+  }
+
+  object Indexer {
+
+    val default: Indexer =
+      (classpath, excludePackages, bucketSize) => {
+        val packages = PackageIndex.fromClasspath(
+          classpath,
+          excludePackages.isExcludedPackage
+        )
+        val map = CompressedPackageIndex.fromPackages(
+          packages,
+          excludePackages.isExcludedPackage,
+          bucketSize
+        )
+        new ClasspathSearch(map)
+      }
   }
 }
