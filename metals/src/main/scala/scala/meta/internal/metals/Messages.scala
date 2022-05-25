@@ -4,6 +4,7 @@ import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.BloopJsonUpdateCause.BloopJsonUpdateCause
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
@@ -121,15 +122,19 @@ object Messages {
 
   def bloopInstallProgress(buildToolExecName: String) =
     new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
+
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
+
   def notNow: MessageActionItem =
     new MessageActionItem("Not now")
 
   object ImportBuildChanges {
     def yes: MessageActionItem =
       new MessageActionItem("Import changes")
+
     def notNow: MessageActionItem = Messages.notNow
+
     def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(s"$buildToolName build needs to be re-imported")
@@ -147,7 +152,9 @@ object Messages {
 
   object ImportBuild {
     def yes = new MessageActionItem("Import build")
+
     def notNow: MessageActionItem = Messages.notNow
+
     def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
@@ -197,23 +204,31 @@ object Messages {
         MessageType.Info,
         "Build is correctly configured now, navigation will work for all build targets."
       )
+
     def moreInfo: String =
       " Select 'More information' to learn how to fix this problem.."
+
     def allProjectsMisconfigured: String =
       "Navigation will not work for this build due to mis-configuration." + moreInfo
+
     def singleMisconfiguredProject(name: String): String =
       s"Navigation will not work in project '$name' due to mis-configuration." + moreInfo
+
     def multipleMisconfiguredProjects(count: Int): String =
       s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
+
     val misconfiguredTestFrameworks: String =
       "Test Explorer won't work due to mis-configuration." + moreInfo
 
     def isDoctor(params: ShowMessageRequestParams): Boolean =
       params.getActions.asScala.contains(moreInformation)
+
     def moreInformation: MessageActionItem =
       new MessageActionItem("More information")
+
     def dismissForever: MessageActionItem =
       new MessageActionItem("Don't show again")
+
     def params(problem: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(problem)
@@ -232,12 +247,16 @@ object Messages {
 
     def dismissForever: MessageActionItem =
       new MessageActionItem("Don't show again")
+
     def learnMore: MessageActionItem =
       new MessageActionItem("Learn more")
+
     def learnMoreUrl: String = Urls.docs("import-build")
+
     def params(tool: BuildTool): ShowMessageRequestParams = {
       def toFixMessage =
         s"To fix this problem, upgrade to $tool ${tool.recommendedVersion} "
+
       val params = new ShowMessageRequestParams()
       params.setMessage(
         s"Automatic build import is not supported for $tool ${tool.version}. $toFixMessage"
@@ -256,8 +275,10 @@ object Messages {
   object DisconnectedServer {
     def reconnect: MessageActionItem =
       new MessageActionItem("Reconnect to build server")
+
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
+
     def params(): ShowMessageRequestParams = {
 
       val params = new ShowMessageRequestParams()
@@ -275,11 +296,14 @@ object Messages {
       params
     }
   }
+
   object BloopVersionChange {
     def reconnect: MessageActionItem =
       new MessageActionItem("Restart Bloop")
+
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
+
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
@@ -299,14 +323,19 @@ object Messages {
   object BloopGlobalJsonFilePremodified {
     def applyAndRestart: MessageActionItem =
       new MessageActionItem("Apply and Restart Bloop")
+
     def useGlobalFile: MessageActionItem =
       new MessageActionItem("Use the Global File's JVM Properties")
+
     def openGlobalJsonFile: MessageActionItem =
       new MessageActionItem("Open the Global File")
-    def params(): ShowMessageRequestParams = {
+
+    def params(
+        bloopJsonUpdateCause: BloopJsonUpdateCause
+    ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"""|You have previously modified the JVM settings of Bloop in its global json file,
+        s"""|Setting $bloopJsonUpdateCause will result in updating Bloop's global Json file by Metals, which has been previously modified manually!
             |Do you want to replace them with the new properties and restart the running Bloop server?""".stripMargin
       )
       params.setType(MessageType.Warning)
@@ -324,12 +353,17 @@ object Messages {
   object BloopJvmPropertiesChange {
     def reconnect: MessageActionItem =
       new MessageActionItem("Restart Bloop")
+
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
-    def params(): ShowMessageRequestParams = {
+
+    def params(
+        bloopJsonUpdateCause: BloopJsonUpdateCause
+    ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"New Bloop JVM properties detected. Bloop will need to be restarted in order for them to take effect."
+        s"""|Setting $bloopJsonUpdateCause will result in updating Bloop's global Json file, by Metals.
+            |Bloop will need to be restarted in order for these changes to take effect.""".stripMargin
       )
       params.setType(MessageType.Warning)
       params.setActions(
@@ -345,8 +379,10 @@ object Messages {
   object AmmoniteJvmParametersChange {
     def restart: MessageActionItem =
       new MessageActionItem("Restart Ammonite")
+
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
+
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
@@ -374,10 +410,13 @@ object Messages {
   object IncompatibleBloopVersion {
     def manually: MessageActionItem =
       new MessageActionItem("I'll update manually")
+
     def shutdown: MessageActionItem =
       new MessageActionItem("Turn off old server")
+
     def dismissForever: MessageActionItem =
       new MessageActionItem("Don't show again")
+
     def params(
         bloopVersion: String,
         minimumBloopVersion: String,
@@ -459,26 +498,32 @@ object Messages {
     def failedToResolve(message: String): MessageParams = {
       new MessageParams(MessageType.Error, message)
     }
+
     def fixedVersion(isAgain: Boolean): MessageParams =
       new MessageParams(
         MessageType.Info,
         s"Updated .scalafmt.conf${MissingScalafmtConf.tryAgain(isAgain)}."
       )
+
     def isMissingScalafmtVersion(params: ShowMessageRequestParams): Boolean =
       params.getMessage == messageRequestMessage
+
     def inputBox(): MetalsInputBoxParams =
       MetalsInputBoxParams(
         prompt =
           "No Scalafmt version is configured for this workspace, what version would you like to use?",
         value = BuildInfo.scalafmtVersion
       )
+
     def messageRequestMessage: String =
       s"No Scalafmt version is configured for this workspace. " +
         s"To fix this problem, update .scalafmt.conf to include 'version=${BuildInfo.scalafmtVersion}'."
+
     def changeVersion: MessageActionItem =
       new MessageActionItem(
         s"Update .scalafmt.conf to use v${BuildInfo.scalafmtVersion}"
       )
+
     def messageRequest(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(messageRequestMessage)
@@ -533,17 +578,22 @@ object Messages {
     def tryAgain(isAgain: Boolean): String =
       if (isAgain) ", try formatting again"
       else ""
+
     def createFile = new MessageActionItem("Create .scalafmt.conf")
+
     def fixedParams(isAgain: Boolean): MessageParams =
       new MessageParams(
         MessageType.Info,
         s"Created .scalafmt.conf${tryAgain(isAgain)}."
       )
+
     def isCreateScalafmtConf(params: ShowMessageRequestParams): Boolean =
       params.getMessage == createScalafmtConfMessage
+
     def createScalafmtConfMessage: String =
       s"Unable to format since this workspace has no .scalafmt.conf file. " +
         s"To fix this problem, create an empty .scalafmt.conf and try again."
+
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(createScalafmtConfMessage)
@@ -591,6 +641,7 @@ object Messages {
   object WorkspaceSymbolDependencies {
     def title: String =
       "Add ';' to search library dependencies"
+
     def detail: String =
       """|The workspace/symbol feature ("Go to symbol in workspace") allows you to search for
          |classes, traits and objects that are defined in your workspace as well as library dependencies.
@@ -609,6 +660,7 @@ object Messages {
 
   object NewScalaFile {
     def selectTheKindOfFileMessage = "Select the kind of file to create"
+
     def enterNameMessage(kind: String): String =
       s"Enter the name for the new $kind"
 
@@ -736,6 +788,7 @@ object Messages {
     val importAll: String = "Import scripts automatically"
     val doImport: String = "Import"
     val dismiss: String = "Dismiss"
+
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams(
         List(importAll, doImport, dismiss)
@@ -746,6 +799,7 @@ object Messages {
       params.setType(MessageType.Info)
       params
     }
+
     def ImportFailed(script: String) =
       new MessageParams(
         MessageType.Error,
@@ -755,25 +809,33 @@ object Messages {
 
   object NewScalaProject {
     def selectTheTemplate: String = "Select the template to use"
+
     def enterName: String =
       "Enter a name or a relative path for the new project"
+
     def enterG8Template: String =
       "Enter the giter template, for example `scala/hello-world.g8`," +
         " which corresponds to a github path `github.com/scala/hello-world.g8`"
+
     def creationFailed(what: String, where: String) =
       new MessageParams(
         MessageType.Error,
         s"Could not create $what in $where"
       )
+
     def templateDownloadFailed(why: String) =
       new MessageParams(
         MessageType.Error,
         s"Failed to download templates from the web.\n" + why
       )
+
     def yes = new MessageActionItem("Yes")
+
     def no = new MessageActionItem("No")
+
     def newWindowMessage =
       "Do you want to open the new project in a new window?"
+
     def newProjectCreated(path: AbsolutePath) =
       new MessageParams(
         MessageType.Info,
@@ -802,7 +864,9 @@ object Messages {
         " Do you want to create a new project?"
 
     def inCurrent = new MessageActionItem("In the current directory")
+
     def newWindow = new MessageActionItem("In a new directory")
+
     def dismiss = new MessageActionItem("Not now")
 
     def noBuildToolAskForTemplate(): ShowMessageRequestParams = {
