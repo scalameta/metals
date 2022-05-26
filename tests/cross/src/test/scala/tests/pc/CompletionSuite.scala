@@ -312,47 +312,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |wait(): Unit
            |wait(x$0: Long): Unit
            |wait(x$0: Long, x$1: Int): Unit
-           |""".stripMargin,
-      "3.2" ->
-        """|empty[A]: List[A]
-           |from[B](coll: IterableOnce[B]): List[B]
-           |newBuilder[A]: Builder[A, List[A]]
-           |apply[A](elems: A*): List[A]
-           |concat[A](xss: Iterable[A]*): List[A]
-           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]] @uncheckedVariance]
-           |fill[A](n: Int)(elem: => A): List[A]
-           |iterate[A](start: A, len: Int)(f: A => A): List[A]
-           |range[A: Integral](start: A, end: A): List[A]
-           |range[A: Integral](start: A, end: A, step: A): List[A]
-           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]] @uncheckedVariance]
-           |tabulate[A](n: Int)(f: Int => A): List[A]
-           |unapplySeq[A](x: List[A] @uncheckedVariance): UnapplySeqWrapper[A]
-           |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
-           |->[B](y: B): (A, B)
-           |ensuring(cond: Boolean): A
-           |ensuring(cond: A => Boolean): A
-           |ensuring(cond: Boolean, msg: => Any): A
-           |ensuring(cond: A => Boolean, msg: => Any): A
-           |nn: x.type & T
-           |formatted(fmtstr: String): String
-           |→[B](y: B): (A, B)
-           |iterableFactory[A]: Factory[A, CC[A]]
-           |asInstanceOf[X0]: X0
-           |equals(x$0: Any): Boolean
-           |getClass[X0 >: List.type](): Class[? <: X0]
-           |hashCode(): Int
-           |isInstanceOf[X0]: Boolean
-           |synchronized[X0](x$0: X0): X0
-           |toString(): String
-           |wait(): Unit
-           |wait(x$0: Long): Unit
-           |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin
     )
   )
@@ -424,6 +383,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|TrieMap scala.collection.concurrent
+           |TrieMap[K, V](elems: (K, V)*): CC[K, V]
            |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin
     )
@@ -777,7 +737,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|DelayedLazyVal scala.concurrent
        |""".stripMargin,
     compat = Map(
-      "3" -> "DelayedLazyVal scala.concurrent",
+      "3" -> """|DelayedLazyVal scala.concurrent
+                |DelayedLazyVal[T](f: () => T, body: => Unit)(exec: ExecutionContext): DelayedLazyVal[T]""".stripMargin,
       "2.13" -> "DelayedLazyVal - scala.concurrent"
     )
   )
@@ -989,6 +950,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       ">=3.1.0" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |SomeToExpr - scala.quoted.ToExpr
@@ -996,6 +958,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr - scala.quoted.ToExpr
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr - scala.quoted.FromExpr
@@ -1016,6 +979,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       ">=3.1.0" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |SomeToExpr - scala.quoted.ToExpr
@@ -1023,6 +987,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr - scala.quoted.ToExpr
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr - scala.quoted.FromExpr
@@ -1381,13 +1346,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |  val a = List(1, 2)
        |    .map($0)
        |}""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object O {
-           |  val a = List(1, 2)
-           |    .map
-           |}""".stripMargin
-    ),
     filter = _.contains("map["),
     assertSingleItem = false
   )

@@ -434,13 +434,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
             |""".stripMargin
     )
   )
-  check(
-    "scala6",
-    """
-      |object A {
-      |  scala.util.Try@@
-      |}
-    """.stripMargin,
+
+  val baseTryDocs: String =
     """|> The `Try` type represents a computation that may either result in an exception, or return a
        |successfully computed value. It's similar to, but semantically different from the [scala.util.Either](scala.util.Either) type.
        |
@@ -484,8 +479,23 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |
        |`Try` comes to the Scala standard library after years of use as an integral part of Twitter's stack.
        |Try scala.util
-       |""".stripMargin,
-    includeDocs = true
+       |""".stripMargin
+  check(
+    "scala6",
+    """
+      |object A {
+      |  scala.util.Try@@
+      |}
+    """.stripMargin,
+    baseTryDocs,
+    includeDocs = true,
+    compat = Map(
+      "3" ->
+        s"""|$baseTryDocs> Constructs a `Try` using the by-name parameter.  This
+            |method will ensure any non-fatal exception is caught and a
+            |`Failure` object is returned.
+            |Try[T](r: => T): Try[T]""".stripMargin
+    )
   )
   check(
     "scala7",
@@ -639,7 +649,13 @@ class CompletionDocSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|Failure scala.util
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "3" ->
+        """|Failure scala.util
+           |Failure[T](exception: Throwable): Failure[T]
+           |""".stripMargin
+    )
   )
 
   // New completions not yet implemented for Scala 3

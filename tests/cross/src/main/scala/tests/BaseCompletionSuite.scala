@@ -172,7 +172,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty,
-      topLines: Option[Int] = None
+      topLines: Option[Int] = None,
+      includeDetail: Boolean = false
   )(implicit loc: Location): Unit = {
     test(name) {
       val baseItems = getItems(original)
@@ -182,11 +183,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       }
       val obtained = items
         .map { item =>
-          item
+          val results = item
             .getLeftTextEdit()
             .map(_.getNewText)
             .orElse(Option(item.getInsertText()))
             .getOrElse(item.getLabel)
+          if (includeDetail) results + " - " + item.getDetail()
+          else results
         }
         .mkString("\n")
       assertNoDiff(

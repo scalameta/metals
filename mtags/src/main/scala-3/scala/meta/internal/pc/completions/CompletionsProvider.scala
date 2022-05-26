@@ -288,7 +288,12 @@ class CompletionsProvider(
       case CompletionValue.NamedArg(label, _) =>
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) => mkItem(label, text)
-      case _ => mkItem(ident, ident.backticked)
+      case _ =>
+        completion.snippetSuffix match
+          case Some(suffix) =>
+            mkItem(ident, ident.backticked + suffix)
+          case _ =>
+            mkItem(ident, ident.backticked)
     end match
   end completionItems
 end CompletionsProvider

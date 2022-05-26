@@ -4,9 +4,6 @@ import tests.BaseCompletionSuite
 
 class CompletionSnippetSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   checkSnippet(
     "member",
     """
@@ -23,6 +20,9 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|apply($0)
            |unapplySeq($0)
            |apply($0)
+           |""".stripMargin,
+      "3" ->
+        """|apply($0)
            |""".stripMargin
     )
   )
@@ -53,6 +53,21 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
+    "nullary2",
+    s"""|class Hello{
+        |  def now() = 25
+        |}
+        |object Main {
+        |  val h = new Hello()
+        |  h.no@@
+        |}
+        |""".stripMargin,
+    """|now()
+       |""".stripMargin,
+    topLines = Some(1)
+  )
+
+  checkSnippet(
     "java-nullary",
     """
       |class Foo {
@@ -66,11 +81,19 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     // even if `Foo.toString` is nullary, it overrides `Object.toString()`
     // which is a Java non-nullary method with an empty parameter list.
     """|toString()
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      // it's not easy or efficient to figure out is parent is nullary
+      // for Scala 2 it showed correctly even for children method
+      "3" ->
+        """|toString
+           |""".stripMargin
+    )
   )
 
   checkSnippet(
-    "type-empty",
+    // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+    "type-empty".tag(IgnoreScala3),
     """
       |object Main {
       |  type MyType = List[Int]
@@ -82,7 +105,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    "type-new-empty",
+    // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+    "type-new-empty".tag(IgnoreScala3),
     """
       |object Main {
       |  class Gen[T]
@@ -104,11 +128,18 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     // expand snipppet) and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq[$0]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+        """|IndexedSeq
+           |IndexedSeq
+           |""".stripMargin
+    )
   )
 
   checkSnippet(
-    "type2",
+    "type2".tag(IgnoreScala3),
     s"""|object Main {
         |  new scala.IndexedSeq@@
         |}
@@ -131,6 +162,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|ArrayDeque[$0]
            |ArrayDeque
            |ArrayDequeOps
+           |""".stripMargin,
+      // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+      "3" ->
+        """|ArrayDeque
+           |ArrayDeque
+           |ArrayDequeOps
            |""".stripMargin
     )
   )
@@ -142,7 +179,13 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|SimpleFileVisitor[$0]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
+      "3" ->
+        """|SimpleFileVisitor
+           |""".stripMargin
+    )
   )
 
   checkSnippet(
@@ -159,6 +202,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0] {}
            |IterableOnce[$0] {}
+           |""".stripMargin,
+      "3" ->
+        // scala 3 new completions not implemented, so no way to distinguish if we are at a type position
+        """|Iterable
+           |Iterable
+           |IterableOnce
            |""".stripMargin
     )
   )
@@ -177,6 +226,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0]
            |IterableOnce[$0]
+           |""".stripMargin,
+      "3" ->
+        // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+        """|Iterable
+           |Iterable
+           |IterableOnce
            |""".stripMargin
     )
   )
@@ -195,6 +250,12 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0]
            |IterableOnce[$0]
+           |""".stripMargin,
+      // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
+      "3" ->
+        """|Iterable
+           |Iterable
+           |IterableOnce
            |""".stripMargin
     )
   )
@@ -254,13 +315,50 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "bug1",
+    // no completions are suggested if we already have full type
+    "bug1".tag(IgnoreScala3),
     s"""|object Main {
         |  ___
         |}
         |""".stripMargin,
     "scala.util.Try@@(1)",
     "scala.util.Try(1)"
+  )
+
+  checkEditLine(
+    "case-class",
+    s"""|object Main {
+        |  ___
+        |}
+        |""".stripMargin,
+    "scala.util.Tr@@(1)",
+    "scala.util.Try(1)",
+    filter = str => str.contains("Try")
+  )
+
+  checkSnippet(
+    "case-class2",
+    s"""|object Main {
+        |  scala.util.Tr@@
+        |}
+        |""".stripMargin,
+    """|Try
+       |Either
+       |control
+       |""".stripMargin,
+    // additional completion when apply method is present
+    compat = Map(
+      "3" ->
+        """|Try
+           |Try($0)
+           |""".stripMargin,
+      "2.12" ->
+        """|Try
+           |PropertiesTrait
+           |Either
+           |control
+           |""".stripMargin
+    )
   )
 
   checkEditLine(
@@ -273,6 +371,49 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     "out.+@@=('a')",
     "out.++==('a')",
     filter = _.contains("++=(s: String)")
+  )
+
+  checkSnippet(
+    "multiple-apply",
+    s"""|package example
+        |
+        |case class Widget(name: String, age: Int)
+        |object Widget{
+        |  def apply(name: String): Widget = Widget(name, 0)
+        |  def apply(age: Int): Widget = Widget("name", age)
+        |}
+        |object Main {
+        |  Wi@@
+        |}
+        |""".stripMargin,
+    "Widget -  example",
+    compat = Map(
+      "3" ->
+        """|Widget -  example
+           |Widget($0) - (name: String): Widget
+           |Widget($0) - (age: Int): Widget
+           |Widget($0) - (name: String, age: Int): Widget
+           |""".stripMargin
+    ),
+    includeDetail = true
+  )
+
+  checkSnippet(
+    "no-apply",
+    s"""|package example
+        |
+        |object Widget{}
+        |object Main {
+        |  Wi@@
+        |}
+        |""".stripMargin,
+    "Widget -  example",
+    compat = Map(
+      "3" ->
+        """|Widget -  example
+           |""".stripMargin
+    ),
+    includeDetail = true
   )
 
 }

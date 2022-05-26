@@ -681,7 +681,13 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|Future scala.concurrent
        |Future - java.util.concurrent
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|Future scala.concurrent
+           |Future[T](body: => T)(implicit executor: ExecutionContext): Future[T]
+           |""".stripMargin
+    )
   )
 
   check(

@@ -12,12 +12,14 @@ import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Completion
@@ -55,7 +57,7 @@ class Completions(
           case _ =>
             val (_, compilerCompletions) = Completion.completions(pos)
             val (compiler, result) = compilerCompletions
-              .flatMap(CompletionValue.fromCompiler)
+              .flatMap(toCompletionValues)
               .filterInteresting()
             (advanced ++ compiler, result)
 
@@ -64,6 +66,77 @@ class Completions(
     val values = application.postProcess(all.sorted(ordering))
     (values, result)
   end completions
+
+  private def toCompletionValues(
+      completion: Completion
+  ): List[CompletionValue.Compiler] =
+    val shouldAddSnippet = path match
+      // if the parent is an apply then we already have ()
+      case (fun) :: (appl: GenericApply) :: _ if appl.fun == fun =>
+        false
+      case (_: Import) :: _ => false
+      case _ :: (_: Import) :: _ => false
+      case _ => true
+
+    completion.symbols.flatMap(
+      completionsWithSuffix(_, completion.label, shouldAddSnippet)
+    )
+  end toCompletionValues
+
+  inline private def undoBacktick(label: String): String =
+    label.stripPrefix("`").stripSuffix("`")
+
+  private def findApplySymbols(denot: Denotation): List[Symbol] =
+    denot match
+      case MultiDenotation(denot1, denot2) =>
+        List(findApplySymbols(denot1), findApplySymbols(denot2)).flatten
+      case NoDenotation => Nil
+      case _ =>
+        List(denot.symbol)
+
+  private def findSuffix(
+      shouldAddSnippet: Boolean,
+      methodSymbol: Symbol
+  ): Option[String] =
+    if shouldAddSnippet &&
+      config.isCompletionSnippetsEnabled &&
+      methodSymbol.is(Flags.Method)
+    then
+      val paramss = methodSymbol.paramSymss
+      paramss match
+        case Nil => None
+        case List(Nil) => Some("()")
+        case _ =>
+          val onlyImplicitOrTypeParams = paramss.forall(
+            _.exists { sym =>
+              sym.isType || sym.is(Implicit) || sym.is(Given)
+            }
+          )
+          if onlyImplicitOrTypeParams then None
+          else Some("($0)")
+    else None
+
+  private def completionsWithSuffix(
+      sym: Symbol,
+      label: String,
+      shouldAddSnippet: Boolean
+  ) =
+    // find the apply completion that would need a snippet
+    val methodSymbols = if shouldAddSnippet && sym.is(Flags.Module) then
+      val appl = sym.info.member(nme.apply)
+      sym :: findApplySymbols(appl)
+    else List(sym)
+
+    methodSymbols.map { methodSymbol =>
+      val suffix = findSuffix(shouldAddSnippet, methodSymbol)
+      val name = undoBacktick(label)
+      CompletionValue.Compiler(
+        name,
+        methodSymbol,
+        suffix
+      )
+    }
+  end completionsWithSuffix
 
   /**
    * @return Tuple of completionValues and flag. If the latter boolean value is true
@@ -360,9 +433,13 @@ class Completions(
           isMember(symbol) && symbol.owner != tpe.typeSymbol
         def postProcess(items: List[CompletionValue]): List[CompletionValue] =
           items.map {
-            case CompletionValue.Compiler(label, sym)
+            case CompletionValue.Compiler(label, sym, suffix)
                 if sym.info.paramNamess.nonEmpty && isMember(sym) =>
-              CompletionValue.Compiler(label, substituteTypeVars(sym))
+              CompletionValue.Compiler(
+                label,
+                substituteTypeVars(sym),
+                suffix
+              )
             case other => other
           }
 
