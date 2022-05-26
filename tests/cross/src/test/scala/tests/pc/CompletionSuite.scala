@@ -345,12 +345,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |iterableFactory[A]: Factory[A, CC[A]]
            |asInstanceOf[X0]: X0
            |equals(x$0: Any): Boolean
-           |getClass[X0 >: List.type]: Class[? <: X0]
-           |hashCode: Int
+           |getClass[X0 >: List.type](): Class[? <: X0]
+           |hashCode(): Int
            |isInstanceOf[X0]: Boolean
            |synchronized[X0](x$0: X0): X0
-           |toString: String
-           |wait: Unit
+           |toString(): String
+           |wait(): Unit
            |wait(x$0: Long): Unit
            |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin

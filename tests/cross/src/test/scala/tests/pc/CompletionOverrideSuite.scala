@@ -879,7 +879,10 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "override def hello: Int",
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "3" -> "override protected def hello: Int"
+    )
   )
 
   check(
