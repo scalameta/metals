@@ -29,8 +29,19 @@ class ShortenedNames(val indexedContext: IndexedContext):
 
   private val history = collection.mutable.Map.empty[Name, ShortName]
 
+  /**
+   * Returns a list of shortened names
+   */
+  def namesToImport: List[ShortName] =
+    import indexedContext.ctx
+    history.values.toList.filterNot(name => name.symbol.isRoot)
+
+  /**
+   * Returns a list of TextEdits (auto-imports) of the symbols
+   * that are shortend by "tryShortenName" method, and cached.
+   */
   def imports(autoImportsGen: AutoImportsGenerator): List[TextEdit] =
-    history.values.flatMap { name =>
+    namesToImport.flatMap { name =>
       autoImportsGen.forSymbol(name.symbol).toList.flatten
     }.toList
 
@@ -106,7 +117,8 @@ class ShortenedNames(val indexedContext: IndexedContext):
             ownersLeft match
               case Nil =>
                 val short = ShortName(sym)
-                TypeRef(loop(prefix, Some(short)), sym)
+                if tryShortenName(short) then TypeRef(NoPrefix, sym)
+                else TypeRef(loop(prefix, Some(short)), sym)
               case h :: tl =>
                 indexedContext.rename(h) match
                   case Some(rename) =>
@@ -162,6 +174,11 @@ class ShortenedNames(val indexedContext: IndexedContext):
           AndType(loop(tp1, None), loop(tp2, None))
         case or @ OrType(tp1, tp2) =>
           OrType(loop(tp1, None), loop(tp2, None), or.isSoft)
+        // Replace error type into Any
+        // Otherwise, DotcPrinter (more specifically, RefinedPrinter in Dotty) print the error type as
+        // <error ....>, that is hard to read for users.
+        // It'd be ideal to replace error types with type parameter (see: CompletionOverrideSuite#error) though
+        case t if t.isError => ctx.definitions.AnyType
         case t => t
 
       cached.putIfAbsent(key, result)

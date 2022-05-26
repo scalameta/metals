@@ -21,6 +21,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.TextEdit
 
 class CompletionsProvider(
@@ -63,7 +64,8 @@ class CompletionsProvider(
             buildTargetIdentifier,
             completionPos,
             indexedCtx,
-            path
+            path,
+            config
           ).completions()
         val autoImportsGen = AutoImports.generator(
           completionPos.sourcePos,
@@ -139,7 +141,7 @@ class CompletionsProvider(
     val printer = MetalsPrinter.standard(
       indexedContext,
       search,
-      includeDefaultParam = false
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.ResolveLater
     )
     val editRange = completionPos.toEditRange
 
@@ -155,7 +157,8 @@ class CompletionsProvider(
         ident: String,
         nameEdit: TextEdit,
         isFromWorkspace: Boolean = false,
-        additionalEdits: List[TextEdit] = Nil
+        additionalEdits: List[TextEdit] = Nil,
+        filterText: Option[String] = None
     ): CompletionItem =
 
       val label =
@@ -173,7 +176,7 @@ class CompletionsProvider(
 
       item.setSortText(f"${idx}%05d")
       item.setDetail(description)
-      item.setFilterText(completion.label)
+      item.setFilterText(filterText.getOrElse(completion.label))
 
       item.setTextEdit(nameEdit)
 
@@ -181,15 +184,24 @@ class CompletionsProvider(
 
       completion match
         case v: CompletionValue.Symbolic =>
+          val completionItemDataKind = v match
+            case _: CompletionValue.Override =>
+              CompletionItemData.OverrideKind
+            case _ => null
           item.setData(
             CompletionItemData(
               SemanticdbSymbols.symbolName(v.symbol),
-              buildTargetIdentifier
+              buildTargetIdentifier,
+              kind = completionItemDataKind
             ).toJson
           )
         case _ => None
+      end match
 
       item.setTags(completion.lspTags.asJava)
+
+      if config.isCompletionSnippetsEnabled then
+        item.setInsertTextFormat(InsertTextFormat.Snippet)
 
       item.setKind(kind)
       item
@@ -199,13 +211,18 @@ class CompletionsProvider(
         ident: String,
         value: String,
         isFromWorkspace: Boolean = false,
-        additionalEdits: List[TextEdit] = Nil
+        additionalEdits: List[TextEdit] = Nil,
+        filterText: Option[String] = None,
+        start: Option[Int] = None
     ): CompletionItem =
       val nameEdit = new TextEdit(
-        editRange,
+        start
+          .map(s => completionPos.copy(start = s).toEditRange)
+          .getOrElse(editRange),
         value
       )
-      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits)
+      mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits, filterText)
+    end mkItem
 
     def mkWorkspaceItem(
         ident: String,
@@ -247,6 +264,27 @@ class CompletionsProvider(
                   case IndexedContext.Result.InScope =>
                     mkItem(ident, ident.backticked)
                   case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
+      case CompletionValue.Override(
+            label,
+            value,
+            _,
+            shortNames,
+            filterText,
+            start
+          ) =>
+        val additionalEdits =
+          shortNames
+            .sortBy(nme => nme.name)
+            .flatMap(name => autoImports.forSymbol(name.symbol))
+            .flatten
+        mkItem(
+          label,
+          value,
+          false,
+          additionalEdits,
+          Some(filterText),
+          Some(start)
+        )
       case CompletionValue.NamedArg(label, _) =>
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) => mkItem(label, text)

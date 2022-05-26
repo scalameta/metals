@@ -154,19 +154,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |- `x`: the object to print.
        |println(x: Any): Unit
        |""".stripMargin,
-    includeDocs = true,
-    compat = Map(
-      "3" ->
-        """|> Prints a newline character on the default output.
-           |println: Unit
-           |> Prints out an object to the default output, followed by a newline character.
-           |
-           |
-           |**Parameters**
-           |- `x`: the object to print.
-           |println(x: Any): Unit
-           |""".stripMargin
-    )
+    includeDocs = true
   )
 
   val commonlyUsedTypesPre2134: String =

@@ -4,8 +4,10 @@ import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
+import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.core.Contexts.Context
@@ -26,7 +28,8 @@ class MetalsPrinter(
     names: ShortenedNames,
     dotcPrinter: DotcPrinter,
     symbolSearch: SymbolSearch,
-    includeDefaultParam: Boolean = false
+    includeDefaultParam: MetalsPrinter.IncludeDefaultParam =
+      IncludeDefaultParam.ResolveLater
 )(using
     Context
 ):
@@ -48,6 +51,8 @@ class MetalsPrinter(
 
   private val defaultWidth = 1000
 
+  def shortenedNames: List[ShortName] = names.namesToImport
+
   def expressionType(tpw: Type)(using Context): Option[String] =
     tpw match
       case t: PolyType =>
@@ -64,8 +69,7 @@ class MetalsPrinter(
 
   def tpe(tpe: Type): String =
     val short = names.shortType(tpe)
-    if short.isErroneous then "Any"
-    else dotcPrinter.tpe(short)
+    dotcPrinter.tpe(short)
 
   def hoverSymbol(sym: Symbol, info: Type)(using Context): String =
     val typeSymbol = info.typeSymbol
@@ -122,11 +126,18 @@ class MetalsPrinter(
    *         e.g. "[A: Ordering](a: A, b: B): collection.mutable.Map[A, B]"
    *              ": collection.mutable.Map[A, B]" for no-arg method
    */
-  private def defaultMethodSignature(
+  def defaultMethodSignature(
       gsym: Symbol,
       gtpe: Type,
       onlyMethodParams: Boolean = false
   ): String =
+    val namess = gtpe.paramNamess
+    val infoss = gtpe.paramInfoss
+    val nameToInfo: Map[Name, Type] = (for
+      pairs <- namess.zip(infoss).map { (names, infos) => names.zip(infos) }
+      pair <- pairs
+    yield pair).toMap
+
     val (methodParams, extParams) = splitExtensionParamss(gsym)
     val paramss = methodParams ++ extParams
     lazy val implicitParams: List[Symbol] =
@@ -166,7 +177,8 @@ class MetalsPrinter(
                 param,
                 implicitEvidencesByTypeParam,
                 index,
-                defaultValues
+                defaultValues,
+                nameToInfo
               ) :: Nil
           index += 1
           lab
@@ -250,28 +262,30 @@ class MetalsPrinter(
   private def paramssString(
       paramLabels: Iterator[Iterator[String]],
       paramss: List[List[Symbol]]
-  )(using Context) =
+  )(using Context): Iterator[String] =
     paramLabels
-      .zip(paramss)
+      .zipAll(paramss, Nil, Nil)
       .map { case (params, syms) =>
         Params.paramsKind(syms) match
-          case Params.Kind.TypeParameter =>
+          case Params.Kind.TypeParameter if params.nonEmpty =>
             params.mkString("[", ", ", "]")
           case Params.Kind.Normal =>
             params.mkString("(", ", ", ")")
-          case Params.Kind.Using =>
+          case Params.Kind.Using if params.nonEmpty =>
             params.mkString(
               "(using ",
               ", ",
               ")"
             )
-          case Params.Kind.Implicit =>
+          case Params.Kind.Implicit if params.nonEmpty =>
             params.mkString(
               "(implicit ",
               ", ",
               ")"
             )
+          case _ => ""
       }
+  end paramssString
 
   /**
    * Construct param (both value params and type params) label string (e.g. "param1: TypeOfParam", "A: Ordering")
@@ -281,10 +295,24 @@ class MetalsPrinter(
       param: Symbol,
       implicitEvidences: Map[Symbol, List[String]],
       index: Int,
-      defaultValues: => Seq[String]
+      defaultValues: => Seq[String],
+      nameToInfo: Map[Name, Type]
   ): String =
     val keywordName = dotcPrinter.name(param)
-    val paramTypeString = tpe(param.info)
+    val info = nameToInfo
+      .get(param.name)
+      .flatMap { info =>
+        // In some cases, paramInfo becomes Nothing (e.g. CompletionOverrideSuite#cake)
+        // which is meaningless, in that case, fallback to param.info
+        if info.isNothingType then None
+        else Some(info)
+      }
+      .getOrElse(param.info)
+
+    // use `nameToInfo.get(param.name)` instead of `param.info` because
+    // param.info loses `asSeenFrom` information:
+    // parameter `f` of `foreach[U](f: A => U)` in `new scala.Traversable[Int]` should be `foreach[U](f: Int => U)`
+    val paramTypeString = tpe(info)
     if param.isTypeParam then
       // pretty context bounds
       // e.g. f[A](a: A, b: A)(implicit evidence$1: Ordering[A])
@@ -302,14 +330,16 @@ class MetalsPrinter(
     else
       val isDefaultParam = param.isAllOf(DefaultParameter)
       val default =
-        if includeDefaultParam && isDefaultParam then
+        if includeDefaultParam == MetalsPrinter.IncludeDefaultParam.Include && isDefaultParam
+        then
           val defaultValue = defaultValues.lift(index) match
             case Some(value) if !value.isEmpty => value
             case _ => "..."
           s" = $defaultValue"
         // to be populated later, otherwise we would spend too much time in completions
-        else if isDefaultParam then " = ..."
-        else ""
+        else if includeDefaultParam == MetalsPrinter.IncludeDefaultParam.ResolveLater && isDefaultParam
+        then " = ..."
+        else "" // includeDefaultParam == Never or !isDefaultParam
       s"$keywordName: ${paramTypeString}$default"
     end if
   end paramLabel
@@ -346,7 +376,7 @@ object MetalsPrinter:
   def standard(
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
-      includeDefaultParam: Boolean
+      includeDefaultParam: IncludeDefaultParam
   ): MetalsPrinter =
     import indexed.ctx
     MetalsPrinter(
@@ -360,7 +390,7 @@ object MetalsPrinter:
       shortenedNames: ShortenedNames,
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
-      includeDefaultParam: Boolean
+      includeDefaultParam: IncludeDefaultParam
   ): MetalsPrinter =
     import shortenedNames.indexedContext.ctx
     MetalsPrinter(
@@ -369,5 +399,18 @@ object MetalsPrinter:
       symbolSearch,
       includeDefaultParam
     )
+
+  enum IncludeDefaultParam:
+    /** Include default param at `textDocument/completion` */
+    case Include
+
+    /**
+     * Include default param as "..." and populate it later at `completionItem/resolve`
+     * @see https://github.com/scalameta/metals/blob/09d62c2e2f77a63c7d21ffa19971e2bb3fc9ab34/mtags/src/main/scala/scala/meta/internal/pc/ItemResolver.scala#L88-L103
+     */
+    case ResolveLater
+
+    /** Do not add default parameter */
+    case Never
 
 end MetalsPrinter

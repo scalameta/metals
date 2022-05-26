@@ -304,12 +304,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |iterableFactory[A]: Factory[A, CC[A]]
            |asInstanceOf[X0]: X0
            |equals(x$0: Any): Boolean
-           |getClass[X0 >: List.type]: Class[? <: X0]
-           |hashCode: Int
+           |getClass[X0 >: List.type](): Class[? <: X0]
+           |hashCode(): Int
            |isInstanceOf[X0]: Boolean
            |synchronized[X0](x$0: X0): X0
-           |toString: String
-           |wait: Unit
+           |toString(): String
+           |wait(): Unit
            |wait(x$0: Long): Unit
            |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin,
@@ -345,12 +345,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |iterableFactory[A]: Factory[A, CC[A]]
            |asInstanceOf[X0]: X0
            |equals(x$0: Any): Boolean
-           |getClass[X0 >: List.type]: Class[? <: X0]
-           |hashCode: Int
+           |getClass[X0 >: List.type](): Class[? <: X0]
+           |hashCode(): Int
            |isInstanceOf[X0]: Boolean
            |synchronized[X0](x$0: X0): X0
-           |toString: String
-           |wait: Unit
+           |toString(): String
+           |wait(): Unit
            |wait(x$0: Long): Unit
            |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin
@@ -696,10 +696,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|toCharArray(): Array[Char]
        |""".stripMargin,
     compat = Map(
-      "2.11" -> "", // SAM was introduced in Scala 2.12
-      "3" ->
-        """|toCharArray: Array[Char]
-           |""".stripMargin
+      "2.11" -> "" // SAM was introduced in Scala 2.12
     )
   )
 
@@ -816,7 +813,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      "3" -> "incrementThisType: (A.this : singleton.A)"
+      "3" -> "incrementThisType(): (A.this : singleton.A)"
     )
   )
 

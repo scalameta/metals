@@ -47,6 +47,15 @@ object AutoImports:
       if sym.owner.showName == ownerRename then SpecifiedOwner(sym)
       else Renamed(sym, ownerRename)
 
+  /**
+   * Returns AutoImportsGenerator
+   *
+   * @param pos A source position where the autoImport is invoked
+   * @param text Source text of the file
+   * @param tree A typed tree of the file
+   * @param indexedContext A context of the position where the autoImport is invoked
+   * @param config A presentation compiler config, this is used for renames
+   */
   def generator(
       pos: SourcePosition,
       text: String,
@@ -77,7 +86,7 @@ object AutoImports:
     new AutoImportsGenerator(
       pos,
       importPos,
-      indexedContext.importContext,
+      indexedContext,
       renames
     )
   end generator
@@ -98,6 +107,15 @@ object AutoImports:
     def nameOnly(edit: l.TextEdit): AutoImportEdits =
       AutoImportEdits(Some(edit), None)
 
+  /**
+   * AutoImportsGenerator generates TextEdits of auto-imports
+   * for the given symbols.
+   *
+   * @param pos A source position where the autoImport is invoked
+   * @param importPosition A position to insert new imports
+   * @param indexedContext A context of the position where the autoImport is invoked
+   * @param renames A function that returns the name of the given symbol which is renamed on import statement.
+   */
   class AutoImportsGenerator(
       pos: SourcePosition,
       importPosition: AutoImportPosition,
@@ -110,6 +128,9 @@ object AutoImports:
     def forSymbol(symbol: Symbol): Option[List[l.TextEdit]] =
       editsForSymbol(symbol).map(_.edits)
 
+    /**
+     * @param symbol A missing symbol to auto-import
+     */
     def editsForSymbol(symbol: Symbol): Option[AutoImportEdits] =
       inferAutoImport(symbol).map { ai =>
         def mkImportEdit = importEdit(List(ai), importPosition)
@@ -171,7 +192,7 @@ object AutoImports:
     end importEdit
 
     private def importName(sym: Symbol): String =
-      if indexedContext.toplevelClashes(sym) then
+      if indexedContext.importContext.toplevelClashes(sym) then
         s"_root_.${sym.fullNameBackticked}"
       else sym.fullNameBackticked
   end AutoImportsGenerator

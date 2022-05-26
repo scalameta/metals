@@ -10,11 +10,13 @@ import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
@@ -33,32 +35,113 @@ class Completions(
     buildTargetIdentifier: String,
     completionPos: CompletionPos,
     indexedContext: IndexedContext,
-    path: List[Tree]
+    path: List[Tree],
+    config: PresentationCompilerConfig
 ):
 
   implicit val context: Context = ctx
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
-    val (completions, result) = path match
-      // should not show completions for toplevel
-      case Nil if pos.source.file.extension != "sc" =>
-        (List.empty, SymbolSearch.Result.COMPLETE)
-      case Select(qual, _) :: _ if qual.tpe.isErroneous =>
-        (List.empty, SymbolSearch.Result.COMPLETE)
-      case _ =>
-        val (_, compilerCompletions) = Completion.completions(pos)
-        compilerCompletions
-          .flatMap(CompletionValue.fromCompiler)
-          .filterInteresting()
+    val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
+    val (all, result) =
+      if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
+      else
+        path match
+          // should not show completions for toplevel
+          case Nil if pos.source.file.extension != "sc" =>
+            (advanced, SymbolSearch.Result.COMPLETE)
+          case Select(qual, _) :: _ if qual.tpe.isErroneous =>
+            (advanced, SymbolSearch.Result.COMPLETE)
+          case _ =>
+            val (_, compilerCompletions) = Completion.completions(pos)
+            val (compiler, result) = compilerCompletions
+              .flatMap(CompletionValue.fromCompiler)
+              .filterInteresting()
+            (advanced ++ compiler, result)
 
-    val args = NamedArgCompletions.contribute(pos, path)
-    val keywords = KeywordsCompletions.contribute(path, completionPos)
-    val all = completions ++ args ++ keywords
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application)
     val values = application.postProcess(all.sorted(ordering))
     (values, result)
   end completions
+
+  /**
+   * @return Tuple of completionValues and flag. If the latter boolean value is true
+   *         Metals should provide advanced completions only.
+   */
+  private def advancedCompletions(
+      path: List[Tree],
+      pos: SourcePosition,
+      completionPos: CompletionPos
+  ): (List[CompletionValue], Boolean) =
+    path match
+      // class FooImpl extends Foo:
+      //   def x|
+      case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
+          if t.parents.nonEmpty =>
+        val completing =
+          if dd.symbol.name == StdNames.nme.ERROR then None else Some(dd.symbol)
+        val values = OverrideCompletions.contribute(
+          td,
+          completing,
+          dd.sourcePos.start,
+          indexedContext,
+          search,
+          config
+        )
+        (values, true)
+
+      // class FooImpl extends Foo:
+      //   ov|
+      case (ident: Ident) :: (t: Template) :: (td: TypeDef) :: _
+          if t.parents.nonEmpty && ident.name.startsWith("o") =>
+        val values = OverrideCompletions.contribute(
+          td,
+          None,
+          ident.sourcePos.start,
+          indexedContext,
+          search,
+          config
+        )
+        // include compiler-oriented completions, in case `ov` doesn't mean the prefix of `override`
+        (values, false)
+
+      // class Main extends Val:
+      //    def @@
+      case (t: Template) :: (td: TypeDef) :: _ if t.parents.nonEmpty =>
+        val values = OverrideCompletions.contribute(
+          td,
+          None,
+          t.sourcePos.start,
+          indexedContext,
+          search,
+          config
+        )
+        (values, true)
+
+      // class Main extends Val:
+      //    hello@@
+      case (sel: Select) :: (t: Template) :: (td: TypeDef) :: _
+          if t.parents.nonEmpty =>
+        val values = OverrideCompletions.contribute(
+          td,
+          Some(sel.symbol),
+          sel.sourcePos.start,
+          indexedContext,
+          search,
+          config
+        )
+        (values, false)
+
+      // From Scala 3.1.3-RC3 (as far as I know), path contains
+      // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
+      case Literal(Constant(null)) :: tl =>
+        advancedCompletions(tl, pos, completionPos)
+
+      case _ =>
+        val args = NamedArgCompletions.contribute(pos, path)
+        val keywords = KeywordsCompletions.contribute(path, completionPos)
+        (args ++ keywords, false)
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
@@ -118,6 +201,7 @@ class Completions(
       def visit(head: CompletionValue): Boolean =
         val (id, include) =
           head match
+            case over: CompletionValue.Override => (over.label, true)
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
@@ -194,8 +278,17 @@ class Completions(
       // symbols defined in this file are more relevant
       if pos.source != sym.source || sym.is(Package) then
         relevance |= IsNotDefinedInFile
-      // fields are more relevant than non fields
-      if !hasGetter(sym) then relevance |= IsNotGetter
+
+      // fields are more relevant than non fields (such as method)
+      completion match
+        // For override-completion, we don't care fields or methods because
+        // we can override both fields and non-fields
+        case _: CompletionValue.Override =>
+          relevance |= IsNotGetter
+        case _ if !hasGetter(sym) =>
+          relevance |= IsNotGetter
+        case _ =>
+
       // symbols whose owner is a base class are less relevant
       if sym.owner == defn.AnyClass || sym.owner == defn.ObjectClass
       then relevance |= IsInheritedBaseMethod
@@ -220,6 +313,11 @@ class Completions(
     end symbolRelevance
 
     completion match
+      case ov: CompletionValue.Override =>
+        var penalty = symbolRelevance(ov.symbol)
+        // show the abstract members first
+        if !ov.symbol.is(Deferred) then penalty |= MemberOrdering.IsNotAbstract
+        penalty
       case CompletionValue.Workspace(_, sym) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
       case sym: CompletionValue.Symbolic =>
@@ -288,7 +386,7 @@ class Completions(
   ): Ordering[CompletionValue] =
     new Ordering[CompletionValue]:
       val queryLower = completionPos.query.toLowerCase()
-      val fuzzyCache = mutable.Map.empty[Symbol, Int]
+      val fuzzyCache = mutable.Map.empty[CompletionValue, Int]
 
       def compareLocalSymbols(s1: Symbol, s2: Symbol): Int =
         if s1.isLocal && s2.isLocal then
@@ -303,10 +401,10 @@ class Completions(
           computeRelevancePenalty(o2, application)
         )
 
-      def fuzzyScore(o: Symbol): Int =
+      def fuzzyScore(o: CompletionValue.Symbolic): Int =
         fuzzyCache.getOrElseUpdate(
           o, {
-            val name = o.name.toString().toLowerCase()
+            val name = o.label.toLowerCase()
             if name.startsWith(queryLower) then 0
             else if name.toLowerCase().contains(queryLower) then 1
             else 2
@@ -349,8 +447,8 @@ class Completions(
               if byRelevance != 0 then byRelevance
               else
                 val byFuzzy = Integer.compare(
-                  fuzzyScore(s1),
-                  fuzzyScore(s2)
+                  fuzzyScore(sym1),
+                  fuzzyScore(sym2)
                 )
                 if byFuzzy != 0 then byFuzzy
                 else
@@ -378,7 +476,6 @@ class Completions(
             val byApplyParams = compareInApplyParams(o1, o2)
             if byApplyParams != 0 then byApplyParams
             else compareByRelevance(o1, o2)
-
       end compare
 
 end Completions
