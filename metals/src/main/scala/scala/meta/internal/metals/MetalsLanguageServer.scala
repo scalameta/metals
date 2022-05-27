@@ -1982,38 +1982,6 @@ class MetalsLanguageServer(
               } else
                 ().asInstanceOf[Object]
             )
-
-        //          for { // ordered serial computation of these futures is crucial.
-        //            // so please do not assign them to `val`s before
-        //            // adding them to the for comprehension
-        //            formattingEdits <- formattingProvider.format(path, token)
-        //            if (!formattingEdits.isEmpty)
-        //            _ <- languageClient
-        //              .applyEdit(
-        //                new ApplyWorkspaceEditParams(
-        //                  new l.WorkspaceEdit(Map(uri -> formattingEdits).asJava)
-        //                )
-        //              )
-        //              .asScala
-        //            _ <- languageClient
-        //              .applyEdit(
-        //                new ApplyWorkspaceEditParams(
-        //                  new l.WorkspaceEdit(
-        //                    Map(
-        //                      uri -> BracelessBracefulSwitchCodeAction
-        //                        .calculateBraceRemovalEdits(
-        //                          formattingEdits.get(0).getNewText,
-        //                          initialFileCode,
-        //                          textDocumentPositionParams,
-        //                          trees
-        //                        )
-        //                        .asJava
-        //                    ).asJava
-        //                  )
-        //                )
-        //              )
-        //              .asScala
-        //          } yield ().asInstanceOf[Object]
         }
 
       case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>
