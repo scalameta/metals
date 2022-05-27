@@ -43,7 +43,7 @@ abstract class BaseEvaluationDapSuite(
   )(implicit loc: Location): Unit = {
     test(name) {
       cleanWorkspace()
-      val debugLayout = DebugWorkspaceLayout(source)
+      val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
       val evaluator = new ExpressionEvaluator(expression)
 

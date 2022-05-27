@@ -106,9 +106,10 @@ abstract class BaseLspSuite(
       icons = this.icons
     )
 
-    val initOptions = initializationOptions.map {
-      _.copy(isVirtualDocumentSupported = Some(useVirtualDocs))
-    }
+    val initOptions = initializationOptions
+      .getOrElse(TestingServer.TestDefault)
+      .copy(isVirtualDocumentSupported = Some(useVirtualDocs))
+
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(
       workspace,

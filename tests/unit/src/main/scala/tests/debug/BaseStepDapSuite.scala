@@ -23,9 +23,6 @@ abstract class BaseStepDapSuite(
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
 
-  private val scalaLibDependency = s"scala-library-$scalaVersion-sources.jar"
-  private val javaLibDependency = s"src.zip"
-
   assertSteps("step-out")(
     sources = """|/a/src/main/scala/Main.scala
                  |package a
@@ -107,11 +104,12 @@ abstract class BaseStepDapSuite(
                  |""".stripMargin,
     main = "a.Main",
     instrument = steps => {
-      val jarDep =
-        s"$scalaLibDependency${if (useVirtualDocuments) "!" else ""}/scala/Predef.scala"
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(jarDep, line = 427)(Continue)
+        .atDependency(
+          server.toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
+          line = 427
+        )(Continue)
     }
   )
 
@@ -132,11 +130,12 @@ abstract class BaseStepDapSuite(
         if (isJava17) ("java.base/java/io/PrintStream.java", 1027)
         else if (isJava8) ("java/io/PrintStream.java", 805)
         else ("java.base/java/io/PrintStream.java", 881)
-      val jarDep =
-        s"$javaLibDependency${if (useVirtualDocuments) "!" else ""}/$javaLibFile"
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(jarDep, javaLibLine)(Continue)
+        .atDependency(
+          server.toPathFromSymbol("java.io.PrintStream", javaLibFile),
+          javaLibLine
+        )(Continue)
     }
   )
 
@@ -172,7 +171,7 @@ abstract class BaseStepDapSuite(
   )(implicit loc: Location): Unit = {
     test(name, withoutVirtualDocs) {
       cleanWorkspace()
-      val debugLayout = DebugWorkspaceLayout(sources)
+      val debugLayout = DebugWorkspaceLayout(sources, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
 
       for {

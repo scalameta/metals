@@ -78,11 +78,10 @@ abstract class BaseDapSuite(
       workspace: DebugWorkspaceLayout
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
-      workspace.files
+      workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          val path = server.toPath(file.relativePath)
-          debugger.setBreakpoints(path, file.breakpoints)
+          debugger.setBreakpoints(file.path, file.breakpoints)
         }
     }
   }
@@ -92,11 +91,10 @@ abstract class BaseDapSuite(
       workspace: DebugWorkspaceLayout
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
-      workspace.files
+      workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          val path = server.toPath(file.relativePath)
-          debugger.setBreakpoints(path, Nil)
+          debugger.setBreakpoints(file.path, Nil)
         }
     }
   }
@@ -112,7 +110,7 @@ abstract class BaseDapSuite(
     test(name) {
 
       cleanWorkspace()
-      val debugLayout = DebugWorkspaceLayout(source)
+      val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
       val navigator = navigateExpectedBreakpoints(debugLayout)
 
@@ -133,16 +131,16 @@ abstract class BaseDapSuite(
       workspaceLayout: DebugWorkspaceLayout
   ): StepNavigator = {
 
-    val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
-      file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
+    val expectedBreakpoints = workspaceLayout.filesBreakpoints.flatMap { file =>
+      file.breakpoints.map(line => Breakpoint(file.path.toString(), line))
     }
 
     expectedBreakpoints.foldLeft(StepNavigator(workspace)) {
       (navigator, breakpoint) =>
-        navigator.at(breakpoint.relativePath, breakpoint.line + 1)(Continue)
+        navigator.at(breakpoint.path, breakpoint.line + 1)(Continue)
     }
   }
 
 }
 
-private final case class Breakpoint(relativePath: String, line: Int)
+private final case class Breakpoint(path: String, line: Int)

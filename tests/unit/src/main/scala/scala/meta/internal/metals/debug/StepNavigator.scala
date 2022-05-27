@@ -3,14 +3,12 @@ package scala.meta.internal.metals.debug
 import scala.collection.mutable
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.StepNavigator._
 import scala.meta.io.AbsolutePath
 
 final class StepNavigator(
     root: AbsolutePath,
-    dependencies: AbsolutePath,
     steps: Seq[(Location, DebugStep)]
 ) extends Stoppage.Handler {
   private val expectedSteps = mutable.Queue(steps: _*)
@@ -28,7 +26,7 @@ final class StepNavigator(
       val (expected, nextStep) = expectedSteps.dequeue()
 
       if (actualLine == expected.line && expected.pathEquals(actualPath)) {
-        if (actualPath.toAbsolutePath.exists) {
+        if (expected.exists) {
           nextStep
         } else {
           throw new Exception(s"${expected.file} does not exist")
@@ -46,17 +44,17 @@ final class StepNavigator(
     at(location)(nextStep)
   }
 
-  def atDependency(path: String, line: Int)(
+  def atDependency(path: AbsolutePath, line: Int)(
       nextStep: DebugStep
   ): StepNavigator = {
-    val location = DependencyLocation(dependencies, path, line)
+    val location = DependencyLocation(path, line)
     at(location)(nextStep)
   }
 
   private def at(location: Location)(
       nextStep: DebugStep
   ): StepNavigator = {
-    new StepNavigator(root, dependencies, steps :+ (location -> nextStep))
+    new StepNavigator(root, steps :+ (location -> nextStep))
   }
 
   override def shutdown: Future[Unit] = {
@@ -71,32 +69,37 @@ final class StepNavigator(
 }
 
 object StepNavigator {
-  def apply(root: AbsolutePath): StepNavigator =
-    new StepNavigator(root, root.resolve(Directories.dependencies), Nil)
+  def apply(root: AbsolutePath): StepNavigator = new StepNavigator(root, Nil)
 
   sealed trait Location {
     def pathEquals(actual: String): Boolean
     def file: String
     def line: Long
+    def exists: Boolean
   }
-  case class WorkspaceLocation(root: AbsolutePath, path: String, lineNum: Long)
-      extends Location {
+  case class WorkspaceLocation(
+      root: AbsolutePath,
+      relativePath: String,
+      lineNum: Long
+  ) extends Location {
 
     override def pathEquals(actual: String): Boolean =
-      actual.toAbsolutePath.toString == file.toString
-    override def file: String = root.resolve(path).toString
+      actual == file
+
+    override def exists: Boolean = root.resolve(relativePath).exists
+    override def file: String = root.resolve(relativePath).toString
     override def line: Long = lineNum
     override def toString: String = s"$root$file:$line"
   }
   case class DependencyLocation(
-      dependencies: AbsolutePath,
-      path: String,
+      path: AbsolutePath,
       lineNum: Long
   ) extends Location {
 
-    override def pathEquals(actual: String): Boolean = actual.endsWith(path)
-    override def file: String = dependencies.resolve(path).toString
+    override def pathEquals(actual: String): Boolean =
+      path.toURI.toString.endsWith(actual)
+    override def file: String = path.toURI.toString()
     override def line: Long = lineNum
-    override def toString: String = s"$dependencies$file:$line"
+    override def exists: Boolean = path.exists
   }
 }
