@@ -8,11 +8,11 @@ on:
       metals_version:
         description: "Metals Version"
         required: true
-        default: "v0.11.5"
+        default: "v0.11.6"
       metals_ref:
         description: "Tag/branch-name from which run release"
         required: true
-        default: "v0.11.5_mtags_release"
+        default: "v0.11.6"
 jobs:
   test_and_release:
     runs-on: ubuntu-latest
