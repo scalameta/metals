@@ -53,7 +53,7 @@ class AddingBracesCodeAction(
         tree match {
           case _: Pkg => None.toSeq
           case valDefn: Defn.Val =>
-            createCodeActionForPotentialBlockHolder(
+            codeActionForBlockHolder(
               valDefn,
               path,
               document,
@@ -62,7 +62,7 @@ class AddingBracesCodeAction(
             ).toSeq
           case varDefn: Defn.Var =>
             varDefn.rhs.flatMap {
-              createCodeActionForPotentialBlockHolder(
+              codeActionForBlockHolder(
                 varDefn,
                 path,
                 document,
@@ -71,7 +71,7 @@ class AddingBracesCodeAction(
               )
             }.toSeq
           case defDefn: Defn.Def =>
-            createCodeActionForPotentialBlockHolder(
+            codeActionForBlockHolder(
               defDefn,
               path,
               document,
@@ -88,7 +88,7 @@ class AddingBracesCodeAction(
             Try(
               Seq(
                 (
-                  createCodeActionForPotentialBlockHolder(
+                  codeActionForBlockHolder(
                     termTry,
                     path,
                     document,
@@ -99,7 +99,7 @@ class AddingBracesCodeAction(
                 ),
                 (
                   termTry.finallyp.flatMap(finallyp =>
-                    createCodeActionForPotentialBlockHolder(
+                    codeActionForBlockHolder(
                       termTry,
                       path,
                       document,
@@ -126,7 +126,7 @@ class AddingBracesCodeAction(
             Try(
               Seq(
                 (
-                  createCodeActionForPotentialBlockHolder(
+                  codeActionForBlockHolder(
                     termIf,
                     path,
                     document,
@@ -137,7 +137,7 @@ class AddingBracesCodeAction(
                   distanceToThen
                 ),
                 (
-                  createCodeActionForPotentialBlockHolder(
+                  codeActionForBlockHolder(
                     termIf,
                     path,
                     document,
@@ -150,7 +150,7 @@ class AddingBracesCodeAction(
             ).map(_._1).toOption.flatten.toList
 
           case termFor: Term.For =>
-            createCodeActionForPotentialBlockHolder(
+            codeActionForBlockHolder(
               termFor,
               path,
               document,
@@ -158,7 +158,7 @@ class AddingBracesCodeAction(
               "for expression"
             ).toSeq
           case termForYield: Term.ForYield =>
-            createCodeActionForPotentialBlockHolder(
+            codeActionForBlockHolder(
               termForYield,
               path,
               document,
@@ -166,7 +166,7 @@ class AddingBracesCodeAction(
               "yield expression"
             ).toSeq
           case termWhile: Term.While =>
-            createCodeActionForPotentialBlockHolder(
+            codeActionForBlockHolder(
               termWhile,
               path,
               document,
@@ -185,7 +185,7 @@ class AddingBracesCodeAction(
               }
               .getOrElse("template")
             template.parent.flatMap {
-              createCodeActionForTemplateHolder(
+              codeActionForTemplateHolder(
                 _,
                 path,
                 document,
@@ -198,7 +198,7 @@ class AddingBracesCodeAction(
                 case _ => false
               }) =>
             termBlock.parent.flatMap { blockHolder =>
-              createCodeActionForPotentialBlockHolder(
+              codeActionForBlockHolder(
                 blockHolder,
                 path,
                 document,
@@ -242,7 +242,7 @@ class AddingBracesCodeAction(
     }
   }
 
-  private def createCodeActionToTakePotentialBlockHolderBraceful(
+  private def addBracesToBlockHolderAction(
       blockHolder: Tree,
       path: AbsolutePath,
       document: String,
@@ -276,7 +276,7 @@ class AddingBracesCodeAction(
           bracelessStartToken.pos.toLSP.getStart
         else bracelessStartToken.pos.toLSP.getEnd
 
-    } yield createCodeActionForGoingBraceful(
+    } yield addBracesAction(
       path,
       expectedBraceStartPos = bracePose,
       expectedBraceEndPose = blockEmbraceable.pos.toLSP.getEnd,
@@ -300,7 +300,7 @@ class AddingBracesCodeAction(
    * @param codeActionSubjectTitle
    * @return
    */
-  private def createCodeActionForPotentialBlockHolder(
+  private def codeActionForBlockHolder(
       blockHolder: Tree,
       path: AbsolutePath,
       document: String,
@@ -312,7 +312,7 @@ class AddingBracesCodeAction(
       getIndentationForPositionInDocument(blockHolder.pos, document)
 
     if (!isBlockEmbraceableBraced(blockEmbraceable)) {
-      createCodeActionToTakePotentialBlockHolderBraceful(
+      addBracesToBlockHolderAction(
         blockHolder,
         path,
         document,
@@ -333,7 +333,7 @@ class AddingBracesCodeAction(
       )
       .map(_.pos)
 
-  private def createCodeActionForTemplateHolder(
+  private def codeActionForTemplateHolder(
       templateHolder: Tree,
       path: AbsolutePath,
       document: String,
@@ -349,7 +349,7 @@ class AddingBracesCodeAction(
       }
       .getOrElse(templ.pos.start)
     if (!hasBraces(templ)) {
-      createCodeActionToTakeTemplateHolderBraceful(
+      addBracesToTemplateHolderAction(
         templateHolder,
         path,
         document,
@@ -361,7 +361,7 @@ class AddingBracesCodeAction(
     } else None
   }
 
-  private def createCodeActionToTakeTemplateHolderBraceful(
+  private def addBracesToTemplateHolderAction(
       templateHolder: Tree,
       path: AbsolutePath,
       document: String,
@@ -377,7 +377,7 @@ class AddingBracesCodeAction(
           token.text == ":" && token.pos.start >= expectedBraceStartPos
         )
         .map(_.pos.toLSP.getStart)
-    } yield createCodeActionForGoingBraceful(
+    } yield addBracesAction(
       path,
       expectedBraceStartPos = colonPose,
       expectedBraceEndPose = templ.pos.toLSP.getEnd,
@@ -390,7 +390,7 @@ class AddingBracesCodeAction(
     )
   }
 
-  private def createCodeActionForGoingBraceful(
+  private def addBracesAction(
       path: AbsolutePath,
       indentation: String,
       document: String,
