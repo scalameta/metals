@@ -82,9 +82,6 @@ class AddingBracesCodeAction(
             val cursorLine = cursorPosition.getLine
             val tryLine = termTry.expr.pos.toLSP.getStart.getLine
             val distanceToTry = (cursorLine - tryLine).abs
-            val distanceToCatchP = (cursorLine - Try(
-              termTry.catchp.minBy(_.pos.start).pos.toLSP.getStart.getLine
-            ).getOrElse(Int.MaxValue)).abs
             val distanceToFinally = (cursorLine - termTry.finallyp
               .map(_.pos.toLSP.getStart.getLine)
               .getOrElse(Int.MaxValue)).abs
@@ -99,15 +96,6 @@ class AddingBracesCodeAction(
                     "try expression"
                   ),
                   distanceToTry
-                ),
-                (
-                  createCodeActionForCatchP(
-                    termTry,
-                    path,
-                    document,
-                    "catch expression"
-                  ),
-                  distanceToCatchP
                 ),
                 (
                   termTry.finallyp.flatMap(finallyp =>
@@ -218,13 +206,7 @@ class AddingBracesCodeAction(
                 "block"
               )
             }
-          case termMatch: Term.Match =>
-            createCodeActionForTermMatch(
-              termMatch,
-              path,
-              document,
-              "match cases"
-            )
+
           case _ => None
         }
       }
@@ -258,151 +240,6 @@ class AddingBracesCodeAction(
       case termBlock: Term.Block => hasBraces(termBlock)
       case _ => false
     }
-  }
-
-  private def createCodeActionForCatchP(
-      termTry: Term.Try,
-      path: AbsolutePath,
-      document: String,
-      codeActionSubjectTitle: String
-  ): Option[l.CodeAction] = {
-    val maybeCatchToken = util
-      .Try(
-        termTry.tokens.tokens
-          .filter(token =>
-            token.pos.end > termTry.expr.pos.end && token.text == "catch"
-          )
-          .minBy(_.pos.end)
-      )
-      .toOption
-    val maybeFirstCase =
-      util.Try(termTry.catchp.minBy(_.pos.start)).toOption
-    val potentialOpenBraceToken = maybeCatchToken
-      .flatMap(catchToken =>
-        util
-          .Try(
-            termTry.tokens.tokens
-              .find(token =>
-                token.pos.end > catchToken.pos.end &&
-                  token.text == "{" &&
-                  maybeFirstCase.forall(token.pos.start < _.pos.start)
-              )
-          )
-          .toOption
-          .flatten
-      )
-    val maybeLastCase =
-      util.Try(termTry.catchp.maxBy(_.pos.end)).toOption
-
-    if (potentialOpenBraceToken.isEmpty) { // does not have braces
-      createCodeActionToTakeCatchPBraceful(
-        maybeCatchToken,
-        maybeLastCase,
-        termTry,
-        document,
-        path,
-        codeActionSubjectTitle
-      )
-    } else None
-  }
-
-  private def createCodeActionToTakeCatchPBraceful(
-      maybeCatchToken: Option[Token],
-      maybeLastCase: Option[Case],
-      termTry: Term.Try,
-      document: String,
-      path: AbsolutePath,
-      codeActionSubjectTitle: String
-  ): Option[l.CodeAction] = {
-    for {
-      bracePose <- maybeCatchToken
-        .map(_.pos.toLSP.getEnd)
-      endBracePose <- maybeLastCase.map(_.pos.toLSP.getEnd)
-      indentation = getIndentationForPositionInDocument(termTry.pos, document)
-    } yield createCodeActionForGoingBraceful(
-      path,
-      expectedBraceStartPos = bracePose,
-      expectedBraceEndPose = endBracePose,
-      bracelessStart = "",
-      bracelessEnd = "",
-      indentation = indentation,
-      document = document,
-      codeActionSubjectTitle = codeActionSubjectTitle,
-      maybeEndMarkerPos = None
-    )
-  }
-
-  private def createCodeActionForTermMatch(
-      termMatch: Term.Match,
-      path: AbsolutePath,
-      document: String,
-      codeActionSubjectTitle: String
-  ): Option[l.CodeAction] = {
-
-    val maybeMatchToken = util
-      .Try(
-        termMatch.tokens.tokens
-          .filter(token =>
-            token.pos.end > termMatch.expr.pos.end && token.text == "match"
-          )
-          .minBy(_.pos.end)
-      )
-      .toOption
-    val maybeFirstCase =
-      Try(termMatch.cases.minBy(_.pos.start)).toOption
-    val potentialOpenBraceToken = maybeMatchToken
-      .flatMap(matchToken =>
-        Try(
-          termMatch.tokens.tokens
-            .find(token =>
-              token.pos.end > matchToken.pos.end &&
-                token.text == "{" &&
-                maybeFirstCase.forall(token.pos.start < _.pos.start)
-            )
-        ).toOption.flatten
-      )
-    val maybeLastCase =
-      Try(termMatch.cases.maxBy(_.pos.end)).toOption
-
-    if (potentialOpenBraceToken.isEmpty) { // does not have braces
-      createCodeActionToTakeTermMatchBraceful(
-        maybeMatchToken,
-        termMatch,
-        maybeLastCase,
-        document,
-        path,
-        codeActionSubjectTitle
-      )
-    } else None
-  }
-
-  private def createCodeActionToTakeTermMatchBraceful(
-      maybeMatchToken: Option[Token],
-      termMatch: Term.Match,
-      maybeLastCase: Option[Case],
-      document: String,
-      path: AbsolutePath,
-      codeActionSubjectTitle: String
-  ): Option[l.CodeAction] = {
-    for {
-      bracePose <- maybeMatchToken
-        .map(_.pos.toLSP.getEnd)
-      endBracePose <- maybeLastCase.map(_.pos.toLSP.getEnd)
-      indentation = getIndentationForPositionInDocument(
-        termMatch.pos,
-        document
-      )
-    } yield createCodeActionForGoingBraceful(
-      path,
-      expectedBraceStartPos = bracePose,
-      expectedBraceEndPose = endBracePose,
-      bracelessStart = "",
-      bracelessEnd = "",
-      indentation = indentation,
-      document = document,
-      codeActionSubjectTitle = codeActionSubjectTitle,
-      maybeEndMarkerPos = None
-    )
   }
 
   private def createCodeActionToTakePotentialBlockHolderBraceful(
