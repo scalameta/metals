@@ -4,6 +4,8 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Paths
 
+import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO
@@ -25,7 +27,7 @@ private[debug] final class SourcePathAdapter(
   private val saveJarFileToDisk = !supportVirtualDocuments
   private val dependencies = workspace.resolve(Directories.dependencies)
 
-  def toDapURI(sourcePath: AbsolutePath): Option[URI] = {
+  def toDapURI(sourcePath: AbsolutePath): Option[URI] = Try {
     if (sources.contains(sourcePath)) Some(sourcePath.toURI)
     else if (supportVirtualDocuments) {
       val sourceFileJarPath = workspace.toNIO
@@ -63,6 +65,14 @@ private[debug] final class SourcePathAdapter(
         root.resolve(relativePath.toString).toURI
       )
     }
+  } match {
+    case Failure(exception) =>
+      scribe.warn(
+        s"Could not find $sourcePath in jars, using it as a normal path",
+        exception
+      )
+      Some(sourcePath.toURI)
+    case Success(value) => value
   }
 
   def toMetalsPath(sourcePath: String): Option[AbsolutePath] = try {
