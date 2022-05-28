@@ -61,7 +61,7 @@ class PatternMatchRefactorLspSuite
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens}
+        |${RewriteBracesParensCodeAction.toParens("map")}
         |""".stripMargin,
     """|object Main {
        |  var x = 0

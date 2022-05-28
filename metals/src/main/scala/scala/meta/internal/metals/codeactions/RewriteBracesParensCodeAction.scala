@@ -85,10 +85,18 @@ class RewriteBracesParensCodeAction(
               val start = new l.TextEdit(leftParen.pos.toLSP, newLeft)
               val end = new l.TextEdit(rightParen.pos.toLSP, newRight)
               val codeAction = new l.CodeAction()
-              if (isParens)
-                codeAction.setTitle(RewriteBracesParensCodeAction.toBraces)
-              else
-                codeAction.setTitle(RewriteBracesParensCodeAction.toParens)
+
+              val name = appl.fun match {
+                case Term.Name(value) => value
+                case Term.Select(_, Term.Name(value)) => value
+                case _ => ""
+              }
+
+              val title =
+                if (isParens) RewriteBracesParensCodeAction.toBraces(name)
+                else RewriteBracesParensCodeAction.toParens(name)
+
+              codeAction.setTitle(title)
               codeAction.setKind(this.kind)
               codeAction.setEdit(
                 new l.WorkspaceEdit(
@@ -116,6 +124,12 @@ class RewriteBracesParensCodeAction(
 }
 
 object RewriteBracesParensCodeAction {
-  val toParens = "Rewrite to parenthesis"
-  val toBraces = "Rewrite to braces"
+  def toParens(name: String): String =
+    s"Rewrite ${addSpaceSuffixIfNonempty(name)}to parenthesis"
+  def toBraces(name: String): String =
+    s"Rewrite ${addSpaceSuffixIfNonempty(name)}to braces"
+
+  private def addSpaceSuffixIfNonempty(str: String): String =
+    if (str.nonEmpty) s"$str "
+    else str
 }
