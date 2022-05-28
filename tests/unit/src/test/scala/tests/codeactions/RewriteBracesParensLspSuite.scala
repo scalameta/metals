@@ -4,8 +4,8 @@ import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
-class BracesParensLspSuite
-    extends BaseCodeActionLspSuite("bracesParensRewrite") {
+class RewriteBracesParensLspSuite
+    extends BaseCodeActionLspSuite("rewriteBracesParens") {
 
   check(
     "to-braces-1",
