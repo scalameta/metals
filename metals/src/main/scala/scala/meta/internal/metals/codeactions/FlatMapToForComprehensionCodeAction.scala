@@ -2,7 +2,6 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
@@ -12,9 +11,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
+
+import scala.meta.internal.metals.codeactions.AssignOrMap.{AssignOrMap, assign}
 
 class FlatMapToForComprehensionCodeAction(
     trees: Trees,
@@ -62,43 +62,76 @@ class FlatMapToForComprehensionCodeAction(
             document,
             indentation
           )
-        case termIf: Term.If =>
-          maybeBuildToForYieldCodeActionWithIf(
-            path,
-            termIf,
-            document,
-            indentation
-          )
+//        case termIf: Term.If =>
+//          maybeBuildToForYieldCodeActionWithIf(
+//            path,
+//            termIf,
+//            document,
+//            indentation
+//          )
         case _ => None
       }
     }
 
-    maybeCodeAction.flatten.toSeq
+    val maybeChainedCodeAction = for {
+      document <- buffers.get(path)
+      applyTree <- maybeTree
+      indentation = getIndentationForPosition(applyTree.pos)
+    } yield {
+      applyTree match {
+        case termApply: Term.Apply =>
+          maybeBuildToForYieldChainedCodeActionWithApply(
+            path,
+            termApply,
+            document,
+            indentation
+          )
+
+//        case termName: Term.Name
+//          if termName.value == "flatMap" || termName.value == "map" =>
+//          maybeBuildToForYieldChainedCodeActionWithName(
+//            path,
+//            termName,
+//            document,
+//            indentation
+//          )
+//        case termIf: Term.If =>
+//          maybeBuildToForYieldChainedCodeActionWithIf(
+//            path,
+//            termIf,
+//            document,
+//            indentation
+//          )
+        case _ => None
+      }
+    }
+
+    maybeChainedCodeAction.flatten.toSeq
 
   }
 
-  private def maybeBuildToForYieldCodeActionWithIf(
-      path: AbsolutePath,
-      termIf: Term.If,
-      document: String,
-      indentation: String
-  ): Option[l.CodeAction] = {
-    val (nameQualsList, conditions, yieldString) =
-      extractForYieldOutOfIf(List.empty, List.empty, termIf, document)
-    if (nameQualsList.nonEmpty)
-      Some(
-        buildCodeActionFromForYieldParts(
-          nameQualsList,
-          conditions,
-          yieldString,
-          indentation: String,
-          path,
-          termIf.pos.toLSP.getStart,
-          termIf.pos.toLSP.getEnd
-        )
-      )
-    else None
-  }
+//  private def maybeBuildToForYieldCodeActionWithIf(
+//                                                    path: AbsolutePath,
+//                                                    termIf: Term.If,
+//                                                    document: String,
+//                                                    indentation: String
+//                                                  ): Option[l.CodeAction] = {
+//    val (nameQualsList, conditions, yieldString) =
+//      extractForYieldOutOfIf(List.empty, List.empty, termIf, document)
+//    if (nameQualsList.nonEmpty)
+//      Some(
+//        buildCodeActionFromForYieldParts(
+//          nameQualsList,
+//          conditions,
+//          yieldString,
+//          indentation: String,
+//          path,
+//          termIf.pos.toLSP.getStart,
+//          termIf.pos.toLSP.getEnd
+//        )
+//      )
+//    else None
+//  }
 
   private def buildCodeActionFromForYieldParts(
       nameQualsList: List[ForYieldEnumeration],
@@ -109,9 +142,20 @@ class FlatMapToForComprehensionCodeAction(
       startPos: l.Position,
       endPos: l.Position
   ): l.CodeAction = {
+
+    pprint.log("nameQualsList is: " + nameQualsList)
+
+    val enumerations = nameQualsList.flatMap { nameQual =>
+      for {
+        valName <- nameQual.perhapsVariableName
+        assignOrMap <- nameQual.perhapsAssignOrMap
+        qual <- nameQual.qual
+      } yield (valName, assignOrMap, qual)
+    }
+
     val forYieldString =
       s"""|for {
-          |${nameQualsList.map(nameQual => s"${indentation}  ${nameQual.variableName} <- ${nameQual.qual}").mkString("\n")}
+          |${enumerations.map(nameQual => s"${indentation}  ${nameQual._1} ${nameQual._2} ${nameQual._3}").mkString("\n")}
           |${forYieldConditionsList.map(forYieldCondition => s"${indentation}  if ${forYieldCondition.condition}").mkString("\n")}
           |${indentation}} yield {
           |${indentation}  ${yieldExpression.expression}
@@ -161,6 +205,37 @@ class FlatMapToForComprehensionCodeAction(
 
   }
 
+  private def maybeBuildToForYieldChainedCodeActionWithApply(
+      path: AbsolutePath,
+      termApply: Term.Apply,
+      document: String,
+      indentation: String
+  ): Option[l.CodeAction] = {
+    val (nameQualsList, conditions) = {
+      extractChainedForYield(None, List.empty, List.empty, termApply, document)
+    }
+
+    if (nameQualsList.nonEmpty) {
+      nameQualsList match {
+        case heads :+ tail =>
+          tail.qual.map(yieldQual =>
+            buildCodeActionFromForYieldParts(
+              heads,
+              conditions,
+              YieldExpression(yieldQual),
+              indentation,
+              path,
+              termApply.pos.toLSP.getStart,
+              termApply.pos.toLSP.getEnd
+            )
+          )
+        case head :: Nil => None
+      }
+
+    } else None
+
+  }
+
   private def maybeBuildToForYieldCodeActionWithSelect(
       path: AbsolutePath,
       termSelect: Term.Select,
@@ -194,7 +269,11 @@ class FlatMapToForComprehensionCodeAction(
 
   }
 
-  case class ForYieldEnumeration(variableName: String, qual: String)
+  case class ForYieldEnumeration(
+      perhapsAssignOrMap: Option[AssignOrMap],
+      perhapsVariableName: Option[String],
+      qual: Option[String]
+  )
 
   case class ForYieldCondition(condition: String)
 
@@ -282,6 +361,155 @@ class FlatMapToForComprehensionCodeAction(
           YieldExpression(
             document.substring(termApply.pos.start, termApply.pos.end)
           )
+        )
+    }
+  }
+
+  private def extractNextValueNameAndNextQualOutOfTermApplyArgs(
+      termApplyArgsHead: Term,
+      document: String
+  ): (Option[String], Option[String]) = {
+    termApplyArgsHead match {
+      case termFunction: Term.Function =>
+        val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunction(
+          termFunction,
+          document
+        )
+        (Some(valueName), Some(nextQual))
+
+      case termBlock: Term.Block =>
+        termBlock.stats
+          .collectFirst { case termFunction: Term.Function =>
+            val (valueName, nextQual) =
+              extractValueNameAndNextQualOutOfFunction(
+                termFunction,
+                document
+              )
+            (Some(valueName), Some(nextQual))
+//            case termApplyInfix: Term.ApplyInfix =>
+//              val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermApplyInfix(
+//                termApplyInfix,
+//                document
+//              )
+//              (Some(valueName), Some(nextQual))
+//            case termName: Term.Name => //single argument function
+//              val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermName(
+//                termName,
+//                document
+//              )
+//              (Some(valueName), Some(nextQual))
+//            case termApply: Term.Apply => //function and placeholder argument
+//              val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunctionWithPlaceHolder(
+//                termApply,
+//                document
+//              )
+//              (Some(valueName), Some(nextQual))
+          }
+          .getOrElse((None, None))
+
+//      case termApplyInfix: Term.ApplyInfix =>
+//        val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermApplyInfix(
+//          termApplyInfix,
+//          document
+//        )
+//        (Some(valueName), Some(nextQual))
+//      case termName: Term.Name =>
+//        val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermName(
+//          termName,
+//          document
+//        )
+//        (Some(valueName), Some(nextQual))
+//      case termApply: Term.Apply =>
+//        val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunctionWithPlaceHolder(
+//          termApply,
+//          document
+//        )
+//        (Some(valueName), Some(nextQual))
+    }
+  }
+
+  private def extractChainedForYield(
+      perhapseLastName: Option[String],
+      existingNameQuals: List[ForYieldEnumeration],
+      existingConditions: List[ForYieldCondition],
+      termApply: Term.Apply,
+      document: String
+  ): (List[ForYieldEnumeration], List[ForYieldCondition]) = {
+    termApply.fun match {
+      case termSelect: Term.Select
+          if termSelect.name.value == "flatMap" || termSelect.name.value == "map" =>
+        val qual = termSelect.qual
+        val assignOrMap =
+          if (termSelect.name.value == "flatMap") AssignOrMap.map
+          else AssignOrMap.assign
+        val (perhapseValueName, perhapsNextQual) =
+          extractNextValueNameAndNextQualOutOfTermApplyArgs(
+            termApply.args.head,
+            document
+          )
+        qual match {
+          case qualTermApply: Term.Apply =>
+            pprint.log("qualTermApply is: " + qualTermApply)
+            extractChainedForYield(
+              perhapseValueName,
+              ForYieldEnumeration(
+                Some(assignOrMap),
+                perhapseLastName,
+                perhapsNextQual
+              ) +: existingNameQuals,
+              existingConditions,
+              qualTermApply,
+              document
+            )
+          case otherQual =>
+            pprint.log("otherQual is: " + otherQual)
+            val qualString =
+              document.substring(otherQual.pos.start, otherQual.pos.end)
+            (
+              ForYieldEnumeration(
+                Some(AssignOrMap.assign),
+                perhapseValueName,
+                Some(qualString)
+              ) +: (ForYieldEnumeration(
+                Some(assignOrMap),
+                perhapseLastName,
+                perhapsNextQual
+              ) +: existingNameQuals),
+              existingConditions
+            )
+
+        }
+
+//      case termSelect: Term.Select
+//        if termSelect.name.value == "filter" || termSelect.name.value == "filterNot" =>
+//        val qual = termSelect.qual
+//        val assignOrMap = if(termSelect.name.value == "filter") AssignOrMap.assign else AssignOrMap.map
+//        val (perhapseValueName, perhapsNextQual) = extractNextValueNameAndNextQualOutOfTermApplyArgs(termApply.args.head, document)
+//        qual match {
+//          case qualTermApply: Term.Apply => extractChainedForYield(Some(assignOrMap) ,perhapseValueName,
+//            ForYieldEnumeration(perhapsLastAssignOrMap , perhapseLastName, perhapsNextQual) +: existingNameQuals,
+//            existingConditions,
+//            qualTermApply,
+//            document)
+//          case otherQual =>
+//            val qualString = document.substring(otherQual.pos.start, otherQual.pos.end)
+//            (
+//              ForYieldEnumeration(Some(assignOrMap) ,perhapseValueName, Some(qualString)) +: (ForYieldEnumeration(perhapsLastAssignOrMap ,perhapseLastName, perhapsNextQual) +: existingNameQuals ),
+//              existingConditions
+//            )
+//
+//        }
+      case otherFun =>
+        pprint.log("otherFun type is " + otherFun.getClass.getSimpleName)
+        val qualString =
+          document.substring(termApply.pos.start, termApply.pos.end)
+        (
+          ForYieldEnumeration(
+            Some(AssignOrMap.map),
+            perhapseLastName,
+            Some(qualString)
+          ) +: existingNameQuals,
+          existingConditions
         )
     }
   }
@@ -375,14 +603,22 @@ class FlatMapToForComprehensionCodeAction(
     body match {
       case bodyTermApply: Term.Apply =>
         extractForYield(
-          existingNameQuals :+ ForYieldEnumeration(paramName, qualString),
+          existingNameQuals :+ ForYieldEnumeration(
+            None,
+            Some(paramName),
+            Some(qualString)
+          ),
           existingConditions,
           bodyTermApply,
           document
         )
       case termIf: Term.If =>
         extractForYieldOutOfIf(
-          existingNameQuals :+ ForYieldEnumeration(paramName, qualString),
+          existingNameQuals :+ ForYieldEnumeration(
+            None,
+            Some(paramName),
+            Some(qualString)
+          ),
           existingConditions,
           termIf,
           document
@@ -390,13 +626,27 @@ class FlatMapToForComprehensionCodeAction(
 
       case otherBody =>
         (
-          existingNameQuals :+ ForYieldEnumeration(paramName, qualString),
+          existingNameQuals :+ ForYieldEnumeration(
+            None,
+            Some(paramName),
+            Some(qualString)
+          ),
           existingConditions,
           YieldExpression(
             document.substring(otherBody.pos.start, otherBody.pos.end)
           )
         )
     }
+  }
+
+  private def extractValueNameAndNextQualOutOfFunction(
+      termFunction: Term.Function,
+      document: String
+  ): (String, String) = {
+    val paramName =
+      termFunction.params.headOption.map(_.name.value).getOrElse("")
+    val body = termFunction.body
+    (paramName, document.substring(body.pos.start, body.pos.end))
   }
 
   private def getIndentationForPosition(
@@ -420,4 +670,10 @@ class FlatMapToForComprehensionCodeAction(
 
 object FlatMapToForComprehensionCodeAction {
   val flatMapToForComprehension = "Turn into for comprehension"
+}
+
+object AssignOrMap extends Enumeration {
+  type AssignOrMap = Value
+  val assign = Value("=")
+  val map = Value("<-")
 }
