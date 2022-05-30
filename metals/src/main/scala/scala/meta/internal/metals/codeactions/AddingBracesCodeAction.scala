@@ -50,34 +50,16 @@ class AddingBracesCodeAction(
         tree <- maybeTree
         document <- buffers.get(path)
       } yield {
-        tree match {
-          case _: Pkg => None.toSeq
+        val maybeBlockHolderCodeActionIngredients
+            : Option[(Tree, Term, String, String)] = tree match {
+          case _: Pkg => None
           case valDefn: Defn.Val =>
-            codeActionForBlockHolder(
-              valDefn,
-              path,
-              document,
-              valDefn.rhs,
-              "val definition"
-            ).toSeq
+            Some(valDefn, valDefn.rhs, "val definition", "")
           case varDefn: Defn.Var =>
-            varDefn.rhs.flatMap {
-              codeActionForBlockHolder(
-                varDefn,
-                path,
-                document,
-                _,
-                "var definition"
-              )
-            }.toSeq
+            varDefn.rhs.map((varDefn, _, "var definition", ""))
+
           case defDefn: Defn.Def =>
-            codeActionForBlockHolder(
-              defDefn,
-              path,
-              document,
-              defDefn.body,
-              "def definition"
-            ).toSeq
+            Some(defDefn, defDefn.body, "def definition", "")
           case termTry: Term.Try =>
             val cursorLine = cursorPosition.getLine
             val tryLine = termTry.expr.pos.toLSP.getStart.getLine
@@ -88,24 +70,12 @@ class AddingBracesCodeAction(
             Try(
               Seq(
                 (
-                  codeActionForBlockHolder(
-                    termTry,
-                    path,
-                    document,
-                    termTry.expr,
-                    "try expression"
-                  ),
+                  Some(termTry, termTry.expr, "try expression", ""),
                   distanceToTry
                 ),
                 (
-                  termTry.finallyp.flatMap(finallyp =>
-                    codeActionForBlockHolder(
-                      termTry,
-                      path,
-                      document,
-                      finallyp,
-                      "finally expression"
-                    )
+                  termTry.finallyp.map(finallyp =>
+                    (termTry, finallyp, "finally expression", "")
                   ),
                   distanceToFinally
                 )
@@ -114,7 +84,6 @@ class AddingBracesCodeAction(
               .map(_._1)
               .toOption
               .flatten
-              .toList
 
           case termIf: Term.If =>
             val cursorLine = cursorPosition.getLine
@@ -126,106 +95,77 @@ class AddingBracesCodeAction(
             Try(
               Seq(
                 (
-                  codeActionForBlockHolder(
-                    termIf,
-                    path,
-                    document,
-                    termIf.thenp,
-                    "then expression",
-                    "then"
-                  ),
+                  (termIf, termIf.thenp, "then expression", "then"),
                   distanceToThen
                 ),
-                (
-                  codeActionForBlockHolder(
-                    termIf,
-                    path,
-                    document,
-                    termIf.elsep,
-                    "else expression"
-                  ),
-                  distanceToElseP
-                )
-              ).minBy(_._2)
-            ).map(_._1).toOption.flatten.toList
+                ((termIf, termIf.elsep, "else expression", ""), distanceToElseP)
+              )
+                .minBy(_._2)
+            ).map(_._1).toOption
 
           case termFor: Term.For =>
-            codeActionForBlockHolder(
-              termFor,
-              path,
-              document,
-              termFor.body,
-              "for expression"
-            ).toSeq
+            Some(termFor, termFor.body, "for expression", "")
           case termForYield: Term.ForYield =>
-            codeActionForBlockHolder(
-              termForYield,
-              path,
-              document,
-              termForYield.body,
-              "yield expression"
-            ).toSeq
+            Some(termForYield, termForYield.body, "yield expression", "")
           case termWhile: Term.While =>
-            codeActionForBlockHolder(
-              termWhile,
-              path,
-              document,
-              termWhile.body,
-              "while expression",
-              "do"
-            ).toSeq
-          case _: Defn.GivenAlias => None.toSeq
-          case template: Template =>
-            val title = template.parent
-              .collectFirst {
-                case _: Defn.Enum => "enum definition"
-                case _: Defn.Trait => "trait definition"
-                case _: Defn.Object => "object definition"
-                case _: Defn.Class => "class definition"
-              }
-              .getOrElse("template")
-            template.parent.flatMap {
-              codeActionForTemplateHolder(
-                _,
-                path,
-                document,
-                template,
-                title
-              )
-            }.toSeq
+            Some(termWhile, termWhile.body, "while expression", "do")
+          case _: Defn.GivenAlias => None
           case termBlock: Term.Block if !termBlock.parent.exists(_ match {
                 case _: Term.Apply => true
                 case _ => false
               }) =>
             termBlock.parent.flatMap { blockHolder =>
-              codeActionForBlockHolder(
-                blockHolder,
-                path,
-                document,
-                termBlock,
-                "block"
-              )
+              Some(blockHolder, termBlock, "block", "")
             }
 
           case _ => None
         }
+        maybeBlockHolderCodeActionIngredients
+          .flatMap { ingredients =>
+            codeActionForBlockHolder(
+              ingredients._1,
+              path,
+              document,
+              ingredients._2,
+              ingredients._3,
+              ingredients._4
+            )
+          }
+          .orElse(
+            tree match {
+              case template: Template =>
+                val title = template.parent
+                  .collectFirst {
+                    case _: Defn.Enum => "enum definition"
+                    case _: Defn.Trait => "trait definition"
+                    case _: Defn.Object => "object definition"
+                    case _: Defn.Class => "class definition"
+                  }
+                  .getOrElse("template")
+                template.parent.flatMap {
+                  codeActionForTemplateHolder(
+                    _,
+                    path,
+                    document,
+                    template,
+                    title
+                  )
+                }
+              case _ => None
+            }
+          )
       }
     result.toSeq.flatten
   }
 
-  private def hasBraces(template: Template): Boolean = {
+  /**
+   * stats holder trees are `Term.Block` and `Template`
+   */
+  private def isStatsHolderBraced(tree: Tree, stats: List[Stat]): Boolean = {
     util
-      .Try(template.stats.maxBy(_.pos.end).pos.end)
-      .getOrElse(-1) != template.pos.end && util
-      .Try(template.tokens.maxBy(_.pos.end).text)
-      .getOrElse("") == "}"
-  }
-
-  private def hasBraces(termBlock: Term.Block): Boolean = {
-    util
-      .Try(termBlock.stats.maxBy(_.pos.end).pos.end)
-      .getOrElse(-1) != termBlock.pos.end && util
-      .Try(termBlock.tokens.maxBy(_.pos.end).text)
+      .Try(stats.maxBy(_.pos.end).pos.end)
+      .getOrElse(-1) != tree.pos.end && util
+      .Try(tree.tokens.maxBy(_.pos.end).text)
       .getOrElse("") == "}"
   }
 
@@ -237,7 +177,8 @@ class AddingBracesCodeAction(
    */
   private def isBlockEmbraceableBraced(blockEmbraceable: Term): Boolean = {
     blockEmbraceable match {
-      case termBlock: Term.Block => hasBraces(termBlock)
+      case termBlock: Term.Block =>
+        isStatsHolderBraced(termBlock, termBlock.stats)
       case _ => false
     }
   }
@@ -348,7 +289,7 @@ class AddingBracesCodeAction(
         lastInit.pos.end
       }
       .getOrElse(templ.pos.start)
-    if (!hasBraces(templ)) {
+    if (!isStatsHolderBraced(templ, templ.stats)) {
       addBracesToTemplateHolderAction(
         templateHolder,
         path,
