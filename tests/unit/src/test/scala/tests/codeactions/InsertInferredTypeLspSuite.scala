@@ -96,7 +96,7 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map(c<<>>h => ch.toInt)
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
-        |${RewriteBracesParensCodeAction.toBraces}
+        |${RewriteBracesParensCodeAction.toBraces("map")}
         |""".stripMargin,
     """|object A{
        |  val list = "123".map((ch: Char) => ch.toInt)
@@ -110,7 +110,7 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map{c<<>>h => ch.toInt}
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
-        |${RewriteBracesParensCodeAction.toParens}
+        |${RewriteBracesParensCodeAction.toParens("map")}
         |""".stripMargin,
     """|object A{
        |  val list = "123".map{ch: Char => ch.toInt}

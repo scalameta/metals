@@ -3,8 +3,8 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
-class PatternMatchRefactorLspSuite
-    extends BaseCodeActionLspSuite("patternMatchRefactor") {
+class ConvertPatternMatchLspSuite
+    extends BaseCodeActionLspSuite("convertPatternMatch") {
 
   check(
     "with-placeholder",
@@ -61,7 +61,7 @@ class PatternMatchRefactorLspSuite
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens}
+        |${RewriteBracesParensCodeAction.toParens("map")}
         |""".stripMargin,
     """|object Main {
        |  var x = 0

@@ -4,8 +4,8 @@ import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
-class BracesParensLspSuite
-    extends BaseCodeActionLspSuite("bracesParensRewrite") {
+class RewriteBracesParensLspSuite
+    extends BaseCodeActionLspSuite("rewriteBracesParens") {
 
   check(
     "to-braces-1",
@@ -14,7 +14,7 @@ class BracesParensLspSuite
        |  foo(<<>>5)
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toBraces}
+    s"""|${RewriteBracesParensCodeAction.toBraces("foo")}
         |${ExtractValueCodeAction.title}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
@@ -30,7 +30,7 @@ class BracesParensLspSuite
        |  List(1,2).map ( a => <<>>a )
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toBraces,
+    RewriteBracesParensCodeAction.toBraces("map"),
     """|object Main {
        |  var x = 0
        |  List(1,2).map { a => a }
@@ -48,7 +48,7 @@ class BracesParensLspSuite
        |  })
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toBraces,
+    RewriteBracesParensCodeAction.toBraces("map"),
     """|object Main {
        |  val x = List(1, 2, 3)
        |  x.map{_ match {
@@ -66,7 +66,7 @@ class BracesParensLspSuite
        |  foo{<<>>5}
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toParens}
+    s"""|${RewriteBracesParensCodeAction.toParens("foo")}
         |${ExtractValueCodeAction.title}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
@@ -82,7 +82,7 @@ class BracesParensLspSuite
        |  List(1,2).map { a => <<>>a }
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toParens,
+    RewriteBracesParensCodeAction.toParens("map"),
     """|object Main {
        |  var x = 0
        |  List(1,2).map ( a => a )
@@ -101,7 +101,7 @@ class BracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens}""".stripMargin,
+        |${RewriteBracesParensCodeAction.toParens("map")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
        |  x.map(_ match {
