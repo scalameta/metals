@@ -213,7 +213,7 @@ object FileWatcher {
 
       override def onNext(event: PathWatchers.Event): Unit = {
         val path = event.getTypedPath.getPath
-        if (watchFilter(path)) {
+        if (path != null && watchFilter(path)) {
           event.getKind match {
             // Swoval PathWatcher may not disambiguate between create and modify events on macOS
             // due to how underlying OS APIs work. However such fidelity is not needed for metals.
