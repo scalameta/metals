@@ -527,7 +527,25 @@ class CompletionDocSuite extends BaseCompletionSuite {
                    |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
                    | section on `StringBuilders` for more information.
                    |StringBuilder scala.collection.mutable
-                   |""".stripMargin
+                   |""".stripMargin,
+      "3" ->
+        """|> A builder for mutable sequence of characters.  This class provides an API
+           |mostly compatible with `java.lang.StringBuilder`, except where there are
+           |conflicts with the Scala collections API (such as the `reverse` method.)
+           |
+           |$multipleResults
+           |
+           |
+           |**See**
+           |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+           |section on `StringBuilders` for more information.
+           |StringBuilder scala.collection.mutable
+           |StringBuilder(): StringBuilder
+           |StringBuilder(str: String): StringBuilder
+           |StringBuilder(underlying: StringBuilder): StringBuilder
+           |StringBuilder(capacity: Int): StringBuilder
+           |StringBuilder(initCapacity: Int, initValue: String): StringBuilder
+           |""".stripMargin
     )
   )
 
@@ -636,7 +654,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> post212CatchDocs,
-      "3" -> post212CatchDocs
+      "3" -> s"${post212CatchDocs}Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean): Catch[T]"
     )
   )
 

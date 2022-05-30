@@ -232,8 +232,10 @@ class CompletionsProvider(
       mkItem(ident, value, isFromWorkspace = true, additionalEdits)
 
     val ident = completion.label
+
+    val completionTextSuffix = completion.snippetSuffix.getOrElse("")
     completion match
-      case CompletionValue.Workspace(label, sym) =>
+      case CompletionValue.Workspace(label, sym, suffix) =>
         path match
           case (_: Ident) :: (_: Import) :: _ =>
             mkWorkspaceItem(
@@ -254,7 +256,7 @@ class CompletionsProvider(
                   case _ =>
                     mkItem(
                       ident,
-                      ident.backticked,
+                      ident.backticked + completionTextSuffix,
                       isFromWorkspace = true,
                       edits.edits
                     )
@@ -262,8 +264,12 @@ class CompletionsProvider(
                 val r = indexedContext.lookupSym(sym)
                 r match
                   case IndexedContext.Result.InScope =>
-                    mkItem(ident, ident.backticked)
-                  case _ => mkWorkspaceItem(ident, sym.fullNameBackticked)
+                    mkItem(ident, ident.backticked + completionTextSuffix)
+                  case _ =>
+                    mkWorkspaceItem(
+                      ident,
+                      sym.fullNameBackticked + completionTextSuffix
+                    )
       case CompletionValue.Override(
             label,
             value,
@@ -289,11 +295,7 @@ class CompletionsProvider(
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) => mkItem(label, text)
       case _ =>
-        completion.snippetSuffix match
-          case Some(suffix) =>
-            mkItem(ident, ident.backticked + suffix)
-          case _ =>
-            mkItem(ident, ident.backticked)
+        mkItem(ident, ident.backticked + completionTextSuffix)
     end match
   end completionItems
 end CompletionsProvider

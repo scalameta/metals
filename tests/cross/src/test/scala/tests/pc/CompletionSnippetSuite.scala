@@ -53,7 +53,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    "nullary2",
+    "nilary",
     s"""|class Hello{
         |  def now() = 25
         |}
@@ -165,7 +165,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |""".stripMargin,
       // scala 3 type completions not implemented, so no way to distinguish if we are at a type position
       "3" ->
-        """|ArrayDeque
+        """|ArrayDeque($0)
+           |ArrayDeque
            |ArrayDeque
            |ArrayDequeOps
            |""".stripMargin
@@ -357,6 +358,28 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |PropertiesTrait
            |Either
            |control
+           |""".stripMargin
+    )
+  )
+
+  checkSnippet(
+    "case-class3",
+    s"""|object Main {
+        |  Try@@
+        |}
+        |""".stripMargin,
+    """|Try
+       |Breaks.TryBlock
+       |""".stripMargin,
+    // additional completion when apply method is present
+    compat = Map(
+      "3" ->
+        """|Try
+           |Try($0)
+           |TryBlock
+           |TryModule
+           |TryMethods
+           |TryMethods
            |""".stripMargin
     )
   )

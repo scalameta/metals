@@ -31,7 +31,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.awt
            |List - java.util
            |List - scala.collection.immutable
-           |JList - javax.swing
+           |List[A](elems: A*): CC[A]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -907,7 +907,13 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[A](elems: A*): CC[A]
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    )
   )
 
   check(
@@ -917,7 +923,13 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[A](elems: A*): CC[A]
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    )
   )
 
   check(

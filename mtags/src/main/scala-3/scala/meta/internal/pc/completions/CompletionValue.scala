@@ -73,7 +73,11 @@ object CompletionValue:
       override val snippetSuffix: Option[String]
   ) extends Symbolic
   case class Scope(label: String, symbol: Symbol) extends Symbolic
-  case class Workspace(label: String, symbol: Symbol) extends Symbolic
+  case class Workspace(
+      label: String,
+      symbol: Symbol,
+      override val snippetSuffix: Option[String]
+  ) extends Symbolic
 
   /**
    * @param shortenedNames shortened type names by `Printer`. This field should be used for autoImports
@@ -101,9 +105,6 @@ object CompletionValue:
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, insertText)
-
-  def workspace(label: String, sym: Symbol): CompletionValue =
-    Workspace(label, sym)
 
   def scope(label: String, sym: Symbol): CompletionValue =
     Scope(label, sym)

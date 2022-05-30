@@ -19,7 +19,6 @@ import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.StdNames.*
-import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Completion
@@ -42,6 +41,16 @@ class Completions(
 ):
 
   implicit val context: Context = ctx
+
+  private lazy val shouldAddSnippet = path match
+    /* In case of `method@@()` we should not add snippets and the path
+     * will contain apply as the parent of the current tree.
+     */
+    case (fun) :: (appl: GenericApply) :: _ if appl.fun == fun =>
+      false
+    case (_: Import) :: _ => false
+    case _ :: (_: Import) :: _ => false
+    case _ => true
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
@@ -69,44 +78,26 @@ class Completions(
 
   private def toCompletionValues(
       completion: Completion
-  ): List[CompletionValue.Compiler] =
-    val shouldAddSnippet = path match
-      // if the parent is an apply then we already have ()
-      case (fun) :: (appl: GenericApply) :: _ if appl.fun == fun =>
-        false
-      case (_: Import) :: _ => false
-      case _ :: (_: Import) :: _ => false
-      case _ => true
-
+  ): List[CompletionValue] =
     completion.symbols.flatMap(
-      completionsWithSuffix(_, completion.label, shouldAddSnippet)
+      completionsWithSuffix(
+        _,
+        completion.label,
+        CompletionValue.Compiler(_, _, _)
+      )
     )
   end toCompletionValues
 
   inline private def undoBacktick(label: String): String =
     label.stripPrefix("`").stripSuffix("`")
 
-  private def findApplySymbols(denot: Denotation): List[Symbol] =
-    denot match
-      case MultiDenotation(denot1, denot2) =>
-        List(findApplySymbols(denot1), findApplySymbols(denot2)).flatten
-      case NoDenotation => Nil
-      case _ =>
-        List(denot.symbol)
-
-  private def findSuffix(
-      shouldAddSnippet: Boolean,
-      methodSymbol: Symbol
-  ): Option[String] =
-    if shouldAddSnippet &&
-      config.isCompletionSnippetsEnabled &&
-      methodSymbol.is(Flags.Method)
-    then
+  private def findSuffix(methodSymbol: Symbol): Option[String] =
+    if shouldAddSnippet && methodSymbol.is(Flags.Method) then
       val paramss = methodSymbol.paramSymss
       paramss match
         case Nil => None
         case List(Nil) => Some("()")
-        case _ =>
+        case _ if config.isCompletionSnippetsEnabled =>
           val onlyImplicitOrTypeParams = paramss.forall(
             _.exists { sym =>
               sym.isType || sym.is(Implicit) || sym.is(Given)
@@ -114,23 +105,26 @@ class Completions(
           )
           if onlyImplicitOrTypeParams then None
           else Some("($0)")
+        case _ => None
     else None
 
   private def completionsWithSuffix(
       sym: Symbol,
       label: String,
-      shouldAddSnippet: Boolean
-  ) =
+      toCompletionValue: (String, Symbol, Option[String]) => CompletionValue
+  ): List[CompletionValue] =
     // find the apply completion that would need a snippet
-    val methodSymbols = if shouldAddSnippet && sym.is(Flags.Module) then
-      val appl = sym.info.member(nme.apply)
-      sym :: findApplySymbols(appl)
-    else List(sym)
+    val methodSymbols =
+      if shouldAddSnippet && sym.is(Flags.Module) && !sym.is(Flags.JavaDefined)
+      then
+        val applSymbols = sym.info.member(nme.apply).allSymbols
+        sym :: applSymbols
+      else List(sym)
 
     methodSymbols.map { methodSymbol =>
-      val suffix = findSuffix(shouldAddSnippet, methodSymbol)
+      val suffix = findSuffix(methodSymbol)
       val name = undoBacktick(label)
-      CompletionValue.Compiler(
+      toCompletionValue(
         name,
         methodSymbol,
         suffix
@@ -237,12 +231,15 @@ class Completions(
         val visitor = new CompilerSearchVisitor(
           query,
           sym =>
-            val value =
-              indexedContext.lookupSym(sym) match
-                case IndexedContext.Result.InScope =>
-                  CompletionValue.scope(sym.decodedName, sym)
-                case _ => CompletionValue.workspace(sym.decodedName, sym)
-            visit(value)
+            indexedContext.lookupSym(sym) match
+              case IndexedContext.Result.InScope =>
+                visit(CompletionValue.scope(sym.decodedName, sym))
+              case _ =>
+                completionsWithSuffix(
+                  sym,
+                  sym.decodedName,
+                  CompletionValue.Workspace(_, _, _)
+                ).forall(visit)
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
       case _ => None
@@ -391,7 +388,7 @@ class Completions(
         // show the abstract members first
         if !ov.symbol.is(Deferred) then penalty |= MemberOrdering.IsNotAbstract
         penalty
-      case CompletionValue.Workspace(_, sym) =>
+      case CompletionValue.Workspace(_, sym, _) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
       case sym: CompletionValue.Symbolic =>
         symbolRelevance(sym.symbol)

@@ -702,6 +702,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     """|Future java.util.concurrent
        |Future - scala.concurrent
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|Future java.util.concurrent
+           |Future[T](body: => T)(implicit executor: ExecutionContext): scala.concurrent.Future[T]
+           |""".stripMargin
+    )
   )
 }
