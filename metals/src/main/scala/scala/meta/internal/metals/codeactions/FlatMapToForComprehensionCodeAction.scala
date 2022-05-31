@@ -380,25 +380,31 @@ class FlatMapToForComprehensionCodeAction(
   private def extractNextValueNameAndNextQualOutOfTermApplyArgs(
       termApplyArgsHead: Term,
       document: String
-  ): (Option[String], Option[String]) = {
+  ): (
+      Option[String],
+      Option[String],
+      List[ForYieldEnumeration],
+      List[ForYieldCondition]
+  ) = {
     termApplyArgsHead match {
       case termFunction: Term.Function =>
-        val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunction(
-          termFunction,
-          document
-        )
-        (Some(valueName), Some(nextQual))
+        val (valueName, nextQual, newEnums, newConditions) =
+          extractValueNameAndNextQualOutOfFunction(
+            termFunction,
+            document
+          )
+        (Some(valueName), Some(nextQual), newEnums, newConditions)
 
       case termBlock: Term.Block =>
         termBlock.stats
           .collectFirst {
             case termFunction: Term.Function =>
-              val (valueName, nextQual) =
+              val (valueName, nextQual, newEnums, newConditions) =
                 extractValueNameAndNextQualOutOfFunction(
                   termFunction,
                   document
                 )
-              (Some(valueName), Some(nextQual))
+              (Some(valueName), Some(nextQual), newEnums, newConditions)
             //            case termApplyInfix: Term.ApplyInfix =>
             //              val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermApplyInfix(
             //                termApplyInfix,
@@ -411,7 +417,7 @@ class FlatMapToForComprehensionCodeAction(
                   termName,
                   document
                 )
-              (Some(valueName), Some(nextQual))
+              (Some(valueName), Some(nextQual), List.empty, List.empty)
             //            case termApply: Term.Apply => //function and placeholder argument
             //              val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunctionWithPlaceHolder(
             //                termApply,
@@ -419,7 +425,7 @@ class FlatMapToForComprehensionCodeAction(
             //              )
             //              (Some(valueName), Some(nextQual))
           }
-          .getOrElse((None, None))
+          .getOrElse((None, None, List.empty, List.empty))
 
       //      case termApplyInfix: Term.ApplyInfix =>
       //        val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermApplyInfix(
@@ -432,7 +438,7 @@ class FlatMapToForComprehensionCodeAction(
           termName,
           document
         )
-        (Some(valueName), Some(nextQual))
+        (Some(valueName), Some(nextQual), List.empty, List.empty)
       //      case termApply: Term.Apply =>
       //        val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunctionWithPlaceHolder(
       //          termApply,
@@ -456,7 +462,7 @@ class FlatMapToForComprehensionCodeAction(
         val assignOrMap =
           if (termSelect.name.value == "flatMap") AssignOrMap.map
           else AssignOrMap.assign
-        val (perhapseValueName, perhapsNextQual) =
+        val (perhapseValueName, perhapsNextQual, newEnums, newConditions) =
           extractNextValueNameAndNextQualOutOfTermApplyArgs(
             termApply.args.head,
             document
@@ -466,12 +472,12 @@ class FlatMapToForComprehensionCodeAction(
             pprint.log("qualTermApply is: " + qualTermApply)
             extractChainedForYield(
               perhapseValueName,
-              ForYieldEnumeration(
+              (newEnums :+ ForYieldEnumeration(
                 Some(assignOrMap),
                 perhapseLastName,
                 perhapsNextQual
-              ) +: existingNameQuals,
-              existingConditions,
+              )) ++ existingNameQuals,
+              newConditions ++ existingConditions,
               qualTermApply,
               document
             )
@@ -480,15 +486,15 @@ class FlatMapToForComprehensionCodeAction(
             val qualString =
               document.substring(otherQual.pos.start, otherQual.pos.end)
             (
-              ForYieldEnumeration(
+              (ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseValueName,
                 Some(qualString)
-              ) +: (ForYieldEnumeration(
+              ) +: newEnums) ++ ((ForYieldEnumeration(
                 Some(assignOrMap),
                 perhapseLastName,
                 perhapsNextQual
-              ) +: existingNameQuals),
+              ) +: existingNameQuals)),
               existingConditions
             )
 
@@ -500,7 +506,7 @@ class FlatMapToForComprehensionCodeAction(
         val filterOrNot =
           if (termSelect.name.value == "filter") FilterOrNot.filter
           else FilterOrNot.filterNot
-        val (perhapseValueName, perhapsNextCondition) =
+        val (perhapseValueName, perhapsNextCondition, newEnums, newConditions) =
           extractNextValueNameAndNextQualOutOfTermApplyArgs(
             termApply.args.head,
             document
@@ -510,15 +516,15 @@ class FlatMapToForComprehensionCodeAction(
             pprint.log("qualTermApply is: " + qualTermApply)
             extractChainedForYield(
               perhapseValueName,
-              ForYieldEnumeration(
+              (ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseLastName,
                 perhapseValueName
-              ) +: existingNameQuals,
-              ForYieldCondition(
+              ) +: newEnums) ++ existingNameQuals,
+              (ForYieldCondition(
                 Some(filterOrNot),
                 perhapsNextCondition
-              ) +: existingConditions,
+              ) +: newConditions) ++ existingConditions,
               qualTermApply,
               document
             )
@@ -527,15 +533,15 @@ class FlatMapToForComprehensionCodeAction(
             val qualString =
               document.substring(otherQual.pos.start, otherQual.pos.end)
             (
-              ForYieldEnumeration(
+              (ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseValueName,
                 Some(qualString)
-              ) +: ForYieldEnumeration(
+              ) +: newEnums) ++ (ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseLastName,
                 perhapseValueName
-              ) +: existingNameQuals,
+              ) +: existingNameQuals),
               ForYieldCondition(
                 Some(filterOrNot),
                 perhapsNextCondition
@@ -648,7 +654,7 @@ class FlatMapToForComprehensionCodeAction(
       case bodyTermApply: Term.Apply =>
         extractForYield(
           existingNameQuals :+ ForYieldEnumeration(
-            None,
+            Some(AssignOrMap.map),
             Some(paramName),
             Some(qualString)
           ),
@@ -656,28 +662,28 @@ class FlatMapToForComprehensionCodeAction(
           bodyTermApply,
           document
         )
-      case termIf: Term.If =>
-        extractForYieldOutOfIf(
-          existingNameQuals :+ ForYieldEnumeration(
-            None,
-            Some(paramName),
-            Some(qualString)
-          ),
-          existingConditions,
-          termIf,
-          document
-        )
+//      case termIf: Term.If =>
+//        extractForYieldOutOfIf(
+//          existingNameQuals :+ ForYieldEnumeration(
+//            None,
+//            Some(paramName),
+//            Some(qualString)
+//          ),
+//          existingConditions,
+//          termIf,
+//          document
+//        )
 
       case otherBody =>
         (
           existingNameQuals :+ ForYieldEnumeration(
-            None,
+            Some(AssignOrMap.map),
             Some(paramName),
             Some(qualString)
           ),
           existingConditions,
           YieldExpression(
-            document.substring(otherBody.pos.start, otherBody.pos.end)
+            s"Some( ${document.substring(otherBody.pos.start, otherBody.pos.end)})"
           )
         )
     }
@@ -686,11 +692,24 @@ class FlatMapToForComprehensionCodeAction(
   private def extractValueNameAndNextQualOutOfFunction(
       termFunction: Term.Function,
       document: String
-  ): (String, String) = {
+  ): (String, String, List[ForYieldEnumeration], List[ForYieldCondition]) = {
     val paramName =
       termFunction.params.headOption.map(_.name.value).getOrElse("")
     val body = termFunction.body
-    (paramName, document.substring(body.pos.start, body.pos.end))
+    body match {
+      case termApplyBody: Term.Apply =>
+        val (enumerations, conditions, yieldexpr) =
+          extractForYield(List.empty, List.empty, termApplyBody, document)
+        (paramName, yieldexpr.expression, enumerations, conditions)
+      case otherBody =>
+        (
+          paramName,
+          document.substring(otherBody.pos.start, otherBody.pos.end),
+          List.empty,
+          List.empty
+        )
+    }
+
   }
 
   private def extractValueNameAndNextQualOutOfTermName(
