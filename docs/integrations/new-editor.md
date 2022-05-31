@@ -384,8 +384,6 @@ Possible values:
 
 - `off` (default): the `metals/slowTask` request is not supported.
 - `on`: the `metals/slowTask` request is fully supported.
-- `status-bar`: the `metals/slowTask` request is not supported, but send updates
-  about slow tasks via `metals/status`.
 
 ##### `statusBarProvider`
 
