@@ -3,9 +3,11 @@ package completions
 
 import scala.collection.mutable
 
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.completions.KeywordsCompletions
+import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
@@ -41,6 +43,10 @@ class Completions(
 ):
 
   implicit val context: Context = ctx
+
+  // versions prior to 3.1.0 sometimes didn't manage to detect properly Java objects
+  val canDetectJavaObjectsCorrectly =
+    SemVer.isLaterVersion("3.1.0", BuildInfo.scalaCompilerVersion)
 
   private lazy val shouldAddSnippet = path match
     /* In case of `method@@()` we should not add snippets and the path
@@ -113,9 +119,16 @@ class Completions(
       label: String,
       toCompletionValue: (String, Symbol, Option[String]) => CompletionValue
   ): List[CompletionValue] =
+    // workaround for earlier versions that force correctly detecting Java flags
+    def isJavaDefined = if canDetectJavaObjectsCorrectly then
+      sym.is(Flags.JavaDefined)
+    else
+      sym.info
+      sym.is(Flags.JavaDefined)
+
     // find the apply completion that would need a snippet
     val methodSymbols =
-      if shouldAddSnippet && sym.is(Flags.Module) && !sym.is(Flags.JavaDefined)
+      if shouldAddSnippet && sym.is(Flags.Module) && !isJavaDefined
       then
         val applSymbols = sym.info.member(nme.apply).allSymbols
         sym :: applSymbols

@@ -141,6 +141,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |StreamResult - javax.xml.transform.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
                  |StreamSource - javax.xml.transform.stream
+                 |Stream[A](elems: A*): CC[A]
                  |""".stripMargin
           ),
           scalaVersion
@@ -164,6 +165,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
             "3" ->
               """|TrieMap - scala.collection.concurrent
                  |TrieMapSerializationEnd - scala.collection.concurrent
+                 |TrieMap[K, V](elems: (K, V)*): CC[K, V]
                  |""".stripMargin
           ),
           scalaVersion
