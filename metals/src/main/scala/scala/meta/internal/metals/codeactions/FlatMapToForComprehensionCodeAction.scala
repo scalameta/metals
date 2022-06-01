@@ -2,21 +2,22 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+
+import scala.meta.Name
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.AssignOrMap.AssignOrMap
+import scala.meta.internal.metals.codeactions.FilterOrNot.FilterOrNot
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
-
-import scala.meta.internal.metals.codeactions.AssignOrMap.{AssignOrMap, assign}
-import scala.meta.internal.metals.codeactions.FilterOrNot.FilterOrNot
-import scala.util.Random
 
 class FlatMapToForComprehensionCodeAction(
     trees: Trees,
@@ -42,43 +43,10 @@ class FlatMapToForComprehensionCodeAction(
       else
         None
 
-    val maybeCodeAction = for {
-      document <- buffers.get(path)
-      applyTree <- maybeTree
-      indentation = getIndentationForPosition(applyTree.pos)
-    } yield {
-      applyTree match {
-        case termApply: Term.Apply =>
-          maybeBuildToForYieldCodeActionWithApply(
-            path,
-            termApply,
-            document,
-            indentation
-          )
-
-        case termName: Term.Name
-            if termName.value == "flatMap" || termName.value == "map" =>
-          maybeBuildToForYieldCodeActionWithName(
-            path,
-            termName,
-            document,
-            indentation
-          )
-        //        case termIf: Term.If =>
-        //          maybeBuildToForYieldCodeActionWithIf(
-        //            path,
-        //            termIf,
-        //            document,
-        //            indentation
-        //          )
-        case _ => None
-      }
-    }
-
     val maybeChainedCodeAction = for {
       document <- buffers.get(path)
       applyTree <- maybeTree
-      indentation = getIndentationForPosition(applyTree.pos)
+      indentation = getIndentationForPositionInDocument(applyTree.pos, document)
     } yield {
       applyTree match {
         case termApply: Term.Apply =>
@@ -88,22 +56,26 @@ class FlatMapToForComprehensionCodeAction(
             document,
             indentation
           )
+        case termSelect: Term.Select
+            if termSelect.name.value == "map" || termSelect.name.value == "flatMap" ||
+              termSelect.name.value == "filter" || termSelect.name.value == "filterNot" =>
+          maybeBuildToForYieldCodeActionWithSelect(
+            path,
+            termSelect,
+            document,
+            indentation
+          )
 
-        //        case termName: Term.Name
-        //          if termName.value == "flatMap" || termName.value == "map" =>
-        //          maybeBuildToForYieldChainedCodeActionWithName(
-        //            path,
-        //            termName,
-        //            document,
-        //            indentation
-        //          )
-        //        case termIf: Term.If =>
-        //          maybeBuildToForYieldChainedCodeActionWithIf(
-        //            path,
-        //            termIf,
-        //            document,
-        //            indentation
-        //          )
+        case termName: Term.Name
+            if termName.value == "flatMap" || termName.value == "map" ||
+              termName.value == "filter" || termName.value == "filterNot" =>
+          maybeBuildToForYieldCodeActionWithName(
+            path,
+            termName,
+            document,
+            indentation
+          )
+
         case _ => None
       }
     }
@@ -111,29 +83,6 @@ class FlatMapToForComprehensionCodeAction(
     maybeChainedCodeAction.flatten.toSeq
 
   }
-
-  //  private def maybeBuildToForYieldCodeActionWithIf(
-  //                                                    path: AbsolutePath,
-  //                                                    termIf: Term.If,
-  //                                                    document: String,
-  //                                                    indentation: String
-  //                                                  ): Option[l.CodeAction] = {
-  //    val (nameQualsList, conditions, yieldString) =
-  //      extractForYieldOutOfIf(List.empty, List.empty, termIf, document)
-  //    if (nameQualsList.nonEmpty)
-  //      Some(
-  //        buildCodeActionFromForYieldParts(
-  //          nameQualsList,
-  //          conditions,
-  //          yieldString,
-  //          indentation: String,
-  //          path,
-  //          termIf.pos.toLSP.getStart,
-  //          termIf.pos.toLSP.getEnd
-  //        )
-  //      )
-  //    else None
-  //  }
 
   private def buildCodeActionFromForYieldParts(
       nameQualsList: List[ForYieldEnumeration],
@@ -187,40 +136,21 @@ class FlatMapToForComprehensionCodeAction(
     codeAction
   }
 
-  private def maybeBuildToForYieldCodeActionWithApply(
-      path: AbsolutePath,
-      termApply: Term.Apply,
-      document: String,
-      indentation: String
-  ): Option[l.CodeAction] = {
-    val (nameQualsList, conditions, yieldExpression) = {
-      extractForYield(List.empty, List.empty, termApply, document)
-    }
-
-    if (nameQualsList.nonEmpty) {
-      Some(
-        buildCodeActionFromForYieldParts(
-          nameQualsList,
-          conditions,
-          yieldExpression,
-          indentation,
-          path,
-          termApply.pos.toLSP.getStart,
-          termApply.pos.toLSP.getEnd
-        )
-      )
-    } else None
-
-  }
-
   private def maybeBuildToForYieldChainedCodeActionWithApply(
       path: AbsolutePath,
       termApply: Term.Apply,
       document: String,
       indentation: String
   ): Option[l.CodeAction] = {
-    val (nameQualsList, conditions) = {
-      extractChainedForYield(None, List.empty, List.empty, termApply, document)
+    val (nameQualsList, conditions, _) = {
+      extractChainedForYield(
+        None,
+        List.empty,
+        List.empty,
+        termApply,
+        document,
+        Set.empty
+      )
     }
 
     if (nameQualsList.nonEmpty) {
@@ -238,7 +168,7 @@ class FlatMapToForComprehensionCodeAction(
               termApply.pos.toLSP.getEnd
             )
           )
-        case head :: Nil => None
+        case _ :: Nil => None
       }
 
     } else None
@@ -252,7 +182,7 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String
   ): Option[l.CodeAction] = {
     termSelect.parent.collect { case termApply: Term.Apply =>
-      maybeBuildToForYieldCodeActionWithApply(
+      maybeBuildToForYieldChainedCodeActionWithApply(
         path,
         termApply,
         document,
@@ -293,159 +223,129 @@ class FlatMapToForComprehensionCodeAction(
 
   case class YieldExpression(expression: String)
 
-  /**
-   * This recursive method, in each iteration, goes one level deeper in the hierarchy
-   * of nested `maps`/`flatMap`s; and extracts the the `variableName <- qual` tuples,
-   * then appends them to the `existingNameQuals` list.
-   *
-   * <p>The recursion stops, when there are no more `flatMap`s/`map`s further inward
-   * in the hierarchy to extract `variableName <- qual` enumerations from. At such
-   * a point, simply the body of the function passed as the argument of the innermost
-   * `map`/`flatMap`, is regarded as the ultimate `yield` expression. For this reason,
-   * the previously deducted yield expressions at the beginning of each iteration, get
-   * ignored, so they don't get passed as an argument to the next recursive call.
-   *
-   * <p>Notice: this method does not preserve the 'flatness' level of the original
-   * `flatMap`/`map` expression, in the produced for comprehension.
-   *
-   * @param existingNameQuals the `variableName <- qual` tuples which are extracted from the
-   *                          higher levels of the hierarchy of nested `flatMaps`/`maps`,
-   *                          which would make up the enumertions of the for yield expression, later
-   * @param termApply         the whole expression which is to have the name
-   * @param document
-   * @return a tuple of (List of (variableName, Qual), the candidate yield expression)
-   */
-  private def extractForYield(
-      existingNameQuals: List[ForYieldEnumeration],
-      existingConditions: List[ForYieldCondition],
-      termApply: Term.Apply,
-      document: String
-  ): (List[ForYieldEnumeration], List[ForYieldCondition], YieldExpression) = {
-    termApply.fun match {
-      case termSelect: Term.Select
-          if termSelect.name.value == "flatMap" || termSelect.name.value == "map" =>
-        val qual = termSelect.qual
-        val qualString = document.substring(qual.pos.start, qual.pos.end)
-        termApply.args.head match {
-          case termFunction: Term.Function =>
-            extractForYieldOutOfFunction(
-              existingNameQuals,
-              existingConditions,
-              termFunction,
-              qualString,
-              document
-            )
-
-          case termBlock: Term.Block =>
-            termBlock.stats
-              .collectFirst { case termFunction: Term.Function =>
-                extractForYieldOutOfFunction(
-                  existingNameQuals,
-                  existingConditions,
-                  termFunction,
-                  qualString,
-                  document
-                )
-              }
-              .getOrElse(
-                (
-                  existingNameQuals,
-                  existingConditions,
-                  YieldExpression(
-                    document.substring(termApply.pos.start, termApply.pos.end)
-                  )
-                )
-              )
-
-          case _ =>
-            (
-              existingNameQuals,
-              existingConditions,
-              YieldExpression(
-                document.substring(termApply.pos.start, termApply.pos.end)
-              )
-            )
-        }
-      case _ =>
-        (
-          existingNameQuals,
-          existingConditions,
-          YieldExpression(
-            document.substring(termApply.pos.start, termApply.pos.end)
-          )
-        )
-    }
-  }
-
   private def extractNextValueNameAndNextQualOutOfTermApplyArgs(
       termApplyArgsHead: Term,
-      document: String
+      document: String,
+      generatedByMetalsValues: Set[String]
   ): (
       Option[String],
       Option[String],
-      List[ForYieldEnumeration],
-      List[ForYieldCondition]
+      Set[String]
   ) = {
-    termApplyArgsHead match {
-      case termFunction: Term.Function =>
-        val (valueName, nextQual, newEnums, newConditions) =
-          extractValueNameAndNextQualOutOfFunction(
-            termFunction,
-            document
-          )
-        (Some(valueName), Some(nextQual), newEnums, newConditions)
+    processValueNameAndNextQual(
+      termApplyArgsHead,
+      document,
+      generatedByMetalsValues
+    )
+  }
 
-      case termBlock: Term.Block =>
-        termBlock.stats
-          .collectFirst {
-            case termFunction: Term.Function =>
-              val (valueName, nextQual, newEnums, newConditions) =
-                extractValueNameAndNextQualOutOfFunction(
-                  termFunction,
-                  document
-                )
-              (Some(valueName), Some(nextQual), newEnums, newConditions)
-            //            case termApplyInfix: Term.ApplyInfix =>
-            //              val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermApplyInfix(
-            //                termApplyInfix,
-            //                document
-            //              )
-            //              (Some(valueName), Some(nextQual))
-            case termName: Term.Name => // single argument function
-              val (valueName, nextQual) =
-                extractValueNameAndNextQualOutOfTermName(
-                  termName,
-                  document
-                )
-              (Some(valueName), Some(nextQual), List.empty, List.empty)
-            //            case termApply: Term.Apply => //function and placeholder argument
-            //              val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunctionWithPlaceHolder(
-            //                termApply,
-            //                document
-            //              )
-            //              (Some(valueName), Some(nextQual))
-          }
-          .getOrElse((None, None, List.empty, List.empty))
-
-      //      case termApplyInfix: Term.ApplyInfix =>
-      //        val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermApplyInfix(
-      //          termApplyInfix,
-      //          document
-      //        )
-      //        (Some(valueName), Some(nextQual))
-      case termName: Term.Name =>
-        val (valueName, nextQual) = extractValueNameAndNextQualOutOfTermName(
+  private def processValueNameAndNextQual(
+      tree: Tree,
+      document: String,
+      generatedByMetalsValues: Set[String]
+  ): (Option[String], Option[String], Set[String]) = tree match {
+    case termFunction: Term.Function =>
+      extractValueNameAndNextQualOutOfFunction(
+        termFunction,
+        document,
+        generatedByMetalsValues
+      )
+    case termApplyInfix: Term.ApplyInfix =>
+      extractValueNameAndNextQualOutOfApplyInfix(
+        termApplyInfix,
+        document,
+        generatedByMetalsValues
+      )
+    case termName: Term.Name => // single argument function
+      val (valueName, nextQual, newMetalsNames) =
+        extractValueNameAndNextQualOutOfTermName(
           termName,
-          document
+          generatedByMetalsValues
         )
-        (Some(valueName), Some(nextQual), List.empty, List.empty)
-      //      case termApply: Term.Apply =>
-      //        val (valueName, nextQual) = extractValueNameAndNextQualOutOfFunctionWithPlaceHolder(
-      //          termApply,
-      //          document
-      //        )
-      //        (Some(valueName), Some(nextQual))
+      (Some(valueName), Some(nextQual), newMetalsNames)
+    case termApply: Term.Apply => // function and placeholder argument
+      extractValueNameAndNextQualOutOfTermApply(
+        termApply,
+        document,
+        generatedByMetalsValues
+      )
+    case termBlock: Term.Block =>
+      termBlock.stats.headOption
+        .map(processValueNameAndNextQual(_, document, generatedByMetalsValues))
+        .getOrElse(None, None, generatedByMetalsValues)
+
+    case termAnonymousFunction: Term.AnonymousFunction =>
+      termAnonymousFunction.body match {
+        case termApplyInfix: Term.ApplyInfix =>
+          extractValueNameAndNextQualOutOfApplyInfix(
+            termApplyInfix,
+            document,
+            generatedByMetalsValues
+          )
+        case termName: Term.Name => // single argument function
+          val (valueName, nextQual, newMetalsNames) =
+            extractValueNameAndNextQualOutOfTermName(
+              termName,
+              generatedByMetalsValues
+            )
+          (Some(valueName), Some(nextQual), newMetalsNames)
+        case termApply: Term.Apply => // function and placeholder argument
+          extractValueNameAndNextQualOutOfTermApply(
+            termApply,
+            document,
+            generatedByMetalsValues
+          )
+        case _ => (None, None, generatedByMetalsValues)
+      }
+  }
+
+  private def extractValueNameAndNextQualOutOfTermApply(
+      termApply: Term.Apply,
+      document: String,
+      generatedByMetalsValues: Set[String]
+  ): (Option[String], Option[String], Set[String]) = {
+    val (nextValueName, newMetalsValues) =
+      createNewName(termApply, generatedByMetalsValues)
+    val maybeNextQual =
+      replacePlaceHolderWithNewValue(nextValueName, termApply, document)
+    (maybeNextQual.map(_ => nextValueName), maybeNextQual, newMetalsValues)
+  }
+
+  private def replacePlaceHolderWithNewValue(
+      newValueName: String,
+      termApply: Term.Apply,
+      document: String
+  ): Option[String] = {
+    val maybePlaceHolderFromSelectQual = termApply.fun match {
+      case termSelect: Term.Select =>
+        termSelect.qual match {
+          case placeHolder: Term.Placeholder => Some(placeHolder)
+          case _ => None
+        }
+      case _ => None
     }
+    val maybePlaceHolder = maybePlaceHolderFromSelectQual.orElse {
+      termApply.args.collectFirst { case placeHolder: Term.Placeholder =>
+        placeHolder
+      }
+    }
+    maybePlaceHolder.map { placeHolder =>
+      val newTermApply =
+        document.substring(termApply.pos.start, termApply.pos.end)
+      newTermApply.patch(
+        placeHolder.pos.start - termApply.pos.start,
+        newValueName,
+        1
+      )
+    }
+  }
+
+  private def extractValueNameAndNextQualOutOfApplyInfix(
+      termApplyInfix: Term.ApplyInfix,
+      document: String,
+      generatedByMetalsValues: Set[String]
+  ): (Option[String], Option[String], Set[String]) = {
+    ???
   }
 
   private def extractChainedForYield(
@@ -453,8 +353,9 @@ class FlatMapToForComprehensionCodeAction(
       existingNameQuals: List[ForYieldEnumeration],
       existingConditions: List[ForYieldCondition],
       termApply: Term.Apply,
-      document: String
-  ): (List[ForYieldEnumeration], List[ForYieldCondition]) = {
+      document: String,
+      generatedByMetalsValues: Set[String]
+  ): (List[ForYieldEnumeration], List[ForYieldCondition], Set[String]) = {
     termApply.fun match {
       case termSelect: Term.Select
           if termSelect.name.value == "flatMap" || termSelect.name.value == "map" =>
@@ -462,40 +363,43 @@ class FlatMapToForComprehensionCodeAction(
         val assignOrMap =
           if (termSelect.name.value == "flatMap") AssignOrMap.map
           else AssignOrMap.assign
-        val (perhapseValueName, perhapsNextQual, newEnums, newConditions) =
+        val (perhapseValueName, perhapsNextQual, newMetalsNames) =
           extractNextValueNameAndNextQualOutOfTermApplyArgs(
             termApply.args.head,
-            document
+            document,
+            generatedByMetalsValues
           )
         qual match {
           case qualTermApply: Term.Apply =>
             pprint.log("qualTermApply is: " + qualTermApply)
             extractChainedForYield(
               perhapseValueName,
-              (newEnums :+ ForYieldEnumeration(
+              ForYieldEnumeration(
                 Some(assignOrMap),
                 perhapseLastName,
                 perhapsNextQual
-              )) ++ existingNameQuals,
-              newConditions ++ existingConditions,
+              ) +: existingNameQuals,
+              existingConditions,
               qualTermApply,
-              document
+              document,
+              newMetalsNames
             )
           case otherQual =>
             pprint.log("otherQual is: " + otherQual)
             val qualString =
               document.substring(otherQual.pos.start, otherQual.pos.end)
             (
-              (ForYieldEnumeration(
+              ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseValueName,
                 Some(qualString)
-              ) +: newEnums) ++ ((ForYieldEnumeration(
+              ) +: ForYieldEnumeration(
                 Some(assignOrMap),
                 perhapseLastName,
                 perhapsNextQual
-              ) +: existingNameQuals)),
-              existingConditions
+              ) +: existingNameQuals,
+              existingConditions,
+              newMetalsNames
             )
 
         }
@@ -506,46 +410,49 @@ class FlatMapToForComprehensionCodeAction(
         val filterOrNot =
           if (termSelect.name.value == "filter") FilterOrNot.filter
           else FilterOrNot.filterNot
-        val (perhapseValueName, perhapsNextCondition, newEnums, newConditions) =
+        val (perhapseValueName, perhapsNextCondition, newMetalsNames) =
           extractNextValueNameAndNextQualOutOfTermApplyArgs(
             termApply.args.head,
-            document
+            document,
+            generatedByMetalsValues
           )
         qual match {
           case qualTermApply: Term.Apply =>
             pprint.log("qualTermApply is: " + qualTermApply)
             extractChainedForYield(
               perhapseValueName,
-              (ForYieldEnumeration(
+              ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseLastName,
                 perhapseValueName
-              ) +: newEnums) ++ existingNameQuals,
-              (ForYieldCondition(
+              ) +: existingNameQuals,
+              ForYieldCondition(
                 Some(filterOrNot),
                 perhapsNextCondition
-              ) +: newConditions) ++ existingConditions,
+              ) +: existingConditions,
               qualTermApply,
-              document
+              document,
+              newMetalsNames
             )
           case otherQual =>
             pprint.log("otherQual is: " + otherQual)
             val qualString =
               document.substring(otherQual.pos.start, otherQual.pos.end)
             (
-              (ForYieldEnumeration(
+              ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseValueName,
                 Some(qualString)
-              ) +: newEnums) ++ (ForYieldEnumeration(
+              ) +: ForYieldEnumeration(
                 Some(AssignOrMap.assign),
                 perhapseLastName,
                 perhapseValueName
-              ) +: existingNameQuals),
+              ) +: existingNameQuals,
               ForYieldCondition(
                 Some(filterOrNot),
                 perhapsNextCondition
-              ) +: existingConditions
+              ) +: existingConditions,
+              newMetalsNames
             )
 
         }
@@ -559,182 +466,88 @@ class FlatMapToForComprehensionCodeAction(
             perhapseLastName,
             Some(qualString)
           ) +: existingNameQuals,
-          existingConditions
-        )
-    }
-  }
-
-  def extractForYieldOutOfPotentaialYieldTree(
-      existingNameQuals: List[ForYieldEnumeration],
-      existingConditions: List[ForYieldCondition],
-      yieldTree: Tree,
-      document: String
-  ): (List[ForYieldEnumeration], List[ForYieldCondition], YieldExpression) = {
-    yieldTree match {
-      case termApply: Term.Apply =>
-        extractForYield(
-          existingNameQuals,
           existingConditions,
-          termApply,
-          document
-        )
-      case termIf: Term.If =>
-        extractForYieldOutOfIf(
-          existingNameQuals,
-          existingConditions,
-          termIf,
-          document
-        )
-      case termBlock: Term.Block if termBlock.stats.length == 1 =>
-        extractForYieldOutOfPotentaialYieldTree(
-          existingNameQuals,
-          existingConditions,
-          termBlock.stats.head,
-          document
-        )
-      case otherStat =>
-        (
-          existingNameQuals,
-          existingConditions,
-          YieldExpression(
-            document.substring(otherStat.pos.start, otherStat.pos.end)
-          )
-        )
-    }
-  }
-
-  private def extractForYieldOutOfIf(
-      existingNameQuals: List[ForYieldEnumeration],
-      existingConditions: List[ForYieldCondition],
-      termIf: Term.If,
-      document: String
-  ): (List[ForYieldEnumeration], List[ForYieldCondition], YieldExpression) = {
-    termIf.elsep match {
-      case termName: Term.Name if termName.value == "None" =>
-        val condition =
-          document.substring(termIf.cond.pos.start, termIf.cond.pos.end)
-        val thenp = termIf.thenp
-        extractForYieldOutOfPotentaialYieldTree(
-          existingNameQuals,
-          existingConditions :+ ForYieldCondition(None, Some(condition)),
-          thenp,
-          document
-        )
-      case _ =>
-        (
-          existingNameQuals,
-          existingConditions,
-          YieldExpression(
-            document.substring(termIf.pos.start, termIf.pos.end)
-          )
-        )
-    }
-  }
-
-  /**
-   * @param existingNameQuals the `variableName <- qual` tuples which are extracted from the higher levels
-   *                          of the hierarchy of nested `flatMaps`/`maps`, which would make up
-   *                          the enumertions of the for yield expression, later
-   * @param termFunction      the function which is passed as the main argument of `.map` or `.flatMap`
-   * @param qualString        the left hand side of each enumeration item in the for yield expression
-   * @param document          the text string of the whole file
-   * @return
-   */
-  private def extractForYieldOutOfFunction(
-      existingNameQuals: List[ForYieldEnumeration],
-      existingConditions: List[ForYieldCondition],
-      termFunction: Term.Function,
-      qualString: String,
-      document: String
-  ): (List[ForYieldEnumeration], List[ForYieldCondition], YieldExpression) = {
-    val paramName =
-      termFunction.params.headOption.map(_.name.value).getOrElse("")
-    val body = termFunction.body
-    body match {
-      case bodyTermApply: Term.Apply =>
-        extractForYield(
-          existingNameQuals :+ ForYieldEnumeration(
-            Some(AssignOrMap.map),
-            Some(paramName),
-            Some(qualString)
-          ),
-          existingConditions,
-          bodyTermApply,
-          document
-        )
-//      case termIf: Term.If =>
-//        extractForYieldOutOfIf(
-//          existingNameQuals :+ ForYieldEnumeration(
-//            None,
-//            Some(paramName),
-//            Some(qualString)
-//          ),
-//          existingConditions,
-//          termIf,
-//          document
-//        )
-
-      case otherBody =>
-        (
-          existingNameQuals :+ ForYieldEnumeration(
-            Some(AssignOrMap.map),
-            Some(paramName),
-            Some(qualString)
-          ),
-          existingConditions,
-          YieldExpression(
-            s"Some( ${document.substring(otherBody.pos.start, otherBody.pos.end)})"
-          )
+          generatedByMetalsValues
         )
     }
   }
 
   private def extractValueNameAndNextQualOutOfFunction(
       termFunction: Term.Function,
-      document: String
-  ): (String, String, List[ForYieldEnumeration], List[ForYieldCondition]) = {
-    val paramName =
-      termFunction.params.headOption.map(_.name.value).getOrElse("")
-    val body = termFunction.body
-    body match {
-      case termApplyBody: Term.Apply =>
-        val (enumerations, conditions, yieldexpr) =
-          extractForYield(List.empty, List.empty, termApplyBody, document)
-        (paramName, yieldexpr.expression, enumerations, conditions)
-      case otherBody =>
-        (
-          paramName,
-          document.substring(otherBody.pos.start, otherBody.pos.end),
-          List.empty,
-          List.empty
-        )
-    }
-
+      document: String,
+      generatedByMetalsValues: Set[String]
+  ): (Option[String], Option[String], Set[String]) = {
+    val maybeNameAndMetalsNames = termFunction.params.headOption
+      .map {
+        case anonymousParam if anonymousParam.name.value == "" =>
+          createNewName(termFunction, generatedByMetalsValues)
+        case otherParam => (otherParam.name.value, generatedByMetalsValues)
+      }
+    val newQual =
+      document.substring(termFunction.body.pos.start, termFunction.body.pos.end)
+    (
+      maybeNameAndMetalsNames.map(_._1),
+      maybeNameAndMetalsNames.map(_ => newQual),
+      maybeNameAndMetalsNames.map(_._2).getOrElse(generatedByMetalsValues)
+    )
   }
 
   private def extractValueNameAndNextQualOutOfTermName(
       termName: Term.Name,
-      document: String
-  ): (String, String) = {
-    val paramName = "newValueByMetals" + Random.nextInt()
-    (paramName, s"${termName.value}($paramName)")
+      generatedByMetalsValues: Set[String]
+  ): (String, String, Set[String]) = {
+    val (paramName, newMetalsNames) =
+      createNewName(termName, generatedByMetalsValues)
+    (paramName, s"${termName.value}($paramName)", newMetalsNames)
   }
 
-  private def getIndentationForPosition(
-      treePos: Position
-  ): String = {
-    var result = ""
-    for (_ <- 0 to treePos.startColumn) {
-      result = result + " "
+  private def createNewName(
+      tree: Tree,
+      generatedByMetalsValues: Set[String]
+  ): (String, Set[String]) = {
+
+    def findTopMostParent = {
+      var initialParent = tree
+      while (initialParent.parent.isDefined)
+        initialParent = initialParent.parent.get
+
+      initialParent
     }
-    result
+
+    // We don't want to use any name that is already being used in the scope
+    def loop(t: Tree): List[String] = {
+      t.children.flatMap {
+        case n: Name => List(n.toString())
+        case child => loop(child)
+      }
+    }
+
+    val newValuePrefix = "generatedByMetals"
+    val names = loop(findTopMostParent).toSet ++ generatedByMetalsValues
+
+    if (!names(newValuePrefix))
+      (newValuePrefix, generatedByMetalsValues + newValuePrefix)
+    else {
+      var i = 0
+      while (names(s"$newValuePrefix$i"))
+        i += 1
+      val result = s"$newValuePrefix$i"
+      (result, generatedByMetalsValues + result)
+    }
   }
+
+  private def getIndentationForPositionInDocument(
+      treePos: Position,
+      document: String
+  ): String =
+    document
+      .substring(treePos.start - treePos.startColumn, treePos.start)
+      .takeWhile(_.isWhitespace)
 
   private def applyWithSingleFunction: Tree => Boolean = {
     case _: Term.Apply => true
     case _: Term.Select => true
     case _: Term.Name => true
-    case _: Term.If => true
     case _ => false
   }
 }
@@ -745,12 +558,12 @@ object FlatMapToForComprehensionCodeAction {
 
 object AssignOrMap extends Enumeration {
   type AssignOrMap = Value
-  val assign = Value("=")
-  val map = Value("<-")
+  val assign: Value = Value("=")
+  val map: Value = Value("<-")
 }
 
 object FilterOrNot extends Enumeration {
   type FilterOrNot = Value
-  val filter = Value("")
-  val filterNot = Value("!")
+  val filter: Value = Value("")
+  val filterNot: Value = Value("!")
 }
