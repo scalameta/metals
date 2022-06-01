@@ -179,30 +179,37 @@ class SemanticdbTreePrinter(
     def isExplicitTuple(range: s.Range) =
       range.inString(textDocument.text).exists(_.startsWith("Tuple"))
 
-    def gatherSynthetics(tree: s.Tree) = {
+    def gatherSynthetics(tree: s.Tree, treeRange: Option[s.Range] = None) = {
       for {
-        range <- synthetic.range.toList
+        range <- treeRange.orElse(synthetic.range).toList
         syntheticString <- printTree(tree, isExplicitTuple(range)).toList
       } yield (syntheticString, range)
     }
 
-    def tryTree(tree: s.Tree): Seq[(String, s.Range)] =
+    /* We don't want type trees for anything than toplevel,
+     * since that might actually be contained in for comprehension.
+     * `ignoreTypesTrees` is only set to false for toplevel synthetics.
+     */
+    def tryTree(
+        tree: s.Tree,
+        ignoreTypesTrees: Boolean = true
+    ): Seq[(String, s.Range)] =
       tree match {
         /**
          *  implicit val str = ""
          *  def hello()(implicit a : String)
          *  hello()<<(str)>>
          */
-        case tree @ s.ApplyTree(_: s.OriginalTree, _)
+        case tree @ s.ApplyTree(org: s.OriginalTree, _)
             if userConfig.showImplicitArguments =>
-          gatherSynthetics(tree)
+          gatherSynthetics(tree, org.range)
 
         /**
          *  def hello[T](T object) = object
          *  hello<<[String]>>("")
          */
         case tree @ s.TypeApplyTree(_: s.OriginalTree | _: s.SelectTree, _)
-            if userConfig.showInferredType =>
+            if !ignoreTypesTrees && userConfig.showInferredType =>
           gatherSynthetics(tree)
         /**
          *  implicit def implicitFun(object: T): R = ???
@@ -238,17 +245,18 @@ class SemanticdbTreePrinter(
             synth <- synthetics(syntheticString, range)
           } yield synth
 
-        // needed in case of synthetics inside yield of more complex synthetic trees such as for comprehensions
-        case tree @ s.ApplyTree(
-              _: s.ApplyTree | _: s.TypeApplyTree,
-              _
-            ) =>
-          tree.arguments.flatMap(tryTree)
+        // needed in case of synthetics inside of more complex synthetic trees such as for comprehensions
+        case appl: s.ApplyTree =>
+          (appl.arguments :+ appl.function).flatMap(tryTree(_))
+        case tree: s.TypeApplyTree =>
+          tryTree(tree.function)
+        case sel: s.SelectTree =>
+          tryTree(sel.qualifier)
         case s.FunctionTree(_, body) =>
           tryTree(body)
         case _ => Nil
       }
-    tryTree(synthetic.tree)
+    tryTree(synthetic.tree, ignoreTypesTrees = false)
   }
 
   private def isTuple(symbol: String) = symbol.startsWith("scala/Tuple")

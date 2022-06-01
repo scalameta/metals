@@ -715,8 +715,11 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |
            |  implicit val evidence: Evidence = ???
            |
+           |  def opts(i: Int)(implicit ev: Evidence) = Option(i)
            |  for {
            |    number <- Option(5)
+           |    num2 <- opts(2)
+           |    _ = "abc ".stripMargin
            |  } yield DataType(number, "").next
            |
            |  Option(5).map(DataType(_, "").next)
@@ -746,8 +749,11 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |
            |  implicit val evidence: Evidence = ???
            |
+           |  def opts(i: Int)(implicit ev: Evidence): Option[Int] = Option[Int](i)
            |  for {
            |    number: Int <- Option[Int](5)
+           |    num2: Int <- opts(2)(evidence)
+           |    _ = augmentString("abc ").stripMargin
            |  } yield DataType[String](number, "").next(evidence)
            |
            |  Option[Int](5).map[Int](DataType[String](_, "").next(evidence))
