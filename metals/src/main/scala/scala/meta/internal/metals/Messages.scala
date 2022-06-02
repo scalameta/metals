@@ -352,7 +352,7 @@ object Messages {
 
   object BloopJvmPropertiesChange {
     def reconnect: MessageActionItem =
-      new MessageActionItem("Restart Bloop")
+      new MessageActionItem("Apply and restart Bloop")
 
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")

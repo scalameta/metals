@@ -1306,20 +1306,21 @@ class MetalsLanguageServer(
         val restartBuildServer = bspSession
           .map { session =>
             if (session.main.isBloop) {
-              bloopServers.ensureDesiredVersion(
-                userConfig.currentBloopVersion,
-                session.version,
-                userConfig.bloopVersion.nonEmpty,
-                old.bloopVersion.isDefined,
-                () => autoConnectToBuildServer
-              )
-
-              bloopServers.ensureDesiredJvmSettings(
-                userConfig.bloopJvmProperties,
-                userConfig.javaHome,
-                () => autoConnectToBuildServer()
-              )
-
+              bloopServers
+                .ensureDesiredVersion(
+                  userConfig.currentBloopVersion,
+                  session.version,
+                  userConfig.bloopVersion.nonEmpty,
+                  old.bloopVersion.isDefined,
+                  () => autoConnectToBuildServer
+                )
+                .flatMap { _ =>
+                  bloopServers.ensureDesiredJvmSettings(
+                    userConfig.bloopJvmProperties,
+                    userConfig.javaHome,
+                    () => autoConnectToBuildServer()
+                  )
+                }
             } else if (
               userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
                 .exists(Ammonite.isAmmBuildTarget)
