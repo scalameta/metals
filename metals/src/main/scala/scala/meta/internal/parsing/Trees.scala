@@ -18,7 +18,7 @@ import org.eclipse.{lsp4j => l}
  * Manages parsing of Scala source files into Scalameta syntax trees.
  *
  * - provides the latest good Scalameta tree for a given source file
- *   similar as `Buffers` provides the current text content.
+ * similar as `Buffers` provides the current text content.
  * - produces diagnostics for syntax errors.
  */
 final class Trees(
@@ -51,8 +51,8 @@ final class Trees(
   /**
    * Find last tree matching T that encloses the position.
    *
-   * @param source source to load the tree for
-   * @param lspPos cursor position
+   * @param source    source to load the tree for
+   * @param lspPos    cursor position
    * @param predicate predicate which T must fulfill
    * @return found tree node of type T or None
    */
@@ -72,6 +72,7 @@ final class Trees(
           enclosedChildren(other.children, pos).flatMap(loop(_, pos))
       }
     }
+
     get(source).flatMap { tree =>
       val pos = lspPos.toMeta(tree.pos.input)
       loop(tree, pos)
@@ -81,6 +82,7 @@ final class Trees(
 
   /**
    * Parse file at the given path and return a list of errors if there are any.
+   *
    * @param path file to parse
    * @return list of errors if the file failed to parse
    */
@@ -125,6 +127,19 @@ final class Trees(
       } else {
         dialect(input).parse[Source]
       }
+    }
+  }
+
+  def parse(
+      path: AbsolutePath
+  )(code: String): Parsed[Tree] = {
+    val dialect = scalaVersionSelector.getDialect(path)
+    val input = Input.VirtualFile(path.toURI.toString(), code)
+    if (path.isAmmoniteScript) {
+      val ammoniteInput = Input.Ammonite(input)
+      dialect(ammoniteInput).parse(Parse.parseAmmonite)
+    } else {
+      dialect(input).parse[Source]
     }
   }
 
