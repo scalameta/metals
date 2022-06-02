@@ -436,6 +436,7 @@ class WorksheetProvider(
       } yield {
         val scalacOptions = info.scalac.getOptions.asScala
           .filterNot(_.contains("semanticdb"))
+          .filterNot(_.contains("-Wconf"))
           .asJava
         val mdoc = embedded
           .mdoc(
