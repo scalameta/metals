@@ -32,7 +32,7 @@ object SignatureHelpProvider:
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
     driver.run(uri, sourceFile)
 
-    given Context = driver.currentCtx
+    given ctx: Context = driver.currentCtx
 
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)
@@ -40,29 +40,25 @@ object SignatureHelpProvider:
     val path =
       Interactive.pathTo(trees, pos).dropWhile(t => notCurrentApply(t, pos))
 
-    val (paramN, callableN, alternatives) =
-      Signatures.callInfo(path, pos.span)
+    val (paramN, callableN, alternativeSignatures) =
+      MetalsSignatures.signatures(
+        search,
+        path,
+        pos
+      )
 
-    val signatureInfos =
-      alternatives.flatMap { denot =>
-        val updatedDenot =
-          path.headOption
-            .map { t =>
-              val pre = t.qual
-              denot.asSeenFrom(pre.tpe.widenTermRefExpr)
-            }
-            .getOrElse(denot)
-        val doc = search.symbolDocumentation(denot.symbol)
-        (doc, Signatures.toSignature(updatedDenot)) match
-          case (Some(info), Some(signature)) =>
-            withDocumentation(
-              info,
-              signature,
-              denot.symbol.is(Flags.JavaDefined)
-            )
-          case (_, sig) => sig
+    val signatureInfos = alternativeSignatures.map { case (signature, denot) =>
+      search.symbolDocumentation(denot.symbol) match
+        case Some(doc) =>
+          withDocumentation(
+            doc,
+            signature,
+            denot.symbol.is(Flags.JavaDefined)
+          ).getOrElse(signature)
+        case _ => signature
 
-      }
+    }
+
     new l.SignatureHelp(
       signatureInfos.map(signatureToSignatureInformation).asJava,
       callableN,
