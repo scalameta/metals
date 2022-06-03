@@ -5,7 +5,7 @@ import Tests._
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-def localSnapshotVersion = "0.11.6-SNAPSHOT"
+def localSnapshotVersion = "0.11.7-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
