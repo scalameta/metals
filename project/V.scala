@@ -12,17 +12,17 @@ object V {
   val ammonite213Version = "2.13.7"
 
   val ammonite = "2.5.3"
-  val bloop = "1.5.0-18-003e6c7b"
+  val bloop = "1.5.0-22-91111c15"
   val bloopNightly = bloop
   val bsp = "2.1.0-M1"
-  val coursier = "2.1.0-M5"
+  val coursier = "2.1.0-M6"
   val coursierInterfaces = "1.0.6"
   val debugAdapter = "2.2.0-M1"
   val genyVersion = "0.7.1"
   val gradleBloop = bloop
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.7.4"
-  val jsoup = "1.14.3"
+  val jsoup = "1.15.1"
   val lsp4jV = "0.12.0"
   val mavenBloop = bloop
   val mill = "0.10.4"
@@ -35,7 +35,7 @@ object V {
   val scalafix = "0.10.0"
   val scalafmt = "3.5.3"
   val scalameta = "4.5.9"
-  val scribe = "3.8.2"
+  val scribe = "3.8.3"
   val semanticdb = scalameta
   val qdox = "2.0.1"
 
