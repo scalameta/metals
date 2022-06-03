@@ -97,7 +97,7 @@ object StepNavigator {
   ) extends Location {
 
     override def pathEquals(actual: String): Boolean =
-      path.toURI.toString.endsWith(actual)
+      actual.endsWith(path.toNIO.toString)
     override def file: String = path.toURI.toString()
     override def line: Long = lineNum
     override def exists: Boolean = path.exists
