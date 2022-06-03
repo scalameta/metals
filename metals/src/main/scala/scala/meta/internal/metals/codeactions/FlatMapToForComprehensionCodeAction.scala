@@ -315,31 +315,35 @@ class FlatMapToForComprehensionCodeAction(
       termApply: Term.Apply,
       document: String
   ): Option[String] = {
-    val maybePlaceHolderFromSelectQual = termApply.fun match {
-      case termSelect: Term.Select =>
-        termSelect.qual match {
-          case placeHolder: Term.Placeholder => Some(placeHolder)
-          case _ => None
-        }
-      case _ => None
-    }
-    val maybePlaceHolder = maybePlaceHolderFromSelectQual.orElse {
-      termApply.args.flatMap {
-        case placeHolder: Term.Placeholder =>
-          Some(placeHolder)
+    val maybeReplacedTreeAndString: Option[(Tree, String)] =
+      termApply.fun match {
+        case innerTermSelect: Term.Select =>
+          replacePlaceHolderInSelect(newValueName, innerTermSelect, document)
+            .map((innerTermSelect, _))
+        case innerTermApply: Term.Apply =>
+          replacePlaceHolderInApply(newValueName, innerTermApply, document).map(
+            (innerTermApply, _)
+          )
         case _ => None
-      }.headOption
-    }
-    maybePlaceHolder.map { placeHolder =>
-      val newTermApply =
-        document.substring(termApply.pos.start, termApply.pos.end)
-      val result = newTermApply.patch(
-        placeHolder.pos.start - termApply.pos.start,
-        newValueName,
-        1
-      )
-      result
-    }
+      }
+    maybeReplacedTreeAndString
+      .orElse {
+        termApply.args.flatMap {
+          case placeHolder: Term.Placeholder =>
+            Some(placeHolder, newValueName)
+          case _ => None
+        }.headOption
+      }
+      .map { tuple =>
+        val newTermApply =
+          document.substring(termApply.pos.start, termApply.pos.end)
+        val result = newTermApply.patch(
+          tuple._1.pos.start - termApply.pos.start,
+          tuple._2,
+          tuple._1.pos.end - tuple._1.pos.start
+        )
+        result
+      }
   }
 
   private def replacePlaceHolderInSelect(
@@ -347,18 +351,25 @@ class FlatMapToForComprehensionCodeAction(
       termSelect: Term.Select,
       document: String
   ): Option[String] = {
-    val maybePlaceHolder = termSelect.qual match {
-      case placeHolder: Term.Placeholder => Some(placeHolder)
-      case _ => None
-    }
-    pprint.log("maybePlaceHolder is " + maybePlaceHolder)
-    maybePlaceHolder.map { placeHolder =>
+    val maybeReplacedTreeReplacementString: Option[(Tree, String)] =
+      termSelect.qual match {
+        case placeHolder: Term.Placeholder => Some(placeHolder, newValueName)
+        case innerTermSelect: Term.Select =>
+          replacePlaceHolderInSelect(newValueName, innerTermSelect, document)
+            .map((innerTermSelect, _))
+        case termApply: Term.Apply =>
+          replacePlaceHolderInApply(newValueName, termApply, document)
+            .map((termApply, _))
+        case _ => None
+      }
+    maybeReplacedTreeReplacementString.map { tuple =>
+      val replacedTree = tuple._1
       val newTermSelect =
         document.substring(termSelect.pos.start, termSelect.pos.end)
       val result = newTermSelect.patch(
-        placeHolder.pos.start - termSelect.pos.start,
-        newValueName,
-        1
+        replacedTree.pos.start - termSelect.pos.start,
+        tuple._2,
+        replacedTree.pos.end - replacedTree.pos.start
       )
       pprint.log("result is: " + result)
       result
