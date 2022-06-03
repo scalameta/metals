@@ -7,6 +7,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.JdkVersion
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.io.AbsolutePath
@@ -71,40 +72,40 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   test("projects") {
     cleanWorkspace()
     for {
-      _ <- initialize("""
-                        |/metals.json
-                        |{
-                        |  "a": {},
-                        |  "b": {}
-                        |}
-                        |/a/src/main/scala/a/Zero.scala
-                        |class Zero {
-                        | val a = 1
-                        |}
-                        |/a/src/main/scala/a/First.scala
-                        |package a
-                        |class First {
-                        |  def a = 1
-                        |  val b = 2
-                        |}
-                        |object First
-                        |/a/src/main/scala/a/Second.scala
-                        |package a
-                        |class Second {
-                        |  def a = 1
-                        |  val b = 2
-                        |  var c = 2
-                        |}
-                        |object Second
-                        |/b/src/main/scala/b/Third.scala
-                        |package b
-                        |class Third
-                        |object Third
-                        |/b/src/main/scala/b/Fourth.scala
-                        |package b
-                        |class Fourth
-                        |object Fourth
-                        |""".stripMargin)
+      _ <- initialize(s"""
+                         |/metals.json
+                         |{
+                         |  "a": { "scalaVersion" : "${V.scala213}"},
+                         |  "b": { "scalaVersion" : "${V.scala213}"}
+                         |}
+                         |/a/src/main/scala/a/Zero.scala
+                         |class Zero {
+                         | val a = 1
+                         |}
+                         |/a/src/main/scala/a/First.scala
+                         |package a
+                         |class First {
+                         |  def a = 1
+                         |  val b = 2
+                         |}
+                         |object First
+                         |/a/src/main/scala/a/Second.scala
+                         |package a
+                         |class Second {
+                         |  def a = 1
+                         |  val b = 2
+                         |  var c = 2
+                         |}
+                         |object Second
+                         |/b/src/main/scala/b/Third.scala
+                         |package b
+                         |class Third
+                         |object Third
+                         |/b/src/main/scala/b/Fourth.scala
+                         |package b
+                         |class Fourth
+                         |object Fourth
+                         |""".stripMargin)
       _ = assertNoDiff(
         client.workspaceTreeViewChanges,
         s"""|${TreeViewProvider.Project} <root>
@@ -191,18 +192,19 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   test("libraries", withoutVirtualDocs = true) {
     for {
       _ <- initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {
-          |    "libraryDependencies": [
-          |      "io.circe::circe-core:0.14.0",
-          |      "org.eclipse.lsp4j:org.eclipse.lsp4j:0.5.0",
-          |      "com.lihaoyi::sourcecode:0.1.7"
-          |    ]
-          |  }
-          |}
-          |""".stripMargin
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |     "scalaVersion" : "${V.scala213}",
+           |    "libraryDependencies": [
+           |      "io.circe::circe-core:0.14.0",
+           |      "org.eclipse.lsp4j:org.eclipse.lsp4j:0.5.0",
+           |      "com.lihaoyi::sourcecode:0.1.7"
+           |    ]
+           |  }
+           |}
+           |""".stripMargin
       )
       folder = server.server.path
       _ = {
@@ -561,22 +563,22 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     cleanWorkspace()
     for {
       _ <- initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {},
-          |  "b": {}
-          |}
-          |/a/src/main/scala/a/First.scala
-          |package a
-          |class First
-          |/b/src/main/scala/b/Second.scala
-          |package b
-          |class Second {
-          |  def a = 1
-          |  val b = 2
-          |}
-          |""".stripMargin
+        s"""
+           |/metals.json
+           |{
+           |  "a": {"scalaVersion" : "${V.scala213}"},
+           |  "b": {"scalaVersion" : "${V.scala213}"}
+           |}
+           |/a/src/main/scala/a/First.scala
+           |package a
+           |class First
+           |/b/src/main/scala/b/Second.scala
+           |package b
+           |class Second {
+           |  def a = 1
+           |  val b = 2
+           |}
+           |""".stripMargin
       )
       folder = server.server.path
       // Trigger a compilation of Second.scala

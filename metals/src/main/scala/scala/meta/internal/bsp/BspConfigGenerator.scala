@@ -11,9 +11,9 @@ import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.BspProvider
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -75,7 +75,7 @@ final class BspConfigGenerator(
       buildTools: List[BuildServerProvider]
   ): Future[(BuildServerProvider, BspConfigGenerationStatus)] = {
     for {
-      Some(buildTool) <- chooseBuildServerProvider(buildTools)
+      case Some(buildTool) <- chooseBuildServerProvider(buildTools)
       status <- buildTool.generateBspConfig(
         workspace,
         args => runUnconditionally(buildTool, args),

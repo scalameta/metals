@@ -7,7 +7,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.io.AbsolutePath
@@ -80,6 +80,7 @@ final class Compilations(
 
   def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
     def empty = new b.CompileResult(b.StatusCode.CANCELLED)
+
     for {
       targetOpt <- expand(path)
       result <- targetOpt match {
@@ -179,8 +180,7 @@ final class Compilations(
       }
 
       targetOpt
-    } else
-      Future.successful(None)
+    } else Future.successful(None)
   }
 
   def expand(paths: Seq[AbsolutePath]): Future[Seq[b.BuildTargetIdentifier]] = {

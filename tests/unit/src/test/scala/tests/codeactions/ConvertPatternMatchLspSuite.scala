@@ -9,7 +9,7 @@ class ConvertPatternMatchLspSuite
       "convertPatternMatch"
     ) {
 
-  val filterAction: CodeAction => Boolean = { act: CodeAction =>
+  val filterAction: CodeAction => Boolean = { (act: CodeAction) =>
     act.getTitle() == PatternMatchRefactor.convertPatternMatch
   }
 

@@ -15,11 +15,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.StatusBarState
@@ -199,7 +195,7 @@ class WorkspaceLspService(
   def fallbackService: MetalsLspService = folderServices.head
 
   val treeView: TreeViewProvider =
-    if (clientConfig.isTreeViewProvider) {
+    if (clientConfig.isTreeViewProvider()) {
       new MetalsTreeViewProvider(
         () => folderServices.map(_.treeView),
         languageClient,
@@ -214,7 +210,7 @@ class WorkspaceLspService(
     statusBar,
     clientConfig,
     shellRunner,
-    clientConfig.icons,
+    clientConfig.icons(),
     folders.head.path,
   )
 
@@ -1070,7 +1066,7 @@ class WorkspaceLspService(
         )
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
-            clientConfig.isCompletionItemResolve,
+            clientConfig.isCompletionItemResolve(),
             List(".", "*").asJava,
           )
         )
@@ -1147,7 +1143,7 @@ class WorkspaceLspService(
   }
 
   private def startHttpServer(): Unit = {
-    if (clientConfig.isHttpEnabled) {
+    if (clientConfig.isHttpEnabled()) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -1172,7 +1168,7 @@ class WorkspaceLspService(
         () => url,
         languageClient.underlying,
         () => server.reload(),
-        clientConfig.icons,
+        clientConfig.icons(),
         time,
         sh,
         clientConfig,
@@ -1195,14 +1191,14 @@ class WorkspaceLspService(
     if (shutdownPromise.compareAndSet(null, promise)) {
       scribe.info("shutting down Metals")
       try {
-        folderServices.foreach(_.onShutdown)
+        folderServices.foreach(_.onShutdown())
       } catch {
         case NonFatal(e) =>
           scribe.error("cancellation error", e)
       } finally {
         promise.success(())
       }
-      if (clientConfig.isExitOnShutdown) {
+      if (clientConfig.isExitOnShutdown()) {
         System.exit(0)
       }
       promise.future.asJava

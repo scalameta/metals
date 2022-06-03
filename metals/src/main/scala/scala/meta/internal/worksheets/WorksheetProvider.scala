@@ -23,7 +23,7 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StatusBar

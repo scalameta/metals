@@ -9,7 +9,7 @@ class InsertInferredTypeLspSuite
       "insertInferredType"
     ) {
 
-  val filterAction: CodeAction => Boolean = { act: CodeAction =>
+  val filterAction: CodeAction => Boolean = { (act: CodeAction) =>
     act.getTitle() == InsertInferredType.insertType || act
       .getTitle() == InsertInferredType.insertTypeToPattern
   }

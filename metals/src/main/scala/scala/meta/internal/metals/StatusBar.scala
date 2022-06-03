@@ -13,7 +13,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
@@ -52,7 +52,7 @@ final class StatusBar(
   }
 
   def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (!clientConfig.slowTaskIsOn)
+    if (!clientConfig.slowTaskIsOn())
       trackBlockingTask(message)(thunk)
     else {
       val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
@@ -73,7 +73,7 @@ final class StatusBar(
       thunk: Future[T],
       onCancel: () => Unit = () => (),
   ): Future[T] = {
-    if (!clientConfig.slowTaskIsOn)
+    if (!clientConfig.slowTaskIsOn())
       trackFuture(message, thunk)
     else {
       val task = client.metalsSlowTask(MetalsSlowTaskParams(message))

@@ -5,15 +5,15 @@ import scala.meta.pc.PresentationCompiler
 
 import tests.BaseSyntheticDecorationsExpectSuite
 import tests.InputProperties
-import tests.TestScala3Compiler
+import tests.TestScala2Compiler
 
-class SyntheticDecorationsScala3ExpectSuite(
+class SyntheticDecorationsScala2ExpectSuite(
 ) extends BaseSyntheticDecorationsExpectSuite(
       "decorations3",
       InputProperties.scala3(),
     ) {
   override val compiler: PresentationCompiler = {
-    TestScala3Compiler.compiler("decorations", input)(
+    TestScala2Compiler.compiler("decorations", input)(
       munitExecutionContext
     ) match {
       case Some(pc) => pc

@@ -5,7 +5,7 @@ import java.io.FileWriter
 import scala.util.Try
 import scala.util.matching.Regex
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.StacktraceAnalyzer._
 import scala.meta.io.AbsolutePath
 

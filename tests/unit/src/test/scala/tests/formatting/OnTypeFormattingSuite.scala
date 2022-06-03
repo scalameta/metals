@@ -621,7 +621,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
       stripMarginEnabled: Boolean = true,
       additionalRequests: TestingServer => Future[Unit] = _ => Future.unit,
   )(implicit loc: Location): Unit = {
-    val quote = """\u0022"""
+    val quote = "\""
     def unmangle(string: String): String =
       string.replaceAll("'", quote)
 

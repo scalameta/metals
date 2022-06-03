@@ -4,7 +4,7 @@ import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
@@ -87,13 +87,13 @@ final class SuperMethodCodeLens(
             ) =>
           val location = new l.Location(path.toURI.toString(), range.toLsp)
           val command = ServerCommands.GotoPosition.toLsp(location)
-          command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+          command.setTitle(s"${clientConfig.icons().findsuper} ${name}")
           command
       }
     else
       Some {
         val command = ServerCommands.GotoSymbol.toLsp(symbol)
-        command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+        command.setTitle(s"${clientConfig.icons().findsuper} ${name}")
         command
       }
   }

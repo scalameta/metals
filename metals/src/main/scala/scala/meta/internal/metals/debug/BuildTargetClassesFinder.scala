@@ -33,7 +33,7 @@ class BuildTargetClassesFinder(
         .classesOf(_)
         .mainClasses
         .values,
-      { clazz: b.ScalaMainClass => clazz.getClassName },
+      { (clazz: b.ScalaMainClass) => clazz.getClassName() },
     ).recoverWith { case ex =>
       val found = ex match {
         // We check whether there is a main in dependencies that is not reported via BSP

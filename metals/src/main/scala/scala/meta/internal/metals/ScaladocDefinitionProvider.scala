@@ -9,6 +9,7 @@ import scala.meta.Defn
 import scala.meta.Pkg
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.given
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._

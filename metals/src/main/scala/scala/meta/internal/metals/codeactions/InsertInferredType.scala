@@ -8,12 +8,10 @@ import scala.meta.Enumerator
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.codeactions.CodeAction
-import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 

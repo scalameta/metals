@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.charset.Charset
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs

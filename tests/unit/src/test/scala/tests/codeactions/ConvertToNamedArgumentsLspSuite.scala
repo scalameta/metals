@@ -9,7 +9,7 @@ class ConvertToNamedArgumentsLspSuite
       "convertToNamedArguments"
     ) {
 
-  val filterAction: CodeAction => Boolean = { act: CodeAction =>
+  val filterAction: CodeAction => Boolean = { (act: CodeAction) =>
     ConvertToNamedArguments.title(".*").r matches act.getTitle()
   }
 

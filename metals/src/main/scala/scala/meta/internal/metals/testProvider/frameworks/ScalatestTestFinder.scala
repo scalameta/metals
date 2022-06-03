@@ -5,12 +5,11 @@ import scala.meta.Stat
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.testProvider.FullyQualifiedName
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestStyle._
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder._
-import scala.meta.internal.metals.testProvider.frameworks.TreeUtils
 import scala.meta.internal.mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.ClassSignature
@@ -114,10 +113,10 @@ object ScalatestTestFinder {
   ): Vector[TestCaseEntry] = {
     // collect all entries like test("testname") { ... }
     template.stats.collect {
-          // format: off
-          case Term.Apply(appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _), _) 
-              if style.leafMethods.contains(funName) =>
-          // format: on
+      case Term.Apply(
+            appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _),
+            _,
+          ) if style.leafMethods.contains(funName) =>
         TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
     }.toVector
   }

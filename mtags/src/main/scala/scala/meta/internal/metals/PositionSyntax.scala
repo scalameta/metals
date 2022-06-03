@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import scala.meta.Position
+import scala.meta.internal.inputs.XtensionInputSyntaxStructure
+import scala.meta.internal.inputs.XtensionPositionFormatMessage
 
 object PositionSyntax {
 
@@ -64,9 +66,9 @@ object PositionSyntax {
     def lineTextAndCaret: String = {
       new StringBuilder()
         .append("\n")
-        .append(pos.lineContent)
+        .append(XtensionPositionFormatMessage(pos).lineContent)
         .append("\n")
-        .append(pos.lineCaret)
+        .append(lineCaret)
         .toString()
     }
     def multilines: String = {

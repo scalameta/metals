@@ -94,7 +94,7 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
       symbol: String,
   ): Iterator[TreeViewSymbolInformation] = withTimer(s"$in/!$symbol") {
     val syms = workspaceCache
-      .getOrElse(in, Array.empty)
+      .getOrElse(in, Array.empty[TreeViewSymbolInformation])
     if (Symbol(symbol).isRootPackage) syms.iterator
     else
       syms.collect {

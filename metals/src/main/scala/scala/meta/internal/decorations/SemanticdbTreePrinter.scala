@@ -1,6 +1,6 @@
 package scala.meta.internal.decorations
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metap.PrinterSymtab
 import scala.meta.internal.semanticdb.Print
@@ -123,7 +123,9 @@ class SemanticdbTreePrinter(
       case _ if isTuple =>
         typeArgs.map(printType).mkString("(", ", ", ")")
       case _ if isFunction =>
-        val argTypes :+ returnType = typeArgs.map(printType)
+        val all = typeArgs.map(printType)
+        val argTypes = all.dropRight(1)
+        val returnType = all.last
         argTypes.mkString("(", ", ", ")") + s" $rightArrow $returnType"
       case _ =>
         typeArgs.map(printType).mkString("[", ", ", "]")

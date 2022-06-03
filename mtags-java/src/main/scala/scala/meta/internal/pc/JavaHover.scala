@@ -2,7 +2,7 @@ package scala.meta.internal.pc
 
 import java.util.Optional
 
-import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.mtags.CommonMtagsEnrichments.given
 import scala.meta.pc.HoverSignature
 
 import org.eclipse.lsp4j

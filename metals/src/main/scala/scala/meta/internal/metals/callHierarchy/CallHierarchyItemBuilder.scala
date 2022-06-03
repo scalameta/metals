@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.given
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken

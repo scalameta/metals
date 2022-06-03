@@ -9,6 +9,7 @@ import scala.meta.Name
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.given
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
@@ -73,7 +74,7 @@ class OutgoingCallsFinder(
               range.toLsp
             )
           )
-        case _ => false
+        case null => false
       }
   }
 

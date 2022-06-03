@@ -58,7 +58,7 @@ class StdReportContext(
       level,
       "metals"
     )
-  val bloop =
+  val bloop: StdReporter =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir,

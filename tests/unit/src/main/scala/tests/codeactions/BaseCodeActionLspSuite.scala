@@ -15,7 +15,7 @@ abstract class BaseCodeActionLspSuite(
     suiteName: String
 ) extends BaseLspSuite(suiteName) {
 
-  protected val scalaVersion: String = V.scala213
+  protected val scalaVersion: String = V.scala3
 
   def checkNoAction(
       name: TestOptions,
