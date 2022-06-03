@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.Range
 
 sealed trait CompletionValue:
   def label: String
+  def snippetSuffix: Option[String] = None
 
   final def completionItemKind(using Context): CompletionItemKind =
     this match
@@ -66,9 +67,17 @@ object CompletionValue:
   sealed trait Symbolic extends CompletionValue:
     def symbol: Symbol
 
-  case class Compiler(label: String, symbol: Symbol) extends Symbolic
+  case class Compiler(
+      label: String,
+      symbol: Symbol,
+      override val snippetSuffix: Option[String]
+  ) extends Symbolic
   case class Scope(label: String, symbol: Symbol) extends Symbolic
-  case class Workspace(label: String, symbol: Symbol) extends Symbolic
+  case class Workspace(
+      label: String,
+      symbol: Symbol,
+      override val snippetSuffix: Option[String]
+  ) extends Symbolic
 
   /**
    * @param shortenedNames shortened type names by `Printer`. This field should be used for autoImports
@@ -91,19 +100,11 @@ object CompletionValue:
   case class NamedArg(label: String, tpe: Type) extends CompletionValue
   case class Keyword(label: String, insertText: String) extends CompletionValue
 
-  def fromCompiler(completion: Completion): List[CompletionValue] =
-    def undoBacktick(label: String): String =
-      label.stripPrefix("`").stripSuffix("`")
-    completion.symbols.map(Compiler(undoBacktick(completion.label), _))
-
   def namedArg(label: String, sym: Symbol)(using Context): CompletionValue =
     NamedArg(label, sym.info.widenTermRefExpr)
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, insertText)
-
-  def workspace(label: String, sym: Symbol): CompletionValue =
-    Workspace(label, sym)
 
   def scope(label: String, sym: Symbol): CompletionValue =
     Scope(label, sym)

@@ -17,9 +17,11 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.Driver
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.*
+import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.interactive.Interactive
@@ -168,4 +170,16 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
         (denot.info, sym.withUpdatedTpe(denot.info))
       catch case NonFatal(e) => (sym.info, sym)
   end extension
+
+  extension (denot: Denotation)
+    def allSymbols: List[Symbol] =
+      denot match
+        case MultiDenotation(denot1, denot2) =>
+          List(
+            denot1.allSymbols,
+            denot2.allSymbols
+          ).flatten
+        case NoDenotation => Nil
+        case _ =>
+          List(denot.symbol)
 end MtagsEnrichments

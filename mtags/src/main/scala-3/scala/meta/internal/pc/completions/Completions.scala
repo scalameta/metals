@@ -3,15 +3,18 @@ package completions
 
 import scala.collection.mutable
 
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.completions.KeywordsCompletions
+import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Denotations.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
@@ -41,6 +44,20 @@ class Completions(
 
   implicit val context: Context = ctx
 
+  // versions prior to 3.1.0 sometimes didn't manage to detect properly Java objects
+  val canDetectJavaObjectsCorrectly =
+    SemVer.isLaterVersion("3.1.0", BuildInfo.scalaCompilerVersion)
+
+  private lazy val shouldAddSnippet = path match
+    /* In case of `method@@()` we should not add snippets and the path
+     * will contain apply as the parent of the current tree.
+     */
+    case (fun) :: (appl: GenericApply) :: _ if appl.fun == fun =>
+      false
+    case (_: Import) :: _ => false
+    case _ :: (_: Import) :: _ => false
+    case _ => true
+
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
     val (all, result) =
@@ -55,7 +72,7 @@ class Completions(
           case _ =>
             val (_, compilerCompletions) = Completion.completions(pos)
             val (compiler, result) = compilerCompletions
-              .flatMap(CompletionValue.fromCompiler)
+              .flatMap(toCompletionValues)
               .filterInteresting()
             (advanced ++ compiler, result)
 
@@ -64,6 +81,69 @@ class Completions(
     val values = application.postProcess(all.sorted(ordering))
     (values, result)
   end completions
+
+  private def toCompletionValues(
+      completion: Completion
+  ): List[CompletionValue] =
+    completion.symbols.flatMap(
+      completionsWithSuffix(
+        _,
+        completion.label,
+        CompletionValue.Compiler(_, _, _)
+      )
+    )
+  end toCompletionValues
+
+  inline private def undoBacktick(label: String): String =
+    label.stripPrefix("`").stripSuffix("`")
+
+  private def findSuffix(methodSymbol: Symbol): Option[String] =
+    if shouldAddSnippet && methodSymbol.is(Flags.Method) then
+      val paramss = methodSymbol.paramSymss
+      paramss match
+        case Nil => None
+        case List(Nil) => Some("()")
+        case _ if config.isCompletionSnippetsEnabled =>
+          val onlyImplicitOrTypeParams = paramss.forall(
+            _.exists { sym =>
+              sym.isType || sym.is(Implicit) || sym.is(Given)
+            }
+          )
+          if onlyImplicitOrTypeParams then None
+          else Some("($0)")
+        case _ => None
+    else None
+
+  private def completionsWithSuffix(
+      sym: Symbol,
+      label: String,
+      toCompletionValue: (String, Symbol, Option[String]) => CompletionValue
+  ): List[CompletionValue] =
+    // workaround for earlier versions that force correctly detecting Java flags
+    def isJavaDefined = if canDetectJavaObjectsCorrectly then
+      sym.is(Flags.JavaDefined)
+    else
+      sym.info
+      sym.is(Flags.JavaDefined)
+
+    // find the apply completion that would need a snippet
+    val methodSymbols =
+      if shouldAddSnippet && sym.is(Flags.Module) && !isJavaDefined
+      then
+        val applSymbols = sym.info.member(nme.apply).allSymbols
+        sym :: applSymbols
+      else List(sym)
+
+    methodSymbols.map { methodSymbol =>
+      val suffix = findSuffix(methodSymbol)
+      val name = undoBacktick(label)
+      toCompletionValue(
+        name,
+        methodSymbol,
+        suffix
+      )
+    }
+  end completionsWithSuffix
 
   /**
    * @return Tuple of completionValues and flag. If the latter boolean value is true
@@ -164,12 +244,15 @@ class Completions(
         val visitor = new CompilerSearchVisitor(
           query,
           sym =>
-            val value =
-              indexedContext.lookupSym(sym) match
-                case IndexedContext.Result.InScope =>
-                  CompletionValue.scope(sym.decodedName, sym)
-                case _ => CompletionValue.workspace(sym.decodedName, sym)
-            visit(value)
+            indexedContext.lookupSym(sym) match
+              case IndexedContext.Result.InScope =>
+                visit(CompletionValue.scope(sym.decodedName, sym))
+              case _ =>
+                completionsWithSuffix(
+                  sym,
+                  sym.decodedName,
+                  CompletionValue.Workspace(_, _, _)
+                ).forall(visit)
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
       case _ => None
@@ -318,7 +401,7 @@ class Completions(
         // show the abstract members first
         if !ov.symbol.is(Deferred) then penalty |= MemberOrdering.IsNotAbstract
         penalty
-      case CompletionValue.Workspace(_, sym) =>
+      case CompletionValue.Workspace(_, sym, _) =>
         symbolRelevance(sym) | (IsWorkspaceSymbol + sym.name.show.length)
       case sym: CompletionValue.Symbolic =>
         symbolRelevance(sym.symbol)
@@ -360,9 +443,13 @@ class Completions(
           isMember(symbol) && symbol.owner != tpe.typeSymbol
         def postProcess(items: List[CompletionValue]): List[CompletionValue] =
           items.map {
-            case CompletionValue.Compiler(label, sym)
+            case CompletionValue.Compiler(label, sym, suffix)
                 if sym.info.paramNamess.nonEmpty && isMember(sym) =>
-              CompletionValue.Compiler(label, substituteTypeVars(sym))
+              CompletionValue.Compiler(
+                label,
+                substituteTypeVars(sym),
+                suffix
+              )
             case other => other
           }
 

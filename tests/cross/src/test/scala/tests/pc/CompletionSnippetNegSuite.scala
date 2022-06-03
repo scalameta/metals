@@ -43,13 +43,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|println()
        |println
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|println
-           |println
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkSnippet(

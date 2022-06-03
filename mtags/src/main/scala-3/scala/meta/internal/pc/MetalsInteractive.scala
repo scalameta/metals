@@ -275,22 +275,19 @@ object MetalsInteractive:
     end match
   end enclosingSymbolsWithExpressionType
 
+  import scala.meta.internal.mtags.MtagsEnrichments.*
+
   private def recoverError(
       tree: Tree,
       indexed: IndexedContext
   ): List[Symbol] =
     import indexed.ctx
 
-    def extractSymbols(d: PreDenotation): List[Symbol] =
-      d match
-        case multi: MultiPreDenotation =>
-          extractSymbols(multi.denot1) ++ extractSymbols(multi.denot2)
-        case d: Denotation => List(d.symbol)
-        case _ => List.empty
-
     tree match
       case select: Select =>
-        extractSymbols(select.qualifier.typeOpt.member(select.name))
+        select.qualifier.typeOpt
+          .member(select.name)
+          .allSymbols
           .filter(_ != NoSymbol)
       case ident: Ident => indexed.findSymbol(ident.name).toList.flatten
       case _ => Nil

@@ -31,7 +31,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.awt
            |List - java.util
            |List - scala.collection.immutable
-           |JList - javax.swing
+           |List[A](elems: A*): CC[A]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -383,6 +383,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|TrieMap scala.collection.concurrent
+           |TrieMap[K, V](elems: (K, V)*): CC[K, V]
            |TrieMapSerializationEnd - scala.collection.concurrent
            |""".stripMargin
     )
@@ -736,7 +737,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|DelayedLazyVal scala.concurrent
        |""".stripMargin,
     compat = Map(
-      "3" -> "DelayedLazyVal scala.concurrent",
+      "3" -> """|DelayedLazyVal scala.concurrent
+                |DelayedLazyVal[T](f: () => T, body: => Unit)(exec: ExecutionContext): DelayedLazyVal[T]""".stripMargin,
       "2.13" -> "DelayedLazyVal - scala.concurrent"
     )
   )
@@ -905,7 +907,13 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[A](elems: A*): CC[A]
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    )
   )
 
   check(
@@ -915,7 +923,13 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|ListBuffer[A](elems: A*): CC[A]
+           |ListBuffer - scala.collection.mutable
+           |""".stripMargin
+    )
   )
 
   check(
@@ -948,6 +962,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       ">=3.1.0" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |SomeToExpr - scala.quoted.ToExpr
@@ -955,6 +970,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr - scala.quoted.ToExpr
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr - scala.quoted.FromExpr
@@ -975,6 +991,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       ">=3.1.0" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |SomeToExpr - scala.quoted.ToExpr
@@ -982,6 +999,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr - scala.quoted.ToExpr
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr - scala.quoted.FromExpr
@@ -1340,13 +1358,6 @@ class CompletionSuite extends BaseCompletionSuite {
        |  val a = List(1, 2)
        |    .map($0)
        |}""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object O {
-           |  val a = List(1, 2)
-           |    .map
-           |}""".stripMargin
-    ),
     filter = _.contains("map["),
     assertSingleItem = false
   )
