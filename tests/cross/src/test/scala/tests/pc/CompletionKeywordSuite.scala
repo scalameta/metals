@@ -379,7 +379,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  val x: Map[Int, new@@]
       |}
     """.stripMargin,
-    ""
+    "",
+    // to avoid newMain annotation
+    filter = str => !str.contains("newMain")
   )
 
   check(
@@ -393,7 +395,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    ""
+    "",
+    // to avoid newMain annotation
+    filter = str => !str.contains("newMain")
   )
 
   check(
