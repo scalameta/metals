@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.Properties
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals._
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.isCompatibleVersion
@@ -217,7 +217,7 @@ object SbtBuildTool {
     writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
   }
 
-  private case class PluginDetails private (
+  case class PluginDetails private[SbtBuildTool] (
       description: Seq[String],
       artifact: String,
       resolver: Option[String]

@@ -3,7 +3,7 @@ package scala.meta.internal.metals.testProvider
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._

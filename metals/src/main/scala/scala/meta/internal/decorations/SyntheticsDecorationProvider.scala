@@ -9,13 +9,14 @@ import scala.concurrent.Future
 import scala.util.Try
 import scala.{meta => m}
 
+import scala.meta.given
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.HoverExtParams
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
@@ -425,8 +426,7 @@ final class SyntheticsDecorationProvider(
           typeDecorations(path, textDocument, decorationPrinter)
         else Nil
       decorations ++ typDecorations
-    } else
-      Nil
+    } else Nil
   }
 
   private def typeDecorations(

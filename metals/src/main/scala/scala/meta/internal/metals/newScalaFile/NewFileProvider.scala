@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -18,7 +18,7 @@ import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
-import scala.meta.internal.pc.Identifier
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
@@ -182,7 +182,8 @@ class NewFileProvider(
   ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ext)
     // name can be actually be "foo/Name", where "foo" is a folder to create
-    val className = Identifier.backtickWrap(
+    // TODO use correct wrapper
+    val className = KeywordWrapper.Scala2.backtickWrap(
       directory.getOrElse(workspace).resolve(name).filename
     )
     val template = kind match {

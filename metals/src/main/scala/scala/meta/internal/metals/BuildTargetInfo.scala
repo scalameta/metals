@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.URIEncoderDecoder
 
 import ch.epfl.scala.bsp4j.BuildTarget
@@ -194,8 +194,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
           maxFilenameSize
         )
       )
-    } else
-      List("  NONE")
+    } else List("  NONE")
   }
 
   private def getDependencies(target: BuildTarget): List[String] = {

@@ -134,5 +134,5 @@ object BatchedFunction {
       ec: ExecutionContext,
       dummy: DummyImplicit
   ): BatchedFunction[A, B] =
-    new BatchedFunction(fn.andThen(CancelableFuture(_)))
+    new BatchedFunction(fn.andThen(CancelableFuture(_, Cancelable.empty)))
 }

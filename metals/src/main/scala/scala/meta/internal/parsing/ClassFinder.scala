@@ -9,7 +9,8 @@ import scala.meta.Pkg
 import scala.meta.Position
 import scala.meta.Self
 import scala.meta.Tree
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.given
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}

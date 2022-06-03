@@ -2,14 +2,14 @@ package scala.meta.internal.metals.codelenses
 
 import scala.meta.internal.metals.ClientCommands.CopyWorksheetOutput
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
 
 class WorksheetCodeLens(clientConfig: ClientConfiguration) extends CodeLens {
 
-  override def isEnabled: Boolean = clientConfig.isCopyWorksheetOutputProvider
+  override def isEnabled: Boolean = clientConfig.isCopyWorksheetOutputProvider()
 
   override def codeLenses(
       path: AbsolutePath

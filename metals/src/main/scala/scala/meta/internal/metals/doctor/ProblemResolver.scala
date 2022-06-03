@@ -9,7 +9,7 @@ import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions

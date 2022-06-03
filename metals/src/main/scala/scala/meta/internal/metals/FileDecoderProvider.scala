@@ -20,7 +20,7 @@ import scala.util.control.NonFatal
 import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -438,8 +438,7 @@ final class FileDecoderProvider(
         .metalsQuickPick(quickPickParams)
         .asScala
         .mapOptionInside(_.itemId)
-    } else
-      Future.successful(Some(classes.head.path))
+    } else Future.successful(Some(classes.head.path))
 
   private def findSemanticDbPathInfo(
       sourceFile: AbsolutePath

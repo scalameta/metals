@@ -14,7 +14,8 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.given
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.CodeActionCommandNotFoundException
 import scala.meta.internal.metals.codeactions.ExtractRenameMember.getMemberType

@@ -7,7 +7,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments.XtensionString
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider

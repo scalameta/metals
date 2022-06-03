@@ -7,7 +7,7 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.Messages.dontShowAgain
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath

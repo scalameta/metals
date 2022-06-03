@@ -3,9 +3,10 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.given
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
@@ -29,7 +30,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
         val tokenized = buffers
           .get(path)
           .flatMap(source =>
-            Trees.defaultTokenizerDialect(source).tokenize.toOption
+            Trees.defaultTokenizerDialect.apply(source).tokenize.toOption
           )
         tokenized match {
           case Some(tokens) => {

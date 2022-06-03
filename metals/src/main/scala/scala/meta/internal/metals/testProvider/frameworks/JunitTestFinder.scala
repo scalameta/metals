@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.testProvider.frameworks
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.mtags
 import scala.meta.internal.semanticdb.SymbolInformation

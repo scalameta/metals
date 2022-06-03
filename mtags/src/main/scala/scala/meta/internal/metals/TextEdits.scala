@@ -2,7 +2,8 @@ package scala.meta.internal.metals
 
 import scala.meta.inputs.Input
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.XtensionCompletionItemData
+import scala.meta.internal.mtags.MtagsEnrichments.XtensionRangeLspInverse
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.TextEdit

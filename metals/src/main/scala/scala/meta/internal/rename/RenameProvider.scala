@@ -8,23 +8,25 @@ import scala.concurrent.Future
 
 import scala.meta.Importee
 import scala.meta.Tree
+import scala.meta.given
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.given
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -125,7 +127,7 @@ final class RenameProvider(
           if (suggestedName.isBackticked)
             suggestedName.stripBackticks
           else suggestedName
-        val newName = Identifier.backtickWrap(withoutBackticks)
+        val newName = KeywordWrapper.Scala2.backtickWrap(withoutBackticks)
 
         def isNotRenamedSymbol(
             textDocument: TextDocument,
@@ -224,10 +226,12 @@ final class RenameProvider(
         }
         val fileChanges = allChanges.flatten.toMap
         val shouldRenameInBackground =
-          !clientConfig.isOpenFilesOnRenameProvider || fileChanges.keySet.size >= clientConfig.renameFileThreshold
+          !clientConfig
+            .isOpenFilesOnRenameProvider() || fileChanges.keySet.size >= clientConfig
+            .renameFileThreshold()
         val (openedEdits, closedEdits) =
           if (shouldRenameInBackground) {
-            if (clientConfig.isOpenFilesOnRenameProvider) {
+            if (clientConfig.isOpenFilesOnRenameProvider()) {
               client.showMessage(fileThreshold(fileChanges.keySet.size))
             }
             fileChanges.partition { case (path, _) =>

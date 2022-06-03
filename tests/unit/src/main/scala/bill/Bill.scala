@@ -20,12 +20,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.reflect.internal.util.BatchSourceFile
-import scala.reflect.internal.{util => r}
-import scala.reflect.io.AbstractFile
-import scala.reflect.io.VirtualFile
-import scala.tools.nsc
-import scala.tools.nsc.reporters.StoreReporter
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -36,6 +30,7 @@ import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.ClasspathLoader
+import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
@@ -43,6 +38,12 @@ import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.GsonBuilder
 import coursierapi.Dependency
 import coursierapi.Fetch
+import dotty.tools.dotc.interfaces.Diagnostic as DottyDiagnostic
+import dotty.tools.dotc.reporting.StoreReporter
+import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.util.Spans
+import dotty.tools.io.AbstractFile
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
 /**
@@ -140,17 +141,11 @@ object Bill {
       result.setData(scalaTarget)
       result
     }
-    val reporter = new StoreReporter
     val out: AbsolutePath = AbsolutePath(workspace.resolve("out.jar"))
     Files.createDirectories(out.toNIO.getParent())
-    lazy val g: nsc.Global = {
-      val settings = new nsc.Settings()
-      settings.classpath.value =
-        myClasspath.map(_.toString).mkString(File.pathSeparator)
-      settings.Yrangepos.value = true
-      settings.d.value = out.toString
-      new nsc.Global(settings, reporter)
-    }
+    lazy val driver =
+      ScalaPresentationCompiler(classpath = myClasspath).newDriver
+    lazy val reporter = driver.currentCtx.reporter.asInstanceOf[StoreReporter]
 
     override def buildInitialize(
         params: InitializeBuildParams
@@ -254,7 +249,9 @@ object Bill {
 
     private val hasError = mutable.Set.empty[AbstractFile]
     def publishDiagnostics(): Unit = {
-      val byFile = reporter.infos.groupBy(_.pos.source.file)
+      val byFile = reporter
+        .pendingMessages(using driver.currentCtx)
+        .groupBy(_.pos.source.file)
       val fixedErrors = hasError.filterNot(byFile.contains)
       fixedErrors.foreach { file =>
         client.onBuildPublishDiagnostics(
@@ -268,27 +265,28 @@ object Bill {
       }
       hasError --= fixedErrors
       byFile.foreach { case (file, infos) =>
-        def toBspPos(pos: r.Position, offset: Int): b.Position = {
+        def toBspPos(pos: SourcePosition, offset: Int): b.Position = {
           val line = pos.source.offsetToLine(offset)
           val column0 = pos.source.lineToOffset(line)
           val column = offset - column0
           new b.Position(line, column)
         }
         val diagnostics = infos.iterator
-          .filter(_.pos.isDefined)
+          .filter(_.pos.span != Spans.NoSpan)
           .map { info =>
             val p = info.pos
             val start =
-              toBspPos(info.pos, if (p.isRange) p.start else p.point)
+              toBspPos(info.pos, if (p.span.isZeroExtent) p.point else p.start)
             val end =
-              toBspPos(info.pos, if (p.isRange) p.end else p.point)
-            val severity = info.severity match {
-              case reporter.ERROR => DiagnosticSeverity.ERROR
-              case reporter.WARNING => DiagnosticSeverity.WARNING
-              case reporter.INFO => DiagnosticSeverity.INFORMATION
+              toBspPos(info.pos, if (p.span.isZeroExtent) p.point else p.end)
+            val severity = info.level match {
+              case DottyDiagnostic.ERROR => DiagnosticSeverity.ERROR
+              case DottyDiagnostic.WARNING => DiagnosticSeverity.WARNING
+              case DottyDiagnostic.INFO => DiagnosticSeverity.INFORMATION
               case _ => DiagnosticSeverity.HINT
             }
-            val diagnostic = new Diagnostic(new b.Range(start, end), info.msg)
+            val diagnostic =
+              new Diagnostic(new b.Range(start, end), info.message)
             diagnostic.setSeverity(severity)
             diagnostic
           }
@@ -310,9 +308,8 @@ object Bill {
         params: CompileParams
     ): CompletableFuture[CompileResult] = {
       CompletableFuture.completedFuture {
-        reporter.reset()
-        val run = new g.Run()
-        val sources: List[BatchSourceFile] =
+
+        val sources: List[DottyDiagnostic] =
           if (Files.isDirectory(src)) {
             Files
               .walk(src)
@@ -320,17 +317,17 @@ object Bill {
               .asScala
               .iterator
               .filter(_.getFileName.toString.endsWith(".scala"))
-              .map(path => {
+              .flatMap(path => {
                 val text =
                   new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
-                val chars = text.toCharArray
-                new BatchSourceFile(new VirtualFile(path.toUri.toString), chars)
+                val source = SourceFile.virtual(path.toString, text)
+
+                driver.run(path.toUri, source)
               })
               .toList
           } else {
             Nil
           }
-        run.compileSources(sources)
         publishDiagnostics()
         val exit =
           if (reporter.hasErrors) StatusCode.ERROR

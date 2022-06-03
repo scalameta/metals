@@ -117,9 +117,6 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
           callback(completions)
           step(threadId, DebugStep.Continue)
         }
-      case cause =>
-        val error = s"Unsupported debug step $cause"
-        Future.failed(new IllegalStateException(error))
     }
   }
 

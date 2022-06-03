@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 

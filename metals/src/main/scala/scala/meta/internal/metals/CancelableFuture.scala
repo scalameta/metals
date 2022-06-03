@@ -21,7 +21,7 @@ object CancelableFuture {
     CancelableFuture(Future(thunk), Cancelable.empty)
   }
   def successful[T](value: T): CancelableFuture[T] =
-    CancelableFuture(Future.successful(value))
+    CancelableFuture(Future.successful(value), Cancelable.empty)
   def sequence[T](
       futures: Seq[CancelableFuture[T]]
   )(implicit ec: ExecutionContext): CancelableFuture[Seq[T]] =

@@ -16,7 +16,7 @@ import scala.meta.internal.classpath.ClasspathIndex
 import scala.meta.internal.io._
 import scala.meta.internal.javacp.Javacp
 import scala.meta.internal.metacp._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.mtags.Symbol

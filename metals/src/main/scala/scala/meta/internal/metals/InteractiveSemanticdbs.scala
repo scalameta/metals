@@ -10,7 +10,7 @@ import scala.util.Try
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
@@ -149,7 +149,7 @@ final class InteractiveSemanticdbs(
           new l.Diagnostic(range.toLSP, diag.message, severity, "scala")
         }
         if (diagnostics.nonEmpty) {
-          statusBar.addMessage(partialNavigation(clientConfig.icons))
+          statusBar.addMessage(partialNavigation(clientConfig.icons()))
           client.publishDiagnostics(
             new PublishDiagnosticsParams(uri, diagnostics.asJava)
           )

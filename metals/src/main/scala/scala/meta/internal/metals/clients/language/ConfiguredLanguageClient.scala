@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -35,12 +35,12 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (clientConfig.statusBarState == StatusBarState.On) {
+    if (clientConfig.statusBarState() == StatusBarState.On) {
       underlying.metalsStatus(params)
     } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (clientConfig.statusBarState == StatusBarState.ShowMessage) {
+      if (clientConfig.statusBarState() == StatusBarState.ShowMessage) {
         underlying.showMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (clientConfig.statusBarState == StatusBarState.LogMessage) {
+      } else if (clientConfig.statusBarState() == StatusBarState.LogMessage) {
         underlying.logMessage(new MessageParams(MessageType.Log, params.text))
       } else {
         ()
@@ -52,7 +52,7 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (clientConfig.slowTaskIsOn) {
+    if (clientConfig.slowTaskIsOn()) {
       underlying.metalsSlowTask(params)
     } else {
       new CompletableFuture[MetalsSlowTaskResult]()
@@ -74,7 +74,8 @@ final class ConfiguredLanguageClient(
 
   override def logMessage(message: MessageParams): Unit = {
     if (
-      clientConfig.statusBarState == StatusBarState.LogMessage && message.getType == MessageType.Log
+      clientConfig
+        .statusBarState() == StatusBarState.LogMessage && message.getType == MessageType.Log
     ) {
       // window/logMessage is reserved for the status bar so we don't publish
       // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
@@ -85,10 +86,11 @@ final class ConfiguredLanguageClient(
   }
 
   override def refreshModel(): CompletableFuture[Unit] = {
-    if (clientConfig.codeLenseRefreshSupport)
+    if (clientConfig.codeLenseRefreshSupport())
       underlying.refreshCodeLenses.thenApply(_ => ())
     else if (
-      clientConfig.isExecuteClientCommandProvider && clientConfig.isDebuggingProvider
+      clientConfig.isExecuteClientCommandProvider() && clientConfig
+        .isDebuggingProvider()
     ) {
       val params = ClientCommands.RefreshModel.toExecuteCommandParams()
       CompletableFuture.completedFuture(metalsExecuteClientCommand(params))
@@ -103,7 +105,7 @@ final class ConfiguredLanguageClient(
   override def rawMetalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[RawMetalsInputBoxResult] = {
-    if (clientConfig.isInputBoxEnabled) {
+    if (clientConfig.isInputBoxEnabled()) {
       underlying.rawMetalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(
@@ -115,7 +117,7 @@ final class ConfiguredLanguageClient(
   override def rawMetalsQuickPick(
       params: MetalsQuickPickParams
   ): CompletableFuture[RawMetalsQuickPickResult] = {
-    if (clientConfig.isQuickPickProvider) {
+    if (clientConfig.isQuickPickProvider()) {
       underlying.rawMetalsQuickPick(params)
     } else {
       showMessageRequest(
@@ -132,7 +134,7 @@ final class ConfiguredLanguageClient(
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
-    if (clientConfig.isDecorationProvider) {
+    if (clientConfig.isDecorationProvider()) {
       underlying.metalsPublishDecorations(params)
     }
   }

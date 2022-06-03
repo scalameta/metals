@@ -60,8 +60,8 @@ final class EndpointLogger(endpoint: RemoteEndpoint, logger: PrintWriter)
 
 object EndpointLogger {
   sealed trait Direction
-  final case object Received extends Direction
-  final case object Sent extends Direction
+  case object Received extends Direction
+  case object Sent extends Direction
 
   private def serializer: MessageJsonHandler = {
     val configure: Consumer[GsonBuilder] = { gson => gson.setPrettyPrinting() }

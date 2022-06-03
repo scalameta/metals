@@ -6,7 +6,7 @@ import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.io.Classpath

@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 /**

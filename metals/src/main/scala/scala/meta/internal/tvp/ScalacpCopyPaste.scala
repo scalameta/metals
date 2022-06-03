@@ -23,7 +23,6 @@ import scala.meta.internal.{semanticdb => s}
  * If the `Scalacp` class was not final then we could avoid this copy-pasting. Changes are
  * documented with "// scalacp deviation" comments.
  */
-@nowarn("msg=parameter value node")
 class ScalacpCopyPaste(node: ScalaSigNode) {
   lazy val symbolCache = new ju.HashMap[Symbol, String]
   implicit class XtensionSymbolSSymbol(sym: Symbol) {
@@ -171,7 +170,7 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
             val ssym = sym.ssym
             sbuf += ssym
             if (sym.isUsefulField && sym.isMutable) {
-              val setterSymbolName = ssym.desc.name + "_="
+              val setterSymbolName = ssym.desc.name.toString + "_="
               val setterSym =
                 Symbols.Global(ssym.owner, d.Method(setterSymbolName, "()"))
               sbuf += setterSym
@@ -453,7 +452,6 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
       else sym.symbolName
     }
 
-    @nowarn("msg=parameter value linkMode")
     private def sig(linkMode: LinkMode): s.Signature =
       s.NoSignature // scalacp deviation
 

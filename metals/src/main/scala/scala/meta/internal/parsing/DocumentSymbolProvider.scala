@@ -4,7 +4,7 @@ import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.trees.Origin
 import scala.meta.transversers.SimpleTraverser
 

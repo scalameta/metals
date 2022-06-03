@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.newScalaFile.NewFileTemplate
-import scala.meta.internal.pc.Identifier
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
@@ -72,7 +72,7 @@ class PackageProvider(private val buildTargets: BuildTargets) {
     }
   }
 
-  private def wrap(str: String) = Identifier.backtickWrap(str)
+  private def wrap(str: String) = KeywordWrapper.Scala2.backtickWrap(str)
 
   private def workspaceEdit(
       path: AbsolutePath,

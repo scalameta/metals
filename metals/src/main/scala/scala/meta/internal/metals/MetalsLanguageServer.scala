@@ -46,7 +46,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages.AmmoniteJvmParametersChange
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
@@ -193,7 +193,7 @@ class MetalsLanguageServer(
     buildTargetClasses,
     () => workspace,
     languageClient,
-    () => testProvider.refreshTestSuites(),
+    () => testProvider.refreshTestSuites(()),
     () => {
       if (clientConfig.isDoctorVisibilityProvider())
         doctor.executeRefreshDoctor()
@@ -360,7 +360,7 @@ class MetalsLanguageServer(
         }
 
         scribe.info(
-          s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
+          s"Started: Metals version ${BuildInfo.metalsVersion} compiled with ${scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion} in workspace '$workspace' $clientInfo."
         )
         clientConfig.update(params)
 
@@ -415,7 +415,7 @@ class MetalsLanguageServer(
           workspace,
           buildTargets,
           statusBar,
-          clientConfig.icons,
+          clientConfig.icons(),
           buildTools,
           compilations.isCurrentlyCompiling
         )
@@ -463,7 +463,7 @@ class MetalsLanguageServer(
           statusBar,
           clientConfig,
           shellRunner,
-          clientConfig.icons,
+          clientConfig.icons(),
           workspace
         )
         bloopServers = new BloopServers(
@@ -523,7 +523,7 @@ class MetalsLanguageServer(
           languageClient,
           clientConfig,
           statusBar,
-          clientConfig.icons,
+          clientConfig.icons(),
           tables,
           buildTargets
         )
@@ -587,7 +587,7 @@ class MetalsLanguageServer(
           workspace,
           buffers,
           definitionProvider,
-          clientConfig.icons,
+          clientConfig.icons(),
           clientConfig.commandInHtmlFormat()
         )
         val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
@@ -752,7 +752,7 @@ class MetalsLanguageServer(
         )
 
         val worksheetPublisher =
-          if (clientConfig.isDecorationProvider)
+          if (clientConfig.isDecorationProvider())
             new DecorationWorksheetPublisher(
               clientConfig.isInlineDecorationProvider()
             )
@@ -794,7 +794,7 @@ class MetalsLanguageServer(
           )
         )
         buildTargets.addData(ammonite.buildTargetsData)
-        if (clientConfig.isTreeViewProvider) {
+        if (clientConfig.isTreeViewProvider()) {
           treeView = new MetalsTreeViewProvider(
             () => workspace,
             languageClient,
@@ -863,7 +863,7 @@ class MetalsLanguageServer(
         )
         capabilities.setCompletionProvider(
           new CompletionOptions(
-            clientConfig.isCompletionItemResolve,
+            clientConfig.isCompletionItemResolve(),
             List(".", "*").asJava
           )
         )
@@ -913,9 +913,11 @@ class MetalsLanguageServer(
             new Registration(
               "1",
               "workspace/didChangeWatchedFiles",
-              clientConfig.globSyntax.registrationOptions(
-                this.workspace
-              )
+              clientConfig
+                .globSyntax()
+                .registrationOptions(
+                  this.workspace
+                )
             )
           ).asJava
         )
@@ -924,7 +926,7 @@ class MetalsLanguageServer(
   }
 
   private def startHttpServer(): Unit = {
-    if (clientConfig.isHttpEnabled) {
+    if (clientConfig.isHttpEnabled()) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -947,7 +949,7 @@ class MetalsLanguageServer(
         () => url,
         languageClient.underlying,
         () => server.reload(),
-        clientConfig.icons,
+        clientConfig.icons(),
         time,
         sh,
         clientConfig
@@ -962,7 +964,6 @@ class MetalsLanguageServer(
 
   val isInitialized = new AtomicBoolean(false)
 
-  @nowarn("msg=parameter value params")
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
@@ -1010,7 +1011,7 @@ class MetalsLanguageServer(
       } finally {
         promise.success(())
       }
-      if (clientConfig.isExitOnShutdown) {
+      if (clientConfig.isExitOnShutdown()) {
         System.exit(0)
       }
       promise.future.asJava
@@ -1312,7 +1313,7 @@ class MetalsLanguageServer(
                   session.version,
                   userConfig.bloopVersion.nonEmpty,
                   old.bloopVersion.isDefined,
-                  () => autoConnectToBuildServer
+                  () => autoConnectToBuildServer()
                 )
                 .flatMap { _ =>
                   bloopServers.ensureDesiredJvmSettings(
@@ -1432,7 +1433,6 @@ class MetalsLanguageServer(
       definitionOrReferences(position, token).map(_.locations)
     }
 
-  @nowarn("msg=parameter value position")
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
       position: TextDocumentPositionParams
@@ -1591,7 +1591,7 @@ class MetalsLanguageServer(
               s"Found new symbol references for $names, try running again."
             scribe.info(message)
             statusBar
-              .addMessage(clientConfig.icons.info + message)
+              .addMessage(clientConfig.icons().info + message)
           }
       }
     }
@@ -1626,7 +1626,7 @@ class MetalsLanguageServer(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { token =>
-      if (clientConfig.isCompletionItemResolve) {
+      if (clientConfig.isCompletionItemResolve()) {
         compilers.completionItemResolve(item)
       } else {
         Future.successful(item)
@@ -1670,9 +1670,9 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       val path = params.getTextDocument().getUri().toAbsolutePath
       if (path.isScala)
-        parseTrees.currentFuture.map(_ =>
-          foldingRangeProvider.getRangedForScala(path)
-        )
+        parseTrees
+          .currentFuture()
+          .map(_ => foldingRangeProvider.getRangedForScala(path))
       else
         Future {
           foldingRangeProvider.getRangedForJava(path)
@@ -2141,7 +2141,7 @@ class MetalsLanguageServer(
       }
     }
 
-    buildTools.loadSupported match {
+    buildTools.loadSupported() match {
       case Nil => {
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
@@ -2162,7 +2162,7 @@ class MetalsLanguageServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
     for {
-      possibleBuildTool <- supportedBuildTool
+      possibleBuildTool <- supportedBuildTool()
       chosenBuildServer = tables.buildServers.selectedServer()
       isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
         _ == BloopServers.name
@@ -2426,7 +2426,7 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.isDidFocusProvider || focusedDocument.isDefined) {
+        if (clientConfig.isDidFocusProvider() || focusedDocument.isDefined) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {

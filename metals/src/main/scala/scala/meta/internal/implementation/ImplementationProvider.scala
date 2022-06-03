@@ -11,7 +11,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -29,6 +29,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
+import scala.meta.internal.semanticdb.given
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
@@ -265,8 +266,7 @@ final class ImplementationProvider(
         implDocument: TextDocument,
         implReal: ClassLocation
     ): Option[String] = {
-      if (isClassLike(parentSymbolInfo))
-        Some(implReal.symbol)
+      if (isClassLike(parentSymbolInfo)) Some(implReal.symbol)
       else {
         val symbolSearch = defaultSymbolSearch(source, implDocument)
         MethodImplementation.findInherited(

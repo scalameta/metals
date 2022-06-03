@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Messages.ChooseBuildTool
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
@@ -21,7 +21,7 @@ final class BuildToolSelector(
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]
   ): Future[Option[BuildTool]] =
-    tables.buildTool.selectedBuildTool match {
+    tables.buildTool.selectedBuildTool() match {
       case Some(chosen) =>
         Future(buildTools.find(_.executableName == chosen))
       case None => requestBuildToolChoice(buildTools)

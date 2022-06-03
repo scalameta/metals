@@ -21,7 +21,7 @@ import scala.util.control.NonFatal
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.ammonite.Ammonite.AmmoniteMetalsException
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
@@ -249,8 +249,7 @@ final class Ammonite(
         }
         futureResp.ignoreValue
       }
-    } else
-      Future.unit
+    } else Future.unit
 
   def reload(): Future[Unit] = stop().asScala.flatMap(_ => start())
 
@@ -333,8 +332,7 @@ object Ammonite {
           new Position(0, 0)
         else
           new Position(pos.getLine - linesBefore, pos.getCharacter)
-    } else
-      identity _
+    } else identity _
   }
 
   def adjustLspData(scalaCode: String): AdjustLspData =

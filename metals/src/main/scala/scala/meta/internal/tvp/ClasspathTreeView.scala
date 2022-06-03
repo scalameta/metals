@@ -1,6 +1,6 @@
 package scala.meta.internal.tvp
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._

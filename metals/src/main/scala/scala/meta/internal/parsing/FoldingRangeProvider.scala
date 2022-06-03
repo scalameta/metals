@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.parsing.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 

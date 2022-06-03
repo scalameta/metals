@@ -6,7 +6,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols

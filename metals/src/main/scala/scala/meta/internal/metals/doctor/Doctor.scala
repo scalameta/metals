@@ -23,7 +23,7 @@ import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.Messages.CheckDoctor
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MetalsHttpServer
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
@@ -135,9 +135,10 @@ final class Doctor(
     val shouldDisplay = isVisibilityProvider && isVisible.get()
     if (shouldDisplay || !isVisibilityProvider) {
       if (
-        clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
+        clientConfig.isExecuteClientCommandProvider() && !clientConfig
+          .isHttpEnabled()
       ) {
-        val output = clientConfig.doctorFormat match {
+        val output = clientConfig.doctorFormat() match {
           case DoctorFormat.Json => buildTargetsJson()
           case DoctorFormat.Html => buildTargetsHtml()
         }
@@ -344,7 +345,7 @@ final class Doctor(
     selectedBuildToolMessage().foreach { msg =>
       html.element("p")(
         _.text(msg)
-          .optionally(!clientConfig.isHttpEnabled)(
+          .optionally(!clientConfig.isHttpEnabled())(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
               .text(")")
@@ -355,7 +356,7 @@ final class Doctor(
     selectedImportBuildMessage().foreach { msg =>
       html.element("p")(
         _.text(msg)
-          .optionally(!clientConfig.isHttpEnabled)(
+          .optionally(!clientConfig.isHttpEnabled())(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildImport), "Reset")
               .text(")")
@@ -368,7 +369,7 @@ final class Doctor(
     if (explicitChoice) {
       html.element("p")(
         _.text(message)
-          .optionally(!clientConfig.isHttpEnabled)(
+          .optionally(!clientConfig.isHttpEnabled())(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildServer), "Reset")
               .text(")")

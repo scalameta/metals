@@ -34,7 +34,7 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -618,7 +618,7 @@ class DebugProvider(
     case e @ SemanticDbNotFoundException =>
       languageClient.metalsStatus(
         MetalsStatusParams(
-          text = s"${clientConfig.icons.alert}Build misconfiguration",
+          text = s"${clientConfig.icons().alert}Build misconfiguration",
           tooltip = e.getMessage(),
           command = ClientCommands.RunDoctor.id
         )

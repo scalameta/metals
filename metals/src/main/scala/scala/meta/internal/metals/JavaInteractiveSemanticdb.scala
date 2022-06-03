@@ -12,7 +12,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.process.SystemProcess
 import scala.meta.internal.{semanticdb => s}

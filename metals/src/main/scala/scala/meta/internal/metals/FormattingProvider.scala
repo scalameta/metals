@@ -24,7 +24,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.Messages.UpdateScalafmtConf
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.semver.SemVer
 
@@ -177,7 +177,7 @@ final class FormattingProvider(
 
   private def askScalafmtVersion(): Future[Option[String]] = {
     if (!tables.dismissedNotifications.ChangeScalafmtVersion.isDismissed) {
-      if (clientConfig.isInputBoxEnabled) {
+      if (clientConfig.isInputBoxEnabled()) {
         client
           .metalsInputBox(MissingScalafmtVersion.inputBox())
           .asScala

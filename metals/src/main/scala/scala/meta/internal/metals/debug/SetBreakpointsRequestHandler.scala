@@ -2,7 +2,7 @@ package scala.meta.internal.metals.debug
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.JvmSignatures
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.ClassFinder

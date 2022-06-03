@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath

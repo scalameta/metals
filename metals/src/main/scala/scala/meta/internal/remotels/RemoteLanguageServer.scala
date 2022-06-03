@@ -12,7 +12,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionResult
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.UserConfiguration
