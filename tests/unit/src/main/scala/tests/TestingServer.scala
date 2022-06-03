@@ -131,7 +131,7 @@ final class TestingServer(
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
     time: Time,
-    initializationOptions: Option[InitializationOptions],
+    initializationOptions: InitializationOptions,
     mtagsResolver: MtagsResolver,
     onStartCompilation: () => Unit = () => ()
 )(implicit ex: ExecutionContextExecutorService) {
@@ -269,11 +269,7 @@ final class TestingServer(
         case ClientCommands.GotoLocation(location) =>
           (location.range.getStart, location.uri)
       }
-      if (
-        initializationOptions
-          .flatMap(_.isVirtualDocumentSupported)
-          .getOrElse(false)
-      ) {
+      if (initializationOptions.isVirtualDocumentSupported.exists(identity)) {
 
         def shortenJarPath(longPath: String): String = {
           val revSplitPath = longPath.reverse.split("!")
@@ -465,8 +461,6 @@ final class TestingServer(
     val documentSymbolCapabilities = new DocumentSymbolCapabilities()
     documentSymbolCapabilities.setHierarchicalDocumentSymbolSupport(true)
     textDocumentCapabilities.setDocumentSymbol(documentSymbolCapabilities)
-    val initOptions: InitializationOptions =
-      initializationOptions.getOrElse(TestingServer.TestDefault)
 
     // Yes, this is a bit gross :/
     // However, I want to only get the existing fields that are being set
@@ -474,10 +468,10 @@ final class TestingServer(
     // collect the fields that are set, get the values, and then make them into
     // a map that will become a JsonObject to pass in as the InitializationOptions
     val existingInitOptions =
-      initOptions.getClass.getDeclaredFields
+      initializationOptions.getClass.getDeclaredFields
         .map { field =>
           field.setAccessible(true)
-          field.getName -> field.get(initOptions)
+          field.getName -> field.get(initializationOptions)
         }
         .collect {
           case (key, Some(value: Boolean)) => key -> value
@@ -511,8 +505,14 @@ final class TestingServer(
     require(server.bspSession.isDefined, "Build server did not initialize")
   }
 
-  def toPath(filename: String): AbsolutePath =
+  def toPath(filename: String): AbsolutePath = {
     TestingServer.toPath(workspace, filename, virtualDocSources)
+  }
+
+  def toPathFromSymbol(symbol: String, filename: String): AbsolutePath = {
+    workspaceSymbol(symbol)
+    TestingServer.toPath(workspace, filename, virtualDocSources)
+  }
 
   def executeCommand[T](
       command: ParametrizedCommand[T],

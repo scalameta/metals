@@ -200,7 +200,7 @@ abstract class BaseStackFrameDapSuite(
 
     test(name) {
       cleanWorkspace()
-      val debugLayout = DebugWorkspaceLayout(source)
+      val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
 
       val stackFrameCollector = new StackFrameCollector

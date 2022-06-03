@@ -1,16 +1,19 @@
 package scala.meta.internal.metals.debug
+import scala.meta.io.AbsolutePath
+
 import tests.FileLayout
 
-final class DebugWorkspaceLayout(val files: List[DebugFileLayout]) {
+final class DebugWorkspaceLayout(val filesBreakpoints: List[FileBreakpoints]) {
   override def toString: String = {
-    files.mkString
+    filesBreakpoints.mkString
   }
 }
 
 object DebugWorkspaceLayout {
-  def apply(layout: String): DebugWorkspaceLayout = {
+  def apply(layout: String, root: AbsolutePath): DebugWorkspaceLayout = {
     val files = FileLayout.mapFromString(layout).toList.map {
-      case (name, originalContent) => DebugFileLayout(name, originalContent)
+      case (name, originalContent) =>
+        FileBreakpoints(name, originalContent, root)
     }
 
     new DebugWorkspaceLayout(files)

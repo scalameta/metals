@@ -40,7 +40,7 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     val arguments = new InitializeRequestArguments
     arguments.setAdapterID("test-adapter")
     arguments.setLinesStartAt1(true)
-    arguments.setPathFormat(InitializeRequestArgumentsPathFormat.URI)
+    arguments.setPathFormat(InitializeRequestArgumentsPathFormat.PATH)
     server.initialize(arguments).asScala
   }
 

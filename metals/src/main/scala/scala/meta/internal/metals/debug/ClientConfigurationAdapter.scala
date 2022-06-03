@@ -44,9 +44,12 @@ private[debug] final case class ClientConfigurationAdapter(
 
   def toMetalsPath(path: String): AbsolutePath = {
     pathFormat match {
-      case InitializeRequestArgumentsPathFormat.PATH =>
+      // VS Code normally sends in path, which doesn't encode files from jars properly
+      // so URIs are actually sent in this case instead
+      case InitializeRequestArgumentsPathFormat.PATH
+          if !path.startsWith("file:") && !path.startsWith("jar:") =>
         Paths.get(path).toUri.toString.toAbsolutePath
-      case InitializeRequestArgumentsPathFormat.URI => path.toAbsolutePath
+      case _ => path.toAbsolutePath
     }
   }
 
