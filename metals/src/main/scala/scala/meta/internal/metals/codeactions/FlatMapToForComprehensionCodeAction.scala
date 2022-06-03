@@ -103,23 +103,30 @@ class FlatMapToForComprehensionCodeAction(
           qualString = qualTree.toString
           qualLines = qualString.split(Array('\n'))
           finalQual = (qualLines.head +: qualLines.tail.map(line =>
-            s"${indentation}${indentation}      $line"
+            s"$indentation$indentation      $line"
           )).mkString("\n")
-        } yield s"${indentation}  ${valName} ${assignOrMap} ${finalQual}"
+        } yield s"$indentation   $valName $assignOrMap $finalQual"
 
       case ForYieldCondition(maybeFilterOrNot, condition) =>
         for {
           filterOrNot <- maybeFilterOrNot
           conditionString <- condition
-        } yield s"${indentation}  if $filterOrNot($conditionString)"
+        } yield s"$indentation  if $filterOrNot($conditionString)"
     }
 
+    val yieldString = yieldExpression.expression.toString
+      .split(Array('\n'))
+      .map(line => s"$indentation$indentation      $line")
+      .mkString("\n")
+
     val forYieldString =
-      s"""|for {
+      s"""|{
+          |$indentation for {
           |${elements.mkString("\n")}
-          |${indentation}} yield {
-          |${indentation}  ${yieldExpression.expression}
-          |${indentation}}""".stripMargin
+          |$indentation } yield {
+          |$yieldString
+          |$indentation }
+          |$indentation}""".stripMargin
 
     val codeAction = new l.CodeAction()
     val range =
