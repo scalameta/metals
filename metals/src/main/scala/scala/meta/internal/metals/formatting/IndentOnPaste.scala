@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.formatting
 import scala.util.matching.Regex
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.UserConfiguration
 
 import org.eclipse.lsp4j.Position

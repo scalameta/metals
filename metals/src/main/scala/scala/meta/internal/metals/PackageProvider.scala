@@ -6,10 +6,10 @@ import scala.concurrent.Future
 import scala.{meta => m}
 
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.newScalaFile.NewFileTemplate
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
@@ -795,12 +795,14 @@ class PackageProvider(
         case _ => acc
       }
     tree match {
-      case Source(List(pk: Pkg)) => extractOuterPackage(pk).reverse
+      case Source(List(pk: Pkg)) => extractOuterPackage(pk).reverse()
       case _ => PackagesStructure.empty
     }
   }
 
-  private def wrap(str: String): String = Identifier.backtickWrap(str)
+  // TODO wrap with correct dialect
+  private def wrap(str: String): String =
+    KeywordWrapper.Scala2.backtickWrap(str)
 
   private def workspaceEdit(
       path: AbsolutePath,
@@ -891,7 +893,10 @@ class PackageProvider(
       oldPath: AbsoluteFile,
   ): WorkspaceEdit = {
     val extend: (Int, Int) => (Int, Int) =
-      extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(source, List(':'))
+      MetalsEnrichments.extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
+        source,
+        List(':'),
+      )
     edits.flatMap {
       // delete package declaration
       case PackageEdit(pkg, Nil) =>
@@ -975,7 +980,7 @@ object PackageProvider {
       PackagesStructure(pkgs.reverse, pkgObject)
     def allPackagesParts(): List[List[String]] =
       pkgs.map(_.name) ++ pkgObject.map(obj => List(obj.name.value)).toList
-    def allParts(): List[String] = allPackagesParts.flatten
+    def allParts(): List[String] = allPackagesParts().flatten
   }
 
   object PackagesStructure {

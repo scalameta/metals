@@ -12,7 +12,6 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken

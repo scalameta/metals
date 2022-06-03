@@ -9,10 +9,8 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.codeactions.CodeAction
-import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken

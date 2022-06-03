@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 import scala.util.matching.Regex.Groups
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 object DotEnvFileParser {

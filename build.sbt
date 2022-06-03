@@ -36,7 +36,7 @@ def crossSetting[A](
 logo := Welcome.logo
 usefulTasks := Welcome.tasks
 
-ThisBuild / scalafixScalaBinaryVersion := scalaBinaryVersion.value
+ThisBuild / scalafixScalaBinaryVersion := "2.13"
 
 inThisBuild(
   List(
@@ -44,8 +44,8 @@ inThisBuild(
       if (isCI) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    scalaVersion := V.scala213,
-    crossScalaVersions := List(V.scala213),
+    scalaVersion := V.scala3,
+    crossScalaVersions := List(V.scala3),
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -128,7 +128,7 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
-      s"++${V.scala213} metals/publishLocal" ::
+      s"++${V.scala3} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
   },
@@ -218,6 +218,27 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
       )
     ),
   ),
+  excludeDependencies ++= crossSetting(
+    scalaVersion.value,
+    if3 = {
+      // Exclude cross published version dependencies leading to conflicts in Scala 3 vs 2.13
+      // When using Scala 3 exclude Scala 2.13 standard native libraries,
+      // when using Scala 2.13 exclude Scala 3 standard native libraries
+      // Use full name, Maven style published artifacts cannot use artifact/cross version for exclusion rules
+      List(
+        ExclusionRule()
+          .withOrganization("org.scala-lang.modules")
+          .withName(
+            "scala-collection-compat_2.13"
+          ),
+        ExclusionRule()
+          .withOrganization("org.scala-lang.modules")
+          .withName(
+            "scala-xml_2.13"
+          ),
+      )
+    },
+  ),
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
 
@@ -299,6 +320,10 @@ def withExcludes(moduleId: ModuleID) =
       "com.lihaoyi",
       "sourcecode_2.13",
     ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
+    .exclude(
+      "org.scala-lang.modules",
+      "scala-parallel-collections_2.13",
+    ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
 
 def scala3SemanticdbDependency: ModuleID = withExcludes(
   ("org.scalameta" % s"semanticdb-shared_${V.scala213}" % V.scalameta)
@@ -307,6 +332,10 @@ def scala3SemanticdbDependency: ModuleID = withExcludes(
 def scala3ScalametaDependency: ModuleID = withExcludes(
   ("org.scalameta" %% "scalameta" % V.scalameta)
     .cross(CrossVersion.for3Use2_13)
+)
+
+def scala3MetapDependency: ModuleID = withExcludes(
+  "org.scalameta" % s"semanticdb-metap_${V.scala213}" % V.scalameta
 )
 
 val mtagsSettings = List(
@@ -370,7 +399,7 @@ val mtagsSettings = List(
   },
 )
 
-lazy val mtags3 = project
+lazy val mtags2 = project
   .in(file(".mtags"))
   .settings(
     Compile / unmanagedSourceDirectories := Seq(),
@@ -378,14 +407,14 @@ lazy val mtags3 = project
     mtagsSettings,
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
-    moduleName := "mtags3",
-    scalaVersion := V.scala3,
-    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-2.13",
+    moduleName := "mtags2",
+    scalaVersion := V.scala213,
+    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target2",
     publish / skip := true,
     libraryDependencies += V.guava,
     scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
+      (ThisBuild / baseDirectory).value / ".scalafix2.conf"
     ),
   )
   .dependsOn(interfaces)
@@ -433,26 +462,34 @@ lazy val metals = project
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-rifle" % V.bloop,
+      ("ch.epfl.scala" %% "bloop-rifle" % V.bloop)
+        .cross(CrossVersion.for3Use2_13),
       // for LSP
       V.lsp4j,
       // for DAP
       V.dap4j,
-      "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
+      ("ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter)
+        .cross(CrossVersion.for3Use2_13),
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // ==================
       // Scala dependencies
       // ==================
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
-      "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
+      ("org.scalameta" %% "scalafmt-dynamic" % V.scalafmt)
+        .cross(CrossVersion.for3Use2_13),
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for comparing versions && fetching from sbt maven repository
-      "io.get-coursier" %% "coursier" % V.coursier,
-      "io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier,
+      ("io.get-coursier" %% "versions" % "0.3.2")
+        .cross(CrossVersion.for3Use2_13),
+      ("io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier)
+        .cross(CrossVersion.for3Use2_13),
+      ("io.get-coursier" %% "coursier" % V.coursier)
+        .cross(CrossVersion.for3Use2_13),
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
@@ -462,15 +499,12 @@ lazy val metals = project
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
-      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
-      "org.scalameta" %% "semanticdb-metap" % V.semanticdb(
-        scalaVersion.value
-      ) cross CrossVersion.full,
-      "org.scalameta" % "semanticdb-shared" % V.semanticdb(
-        scalaVersion.value
-      ) cross CrossVersion.full,
+      scala3ScalametaDependency,
+      scala3MetapDependency,
+      scala3SemanticdbDependency,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
+      ("io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0")
+        .cross(CrossVersion.for3Use2_13),
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
@@ -540,6 +574,7 @@ lazy val input = project
   .in(file("tests/input"))
   .settings(
     sharedSettings,
+    scalaVersion := V.scala213,
     scalacOptions -= "-Xsource:3",
     publish / skip := true,
     libraryDependencies ++= List(
@@ -716,6 +751,7 @@ lazy val metalsDependencies = project
   .in(file("target/.dependencies"))
   .settings(
     publish / skip := true,
+    scalaVersion := V.scala213,
     // silent the intransitive dependency warning
     publishMavenStyle := false,
     libraryDependencies ++= List(
@@ -745,8 +781,10 @@ lazy val unit = project
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % V.coursier, // for jars
-      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
+      ("io.get-coursier" %% "coursier" % V.coursier)
+        .cross(CrossVersion.for3Use2_13), // for jars
+      ("ch.epfl.scala" %% "bloop-config" % V.bloopConfig)
+        .cross(CrossVersion.for3Use2_13),
       "org.scalameta" %% "munit" % V.munit,
     ),
     buildInfoPackage := "tests",

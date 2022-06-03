@@ -465,7 +465,7 @@ class ExtractRenameMemberLspSuite
       name: TestOptions,
       original: String,
       codeActionExpected: Boolean = true,
-      scalaVersion: String = V.scala213,
+      scalaVersion: String = V.scala3,
       fileName: String = "A.scala",
   ): Unit =
     test(name) {

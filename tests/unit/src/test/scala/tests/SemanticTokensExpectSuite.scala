@@ -6,9 +6,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.internal.pc.ScalaPresentationCompiler
 
-class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
+class SemanticTokensExpectSuite
+    extends DirectoryExpectSuite("semanticTokens3") {
 
-  override lazy val input: InputProperties = InputProperties.scala2()
+  override lazy val input: InputProperties = InputProperties.scala3()
   private val compiler = new ScalaPresentationCompiler(
     classpath = input.classpath.entries.map(_.toNIO)
   )
@@ -27,7 +28,7 @@ class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
           val tokens = SemanticTokensProvider.provide(
             nodes,
             params,
-            isScala3 = false,
+            isScala3 = true,
           )
 
           TestSemanticTokens.semanticString(

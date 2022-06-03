@@ -6,7 +6,7 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.semanticdb.TextDocument
@@ -59,11 +59,7 @@ class SemanticdbIndexer(
    * In case of a null path, we re-index `META-INF/semanticdb` for all targets
    */
   def onOverflow(path: SemanticdbPath): Unit = {
-    if (path == null) {
-      onTargetRoots()
-    } else {
-      path.semanticdbRoot.foreach(onChangeDirectory(_))
-    }
+    path.semanticdbRoot.foreach(onChangeDirectory(_))
   }
 
   private def onChangeDirectory(dir: Path): Unit = {

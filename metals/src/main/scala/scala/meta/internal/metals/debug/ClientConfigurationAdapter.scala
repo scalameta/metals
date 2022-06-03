@@ -4,7 +4,7 @@ import java.nio.file.Paths
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.io.AbsolutePath
 

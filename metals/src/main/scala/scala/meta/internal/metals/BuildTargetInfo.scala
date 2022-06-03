@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.io.AbsolutePath
 

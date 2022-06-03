@@ -5,7 +5,7 @@ import scala.meta.pc.PresentationCompiler
 
 import tests.BaseInlayHintsExpectSuite
 import tests.InputProperties
-import tests.TestScala3Compiler
+import tests.TestScala2Compiler
 
 class InlayHintsScala3ExpectSuite(
 ) extends BaseInlayHintsExpectSuite(

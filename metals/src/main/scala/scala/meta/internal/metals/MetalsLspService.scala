@@ -26,8 +26,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
@@ -1186,7 +1185,7 @@ abstract class MetalsLspService(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { _ =>
-      if (clientConfig.isCompletionItemResolve) {
+      if (clientConfig.isCompletionItemResolve()) {
         compilers.completionItemResolve(item)
       } else {
         Future.successful(item)
@@ -1572,8 +1571,8 @@ abstract class MetalsLspService(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.isDidFocusProvider() || focusedDocument.isDefined) {
-          focusedDocument.contains(path) &&
+        if (clientConfig.isDidFocusProvider() || focusedDocument().isDefined) {
+          focusedDocument().contains(path) &&
           path.isWorksheet
         } else {
           path.isWorksheet

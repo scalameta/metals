@@ -11,7 +11,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   override def munitIgnore: Boolean = isWindows
 
   test("basic-213") {
-    basicTest(V.scala213)
+    basicTest(V.scala3)
   }
 
   test("workspace".flaky) {

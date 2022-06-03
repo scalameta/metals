@@ -5,7 +5,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 
 import com.google.gson.JsonElement

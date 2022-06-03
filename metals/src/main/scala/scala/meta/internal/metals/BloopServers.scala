@@ -27,7 +27,7 @@ import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.OldBloopVersionRunning
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -58,6 +58,16 @@ final class BloopServers(
     workDoneProgress: WorkDoneProgress,
     sh: ScheduledExecutorService,
 )(implicit ec: ExecutionContextExecutorService) {
+
+  class BloopOutputStream extends OutputStream {
+    private lazy val b = new StringBuilder
+
+    override def write(byte: Int): Unit = byte.toChar match {
+      case c => b.append(c)
+    }
+
+    def logs = b.result.linesIterator
+  }
 
   import BloopServers._
 

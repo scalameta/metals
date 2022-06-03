@@ -30,13 +30,11 @@ class BillLspSuite extends BaseLspSuite("bill") {
       _ <- server.didOpen("src/com/App.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """
-          |src/com/App.scala:2:16: error: type mismatch;
-          | found   : String("")
-          | required: Int
-          |  val x: Int = ""
-          |               ^^
-        """.stripMargin,
+        """|src/com/App.scala:2:16: error: Found:    ("" : String)
+           |Required: Int
+           |  val x: Int = ""
+           |               ^^
+           |""".stripMargin,
       )
       _ <- server.didSave("src/com/App.scala")(_ => "object App")
       _ = assertNoDiff(

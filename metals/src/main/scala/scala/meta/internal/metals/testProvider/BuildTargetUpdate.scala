@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.testProvider
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget

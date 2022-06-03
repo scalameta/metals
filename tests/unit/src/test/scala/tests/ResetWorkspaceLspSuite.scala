@@ -58,9 +58,8 @@ class ResetWorkspaceLspSuite extends BaseLspSuite(s"reset-workspace") {
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/b/B.scala:4:19: error: type mismatch;
-           | found   : Int(42)
-           | required: String
+        """|a/src/main/scala/b/B.scala:4:19: error: Found:    (42 : Int)
+           |Required: String
            |  val x: String = 42
            |                  ^^
            |""".stripMargin,

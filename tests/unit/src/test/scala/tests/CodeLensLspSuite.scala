@@ -72,7 +72,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
 
   check(
     "test-suite-object",
-    library = Some("com.lihaoyi::utest:0.7.3"),
+    library = Some("com.lihaoyi::utest:0.8.1"),
     minExpectedLenses = 3,
   )(
     """|package foo.bar

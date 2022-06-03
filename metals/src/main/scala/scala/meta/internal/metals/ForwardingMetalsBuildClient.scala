@@ -15,7 +15,8 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
+import scala.meta.internal.metals.MetalsEnrichments
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
@@ -129,7 +130,8 @@ final class ForwardingMetalsBuildClient(
 
   def onBuildLogMessage(params: l.MessageParams): Unit = {
     // NOTE: BazelBsp adds coloring to the log message after `workspaceBuildTargets` request
-    val noANSICodes = filterANSIColorCodes(params.getMessage).trim()
+    val noANSICodes =
+      MetalsEnrichments.filterANSIColorCodes(params.getMessage).trim()
     if (noANSICodes.nonEmpty) {
       params.getType match {
         case l.MessageType.Error =>

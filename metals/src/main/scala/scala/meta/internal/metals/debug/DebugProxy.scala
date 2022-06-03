@@ -18,7 +18,8 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.Trace
@@ -275,7 +276,7 @@ private[debug] final class DebugProxy(
 
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
-      val msgWithoutColorCodes = filterANSIColorCodes(raw)
+      val msgWithoutColorCodes = MetalsEnrichments.filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
       client.consume(message)

@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.mtags
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
@@ -63,7 +63,6 @@ object Library {
       .filter(_.toString.endsWith("bindings-rxjava-2.0.0-sources.jar"))
 
   def allScala2: List[Library] = {
-    import mtags.BuildInfo.scalaCompilerVersion
 
     val dependencies = List(
       Dependency.of("com.lihaoyi", "acyclic_2.12", "0.1.8"),
@@ -78,7 +77,7 @@ object Library {
       Dependency.of("org.apache.spark", "spark-sql_2.11", "2.2.1"),
       Dependency.of("org.eclipse.jetty", "jetty-servlet", "9.3.11.v20160721"),
       Dependency.of("org.scalameta", "scalameta_2.12", "4.1.4"),
-      Dependency.of("org.scala-lang", "scala-compiler", scalaCompilerVersion),
+      Dependency.of("org.scala-lang", "scala-compiler", V.scala213),
     )
     List(fetchSources("scala2-suite", dependencies))
   }

@@ -20,11 +20,6 @@ class CompletionDapSuite
     "basic",
     expression = "1.toS@@",
     expectedCompletions = """|toShort: Short
-                             |toBinaryString: String
-                             |toDegrees: Double
-                             |toHexString: String
-                             |toOctalString: String
-                             |toRadians: Double
                              |toString(): String
                              |""".stripMargin,
     expectedEdit = "1.toShort",
@@ -71,12 +66,11 @@ class CompletionDapSuite
   assertCompletion(
     "advanced-snippet",
     expression = "1.until@@",
-    expectedCompletions =
-      """|until(end: Long): NumericRange.Exclusive[Long]
-         |until(end: Long, step: Long): NumericRange.Exclusive[Long]
-         |until(end: Int): Range
-         |until(end: Int, step: Int): Range
-         |""".stripMargin,
+    expectedCompletions = """|until(end: T): Exclusive[T]
+                             |until(end: T, step: T): Exclusive[T]
+                             |until(end: Int): Range
+                             |until(end: Int, step: Int): Range
+                             |""".stripMargin,
     expectedEdit = "1.until(@@)",
     topLines = Some(4),
   )(
@@ -121,13 +115,10 @@ class CompletionDapSuite
     "multiline",
     expression = """|val a = 123
                     |a.toStri@@""".stripMargin,
-    expectedCompletions = """|toBinaryString: String
-                             |toHexString: String
-                             |toOctalString: String
-                             |toString(): String
+    expectedCompletions = """|toString(): String
                              |""".stripMargin,
     expectedEdit = """|val a = 123
-                      |a.toBinaryString""".stripMargin,
+                      |a.toString()""".stripMargin,
     topLines = Some(4),
   )(
     """|/a/src/main/scala/a/Main.scala
@@ -152,16 +143,13 @@ class CompletionDapSuite
                     |val d = 111
                     |a.toStri@@
                     |1 + 234""".stripMargin,
-    expectedCompletions = """|toBinaryString: String
-                             |toHexString: String
-                             |toOctalString: String
-                             |toString(): String
+    expectedCompletions = """|toString(): String
                              |""".stripMargin,
     expectedEdit = """|val a = 123
                       |val b = 111
                       |val c = 111
                       |val d = 111
-                      |a.toBinaryString
+                      |a.toString()
                       |1 + 234
                       |""".stripMargin,
     topLines = Some(4),
@@ -184,8 +172,8 @@ class CompletionDapSuite
     "single-dot",
     expression = "Main.@@",
     expectedCompletions = """|name: Option[String]
-                             |args: Array[String]
                              |executionStart: Long
+                             |args: Array[String]
                              |main(args: Array[String]): Unit
                              |""".stripMargin,
     expectedEdit = "Main.name",

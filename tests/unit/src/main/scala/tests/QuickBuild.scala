@@ -76,7 +76,7 @@ case class QuickBuild(
   def withId(id: String): QuickBuild =
     QuickBuild(
       id,
-      if (scalaVersion == null) V.scala213
+      if (scalaVersion == null) V.scala3
       else scalaVersion,
       orEmpty(libraryDependencies),
       orEmpty(compilerPlugins),
@@ -371,7 +371,7 @@ object QuickBuild {
     val newDigest = {
       val digest = MessageDigest.getInstance("MD5")
       digest.update(version.getBytes(StandardCharsets.UTF_8))
-      digest.update(V.scala213.getBytes(StandardCharsets.UTF_8))
+      digest.update(V.scala3.getBytes(StandardCharsets.UTF_8))
       def update(file: AbsolutePath): Unit = {
         if (file.isFile) {
           digest.update(file.readAllBytes)

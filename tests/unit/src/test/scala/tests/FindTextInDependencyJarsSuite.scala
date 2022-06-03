@@ -49,20 +49,19 @@ class FindTextInDependencyJarsSuite
 
       assertLocations(
         akkaLocations,
-        s"""|
-            |akka-actor_2.12-${akkaVersion}.jar/reference.conf:96:3: info: result
-            |  jvm-shutdown-hooks = on
-            |  ^^^^^^^^^^^^^^^^^^
-            |akka-actor_2.12-${akkaVersion}.jar/reference.conf:1178:41: info: result
-            |    # This property is related to `akka.jvm-shutdown-hooks` above.
-            |                                        ^^^^^^^^^^^^^^^^^^
-            |akka-actor_2.12-${akkaVersion}-sources.jar/reference.conf:96:3: info: result
-            |  jvm-shutdown-hooks = on
-            |  ^^^^^^^^^^^^^^^^^^
-            |akka-actor_2.12-${akkaVersion}-sources.jar/reference.conf:1178:41: info: result
-            |    # This property is related to `akka.jvm-shutdown-hooks` above.
-            |                                        ^^^^^^^^^^^^^^^^^^
-            |""".stripMargin,
+        """|akka-actor_2.12-2.6.16.jar/reference.conf:96:3: info: result
+           |  jvm-shutdown-hooks = on
+           |  ^^^^^^^^^^^^^^^^^^
+           |akka-actor_2.12-2.6.16.jar/reference.conf:1178:41: info: result
+           |    # This property is related to `akka.jvm-shutdown-hooks` above.
+           |                                        ^^^^^^^^^^^^^^^^^^
+           |akka-actor_2.12-2.6.16-sources.jar/reference.conf:96:3: info: result
+           |  jvm-shutdown-hooks = on
+           |  ^^^^^^^^^^^^^^^^^^
+           |akka-actor_2.12-2.6.16-sources.jar/reference.conf:1178:41: info: result
+           |    # This property is related to `akka.jvm-shutdown-hooks` above.
+           |                                        ^^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
       )
 
       assertLocations(

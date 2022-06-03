@@ -15,7 +15,7 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.InputStreamIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 
 import io.undertow.Handlers.path
 import io.undertow.Handlers.websocket

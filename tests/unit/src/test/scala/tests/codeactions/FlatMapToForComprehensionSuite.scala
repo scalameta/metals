@@ -53,6 +53,7 @@ class FlatMapToForComprehensionSuite
        |}
        |""".stripMargin,
     selectedActionIndex = 1,
+    expectNoDiagnostics = false,
   )
 
   check(

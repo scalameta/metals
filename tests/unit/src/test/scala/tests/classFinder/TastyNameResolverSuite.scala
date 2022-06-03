@@ -135,7 +135,7 @@ class ClassNameResolverSuite extends BaseClassFinderSuite {
       original: String,
       expected: String,
       filename: String = "Main.scala",
-      scalaVersion: String = V.scala213,
+      scalaVersion: String = V.scala3,
   ): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)

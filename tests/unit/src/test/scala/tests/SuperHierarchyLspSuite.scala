@@ -82,22 +82,26 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
     val code =
       """
         |package a
-        |import io.circe.Decoder
+        |import java.nio.file.FileSystem
+        |import java.nio.file.FileStore
         |
-        |trait CustomDecoder[X] extends Decoder[String] {
-        |  override def <<1>>apply(c: io.circe.HCursor): Decoder.Result[String] = ???
+        |trait CustomFileSystem extends FileSystem {
+        |  override def <<1>>close(): Unit = ???
+        |
+        |  override def <<2>>getFileStores(): java.lang.Iterable[FileStore] = ???
         |}
         |
-        |class CustomXDecoder extends CustomDecoder[Unit] {
-        |  override def <<2>>apply(c: io.circe.HCursor): Decoder.Result[String] = ???
-        |}
         |
         |""".stripMargin
     checkHierarchy(
       code,
       Map(
-        1 -> List("io.circe.Decoder#apply"),
-        2 -> List("a.CustomDecoder#apply", "io.circe.Decoder#apply"),
+        1 -> List(
+          "java.nio.file.FileSystem#close",
+          "java.io.Closeable#close",
+          "java.lang.AutoCloseable#close",
+        ),
+        2 -> List("java.nio.file.FileSystem#getFileStores"),
       ),
     )
   }
@@ -110,9 +114,7 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
                    |/metals.json
                    |{
                    |  "a": {
-                   |    "libraryDependencies": [
-                   |      "io.circe::circe-generic:0.12.0"
-                   |    ]
+                   |    "libraryDependencies": []
                    |  }
                    |}
                    |/a/src/main/scala/a/A.scala

@@ -7,7 +7,7 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
 import scala.meta.dialects
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -198,7 +198,7 @@ class MetalsTreeViewProvider(
     if (params.visible) {
       params.viewId match {
         case TreeViewProvider.Project =>
-          val toUpdate = trees.map(_.flushPendingProjectUpdates).collect {
+          val toUpdate = trees.map(_.flushPendingProjectUpdates()).collect {
             case Some(value) => value
           }
           if (toUpdate.nonEmpty) {

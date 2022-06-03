@@ -18,7 +18,7 @@ import scala.meta.dialects._
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
@@ -62,7 +62,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       },
     )
     tracked.foreach { _ =>
-      statusBar.addMessage(
+      statusBar().addMessage(
         s"${clientConfig.icons().rocket} Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {

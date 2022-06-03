@@ -2,7 +2,6 @@ package scala.meta.internal.builds
 
 import java.security.MessageDigest
 
-import scala.meta.internal.builds.Digest
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 

@@ -2,7 +2,7 @@ package scala.meta.internal.builds
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 

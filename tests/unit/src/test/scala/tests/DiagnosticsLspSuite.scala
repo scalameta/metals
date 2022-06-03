@@ -14,12 +14,12 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |{
            |  "a": {
            |     "scalacOptions": [
-           |       "-Ywarn-unused"
+           |       "-Wunused:all"
            |     ]
            |   },
            |  "b": {
            |     "scalacOptions": [
-           |       "-Ywarn-unused"
+           |       "-Wunused:all"
            |     ]
            |   }
            |}
@@ -43,21 +43,21 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       exampleDiagnostics = {
-        """|a/src/main/scala/a/Example.scala:2:1: warning: Unused import
+        """|a/src/main/scala/a/Example.scala:2:29: warning: unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |a/src/main/scala/a/Example.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |a/src/main/scala/a/Example.scala:3:19: warning: unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       mainDiagnostics = {
-        """|a/src/main/scala/a/Main.scala:2:1: warning: Unused import
+        """|a/src/main/scala/a/Main.scala:2:29: warning: unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |a/src/main/scala/a/Main.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |a/src/main/scala/a/Main.scala:3:19: warning: unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
@@ -66,12 +66,12 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
       _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
       testDiagnostics = {
-        """|b/src/main/scala/a/MainSuite.scala:2:1: warning: Unused import
+        """|b/src/main/scala/a/MainSuite.scala:2:29: warning: unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |b/src/main/scala/a/MainSuite.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |b/src/main/scala/a/MainSuite.scala:3:19: warning: unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
@@ -79,17 +79,17 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
         testDiagnostics,
       )
       // This seems to be currently broken on CI - diagnostics not being refreshed
-      // _ <- server.didSave("b/src/main/scala/a/MainSuite.scala")(
-      //   _.linesIterator.filterNot(_.startsWith("import")).mkString("\n")
-      // )
-      // _ = assertNoDiff(
-      //   client.workspaceDiagnostics,
-      //   exampleDiagnostics + mainDiagnostics
-      // )
-      // _ <- server.didSave("a/src/main/scala/a/Main.scala")(
-      //   _.linesIterator.filterNot(_.startsWith("import")).mkString("\n")
-      // )
-      // _ = assertNoDiff(client.workspaceDiagnostics, exampleDiagnostics)
+      _ <- server.didSave("b/src/main/scala/a/MainSuite.scala")(
+        _.linesIterator.filterNot(_.startsWith("import")).mkString("\n")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        exampleDiagnostics + mainDiagnostics,
+      )
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")(
+        _.linesIterator.filterNot(_.startsWith("import")).mkString("\n")
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, exampleDiagnostics)
     } yield ()
   }
 
@@ -179,7 +179,10 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/Deprecation.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Deprecation.scala:3:16: error: value Stream in package scala is deprecated (since 2.13.0): Use LazyList instead of Stream
+        """|a/src/main/scala/a/Deprecation.scala:3:13: error: class Stream in package scala.collection.immutable is deprecated since 2.13.0: Use LazyList (which is fully lazy) instead of Stream (which has a lazy tail only)
+           |  val stream = Stream.empty
+           |            ^
+           |a/src/main/scala/a/Deprecation.scala:3:16: error: getter Stream in package scala is deprecated since 2.13.0: Use LazyList instead of Stream
            |  val stream = Stream.empty
            |               ^^^^^^
            |""".stripMargin,
@@ -248,9 +251,8 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/B.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/B.scala:3:19: error: type mismatch;
-           | found   : Int(42)
-           | required: String
+        """|a/src/main/scala/a/B.scala:3:19: error: Found:    (42 : Int)
+           |Required: String
            |  val x: String = 42
            |                  ^^
            |""".stripMargin,
@@ -287,9 +289,8 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/B.scala:2:19: error: type mismatch;
-           | found   : Int(2)
-           | required: String
+        """|a/src/main/scala/a/B.scala:2:19: error: Found:    (2 : Int)
+           |Required: String
            |  val a: String = 2
            |                  ^
            |""".stripMargin,
@@ -320,9 +321,8 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/weird/path/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/weird/path/A.scala:2:16: error: type mismatch;
-           | found   : String("")
-           | required: Int
+        """|a/weird/path/A.scala:2:16: error: Found:    ("" : String)
+           |Required: Int
            |  val n: Int = ""
            |               ^^
            |""".stripMargin,
@@ -348,9 +348,8 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/A.scala:2:16: error: type mismatch;
-           | found   : String("")
-           | required: Int
+        """|a/src/main/scala/a/A.scala:2:16: error: Found:    ("" : String)
+           |Required: Int
            |  val n: Int = ""
            |               ^^
            |""".stripMargin,

@@ -10,7 +10,7 @@ import scala.util.Success
 
 import scala.meta.Input
 import scala.meta.Position
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.parsing.TokenOps.syntax._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.tokenizers.Tokenized

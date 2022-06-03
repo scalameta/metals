@@ -18,8 +18,8 @@ import scala.meta.internal.metals.CreateSession
 import scala.meta.internal.metals.GenerateBspConfigAndConnect
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SlowConnect
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
@@ -192,7 +192,7 @@ class BspConnector(
               None,
             )
           for {
-            Some(item) <- client
+            case Some(item) <- client
               .showMessageRequest(query.params)
               .asScala
               .map(item =>

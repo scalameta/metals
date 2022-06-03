@@ -4,9 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.codeactions.CodeAction
-import scala.meta.internal.metals.codeactions.CodeActionBuilder
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken

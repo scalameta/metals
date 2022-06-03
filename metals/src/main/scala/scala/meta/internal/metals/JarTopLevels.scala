@@ -12,7 +12,7 @@ import java.util.zip.ZipException
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JarTopLevels.getFileSystem
 import scala.meta.internal.metals.JdbcEnrichments._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol

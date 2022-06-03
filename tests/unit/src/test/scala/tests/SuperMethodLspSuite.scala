@@ -217,10 +217,11 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     val code =
       """
         |package a
-        |import io.circe.Decoder
         |
-        |trait CustomDecoder extends Decoder[String] {
-        |  override def <<1->50>>apply(c: io.circe.HCursor): Decoder.Result[String] = ???
+        |import java.nio.file.FileSystem
+        |
+        |trait CustomFileSystem extends FileSystem {
+        |  override def <<4->50>>close(): Unit = ???
         |}
         |
         |""".stripMargin
@@ -270,7 +271,6 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
                    |{
                    |  "a": {
                    |    "libraryDependencies": [
-                   |      "io.circe::circe-generic:0.12.0"
                    |    ]
                    |  }
                    |}

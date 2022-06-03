@@ -68,7 +68,7 @@ import org.eclipse.{lsp4j => l}
  * One stop shop for all extension methods that are used in the metals build.
  *
  * Usage: {{{
- *   import scala.meta.internal.metals.MetalsEnrichments._
+ *   import scala.meta.internal.metals.MetalsEnrichments.given
  *   List(1).asJava
  *   Future(1).asJava
  *   // ...
@@ -232,7 +232,7 @@ object MetalsEnrichments
 
   implicit class XtensionScalaFuture[A](future: Future[A]) {
     def asCancelable: CancelableFuture[A] =
-      CancelableFuture(future)
+      CancelableFuture(future, Cancelable.empty)
 
     def asJava: CompletableFuture[A] =
       FutureConverters.toJava(future).toCompletableFuture
@@ -460,8 +460,7 @@ object MetalsEnrichments
 
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
-      if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
-        None
+      if (path.toNIO.getRoot() != prefix.toNIO.getRoot()) None
       else {
         val relative = path.toRelative(prefix)
         if (relative.toNIO.getName(0).filename != "..") Some(relative)
@@ -789,16 +788,13 @@ object MetalsEnrichments
     def replaceAllBetween(start: String, end: String)(
         replacement: String
     ): String =
-      if (start.isEmpty || end.isEmpty)
-        value
+      if (start.isEmpty || end.isEmpty) value
       else {
         val startIdx = value.indexOf(start)
-        if (startIdx < 0)
-          value
+        if (startIdx < 0) value
         else {
           val endIdx = value.indexOf(end, startIdx + start.length)
-          if (endIdx < 0)
-            value
+          if (endIdx < 0) value
           else {
             val b = new java.lang.StringBuilder
             b.append(value, 0, startIdx)
@@ -1349,8 +1345,8 @@ object MetalsEnrichments
             .toRight(cannotDecode(className))
         case b.TestParamsDataKind.SCALA_TEST_SUITES =>
           (for (
-            tests <- decodeJson(params.getData(), classOf[util.List[String]])
-          )
+              tests <- decodeJson(params.getData(), classOf[util.List[String]])
+            )
             yield {
               val suites =
                 tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava))

@@ -15,13 +15,13 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.Identifier
 import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SelectTree

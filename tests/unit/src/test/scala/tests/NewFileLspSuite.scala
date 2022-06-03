@@ -583,7 +583,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       scalaVersion: Option[String],
   )(implicit loc: Location): Unit =
     test(testName) {
-      val localScalaVersion = scalaVersion.getOrElse(V.scala213)
+      val localScalaVersion = scalaVersion.getOrElse(V.scala3)
       val directoryUri = directory.fold(null.asInstanceOf[String])(
         workspace.resolve(_).toURI.toString()
       )

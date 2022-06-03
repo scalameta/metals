@@ -8,9 +8,9 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.WorkspaceLspService
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.config.StatusBarState.LogMessage
 import scala.meta.internal.metals.config.StatusBarState.On

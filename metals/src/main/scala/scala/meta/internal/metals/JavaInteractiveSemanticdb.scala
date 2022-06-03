@@ -13,7 +13,7 @@ import scala.util.Properties
 import scala.util.Try
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.JavaMetalsGlobal
 import scala.meta.internal.{semanticdb => s}

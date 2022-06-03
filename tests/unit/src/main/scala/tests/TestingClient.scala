@@ -357,7 +357,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       showMessageRequestHandler(params).getOrElse {
         if (isSameMessage(ImportBuildChanges.params)) {
           importBuildChanges
-        } else if (isSameGenerateBspAndConnectMessage) {
+        } else if (isSameGenerateBspAndConnectMessage()) {
           generateBspAndConnect
         } else if (isSameMessage(ImportBuild.params)) {
           importBuild

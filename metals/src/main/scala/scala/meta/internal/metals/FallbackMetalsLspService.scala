@@ -69,7 +69,7 @@ class FallbackMetalsLspService(
     parseTrees ::
       compilations.pauseables
   )
-  override protected val semanticdbs: Semanticdbs = interactiveSemanticdbs
+  override protected def semanticdbs(): Semanticdbs = interactiveSemanticdbs
   override val fileWatcher: FileWatcher = NoopFileWatcher
   override val projectInfo: MetalsServiceInfo =
     MetalsServiceInfo.FallbackService

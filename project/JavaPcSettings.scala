@@ -12,7 +12,7 @@ object JavaPcSettings {
       prj.settings(
         sharedSettings,
         moduleName := "mtags-java",
-        scalaVersion := V.scala213,
+        scalaVersion := V.scala3,
         currentJavaHome := file(System.getProperty("java.home")),
         currentJavaVersion := {
           val version = System.getProperty("java.version")

@@ -37,12 +37,11 @@ class CascadeLspSuite extends BaseLspSuite("cascade") {
       // but not independent project "c".
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|b/src/main/scala/b/B.scala:3:19: error: type mismatch;
-           | found   : Int
-           | required: String
+        """|b/src/main/scala/b/B.scala:3:19: error: Found:    (a.A.n : Int)
+           |Required: String
            |  val n: String = a.A.n
            |                  ^^^^^
-          """.stripMargin,
+           |""".stripMargin,
       )
     } yield ()
   }

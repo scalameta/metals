@@ -10,8 +10,6 @@ import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.codeactions.CodeAction
-import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 

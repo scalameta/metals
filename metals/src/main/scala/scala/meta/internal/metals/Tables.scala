@@ -5,6 +5,7 @@ import java.sql.Connection
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.Digests
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 final class Tables(

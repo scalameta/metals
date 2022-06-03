@@ -6,7 +6,7 @@ object URIEncoderDecoder {
   // Currently Metals doesn't encode `:` but does decode it
   private val toEscape: Map[Char, String] =
     Set('"', '<', '>', '&', '\'', '[', ']', '{', '}', ' ', '+', '!')
-      .map(char => char -> ("%" + char.toHexString))
+      .map(char => char -> ("%" + char.toInt.toHexString))
       .toMap
 
   private val toDecode: Map[String, Char] = toEscape.map { case (k, v) =>

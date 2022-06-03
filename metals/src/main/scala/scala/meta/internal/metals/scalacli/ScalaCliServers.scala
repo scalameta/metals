@@ -117,7 +117,7 @@ class ScalaCliServers(
   def cancel(): Unit = {
     val servers = serversRef.getAndSet(Queue.empty)
     servers.foreach(_.cancel())
-    servers.foreach(_.customWorkspace.foreach(_.deleteRecursively))
+    servers.foreach(_.customWorkspace.foreach(_.deleteRecursively()))
   }
 
   def loaded(path: AbsolutePath): Boolean =
@@ -141,12 +141,12 @@ class ScalaCliServers(
                   AbsolutePath(
                     Files.createTempDirectory(s"metals-scala-cli")
                   )
-                val Some(workspace) =
+                val workspace =
                   scalaCliBuildDirectory.updateAndGet {
                     case None => Some(tmpFile)
                     case some => some
                   }
-                workspace
+                workspace.get
             }
 
           // When path and workspace have different roots on Windows `scala-cli` throws an error,

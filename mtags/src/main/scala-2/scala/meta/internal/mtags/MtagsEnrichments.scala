@@ -1,43 +1,14 @@
 package scala.meta.internal.mtags
 
-import java.net.URI
-import java.net.URLDecoder
-import java.nio.file.FileSystemNotFoundException
-import java.nio.file.NoSuchFileException
-import java.nio.file.Paths
-import java.util.concurrent.CancellationException
-
 import scala.collection.mutable
 import scala.reflect.internal.util.Position
-import scala.util.Failure
-import scala.util.Properties
-import scala.util.Success
-import scala.util.Try
-import scala.{meta => m}
 
-import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
-import scala.meta.io.AbsolutePath
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 import scala.meta.tokens.Token
 
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import org.eclipse.{lsp4j => l}
-
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments extends ScalametaCommonEnrichments {
-
-  implicit class XtensionIteratorCollection[T](it: Iterator[T]) {
-    def headOption: Option[T] = {
-      if (it.hasNext) Some(it.next())
-      else None
-    }
-    def lastOption: Option[T] = {
-      it.foldLeft(Option.empty[T]) { case (_, e) =>
-        Some(e)
-      }
-    }
-  }
 
   implicit class XtensionOffsetParams(params: OffsetParams) {
     def isDelimiter: Boolean = {

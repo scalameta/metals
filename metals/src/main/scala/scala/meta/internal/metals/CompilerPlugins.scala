@@ -7,7 +7,7 @@ import scala.util.control.NonFatal
 import scala.xml.XML
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 /**

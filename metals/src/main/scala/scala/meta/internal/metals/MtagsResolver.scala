@@ -8,7 +8,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.semver.SemVer
 
 trait MtagsResolver {
@@ -198,7 +197,6 @@ object MtagsResolver {
                 s"Failed to resolve Scala 3 presentation compiler for $scalaVersion"
             }
             scribe.error(errorMsg, fail.exception)
-          case _ =>
         }
         state
       }

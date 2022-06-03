@@ -11,7 +11,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.PathMatcher.Nio
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient

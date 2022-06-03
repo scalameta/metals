@@ -17,7 +17,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
