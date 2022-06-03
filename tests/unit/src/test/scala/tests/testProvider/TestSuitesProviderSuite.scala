@@ -259,7 +259,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     s"""|/metals.json
         |{
         |  "app": {
-        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4" ],
         |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
@@ -390,7 +390,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     s"""|/metals.json
         |{
         |  "app": {
-        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4" ],
         |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
@@ -435,7 +435,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     s"""|/metals.json
         |{
         |  "app": {
-        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M3" ],
+        |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4" ],
         |    "scalaVersion": "${BuildInfo.scalaVersion}"
         |  }
         |}
