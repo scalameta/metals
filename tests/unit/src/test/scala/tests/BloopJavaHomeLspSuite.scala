@@ -61,9 +61,8 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/A.scala:2:29: error: type mismatch;
-           | found   : Int(1)
-           | required: String
+        """|a/src/main/scala/a/A.scala:2:29: error: Found:    (1 : Int)
+           |Required: String
            |object A { val x : String = 1 }
            |                            ^
            |""".stripMargin,
@@ -139,9 +138,8 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/A.scala:2:29: error: type mismatch;
-           | found   : Int(1)
-           | required: String
+        """|a/src/main/scala/a/A.scala:2:29: error: Found:    (1 : Int)
+           |Required: String
            |object A { val x : String = 1 }
            |                            ^
            |""".stripMargin,

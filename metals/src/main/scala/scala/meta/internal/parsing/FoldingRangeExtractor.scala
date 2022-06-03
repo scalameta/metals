@@ -7,8 +7,8 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.MetalsEnrichments.given
+import scala.meta.internal.metals.PositionSyntax.given
 import scala.meta.tokens.Token
 
 import org.eclipse.lsp4j.FoldingRange
@@ -333,7 +333,7 @@ final class FoldingRangeExtractor(
       }
     }
 
-    private def findTermFoldStartAndAdjustment[T: ClassTag](
+    private def findTermFoldStartAndAdjustment[T <: Token: ClassTag](
         trailingTokens: Iterator[Token],
         startFoldIfEOL: Boolean,
     ): Option[(Int, Boolean)] = {
@@ -361,7 +361,7 @@ final class FoldingRangeExtractor(
       }
     }
 
-    private def getFoldingRangeForBlockAfterKeyword[T: ClassTag](
+    private def getFoldingRangeForBlockAfterKeyword[T <: Token: ClassTag](
         block: Term.Block
     ): Option[Position] = {
       val firstToken = block.leadingTokens

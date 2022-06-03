@@ -161,7 +161,7 @@ class ProjectMetalsLspService(
     folder,
     buildTargets,
     statusBar,
-    clientConfig.icons,
+    clientConfig.icons(),
     buildTools,
     compilations.isCurrentlyCompiling,
   )
@@ -178,12 +178,14 @@ class ProjectMetalsLspService(
       compilations.pauseables
   )
 
-  protected val semanticdbs: Semanticdbs = AggregateSemanticdbs(
+  private val agregateSemanticdbs: AggregateSemanticdbs = AggregateSemanticdbs(
     List(
       fileSystemSemanticdbs,
       interactiveSemanticdbs,
     )
   )
+
+  protected def semanticdbs(): Semanticdbs = agregateSemanticdbs
 
   val gitHubIssueFolderInfo: GitHubIssueFolderInfo = new GitHubIssueFolderInfo(
     () => tables.buildTool.selectedBuildTool(),
@@ -390,7 +392,7 @@ class ProjectMetalsLspService(
   def maybeSetupScalaCli(): Future[Unit] = {
     if (
       !buildTools.isAutoConnectable()
-      && buildTools.loadSupported.isEmpty
+      && buildTools.loadSupported().isEmpty
       && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
     ) {
       scalaCli.setupIDE(folder)
@@ -767,7 +769,7 @@ class ProjectMetalsLspService(
   protected def buildTool: Option[BuildTool] =
     for {
       name <- tables.buildTool.selectedBuildTool()
-      buildTool <- buildTools.loadSupported.find(_.executableName == name)
+      buildTool <- buildTools.loadSupported().find(_.executableName == name)
       found <- isCompatibleVersion(buildTool) match {
         case BuildTool.Found(bt, _) => Some(bt)
         case _ => None
@@ -792,7 +794,7 @@ class ProjectMetalsLspService(
   }
 
   def supportedBuildTool(): Future[Option[BuildTool.Found]] = {
-    buildTools.loadSupported match {
+    buildTools.loadSupported() match {
       case Nil => {
         if (!buildTools.isAutoConnectable()) {
           warnings.noBuildTool()
@@ -1059,7 +1061,7 @@ class ProjectMetalsLspService(
               session.version,
               userConfig.bloopVersion.nonEmpty,
               old.bloopVersion.isDefined,
-              () => autoConnectToBuildServer,
+              () => autoConnectToBuildServer(),
             )
             .flatMap { _ =>
               userConfig.bloopJvmProperties

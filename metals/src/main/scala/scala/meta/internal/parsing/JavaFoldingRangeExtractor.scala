@@ -19,7 +19,7 @@ import com.sun.source.util.Trees
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind
 
-final object JavaFoldingRangeExtractor {
+object JavaFoldingRangeExtractor {
   private val spanThreshold = 2
 
   private case class Range(

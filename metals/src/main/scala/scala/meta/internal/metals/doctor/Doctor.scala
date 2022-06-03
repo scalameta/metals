@@ -30,7 +30,7 @@ import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.PopupChoiceReset
 import scala.meta.internal.metals.Report
@@ -341,7 +341,7 @@ final class Doctor(
     selectedBuildToolMessage().foreach { case (msg, explicitChoice) =>
       html.element("p")(
         _.text(msg)
-          .optionally(!clientConfig.isHttpEnabled && explicitChoice)(
+          .optionally(!clientConfig.isHttpEnabled() && explicitChoice)(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildTool), "Reset")
               .text(")")
@@ -352,7 +352,7 @@ final class Doctor(
     selectedImportBuildMessage().foreach { msg =>
       html.element("p")(
         _.text(msg)
-          .optionally(!clientConfig.isHttpEnabled)(
+          .optionally(!clientConfig.isHttpEnabled())(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildImport), "Reset")
               .text(")")
@@ -369,7 +369,7 @@ final class Doctor(
     if (explicitChoice) {
       html.element("p")(
         _.text(message)
-          .optionally(!clientConfig.isHttpEnabled)(
+          .optionally(!clientConfig.isHttpEnabled())(
             _.text(" (")
               .link(resetChoiceCommand(PopupChoiceReset.BuildServer), "Reset")
               .text(")")

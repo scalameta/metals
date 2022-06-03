@@ -10,8 +10,6 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.codeactions.CodeAction
-import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
@@ -41,12 +39,12 @@ class ConvertToNamedArguments(
     for {
       edits <- compilers.convertToNamedArguments(
         data.position,
-        data.argIndices,
+        data.argIndices.toList.asJava,
         token,
       )
       _ = logging.logErrorWhen(
         edits.isEmpty(),
-        s"Could not find the correct names for arguments at ${data.position} with indices ${data.argIndices.asScala
+        s"Could not find the correct names for arguments at ${data.position} with indices ${data.argIndices.toList
             .mkString(",")}",
       )
       workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
@@ -137,7 +135,7 @@ class ConvertToNamedArguments(
               ServerCommands
                 .ConvertToNamedArgsRequest(
                   position,
-                  apply.argIndices.map(new Integer(_)).asJava,
+                  apply.argIndices.map(new Integer(_)).toArray,
                 )
             )
 

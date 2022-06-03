@@ -4,7 +4,7 @@ import scala.reflect.ClassTag
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 
 import org.eclipse.{lsp4j => l}
 

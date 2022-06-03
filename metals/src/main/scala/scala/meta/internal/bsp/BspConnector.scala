@@ -16,7 +16,7 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
@@ -190,7 +190,7 @@ class BspConnector(
               None,
             )
           for {
-            Some(item) <- client
+            case Some(item) <- client
               .showMessageRequest(query.params)
               .asScala
               .map(item =>
@@ -239,7 +239,8 @@ class BspConnector(
    * Only for `bloop` there will be no matching build tool and the previously chosen one remains.
    */
   private def optSetBuildTool(buildServerName: String): Unit =
-    buildTools.loadSupported
+    buildTools
+      .loadSupported()
       .find {
         case _: ScalaCliBuildTool if ScalaCli.names(buildServerName) => true
         case buildTool => buildTool.buildServerName == buildServerName

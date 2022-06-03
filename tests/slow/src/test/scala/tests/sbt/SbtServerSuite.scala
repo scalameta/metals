@@ -144,7 +144,7 @@ class SbtServerSuite
 
   test("reload plugins") {
     // should reload existing server after writing the metals.sbt plugin file
-    cleanWorkspace
+    cleanWorkspace()
     val layout = SbtBuildLayout("", V.scala213)
     writeLayout(layout)
     assert(workspace.exists)
@@ -158,7 +158,7 @@ class SbtServerSuite
       sbtProcess.complete
     }
     for {
-      code <- startSbtServer
+      code <- startSbtServer()
       _ = assert(code == 0)
       _ = assert(workspace.resolve(".bsp/sbt.json").exists)
       _ <- initializer.initialize(workspace, server, client, false)

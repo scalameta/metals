@@ -346,7 +346,7 @@ class ExtractValueLspSuite
     "extract-new",
     """|class Car(age: Int)
        |object Main{
-       |  new Car(age = <<1>>)
+       |  val car = new Car(age = <<1>>)
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title("1")}
@@ -354,7 +354,7 @@ class ExtractValueLspSuite
     """|class Car(age: Int)
        |object Main{
        |  val newValue = 1
-       |  new Car(age = newValue)
+       |  val car = new Car(age = newValue)
        |}
        |""".stripMargin,
   )

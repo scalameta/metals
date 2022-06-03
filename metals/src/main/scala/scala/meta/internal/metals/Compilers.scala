@@ -17,10 +17,8 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.metals.CompilerOffsetParamsUtils
-import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
@@ -1089,7 +1087,7 @@ class Compilers(
       jworksheetsCache.put(
         path,
         workDoneProgress.trackBlocking(
-          s"${config.icons.sync}Loading worksheet presentation compiler"
+          s"${config.icons().sync}Loading worksheet presentation compiler"
         ) {
           ScalaLazyCompiler.forWorksheet(
             scalaTarget,
@@ -1126,7 +1124,7 @@ class Compilers(
         PresentationCompilerKey.JavaBuildTarget(targetId),
         { _ =>
           workDoneProgress.trackBlocking(
-            s"${config.icons.sync}Loading presentation compiler"
+            s"${config.icons().sync}Loading presentation compiler"
           ) {
             JavaLazyCompiler(targetId, search)
           }
@@ -1153,7 +1151,7 @@ class Compilers(
         case Some(mtags) =>
           def default() =
             workDoneProgress.trackBlocking(
-              s"${config.icons.sync}Loading presentation compiler"
+              s"${config.icons().sync}Loading presentation compiler"
             ) {
               ScalaLazyCompiler(scalaTarget, mtags, search)
             }

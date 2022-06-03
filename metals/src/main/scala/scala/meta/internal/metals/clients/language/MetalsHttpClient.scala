@@ -10,7 +10,7 @@ import scala.util.Try
 
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
@@ -138,7 +138,7 @@ final class MetalsHttpClient(
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
-    if (clientConfig.isDecorationProvider) {
+    if (clientConfig.isDecorationProvider()) {
       underlying.metalsPublishDecorations(params)
     }
   }

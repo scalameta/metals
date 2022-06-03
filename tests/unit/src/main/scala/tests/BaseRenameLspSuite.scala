@@ -2,7 +2,8 @@ package tests
 
 import scala.concurrent.Future
 
-import scala.meta.internal.pc.Identifier
+import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.mtags.KeywordWrapper
 
 import munit.Location
 import munit.TestOptions
@@ -11,6 +12,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
   protected def compilerPlugins: List[String] = Nil
+  protected def scalacOptions: List[String] = Nil
 
   def same(
       name: String,
@@ -64,7 +66,12 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       cleanWorkspace()
       val allMarkersRegex = "(<<|>>|@@|##.*##)"
       val files = FileLayout.mapFromString(input)
-      val expectedName = Identifier.backtickWrap(newName)
+      val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
+      val expectedName =
+        if (ScalaVersions.isScala3Version(actualScalaVersion))
+          KeywordWrapper.Scala3.backtickWrap(newName)
+        else
+          KeywordWrapper.Scala2.backtickWrap(newName)
       val expectedFiles = files.map { case (file, code) =>
         fileRenames.getOrElse(file, file) -> {
           val expected = if (!notRenamed) {
@@ -128,7 +135,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
         |    "scalaVersion": "$actualScalaVersion",
         |    "compilerPlugins": ${toJsonArray(compilerPlugins)},
         |    "libraryDependencies": ${toJsonArray(libraryDependencies)},
-        |    "scalacOptions" : ["-Ymacro-annotations"]
+        |    "scalacOptions" : ${toJsonArray(scalacOptions)}
         |  },
         |  "b" : {
         |    "scalaVersion": "$actualScalaVersion",

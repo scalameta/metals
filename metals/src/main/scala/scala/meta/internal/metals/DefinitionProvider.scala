@@ -10,7 +10,7 @@ import scala.meta.Type
 import scala.meta.XtensionClassifiable
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
@@ -496,8 +496,7 @@ class DestinationProvider(
       allowedBuildTargets: Set[BuildTargetIdentifier],
   ): Option[SymbolDefinition] = {
     val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
-    if (allowedBuildTargets.isEmpty)
-      definitions.headOption
+    if (allowedBuildTargets.isEmpty) definitions.headOption
     else {
       val matched = definitions.find { defn =>
         sourceBuildTargets(defn.path).exists(id =>

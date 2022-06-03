@@ -4,7 +4,7 @@ import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
 import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.pc.HoverMarkup
 import scala.meta.internal.worksheets.MdocEnrichments._

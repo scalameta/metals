@@ -461,8 +461,9 @@ final class FileDecoderProvider(
         .metalsQuickPick(quickPickParams)
         .asScala
         .mapOptionInside(_.itemId)
-    } else
+    } else {
       Future.successful(Some(classes.head.resourcePath))
+    }
 
   private def findSemanticDbPathInfo(
       sourceFile: AbsolutePath
