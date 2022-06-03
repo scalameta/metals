@@ -35,6 +35,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.filesystem.MetalsFileSystem
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -309,7 +310,9 @@ object MetalsEnrichments
 
     def isDependencySource(workspace: AbsolutePath): Boolean = {
       (isLocalFileSystem(workspace) &&
-        isInReadonlyDirectory(workspace)) || isJarFileSystem
+        isInReadonlyDirectory(
+          workspace
+        )) || isJarFileSystem || isMetalsFileSystem
     }
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
@@ -323,10 +326,15 @@ object MetalsEnrichments
     def isJarFileSystem: Boolean =
       path.toNIO.getFileSystem().provider().getScheme().equals("jar")
 
+    def isMetalsFileSystem: Boolean =
+      MetalsFileSystem.metalsFS.isMetalsFileSystem(path.toNIO)
+
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
+
+    def isReadOnly: Boolean = !Files.isWritable(path.toNIO)
 
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
@@ -408,7 +416,12 @@ object MetalsEnrichments
           out.toFile.setWritable(true)
         }
         try {
-          Files.copy(path.toNIO, out, StandardCopyOption.REPLACE_EXISTING)
+          if (path.isClassfile) {
+            val decompiledText =
+              MetalsFileSystem.metalsFS.decodeCFRFromClassFile(path.toNIO)
+            decompiledText.foreach(text => Files.write(out, text.getBytes()))
+          } else
+            Files.copy(path.toNIO, out, StandardCopyOption.REPLACE_EXISTING)
           // Don't use readOnly files on Windows, makes it impossible to walk
           // the entire directory later on.
           if (!Properties.isWin) {
@@ -426,16 +439,18 @@ object MetalsEnrichments
         throw new Exception(s"Unable to save $path in workspace")
       } else if (path.toNIO.getFileSystem == workspace.toNIO.getFileSystem) {
         path
-      } else {
-        path.jarPath match {
-          case Some(jar) =>
+      } else
+        path.toNIO match {
+          case metalsPath: m.internal.metals.filesystem.MetalsPath =>
             val jarDir =
-              workspace.resolve(Directories.dependencies).resolve(jar.filename)
+              workspace
+                .resolve(Directories.dependencies)
+                .resolve(metalsPath.filename)
             val out = jarDir.resolveZipPath(path.toNIO)
             val jarMetaFile = jarDir.resolve(".jar.meta")
 
             lazy val currentJarMeta = readJarMeta(jarMetaFile)
-            lazy val jarMeta = toJarMeta(jar)
+            lazy val jarMeta = toJarMeta(AbsolutePath(metalsPath))
 
             val updateMeta = !jarDir.exists || !currentJarMeta.contains(jarMeta)
             if (!out.exists || updateMeta) {
@@ -451,12 +466,11 @@ object MetalsEnrichments
               }(retry)
             } else
               out
-          case None =>
+          case _ =>
             val out =
               workspace.resolve(Directories.readonly).resolveZipPath(path.toNIO)
             copyFile(path, out)
         }
-      }
     }
 
     def toTextDocumentIdentifier: TextDocumentIdentifier = {

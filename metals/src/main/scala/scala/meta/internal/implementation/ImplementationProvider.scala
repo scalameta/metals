@@ -395,11 +395,16 @@ final class ImplementationProvider(
     def isDefinitionOccurrence(occ: SymbolOccurrence) =
       occ.role.isDefinition && occ.symbol == symbol
 
+    val input =
+      if (source.isReadOnly)
+        source.toInputFromBuffers(buffer)
+      else
+        source.toInput
     semanticDb.occurrences
       .find(isDefinitionOccurrence)
       .orElse(
         Mtags
-          .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
+          .allToplevels(input, scalaVersionSelector.getDialect(source))
           .occurrences
           .find(isDefinitionOccurrence)
       )

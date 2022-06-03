@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Paths
 
@@ -13,7 +14,10 @@ final class OpenClassLoader extends URLClassLoader(Array.empty) {
   private val isAdded = mutable.Set.empty[AbsolutePath]
   def addEntry(entry: AbsolutePath): Boolean = {
     if (!isAdded(entry)) {
-      super.addURL(entry.toNIO.toUri.toURL)
+      // url must end in "/" for the correct Loader to be selected for metalsfs:/somejar.jar
+      val url = entry.toNIO.toUri.toURL
+      val formattedURL = new URL(s"${url}/")
+      super.addURL(formattedURL)
       isAdded += entry
       true
     } else {

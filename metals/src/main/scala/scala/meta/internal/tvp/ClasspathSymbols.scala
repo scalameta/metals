@@ -117,7 +117,8 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
                   buf += TreeViewSymbolInformation(
                     i.symbol,
                     i.kind,
-                    i.properties
+                    i.properties,
+                    Some(path.toURI)
                   )
                 }
               }
@@ -129,13 +130,8 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
 
         case _ =>
       }
-
     }
-    if (in.extension == "jar") {
-      FileIO.withJarFileSystem(in, create = false, close = true)(list)
-    } else {
-      list(in)
-    }
+    list(in)
     buf.result()
   }
 
@@ -173,7 +169,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
                     d.Package(path.filename.stripSuffix("/"))
                   )
               }
-              result += TreeViewSymbolInformation(dummySymbol, k.CLASS, 0)
+              result += TreeViewSymbolInformation(dummySymbol, k.CLASS, 0, None)
             }
             FileVisitResult.CONTINUE
           }

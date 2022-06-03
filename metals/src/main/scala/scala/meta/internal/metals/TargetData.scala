@@ -79,6 +79,8 @@ final class TargetData {
     val allTargetRoots = scalaTargetRoots.toSet ++ javaTargetRoots.toSet
     allTargetRoots.iterator
   }
+  def allJDKs: Iterator[String] = scalaTargetInfo.flatMap(_._2.jvmHome).iterator
+
   def all: Iterator[BuildTarget] =
     buildTargetInfo.values.toIterator
 

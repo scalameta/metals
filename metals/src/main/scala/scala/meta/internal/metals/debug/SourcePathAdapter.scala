@@ -12,6 +12,8 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.filesystem.MetalsFileSystem
+import scala.meta.internal.metals.filesystem.MetalsPath
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.io.AbsolutePath
 
@@ -36,20 +38,26 @@ private[debug] final class SourcePathAdapter(
         .stripPrefix("jar:")
       val decodedPath =
         URIEncoderDecoder.decode(sourceFileJarPath).toAbsolutePath
-      val parts = decodedPath.toNIO.iterator().asScala.map(_.toString).toVector
-      val jarPartIndex = parts.indexWhere(path => path.endsWith(".jar!"))
-      val jarPath = AbsolutePath(
-        parts
-          .take(jarPartIndex + 1)
-          .mkString(File.separator, File.separator, "")
-          .stripSuffix("!")
-      )
-      val relative = parts.drop(jarPartIndex + 1).mkString(File.separator)
+      decodedPath.toNIO match {
+        case metalsPath: MetalsPath => metalsPath.originalJarURI
+        case _ =>
+          val parts =
+            decodedPath.toNIO.iterator().asScala.map(_.toString).toVector
+          val jarPartIndex = parts.indexWhere(path => path.endsWith(".jar!"))
+          val jarPath = AbsolutePath(
+            parts
+              .take(jarPartIndex + 1)
+              .mkString(File.separator, File.separator, "")
+              .stripSuffix("!")
+          )
+          val relative = parts.drop(jarPartIndex + 1).mkString(File.separator)
 
-      val sourceURI = FileIO.withJarFileSystem(jarPath, create = false)(root =>
-        root.resolve(relative).toURI
-      )
-      Some(sourceURI)
+          val sourceURI =
+            FileIO.withJarFileSystem(jarPath, create = false)(root =>
+              root.resolve(relative).toURI
+            )
+          Some(sourceURI)
+      }
     } else {
       // if sourcePath is a dependency source file
       // we retrieve the original source jar and we build the uri innside the source jar filesystem
@@ -80,8 +88,11 @@ private[debug] final class SourcePathAdapter(
       Try(URI.create(sourcePath)).getOrElse(Paths.get(sourcePath).toUri())
     sourceUri.getScheme match {
       case "jar" =>
-        val path = sourceUri.toAbsolutePath
-        Some(if (saveJarFileToDisk) path.toFileOnDisk(workspace) else path)
+        MetalsFileSystem.metalsFS
+          .getMetalsJarPath(sourceUri)
+          .map(path =>
+            if (saveJarFileToDisk) path.toFileOnDisk(workspace) else path
+          )
       case "file" => Some(AbsolutePath(Paths.get(sourceUri)))
       case _ => None
     }

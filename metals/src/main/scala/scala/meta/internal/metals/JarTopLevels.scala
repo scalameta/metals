@@ -1,15 +1,14 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributeView
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Statement
 import java.util.zip.ZipError
 
-import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -30,14 +29,6 @@ final class JarTopLevels(conn: () => Connection) {
       path: AbsolutePath
   ): Option[List[(String, AbsolutePath)]] =
     try {
-      val fs = path.jarPath
-        .map(jarPath =>
-          PlatformFileIO.newFileSystem(
-            jarPath.toURI,
-            new java.util.HashMap[String, String]()
-          )
-        )
-        .getOrElse(PlatformFileIO.newJarFileSystem(path, create = false))
       val toplevels = List.newBuilder[(String, AbsolutePath)]
       conn()
         .query(
@@ -49,7 +40,7 @@ final class JarTopLevels(conn: () => Connection) {
         ) { _.setString(1, getMD5Digest(path)) } { rs =>
           if (rs.getString(1) != null && rs.getString(2) != null) {
             val symbol = rs.getString(1)
-            val path = AbsolutePath(fs.getPath(rs.getString(2)))
+            val path = AbsolutePath(Paths.get(rs.getString(2)))
             toplevels += (symbol -> path)
           }
         }

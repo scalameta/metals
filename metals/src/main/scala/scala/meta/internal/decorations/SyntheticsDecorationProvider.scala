@@ -282,12 +282,16 @@ final class SyntheticsDecorationProvider(
       textDocument: Option[s.TextDocument],
       path: AbsolutePath
   ): Option[TextDocument] = {
-    for {
-      doc <- textDocument
-      source <- fingerprints.loadLastValid(path, doc.md5, charset)
-      docWithText = doc.withText(source)
-      _ = Document.set(docWithText)
-    } yield docWithText
+    // TODO what does `enrichWithText` do and should it be run on readOnly files?  fingerprints causes slurping ;-(
+    if (path.isReadOnly)
+      textDocument
+    else
+      for {
+        doc <- textDocument
+        source <- fingerprints.loadLastValid(path, doc.md5, charset)
+        docWithText = doc.withText(source)
+        _ = Document.set(docWithText)
+      } yield docWithText
   }
 
   private def localSymbolName(symbol: String, textDoc: TextDocument): String = {

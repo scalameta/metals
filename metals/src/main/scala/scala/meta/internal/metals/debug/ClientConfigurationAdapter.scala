@@ -53,7 +53,8 @@ private[debug] final case class ClientConfigurationAdapter(
   def adaptPathForClient(path: AbsolutePath): String = {
     pathFormat match {
       case InitializeRequestArgumentsPathFormat.PATH =>
-        if (path.isJarFileSystem) path.toURI.toString else path.toString
+        if (path.isJarFileSystem || path.isMetalsFileSystem) path.toURI.toString
+        else path.toString
       case InitializeRequestArgumentsPathFormat.URI => path.toURI.toString
     }
   }
