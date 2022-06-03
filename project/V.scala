@@ -11,7 +11,7 @@ object V {
   val ammonite212Version = scala212
   val ammonite213Version = "2.13.7"
 
-  val ammonite = "2.5.3"
+  val ammonite = "2.5.4"
   val bloop = "1.5.0-18-003e6c7b"
   val bloopNightly = bloop
   val bsp = "2.1.0-M1"
