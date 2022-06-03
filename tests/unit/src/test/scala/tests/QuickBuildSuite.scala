@@ -16,7 +16,7 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
           |{
           |  "a": {
           |    "libraryDependencies": [
-          |      "io.get-coursier:interface:1.0.6"
+          |      "io.get-coursier:interface:1.0.7"
           |    ]
           |  },
           |  "b": {
