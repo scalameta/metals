@@ -14,6 +14,8 @@ import org.eclipse.{lsp4j => l}
 
 class ConvertToNamedArguments(trees: Trees, compilers: Compilers)
     extends CodeAction {
+
+  import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
@@ -41,7 +43,7 @@ class ConvertToNamedArguments(trees: Trees, compilers: Compilers)
               token
             )
             edits.map(e => {
-              val codeAction = new l.CodeAction("Convert to named arguments")
+              val codeAction = new l.CodeAction(title)
               codeAction.setEdit(
                 new l.WorkspaceEdit(Map(path.toURI.toString -> e).asJava)
               )
@@ -52,4 +54,8 @@ class ConvertToNamedArguments(trees: Trees, compilers: Compilers)
       }
       .getOrElse(Future.successful(Nil))
   }
+}
+
+object ConvertToNamedArguments {
+  val title = "Convert to named arguments"
 }
