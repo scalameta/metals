@@ -193,7 +193,7 @@ case class ScalaPresentationCompiler(
 
   override def convertToNamedArguments(
       params: OffsetParams,
-      numUnnamedArgs: Int
+      argIndices: ju.List[Integer]
   ): CompletableFuture[ju.List[l.TextEdit]] = CompletableFuture.completedFuture(Nil.asJava)
 
   override def selectionRange(

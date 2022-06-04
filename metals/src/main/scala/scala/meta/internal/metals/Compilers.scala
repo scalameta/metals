@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Try
 
+import scala.meta.Term
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
@@ -359,14 +360,14 @@ class Compilers(
   }.getOrElse(Future.successful(Nil.asJava))
 
   def convertToNamedArguments(
-      params: TextDocumentPositionParams,
-      numUnnamedArgs: Int,
+      position: TextDocumentPositionParams,
+      argIndices: ju.List[Integer],
       token: CancelToken
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
       pc.convertToNamedArguments(
         CompilerOffsetParams.fromPos(pos, token),
-        numUnnamedArgs
+        argIndices,
       ).asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)

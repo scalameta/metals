@@ -1983,6 +1983,19 @@ class MetalsLanguageServer(
           } yield ().asInstanceOf[Object]
         }
 
+      case ServerCommands.ConvertToNamedArguments(ServerCommands.ConvertToNamedArgsRequest(position, argIndices)) =>
+        CancelTokens.future { token =>
+          val uri = position.getTextDocument().getUri()
+          for {
+            edits <- compilers.convertToNamedArguments(position, argIndices, token)
+            if (!edits.isEmpty())
+            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+            _ <- languageClient
+              .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
+              .asScala
+          } yield ().asInstanceOf[Object]
+        }
+
       case ServerCommands.ExtractMemberDefinition(textDocumentParams) =>
         val data = ExtractMemberDefinitionData(textDocumentParams)
         val future = for {

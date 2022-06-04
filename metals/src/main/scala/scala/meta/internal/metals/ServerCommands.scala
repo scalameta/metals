@@ -8,6 +8,7 @@ import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import java.{util => ju}
 
 /**
  * LSP commands supported by the Metals language server.
@@ -462,6 +463,17 @@ object ServerCommands {
     "Insert inferred type of a value",
     """|Whenever a user chooses code action to insert the inferred type this command is later ran to 
        |calculate the type and insert it in the correct location.
+       |""".stripMargin,
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+       |""".stripMargin
+  )
+
+  final case class ConvertToNamedArgsRequest(position: TextDocumentPositionParams, argIndices: ju.List[Integer])
+  val ConvertToNamedArguments = new ParametrizedCommand[ConvertToNamedArgsRequest](
+    "convert-to-named-arguments",
+    "Convert positional arguments to named ones",
+    """|Whenever a user chooses code action to convert to named arguments, this command is later ran to 
+       |determine the parameter names of all unnamed arguments and insert names at the correct locations.
        |""".stripMargin,
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin

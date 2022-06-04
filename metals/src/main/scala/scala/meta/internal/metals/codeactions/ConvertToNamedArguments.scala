@@ -5,14 +5,14 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.internal.metals.CodeAction
-import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class ConvertToNamedArguments(trees: Trees, compilers: Compilers)
+class ConvertToNamedArguments(trees: Trees)
     extends CodeAction {
 
   import ConvertToNamedArguments._
@@ -29,26 +29,28 @@ class ConvertToNamedArguments(trees: Trees, compilers: Compilers)
       .findLastEnclosingAt[Term.Apply](path, range.getStart())
       .map { apply =>
         {
-          val numUnnamedArgs =
-            apply.args.takeWhile(!_.isInstanceOf[Term.Assign]).length
-          if (numUnnamedArgs == 0) Future.successful(Nil)
+          // TODO: Skip block args
+          // TODO: Go to parent apply, if current has no candidates
+          pprint.log(apply)
+          val argIndices = apply.args.zipWithIndex.filterNot { case (arg, _) => arg.isInstanceOf[Term.Assign]}.map(_._2)
+          pprint.log(argIndices)
+          //val numUnnamedArgs =
+            //apply.args.takeWhile(!_.isInstanceOf[Term.Assign]).length
+          if (argIndices.isEmpty) Future.successful(Nil)
           else {
-            val textDocumentPositionParams = new l.TextDocumentPositionParams(
+            val codeAction = new l.CodeAction(title)
+            codeAction.setKind(l.CodeActionKind.RefactorRewrite)
+            val position = new l.TextDocumentPositionParams(
               params.getTextDocument(),
               new l.Position(apply.pos.endLine, apply.pos.endColumn)
             )
-            val edits = compilers.convertToNamedArguments(
-              textDocumentPositionParams,
-              numUnnamedArgs,
-              token
-            )
-            edits.map(e => {
-              val codeAction = new l.CodeAction(title)
-              codeAction.setEdit(
-                new l.WorkspaceEdit(Map(path.toURI.toString -> e).asJava)
+            codeAction.setCommand(
+              ServerCommands.ConvertToNamedArguments.toLSP(
+                ServerCommands.ConvertToNamedArgsRequest(position, argIndices.map(new Integer(_)).asJava)
               )
-              Seq(codeAction)
-            })
+            )
+            Future.successful(Seq(codeAction))
+            
           }
         }
       }
