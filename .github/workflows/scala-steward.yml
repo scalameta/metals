@@ -16,3 +16,4 @@ jobs:
           github-token: ${{ secrets.SCALAMETA_BOT_GH_TOKEN }}
           author-email: scalameta@gmail.com
           author-name: Scalameta Bot
+          repos-file: .github/steward-repos.md
