@@ -29,13 +29,10 @@ class ConvertToNamedArguments(trees: Trees)
       .findLastEnclosingAt[Term.Apply](path, range.getStart())
       .map { apply =>
         {
-          // TODO: Skip block args
           // TODO: Go to parent apply, if current has no candidates
-          pprint.log(apply)
-          val argIndices = apply.args.zipWithIndex.filterNot { case (arg, _) => arg.isInstanceOf[Term.Assign]}.map(_._2)
-          pprint.log(argIndices)
-          //val numUnnamedArgs =
-            //apply.args.takeWhile(!_.isInstanceOf[Term.Assign]).length
+          val argIndices = apply.args.zipWithIndex.filterNot { case (arg, _) => 
+            arg.isInstanceOf[Term.Assign] || arg.isInstanceOf[Term.Block]
+          }.map(_._2)
           if (argIndices.isEmpty) Future.successful(Nil)
           else {
             val codeAction = new l.CodeAction(title)

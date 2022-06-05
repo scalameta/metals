@@ -1140,6 +1140,20 @@ final class TestingServer(
       codeActions
     }
 
+  def assertCodeActionExcluded(
+      filename: String,
+      query: String,
+      expectedExcluded: String,
+      kind: List[String],
+      root: AbsolutePath = workspace,
+  )(implicit loc: munit.Location): Future[List[l.CodeAction]] =
+    for {
+      (codeActions, codeActionString) <- codeAction(filename, query, root, kind)
+    } yield {
+      Assertions.assertNotContains(codeActionString, expectedExcluded)
+      codeActions
+    }
+
   def hover(
       filename: String,
       query: String,

@@ -26,4 +26,12 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionLspSuite("convertToName
        |  Foo<<(>>param1 = 1, param2 = <<>>2, param3 = 3)
        |}""".stripMargin,
   )
+
+  checkActionMissing(
+    "convert-to-named-args-no-unnamed-args",
+    """|object Something {
+       |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
+       |}""".stripMargin,
+    ConvertToNamedArguments.title
+  )
 }

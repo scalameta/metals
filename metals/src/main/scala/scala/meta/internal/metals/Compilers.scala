@@ -10,7 +10,6 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Try
 
-import scala.meta.Term
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey

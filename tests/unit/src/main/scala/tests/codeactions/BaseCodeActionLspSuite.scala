@@ -31,6 +31,57 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
     )
   }
 
+  // Checks that a code action is not in the actions recieved from the server
+  def checkActionMissing(
+      name: TestOptions,
+      input: String,
+      expectedMissing: String,
+      scalafixConf: String = "",
+      scalacOptions: List[String] = Nil,
+      kind: List[String] = Nil,
+      configuration: => Option[String] = None,
+      scalaVersion: String = scalaVersion,
+      fileName: String = "A.scala",
+      changeFile: String => String = identity,
+  )(implicit loc: Location): Unit = {
+    val scalacOptionsJson =
+      if (scalacOptions.nonEmpty)
+        s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"],"""
+      else ""
+    val path = s"a/src/main/scala/a/$fileName"
+    val fileContent = input.replace("<<", "").replace(">>", "")
+
+    test(name) {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""/metals.json
+             |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
+             |$scalafixConf
+             |/$path
+             |$fileContent""".stripMargin
+        )
+        _ <- server.didOpen(path)
+        _ <- {
+          configuration match {
+            case Some(conf) => server.didChangeConfiguration(conf)
+            case None => Future {}
+          }
+        }
+        _ <- server.didChange(path)(txt => changeFile(txt))
+        codeActions <-
+          server
+            .assertCodeActionExcluded(
+              path,
+              changeFile(input),
+              expectedMissing,
+              kind,
+            )
+      } yield ()
+    }
+  }
+
+
   def check(
       name: TestOptions,
       input: String,
