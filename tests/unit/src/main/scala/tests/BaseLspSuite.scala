@@ -85,7 +85,7 @@ abstract class BaseLspSuite(
 
   def test(testOpts: TestOptions, withoutVirtualDocs: Boolean)(
       fn: => Future[Unit]
-  )(implicit loc: Location) {
+  )(implicit loc: Location): Unit = {
     if (withoutVirtualDocs) {
       test(testOpts.withName(s"${testOpts.name}-readonly")) { fn }
       test(

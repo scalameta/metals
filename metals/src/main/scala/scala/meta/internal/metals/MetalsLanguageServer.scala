@@ -1740,6 +1740,22 @@ class MetalsLanguageServer(
             Option(params.uri).map(_.toAbsolutePath)
           )
         }.asJavaObject
+      case ServerCommands.RunScalafix(params) =>
+        val uri = params.getTextDocument().getUri()
+        scalafixProvider
+          .runAllRules(
+            uri.toAbsolutePath
+          )
+          .flatMap { edits =>
+            languageClient
+              .applyEdit(
+                new l.ApplyWorkspaceEditParams(
+                  new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
+                )
+              )
+              .asScala
+          }
+          .asJavaObject
       case ServerCommands.ChooseClass(params) =>
         fileDecoderProvider
           .chooseClassFromFile(

@@ -579,7 +579,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       uri: () => Option[String] = () => None
   )(implicit
       loc: munit.Location
-  ) {
+  ): Unit = {
     test(name) {
       for {
         _ <- Future.successful(cleanWorkspace())
@@ -598,7 +598,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       expected: () => List[BuildTargetUpdate]
   )(implicit
       loc: munit.Location
-  ) {
+  ): Unit = {
     test(name) {
       for {
         _ <- Future.successful(cleanWorkspace())
