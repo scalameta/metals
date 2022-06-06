@@ -91,7 +91,8 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String,
       path: AbsolutePath,
       startPos: l.Position,
-      endPos: l.Position
+      endPos: l.Position,
+      flattenOrNot: Boolean
   ): l.CodeAction = {
 
     val elements = forElementsList.flatMap {
@@ -119,6 +120,8 @@ class FlatMapToForComprehensionCodeAction(
       .map(line => s"$indentation$indentation      $line")
       .mkString("\n")
 
+    val flattenString = if (flattenOrNot) ".flatten" else ""
+
     val forYieldString =
       s"""|{
           |$indentation for {
@@ -126,7 +129,7 @@ class FlatMapToForComprehensionCodeAction(
           |$indentation } yield {
           |$yieldString
           |$indentation }
-          |$indentation}""".stripMargin
+          |$indentation}$flattenString""".stripMargin
 
     val codeAction = new l.CodeAction()
     val range =
@@ -167,19 +170,24 @@ class FlatMapToForComprehensionCodeAction(
     if (forElements.nonEmpty) {
       forElements match {
         case heads :+ tail =>
-          tail
+          val forYieldTail = tail
             .asInstanceOf[ForYieldEnumeration]
-            .qual
-            .map(yieldQual =>
-              constructCodeAction(
-                heads,
-                YieldExpression(yieldQual),
-                indentation,
-                path,
-                termApply.pos.toLSP.getStart,
-                termApply.pos.toLSP.getEnd
-              )
-            )
+          for {
+            yieldQual <- forYieldTail.qual
+            yieldAssignOrMap <- forYieldTail.perhapsAssignOrMap
+            flattenOrNot = yieldAssignOrMap match {
+              case AssignOrMap.assign => false
+              case AssignOrMap.map => true
+            }
+          } yield constructCodeAction(
+            heads,
+            YieldExpression(yieldQual),
+            indentation,
+            path,
+            termApply.pos.toLSP.getStart,
+            termApply.pos.toLSP.getEnd,
+            flattenOrNot
+          )
         case _ :: Nil => None
       }
 
@@ -431,7 +439,7 @@ class FlatMapToForComprehensionCodeAction(
           case otherQual =>
             (
               ForYieldEnumeration(
-                Some(AssignOrMap.assign),
+                Some(AssignOrMap.map),
                 perhapseValueName,
                 Some(TreeEnumerationValue(otherQual))
               ) +: ForYieldEnumeration(
@@ -477,7 +485,7 @@ class FlatMapToForComprehensionCodeAction(
           case otherQual =>
             (
               ForYieldEnumeration(
-                Some(AssignOrMap.assign),
+                Some(AssignOrMap.map),
                 perhapseValueName,
                 Some(TreeEnumerationValue(otherQual))
               ) +: ForYieldCondition(
