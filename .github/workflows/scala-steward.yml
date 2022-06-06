@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Launch Scala Steward
     steps:
+      # Needed or else it won't find your repos file
+      - uses: actions/checkout@v2
+
       - name: Launch Scala Steward
         uses: scala-steward-org/scala-steward-action@v2
         with:
