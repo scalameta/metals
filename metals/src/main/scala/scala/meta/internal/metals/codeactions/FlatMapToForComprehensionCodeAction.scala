@@ -386,7 +386,6 @@ class FlatMapToForComprehensionCodeAction(
         tuple._2,
         replacedTree.pos.end - replacedTree.pos.start
       )
-      pprint.log("result is: " + result)
       result
     }
   }
