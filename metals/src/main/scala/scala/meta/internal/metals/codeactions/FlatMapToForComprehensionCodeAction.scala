@@ -91,8 +91,7 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String,
       path: AbsolutePath,
       startPos: l.Position,
-      endPos: l.Position,
-      flattenOrNot: Boolean
+      endPos: l.Position
   ): l.CodeAction = {
 
     val elements = forElementsList.flatMap {
@@ -120,8 +119,6 @@ class FlatMapToForComprehensionCodeAction(
       .map(line => s"$indentation$indentation      $line")
       .mkString("\n")
 
-    val flattenString = if (flattenOrNot) ".flatten" else ""
-
     val forYieldString =
       s"""|{
           |$indentation for {
@@ -129,7 +126,7 @@ class FlatMapToForComprehensionCodeAction(
           |$indentation } yield {
           |$yieldString
           |$indentation }
-          |$indentation}$flattenString""".stripMargin
+          |$indentation}""".stripMargin
 
     val codeAction = new l.CodeAction()
     val range =
@@ -156,7 +153,7 @@ class FlatMapToForComprehensionCodeAction(
       document: String,
       indentation: String
   ): Option[l.CodeAction] = {
-    val (forElements, _) = {
+    val (forElements, generatedByMetalsVals) = {
       extractChainedForYield(
         parse,
         None,
@@ -175,19 +172,41 @@ class FlatMapToForComprehensionCodeAction(
           for {
             yieldQual <- forYieldTail.qual
             yieldAssignOrMap <- forYieldTail.perhapsAssignOrMap
-            flattenOrNot = yieldAssignOrMap match {
-              case AssignOrMap.assign => false
-              case AssignOrMap.map => true
+          } yield {
+            yieldAssignOrMap match {
+              case AssignOrMap.assign =>
+                constructCodeAction(
+                  heads,
+                  YieldExpression(yieldQual),
+                  indentation,
+                  path,
+                  termApply.pos.toLSP.getStart,
+                  termApply.pos.toLSP.getEnd
+                )
+              case AssignOrMap.map =>
+                val (lastGeneratedName, _) =
+                  createNewName(termApply, generatedByMetalsVals)
+                val newEnumerations = heads :+ ForYieldEnumeration(
+                  Some(AssignOrMap.map),
+                  Some(lastGeneratedName),
+                  Some(yieldQual)
+                )
+                val newYield = YieldExpression(
+                  StringEnumerationValue(lastGeneratedName)
+                )
+
+                constructCodeAction(
+                  newEnumerations,
+                  newYield,
+                  indentation,
+                  path,
+                  termApply.pos.toLSP.getStart,
+                  termApply.pos.toLSP.getEnd
+                )
+
             }
-          } yield constructCodeAction(
-            heads,
-            YieldExpression(yieldQual),
-            indentation,
-            path,
-            termApply.pos.toLSP.getStart,
-            termApply.pos.toLSP.getEnd,
-            flattenOrNot
-          )
+
+          }
         case _ :: Nil => None
       }
 
@@ -452,10 +471,13 @@ class FlatMapToForComprehensionCodeAction(
         }
 
       case termSelect: Term.Select
-          if termSelect.name.value == "filter" || termSelect.name.value == "filterNot" =>
+          if termSelect.name.value == "filter" || termSelect.name.value == "filterNot" ||
+            termSelect.name.value == "withFilter" =>
         val qual = termSelect.qual
         val filterOrNot =
-          if (termSelect.name.value == "filter") FilterOrNot.filter
+          if (
+            termSelect.name.value == "filter" || termSelect.name.value == "withFilter"
+          ) FilterOrNot.filter
           else FilterOrNot.filterNot
         val (perhapseValueName, perhapsNextCondition, newMetalsNames) =
           processValueNameAndNextQual(
@@ -585,11 +607,13 @@ class FlatMapToForComprehensionCodeAction(
     case _: Term.Apply => true
     case termSelect: Term.Select
         if termSelect.name.value == "map" || termSelect.name.value == "flatMap" ||
-          termSelect.name.value == "filter" || termSelect.name.value == "filterNot" =>
+          termSelect.name.value == "filter" || termSelect.name.value == "filterNot" ||
+          termSelect.name.value == "withFilter" =>
       true
     case termName: Term.Name
         if termName.value == "flatMap" || termName.value == "map" ||
-          termName.value == "filter" || termName.value == "filterNot" =>
+          termName.value == "filter" || termName.value == "filterNot" ||
+          termName.value == "withFilter" =>
       true
     case _ => false
   }
