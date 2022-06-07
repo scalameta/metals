@@ -218,154 +218,48 @@ class FlatMapToForComprehensionCodeAction(
 
   }
 
-  private def processValueNameAndNextQual(
-      parseTerm: String => Option[Term],
-      parse: String => Option[Tree],
-      tree: Tree,
-      document: String,
-      generatedByMetalsValues: Set[String]
-  ): (Option[(String, Term)], Set[String]) = tree match {
-    case termFunction: Term.Function =>
-      processFunction(termFunction, generatedByMetalsValues)
-    case termApplyInfix: Term.ApplyInfix =>
-      processApplyInfix(
-        parseTerm,
-        parse,
-        termApplyInfix,
-        document,
-        generatedByMetalsValues
-      )
-    case termSelect: Term.Select =>
-      processTreeWithPlaceHolder[Term.Select](
-        parseTerm,
-        replacePlaceHolderInSelect,
-        termSelect,
-        document,
-        generatedByMetalsValues
-      )
-    case termName: Term.Name => // single argument function
-      processTermName(termName, generatedByMetalsValues)
-    case termApply: Term.Apply => // function and placeholder argument
-      processTreeWithPlaceHolder[Term.Apply](
-        parseTerm,
-        replacePlaceHolderInApply,
-        termApply,
-        document,
-        generatedByMetalsValues
-      )
-    case termBlock: Term.Block =>
-      termBlock.stats.headOption
-        .map(
-          processValueNameAndNextQual(
-            parseTerm,
-            parse,
-            _,
-            document,
-            generatedByMetalsValues
-          )
+  private def replacePlaceHolder(tree: Term, newName: Term.Name): Term =
+    tree match {
+      case Term.Apply(fun, args) =>
+        Term.Apply(
+          replacePlaceHolder(fun, newName),
+          args.map(replacePlaceHolder(_, newName))
         )
-        .getOrElse(None, generatedByMetalsValues)
-    case termAnonymousFunction: Term.AnonymousFunction =>
-      processValueNameAndNextQual(
-        parseTerm,
-        parse,
-        termAnonymousFunction.body,
-        document,
-        generatedByMetalsValues
-      )
-  }
-
-  private def processTreeWithPlaceHolder[T <: Term](
-      parseTerm: String => Option[Term],
-      replacePlaceHolder: (String, T, String) => Option[String],
-      tree: T,
-      document: String,
-      generatedByMetalsValues: Set[String]
-  ): (Option[(String, Term)], Set[String]) = {
-    val (nextValueName, newMetalsValues) =
-      createNewName(tree, generatedByMetalsValues)
-    val maybeNextQual =
-      replacePlaceHolder(nextValueName, tree, document)
-    val nextQualTree =
-      maybeNextQual
-        .flatMap(parseTerm)
-        .getOrElse(tree)
-    (maybeNextQual.map(_ => (nextValueName, nextQualTree)), newMetalsValues)
-  }
-
-  private def replacePlaceHolderInApply(
-      newValueName: String,
-      termApply: Term.Apply,
-      document: String
-  ): Option[String] = {
-    val maybeReplacedTreeAndString: Option[(Tree, String)] =
-      termApply.fun match {
-        case innerTermSelect: Term.Select =>
-          replacePlaceHolderInSelect(newValueName, innerTermSelect, document)
-            .map((innerTermSelect, _))
-        case innerTermApply: Term.Apply =>
-          replacePlaceHolderInApply(newValueName, innerTermApply, document).map(
-            (innerTermApply, _)
-          )
-        case _ => None
-      }
-    maybeReplacedTreeAndString
-      .orElse {
-        termApply.args.flatMap {
-          case placeHolder: Term.Placeholder =>
-            Some(placeHolder, newValueName)
-          case _ => None
-        }.headOption
-      }
-      .map { tuple =>
-        val newTermApply =
-          document.substring(termApply.pos.start, termApply.pos.end)
-        val result = newTermApply.patch(
-          tuple._1.pos.start - termApply.pos.start,
-          tuple._2,
-          tuple._1.pos.end - tuple._1.pos.start
-        )
-        result
-      }
-  }
-
-  private def replacePlaceHolderInSelect(
-      newValueName: String,
-      termSelect: Term.Select,
-      document: String
-  ): Option[String] = {
-    val maybeReplacedTreeReplacementString: Option[(Tree, String)] =
-      termSelect.qual match {
-        case placeHolder: Term.Placeholder => Some(placeHolder, newValueName)
-        case innerTermSelect: Term.Select =>
-          replacePlaceHolderInSelect(newValueName, innerTermSelect, document)
-            .map((innerTermSelect, _))
-        case termApply: Term.Apply =>
-          replacePlaceHolderInApply(newValueName, termApply, document)
-            .map((termApply, _))
-        case _ => None
-      }
-    maybeReplacedTreeReplacementString.map { tuple =>
-      val replacedTree = tuple._1
-      val newTermSelect =
-        document.substring(termSelect.pos.start, termSelect.pos.end)
-      val result = newTermSelect.patch(
-        replacedTree.pos.start - termSelect.pos.start,
-        tuple._2,
-        replacedTree.pos.end - replacedTree.pos.start
-      )
-      result
+      case Term.Select(qual, name) =>
+        Term.Select(replacePlaceHolder(qual, newName), name)
+      case Term.Placeholder() => newName
+      case other => other
     }
-  }
 
-  private def processApplyInfix(
-      parseTerm: String => Option[Term],
-      parse: String => Option[Tree],
-      termApplyInfix: Term.ApplyInfix,
-      document: String,
+  private def processValueNameAndNextQual(
+      tree: Tree,
       generatedByMetalsValues: Set[String]
   ): (Option[(String, Term)], Set[String]) = {
-    ???
+    tree match {
+      case Term.Function(List(param), term) if param.name.value.isEmpty =>
+        val (newName, generatedValues) =
+          createNewName(tree, generatedByMetalsValues)
+        (Some((newName, term)), generatedValues)
+      case Term.Function(List(param), term) =>
+        (Some((param.name.value, term)), generatedByMetalsValues)
+
+      case Term.AnonymousFunction(term) =>
+        val (newName, generatedValues) =
+          createNewName(tree, generatedByMetalsValues)
+        (
+          Some((newName, replacePlaceHolder(term, Term.Name(newName)))),
+          generatedValues
+        )
+      case Term.Block(List(function)) =>
+        processValueNameAndNextQual(function, generatedByMetalsValues)
+      case term: Term =>
+        val (newName, generatedValues) =
+          createNewName(tree, generatedByMetalsValues)
+        (
+          Some((newName, Term.Apply(term, List(Term.Name(newName))))),
+          generatedValues
+        )
+    }
   }
 
   private def extractChainedForYield(
@@ -378,6 +272,12 @@ class FlatMapToForComprehensionCodeAction(
       document: String,
       generatedByMetalsValues: Set[String]
   ): (List[Enumerator], Option[Term], Set[String]) = {
+    val (perhapseValueNameAndNextQual, newMetalsNames) =
+      processValueNameAndNextQual(
+        termApply.args.head,
+        generatedByMetalsValues
+      )
+
     termApply.fun match {
       case termSelect: Term.Select
           if termSelect.name.value == "flatMap" || termSelect.name.value == "map" =>
@@ -385,14 +285,6 @@ class FlatMapToForComprehensionCodeAction(
         val assignOrMap =
           if (termSelect.name.value == "flatMap") AssignOrMap.map
           else AssignOrMap.assign
-        val (perhapseValueNameAndNextQual, newMetalsNames) =
-          processValueNameAndNextQual(
-            parseTerm,
-            parse,
-            termApply.args.head,
-            document,
-            generatedByMetalsValues
-          )
 
         val result = for {
           valueName <- perhapseValueNameAndNextQual.map(_._1)
@@ -471,18 +363,9 @@ class FlatMapToForComprehensionCodeAction(
             termSelect.name.value == "filter" || termSelect.name.value == "withFilter"
           ) FilterOrNot.filter
           else FilterOrNot.filterNot
-        val (perhapseValueNameAndNextCondition, newMetalsNames) =
-          processValueNameAndNextQual(
-            parseTerm,
-            parse,
-            termApply.args.head,
-            document,
-            generatedByMetalsValues
-          )
-
         val result = for {
-          valueName <- perhapseValueNameAndNextCondition.map(_._1)
-          nextCondition <- perhapseValueNameAndNextCondition.map(_._2)
+          valueName <- perhapseValueNameAndNextQual.map(_._1)
+          nextCondition <- perhapseValueNameAndNextQual.map(_._2)
         } yield {
           val (elems, maybeYieldTerm): (List[Enumerator], Option[Term]) =
             perhapseLastName match {
@@ -552,34 +435,6 @@ class FlatMapToForComprehensionCodeAction(
             (existingForElements, Some(termApply), generatedByMetalsValues)
         }
     }
-  }
-
-  private def processFunction(
-      termFunction: Term.Function,
-      generatedByMetalsValues: Set[String]
-  ): (Option[(String, Term)], Set[String]) = {
-    val maybeNameAndMetalsNames = termFunction.params.headOption
-      .map {
-        case anonymousParam if anonymousParam.name.value == "" =>
-          createNewName(termFunction, generatedByMetalsValues)
-        case otherParam => (otherParam.name.value, generatedByMetalsValues)
-      }
-    (
-      maybeNameAndMetalsNames.map(nameAndMetalsNames =>
-        (nameAndMetalsNames._1, termFunction.body)
-      ),
-      maybeNameAndMetalsNames.map(_._2).getOrElse(generatedByMetalsValues)
-    )
-  }
-
-  private def processTermName(
-      termName: Term.Name,
-      generatedByMetalsValues: Set[String]
-  ): (Option[(String, Term)], Set[String]) = {
-    val (paramName, newMetalsNames) =
-      createNewName(termName, generatedByMetalsValues)
-    val nextQual = Term.Apply.apply(termName, List(Term.Name.apply(paramName)))
-    (Some(paramName, nextQual), newMetalsNames)
   }
 
   private def createNewName(
