@@ -21,15 +21,16 @@ final class ConvertToNamedArgumentsProvider(
     val typedTree = typedTreeAt(unit.position(params.offset))
     typedTree match {
       case Apply(fun, args) =>
-        args.take(numUnnamedArgs)
+        args
+          .take(numUnnamedArgs)
           .zip(fun.tpe.params)
           .map {
-          case (arg, param) => {
-            val position = arg.pos.toLSP
-            position.setEnd(position.getStart())
-            new l.TextEdit(position, s"${param.nameString} = ")
+            case (arg, param) => {
+              val position = arg.pos.toLSP
+              position.setEnd(position.getStart())
+              new l.TextEdit(position, s"${param.nameString} = ")
+            }
           }
-        }
       case _ => Nil
     }
   }

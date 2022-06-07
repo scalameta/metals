@@ -42,7 +42,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       configuration: => Option[String] = None,
       scalaVersion: String = scalaVersion,
       fileName: String = "A.scala",
-      changeFile: String => String = identity,
+      changeFile: String => String = identity
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -75,12 +75,11 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
               path,
               changeFile(input),
               expectedMissing,
-              kind,
+              kind
             )
       } yield ()
     }
   }
-
 
   def check(
       name: TestOptions,

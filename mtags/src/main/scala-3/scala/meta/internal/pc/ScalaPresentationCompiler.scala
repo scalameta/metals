@@ -194,7 +194,8 @@ case class ScalaPresentationCompiler(
   override def convertToNamedArguments(
       params: OffsetParams,
       numUnnamedArgs: Int
-  ): CompletableFuture[ju.List[l.TextEdit]] = CompletableFuture.completedFuture(Nil.asJava)
+  ): CompletableFuture[ju.List[l.TextEdit]] =
+    CompletableFuture.completedFuture(Nil.asJava)
 
   override def selectionRange(
       params: ju.List[OffsetParams]

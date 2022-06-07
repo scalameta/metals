@@ -1145,7 +1145,7 @@ final class TestingServer(
       query: String,
       expectedExcluded: String,
       kind: List[String],
-      root: AbsolutePath = workspace,
+      root: AbsolutePath = workspace
   )(implicit loc: munit.Location): Future[List[l.CodeAction]] =
     for {
       (codeActions, codeActionString) <- codeAction(filename, query, root, kind)

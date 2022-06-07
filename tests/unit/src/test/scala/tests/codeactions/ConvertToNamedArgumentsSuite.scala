@@ -3,7 +3,8 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 
-class ConvertToNamedArgumentsSuite extends BaseCodeActionLspSuite("convertToNamedArguments") {
+class ConvertToNamedArgumentsSuite
+    extends BaseCodeActionLspSuite("convertToNamedArguments") {
 
   check(
     "convert-to-named-args-basic",
@@ -25,7 +26,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionLspSuite("convertToName
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>param1 = 1, param2 = <<>>2, param3 = 3)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkActionMissing(

@@ -13,16 +13,17 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class ConvertToNamedArguments(trees: Trees)
-    extends CodeAction {
+class ConvertToNamedArguments(trees: Trees) extends CodeAction {
 
   import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
-  def firstApplyWithUnnamedArgs(term: Option[Tree]): Option[ApplyTermWithNumArgs] = {
+  def firstApplyWithUnnamedArgs(
+      term: Option[Tree]
+  ): Option[ApplyTermWithNumArgs] = {
     term match {
-      case Some(apply: Term.Apply) => 
-        val numUnnamedArgs = apply.args.takeWhile{ arg => 
+      case Some(apply: Term.Apply) =>
+        val numUnnamedArgs = apply.args.takeWhile { arg =>
           !arg.isInstanceOf[Term.Assign] && !arg.isInstanceOf[Term.Block]
         }.size
         if (numUnnamedArgs == 0) firstApplyWithUnnamedArgs(apply.parent)
@@ -44,20 +45,25 @@ class ConvertToNamedArguments(trees: Trees)
       apply <- firstApplyWithUnnamedArgs(Some(term))
     } yield apply
 
-    maybeApply.map { apply => {
-      val codeAction = new l.CodeAction(title)
-      codeAction.setKind(l.CodeActionKind.RefactorRewrite)
-      val position = new l.TextDocumentPositionParams(
-        params.getTextDocument(),
-        new l.Position(apply.term.pos.endLine, apply.term.pos.endColumn)
-      )
-      codeAction.setCommand(
-        ServerCommands.ConvertToNamedArguments.toLSP(
-          ServerCommands.ConvertToNamedArgsRequest(position, apply.numUnnamedArgs)
-        )
-      )
-      Future.successful(Seq(codeAction))
-    }}.getOrElse(Future.successful(Nil))
+    maybeApply
+      .map { apply =>
+        {
+          val codeAction = new l.CodeAction(title)
+          codeAction.setKind(l.CodeActionKind.RefactorRewrite)
+          val position = new l.TextDocumentPositionParams(
+            params.getTextDocument(),
+            new l.Position(apply.term.pos.endLine, apply.term.pos.endColumn)
+          )
+          codeAction.setCommand(
+            ServerCommands.ConvertToNamedArguments.toLSP(
+              ServerCommands
+                .ConvertToNamedArgsRequest(position, apply.numUnnamedArgs)
+            )
+          )
+          Future.successful(Seq(codeAction))
+        }
+      }
+      .getOrElse(Future.successful(Nil))
   }
 }
 

@@ -467,16 +467,20 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  final case class ConvertToNamedArgsRequest(position: TextDocumentPositionParams, numUnnamedArgs: Int)
-  val ConvertToNamedArguments = new ParametrizedCommand[ConvertToNamedArgsRequest](
-    "convert-to-named-arguments",
-    "Convert positional arguments to named ones",
-    """|Whenever a user chooses code action to convert to named arguments, this command is later ran to 
-       |determine the parameter names of all unnamed arguments and insert names at the correct locations.
-       |""".stripMargin,
-    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
-       |""".stripMargin
+  final case class ConvertToNamedArgsRequest(
+      position: TextDocumentPositionParams,
+      numUnnamedArgs: Int
   )
+  val ConvertToNamedArguments =
+    new ParametrizedCommand[ConvertToNamedArgsRequest](
+      "convert-to-named-arguments",
+      "Convert positional arguments to named ones",
+      """|Whenever a user chooses code action to convert to named arguments, this command is later ran to 
+         |determine the parameter names of all unnamed arguments and insert names at the correct locations.
+         |""".stripMargin,
+      """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+         |""".stripMargin
+    )
 
   val GotoLog = new Command(
     "goto-log",
