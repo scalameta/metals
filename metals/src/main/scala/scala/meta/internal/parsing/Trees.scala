@@ -143,6 +143,19 @@ final class Trees(
     }
   }
 
+  def parseTerm(
+      path: AbsolutePath
+  )(code: String): Parsed[Term] = {
+    val dialect = scalaVersionSelector.getDialect(path)
+    val input = Input.VirtualFile(path.toURI.toString(), code)
+    if (path.isAmmoniteScript) {
+      val ammoniteInput = Input.Ammonite(input)
+      dialect(ammoniteInput).parse[Term](Parse.parseTerm)
+    } else {
+      dialect(input).parse[Term]
+    }
+  }
+
 }
 
 object Trees {

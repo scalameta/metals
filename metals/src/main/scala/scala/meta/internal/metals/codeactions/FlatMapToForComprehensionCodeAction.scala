@@ -3,15 +3,15 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Enumerator
 import scala.meta.Name
+import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.codeactions.AssignOrMap.AssignOrMap
-import scala.meta.internal.metals.codeactions.FilterOrNot.FilterOrNot
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -45,6 +45,9 @@ class FlatMapToForComprehensionCodeAction(
 
     def parse(code: String): Option[Tree] = trees.parse(path)(code).toOption
 
+    def parseTerm(code: String): Option[Term] =
+      trees.parseTerm(path)(code).toOption
+
     val maybeChainedCodeAction = for {
       document <- buffers.get(path)
       applyTree <- maybeTree
@@ -53,6 +56,7 @@ class FlatMapToForComprehensionCodeAction(
       applyTree match {
         case termApply: Term.Apply =>
           codeActionWithApply(
+            parseTerm,
             parse,
             path,
             termApply,
@@ -61,6 +65,7 @@ class FlatMapToForComprehensionCodeAction(
           )
         case termSelect: Term.Select =>
           codeActionWithSelect(
+            parseTerm,
             parse,
             path,
             termSelect,
@@ -70,6 +75,7 @@ class FlatMapToForComprehensionCodeAction(
 
         case termName: Term.Name =>
           codeActionWithName(
+            parseTerm,
             parse,
             path,
             termName,
@@ -86,46 +92,24 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def constructCodeAction(
-      forElementsList: List[ForElement],
-      yieldExpression: YieldExpression,
+      forElementsList: List[Enumerator],
+      yieldTerm: Term,
       indentation: String,
       path: AbsolutePath,
       startPos: l.Position,
       endPos: l.Position
   ): l.CodeAction = {
 
-    val elements = forElementsList.flatMap {
-      case ForYieldEnumeration(perhapsAssignOrMap, perhapsVariableName, qual) =>
-        for {
-          valName <- perhapsVariableName
-          assignOrMap <- perhapsAssignOrMap
-          qualTree <- qual
-          qualString = qualTree.toString
-          qualLines = qualString.split(Array('\n'))
-          finalQual = (qualLines.head +: qualLines.tail.map(line =>
-            s"$indentation$indentation      $line"
-          )).mkString("\n")
-        } yield s"$indentation   $valName $assignOrMap $finalQual"
-
-      case ForYieldCondition(maybeFilterOrNot, condition) =>
-        for {
-          filterOrNot <- maybeFilterOrNot
-          conditionString <- condition
-        } yield s"$indentation  if $filterOrNot($conditionString)"
-    }
-
-    val yieldString = yieldExpression.expression.toString
+    val forYieldIndentedString = Term.ForYield
+      .apply(forElementsList, yieldTerm)
+      .syntax
       .split(Array('\n'))
-      .map(line => s"$indentation$indentation      $line")
+      .map(line => s"$indentation $line")
       .mkString("\n")
 
     val forYieldString =
       s"""|{
-          |$indentation for {
-          |${elements.mkString("\n")}
-          |$indentation } yield {
-          |$yieldString
-          |$indentation }
+          |$forYieldIndentedString
           |$indentation}""".stripMargin
 
     val codeAction = new l.CodeAction()
@@ -147,15 +131,18 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def codeActionWithApply(
+      parseTerm: String => Option[Term],
       parse: String => Option[Tree],
       path: AbsolutePath,
       termApply: Term.Apply,
       document: String,
       indentation: String
   ): Option[l.CodeAction] = {
-    val (forElements, generatedByMetalsVals) = {
+    val (forElements, maybeYieldTerm, generatedByMetalsVals) = {
       extractChainedForYield(
+        parseTerm,
         parse,
+        None,
         None,
         List.empty,
         termApply,
@@ -165,56 +152,22 @@ class FlatMapToForComprehensionCodeAction(
     }
 
     if (forElements.nonEmpty) {
-      forElements match {
-        case heads :+ tail =>
-          val forYieldTail = tail
-            .asInstanceOf[ForYieldEnumeration]
-          for {
-            yieldQual <- forYieldTail.qual
-            yieldAssignOrMap <- forYieldTail.perhapsAssignOrMap
-          } yield {
-            yieldAssignOrMap match {
-              case AssignOrMap.assign =>
-                constructCodeAction(
-                  heads,
-                  YieldExpression(yieldQual),
-                  indentation,
-                  path,
-                  termApply.pos.toLSP.getStart,
-                  termApply.pos.toLSP.getEnd
-                )
-              case AssignOrMap.map =>
-                val (lastGeneratedName, _) =
-                  createNewName(termApply, generatedByMetalsVals)
-                val newEnumerations = heads :+ ForYieldEnumeration(
-                  Some(AssignOrMap.map),
-                  Some(lastGeneratedName),
-                  Some(yieldQual)
-                )
-                val newYield = YieldExpression(
-                  StringEnumerationValue(lastGeneratedName)
-                )
-
-                constructCodeAction(
-                  newEnumerations,
-                  newYield,
-                  indentation,
-                  path,
-                  termApply.pos.toLSP.getStart,
-                  termApply.pos.toLSP.getEnd
-                )
-
-            }
-
-          }
-        case _ :: Nil => None
+      maybeYieldTerm.map { yieldTerm =>
+        constructCodeAction(
+          forElements,
+          yieldTerm,
+          indentation,
+          path,
+          termApply.pos.toLSP.getStart,
+          termApply.pos.toLSP.getEnd
+        )
       }
-
     } else None
 
   }
 
   private def codeActionWithSelect(
+      parseTerm: String => Option[Term],
       parse: String => Option[Tree],
       path: AbsolutePath,
       termSelect: Term.Select,
@@ -223,6 +176,7 @@ class FlatMapToForComprehensionCodeAction(
   ): Option[l.CodeAction] = {
     termSelect.parent.collect { case termApply: Term.Apply =>
       codeActionWithApply(
+        parseTerm,
         parse,
         path,
         termApply,
@@ -233,6 +187,7 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def codeActionWithName(
+      parseTerm: String => Option[Term],
       parse: String => Option[Tree],
       path: AbsolutePath,
       termName: Term.Name,
@@ -241,6 +196,7 @@ class FlatMapToForComprehensionCodeAction(
   ): Option[l.CodeAction] = {
     termName.parent.collect { case termSelect: Term.Select =>
       codeActionWithSelect(
+        parseTerm,
         parse,
         path,
         termSelect,
@@ -251,41 +207,43 @@ class FlatMapToForComprehensionCodeAction(
 
   }
 
-  case class ForYieldEnumeration(
-      perhapsAssignOrMap: Option[AssignOrMap],
-      perhapsVariableName: Option[String],
-      qual: Option[EnumerationValue]
-  ) extends ForElement
+  //  case class ForYieldEnumeration(
+  //      perhapsAssignOrMap: Option[AssignOrMap],
+  //      perhapsVariableName: Option[String],
+  //      qual: Option[EnumerationValue]
+  //  ) extends ForElement
 
-  trait EnumerationValue
+  // sealed trait EnumerationValue
+  //
+  //  case class TreeEnumerationValue(qual: Tree) extends EnumerationValue {
+  //    override def toString: String = qual.syntax
+  //  }
 
-  case class TreeEnumerationValue(qual: Tree) extends EnumerationValue {
-    override def toString: String = qual.syntax
-  }
+  //  case class StringEnumerationValue(qual: String) extends EnumerationValue {
+  //    override def toString: String = qual
+  //  }
 
-  case class StringEnumerationValue(qual: String) extends EnumerationValue {
-    override def toString: String = qual
-  }
+  //  case class ForYieldCondition(
+  //      maybeFilterOrNot: Option[FilterOrNot],
+  //      condition: Option[EnumerationValue]
+  //  ) extends ForElement
 
-  case class ForYieldCondition(
-      maybeFilterOrNot: Option[FilterOrNot],
-      condition: Option[EnumerationValue]
-  ) extends ForElement
+  //  trait ForElement
 
-  trait ForElement
-
-  case class YieldExpression(expression: EnumerationValue)
+  //  case class YieldExpression(expression: EnumerationValue)
 
   private def processValueNameAndNextQual(
+      parseTerm: String => Option[Term],
       parse: String => Option[Tree],
       tree: Tree,
       document: String,
       generatedByMetalsValues: Set[String]
-  ): (Option[String], Option[EnumerationValue], Set[String]) = tree match {
+  ): (Option[(String, Term)], Set[String]) = tree match {
     case termFunction: Term.Function =>
       processFunction(termFunction, generatedByMetalsValues)
     case termApplyInfix: Term.ApplyInfix =>
       processApplyInfix(
+        parseTerm,
         parse,
         termApplyInfix,
         document,
@@ -293,6 +251,7 @@ class FlatMapToForComprehensionCodeAction(
       )
     case termSelect: Term.Select =>
       processTreeWithPlaceHolder[Term.Select](
+        parseTerm,
         replacePlaceHolderInSelect,
         termSelect,
         document,
@@ -302,6 +261,7 @@ class FlatMapToForComprehensionCodeAction(
       processTermName(termName, generatedByMetalsValues)
     case termApply: Term.Apply => // function and placeholder argument
       processTreeWithPlaceHolder[Term.Apply](
+        parseTerm,
         replacePlaceHolderInApply,
         termApply,
         document,
@@ -311,15 +271,17 @@ class FlatMapToForComprehensionCodeAction(
       termBlock.stats.headOption
         .map(
           processValueNameAndNextQual(
+            parseTerm,
             parse,
             _,
             document,
             generatedByMetalsValues
           )
         )
-        .getOrElse(None, None, generatedByMetalsValues)
+        .getOrElse(None, generatedByMetalsValues)
     case termAnonymousFunction: Term.AnonymousFunction =>
       processValueNameAndNextQual(
+        parseTerm,
         parse,
         termAnonymousFunction.body,
         document,
@@ -327,21 +289,22 @@ class FlatMapToForComprehensionCodeAction(
       )
   }
 
-  private def processTreeWithPlaceHolder[T <: Tree](
+  private def processTreeWithPlaceHolder[T <: Term](
+      parseTerm: String => Option[Term],
       replacePlaceHolder: (String, T, String) => Option[String],
       tree: T,
       document: String,
       generatedByMetalsValues: Set[String]
-  ): (Option[String], Option[EnumerationValue], Set[String]) = {
+  ): (Option[(String, Term)], Set[String]) = {
     val (nextValueName, newMetalsValues) =
       createNewName(tree, generatedByMetalsValues)
     val maybeNextQual =
       replacePlaceHolder(nextValueName, tree, document)
     val nextQualTree =
       maybeNextQual
-        .map(StringEnumerationValue)
-        .getOrElse(TreeEnumerationValue(tree))
-    (maybeNextQual.map(_ => nextValueName), Some(nextQualTree), newMetalsValues)
+        .flatMap(parseTerm)
+        .getOrElse(tree)
+    (maybeNextQual.map(_ => (nextValueName, nextQualTree)), newMetalsValues)
   }
 
   private def replacePlaceHolderInApply(
@@ -410,22 +373,25 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def processApplyInfix(
+      parseTerm: String => Option[Term],
       parse: String => Option[Tree],
       termApplyInfix: Term.ApplyInfix,
       document: String,
       generatedByMetalsValues: Set[String]
-  ): (Option[String], Option[EnumerationValue], Set[String]) = {
+  ): (Option[(String, Term)], Set[String]) = {
     ???
   }
 
   private def extractChainedForYield(
+      parseTerm: String => Option[Term],
       parse: String => Option[Tree],
       perhapseLastName: Option[String],
-      existingForElements: List[ForElement],
+      currentYieldTerm: Option[Term],
+      existingForElements: List[Enumerator],
       termApply: Term.Apply,
       document: String,
       generatedByMetalsValues: Set[String]
-  ): (List[ForElement], Set[String]) = {
+  ): (List[Enumerator], Option[Term], Set[String]) = {
     termApply.fun match {
       case termSelect: Term.Select
           if termSelect.name.value == "flatMap" || termSelect.name.value == "map" =>
@@ -433,42 +399,82 @@ class FlatMapToForComprehensionCodeAction(
         val assignOrMap =
           if (termSelect.name.value == "flatMap") AssignOrMap.map
           else AssignOrMap.assign
-        val (perhapseValueName, perhapsNextQual, newMetalsNames) =
+        val (perhapseValueNameAndNextQual, newMetalsNames) =
           processValueNameAndNextQual(
+            parseTerm,
             parse,
             termApply.args.head,
             document,
             generatedByMetalsValues
           )
-        qual match {
-          case qualTermApply: Term.Apply =>
-            extractChainedForYield(
-              parse,
-              perhapseValueName,
-              ForYieldEnumeration(
-                Some(assignOrMap),
-                perhapseLastName,
-                perhapsNextQual
-              ) +: existingForElements,
-              qualTermApply,
-              document,
-              newMetalsNames
-            )
-          case otherQual =>
-            (
-              ForYieldEnumeration(
-                Some(AssignOrMap.map),
-                perhapseValueName,
-                Some(TreeEnumerationValue(otherQual))
-              ) +: ForYieldEnumeration(
-                Some(assignOrMap),
-                perhapseLastName,
-                perhapsNextQual
-              ) +: existingForElements,
-              newMetalsNames
-            )
 
+        val result = for {
+          valueName <- perhapseValueNameAndNextQual.map(_._1)
+          nextQual <- perhapseValueNameAndNextQual.map(_._2)
+        } yield {
+          val (elems, maybeYieldTerm, updatedGenByMetalsVals) =
+            perhapseLastName match {
+              case Some(lastName) =>
+                (
+                  List(assignOrMap match {
+                    case AssignOrMap.assign =>
+                      Enumerator.Val.apply(
+                        Pat.Var.apply(Term.Name.apply(lastName)),
+                        nextQual
+                      )
+                    case AssignOrMap.map =>
+                      Enumerator.Generator.apply(
+                        Pat.Var.apply(Term.Name.apply(lastName)),
+                        nextQual
+                      )
+                  }) ++ existingForElements,
+                  currentYieldTerm,
+                  newMetalsNames
+                )
+              case None =>
+                assignOrMap match {
+                  case AssignOrMap.assign =>
+                    (existingForElements, Some(nextQual), newMetalsNames)
+
+                  case AssignOrMap.map =>
+                    val (lastGeneratedName, newGeneratedByMetalsVals) =
+                      createNewName(termApply, newMetalsNames)
+                    val newEnumerations = List(
+                      Enumerator.Generator(
+                        Pat.Var.apply(Term.Name.apply(lastGeneratedName)),
+                        nextQual
+                      )
+                    )
+                    val newYield = Term.Name.apply(lastGeneratedName)
+                    (newEnumerations, Some(newYield), newGeneratedByMetalsVals)
+                }
+            }
+          qual match {
+            case qualTermApply: Term.Apply =>
+              extractChainedForYield(
+                parseTerm,
+                parse,
+                Some(valueName),
+                maybeYieldTerm,
+                elems,
+                qualTermApply,
+                document,
+                updatedGenByMetalsVals
+              )
+            case otherQual =>
+              (
+                Enumerator.Generator(
+                  Pat.Var.apply(Term.Name.apply(valueName)),
+                  otherQual
+                )
+                  +: elems,
+                maybeYieldTerm,
+                updatedGenByMetalsVals
+              )
+
+          }
         }
+        result.getOrElse(List.empty, None, newMetalsNames)
 
       case termSelect: Term.Select
           if termSelect.name.value == "filter" || termSelect.name.value == "filterNot" ||
@@ -479,64 +485,93 @@ class FlatMapToForComprehensionCodeAction(
             termSelect.name.value == "filter" || termSelect.name.value == "withFilter"
           ) FilterOrNot.filter
           else FilterOrNot.filterNot
-        val (perhapseValueName, perhapsNextCondition, newMetalsNames) =
+        val (perhapseValueNameAndNextCondition, newMetalsNames) =
           processValueNameAndNextQual(
+            parseTerm,
             parse,
             termApply.args.head,
             document,
             generatedByMetalsValues
           )
-        qual match {
-          case qualTermApply: Term.Apply =>
-            extractChainedForYield(
-              parse,
-              perhapseValueName,
-              ForYieldCondition(
-                Some(filterOrNot),
-                perhapsNextCondition
-              ) +: ForYieldEnumeration(
-                Some(AssignOrMap.assign),
-                perhapseLastName,
-                perhapseValueName.map(StringEnumerationValue)
-              ) +: existingForElements,
-              qualTermApply,
-              document,
-              newMetalsNames
-            )
-          case otherQual =>
-            (
-              ForYieldEnumeration(
-                Some(AssignOrMap.map),
-                perhapseValueName,
-                Some(TreeEnumerationValue(otherQual))
-              ) +: ForYieldCondition(
-                Some(filterOrNot),
-                perhapsNextCondition
-              ) +: ForYieldEnumeration(
-                Some(AssignOrMap.assign),
-                perhapseLastName,
-                perhapseValueName.map(StringEnumerationValue)
-              ) +: existingForElements,
-              newMetalsNames
-            )
 
+        val result = for {
+          valueName <- perhapseValueNameAndNextCondition.map(_._1)
+          nextCondition <- perhapseValueNameAndNextCondition.map(_._2)
+        } yield {
+          val (elems, maybeYieldTerm): (List[Enumerator], Option[Term]) =
+            perhapseLastName match {
+              case Some(lastName) =>
+                (
+                  Enumerator.Val.apply(
+                    Pat.Var.apply(Term.Name.apply(lastName)),
+                    Term.Name.apply(valueName)
+                  ) +: existingForElements,
+                  currentYieldTerm
+                )
+              case None =>
+                (existingForElements, Some(Term.Name.apply(valueName)))
+            }
+
+          qual match {
+            case qualTermApply: Term.Apply =>
+              extractChainedForYield(
+                parseTerm,
+                parse,
+                Some(valueName),
+                maybeYieldTerm,
+                Enumerator.Guard.apply(
+                  filterOrNot match {
+                    case FilterOrNot.filter => nextCondition
+                    case FilterOrNot.filterNot =>
+                      Term.ApplyUnary.apply(Term.Name.apply("!"), nextCondition)
+                  }
+                ) +: elems,
+                qualTermApply,
+                document,
+                newMetalsNames
+              )
+            case otherQual =>
+              (
+                Enumerator.Generator(
+                  Pat.Var.apply(Term.Name.apply(valueName)),
+                  otherQual
+                )
+                  +: Enumerator.Guard.apply(
+                    filterOrNot match {
+                      case FilterOrNot.filter => nextCondition
+                      case FilterOrNot.filterNot =>
+                        Term.ApplyUnary
+                          .apply(Term.Name.apply("!"), nextCondition)
+                    }
+                  ) +: elems,
+                maybeYieldTerm,
+                newMetalsNames
+              )
+          }
         }
+        result.getOrElse(List.empty, currentYieldTerm, generatedByMetalsValues)
       case _ =>
-        (
-          ForYieldEnumeration(
-            Some(AssignOrMap.map),
-            perhapseLastName,
-            Some(TreeEnumerationValue(termApply))
-          ) +: existingForElements,
-          generatedByMetalsValues
-        )
+        perhapseLastName match {
+          case Some(lastName) =>
+            (
+              Enumerator.Generator(
+                Pat.Var.apply(Term.Name.apply(lastName)),
+                termApply
+              )
+                +: existingForElements,
+              currentYieldTerm,
+              generatedByMetalsValues
+            )
+          case None =>
+            (existingForElements, Some(termApply), generatedByMetalsValues)
+        }
     }
   }
 
   private def processFunction(
       termFunction: Term.Function,
       generatedByMetalsValues: Set[String]
-  ): (Option[String], Option[EnumerationValue], Set[String]) = {
+  ): (Option[(String, Term)], Set[String]) = {
     val maybeNameAndMetalsNames = termFunction.params.headOption
       .map {
         case anonymousParam if anonymousParam.name.value == "" =>
@@ -544,8 +579,9 @@ class FlatMapToForComprehensionCodeAction(
         case otherParam => (otherParam.name.value, generatedByMetalsValues)
       }
     (
-      maybeNameAndMetalsNames.map(_._1),
-      maybeNameAndMetalsNames.map(_ => TreeEnumerationValue(termFunction.body)),
+      maybeNameAndMetalsNames.map(nameAndMetalsNames =>
+        (nameAndMetalsNames._1, termFunction.body)
+      ),
       maybeNameAndMetalsNames.map(_._2).getOrElse(generatedByMetalsValues)
     )
   }
@@ -553,11 +589,11 @@ class FlatMapToForComprehensionCodeAction(
   private def processTermName(
       termName: Term.Name,
       generatedByMetalsValues: Set[String]
-  ): (Option[String], Option[EnumerationValue], Set[String]) = {
+  ): (Option[(String, Term)], Set[String]) = {
     val (paramName, newMetalsNames) =
       createNewName(termName, generatedByMetalsValues)
-    val nextQual = StringEnumerationValue(s"${termName.value}($paramName)")
-    (Some(paramName), Some(nextQual), newMetalsNames)
+    val nextQual = Term.Apply.apply(termName, List(Term.Name.apply(paramName)))
+    (Some(paramName, nextQual), newMetalsNames)
   }
 
   private def createNewName(
@@ -565,7 +601,7 @@ class FlatMapToForComprehensionCodeAction(
       generatedByMetalsValues: Set[String]
   ): (String, Set[String]) = {
 
-    def findTopMostParent = {
+    def findTopMostParent: Tree = {
       var initialParent = tree
       while (initialParent.parent.isDefined)
         initialParent = initialParent.parent.get
