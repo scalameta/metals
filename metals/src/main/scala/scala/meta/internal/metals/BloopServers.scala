@@ -261,6 +261,26 @@ final class BloopServers(
   }
 
   /**
+   * Determine whether or not we need to update the javaHome setting in the bloop.json file.
+   *
+   * @param metalsJavaHome javaHome being passed in from the user
+   * @param bloopJavaHome bloop javaHome that is in the global config
+   * @return whether or not the javaHome needs to be updated
+   */
+  private def needsJavaHomeUpdate(
+      metalsJavaHome: Option[String],
+      bloopJavaHome: Option[String]
+  ) = {
+    (metalsJavaHome, bloopJavaHome) match {
+      // Metals is set but Bloop isn't
+      case (Some(_), None) => true
+      // Metals and Bloop are set, but they aren't the same
+      case (Some(m), Some(b)) if m != b => true
+      case _ => false
+    }
+  }
+
+  /**
    * First we check if the user requested to update the Bloop JVM
    * properties through the extension.
    * <p>If so, we also check if the Bloop's Global Json file exists
@@ -299,7 +319,12 @@ final class BloopServers(
                 requested != maybeBloopGlobalJsonJvmProperties
               )
           ) Some(BloopJsonUpdateCause.JVM_OPTS)
-          else if (maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome)
+          else if (
+            needsJavaHomeUpdate(
+              maybeRequestedMetalsJavaHome,
+              maybeBloopGlobalJsonJavaHome
+            )
+          )
             Some(BloopJsonUpdateCause.JAVA_HOME)
           else None
         maybeBloopJvmProperties = maybeRequestedBloopJvmProperties.getOrElse(
