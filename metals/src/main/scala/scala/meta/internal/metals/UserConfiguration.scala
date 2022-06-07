@@ -51,7 +51,7 @@ case class UserConfiguration(
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
-    scalafixRulesDependencies: Map[String, String] = Map.empty
+    scalafixRulesDependencies: List[String] = Nil
 ) {
 
   def currentBloopVersion: String =
@@ -492,8 +492,7 @@ object UserConfiguration {
       )
 
     val scalafixRulesDependencies =
-      getStringMap("scalafix-rules-dependencies")
-        .getOrElse(Map.empty)
+      getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
     if (errors.isEmpty) {
       Right(

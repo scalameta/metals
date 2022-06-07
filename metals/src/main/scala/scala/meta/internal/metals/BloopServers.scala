@@ -299,11 +299,7 @@ final class BloopServers(
                 requested != maybeBloopGlobalJsonJvmProperties
               )
           ) Some(BloopJsonUpdateCause.JVM_OPTS)
-          else if (
-            maybeRequestedMetalsJavaHome.exists(
-              _ != maybeBloopGlobalJsonJavaHome
-            )
-          )
+          else if (maybeRequestedMetalsJavaHome != maybeBloopGlobalJsonJavaHome)
             Some(BloopJsonUpdateCause.JAVA_HOME)
           else None
         maybeBloopJvmProperties = maybeRequestedBloopJvmProperties.getOrElse(

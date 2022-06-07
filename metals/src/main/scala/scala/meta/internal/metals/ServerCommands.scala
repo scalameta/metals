@@ -164,6 +164,7 @@ object ServerCommands {
     """|Run all the supported scalafix rules in your codebase.
        |
        |If the rules are missing please add them to user configuration `metals.scalafixRulesDependencies`.
+       |Their format is the coursier one https://get-coursier.io/
        |""".stripMargin,
     """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
        |""".stripMargin

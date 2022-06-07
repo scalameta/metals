@@ -1,5 +1,8 @@
 package tests.scalafix
 
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.ServerCommands
 
 import org.eclipse.lsp4j.Position
@@ -128,7 +131,8 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |{"a":{"scalacOptions": ["-Wunused"] }}
            |/.scalafix.conf
            |rules = [
-           |  NotARule
+           |  NotARule,
+           |  NotARule2
            |]
            |
            |/a/src/main/scala/Main.scala
@@ -146,10 +150,14 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
           ),
           new Position(0, 0)
         )
-      _ <- server.executeCommand(
-        ServerCommands.RunScalafix,
-        textParams
-      )
+      _ <- server
+        .executeCommand(
+          ServerCommands.RunScalafix,
+          textParams
+        )
+        .recoverWith { case ScalafixProvider.ScalafixRunException(_) =>
+          Future.unit
+        }
       _ = assertNoDiff(
         client.workspaceShowMessages,
         "Metals is unable to run NotARule. Please add the rule dependency to `metals.scalafixRulesDependencies`."
@@ -205,9 +213,9 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
       )
       _ <- server.didChangeConfiguration(
         """{
-          |  "scalafix-rules-dependencies": {
-          |     "class:fix.Examplescalafixrule_v1" : "ch.epfl.scala::example-scalafix-rule:1.4.0"
-          |  }
+          |  "scalafix-rules-dependencies": [
+          |    "ch.epfl.scala::example-scalafix-rule:1.4.0"
+          |  ]
           |}
           |""".stripMargin
       )

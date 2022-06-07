@@ -78,35 +78,15 @@ case class ScalafixProvider(
   }
 
   def runAllRules(file: AbsolutePath): Future[List[l.TextEdit]] = {
-    def warnAboutRulesNotAdded(
-        scalafixRules: Set[String],
-        knownRules: Set[String]
-    ): Unit = {
-      val unknownRules = scalafixRules.diff(knownRules)
-      if (unknownRules.nonEmpty)
-        languageClient.showMessage(Messages.unknownScalafixRules(unknownRules))
-    }
     val definedRules = rulesFromScalafixConf()
     val result = for {
       buildId <- buildTargets.inverseSources(file)
       target <- buildTargets.scalaTarget(buildId)
-      knownRules = ScalafixProvider
-        .knownRules(
-          target.scalaBinaryVersion,
-          target.scalaVersion,
-          userConfig()
-        )
-        .keySet
-      runRules = knownRules
-        .intersect(definedRules)
-        .toList
-      _ = warnAboutRulesNotAdded(definedRules, knownRules)
-      if runRules.nonEmpty
     } yield {
       runScalafixRules(
         file,
         target,
-        runRules
+        definedRules.toList
       )
     }
     result.getOrElse(Future.successful(Nil))
@@ -167,6 +147,14 @@ case class ScalafixProvider(
         case Success(results) if !scalafixSucceded(results) =>
           val scalafixError = getMessageErrorFromScalafix(results)
           val exception = ScalafixRunException(scalafixError)
+          if (
+            scalafixError.startsWith("Unknown rule") ||
+            scalafixError.startsWith("Class not found")
+          ) {
+            languageClient
+              .showMessage(Messages.unknownScalafixRules(scalafixError))
+          }
+
           scribe.error(scalafixError, exception)
           if (!retried && hasStaleSemanticdb(results)) {
             // Retry, since the semanticdb might be stale
@@ -297,7 +285,7 @@ case class ScalafixProvider(
   }
 
   private def rulesFromScalafixConf(): Set[String] = {
-    scalafixConf(false) match {
+    scalafixConf(isScala3 = false) match {
       case None => Set.empty
       case Some(configPath) =>
         val conf = ConfigFactory.parseFile(configPath.toFile)
@@ -360,11 +348,10 @@ case class ScalafixProvider(
 
     val scalaVersion = scalaTarget.scalaVersion
     val scalafixRulesKey =
-      scalafixRulesClasspathKey(
+      ScalafixRulesClasspathKey(
         scalaBinaryVersion,
         scalaVersion,
-        userConfig(),
-        rules.toSet
+        userConfig()
       )
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
@@ -375,7 +362,6 @@ case class ScalafixProvider(
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
         scalafixRulesKey,
-        scalaVersion,
         api.getClass.getClassLoader
       )
     } yield {
@@ -448,31 +434,18 @@ case class ScalafixProvider(
 
   private def getRuleClassLoader(
       scalfixRulesKey: ScalafixRulesClasspathKey,
-      scalaVersion: String,
       scalafixClassLoader: ClassLoader
   ): Try[URLClassLoader] = {
     rulesClassloaderCache.get(scalfixRulesKey) match {
       case Some(value) => Success(value)
       case None =>
         statusBar.trackBlockingTask(
-          "Downloading scaladix rules' dependencies"
+          "Downloading scalafix rules' dependencies"
         ) {
-          val rulesDependencies = ScalafixProvider
-            .knownRules(
-              scalfixRulesKey.scalaBinaryVersion,
-              scalaVersion,
-              userConfig()
-            )
-            .filter { case (rule, _) =>
-              scalfixRulesKey.usedRulesWithClasspath(rule)
-            }
-            .values
-            .flatten
-            .toList
-            .distinct
+          val rulesDependencies = scalfixRulesKey.usedRulesWithClasspath
           val organizeImportRule =
             Try(
-              Embedded.rulesClasspath(rulesDependencies)
+              Embedded.rulesClasspath(rulesDependencies.toList)
             ).map { paths =>
               val classloader = Embedded.toClassLoader(
                 Classpath(paths.map(AbsolutePath(_))),
@@ -503,34 +476,31 @@ object ScalafixProvider {
 
   case class ScalafixRulesClasspathKey(
       scalaBinaryVersion: ScalaBinaryVersion,
-      usedRulesWithClasspath: Set[String]
+      usedRulesWithClasspath: Set[Dependency]
   )
 
-  def scalafixRulesClasspathKey(
-      scalaBinaryVersion: String,
-      scalaVersion: String,
-      userConfig: UserConfiguration,
-      usedRules: Set[String]
-  ) = {
-
-    val rulesWithClasspath =
-      knownRules(scalaBinaryVersion, scalaVersion, userConfig).collect {
-        case (rule, Some(_)) if usedRules(rule) => rule
-      }.toSet
-    ScalafixRulesClasspathKey(scalaBinaryVersion, rulesWithClasspath)
+  object ScalafixRulesClasspathKey {
+    def apply(
+        scalaBinaryVersion: String,
+        scalaVersion: String,
+        userConfig: UserConfiguration
+    ): ScalafixRulesClasspathKey = {
+      val rulesClasspath =
+        rulesDependencies(scalaVersion, scalaBinaryVersion, userConfig)
+      ScalafixRulesClasspathKey(scalaBinaryVersion, rulesClasspath.toSet)
+    }
   }
   case class ScalafixRunException(msg: String) extends Exception(msg)
 
   val organizeImportRuleName = "OrganizeImports"
-  val explicitResultTypesRuleName = "ExplicitResultTypes"
 
-  def knownRules(
-      scalaBinaryVersion: String,
+  def rulesDependencies(
       scalaVersion: String,
+      scalaBinaryVersion: String,
       userConfig: UserConfiguration
-  ): Map[String, Option[Dependency]] = {
+  ): List[Dependency] = {
     val fromSettings = userConfig.scalafixRulesDependencies.flatMap {
-      case (name, dependencyString) =>
+      dependencyString =>
         Try {
           Dependency.parse(
             dependencyString,
@@ -541,29 +511,16 @@ object ScalafixProvider {
             scribe.warn(s"Could not download `${dependencyString}`", exception)
             None
           case Success(dep) =>
-            Some(name -> Some(dep))
+            Some(dep)
         }
     }
-    val all = Map(
-      organizeImportRuleName -> Some(
-        Dependency.of(
-          "com.github.liancheng",
-          s"organize-imports_$scalaBinaryVersion",
-          BuildInfo.organizeImportVersion
-        )
-      ),
-      explicitResultTypesRuleName -> None,
-      "NoAutoTupling" -> None,
-      "RemoveUnused" -> None,
-      "DisableSyntax" -> None,
-      "LeakingImplicitClassVal" -> None,
-      "NoValInForComprehension" -> None,
-      "ProcedureSyntax" -> None,
-      "RedundantSyntax" -> None
+    List(
+      Dependency.of(
+        "com.github.liancheng",
+        s"organize-imports_$scalaBinaryVersion",
+        BuildInfo.organizeImportVersion
+      )
     ) ++ fromSettings
-    if (scalaBinaryVersion.startsWith("3"))
-      all.filter { case (key, _) => key != explicitResultTypesRuleName }
-    else all
 
   }
 }
