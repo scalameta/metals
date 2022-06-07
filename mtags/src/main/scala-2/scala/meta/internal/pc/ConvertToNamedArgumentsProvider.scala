@@ -7,10 +7,9 @@ import org.eclipse.{lsp4j => l}
 final class ConvertToNamedArgumentsProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams,
-    argIndices: Seq[Int]
+    numUnnamedArgs: Int
 ) {
 
-  private val argIndexSet = argIndices.toSet
   import compiler._
   def convertToNamedArguments: List[l.TextEdit] = {
     val unit = addCompilationUnit(
@@ -22,8 +21,7 @@ final class ConvertToNamedArgumentsProvider(
     val typedTree = typedTreeAt(unit.position(params.offset))
     typedTree match {
       case Apply(fun, args) =>
-        args.zipWithIndex.filter { case (_, index) => argIndexSet.contains(index) }
-          .map(_._1)
+        args.take(numUnnamedArgs)
           .zip(fun.tpe.params)
           .map {
           case (arg, param) => {

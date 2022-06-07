@@ -360,13 +360,13 @@ class Compilers(
 
   def convertToNamedArguments(
       position: TextDocumentPositionParams,
-      argIndices: ju.List[Integer],
+      numUnnamedArgs: Int,
       token: CancelToken
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
       pc.convertToNamedArguments(
         CompilerOffsetParams.fromPos(pos, token),
-        argIndices,
+        numUnnamedArgs
       ).asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)

@@ -144,14 +144,14 @@ case class ScalaPresentationCompiler(
 
   override def convertToNamedArguments(
       params: OffsetParams,
-      argIndices: ju.List[Integer]
+      numUnnamedArgs: Int
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
       new ConvertToNamedArgumentsProvider(
         pc.compiler(),
         params,
-        argIndices.asScala.toSeq.map(_.toInt)
+        numUnnamedArgs
       ).convertToNamedArguments.asJava
     }
   }

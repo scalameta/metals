@@ -1983,11 +1983,11 @@ class MetalsLanguageServer(
           } yield ().asInstanceOf[Object]
         }
 
-      case ServerCommands.ConvertToNamedArguments(ServerCommands.ConvertToNamedArgsRequest(position, argIndices)) =>
+      case ServerCommands.ConvertToNamedArguments(ServerCommands.ConvertToNamedArgsRequest(position, numUnnamedArgs)) =>
         CancelTokens.future { token =>
           val uri = position.getTextDocument().getUri()
           for {
-            edits <- compilers.convertToNamedArguments(position, argIndices, token)
+            edits <- compilers.convertToNamedArguments(position, numUnnamedArgs, token)
             if (!edits.isEmpty())
             workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
             _ <- languageClient

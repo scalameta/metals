@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
+import scala.meta.Tree
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -18,6 +19,19 @@ class ConvertToNamedArguments(trees: Trees)
   import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
+  def firstApplyWithUnnamedArgs(term: Option[Tree]): Option[ApplyTermWithNumArgs] = {
+    term match {
+      case Some(apply: Term.Apply) => 
+        val numUnnamedArgs = apply.args.takeWhile{ arg => 
+          !arg.isInstanceOf[Term.Assign] && !arg.isInstanceOf[Term.Block]
+        }.size
+        if (numUnnamedArgs == 0) firstApplyWithUnnamedArgs(apply.parent)
+        else Some(ApplyTermWithNumArgs(apply, numUnnamedArgs))
+      case Some(t) => firstApplyWithUnnamedArgs(t.parent)
+      case _ => None
+    }
+  }
+
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
@@ -25,36 +39,29 @@ class ConvertToNamedArguments(trees: Trees)
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    trees
-      .findLastEnclosingAt[Term.Apply](path, range.getStart())
-      .map { apply =>
-        {
-          // TODO: Go to parent apply, if current has no candidates
-          val argIndices = apply.args.zipWithIndex.filterNot { case (arg, _) => 
-            arg.isInstanceOf[Term.Assign] || arg.isInstanceOf[Term.Block]
-          }.map(_._2)
-          if (argIndices.isEmpty) Future.successful(Nil)
-          else {
-            val codeAction = new l.CodeAction(title)
-            codeAction.setKind(l.CodeActionKind.RefactorRewrite)
-            val position = new l.TextDocumentPositionParams(
-              params.getTextDocument(),
-              new l.Position(apply.pos.endLine, apply.pos.endColumn)
-            )
-            codeAction.setCommand(
-              ServerCommands.ConvertToNamedArguments.toLSP(
-                ServerCommands.ConvertToNamedArgsRequest(position, argIndices.map(new Integer(_)).asJava)
-              )
-            )
-            Future.successful(Seq(codeAction))
-            
-          }
-        }
-      }
-      .getOrElse(Future.successful(Nil))
+    val maybeApply = for {
+      term <- trees.findLastEnclosingAt[Term.Apply](path, range.getStart())
+      apply <- firstApplyWithUnnamedArgs(Some(term))
+    } yield apply
+
+    maybeApply.map { apply => {
+      val codeAction = new l.CodeAction(title)
+      codeAction.setKind(l.CodeActionKind.RefactorRewrite)
+      val position = new l.TextDocumentPositionParams(
+        params.getTextDocument(),
+        new l.Position(apply.term.pos.endLine, apply.term.pos.endColumn)
+      )
+      codeAction.setCommand(
+        ServerCommands.ConvertToNamedArguments.toLSP(
+          ServerCommands.ConvertToNamedArgsRequest(position, apply.numUnnamedArgs)
+        )
+      )
+      Future.successful(Seq(codeAction))
+    }}.getOrElse(Future.successful(Nil))
   }
 }
 
 object ConvertToNamedArguments {
+  case class ApplyTermWithNumArgs(term: Term.Apply, numUnnamedArgs: Int)
   val title = "Convert to named arguments"
 }

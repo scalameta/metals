@@ -98,7 +98,7 @@ public abstract class PresentationCompiler {
     /**
      * Return named arguments for the apply method that encloses the given position.
      */
-    public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(OffsetParams params, List<Integer> argIndices);
+    public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(OffsetParams params, int numUnnamedArgs);
 
     /**
      * The text contents of the fiven file changed.
