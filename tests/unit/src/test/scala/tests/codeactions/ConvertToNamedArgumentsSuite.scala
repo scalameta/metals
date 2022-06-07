@@ -30,7 +30,7 @@ class ConvertToNamedArgumentsSuite
   )
 
   checkActionMissing(
-    "convert-to-named-args-no-unnamed-args",
+    "convert-to-named-args-block",
     """|object Something {
        |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
        |}""".stripMargin,
