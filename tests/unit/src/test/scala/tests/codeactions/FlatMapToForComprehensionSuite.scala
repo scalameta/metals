@@ -43,20 +43,20 @@ class FlatMapToForComprehensionSuite
        |         for {
        |           a <- list
        |           generatedByMetals3 <- {
-       |                                              val m = 6
-       |                                              Some(a + 1).map(b => b + 3 + 4)
-       |                                            }
-       |          if (check(generatedByMetals3))
+       |             val m = 6
+       |             Some(a + 1).map(b => b + 3 + 4)
+       |           }
+       |           if check(generatedByMetals3)
        |           generatedByMetals2 = generatedByMetals3
-       |          if !(true)
+       |           if !true
        |           generatedByMetals1 = generatedByMetals2
        |           c = 7
        |           d = c - 1
-       |          if (d > 1)
+       |           if d > 1
        |           generatedByMetals0 = d
        |           generatedByMetals = double(generatedByMetals0, 4).toFloat.toDouble
-       |         } yield {
-       |                      generatedByMetals.toInt.compare(3)
+       |         }  yield {
+       |           generatedByMetals.toInt.compare(3)
        |         }
        |        }
        |
@@ -101,23 +101,23 @@ class FlatMapToForComprehensionSuite
        |    val res3 = {
        |         for {
        |           a <- list
-       |           generatedByMetals3 <- {
-       |                                              val m = 6
-       |                                              Some(a + 1).map(b => b + 3 + 4)
-       |                                          }
-       |          if (check(generatedByMetals3))
+       |           generatedByMetals4 <- {
+       |             val m = 6
+       |             Some(a + 1).map(b => b + 3 + 4)
+       |           }
+       |           if check(generatedByMetals4)
+       |           generatedByMetals3 = generatedByMetals4
+       |           if !true
        |           generatedByMetals2 = generatedByMetals3
-       |          if !(true)
-       |           generatedByMetals1 = generatedByMetals2
        |           c = 7
        |           d = c - 1
-       |          if (d > 1)
-       |           generatedByMetals0 = d
-       |           generatedByMetals = double(generatedByMetals0, 4).toFloat.toDouble
-       |           m = generatedByMetals.toInt.compare(3)
-       |           generatedByMetals4 <- Some(m * 3)
-       |         } yield {
-       |                      generatedByMetals4
+       |           if d > 1
+       |           generatedByMetals1 = d
+       |           generatedByMetals0 = double(generatedByMetals1, 4).toFloat.toDouble
+       |           m = generatedByMetals0.toInt.compare(3)
+       |           generatedByMetals <- Some(m * 3)
+       |         }  yield {
+       |           generatedByMetals
        |         }
        |        }
        |
