@@ -704,6 +704,37 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "selftype",
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class <<Concrete>> extends Base { self =>
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class Concrete extends Base { self =>
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
