@@ -141,8 +141,28 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  /* Starting with Scala 2.12.16 we are getting
+   * Select(
+   *   TypeApply(
+   *     Ident(baz),
+   *     List(
+   *       ExistentialTypeTree(
+   *         AppliedTypeTree(Ident(Either), List(Ident(Int), Ident($qmark$1))),
+   *         List(
+   *           TypeDef(Modifiers(2097168L, , List()), $qmark$1, List(), TypeBoundsTree(<empty>, <empty>))
+   *         )
+   *       ),
+   *       Ident(String)
+   *     )
+   *   ),
+   *   fold_CURSOR_
+   * )
+   *
+   * The compiler seems unable to deal with getting type members of ExistentialTypeTree.
+   * This requires a fix in the compiler, but I doubt anyone will have the time to take a look.
+   */
   check(
-    "kind-projector",
+    "kind-projector".tag(IgnoreScalaVersion("2.12.16")),
     """
       |object a {
       |  def baz[F[_], A]: F[A] = ???

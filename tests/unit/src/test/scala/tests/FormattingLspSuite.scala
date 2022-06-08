@@ -411,10 +411,10 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|/metals.json
             |{
             |  "a": {
-            |     "scalaVersion": "2.12.15"
+            |     "scalaVersion": "${V.scala212}"
             |  },
             |  "b": {
-            |     "scalaVersion": "2.12.15",
+            |     "scalaVersion": "${V.scala212}",
             |     "scalacOptions": ["-Xsource:3"],
             |     "sbtVersion": "1.6.0-RC2"
             |  }
