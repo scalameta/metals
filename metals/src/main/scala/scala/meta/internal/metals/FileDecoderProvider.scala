@@ -634,7 +634,7 @@ final class FileDecoderProvider(
           propagateError = true
         )
         .map(_ => {
-          if (sbErr.nonEmpty)
+          if (sbOut.isEmpty && sbErr.nonEmpty)
             DecoderResponse.failed(
               path.toURI,
               s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}"
