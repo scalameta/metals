@@ -28,4 +28,5 @@ coursier fetch \
   org.scalameta:mtags_2.12.13:$version \
   org.scalameta:mtags_2.12.14:$version \
   org.scalameta:mtags_2.12.15:$version \
+  org.scalameta:mtags_2.12.16:$version \
   org.scalameta:mtags_2.11.12:$version $suffix
