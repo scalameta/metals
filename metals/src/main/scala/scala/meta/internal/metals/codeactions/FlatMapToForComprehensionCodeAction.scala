@@ -100,16 +100,27 @@ class FlatMapToForComprehensionCodeAction(
       endPos: l.Position
   ): l.CodeAction = {
 
-    val forYieldIndentedString = Term.ForYield
-      .apply(forElementsList, yieldTerm)
-      .syntax
+    val indentedElems = forElementsList
+      .map(
+        _.syntax
+          .split(Array('\n'))
+          .map(line => s"$indentation   $line")
+          .mkString("\n")
+      )
+      .mkString("\n")
+
+    val yieldTermIndentedString = yieldTerm.syntax
       .split(Array('\n'))
-      .map(line => s"$indentation $line")
+      .map(line => s"$indentation   $line")
       .mkString("\n")
 
     val forYieldString =
       s"""|{
-          |$forYieldIndentedString
+          |$indentation for {
+          |$indentedElems
+          |$indentation }  yield {
+          |$yieldTermIndentedString
+          |$indentation }
           |$indentation}""".stripMargin
 
     val codeAction = new l.CodeAction()
@@ -138,7 +149,7 @@ class FlatMapToForComprehensionCodeAction(
       document: String,
       indentation: String
   ): Option[l.CodeAction] = {
-    val (forElements, maybeYieldTerm, generatedByMetalsVals) = {
+    val (forElements, maybeYieldTerm, _) = {
       extractChainedForYield(
         parseTerm,
         parse,
@@ -206,31 +217,6 @@ class FlatMapToForComprehensionCodeAction(
     }.flatten
 
   }
-
-  //  case class ForYieldEnumeration(
-  //      perhapsAssignOrMap: Option[AssignOrMap],
-  //      perhapsVariableName: Option[String],
-  //      qual: Option[EnumerationValue]
-  //  ) extends ForElement
-
-  // sealed trait EnumerationValue
-  //
-  //  case class TreeEnumerationValue(qual: Tree) extends EnumerationValue {
-  //    override def toString: String = qual.syntax
-  //  }
-
-  //  case class StringEnumerationValue(qual: String) extends EnumerationValue {
-  //    override def toString: String = qual
-  //  }
-
-  //  case class ForYieldCondition(
-  //      maybeFilterOrNot: Option[FilterOrNot],
-  //      condition: Option[EnumerationValue]
-  //  ) extends ForElement
-
-  //  trait ForElement
-
-  //  case class YieldExpression(expression: EnumerationValue)
 
   private def processValueNameAndNextQual(
       parseTerm: String => Option[Term],
