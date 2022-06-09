@@ -2,6 +2,7 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
@@ -33,7 +34,8 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("map")}
-        |${ConvertToNamedArguments.title("List(1,2).map")}""".stripMargin,
+        |${ConvertToNamedArguments.title("List(1,2).map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
     """|object Main {
        |  var x = 0
        |  List(1,2).map { a => a }
@@ -86,7 +88,8 @@ class RewriteBracesParensLspSuite
        |  List(1,2).map { a => <<>>a }
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toParens("map"),
+    s"""|${RewriteBracesParensCodeAction.toParens("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
     """|object Main {
        |  var x = 0
        |  List(1,2).map ( a => a )
@@ -121,18 +124,24 @@ class RewriteBracesParensLspSuite
     "to-parens-noop",
     """|object Main {
        |  var x = 0
+       |
        |  List(1,2).map { a =>
        |    println(a)
        |    <<>>a 
        |  }
        |}
        |""".stripMargin,
-    "",
+    s"${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { a =>
-       |    println(a)
-       |    a 
+       |
+       |  {
+       |   for {
+       |     a <- List(1, 2)
+       |   }  yield {
+       |     println(a)
+       |         a
+       |   }
        |  }
        |}
        |""".stripMargin
