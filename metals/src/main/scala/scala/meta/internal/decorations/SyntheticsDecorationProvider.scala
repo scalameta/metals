@@ -95,7 +95,9 @@ final class SyntheticsDecorationProvider(
   ): Option[l.Hover] =
     if (isSyntheticsEnabled) {
       val path = params.textDocument.getUri().toAbsolutePath
-      val line = params.getPosition.getLine()
+      val position = params.getPosition
+      val line = position.getLine()
+      val isInlineDecorationProvider = clientConfig.isInlineDecorationProvider()
       val newHover = currentDocument(path) match {
         case Some(textDocument) =>
           val edit = buffer.tokenEditDistance(path, textDocument.text, trees)
@@ -110,8 +112,8 @@ final class SyntheticsDecorationProvider(
             range <- synthetic.range.toIterable
             currentRange <- edit.toRevisedStrict(range).toIterable
             lspRange = currentRange.toLSP
-            if lspRange.getEnd.getLine == line
-
+            if range.encloses(position, includeLastCharacter = true) ||
+              !isInlineDecorationProvider // in this case we want to always show the full line
             (fullSnippet, range) <- printer
               .printSyntheticInfo(
                 textDocument,
@@ -120,13 +122,14 @@ final class SyntheticsDecorationProvider(
                 isInlineProvider = clientConfig.isInlineDecorationProvider()
               )
               .toIterable
+            if range.endLine == line
             realRange <- edit.toRevisedStrict(range).toIterable
             lspRealRange = realRange.toLSP
             if lspRealRange.getEnd.getLine == line
           } yield (lspRealRange, fullSnippet)
 
           if (syntheticsAtLine.size > 0) {
-            if (clientConfig.isInlineDecorationProvider()) {
+            if (isInlineDecorationProvider) {
               createHoverAtPoint(
                 syntheticsAtLine,
                 pcHover,
