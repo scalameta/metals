@@ -50,7 +50,8 @@ case class UserConfiguration(
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
-    javaFormatConfig: Option[JavaFormatConfig] = None
+    javaFormatConfig: Option[JavaFormatConfig] = None,
+    scalafixRulesDependencies: List[String] = Nil
 ) {
 
   def currentBloopVersion: String =
@@ -490,6 +491,9 @@ object UserConfiguration {
         )
       )
 
+    val scalafixRulesDependencies =
+      getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -517,7 +521,8 @@ object UserConfiguration {
           excludedPackages,
           defaultScalaVersion,
           disableTestCodeLenses,
-          javaFormatConfig
+          javaFormatConfig,
+          scalafixRulesDependencies
         )
       )
     } else {

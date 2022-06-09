@@ -281,13 +281,11 @@ object Embedded {
       resolution = resolutionParams
     )
 
-  def organizeImportRule(scalaBinaryVersion: String): List[Path] = {
-    val dep = Dependency.of(
-      "com.github.liancheng",
-      s"organize-imports_$scalaBinaryVersion",
-      BuildInfo.organizeImportVersion
-    )
-    downloadDependency(dep, scalaVersion = None)
+  def rulesClasspath(dependencies: List[Dependency]): List[Path] = {
+    for {
+      dep <- dependencies
+      path <- downloadDependency(dep, scalaVersion = None)
+    } yield path
   }
 
   def toClassLoader(

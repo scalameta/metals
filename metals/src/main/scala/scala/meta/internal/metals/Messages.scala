@@ -95,6 +95,19 @@ object Messages {
     s"Metals is unable to start ${buildTool}. Please try to connect after starting it manually."
   )
 
+  def unknownScalafixRules(unknownRuleMessage: String): MessageParams = {
+    // To match: "Rule not found 'ARuleName'"
+    val regex = ".*'(.*)'.*".r
+    val rule = unknownRuleMessage match {
+      case regex(rule) => rule
+      case _ => "a rule"
+    }
+    new MessageParams(
+      MessageType.Warning,
+      s"Metals is unable to run ${rule}. Please add the rule dependency to `metals.scalafixRulesDependencies`."
+    )
+  }
+
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"

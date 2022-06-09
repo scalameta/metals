@@ -158,6 +158,18 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val RunScalafix = new ParametrizedCommand[TextDocumentPositionParams](
+    "scalafix-run",
+    "Run all Scalafix Rules",
+    """|Run all the supported scalafix rules in your codebase.
+       |
+       |If the rules are missing please add them to user configuration `metals.scalafixRulesDependencies`.
+       |Their format is the coursier one https://get-coursier.io/
+       |""".stripMargin,
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+       |""".stripMargin
+  )
+
   val CascadeCompile = new Command(
     "compile-cascade",
     "Cascade compile",
@@ -539,6 +551,7 @@ object ServerCommands {
       ResetChoicePopup,
       RestartBuildServer,
       RunDoctor,
+      RunScalafix,
       DecodeFile,
       DisconnectBuildServer,
       ListBuildTargets,
