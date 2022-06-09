@@ -99,19 +99,28 @@ class Completions(
 
   private def findSuffix(methodSymbol: Symbol): Option[String] =
     if shouldAddSnippet && methodSymbol.is(Flags.Method) then
-      val paramss = methodSymbol.paramSymss
+      val paramss =
+        if methodSymbol.is(Flags.Extension) then
+          methodSymbol.paramSymss.filter(
+            !_.contains(methodSymbol.extensionParam)
+          )
+        else methodSymbol.paramSymss
+
       paramss match
         case Nil => None
         case List(Nil) => Some("()")
         case _ if config.isCompletionSnippetsEnabled =>
-          val onlyImplicitOrTypeParams = paramss.forall(
+          val onlyParameterless = paramss.forall(_.isEmpty)
+          lazy val onlyImplicitOrTypeParams = paramss.forall(
             _.exists { sym =>
               sym.isType || sym.is(Implicit) || sym.is(Given)
             }
           )
-          if onlyImplicitOrTypeParams then None
+          if onlyParameterless then Some("()" * paramss.length)
+          else if onlyImplicitOrTypeParams then None
           else Some("($0)")
         case _ => None
+      end match
     else None
 
   private def completionsWithSuffix(
