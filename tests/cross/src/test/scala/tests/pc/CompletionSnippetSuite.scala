@@ -439,4 +439,29 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
     includeDetail = true
   )
 
+  // https://github.com/scalameta/metals/issues/4004
+  checkSnippet(
+    "issu-4004".tag(IgnoreScala2),
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def barr = 0
+        |    def baxx() = 0
+        |    def bazz()() = 0
+        |  val bar = "abc".bar@@
+        |  val bax = "abc".bax@@
+        |  val baz = "abc".baz@@
+    """.stripMargin,
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def barr = 0
+        |    def baxx() = 0
+        |    def bazz()() = 0
+        |  val bar = "abc".barr
+        |  val bax = "abc".baxx()
+        |  val baz = "abc".bazz()()
+    """.stripMargin
+  )
+
 }
