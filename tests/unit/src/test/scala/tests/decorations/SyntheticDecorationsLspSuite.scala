@@ -761,6 +761,16 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      expectedParams = URLEncoder.encode(
+        """["_empty_/Example.evidence."]"""
+      )
+      _ <- server.assertHoverAtLine(
+        "a/Main.scala",
+        "    num2 <- opts(2)@@",
+        s"""|**Synthetics**:
+            |
+            |([evidence](command:metals.goto?$expectedParams))""".stripMargin
+      )
     } yield ()
   }
 }
