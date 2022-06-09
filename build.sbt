@@ -566,7 +566,9 @@ lazy val mtest = project
       "scala2Versions" -> V.scala2Versions,
       "scala3Versions" -> (V.scala3Versions ++ V.nightlyScala3Versions),
       "scala2Versions" -> V.scala2Versions,
-      "scalaVersion" -> scalaVersion.value
+      "scalaVersion" -> scalaVersion.value,
+      "kindProjector" -> V.kindProjector,
+      "betterMonadicFor" -> V.betterMonadicFor
     ),
     crossScalaVersions := V.nonDeprecatedScalaVersions,
     Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
@@ -619,6 +621,8 @@ lazy val unit = project
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
       "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive (),
+      "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full intransitive (),
+      "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor intransitive (),
       "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive ()
     ),
     buildInfoPackage := "tests",

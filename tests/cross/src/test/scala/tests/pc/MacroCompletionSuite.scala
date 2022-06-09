@@ -6,6 +6,7 @@ import scala.collection.Seq
 
 import coursierapi.Dependency
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class MacroCompletionSuite extends BaseCompletionSuite {
 
@@ -25,9 +26,17 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     } else {
       Seq(
         Dependency
-          .of("com.olegpy", s"better-monadic-for_$scalaBinaryVersion", "0.3.1"),
+          .of(
+            "com.olegpy",
+            s"better-monadic-for_$scalaBinaryVersion",
+            BuildInfoVersions.betterMonadicFor
+          ),
         Dependency
-          .of("org.typelevel", s"kind-projector_$scalaBinaryVersion", "0.10.3"),
+          .of(
+            "org.typelevel",
+            s"kind-projector_$scalaVersion",
+            BuildInfoVersions.kindProjector
+          ),
         Dependency
           .of("org.typelevel", s"simulacrum_$scalaBinaryVersion", "1.0.0"),
         Dependency
@@ -141,32 +150,12 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     ""
   )
 
-  /* Starting with Scala 2.12.16 we are getting
-   * Select(
-   *   TypeApply(
-   *     Ident(baz),
-   *     List(
-   *       ExistentialTypeTree(
-   *         AppliedTypeTree(Ident(Either), List(Ident(Int), Ident($qmark$1))),
-   *         List(
-   *           TypeDef(Modifiers(2097168L, , List()), $qmark$1, List(), TypeBoundsTree(<empty>, <empty>))
-   *         )
-   *       ),
-   *       Ident(String)
-   *     )
-   *   ),
-   *   fold_CURSOR_
-   * )
-   *
-   * The compiler seems unable to deal with getting type members of ExistentialTypeTree.
-   * This requires a fix in the compiler, but I doubt anyone will have the time to take a look.
-   */
   check(
-    "kind-projector".tag(IgnoreScalaVersion("2.12.16")),
+    "kind-projector",
     """
       |object a {
       |  def baz[F[_], A]: F[A] = ???
-      |  baz[Either[Int, ?], String].fold@@
+      |  baz[Either[Int, *], String].fold@@
       |}
     """.stripMargin,
     """|fold[C](fa: Int => C, fb: String => C): C
