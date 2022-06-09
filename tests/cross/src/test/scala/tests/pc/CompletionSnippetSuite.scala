@@ -440,27 +440,53 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   // https://github.com/scalameta/metals/issues/4004
-  checkSnippet(
-    "issu-4004".tag(IgnoreScala2),
+  checkEdit(
+    "extension-param1".tag(IgnoreScala2),
     s"""|package a
         |object Foo:
         |  extension (s: String)
-        |    def barr = 0
-        |    def baxx() = 0
-        |    def bazz()() = 0
-        |  val bar = "abc".bar@@
-        |  val bax = "abc".bax@@
-        |  val baz = "abc".baz@@
+        |    def bar = 0
+        |  val bar = "abc".ba@@
     """.stripMargin,
     s"""|package a
         |object Foo:
         |  extension (s: String)
-        |    def barr = 0
-        |    def baxx() = 0
-        |    def bazz()() = 0
-        |  val bar = "abc".barr
-        |  val bax = "abc".baxx()
-        |  val baz = "abc".bazz()()
+        |    def bar = 0
+        |  val bar = "abc".bar
+    """.stripMargin
+  )
+
+  // https://github.com/scalameta/metals/issues/4004
+  checkEdit(
+    "extension-param2".tag(IgnoreScala2),
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar() = 0
+        |  val bar = "abc".ba@@
+    """.stripMargin,
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar() = 0
+        |  val bar = "abc".bar()
+    """.stripMargin
+  )
+
+  // https://github.com/scalameta/metals/issues/4004
+  checkEdit(
+    "extension-param3".tag(IgnoreScala2),
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar()() = 0
+        |  val bar = "abc".ba@@
+    """.stripMargin,
+    s"""|package a
+        |object Foo:
+        |  extension (s: String)
+        |    def bar()() = 0
+        |  val bar = "abc".bar()()
     """.stripMargin
   )
 
