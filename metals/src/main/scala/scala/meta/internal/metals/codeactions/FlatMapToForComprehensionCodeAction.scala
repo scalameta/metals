@@ -46,7 +46,8 @@ class FlatMapToForComprehensionCodeAction(
     val maybeChainedCodeAction = for {
       document <- buffers.get(path)
       termApply <- maybeTree
-      indentation = getIndentForPos(termApply.pos, document)
+      termApplyArg <- termApply.args.headOption
+      indentation = getIndentForPos(termApplyArg.pos, document)
     } yield codeActionWithApply(
       path,
       termApply,
