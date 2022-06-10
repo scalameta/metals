@@ -1,5 +1,6 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
 
 import org.eclipse.lsp4j.CodeAction
