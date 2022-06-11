@@ -12,7 +12,7 @@ class ConvertToNamedArgumentsSuite
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>1, 2, param3 = 3)
        |}""".stripMargin,
-    s"""|${ConvertToNamedArguments.title}
+    s"""|${ConvertToNamedArguments.title("Foo")}
         |""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
@@ -34,7 +34,7 @@ class ConvertToNamedArgumentsSuite
     """|object Something {
        |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
        |}""".stripMargin,
-    ConvertToNamedArguments.title
+    ConvertToNamedArguments.title("map")
   )
 
   check(
@@ -44,7 +44,7 @@ class ConvertToNamedArgumentsSuite
        |  Foo(1, 2, 3.t<<>>oString())
        |}""".stripMargin,
     s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title}
+        |${ConvertToNamedArguments.title("Foo")}
         |""".stripMargin,
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: String)

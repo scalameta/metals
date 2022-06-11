@@ -48,11 +48,11 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     maybeApply
       .map { apply =>
         {
-          val codeAction = new l.CodeAction(title)
+          val codeAction = new l.CodeAction(title(apply.app.fun.syntax))
           codeAction.setKind(l.CodeActionKind.RefactorRewrite)
           val position = new l.TextDocumentPositionParams(
             params.getTextDocument(),
-            new l.Position(apply.term.pos.endLine, apply.term.pos.endColumn)
+            new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn)
           )
           codeAction.setCommand(
             ServerCommands.ConvertToNamedArguments.toLSP(
@@ -68,6 +68,6 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
 }
 
 object ConvertToNamedArguments {
-  case class ApplyTermWithNumArgs(term: Term.Apply, numUnnamedArgs: Int)
-  val title = "Convert to named arguments"
+  case class ApplyTermWithNumArgs(app: Term.Apply, numUnnamedArgs: Int)
+  def title(funcName: String) = s"Convert $funcName to named arguments"
 }
