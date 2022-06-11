@@ -2321,6 +2321,7 @@ class MetalsLanguageServer(
   }
 
   private def disconnectOldBuildServer(): Future[Unit] = {
+    diagnostics.reset()
     bspSession.foreach(connection =>
       scribe.info(s"Disconnecting from ${connection.main.name} session...")
     )
@@ -2329,7 +2330,6 @@ class MetalsLanguageServer(
       case None => Future.successful(())
       case Some(session) =>
         bspSession = None
-        diagnostics.reset()
         mainBuildTargetsData.resetConnections(List.empty)
         session.shutdown()
     }
@@ -2360,7 +2360,6 @@ class MetalsLanguageServer(
       }
       _ <- indexer.profiledIndexWorkspace(() => doctor.check())
       _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
-      _ = diagnostics.reset()
     } yield {
       BuildChange.Reconnected
     }
