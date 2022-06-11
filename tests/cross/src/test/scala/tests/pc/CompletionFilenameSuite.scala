@@ -4,9 +4,6 @@ import tests.BaseCompletionSuite
 
 class CompletionFilenameSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   check(
     "class",
     """|
