@@ -7,7 +7,7 @@ class ConvertToNamedArgumentsSuite
     extends BaseCodeActionLspSuite("convertToNamedArguments") {
 
   check(
-    "convert-to-named-args-basic",
+    "basic",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>1, 2, param3 = 3)
@@ -22,7 +22,7 @@ class ConvertToNamedArgumentsSuite
   )
 
   checkNoAction(
-    "convert-to-named-args-no-unnamed-args",
+    "no-unnamed-args",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>param1 = 1, param2 = <<>>2, param3 = 3)
@@ -30,7 +30,7 @@ class ConvertToNamedArgumentsSuite
   )
 
   checkActionMissing(
-    "convert-to-named-args-block",
+    "block",
     """|object Something {
        |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
        |}""".stripMargin,
@@ -38,7 +38,7 @@ class ConvertToNamedArgumentsSuite
   )
 
   check(
-    "convert-to-named-go-to-parent-apply",
+    "go-to-parent-apply",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(1, 2, 3.t<<>>oString())
