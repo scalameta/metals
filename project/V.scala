@@ -12,6 +12,7 @@ object V {
   val ammonite213Version = "2.13.7"
 
   val ammonite = "2.5.4"
+  val betterMonadicFor = "0.3.1"
   val bloop = "1.5.0-22-91111c15"
   val bloopNightly = bloop
   val bsp = "2.1.0-M1"
@@ -23,6 +24,7 @@ object V {
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.7.4"
   val jsoup = "1.15.1"
+  val kindProjector = "0.13.2"
   val lsp4jV = "0.14.0"
   val mavenBloop = bloop
   val mill = "0.10.4"
