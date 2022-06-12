@@ -1,10 +1,10 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
-import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 
 class ConvertToNamedArgumentsSuite
-    extends BaseCodeActionLspSuite("convertToNamedArguments") {
+    extends BaseCodeActionLspSuite("convertToNamedArguments", filterAction = ConvertToNamedArguments.title(".*").r matches _.getTitle() ) {
+
 
   check(
     "basic",
@@ -12,13 +12,24 @@ class ConvertToNamedArgumentsSuite
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo<<(>>1, 2, param3 = 3)
        |}""".stripMargin,
-    s"""|${ConvertToNamedArguments.title("Foo")}
-        |""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo")}",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
        |  Foo(param1 = 1, param2 = 2, param3 = 3)
+       |}""".stripMargin
+  )
+
+  check(
+    "named-arg-in-middle",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo<<(>>1, param2 = 2, 3)
        |}""".stripMargin,
-    selectedActionIndex = 0
+    s"${ConvertToNamedArguments.title("Foo")}",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo(param1 = 1, param2 = 2, param3 = 3)
+       |}""".stripMargin
   )
 
   checkNoAction(
@@ -29,12 +40,11 @@ class ConvertToNamedArgumentsSuite
        |}""".stripMargin
   )
 
-  checkActionMissing(
-    "block",
+  checkNoAction(
+    "dont-convert-block",
     """|object Something {
        |  def f(x: Seq[Int]) = x.map <<{>> _.toLong }
-       |}""".stripMargin,
-    ConvertToNamedArguments.title("map")
+       |}""".stripMargin
   )
 
   check(
@@ -43,13 +53,10 @@ class ConvertToNamedArgumentsSuite
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(1, 2, 3.t<<>>oString())
        |}""".stripMargin,
-    s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title("Foo")}
-        |""".stripMargin,
+      s"${ConvertToNamedArguments.title("Foo")}",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(param1 = 1, param2 = 2, param3 = 3.toString())
-       |}""".stripMargin,
-    selectedActionIndex = 1
+       |}""".stripMargin
   )
 }

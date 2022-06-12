@@ -4,7 +4,8 @@ import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class InsertInferredTypeLspSuite
-    extends BaseCodeActionLspSuite("insertInferredType") {
+    extends BaseCodeActionLspSuite("insertInferredType",
+      filterAction = act => act.getTitle() == InsertInferredType.insertType || act.getTitle() == InsertInferredType.insertTypeToPattern) {
 
   check(
     "val",
@@ -96,7 +97,6 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map(c<<>>h => ch.toInt)
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
-        |${RewriteBracesParensCodeAction.toBraces("map")}
         |""".stripMargin,
     """|object A{
        |  val list = "123".map((ch: Char) => ch.toInt)
@@ -110,7 +110,6 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map{c<<>>h => ch.toInt}
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
-        |${RewriteBracesParensCodeAction.toParens("map")}
         |""".stripMargin,
     """|object A{
        |  val list = "123".map{ch: Char => ch.toInt}

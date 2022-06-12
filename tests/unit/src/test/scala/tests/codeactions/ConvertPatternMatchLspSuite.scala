@@ -4,7 +4,7 @@ import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class ConvertPatternMatchLspSuite
-    extends BaseCodeActionLspSuite("convertPatternMatch") {
+    extends BaseCodeActionLspSuite("convertPatternMatch", filterAction = _.getTitle() == PatternMatchRefactor.convertPatternMatch) {
 
   check(
     "with-placeholder",
@@ -61,7 +61,6 @@ class ConvertPatternMatchLspSuite
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens("map")}
         |""".stripMargin,
     """|object Main {
        |  var x = 0
