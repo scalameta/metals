@@ -20,6 +20,99 @@ class ConvertToNamedArgumentsSuite
   )
 
   check(
+    "named-arg-first-position",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo<<(>>param1 = 1, 2, 3)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("Foo")}",
+    """|object Something {
+       |  case class Foo(param1: Int, param2: Int, param3: Int)
+       |  Foo(param1 = 1, param2 = 2, param3 = 3)
+       |}""".stripMargin
+  )
+
+  check(
+    "def",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int) = None
+       |  foo<<(>>1, 2, param3 = 3)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("foo")}",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int) = None
+       |  foo(param1 = 1, param2 = 2, param3 = 3)
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-arg-lists",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
+       |  foo<<(>>1, 2, param3 = 3)(4)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("foo")}",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
+       |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-arg-lists-start-of-2nd",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
+       |  foo(1, 2, param3 = 3)<<(>>4)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("foo")}",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
+       |  foo(param1 = 1, param2 = 2, param3 = 3)(4)
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-arg-lists-only-2nd",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
+       |  foo(1, 2, param3 = 3)(<<4>>)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("foo(1, 2, param3 = 3)")}",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
+       |  foo(1, 2, param3 = 3)(param4 = 4)
+       |}""".stripMargin
+  )
+
+  check(
+    "implicit-param",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
+       |  implicit val x = 3
+       |  foo(1, <<2>>)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("foo")}",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
+       |  implicit val x = 3
+       |  foo(param1 = 1, param2 = 2)
+       |}""".stripMargin
+  )
+
+  check(
+    "implicit-passed-explicitly",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
+       |  foo(1, 2)(<<3>>)
+       |}""".stripMargin,
+    s"${ConvertToNamedArguments.title("foo(1, 2)")}",
+    """|object Something {
+       |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
+       |  foo(1, 2)(param3 = 3)
+       |}""".stripMargin
+  )
+
+  check(
     "named-arg-in-middle",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: Int)
