@@ -13,8 +13,10 @@ class FlatMapToForComprehensionSuite
        |    def check(x: Int) = true
        |    val list = List(1, 2, 3)
        |    def negate(a: Boolean) = !a
+       |    def curried(a: Int)(b: Int) = a * b
        |
        |    val res3 = list
+       |        .map(10.+)
        |        .flatMap{
        |              a =>
        |                      {
@@ -29,6 +31,9 @@ class FlatMapToForComprehensionSuite
        |        .map(5 + double(_, 7).toFloat.toInt / 8 + 6)
        |        .filter(d => d > 1)
        |        .map(double(_, 5))
+       |        .map(curried(6) _ )
+       |        .map(curried(_)(9))
+       |        .map(curried(3))
        |        .map( double(_, 4).toFloat.toDouble)
        |        .map( _.toInt.compare(3))
        |        .map(_ > 2)
@@ -45,24 +50,29 @@ class FlatMapToForComprehensionSuite
        |    def check(x: Int) = true
        |    val list = List(1, 2, 3)
        |    def negate(a: Boolean) = !a
+       |    def curried(a: Int)(b: Int) = a * b
        |
        |    val res3 = {
        |         for {
-       |           a <- list
-       |           generatedByMetals8 <- {
+       |           generatedByMetals12 <- list
+       |           a = 10.+(generatedByMetals12)
+       |           generatedByMetals11 <- {
        |             val m = 6
        |             Some(a + 1).map(b => b + 3 + 4)
        |           }
-       |           if check(generatedByMetals8)
-       |           generatedByMetals7 = generatedByMetals8
+       |           if check(generatedByMetals11)
+       |           generatedByMetals10 = generatedByMetals11
        |           if !true
-       |           generatedByMetals6 = generatedByMetals7
+       |           generatedByMetals9 = generatedByMetals10
        |           c = 7
-       |           generatedByMetals5 = c - 1
-       |           d = 5 + double(generatedByMetals5, 7).toFloat.toInt / 8 + 6
+       |           generatedByMetals8 = c - 1
+       |           d = 5 + double(generatedByMetals8, 7).toFloat.toInt / 8 + 6
        |           if d > 1
-       |           generatedByMetals4 = d
-       |           generatedByMetals3 = double(generatedByMetals4, 5)
+       |           generatedByMetals7 = d
+       |           generatedByMetals6 = double(generatedByMetals7, 5)
+       |           generatedByMetals5 = curried(6)(generatedByMetals6)
+       |           generatedByMetals4 = curried(generatedByMetals5)(9)
+       |           generatedByMetals3 = curried(3)(generatedByMetals4)
        |           generatedByMetals2 = double(generatedByMetals3, 4).toFloat.toDouble
        |           generatedByMetals1 = generatedByMetals2.toInt.compare(3)
        |           generatedByMetals0 = generatedByMetals1 > 2

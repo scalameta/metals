@@ -38,7 +38,10 @@ class FlatMapToForComprehensionCodeAction(
           .findLastEnclosingAt[Term.Apply](
             path,
             range.getStart(),
-            isTreeInteresting
+            {
+              case _: Term.Apply => true
+              case _ => false
+            }
           )
       else
         None
@@ -145,7 +148,7 @@ class FlatMapToForComprehensionCodeAction(
     tree match {
       case Term.Apply(fun, args) if allowedToGetInsideApply =>
         val (newFun, funReplacementTimes) =
-          replacePlaceHolder(fun, newName, false)
+          replacePlaceHolder(fun, newName, allowedToGetInsideApply)
         val (newArgs, argsReplacementTimes) =
           args.map(replacePlaceHolder(_, newName, false)).unzip
 
@@ -155,6 +158,9 @@ class FlatMapToForComprehensionCodeAction(
           )
 
         (Term.Apply(newFun, newArgs), replacementTimes)
+
+      case Term.Eta(expr) if allowedToGetInsideApply =>
+        (Term.Apply(expr, List(newName)), 1)
 
       case Term.ApplyUnary(op, arg) if allowedToGetInsideApply =>
         val (newArg, argReplacementTimes) =
@@ -213,7 +219,10 @@ class FlatMapToForComprehensionCodeAction(
     val (newTerm, replacementTimes) =
       replacePlaceHolder(term, Term.Name(newName), true)
     (
-      if (replacementTimes == 1) Some((newName, newTerm)) else None,
+      if (replacementTimes == 1) Some((newName, newTerm))
+      else if (replacementTimes == 0)
+        Some((newName), Term.Apply(newTerm, List(Term.Name(newName))))
+      else None,
       generatedValues
     )
   }
@@ -232,30 +241,14 @@ class FlatMapToForComprehensionCodeAction(
 
       case Term.AnonymousFunction(term) =>
         replacePlaceHolderInTermWithNewName(term, generatedByMetalsValues)
-      case term: Term.ApplyInfix =>
-        replacePlaceHolderInTermWithNewName(term, generatedByMetalsValues)
-      case term: Term.ApplyUnary =>
-        replacePlaceHolderInTermWithNewName(term, generatedByMetalsValues)
-      case term: Term.ApplyUsing =>
+      case term: Term
+          if term.is[Term.Apply] || term.is[Term.Eta] || term
+            .is[Term.ApplyUnary] || term.is[Term.ApplyUsing] || term
+            .is[Term.ApplyInfix] || term.is[Term.Name] || term
+            .is[Term.Select] =>
         replacePlaceHolderInTermWithNewName(term, generatedByMetalsValues)
       case Term.Block(List(function)) =>
         processValueNameAndNextQual(function, generatedByMetalsValues)
-      case term: Term.Name =>
-        val (newName, generatedValues) =
-          createNewName(tree, generatedByMetalsValues)
-        (
-          Some((newName, Term.Apply(term, List(Term.Name(newName))))),
-          generatedValues
-        )
-
-      case term: Term.Select =>
-        val (newName, generatedValues) =
-          createNewName(tree, generatedByMetalsValues)
-        (
-          Some((newName, Term.Apply(term, List(Term.Name(newName))))),
-          generatedValues
-        )
-
       case _ =>
         (
           None,
@@ -266,14 +259,14 @@ class FlatMapToForComprehensionCodeAction(
 
   private def obtainNextYieldAndElemsForMap(
       newMetalsNames: Set[String],
-      perhapseLastName: Option[String],
+      perhapsLastName: Option[String],
       shouldFlat: Boolean,
       existingForElements: List[Enumerator],
       currentYieldTerm: Option[Term],
       termApply: Term.Apply,
       nextQual: Term
   ): (List[Enumerator], Option[Term], Set[String]) = {
-    perhapseLastName match {
+    perhapsLastName match {
       case Some(lastName) =>
         (
           List(
@@ -340,10 +333,10 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def processFilter(
-      perhapseValueNameAndNextQual: Option[(String, Term)],
+      perhapsValueNameAndNextQual: Option[(String, Term)],
       newMetalsNames: Set[String],
       generatedByMetalsNames: Set[String],
-      perhapseLastName: Option[String],
+      perhapsLastName: Option[String],
       isFilter: Boolean,
       existingForElements: List[Enumerator],
       currentYieldTerm: Option[Term],
@@ -351,11 +344,11 @@ class FlatMapToForComprehensionCodeAction(
   ): (List[Enumerator], Option[Term], Set[String]) = {
 
     val result = for {
-      valueName <- perhapseValueNameAndNextQual.map(_._1)
-      nextCondition <- perhapseValueNameAndNextQual.map(_._2)
+      valueName <- perhapsValueNameAndNextQual.map(_._1)
+      nextCondition <- perhapsValueNameAndNextQual.map(_._2)
     } yield {
       val (elems, maybeYieldTerm): (List[Enumerator], Option[Term]) =
-        perhapseLastName match {
+        perhapsLastName match {
           case Some(lastName) =>
             (
               Enumerator.Val.apply(
@@ -401,13 +394,13 @@ class FlatMapToForComprehensionCodeAction(
   }
 
   private def extractChainedForYield(
-      perhapseLastName: Option[String],
+      perhapsLastName: Option[String],
       currentYieldTerm: Option[Term],
       existingForElements: List[Enumerator],
       termApply: Term.Apply,
       generatedByMetalsValues: Set[String]
   ): (List[Enumerator], Option[Term], Set[String]) = {
-    val (perhapseValueNameAndNextQual, newMetalsNames) =
+    val (perhapsValueNameAndNextQual, newMetalsNames) =
       processValueNameAndNextQual(
         termApply.args.head,
         generatedByMetalsValues
@@ -419,13 +412,13 @@ class FlatMapToForComprehensionCodeAction(
         val shouldFlat = termSelect.name.value == "flatMap"
 
         val result = for {
-          valueName <- perhapseValueNameAndNextQual.map(_._1)
-          nextQual <- perhapseValueNameAndNextQual.map(_._2)
+          valueName <- perhapsValueNameAndNextQual.map(_._1)
+          nextQual <- perhapsValueNameAndNextQual.map(_._2)
         } yield {
           val (elems, maybeYieldTerm, updatedGenByMetalsVals) =
             obtainNextYieldAndElemsForMap(
               newMetalsNames,
-              perhapseLastName,
+              perhapsLastName,
               shouldFlat,
               existingForElements,
               currentYieldTerm,
@@ -449,10 +442,10 @@ class FlatMapToForComprehensionCodeAction(
         val isFilter =
           termSelect.name.value == "filter" || termSelect.name.value == "withFilter"
         processFilter(
-          perhapseValueNameAndNextQual,
+          perhapsValueNameAndNextQual,
           newMetalsNames,
           generatedByMetalsValues,
-          perhapseLastName,
+          perhapsLastName,
           isFilter,
           existingForElements,
           currentYieldTerm,
@@ -460,7 +453,7 @@ class FlatMapToForComprehensionCodeAction(
         )
 
       case _ =>
-        perhapseLastName match {
+        perhapsLastName match {
           case Some(lastName) =>
             (
               Enumerator.Generator(
@@ -520,20 +513,6 @@ class FlatMapToForComprehensionCodeAction(
       .substring(treePos.start - treePos.startColumn, treePos.start)
       .takeWhile(_.isWhitespace)
 
-  private def isTreeInteresting: Tree => Boolean = {
-    case _: Term.Apply => true
-    case termSelect: Term.Select
-        if termSelect.name.value == "map" || termSelect.name.value == "flatMap" ||
-          termSelect.name.value == "filter" || termSelect.name.value == "filterNot" ||
-          termSelect.name.value == "withFilter" =>
-      true
-    case termName: Term.Name
-        if termName.value == "flatMap" || termName.value == "map" ||
-          termName.value == "filter" || termName.value == "filterNot" ||
-          termName.value == "withFilter" =>
-      true
-    case _ => false
-  }
 }
 
 object FlatMapToForComprehensionCodeAction {
