@@ -2,7 +2,7 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 
-class ConvertToNamedArgumentsSuite
+class ConvertToNamedArgumentsLspSuite
     extends BaseCodeActionLspSuite("convertToNamedArguments", filterAction = ConvertToNamedArguments.title(".*").r matches _.getTitle() ) {
 
 
