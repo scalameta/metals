@@ -10,8 +10,10 @@ import munit.TestOptions
 import tests.BaseLspSuite
 import org.eclipse.lsp4j.CodeAction
 
-abstract class BaseCodeActionLspSuite(suiteName: String, filterAction: CodeAction => Boolean = _ => true)
-    extends BaseLspSuite(suiteName) {
+abstract class BaseCodeActionLspSuite(
+    suiteName: String,
+    filterAction: CodeAction => Boolean = _ => true
+) extends BaseLspSuite(suiteName) {
 
   protected val scalaVersion: String = V.scala213
 

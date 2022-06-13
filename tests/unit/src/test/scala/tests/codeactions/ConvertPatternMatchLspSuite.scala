@@ -4,7 +4,10 @@ import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class ConvertPatternMatchLspSuite
-    extends BaseCodeActionLspSuite("convertPatternMatch", filterAction = _.getTitle() == PatternMatchRefactor.convertPatternMatch) {
+    extends BaseCodeActionLspSuite(
+      "convertPatternMatch",
+      filterAction = _.getTitle() == PatternMatchRefactor.convertPatternMatch
+    ) {
 
   check(
     "with-placeholder",

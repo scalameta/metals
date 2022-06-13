@@ -3,8 +3,10 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 
 class ConvertToNamedArgumentsLspSuite
-    extends BaseCodeActionLspSuite("convertToNamedArguments", filterAction = ConvertToNamedArguments.title(".*").r matches _.getTitle() ) {
-
+    extends BaseCodeActionLspSuite(
+      "convertToNamedArguments",
+      filterAction = ConvertToNamedArguments.title(".*").r matches _.getTitle()
+    ) {
 
   check(
     "basic",
@@ -146,7 +148,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(1, 2, 3.t<<>>oString())
        |}""".stripMargin,
-      s"${ConvertToNamedArguments.title("Foo")}",
+    s"${ConvertToNamedArguments.title("Foo")}",
     """|object Something {
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(param1 = 1, param2 = 2, param3 = 3.toString())

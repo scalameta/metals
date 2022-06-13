@@ -21,8 +21,7 @@ final class ConvertToNamedArgumentsProvider(
     val typedTree = typedTreeAt(unit.position(params.offset))
     typedTree match {
       case Apply(fun, args) =>
-        args
-          .zipWithIndex
+        args.zipWithIndex
           .zip(fun.tpe.params)
           .collect {
             case ((arg, index), param) if argIndices.contains(index) => {

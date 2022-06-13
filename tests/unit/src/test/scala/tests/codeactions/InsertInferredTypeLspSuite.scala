@@ -4,8 +4,12 @@ import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 class InsertInferredTypeLspSuite
-    extends BaseCodeActionLspSuite("insertInferredType",
-      filterAction = act => act.getTitle() == InsertInferredType.insertType || act.getTitle() == InsertInferredType.insertTypeToPattern) {
+    extends BaseCodeActionLspSuite(
+      "insertInferredType",
+      filterAction = act =>
+        act.getTitle() == InsertInferredType.insertType || act
+          .getTitle() == InsertInferredType.insertTypeToPattern
+    ) {
 
   check(
     "val",

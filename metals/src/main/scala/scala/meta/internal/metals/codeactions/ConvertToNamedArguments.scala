@@ -23,8 +23,11 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
   ): Option[ApplyTermWithArgIndices] = {
     term match {
       case Some(apply: Term.Apply) =>
-        val argIndices = apply.args.zipWithIndex.collect { 
-          case (arg, index) if !arg.isInstanceOf[Term.Assign] && !arg.isInstanceOf[Term.Block] => index
+        val argIndices = apply.args.zipWithIndex.collect {
+          case (arg, index)
+              if !arg.isInstanceOf[Term.Assign] && !arg
+                .isInstanceOf[Term.Block] =>
+            index
         }
         if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
         else Some(ApplyTermWithArgIndices(apply, argIndices))
@@ -57,7 +60,10 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
           codeAction.setCommand(
             ServerCommands.ConvertToNamedArguments.toLSP(
               ServerCommands
-                .ConvertToNamedArgsRequest(position, apply.argIndices.map(new Integer(_)).asJava)
+                .ConvertToNamedArgsRequest(
+                  position,
+                  apply.argIndices.map(new Integer(_)).asJava
+                )
             )
           )
           Future.successful(Seq(codeAction))

@@ -1135,7 +1135,13 @@ final class TestingServer(
       filterAction: l.CodeAction => Boolean = _ => true
   )(implicit loc: munit.Location): Future[List[l.CodeAction]] =
     for {
-      (codeActions, codeActionString) <- codeAction(filename, query, root, kind, filterAction)
+      (codeActions, codeActionString) <- codeAction(
+        filename,
+        query,
+        root,
+        kind,
+        filterAction
+      )
     } yield {
       Assertions.assertNoDiff(codeActionString, expected)
       codeActions
@@ -1175,7 +1181,10 @@ final class TestingServer(
           if (kind.nonEmpty) kind.asJava else null
         )
       )
-      codeActions <- server.codeAction(params).asScala.map(_.asScala.filter(filterAction))
+      codeActions <- server
+        .codeAction(params)
+        .asScala
+        .map(_.asScala.filter(filterAction))
     } yield (
       codeActions.toList,
       codeActions.map(_.getTitle()).mkString("\n")

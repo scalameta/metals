@@ -18,9 +18,9 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
   checkEdit(
     "scala-std-lib",
     """|object A{
-      |  val a = <<scala.math.max(1, 2)>>
+       |  val a = <<scala.math.max(1, 2)>>
        |}""".stripMargin,
-       List(0, 1),
+    List(0, 1),
     """|object A{
        |  val a = scala.math.max(x = 1, y = 2)
        |}""".stripMargin
