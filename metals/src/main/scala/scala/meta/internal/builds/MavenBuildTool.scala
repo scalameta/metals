@@ -39,8 +39,9 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
         )
 
         val jarArgs = List(
-          "-jar",
-          embeddedMavenLauncher.toString()
+          "-cp",
+          embeddedMavenLauncher.toString(),
+          "org.apache.maven.wrapper.MavenWrapperMain"
         )
         List(
           javaArgs,
@@ -58,7 +59,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
 
   override def recommendedVersion: String = version
 
-  override def version: String = "3.6.1"
+  override def version: String = "3.8.6"
 
   override def toString(): String = "Maven"
 
