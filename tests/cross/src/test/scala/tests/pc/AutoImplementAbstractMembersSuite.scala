@@ -360,7 +360,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "jutil".tag(IgnoreScala3),
+    "jutil",
     """|abstract class JUtil {
        |  def foo: java.util.List[Int]
        |}
@@ -376,11 +376,23 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override def foo: ju.List[Int] = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|abstract class JUtil {
+           |  def foo: java.util.List[Int]
+           |}
+           |class Main extends JUtil {
+           |
+           |  override def foo: java.util.List[Int] = ???
+           |
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
-    "jutil-conflict".tag(IgnoreScala3),
+    "jutil-conflict",
     """|package jutil
        |abstract class JUtil {
        |  def foo: java.util.List[Int]
@@ -402,7 +414,21 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  val java = 42
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package jutil
+           |abstract class JUtil {
+           |  def foo: java.util.List[Int]
+           |}
+           |class Main extends JUtil {
+           |
+           |  override def foo: java.util.List[Int] = ???
+           |
+           |  val java = 42
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
