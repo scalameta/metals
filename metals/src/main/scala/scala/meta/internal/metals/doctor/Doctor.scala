@@ -92,7 +92,7 @@ final class Doctor(
    */
   def executeRunDoctor(): Unit = {
     executeDoctor(
-      ClientCommands.RunDoctor,
+      clientCommand = ClientCommands.RunDoctor,
       onServer = server => {
         Urls.openBrowser(server.address + "/doctor")
       }
@@ -116,7 +116,7 @@ final class Doctor(
 
   def executeRefreshDoctor(): Unit = {
     executeDoctor(
-      ClientCommands.ReloadDoctor,
+      clientCommand = ClientCommands.ReloadDoctor,
       onServer = server => {
         server.reload()
       }
@@ -174,6 +174,7 @@ final class Doctor(
           hasProblems.set(true)
           languageClient.showMessageRequest(params).asScala.foreach { item =>
             if (item == CheckDoctor.moreInformation) {
+              onVisibilityDidChange(true)
               executeRunDoctor()
             } else if (item == CheckDoctor.dismissForever) {
               notification.dismissForever()
