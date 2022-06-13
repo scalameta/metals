@@ -1984,14 +1984,14 @@ class MetalsLanguageServer(
         }
 
       case ServerCommands.ConvertToNamedArguments(
-            ServerCommands.ConvertToNamedArgsRequest(position, numUnnamedArgs)
+            ServerCommands.ConvertToNamedArgsRequest(position, argIndices)
           ) =>
         CancelTokens.future { token =>
           val uri = position.getTextDocument().getUri()
           for {
             edits <- compilers.convertToNamedArguments(
               position,
-              numUnnamedArgs,
+              argIndices,
               token
             )
             if (!edits.isEmpty())

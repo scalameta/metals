@@ -8,6 +8,7 @@ import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import java.{util => ju}
 
 /**
  * LSP commands supported by the Metals language server.
@@ -469,7 +470,7 @@ object ServerCommands {
 
   final case class ConvertToNamedArgsRequest(
       position: TextDocumentPositionParams,
-      numUnnamedArgs: Int
+      argIndices: ju.List[Integer]
   )
   val ConvertToNamedArguments =
     new ParametrizedCommand[ConvertToNamedArgsRequest](

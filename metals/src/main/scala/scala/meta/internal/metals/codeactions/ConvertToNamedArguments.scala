@@ -20,14 +20,14 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
 
   def firstApplyWithUnnamedArgs(
       term: Option[Tree]
-  ): Option[ApplyTermWithNumArgs] = {
+  ): Option[ApplyTermWithArgIndices] = {
     term match {
       case Some(apply: Term.Apply) =>
-        val numUnnamedArgs = apply.args.takeWhile { arg =>
-          !arg.isInstanceOf[Term.Assign] && !arg.isInstanceOf[Term.Block]
-        }.size
-        if (numUnnamedArgs == 0) firstApplyWithUnnamedArgs(apply.parent)
-        else Some(ApplyTermWithNumArgs(apply, numUnnamedArgs))
+        val argIndices = apply.args.zipWithIndex.collect { 
+          case (arg, index) if !arg.isInstanceOf[Term.Assign] && !arg.isInstanceOf[Term.Block] => index
+        }
+        if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
+        else Some(ApplyTermWithArgIndices(apply, argIndices))
       case Some(t) => firstApplyWithUnnamedArgs(t.parent)
       case _ => None
     }
@@ -57,7 +57,7 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
           codeAction.setCommand(
             ServerCommands.ConvertToNamedArguments.toLSP(
               ServerCommands
-                .ConvertToNamedArgsRequest(position, apply.numUnnamedArgs)
+                .ConvertToNamedArgsRequest(position, apply.argIndices.map(new Integer(_)).asJava)
             )
           )
           Future.successful(Seq(codeAction))
@@ -68,6 +68,6 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
 }
 
 object ConvertToNamedArguments {
-  case class ApplyTermWithNumArgs(app: Term.Apply, numUnnamedArgs: Int)
+  case class ApplyTermWithArgIndices(app: Term.Apply, argIndices: List[Int])
   def title(funcName: String) = s"Convert $funcName to named arguments"
 }
