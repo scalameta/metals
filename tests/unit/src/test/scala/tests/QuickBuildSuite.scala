@@ -10,7 +10,7 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
   test("basic", withoutVirtualDocs = true) {
     cleanCompileCache("b")
     for {
-      _ <- initialize(
+      initResults <- initialize(
         """
           |/metals.json
           |{
@@ -44,6 +44,11 @@ class QuickBuildSuite extends BaseLspSuite(s"quick-build") {
           |  }
           |}
         """.stripMargin
+      )
+      // metals should always return experimental capabilities
+      _ = assertNoDiff(
+        initResults.getCapabilities().getExperimental().toString,
+        "{\"rangeHoverProvider\":true}"
       )
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiff(
