@@ -333,7 +333,14 @@ waiting for the debugger to connect:
 -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y
 ```
 
-## Updating sbt-launcher
+## Updating build tool launcher/wrappers
+
+Metals uses various wrappers or launchers for each build tool that it supports.
+This makes sure that when your in a workspace for you build tool that metals is
+able to correctly launch that build tool, even if it doesn't exist on the users
+`$PATH`. You can see their usages in `<BuildToolName>BuildTool.scala`.
+
+### Updating sbt-launcher
 
 The easiest way to update the sbt-launcher is with the following coursier
 command:
@@ -344,6 +351,19 @@ cp "$(cs fetch org.scala-sbt:sbt-launch:<version>)" sbt-launch.jar
 
 This will allow you to not have to do some of the manual steps with the launcher
 properties file listed [here](https://github.com/sbt/launcher).
+
+### Updating maven wrappers
+
+For Maven we use the [Maven
+Wrapper](https://maven.apache.org/wrapper/maven-wrapper/index.html). In order to
+update this you'll want to do the following:
+
+  - Run the `./bin/update-maven-wrapper.sh` script
+  - Update the `def version` in `MavenBuildTool.scala` to the latest version
+      that you just updated to.
+  - Run the specific maven tests and ensure they pass: `./bin/test.sh
+      'slow/testOnly -- tests.maven.*`
+
 
 ## Git hooks
 
