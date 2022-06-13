@@ -164,6 +164,7 @@ object OverrideCompletions:
     )
     val implementAll = implementAllFor(
       indexedContext,
+      params.text,
       search,
       autoImportsGen,
       config
@@ -179,6 +180,7 @@ object OverrideCompletions:
 
   private def implementAllFor(
       indexedContext: IndexedContext,
+      text: String,
       search: SymbolSearch,
       autoImports: AutoImportsGenerator,
       config: PresentationCompilerConfig
@@ -251,8 +253,6 @@ object OverrideCompletions:
 
     if edits.isEmpty then Nil
     else
-      val text = indexedContext.ctx.source.content.mkString
-
       // A list of declarations in the class/object to implement
       val decls = td.tpe.decls.toList
         .filter(sym =>
