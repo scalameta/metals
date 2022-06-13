@@ -1,5 +1,6 @@
 -Xss4m
--Xmx1G
+-Xms1G
+-Xmx2G
 -XX:ReservedCodeCacheSize=1024m
 -XX:+TieredCompilation
 -Dfile.encoding=UTF-8
