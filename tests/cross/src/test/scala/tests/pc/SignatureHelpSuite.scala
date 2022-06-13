@@ -355,18 +355,6 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "error1".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
-    ),
-    """
-      |object a {
-      |  Map[Int](1 @@-> "").map {
-      |  }
-      |}
-    """.stripMargin,
-    ""
-  )
-  check(
     "for",
     """
       |object a {
@@ -464,7 +452,13 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    ""
+    "",
+    compat = Map(
+      ">=3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY" ->
+        """|apply[K, V](elems: (K, V)*): Map[K, V]
+           |            ^^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -743,14 +737,20 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "off-by-one".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY")
     ),
     """
       |object a {
       |  identity(42)@@
       |}
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" ->
+        """|identity[A](x: A): A
+           |            ^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -767,14 +767,20 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "between-parens".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY")
     ),
     """
       |object a {
       |  Option(1).fold(2)@@(_ + 1)
       |}
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" ->
+        """|fold[B](ifEmpty: => B)(f: Int => B): B
+           |        ^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -791,7 +797,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "between-parens3".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY")
     ),
     """
       |object a {

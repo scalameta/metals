@@ -312,6 +312,19 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|apply[T1, T2, T3](_1: T1, _2: T2, _3: T3): (T1, T2, T3)
            |                                  ^^^^^^
+           |""".stripMargin,
+      ">=3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY" ->
+        """|An Option factory which creates Some(x) if the argument is not null,
+           | and None if it is null.
+           |
+           |
+           |**Parameters**
+           |- `x`: the value
+           |
+           |**Returns:** Some(value) if value != null, None if value == null
+           |apply[A](x: A): Option[A]
+           |         ^^^^
+           |  @param x the value
            |""".stripMargin
     )
   )

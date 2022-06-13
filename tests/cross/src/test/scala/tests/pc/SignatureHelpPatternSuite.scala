@@ -201,7 +201,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
 
   check(
     "pat2".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY")
     ),
     """
       |object a {
@@ -215,8 +215,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
        | ^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "3" -> """|(String)
-                | ^^^^^^
+      "3" -> """|(List[String])
+                | ^^^^^^^^^^^^
                 |""".stripMargin
     )
   )
@@ -241,9 +241,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "pat4".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
-    ),
+    "pat4",
     """
       |object & {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
@@ -260,7 +258,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     // generated code. Feel free to update this test to have the same expected output as
     // `pat3` without regressing signature help in othere cases like partial functions that
     // generate qualifiers with offset positions.
-    ""
+    "",
+    compat = Map(
+      ">=3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY" ->
+        """|(String, String)
+           |         ^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
