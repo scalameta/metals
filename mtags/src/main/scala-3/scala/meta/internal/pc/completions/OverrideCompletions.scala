@@ -418,8 +418,9 @@ object OverrideCompletions:
         t.self.span.isSourceDerived
       case _ => false
     val start = td.span.start
-    val marker = if hasSelfTypeAnnot then '>' else '{'
-    val offset = text.indexOf(marker, start)
+    val offset =
+      if hasSelfTypeAnnot then text.indexOf("=>", start) + 1
+      else text.indexOf("{", start)
     if offset > 0 && offset < td.span.end then Some(offset)
     else None
 

@@ -796,6 +796,39 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "selftype-arrow",
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class <<Concrete>> extends Base { // > reference
+       |    self =>
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class Concrete extends Base { // > reference
+       |    self =>
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "braceless-basic".tag(IgnoreScala2),
     """|package a
        |
