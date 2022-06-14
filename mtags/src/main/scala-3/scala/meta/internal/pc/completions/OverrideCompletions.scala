@@ -124,9 +124,10 @@ object OverrideCompletions:
       driver: InteractiveDriver,
       search: SymbolSearch,
       config: PresentationCompilerConfig
-  ) =
+  ): ju.List[l.TextEdit] =
     object FindTypeDef:
       def unapply(path: List[Tree]): Option[TypeDef] = path match
+        case (td: TypeDef) :: _ => Some(td)
         // new Iterable[Int] {}
         case (_: Ident) :: _ :: (_: Template) :: (td: TypeDef) :: _ =>
           Some(td)
@@ -170,8 +171,6 @@ object OverrideCompletions:
       config
     )
     path match
-      case (td: TypeDef) :: _ =>
-        implementAll(td).asJava
       case FindTypeDef(td) =>
         implementAll(td).asJava
       case _ =>
@@ -207,7 +206,7 @@ object OverrideCompletions:
       )
       // infer indent for implementations
       // If there's declaration in the class/object, follow its indent.
-      // For example, numIndent will be 8, becuase there're 8 spaces before
+      // For example, numIndent will be 8, because there're 8 spaces before
       // `override def foo: Int`
       // ```scala
       // |object X:
