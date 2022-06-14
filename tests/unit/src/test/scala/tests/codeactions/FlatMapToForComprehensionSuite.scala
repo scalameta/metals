@@ -7,7 +7,30 @@ class FlatMapToForComprehensionSuite
     extends BaseCodeActionLspSuite("forComprehension") {
 
   check(
-    "mixture",
+    "simple-for-comprehension",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |        .m<<>>ap(10 + _)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = {
+       |         for {
+       |           generatedByMetals <- List(1, 2, 3)
+       |         }  yield {
+       |           10 + generatedByMetals
+       |         }
+       |        }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
+  )
+
+  check(
+    "mixture-for-comprehension",
     """|object A {
        |    def double(x : Int, y: Int = 1) = y * x
        |    def check(x: Int) = true
@@ -32,13 +55,13 @@ class FlatMapToForComprehensionSuite
        |        .filter(d => d > 1)
        |        .map(double(_, 5))
        |        .map(curried(6) _ )
-       |        .map(curried(_)(9))
+       |        .m<<>>ap(curried(_)(9))
        |        .map(curried(3))
        |        .map( double(_, 4).toFloat.toDouble)
        |        .map( _.toInt.compare(3))
        |        .map(_ > 2)
        |        .map(!negate(_))
-       |        .m<<>>ap( true && !negate(_) && false)
+       |        .map( true && !negate(_) && false)
        |
        |}
        |""".stripMargin,
@@ -163,5 +186,13 @@ class FlatMapToForComprehensionSuite
 //       |def multiply(a: Int, b: Int) = a * b
 //       |val res = List(1, 2, 3).map{multiply(_, _)}
 //       |}""".stripMargin,
+//    expectError = true
 //  )
+  // expectError = true did not cause the test to pass. the error is:
+//  -a/src/main/scala/a/A.scala:3:29: error: type mismatch;
+//  - found   : (Int, Int) => Int
+//  - required: Int => ?
+//  -val res = List(1, 2, 3).map{multiply(_, _)}
+//  -
+
 }

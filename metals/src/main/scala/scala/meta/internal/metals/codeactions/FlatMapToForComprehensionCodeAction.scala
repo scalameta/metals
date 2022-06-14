@@ -115,28 +115,59 @@ class FlatMapToForComprehensionCodeAction(
       termApply: Term.Apply,
       indentation: String
   ): Option[l.CodeAction] = {
-    val (forElements, maybeYieldTerm, _) = {
-      extractChainedForYield(
-        None,
-        None,
-        List.empty,
-        termApply,
-        Set.empty
-      )
+
+    def findTopMostApply(
+        currentTermApply: Term.Apply,
+        lastValidTermApply: Option[Term.Apply]
+    ): Option[Term.Apply] = {
+
+      currentTermApply.fun match {
+        case term if term.isNot[Term.Select] => lastValidTermApply
+        case termSelect: Term.Select
+            if termSelect.name.value != "map" && termSelect.name.value != "flatMap" &&
+              termSelect.name.value != "filter" && termSelect.name.value != "withFilter" && termSelect.name.value != "filterNot" =>
+          lastValidTermApply
+        case _: Term.Select =>
+          if (
+            !currentTermApply.parent.exists(parent =>
+              parent.is[Term.Select] && parent.parent.exists(_.is[Term.Apply])
+            )
+          ) {
+            Some(currentTermApply)
+          } else {
+            val result = Some(currentTermApply)
+            val grandParentApply =
+              currentTermApply.parent.get.parent.get.asInstanceOf[Term.Apply]
+
+            pprint.log("grandParentApply is \n" + grandParentApply)
+            findTopMostApply(grandParentApply, result)
+          }
+      }
     }
 
-    if (forElements.nonEmpty) {
-      maybeYieldTerm.map { yieldTerm =>
-        constructCodeAction(
-          forElements,
-          yieldTerm,
-          indentation,
-          path,
-          termApply.pos.toLSP.getStart,
-          termApply.pos.toLSP.getEnd
+    findTopMostApply(termApply, None).flatMap { topMostApply =>
+      val (forElements, maybeYieldTerm, _) =
+        extractChainedForYield(
+          None,
+          None,
+          List.empty,
+          topMostApply,
+          Set.empty
         )
-      }
-    } else None
+
+      if (forElements.nonEmpty) {
+        maybeYieldTerm.map { yieldTerm =>
+          constructCodeAction(
+            forElements,
+            yieldTerm,
+            indentation,
+            path,
+            topMostApply.pos.toLSP.getStart,
+            topMostApply.pos.toLSP.getEnd
+          )
+        }
+      } else None
+    }
 
   }
 
@@ -169,9 +200,9 @@ class FlatMapToForComprehensionCodeAction(
 
       case Term.ApplyUsing(fun, args) if allowedToGetInsideApply =>
         val (newFun, funReplacementTimes) =
-          replacePlaceHolder(fun, newName, false) // TODO false??
+          replacePlaceHolder(fun, newName, allowedToGetInsideApply)
         val (newArgs, argsReplacementTimes) =
-          args.map(replacePlaceHolder(_, newName, false)).unzip // TODO false??
+          args.map(replacePlaceHolder(_, newName, false)).unzip
 
         val replacementTimes =
           argsReplacementTimes.fold(funReplacementTimes)((result, newElem) =>
