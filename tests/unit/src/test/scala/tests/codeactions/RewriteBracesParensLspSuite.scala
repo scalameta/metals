@@ -2,7 +2,6 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
-import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
@@ -30,15 +29,15 @@ class RewriteBracesParensLspSuite
     "to-braces-2",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map ( a => <<>>a )
+       |  List(1,2).foreach ( a => <<>>a )
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+    s"""|${RewriteBracesParensCodeAction.toBraces("foreach")}
         |${ConvertToNamedArguments.title("List(1,2).map")}
         |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { a => a }
+       |  List(1,2).foreach { a => a }
        |}
        |""".stripMargin
   )
@@ -47,17 +46,17 @@ class RewriteBracesParensLspSuite
     "to-braces-3",
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map(_ ma<<>>tch {
+       |  x.foreach(_ ma<<>>tch {
        |    case 1 => 0
        |    case _ => 1
        |  })
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
-        |${ConvertToNamedArguments.title("x.map")}""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("foreach")}
+        |${ConvertToNamedArguments.title("x.foreach")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map{_ match {
+       |  x.foreach{_ match {
        |    case 1 => 0
        |    case _ => 1
        |  }}
@@ -85,14 +84,13 @@ class RewriteBracesParensLspSuite
     "to-parens-2",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { a => <<>>a }
+       |  List(1,2).foreach { a => <<>>a }
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toParens("map")}
-        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
+    RewriteBracesParensCodeAction.toParens("foreach"),
     """|object Main {
        |  var x = 0
-       |  List(1,2).map ( a => a )
+       |  List(1,2).foreach ( a => a )
        |}
        |""".stripMargin
   )
@@ -101,17 +99,17 @@ class RewriteBracesParensLspSuite
     "to-parens-3",
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map{_ ma<<>>tch {
+       |  x.foreach{_ ma<<>>tch {
        |    case 1 => 0
        |    case _ => 1
        |  }}
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens("map")}""".stripMargin,
+        |${RewriteBracesParensCodeAction.toParens("foreach")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map(_ match {
+       |  x.foreach(_ match {
        |    case 1 => 0
        |    case _ => 1
        |  })
@@ -120,28 +118,14 @@ class RewriteBracesParensLspSuite
     selectedActionIndex = 1
   )
 
-  check(
+  checkNoAction(
     "to-parens-noop",
     """|object Main {
        |  var x = 0
        |
-       |  List(1,2).map { a =>
+       |  List(1,2).foreach { a =>
        |    println(a)
        |    <<>>a 
-       |  }
-       |}
-       |""".stripMargin,
-    s"${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}",
-    """|object Main {
-       |  var x = 0
-       |
-       |  {
-       |   for {
-       |     a <- List(1, 2)
-       |   }  yield {
-       |     println(a)
-       |         a
-       |   }
        |  }
        |}
        |""".stripMargin
