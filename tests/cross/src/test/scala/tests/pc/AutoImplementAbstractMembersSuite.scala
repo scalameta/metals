@@ -12,9 +12,6 @@ import tests.BaseCodeActionSuite
 
 class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   checkEdit(
     "classdef",
     """|package a
@@ -78,7 +75,27 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package a
+           |
+           |object A {
+           |  trait Base {
+           |    def foo(x: Int): Int
+           |    def bar(x: String): String
+           |  }
+           |  class Concrete extends Base {
+           |
+           |
+           |    override def foo(x: Int): Int = ???
+           |
+           |    def bar(x: String): String = ???
+           |
+           |  }
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -291,7 +308,24 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|abstract class Mutable {
+           |  def foo: scala.collection.mutable.Set[Int]
+           |  def bar: scala.collection.immutable.Set[Int]
+           |}
+           |object Main {
+           |  new Mutable {
+           |
+           |    override def foo: collection.mutable.Set[Int] = ???
+           |
+           |    override def bar: Set[Int] = ???
+           |
+           |  }
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -342,7 +376,19 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override def foo: ju.List[Int] = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|abstract class JUtil {
+           |  def foo: java.util.List[Int]
+           |}
+           |class Main extends JUtil {
+           |
+           |  override def foo: java.util.List[Int] = ???
+           |
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -368,7 +414,21 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  val java = 42
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package jutil
+           |abstract class JUtil {
+           |  def foo: java.util.List[Int]
+           |}
+           |class Main extends JUtil {
+           |
+           |  override def foo: java.util.List[Int] = ???
+           |
+           |  val java = 42
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -735,17 +795,116 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "selftype-arrow",
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class <<Concrete>> extends Base { // > reference
+       |    self =>
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class Concrete extends Base { // > reference
+       |    self =>
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "braceless-basic".tag(IgnoreScala2),
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class <<Concrete>> extends Base:
+       |    def foo(x: Int): Int = x
+       |
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class Concrete extends Base:
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |    def foo(x: Int): Int = x
+       |
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "braceless-selftype".tag(IgnoreScala2),
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class <<Concrete>> extends Base:
+       |    def foo(x: Int): Int = x
+       |
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |
+       |  class Concrete extends Base:
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |    def foo(x: Int): Int = x
+       |
+       |}
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
-      expected: String
+      expected: String,
+      compat: Map[String, String] = Map.empty
   ): Unit =
     test(name) {
       val edits = getAutoImplement(original)
       if (edits.isEmpty) fail("obtained no edits")
       val (code, _, _) = params(original)
       val obtained = TextEdits.applyEdits(code, edits)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
     }
 
   def getAutoImplement(

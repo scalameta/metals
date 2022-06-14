@@ -271,6 +271,30 @@ class Scala3CodeActionLspSuite
     fileName = "Foo.scala"
   )
 
+  check(
+    // it should be a syntax error
+    "implement-all-braceless-noaction",
+    """|package a
+       |
+       |object A:
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  class <<Concrete>> extends Base:
+       |""".stripMargin,
+    "",
+    """|package a
+       |
+       |object A:
+       |  trait Base:
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  class Concrete extends Base:
+       |""".stripMargin,
+    expectError = true,
+    expectNoDiagnostics = false
+  )
+
   def checkExtractedMember(
       name: TestOptions,
       input: String,
