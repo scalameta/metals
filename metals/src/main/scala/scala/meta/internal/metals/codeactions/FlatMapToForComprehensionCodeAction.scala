@@ -109,38 +109,38 @@ class FlatMapToForComprehensionCodeAction(
     codeAction
   }
 
+  private def findTopMostApply(
+      currentTermApply: Term.Apply,
+      lastValidTermApply: Option[Term.Apply]
+  ): Option[Term.Apply] = {
+
+    currentTermApply.fun match {
+      case term if term.isNot[Term.Select] => lastValidTermApply
+      case termSelect: Term.Select
+          if termSelect.name.value != "map" && termSelect.name.value != "flatMap" &&
+            termSelect.name.value != "filter" && termSelect.name.value != "withFilter" && termSelect.name.value != "filterNot" =>
+        lastValidTermApply
+      case _: Term.Select =>
+        if (
+          !currentTermApply.parent.exists(parent =>
+            parent.is[Term.Select] && parent.parent.exists(_.is[Term.Apply])
+          )
+        ) {
+          Some(currentTermApply)
+        } else {
+          val result = Some(currentTermApply)
+          val grandParentApply =
+            currentTermApply.parent.get.parent.get.asInstanceOf[Term.Apply]
+          findTopMostApply(grandParentApply, result)
+        }
+    }
+  }
+
   private def codeActionWithApply(
       path: AbsolutePath,
       termApply: Term.Apply,
       indentation: String
   ): Option[l.CodeAction] = {
-
-    def findTopMostApply(
-        currentTermApply: Term.Apply,
-        lastValidTermApply: Option[Term.Apply]
-    ): Option[Term.Apply] = {
-
-      currentTermApply.fun match {
-        case term if term.isNot[Term.Select] => lastValidTermApply
-        case termSelect: Term.Select
-            if termSelect.name.value != "map" && termSelect.name.value != "flatMap" &&
-              termSelect.name.value != "filter" && termSelect.name.value != "withFilter" && termSelect.name.value != "filterNot" =>
-          lastValidTermApply
-        case _: Term.Select =>
-          if (
-            !currentTermApply.parent.exists(parent =>
-              parent.is[Term.Select] && parent.parent.exists(_.is[Term.Apply])
-            )
-          ) {
-            Some(currentTermApply)
-          } else {
-            val result = Some(currentTermApply)
-            val grandParentApply =
-              currentTermApply.parent.get.parent.get.asInstanceOf[Term.Apply]
-            findTopMostApply(grandParentApply, result)
-          }
-      }
-    }
 
     findTopMostApply(termApply, None).flatMap { topMostApply =>
       val nameGenerator = MetalsNames(topMostApply, "generatedByMetals")
