@@ -19,9 +19,9 @@ class FlatMapToForComprehensionSuite
     """|object A {
        |    val res3 = {
        |         for {
-       |           generatedByMetals <- List(1, 2, 3)
+       |           generatedByMetals0 <- List(1, 2, 3)
        |         }  yield {
-       |           10 + generatedByMetals
+       |           10 + generatedByMetals0
        |         }
        |        }
        |}
@@ -77,31 +77,31 @@ class FlatMapToForComprehensionSuite
        |
        |    val res3 = {
        |         for {
-       |           generatedByMetals12 <- list
-       |           a = 10.+(generatedByMetals12)
-       |           generatedByMetals11 <- {
+       |           generatedByMetals13 <- list
+       |           a = 10.+(generatedByMetals13)
+       |           generatedByMetals12 <- {
        |             val m = 6
        |             Some(a + 1).map(b => b + 3 + 4)
        |           }
-       |           if check(generatedByMetals11)
-       |           generatedByMetals10 = generatedByMetals11
+       |           if check(generatedByMetals12)
+       |           generatedByMetals11 = generatedByMetals12
        |           if !true
-       |           generatedByMetals9 = generatedByMetals10
+       |           generatedByMetals10 = generatedByMetals11
        |           c = 7
-       |           generatedByMetals8 = c - 1
-       |           d = 5 + double(generatedByMetals8, 7).toFloat.toInt / 8 + 6
+       |           generatedByMetals9 = c - 1
+       |           d = 5 + double(generatedByMetals9, 7).toFloat.toInt / 8 + 6
        |           if d > 1
-       |           generatedByMetals7 = d
-       |           generatedByMetals6 = double(generatedByMetals7, 5)
-       |           generatedByMetals5 = curried(6)(generatedByMetals6)
-       |           generatedByMetals4 = curried(generatedByMetals5)(9)
-       |           generatedByMetals3 = curried(3)(generatedByMetals4)
-       |           generatedByMetals2 = double(generatedByMetals3, 4).toFloat.toDouble
-       |           generatedByMetals1 = generatedByMetals2.toInt.compare(3)
-       |           generatedByMetals0 = generatedByMetals1 > 2
-       |           generatedByMetals = !negate(generatedByMetals0)
+       |           generatedByMetals8 = d
+       |           generatedByMetals7 = double(generatedByMetals8, 5)
+       |           generatedByMetals6 = curried(6)(generatedByMetals7)
+       |           generatedByMetals5 = curried(generatedByMetals6)(9)
+       |           generatedByMetals4 = curried(3)(generatedByMetals5)
+       |           generatedByMetals3 = double(generatedByMetals4, 4).toFloat.toDouble
+       |           generatedByMetals2 = generatedByMetals3.toInt.compare(3)
+       |           generatedByMetals1 = generatedByMetals2 > 2
+       |           generatedByMetals0 = !negate(generatedByMetals1)
        |         }  yield {
-       |           true && !negate(generatedByMetals) && false
+       |           true && !negate(generatedByMetals0) && false
        |         }
        |        }
        |
@@ -147,24 +147,24 @@ class FlatMapToForComprehensionSuite
        |    val res3 = {
        |         for {
        |           a <- list
-       |           generatedByMetals5 <- {
+       |           generatedByMetals6 <- {
        |             val m = 6
        |             Some(a + 1).map(b => b + 3 + 4)
        |           }
-       |           if check(generatedByMetals5)
-       |           generatedByMetals4 = generatedByMetals5
+       |           if check(generatedByMetals6)
+       |           generatedByMetals5 = generatedByMetals6
        |           if !true
-       |           generatedByMetals3 = generatedByMetals4
+       |           generatedByMetals4 = generatedByMetals5
        |           c = 7
-       |           generatedByMetals2 = c - 1
-       |           d = double(generatedByMetals2, 4).toFloat.toInt
+       |           generatedByMetals3 = c - 1
+       |           d = double(generatedByMetals3, 4).toFloat.toInt
        |           if d > 1
-       |           generatedByMetals1 = d
-       |           generatedByMetals0 = 5 + double(generatedByMetals1, 7).toFloat.toInt / 8 + 6
-       |           m = generatedByMetals0.toInt.compare(3)
-       |           generatedByMetals <- Some(m * 3)
+       |           generatedByMetals2 = d
+       |           generatedByMetals1 = 5 + double(generatedByMetals2, 7).toFloat.toInt / 8 + 6
+       |           m = generatedByMetals1.toInt.compare(3)
+       |           generatedByMetals0 <- Some(m * 3)
        |         }  yield {
-       |           generatedByMetals
+       |           generatedByMetals0
        |         }
        |        }
        |
@@ -185,8 +185,9 @@ class FlatMapToForComprehensionSuite
 //    """|object A{
 //       |def multiply(a: Int, b: Int) = a * b
 //       |val res = List(1, 2, 3).map{multiply(_, _)}
-//       |}""".stripMargin,
-//    expectError = true
+//       |}
+//       |""".stripMargin,
+//      expectError = true
 //  )
   // expectError = true did not cause the test to pass. the error is:
 //  -a/src/main/scala/a/A.scala:3:29: error: type mismatch;

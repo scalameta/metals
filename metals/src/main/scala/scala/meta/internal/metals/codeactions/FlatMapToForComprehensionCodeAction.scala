@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Enumerator
-import scala.meta.Name
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
@@ -138,21 +137,20 @@ class FlatMapToForComprehensionCodeAction(
             val result = Some(currentTermApply)
             val grandParentApply =
               currentTermApply.parent.get.parent.get.asInstanceOf[Term.Apply]
-
-            pprint.log("grandParentApply is \n" + grandParentApply)
             findTopMostApply(grandParentApply, result)
           }
       }
     }
 
     findTopMostApply(termApply, None).flatMap { topMostApply =>
-      val (forElements, maybeYieldTerm, _) =
+      val nameGenerator = MetalsNames(topMostApply, "generatedByMetals")
+      val (forElements, maybeYieldTerm) =
         extractChainedForYield(
           None,
           None,
           List.empty,
           topMostApply,
-          Set.empty
+          nameGenerator
         )
 
       if (forElements.nonEmpty) {
@@ -242,10 +240,10 @@ class FlatMapToForComprehensionCodeAction(
 
   private def replacePlaceHolderInTermWithNewName(
       term: Term,
-      generatedByMetalsValues: Set[String]
-  ): (Option[(String, Term)], Set[String]) = {
-    val (newName, generatedValues) =
-      createNewName(term, generatedByMetalsValues)
+      nameGenerator: MetalsNames
+  ): Option[(String, Term)] = {
+    val newName =
+      nameGenerator.createNewName()
 
     val (newTerm, replacementTimes) =
       replacePlaceHolder(term, Term.Name(newName), true)
@@ -253,50 +251,46 @@ class FlatMapToForComprehensionCodeAction(
       if (replacementTimes == 1) Some((newName, newTerm))
       else if (replacementTimes == 0)
         Some((newName), Term.Apply(newTerm, List(Term.Name(newName))))
-      else None,
-      generatedValues
+      else None
     )
   }
 
   private def processValueNameAndNextQual(
       tree: Tree,
-      generatedByMetalsValues: Set[String]
-  ): (Option[(String, Term)], Set[String]) = {
+      nameGenerator: MetalsNames
+  ): Option[(String, Term)] = {
     tree match {
       case Term.Function(List(param), term) if param.name.value.isEmpty =>
-        val (newName, generatedValues) =
-          createNewName(tree, generatedByMetalsValues)
-        (Some((newName, term)), generatedValues)
+        val newName =
+          nameGenerator.createNewName()
+        Some((newName, term))
       case Term.Function(List(param), term) =>
-        (Some((param.name.value, term)), generatedByMetalsValues)
+        (Some((param.name.value, term)))
 
       case Term.AnonymousFunction(term) =>
-        replacePlaceHolderInTermWithNewName(term, generatedByMetalsValues)
+        replacePlaceHolderInTermWithNewName(term, nameGenerator)
       case term: Term
           if term.is[Term.Apply] || term.is[Term.Eta] || term
             .is[Term.ApplyUnary] || term.is[Term.ApplyUsing] || term
             .is[Term.ApplyInfix] || term.is[Term.Name] || term
             .is[Term.Select] =>
-        replacePlaceHolderInTermWithNewName(term, generatedByMetalsValues)
+        replacePlaceHolderInTermWithNewName(term, nameGenerator)
       case Term.Block(List(function)) =>
-        processValueNameAndNextQual(function, generatedByMetalsValues)
+        processValueNameAndNextQual(function, nameGenerator)
       case _ =>
-        (
-          None,
-          generatedByMetalsValues
-        )
+        None
+
     }
   }
 
   private def obtainNextYieldAndElemsForMap(
-      newMetalsNames: Set[String],
+      nameGenerator: MetalsNames,
       perhapsLastName: Option[String],
       shouldFlat: Boolean,
       existingForElements: List[Enumerator],
       currentYieldTerm: Option[Term],
-      termApply: Term.Apply,
       nextQual: Term
-  ): (List[Enumerator], Option[Term], Set[String]) = {
+  ): (List[Enumerator], Option[Term]) = {
     perhapsLastName match {
       case Some(lastName) =>
         (
@@ -312,13 +306,12 @@ class FlatMapToForComprehensionCodeAction(
                 nextQual
               )
           ) ++ existingForElements,
-          currentYieldTerm,
-          newMetalsNames
+          currentYieldTerm
         )
       case None =>
         if (shouldFlat) {
-          val (lastGeneratedName, newGeneratedByMetalsVals) =
-            createNewName(termApply, newMetalsNames)
+          val lastGeneratedName =
+            nameGenerator.createNewName()
           val newEnumerations = List(
             Enumerator.Generator(
               Pat.Var.apply(Term.Name.apply(lastGeneratedName)),
@@ -326,18 +319,18 @@ class FlatMapToForComprehensionCodeAction(
             )
           )
           val newYield = Term.Name.apply(lastGeneratedName)
-          (newEnumerations, Some(newYield), newGeneratedByMetalsVals)
-        } else (existingForElements, Some(nextQual), newMetalsNames)
+          (newEnumerations, Some(newYield))
+        } else (existingForElements, Some(nextQual))
     }
   }
 
   private def processMap(
       elems: List[Enumerator],
       maybeYieldTerm: Option[Term],
-      updatedGenByMetalsVals: Set[String],
+      nameGenerator: MetalsNames,
       valueName: String,
       termSelectQual: Term
-  ): (List[Enumerator], Option[Term], Set[String]) = {
+  ): (List[Enumerator], Option[Term]) = {
 
     termSelectQual match {
       case qualTermApply: Term.Apply =>
@@ -346,7 +339,7 @@ class FlatMapToForComprehensionCodeAction(
           maybeYieldTerm,
           elems,
           qualTermApply,
-          updatedGenByMetalsVals
+          nameGenerator
         )
       case otherQual =>
         (
@@ -355,8 +348,7 @@ class FlatMapToForComprehensionCodeAction(
             otherQual
           )
             +: elems,
-          maybeYieldTerm,
-          updatedGenByMetalsVals
+          maybeYieldTerm
         )
 
     }
@@ -365,14 +357,13 @@ class FlatMapToForComprehensionCodeAction(
 
   private def processFilter(
       perhapsValueNameAndNextQual: Option[(String, Term)],
-      newMetalsNames: Set[String],
-      generatedByMetalsNames: Set[String],
+      nameGenerator: MetalsNames,
       perhapsLastName: Option[String],
       isFilter: Boolean,
       existingForElements: List[Enumerator],
       currentYieldTerm: Option[Term],
       termSelectQual: Term
-  ): (List[Enumerator], Option[Term], Set[String]) = {
+  ): (List[Enumerator], Option[Term]) = {
 
     val result = for {
       valueName <- perhapsValueNameAndNextQual.map(_._1)
@@ -403,7 +394,7 @@ class FlatMapToForComprehensionCodeAction(
                 Term.ApplyUnary.apply(Term.Name.apply("!"), nextCondition)
             ) +: elems,
             qualTermApply,
-            newMetalsNames
+            nameGenerator
           )
         case otherQual =>
           (
@@ -416,12 +407,11 @@ class FlatMapToForComprehensionCodeAction(
                 else
                   Term.ApplyUnary.apply(Term.Name.apply("!"), nextCondition)
               ) +: elems,
-            maybeYieldTerm,
-            newMetalsNames
+            maybeYieldTerm
           )
       }
     }
-    result.getOrElse(List.empty, currentYieldTerm, generatedByMetalsNames)
+    result.getOrElse(List.empty, currentYieldTerm)
   }
 
   private def extractChainedForYield(
@@ -429,12 +419,12 @@ class FlatMapToForComprehensionCodeAction(
       currentYieldTerm: Option[Term],
       existingForElements: List[Enumerator],
       termApply: Term.Apply,
-      generatedByMetalsValues: Set[String]
-  ): (List[Enumerator], Option[Term], Set[String]) = {
-    val (perhapsValueNameAndNextQual, newMetalsNames) =
+      nameGenerator: MetalsNames
+  ): (List[Enumerator], Option[Term]) = {
+    val perhapsValueNameAndNextQual =
       processValueNameAndNextQual(
         termApply.args.head,
-        generatedByMetalsValues
+        nameGenerator
       )
 
     termApply.fun match {
@@ -446,26 +436,25 @@ class FlatMapToForComprehensionCodeAction(
           valueName <- perhapsValueNameAndNextQual.map(_._1)
           nextQual <- perhapsValueNameAndNextQual.map(_._2)
         } yield {
-          val (elems, maybeYieldTerm, updatedGenByMetalsVals) =
+          val (elems, maybeYieldTerm) =
             obtainNextYieldAndElemsForMap(
-              newMetalsNames,
+              nameGenerator,
               perhapsLastName,
               shouldFlat,
               existingForElements,
               currentYieldTerm,
-              termApply,
               nextQual
             )
 
           processMap(
             elems,
             maybeYieldTerm,
-            updatedGenByMetalsVals,
+            nameGenerator,
             valueName,
             termSelect.qual
           )
         }
-        result.getOrElse(List.empty, None, generatedByMetalsValues)
+        result.getOrElse(List.empty, None)
 
       case termSelect: Term.Select
           if termSelect.name.value == "filter" || termSelect.name.value == "filterNot" ||
@@ -474,8 +463,7 @@ class FlatMapToForComprehensionCodeAction(
           termSelect.name.value == "filter" || termSelect.name.value == "withFilter"
         processFilter(
           perhapsValueNameAndNextQual,
-          newMetalsNames,
-          generatedByMetalsValues,
+          nameGenerator,
           perhapsLastName,
           isFilter,
           existingForElements,
@@ -492,47 +480,11 @@ class FlatMapToForComprehensionCodeAction(
                 termApply
               )
                 +: existingForElements,
-              currentYieldTerm,
-              generatedByMetalsValues
+              currentYieldTerm
             )
           case None =>
-            (existingForElements, Some(termApply), generatedByMetalsValues)
+            (existingForElements, Some(termApply))
         }
-    }
-  }
-
-  private def createNewName(
-      tree: Tree,
-      generatedByMetalsValues: Set[String]
-  ): (String, Set[String]) = {
-
-    def findTopMostParent: Tree = {
-      var initialParent = tree
-      while (initialParent.parent.isDefined)
-        initialParent = initialParent.parent.get
-
-      initialParent
-    }
-
-    // We don't want to use any name that is already being used in the scope
-    def loop(t: Tree): List[String] = {
-      t.children.flatMap {
-        case n: Name => List(n.toString())
-        case child => loop(child)
-      }
-    }
-
-    val newValuePrefix = "generatedByMetals"
-    val names = loop(findTopMostParent).toSet ++ generatedByMetalsValues
-
-    if (!names(newValuePrefix))
-      (newValuePrefix, generatedByMetalsValues + newValuePrefix)
-    else {
-      var i = 0
-      while (names(s"$newValuePrefix$i"))
-        i += 1
-      val result = s"$newValuePrefix$i"
-      (result, generatedByMetalsValues + result)
     }
   }
 
