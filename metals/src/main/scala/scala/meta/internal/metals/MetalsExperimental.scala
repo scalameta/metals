@@ -5,7 +5,7 @@ package scala.meta.internal.metals
  * capabilities" in the initialize response.
  */
 
-object MetalsExperimental {
-  // A workaround for https://github.com/microsoft/language-server-protocol/issues/377 until it is resolved
-  val rangeHoverProvider: java.lang.Boolean = true
-}
+case class MetalsExperimental(
+    // A workaround for https://github.com/microsoft/language-server-protocol/issues/377 until it is resolved
+    val rangeHoverProvider: Boolean = true
+)

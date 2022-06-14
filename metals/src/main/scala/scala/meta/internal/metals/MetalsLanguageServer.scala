@@ -89,6 +89,7 @@ import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
@@ -891,8 +892,10 @@ class MetalsLanguageServer(
 
         capabilities.setTextDocumentSync(textDocumentSyncOptions)
 
-        capabilities.setExperimental(MetalsExperimental)
-
+        val gson = new Gson
+        val data =
+          gson.toJsonTree(MetalsExperimental())
+        capabilities.setExperimental(data)
         val serverInfo = new ServerInfo("Metals", BuildInfo.metalsVersion)
         new InitializeResult(capabilities, serverInfo)
       })

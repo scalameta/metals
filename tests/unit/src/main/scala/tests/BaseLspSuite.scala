@@ -26,6 +26,7 @@ import scala.meta.io.AbsolutePath
 import munit.Ignore
 import munit.Location
 import munit.TestOptions
+import org.eclipse.lsp4j.InitializeResult
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -70,7 +71,10 @@ abstract class BaseLspSuite(
     FileLayout.fromString(layout, workspace)
   }
 
-  def initialize(layout: String, expectError: Boolean = false): Future[Unit] = {
+  def initialize(
+      layout: String,
+      expectError: Boolean = false
+  ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
     initializer.initialize(workspace, server, client, layout, expectError)
