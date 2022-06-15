@@ -92,9 +92,9 @@ object V {
 
   // Scala 3
   def nonDeprecatedScala3Versions =
-    Seq(nextScala3RC, scala3, "3.1.1", "3.1.0", "3.0.2")
+    Seq(nextScala3RC, scala3, "3.1.1", "3.1.0")
   def deprecatedScala3Versions =
-    Seq("3.1.3-RC4", "3.1.3-RC3", "3.1.3-RC2", "3.0.1", "3.0.0")
+    Seq("3.1.3-RC4", "3.1.3-RC3", "3.1.3-RC2", "3.0.2", "3.0.1", "3.0.0")
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
 
   lazy val nightlyScala3DottyVersions = {
