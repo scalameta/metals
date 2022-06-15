@@ -68,7 +68,7 @@ object MetalsLogger {
   case class MetalsFilter(id: String = "MetalsFilter") extends LogModifier {
     override def withId(id: String): LogModifier = copy(id = id)
     override def priority: Priority = Priority.Normal
-    override def apply[M](record: LogRecord[M]): Option[LogRecord[M]] = {
+    override def apply(record: LogRecord): Option[LogRecord] = {
       if (
         record.className.startsWith(
           "org.flywaydb"
@@ -100,7 +100,7 @@ object MetalsLogger {
 
   def silent: LoggerSupport[Unit] =
     new LoggerSupport[Unit] {
-      override def log[M](record: LogRecord[M]): Unit = ()
+      override def log(record: LogRecord): Unit = ()
     }
   def default: LoggerSupport[Unit] = scribe.Logger.root
   def silentInTests: LoggerSupport[Unit] =
