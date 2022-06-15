@@ -14,8 +14,8 @@ import scribe.writer.Writer
  */
 object LanguageClientLogger extends Writer {
   var languageClient: Option[MetalsLanguageClient] = None
-  override def write[M](
-      record: LogRecord[M],
+  override def write(
+      record: LogRecord,
       output: LogOutput,
       outputFormat: OutputFormat
   ): Unit = {
