@@ -1,8 +1,11 @@
 package scala.meta.internal.pc
 package completions
 
+import java.nio.file.Paths
+
 import scala.collection.mutable
 
+import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.IdentifierComparator
@@ -164,6 +167,12 @@ class Completions(
       pos: SourcePosition,
       completionPos: CompletionPos
   ): (List[CompletionValue], Boolean) =
+    lazy val filename = Paths
+      .get(pos.source.path)
+      .getFileName()
+      .toString()
+      .stripSuffix(".scala")
+
     path match
       // class FooImpl extends Foo:
       //   def x|
@@ -223,6 +232,12 @@ class Completions(
         )
         (values, false)
 
+      // class Fo@@
+      case (td: TypeDef) :: _
+          if Fuzzy.matches(td.symbol.name.decoded, filename) =>
+        val values = FilenameCompletions.contribute(filename, td)
+        (values, true)
+
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
       case Literal(Constant(null)) :: tl =>
@@ -232,6 +247,8 @@ class Completions(
         val args = NamedArgCompletions.contribute(pos, path)
         val keywords = KeywordsCompletions.contribute(path, completionPos)
         (args ++ keywords, false)
+    end match
+  end advancedCompletions
 
   private def description(sym: Symbol): String =
     if sym.isType then sym.showFullName
