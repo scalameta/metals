@@ -44,7 +44,7 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     val range = params.getRange()
 
     val maybeApply = for {
-      term <- trees.findLastEnclosingAt[Term.Apply](path, range.getStart())
+      term <- trees.findLastEnclosingAt[Term.Apply](path, range.getStart(), term => !term.fun.pos.encloses(range))
       apply <- firstApplyWithUnnamedArgs(Some(term))
     } yield apply
 

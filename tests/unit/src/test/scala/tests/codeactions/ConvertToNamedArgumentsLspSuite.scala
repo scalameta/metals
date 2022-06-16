@@ -160,4 +160,13 @@ class ConvertToNamedArgumentsLspSuite
        |}""".stripMargin,
        filterAction = filterAction
   )
+
+  checkNoAction(
+    "cursor-outside-func",
+    """|object Something {
+       |  import scala.concurrent.Future
+       |  F<<u>>ture.successful(1)
+       |}""".stripMargin,
+    filterAction = filterAction
+  )
 }
