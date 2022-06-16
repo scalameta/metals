@@ -11,8 +11,7 @@ import tests.BaseLspSuite
 import org.eclipse.lsp4j.CodeAction
 
 abstract class BaseCodeActionLspSuite(
-    suiteName: String,
-    filterAction: CodeAction => Boolean = _ => true
+    suiteName: String
 ) extends BaseLspSuite(suiteName) {
 
   protected val scalaVersion: String = V.scala213
@@ -21,7 +20,8 @@ abstract class BaseCodeActionLspSuite(
       name: TestOptions,
       input: String,
       scalafixConf: String = "",
-      scalacOptions: List[String] = Nil
+      scalacOptions: List[String] = Nil,
+      filterAction: CodeAction => Boolean = _ => true
   )(implicit loc: Location): Unit = {
     val fileContent = input.replace("<<", "").replace(">>", "")
     check(
@@ -30,7 +30,8 @@ abstract class BaseCodeActionLspSuite(
       "",
       fileContent,
       scalafixConf = scalafixConf,
-      scalacOptions = scalacOptions
+      scalacOptions = scalacOptions,
+      filterAction = filterAction
     )
   }
 
@@ -50,7 +51,8 @@ abstract class BaseCodeActionLspSuite(
       extraOperations: => Unit = (),
       fileName: String = "A.scala",
       changeFile: String => String = identity,
-      expectError: Boolean = false
+      expectError: Boolean = false,
+      filterAction: CodeAction => Boolean = _ => true
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)

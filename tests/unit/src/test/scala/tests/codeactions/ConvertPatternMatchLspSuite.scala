@@ -2,12 +2,14 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+import org.eclipse.lsp4j.CodeAction
 
 class ConvertPatternMatchLspSuite
     extends BaseCodeActionLspSuite(
-      "convertPatternMatch",
-      filterAction = _.getTitle() == PatternMatchRefactor.convertPatternMatch
+      "convertPatternMatch"
     ) {
+
+  val filterAction = { act: CodeAction => act.getTitle() == PatternMatchRefactor.convertPatternMatch }
 
   check(
     "with-placeholder",
@@ -79,7 +81,8 @@ class ConvertPatternMatchLspSuite
        |    case 3 => x = 3; Nil
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+       filterAction = filterAction
   )
 
   checkNoAction(
@@ -90,7 +93,8 @@ class ConvertPatternMatchLspSuite
        |    case 2 => 2
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+       filterAction = filterAction
   )
 
 }
