@@ -20,7 +20,7 @@ class FlatMapToForComprehensionSuite
        |    val res3 = {
        |         for {
        |           generatedByMetals0 <- List(1, 2, 3)
-       |         }  yield {
+       |         } yield {
        |           10 + generatedByMetals0
        |         }
        |        }
@@ -100,7 +100,7 @@ class FlatMapToForComprehensionSuite
        |           generatedByMetals2 = generatedByMetals3.toInt.compare(3)
        |           generatedByMetals1 = generatedByMetals2 > 2
        |           generatedByMetals0 = !negate(generatedByMetals1)
-       |         }  yield {
+       |         } yield {
        |           true && !negate(generatedByMetals0) && false
        |         }
        |        }
@@ -163,7 +163,7 @@ class FlatMapToForComprehensionSuite
        |           generatedByMetals1 = 5 + double(generatedByMetals2, 7).toFloat.toInt / 8 + 6
        |           m = generatedByMetals1.toInt.compare(3)
        |           generatedByMetals0 <- Some(m * 3)
-       |         }  yield {
+       |         } yield {
        |           generatedByMetals0
        |         }
        |        }

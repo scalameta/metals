@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.codeactions
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -49,6 +50,9 @@ class FlatMapToForComprehensionCodeAction(
       document <- buffers.get(path)
       termApply <- maybeTree
       termApplyArg <- termApply.args.headOption
+      // the termApply itself might be too outdented in the first line.
+      // the position of the arg which falls on the subsequent lines
+      // gives the right indentation
       indentation = getIndentForPos(termApplyArg.pos, document)
     } yield codeActionWithApply(
       path,
@@ -86,7 +90,7 @@ class FlatMapToForComprehensionCodeAction(
       s"""|{
           |$indentation for {
           |$indentedElems
-          |$indentation }  yield {
+          |$indentation } yield {
           |$yieldTermIndentedString
           |$indentation }
           |$indentation}""".stripMargin
@@ -109,7 +113,32 @@ class FlatMapToForComprehensionCodeAction(
     codeAction
   }
 
-  private def findTopMostApply(
+  /**
+   * This method traverses the apply chain, from where the cursor is,
+   *  to the outermost [[Term.Apply]] which has one of the functions of
+   *  `map`, `flatMap`, `filter`, `filterNot`, or `withFilter`
+   *  and returns that.
+   *
+   * As an example,
+   * {{{
+   * List(1, 2, 3)
+   *   .m<<>>ap(x => x)
+   *  .flatMap(Some(_))
+   *  .filter(_ > 3)
+   * }}}
+   * <p>Now when the cursor is on `map`, we want to start the conversion
+   * on `filter`` instead, which is the parentMost or `outerMost` apply.
+   * @param currentTermApply the termApply on which the cursor is
+   *                         when invoking the code action
+   * @param lastValidTermApply the last inner [[Term.Apply]] from the previous
+   *                           iteration which had one of the functions of
+   *                           `map`, `flatMap`, `filter`, `filterNot`, or `withFilter`
+   *                           in its [[Term.Select]]
+   * @return the `lastValidTermApply`` if the `currenTermApply` does not have
+   *         an interesting function. Otherwise, the currentTermApply.
+   */
+  @tailrec
+  private def findOuterMostApply(
       currentTermApply: Term.Apply,
       lastValidTermApply: Option[Term.Apply]
   ): Option[Term.Apply] = {
@@ -131,7 +160,7 @@ class FlatMapToForComprehensionCodeAction(
           val result = Some(currentTermApply)
           val grandParentApply =
             currentTermApply.parent.get.parent.get.asInstanceOf[Term.Apply]
-          findTopMostApply(grandParentApply, result)
+          findOuterMostApply(grandParentApply, result)
         }
     }
   }
@@ -142,14 +171,14 @@ class FlatMapToForComprehensionCodeAction(
       indentation: String
   ): Option[l.CodeAction] = {
 
-    findTopMostApply(termApply, None).flatMap { topMostApply =>
-      val nameGenerator = MetalsNames(topMostApply, "generatedByMetals")
+    findOuterMostApply(termApply, None).flatMap { outerMostApply =>
+      val nameGenerator = MetalsNames(outerMostApply, "generatedByMetals")
       val (forElements, maybeYieldTerm) =
         extractChainedForYield(
           None,
           None,
           List.empty,
-          topMostApply,
+          outerMostApply,
           nameGenerator
         )
 
@@ -160,8 +189,8 @@ class FlatMapToForComprehensionCodeAction(
             yieldTerm,
             indentation,
             path,
-            topMostApply.pos.toLSP.getStart,
-            topMostApply.pos.toLSP.getEnd
+            outerMostApply.pos.toLSP.getStart,
+            outerMostApply.pos.toLSP.getEnd
           )
         }
       } else None
@@ -283,44 +312,71 @@ class FlatMapToForComprehensionCodeAction(
     }
   }
 
+  /**
+   * connect what is passed as argument to map/flatMap
+   * to the param name from the potential previous iteration and
+   * conclude the yield term accordingly.
+   *
+   * @param nameGenerator the stateful mutable name generator object for
+   *                      creating a new Metals generated name in each call.
+   * @param perhapsLastName paramName from previous iteration
+   *                        in `list.map(x => x + 1).flatMap(b => Some(b - 1))`,
+   *                        if we are now processing `map`, it would be `b``
+   * @param shouldFlat is it map or flatMap
+   * @param existingForElements list of enumerators obtained from previous iterations
+   * @param maybeCurrentYieldTerm the yield term from previous iterations if they
+   *                              existed or `None``
+   * @param nextQual in `list.map(x => x + 1)`, it is `x + 1``
+   * @return (the list of deducted enumerators, maybe the deducted yield term)
+   */
   private def obtainNextYieldAndElemsForMap(
       nameGenerator: MetalsNames,
       perhapsLastName: Option[String],
       shouldFlat: Boolean,
       existingForElements: List[Enumerator],
-      currentYieldTerm: Option[Term],
+      maybeCurrentYieldTerm: Option[Term],
       nextQual: Term
   ): (List[Enumerator], Option[Term]) = {
     perhapsLastName match {
       case Some(lastName) =>
         (
           List(
-            if (shouldFlat)
-              Enumerator.Generator.apply(
-                Pat.Var.apply(Term.Name.apply(lastName)),
+            if (shouldFlat) { // when it is flatMap,
+              // do lastName <- nextQual
+              Enumerator.Generator(
+                Pat.Var(Term.Name(lastName)),
                 nextQual
               )
-            else
-              Enumerator.Val.apply(
-                Pat.Var.apply(Term.Name.apply(lastName)),
+            } else
+              Enumerator.Val( // when it is map
+                // it is lastName = nextQual
+                Pat.Var(Term.Name(lastName)),
                 nextQual
               )
           ) ++ existingForElements,
-          currentYieldTerm
+          maybeCurrentYieldTerm // there was an iteration before this one,
+          // so the yieldTerm comes from there
         )
-      case None =>
-        if (shouldFlat) {
+      case None => // there was no iteration before this one
+        // so it is list.map(x => x + 1)
+        if (shouldFlat) { // when it is list.flatMap(x => Some(x + 1))
+          // we have to generate a new parameter name, assign x + 1
+          // to it, as in generatedByMetals0 <- Some(x + 1) to flatten the result
           val lastGeneratedName =
             nameGenerator.createNewName()
           val newEnumerations = List(
             Enumerator.Generator(
-              Pat.Var.apply(Term.Name.apply(lastGeneratedName)),
+              Pat.Var(Term.Name(lastGeneratedName)),
               nextQual
             )
           )
-          val newYield = Term.Name.apply(lastGeneratedName)
+          val newYield =
+            Term.Name(lastGeneratedName) // then this new paramName,
+          // generatedByMetals0, becomes the yield term.
           (newEnumerations, Some(newYield))
-        } else (existingForElements, Some(nextQual))
+        } else
+          (existingForElements, Some(nextQual)) // there is no flattening in
+      // list.map(x => x + 1) so we just have `x + 1` as the ultimate yield term
     }
   }
 
@@ -332,8 +388,9 @@ class FlatMapToForComprehensionCodeAction(
       termSelectQual: Term
   ): (List[Enumerator], Option[Term]) = {
 
-    termSelectQual match {
-      case qualTermApply: Term.Apply =>
+    termSelectQual match { // prepare the next iteration
+      case qualTermApply: Term.Apply => // the next termApply can potentially
+        // be interesting
         extractChainedForYield(
           Some(valueName),
           maybeYieldTerm,
@@ -341,18 +398,18 @@ class FlatMapToForComprehensionCodeAction(
           qualTermApply,
           nameGenerator
         )
-      case otherQual =>
+      case otherQual => // there is no further termApply to process,
+        // so we just assign what is left to the current valueName, as in
+        // x <- list and prepend it to the list of other enumerators
         (
           Enumerator.Generator(
-            Pat.Var.apply(Term.Name.apply(valueName)),
+            Pat.Var(Term.Name(valueName)),
             otherQual
           )
-            +: elems,
-          maybeYieldTerm
+            :: elems,
+          maybeYieldTerm // return the already deducted yield term
         )
-
     }
-
   }
 
   private def processFilter(
@@ -366,54 +423,114 @@ class FlatMapToForComprehensionCodeAction(
   ): (List[Enumerator], Option[Term]) = {
 
     val result = for {
-      valueName <- perhapsValueNameAndNextQual.map(_._1)
-      nextCondition <- perhapsValueNameAndNextQual.map(_._2)
+      valueName <- perhapsValueNameAndNextQual.map(_._1) // s
+      nextCondition <- perhapsValueNameAndNextQual.map(_._2) // s + 1
     } yield {
       val (elems, maybeYieldTerm): (List[Enumerator], Option[Term]) =
         perhapsLastName match {
-          case Some(lastName) =>
+          case Some(lastName) => // there was an iteration before it.
             (
-              Enumerator.Val.apply(
-                Pat.Var.apply(Term.Name.apply(lastName)),
-                Term.Name.apply(valueName)
-              ) +: existingForElements,
+              Enumerator.Val(
+                Pat.Var(
+                  Term.Name(lastName)
+                ), // lastName gets paired with valueName
+                // so in List(1, 2, 3).filter( s => s > 1).map(x => x + 1)
+                // x is paired with s as in x = s
+                Term.Name(valueName)
+              ) :: existingForElements,
               currentYieldTerm
             )
           case None =>
-            (existingForElements, Some(Term.Name.apply(valueName)))
+            (existingForElements, Some(Term.Name(valueName)))
+          // there was no iteration before this one, so in
+          // List(1, 2, 3).filter( s => s > 1) we would finally have
+          // s as the ultimate yield
         }
 
-      termSelectQual match {
-        case qualTermApply: Term.Apply =>
+      termSelectQual match { // move to preparing the next iteration
+        case qualTermApply: Term.Apply => // we can potentially encounter
+          // an interesting function, so we enter the next iteration to see
           extractChainedForYield(
             Some(valueName),
             maybeYieldTerm,
-            Enumerator.Guard.apply(
+            Enumerator.Guard( // guard should come before x = s,
+              // hence it should be prepended
               if (isFilter) nextCondition
               else
-                Term.ApplyUnary.apply(Term.Name.apply("!"), nextCondition)
-            ) +: elems,
+                Term.ApplyUnary(Term.Name("!"), nextCondition)
+            ) :: elems,
             qualTermApply,
             nameGenerator
           )
-        case otherQual =>
-          (
+        case otherQual => // list
+          ( // we are at the top end of the chain with no longer interesting
+            // function to process as in list.filter(s => s > 1).map(x => x + 1)
+            // so just assign otherQual to s, as in s <- list
+            // and then add the guard after that, with
+            // all the previous enumerators such as x = s before it.
             Enumerator.Generator(
-              Pat.Var.apply(Term.Name.apply(valueName)),
+              Pat.Var(Term.Name(valueName)),
               otherQual
             )
-              +: Enumerator.Guard.apply(
+              :: Enumerator.Guard(
                 if (isFilter) nextCondition
                 else
-                  Term.ApplyUnary.apply(Term.Name.apply("!"), nextCondition)
-              ) +: elems,
+                  Term.ApplyUnary(Term.Name("!"), nextCondition)
+              ) :: elems,
             maybeYieldTerm
           )
       }
     }
-    result.getOrElse(List.empty, currentYieldTerm)
+    result.getOrElse(
+      List.empty,
+      currentYieldTerm
+    ) // when function passed to filter
+    // cannot be processed to give us a parameter name and a condition, we just return an
+    // empty list to avoid any further processing.
   }
 
+  /**
+   * This method traverses the chain of interesting applies from
+   * the outermost to the innermost one, prepending the relevant
+   * [[Enumerator]]s to the `existingForElements` in each iteration.
+   *
+   * the first thing it does is extracting a `paramName`, and `nextQual`
+   * from the function passed as the argument of termApply.
+   *
+   * So for example, in
+   * {{{
+   * List(1, 2, 3)
+   *    .map(x => x + 1)
+   *    .filter(s => s > 7)
+   * }}}
+   * <p>if it had traversed `filter` in the previous iteration, the value of
+   * `perhapseLastName` would be `s` which would be passed as argument when
+   * we are passing `map` as the termApply. Also, `s` itself would be the value
+   * of the so far extracted `maybeCurrentYieldTerm`, because of `filter`.
+   *
+   * <p>  then, entering in the current cycle, first `Some(x, x+1)` would get
+   * extracted as `perhapsValueNameAndNextQual`.
+   *
+   * Now because in the current iteration we are on `map`/`flatMap`, `s` as the
+   * param name of the last iteration is to be paired with `x + 1` as the
+   * next qual, and prepended to the list of `existingForElements`, while `x` is to be
+   * paired with either the whole qual value of the current [[Term.Select]], in this
+   * case `List(1, 2, 3)`, or it is to be paired with the qual extracted from the
+   * next iteration, in case, there is a `map`/`flatMap` before it.
+   *
+   * @param perhapsLastName the param name extracted from the termApply
+   *                        in the last iteration
+   * @param currentYieldTerm the so far extraxcted yield term from the previous iterations
+   * @param existingForElements
+   * @param termApply the termApply to be traveresed in this iteration
+   * @param nameGenerator a stateful mutable object which is used for creating
+   *                      non-overlapping
+   *                      names for the anonymous parameters/placeholders of
+   *                      the functions passed
+   *                      as arguments to the interesting methods.
+   * @return (the list of the so far extracted [[Enumerator]]s, maybe the
+   *         so far extracted yield term)
+   */
   private def extractChainedForYield(
       perhapsLastName: Option[String],
       currentYieldTerm: Option[Term],
@@ -471,18 +588,24 @@ class FlatMapToForComprehensionCodeAction(
           termSelect.qual
         )
 
-      case _ =>
+      case _ => // there is no interesting function in this termApply
         perhapsLastName match {
-          case Some(lastName) =>
+          case Some(
+                lastName
+              ) => // if there were iterations before it, pair lastName
+            // with this termApply
+            // the yieldTerm is the one constructed in the previous iterations,
+            // further down the chain
             (
               Enumerator.Generator(
-                Pat.Var.apply(Term.Name.apply(lastName)),
+                Pat.Var(Term.Name(lastName)),
                 termApply
               )
-                +: existingForElements,
+                :: existingForElements,
               currentYieldTerm
             )
-          case None =>
+          case None => // if this is the first iteration,
+            // just return the existingForElements and the termApply itself as yield
             (existingForElements, Some(termApply))
         }
     }
