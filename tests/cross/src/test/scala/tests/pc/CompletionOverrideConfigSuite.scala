@@ -8,8 +8,6 @@ import tests.BaseCompletionSuite
 
 class CompletionOverrideConfigSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
       _symbolPrefixes = Map(
@@ -66,7 +64,20 @@ class CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |class Main extends Package {
        |  def function: f.Function[Int,String] = ${0:???}
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> // space between Int, String
+        """|package b
+           |
+           |import java.util.{function => f}
+           |class Package {
+           |  def function: java.util.function.Function[Int, String]
+           |}
+           |class Main extends Package {
+           |  def function: f.Function[Int, String] = ${0:???}
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -82,6 +93,12 @@ class CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """🔼 numberAbstract: Intdef numberAbstract: Int
       |⏫ number: Intoverride def number: Int
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|⏫ def numberAbstract: Int
+           |⏫ def number: Int
+           |""".stripMargin
+    )
   )
 }

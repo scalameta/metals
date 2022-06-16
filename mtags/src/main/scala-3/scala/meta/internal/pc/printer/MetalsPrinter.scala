@@ -4,10 +4,12 @@ import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
+import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.core.Contexts.Context
@@ -398,11 +400,12 @@ object MetalsPrinter:
   def standard(
       indexed: IndexedContext,
       symbolSearch: SymbolSearch,
-      includeDefaultParam: IncludeDefaultParam
+      includeDefaultParam: IncludeDefaultParam,
+      renames: Map[Symbol, String] = Map.empty
   ): MetalsPrinter =
     import indexed.ctx
     MetalsPrinter(
-      new ShortenedNames(indexed),
+      new ShortenedNames(indexed, renames),
       DotcPrinter.Std(),
       symbolSearch,
       includeDefaultParam

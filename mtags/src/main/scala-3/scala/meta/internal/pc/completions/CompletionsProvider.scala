@@ -281,7 +281,7 @@ class CompletionsProvider(
         val additionalEdits =
           shortNames
             .sortBy(nme => nme.name)
-            .flatMap(name => autoImports.forSymbol(name.symbol))
+            .flatMap(name => autoImports.forShortName(name))
             .flatten
         mkItem(
           label,

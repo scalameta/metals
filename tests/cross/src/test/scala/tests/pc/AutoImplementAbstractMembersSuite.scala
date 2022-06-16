@@ -308,24 +308,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|abstract class Mutable {
-           |  def foo: scala.collection.mutable.Set[Int]
-           |  def bar: scala.collection.immutable.Set[Int]
-           |}
-           |object Main {
-           |  new Mutable {
-           |
-           |    override def foo: collection.mutable.Set[Int] = ???
-           |
-           |    override def bar: Set[Int] = ???
-           |
-           |  }
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
@@ -376,19 +359,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override def foo: ju.List[Int] = ???
        |
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|abstract class JUtil {
-           |  def foo: java.util.List[Int]
-           |}
-           |class Main extends JUtil {
-           |
-           |  override def foo: java.util.List[Int] = ???
-           |
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
@@ -414,21 +385,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  val java = 42
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|package jutil
-           |abstract class JUtil {
-           |  def foo: java.util.List[Int]
-           |}
-           |class Main extends JUtil {
-           |
-           |  override def foo: java.util.List[Int] = ???
-           |
-           |  val java = 42
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
