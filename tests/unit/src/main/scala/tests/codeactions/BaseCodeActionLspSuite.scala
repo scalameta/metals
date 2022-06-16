@@ -7,8 +7,8 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.Location
 import munit.TestOptions
-import tests.BaseLspSuite
 import org.eclipse.lsp4j.CodeAction
+import tests.BaseLspSuite
 
 abstract class BaseCodeActionLspSuite(
     suiteName: String

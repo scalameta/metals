@@ -1,9 +1,9 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
-import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 
 class RewriteBracesParensLspSuite
     extends BaseCodeActionLspSuite("rewriteBracesParens") {

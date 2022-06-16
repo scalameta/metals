@@ -1,8 +1,8 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
-import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {

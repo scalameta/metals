@@ -1,7 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.InsertInferredType
-import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+
 import org.eclipse.lsp4j.CodeAction
 
 class InsertInferredTypeLspSuite
@@ -9,7 +9,10 @@ class InsertInferredTypeLspSuite
       "insertInferredType"
     ) {
 
-  val filterAction = { act: CodeAction => act.getTitle() == InsertInferredType.insertType || act.getTitle() == InsertInferredType.insertTypeToPattern }
+  val filterAction: CodeAction => Boolean = { act: CodeAction =>
+    act.getTitle() == InsertInferredType.insertType || act
+      .getTitle() == InsertInferredType.insertTypeToPattern
+  }
 
   check(
     "val",
@@ -106,7 +109,7 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map((ch: Char) => ch.toInt)
        |}
        |""".stripMargin,
-      filterAction = filterAction
+    filterAction = filterAction
   )
 
   check(
@@ -120,7 +123,7 @@ class InsertInferredTypeLspSuite
        |  val list = "123".map{ch: Char => ch.toInt}
        |}
        |""".stripMargin,
-       filterAction = filterAction
+    filterAction = filterAction
   )
 
   check(

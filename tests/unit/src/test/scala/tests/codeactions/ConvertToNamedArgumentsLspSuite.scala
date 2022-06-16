@@ -1,6 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
+
 import org.eclipse.lsp4j.CodeAction
 
 class ConvertToNamedArgumentsLspSuite
@@ -8,7 +9,9 @@ class ConvertToNamedArgumentsLspSuite
       "convertToNamedArguments"
     ) {
 
-  val filterAction = { act: CodeAction => ConvertToNamedArguments.title(".*").r matches act.getTitle() }
+  val filterAction: CodeAction => Boolean = { act: CodeAction =>
+    ConvertToNamedArguments.title(".*").r matches act.getTitle()
+  }
 
   check(
     "basic",
@@ -86,7 +89,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int, param3: Int)(param4: Int) = None
        |  foo(1, 2, param3 = 3)(param4 = 4)
        |}""".stripMargin,
-       filterAction = filterAction
+    filterAction = filterAction
   )
 
   check(
@@ -102,7 +105,7 @@ class ConvertToNamedArgumentsLspSuite
        |  implicit val x = 3
        |  foo(param1 = 1, param2 = 2)
        |}""".stripMargin,
-       filterAction = filterAction
+    filterAction = filterAction
   )
 
   check(
@@ -116,7 +119,7 @@ class ConvertToNamedArgumentsLspSuite
        |  def foo(param1: Int, param2: Int)(implicit param3: Int) = None
        |  foo(1, 2)(param3 = 3)
        |}""".stripMargin,
-       filterAction = filterAction
+    filterAction = filterAction
   )
 
   check(
@@ -158,7 +161,7 @@ class ConvertToNamedArgumentsLspSuite
        |  case class Foo(param1: Int, param2: Int, param3: String)
        |  Foo(param1 = 1, param2 = 2, param3 = 3.toString())
        |}""".stripMargin,
-       filterAction = filterAction
+    filterAction = filterAction
   )
 
   checkNoAction(

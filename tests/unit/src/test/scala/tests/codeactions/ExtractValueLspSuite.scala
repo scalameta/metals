@@ -1,7 +1,7 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 
 class ExtractValueLspSuite
     extends BaseCodeActionLspSuite("extractValueRewrite") {

@@ -44,7 +44,11 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
     val range = params.getRange()
 
     val maybeApply = for {
-      term <- trees.findLastEnclosingAt[Term.Apply](path, range.getStart(), term => !term.fun.pos.encloses(range))
+      term <- trees.findLastEnclosingAt[Term.Apply](
+        path,
+        range.getStart(),
+        term => !term.fun.pos.encloses(range)
+      )
       apply <- firstApplyWithUnnamedArgs(Some(term))
     } yield apply
 
@@ -75,5 +79,5 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
 
 object ConvertToNamedArguments {
   case class ApplyTermWithArgIndices(app: Term.Apply, argIndices: List[Int])
-  def title(funcName: String) = s"Convert $funcName to named arguments"
+  def title(funcName: String): String = s"Convert $funcName to named arguments"
 }
