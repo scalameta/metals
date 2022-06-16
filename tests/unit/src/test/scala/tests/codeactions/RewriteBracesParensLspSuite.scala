@@ -3,6 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 
 class RewriteBracesParensLspSuite
     extends BaseCodeActionLspSuite("rewriteBracesParens") {
@@ -15,7 +16,8 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("foo")}
-        |${ExtractValueCodeAction.title}""".stripMargin,
+        |${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("foo")}""".stripMargin,
     """|object Main {
        |  def foo(n: Int) = ???
        |  foo{5}
@@ -30,7 +32,8 @@ class RewriteBracesParensLspSuite
        |  List(1,2).map ( a => <<>>a )
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toBraces("map"),
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${ConvertToNamedArguments.title("List(1,2).map")}""".stripMargin,
     """|object Main {
        |  var x = 0
        |  List(1,2).map { a => a }
@@ -48,7 +51,8 @@ class RewriteBracesParensLspSuite
        |  })
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toBraces("map"),
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${ConvertToNamedArguments.title("x.map")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
        |  x.map{_ match {

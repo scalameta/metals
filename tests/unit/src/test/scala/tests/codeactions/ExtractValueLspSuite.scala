@@ -1,6 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 
 class ExtractValueLspSuite
     extends BaseCodeActionLspSuite("extractValueRewrite") {
@@ -15,7 +16,8 @@ class ExtractValueLspSuite
        |
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    s"""|${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  def method1(s: String): Unit = {
@@ -41,7 +43,8 @@ class ExtractValueLspSuite
        |  }
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    s"""|${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  
@@ -70,7 +73,8 @@ class ExtractValueLspSuite
        |  }
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    s"""|${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int): Option[String]  = ???
        |  
@@ -116,7 +120,8 @@ class ExtractValueLspSuite
        |    method2(i + 23 + <<123>>)
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    s"""|${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  
@@ -137,7 +142,8 @@ class ExtractValueLspSuite
        |  }
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title,
+    s"""|${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
@@ -175,7 +181,8 @@ class ExtractValueLspSuite
         |\tmethod2(<<List>>(1, 2, 3).map(_ + 1).sum)
         |}
         |""".stripMargin,
-    ExtractValueCodeAction.title,
+    s"""|${ExtractValueCodeAction.title}
+        |${ConvertToNamedArguments.title("method2")}""".stripMargin,
     s"""|object Main {
         |\tdef method2(i: Int) = ???
         |\tval newValue = List(1, 2, 3).map(_ + 1).sum
