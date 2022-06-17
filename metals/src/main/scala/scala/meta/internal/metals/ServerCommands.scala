@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.{util => ju}
 import javax.annotation.Nullable
 
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
@@ -8,7 +9,6 @@ import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import java.{util => ju}
 
 /**
  * LSP commands supported by the Metals language server.
