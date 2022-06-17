@@ -79,10 +79,19 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
   end extension
 
   extension (pos: SourcePosition)
+    def offsetToPos(offset: Int): l.Position =
+      // dotty's `SourceFile.column` method treats tabs incorrectly.
+      // If a line starts with tabs, they just don't count as symbols, resulting in a wrong editRange.
+      // see: https://github.com/scalameta/metals/pull/3702
+      val lineStartOffest = pos.source.startOfLine(offset)
+      val line = pos.source.offsetToLine(lineStartOffest)
+      val column = offset - lineStartOffest
+      new l.Position(line, column)
+
     def toLSP: l.Range =
       new l.Range(
-        new l.Position(pos.startLine, pos.startColumn),
-        new l.Position(pos.endLine, pos.endColumn)
+        offsetToPos(pos.start),
+        offsetToPos(pos.end)
       )
 
     def toLocation: Option[l.Location] =
@@ -90,6 +99,7 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
         uri <- InteractiveDriver.toUriOption(pos.source)
         range <- if pos.exists then Some(pos.toLSP) else None
       yield new l.Location(uri.toString, range)
+  end extension
 
   extension (sym: Symbol)(using Context)
     def fullNameBackticked: String =

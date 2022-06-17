@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 package completions
 
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.tokenizers.Chars
 
 import dotty.tools.dotc.ast.tpd.*
@@ -24,13 +25,7 @@ case class CompletionPos(
   def sourcePos: SourcePosition = cursorPos.withSpan(Spans.Span(start, end))
 
   def toEditRange: l.Range =
-    def toPos(offset: Int): l.Position =
-      val lineStartOffest = cursorPos.source.startOfLine(offset)
-      val line = cursorPos.source.offsetToLine(lineStartOffest)
-      val column = offset - lineStartOffest
-      new l.Position(line, column)
-
-    new l.Range(toPos(start), toPos(end))
+    new l.Range(cursorPos.offsetToPos(start), cursorPos.offsetToPos(end))
   end toEditRange
 end CompletionPos
 

@@ -13,7 +13,8 @@ import org.eclipse.{lsp4j => l}
 
 trait OverrideCompletions { this: MetalsGlobal =>
 
-  private val DefaultIndent = 2
+  private def defaultIndent(tabIndent: Boolean) =
+    if (tabIndent) 1 else 2
 
   class OverrideDefMember(
       val label: String,
@@ -164,7 +165,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
     val autoImport: AutoImportPosition = baseAutoImport.getOrElse(
       AutoImportPosition(
         lineStart,
-        inferIndent(lineStart, text),
+        inferIndent(lineStart, text)._1,
         padTop = false
       )
     )
@@ -399,12 +400,12 @@ trait OverrideCompletions { this: MetalsGlobal =>
       // |    class Foo extends Bar {} // inferred to 4
       // |}
       val lineStart = t.pos.source.lineToOffset(t.pos.line - 1)
-      val necessaryIndent = inferIndent(lineStart, text)
+      val (necessaryIndent, tabIndented) = inferIndent(lineStart, text)
 
       // infer indent for implementations
       // if there's declaration in the class/object, follow its indent.
       // otherwise the indent default to 2
-      val indent = typed.tpe.decls
+      val (numIndent, shouldTabIndent) = typed.tpe.decls
         .filter(sym =>
           !sym.isSynthetic &&
             !sym.isPrimaryConstructor &&
@@ -412,14 +413,17 @@ trait OverrideCompletions { this: MetalsGlobal =>
         )
         .headOption
         .map(existing => {
-          " " * inferIndent(
+          inferIndent(
             t.pos.source.lineToOffset(existing.pos.line - 1),
             text
           )
         })
         .getOrElse {
-          " " * (necessaryIndent + DefaultIndent)
+          val default = defaultIndent(tabIndented)
+          (necessaryIndent + default, tabIndented)
         }
+      val indentChar = if (shouldTabIndent) "\t" else " "
+      val indent = indentChar * numIndent
 
       val shouldCompleteBraces = hasBody(text, t).isEmpty
 
@@ -443,7 +447,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
           t.pos.source.offsetToLine(t.pos.start) ==
             t.pos.source.offsetToLine(t.pos.end) || shouldCompleteBraces
         )
-          "\n" + " " * necessaryIndent
+          "\n" + indentChar * necessaryIndent
         else ""
 
       // Add opening/closing braces
