@@ -300,7 +300,6 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15249
     "tparam3".tag(IgnoreScala3),
     """
       |object a {
@@ -311,8 +310,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |      ^
        |""".stripMargin
   )
+
   check(
-    // https://github.com/lampepfl/dotty/issues/15249
     "tparam4".tag(IgnoreScala3),
     """
       |object a {
@@ -364,7 +363,13 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" ->
+        """|apply[K, V](elems: (K, V)*): Map[K, V]
+           |            ^^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "for",
@@ -464,7 +469,15 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  }
       |}
     """.stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3.0" -> "",
+      "3.1" -> "",
+      "3" ->
+        """|apply[K, V](elems: (K, V)*): Map[K, V]
+           |            ^^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -681,7 +694,6 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15249
     "evidence".tag(IgnoreScala3),
     """
       |object a {
@@ -717,7 +729,6 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15249
     "type".tag(IgnoreScala3),
     """
       |object a {
@@ -743,14 +754,20 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "off-by-one".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1")
     ),
     """
       |object a {
       |  identity(42)@@
       |}
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" ->
+        """|identity[A](x: A): A
+           |            ^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -774,7 +791,15 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold(2)@@(_ + 1)
       |}
       |""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3.0" -> "",
+      "3.1" -> "",
+      "3" ->
+        """|fold[B](ifEmpty: => B)(f: Int => B): B
+           |        ^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
