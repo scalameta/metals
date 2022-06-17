@@ -17,11 +17,19 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   private def getMillVersion(workspace: AbsolutePath): String = {
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")
+    lazy val millPath = workspace.resolve("mill")
     if (millVersionPath.isFile) {
       Files
         .readAllLines(millVersionPath.toNIO)
         .asScala
         .headOption
+        .getOrElse(version)
+    } else if (millPath.isFile) {
+      Files
+        .readAllLines(millPath.toNIO)
+        .asScala
+        .find(_.startsWith("DEFAULT_MILL_VERSION"))
+        .map(line => line.dropWhile(!_.isDigit).trim)
         .getOrElse(version)
     } else {
       version
