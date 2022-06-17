@@ -434,9 +434,13 @@ class WorksheetProvider(
         }
         if isSupported
       } yield {
+        // We filter out NonUnitStatements from wartremover or you'll get an
+        // error about $doc.binder returning Unit from mdoc, which causes the
+        // worksheet not to be evaluated.
         val scalacOptions = info.scalac.getOptions.asScala
           .filterNot(_.contains("semanticdb"))
           .filterNot(_.contains("-Wconf"))
+          .filterNot(_.contains("org.wartremover.warts.NonUnitStatements"))
           .asJava
         val mdoc = embedded
           .mdoc(
