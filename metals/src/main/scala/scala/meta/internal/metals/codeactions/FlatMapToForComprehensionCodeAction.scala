@@ -143,24 +143,19 @@ class FlatMapToForComprehensionCodeAction(
       lastValidTermApply: Option[Term.Apply]
   ): Option[Term.Apply] = {
 
+    val interestingSelects =
+      Set("map", "flatMap", "filter", "filterNot", "withFilter")
+
     currentTermApply.fun match {
       case term if term.isNot[Term.Select] => lastValidTermApply
       case termSelect: Term.Select
-          if termSelect.name.value != "map" && termSelect.name.value != "flatMap" &&
-            termSelect.name.value != "filter" && termSelect.name.value != "withFilter" && termSelect.name.value != "filterNot" =>
+          if !interestingSelects.contains(termSelect.name.value) =>
         lastValidTermApply
       case _: Term.Select =>
-        if (
-          !currentTermApply.parent.exists(parent =>
-            parent.is[Term.Select] && parent.parent.exists(_.is[Term.Apply])
-          )
-        ) {
-          Some(currentTermApply)
-        } else {
-          val result = Some(currentTermApply)
-          val grandParentApply =
-            currentTermApply.parent.get.parent.get.asInstanceOf[Term.Apply]
-          findOuterMostApply(grandParentApply, result)
+        currentTermApply.parent.flatMap(_.parent) match {
+          case Some(next @ Term.Apply(_: Term.Select, _)) =>
+            findOuterMostApply(next, Some(currentTermApply))
+          case _ => Some(currentTermApply)
         }
     }
   }
@@ -211,9 +206,7 @@ class FlatMapToForComprehensionCodeAction(
           args.map(replacePlaceHolder(_, newName, false)).unzip
 
         val replacementTimes =
-          argsReplacementTimes.fold(funReplacementTimes)((result, newElem) =>
-            result + newElem
-          )
+          argsReplacementTimes.sum + funReplacementTimes
 
         (Term.Apply(newFun, newArgs), replacementTimes)
 
@@ -232,9 +225,7 @@ class FlatMapToForComprehensionCodeAction(
           args.map(replacePlaceHolder(_, newName, false)).unzip
 
         val replacementTimes =
-          argsReplacementTimes.fold(funReplacementTimes)((result, newElem) =>
-            result + newElem
-          )
+          argsReplacementTimes.sum + funReplacementTimes
 
         (Term.ApplyUsing(newFun, newArgs), replacementTimes)
 
@@ -247,9 +238,7 @@ class FlatMapToForComprehensionCodeAction(
             .unzip
 
         val replacementTimes =
-          argsReplacementTimes.fold(lhsReplacementTimes)((result, newElem) =>
-            result + newElem
-          )
+          lhsReplacementTimes + argsReplacementTimes.sum
 
         (Term.ApplyInfix(newLHS, op, targs, newArgs), replacementTimes)
 
@@ -298,11 +287,12 @@ class FlatMapToForComprehensionCodeAction(
 
       case Term.AnonymousFunction(term) =>
         replacePlaceHolderInTermWithNewName(term, nameGenerator)
-      case term: Term
-          if term.is[Term.Apply] || term.is[Term.Eta] || term
-            .is[Term.ApplyUnary] || term.is[Term.ApplyUsing] || term
-            .is[Term.ApplyInfix] || term.is[Term.Name] || term
-            .is[Term.Select] =>
+      case term: Term // this is for cases when they are not wrapped inside
+          // Anonymous function due to a bug, such as for .map(curried(7) _ )
+          if term.is[Term.Apply] || term.is[Term.Eta]
+            || term.is[Term.ApplyUnary] || term.is[Term.ApplyUsing]
+            || term.is[Term.ApplyInfix] || term.is[Term.Name]
+            || term.is[Term.Select] =>
         replacePlaceHolderInTermWithNewName(term, nameGenerator)
       case Term.Block(List(function)) =>
         processValueNameAndNextQual(function, nameGenerator)
@@ -360,7 +350,7 @@ class FlatMapToForComprehensionCodeAction(
       case None => // there was no iteration before this one
         // so it is list.map(x => x + 1)
         if (shouldFlat) { // when it is list.flatMap(x => Some(x + 1))
-          // we have to generate a new parameter name, assign x + 1
+          // we have to generate a new parameter name, assign Some(x + 1)
           // to it, as in generatedByMetals0 <- Some(x + 1) to flatten the result
           val lastGeneratedName =
             nameGenerator.createNewName()
@@ -422,69 +412,67 @@ class FlatMapToForComprehensionCodeAction(
       termSelectQual: Term
   ): (List[Enumerator], Option[Term]) = {
 
-    val result = for {
-      valueName <- perhapsValueNameAndNextQual.map(_._1) // s
-      nextCondition <- perhapsValueNameAndNextQual.map(_._2) // s + 1
-    } yield {
-      val (elems, maybeYieldTerm): (List[Enumerator], Option[Term]) =
-        perhapsLastName match {
-          case Some(lastName) => // there was an iteration before it.
-            (
-              Enumerator.Val(
-                Pat.Var(
-                  Term.Name(lastName)
-                ), // lastName gets paired with valueName
-                // so in List(1, 2, 3).filter( s => s > 1).map(x => x + 1)
-                // x is paired with s as in x = s
-                Term.Name(valueName)
-              ) :: existingForElements,
-              currentYieldTerm
-            )
-          case None =>
-            (existingForElements, Some(Term.Name(valueName)))
-          // there was no iteration before this one, so in
-          // List(1, 2, 3).filter( s => s > 1) we would finally have
-          // s as the ultimate yield
-        }
+    perhapsValueNameAndNextQual
+      .map { case (valueName, nextCondition) =>
+        val (elems, maybeYieldTerm): (List[Enumerator], Option[Term]) =
+          perhapsLastName match {
+            case Some(lastName) => // there was an iteration before it.
+              (
+                Enumerator.Val(
+                  Pat.Var(
+                    Term.Name(lastName)
+                  ), // lastName gets paired with valueName
+                  // so in List(1, 2, 3).filter( s => s > 1).map(x => x + 1)
+                  // x is paired with s as in x = s
+                  Term.Name(valueName)
+                ) :: existingForElements,
+                currentYieldTerm
+              )
+            case None =>
+              (existingForElements, Some(Term.Name(valueName)))
+            // there was no iteration before this one, so in
+            // List(1, 2, 3).filter( s => s > 1) we would finally have
+            // s as the ultimate yield
+          }
 
-      termSelectQual match { // move to preparing the next iteration
-        case qualTermApply: Term.Apply => // we can potentially encounter
-          // an interesting function, so we enter the next iteration to see
-          extractChainedForYield(
-            Some(valueName),
-            maybeYieldTerm,
-            Enumerator.Guard( // guard should come before x = s,
-              // hence it should be prepended
-              if (isFilter) nextCondition
-              else
-                Term.ApplyUnary(Term.Name("!"), nextCondition)
-            ) :: elems,
-            qualTermApply,
-            nameGenerator
-          )
-        case otherQual => // list
-          ( // we are at the top end of the chain with no longer interesting
-            // function to process as in list.filter(s => s > 1).map(x => x + 1)
-            // so just assign otherQual to s, as in s <- list
-            // and then add the guard after that, with
-            // all the previous enumerators such as x = s before it.
-            Enumerator.Generator(
-              Pat.Var(Term.Name(valueName)),
-              otherQual
-            )
-              :: Enumerator.Guard(
+        termSelectQual match { // move to preparing the next iteration
+          case qualTermApply: Term.Apply => // we can potentially encounter
+            // an interesting function, so we enter the next iteration to see
+            extractChainedForYield(
+              Some(valueName),
+              maybeYieldTerm,
+              Enumerator.Guard( // guard should come before x = s,
+                // hence it should be prepended
                 if (isFilter) nextCondition
                 else
                   Term.ApplyUnary(Term.Name("!"), nextCondition)
               ) :: elems,
-            maybeYieldTerm
-          )
+              qualTermApply,
+              nameGenerator
+            )
+          case otherQual => // list
+            ( // we are at the top end of the chain with no longer interesting
+              // function to process as in list.filter(s => s > 1).map(x => x + 1)
+              // so just assign otherQual to s, as in s <- list
+              // and then add the guard after that, with
+              // all the previous enumerators such as x = s after it.
+              Enumerator.Generator(
+                Pat.Var(Term.Name(valueName)),
+                otherQual
+              )
+                :: Enumerator.Guard(
+                  if (isFilter) nextCondition
+                  else
+                    Term.ApplyUnary(Term.Name("!"), nextCondition)
+                ) :: elems,
+              maybeYieldTerm
+            )
+        }
       }
-    }
-    result.getOrElse(
-      List.empty,
-      currentYieldTerm
-    ) // when function passed to filter
+      .getOrElse(
+        List.empty,
+        currentYieldTerm
+      ) // when function passed to filter
     // cannot be processed to give us a parameter name and a condition, we just return an
     // empty list to avoid any further processing.
   }
@@ -549,29 +537,27 @@ class FlatMapToForComprehensionCodeAction(
           if termSelect.name.value == "flatMap" || termSelect.name.value == "map" =>
         val shouldFlat = termSelect.name.value == "flatMap"
 
-        val result = for {
-          valueName <- perhapsValueNameAndNextQual.map(_._1)
-          nextQual <- perhapsValueNameAndNextQual.map(_._2)
-        } yield {
-          val (elems, maybeYieldTerm) =
-            obtainNextYieldAndElemsForMap(
-              nameGenerator,
-              perhapsLastName,
-              shouldFlat,
-              existingForElements,
-              currentYieldTerm,
-              nextQual
-            )
+        perhapsValueNameAndNextQual
+          .map { case (valueName, nextQual) =>
+            val (elems, maybeYieldTerm) =
+              obtainNextYieldAndElemsForMap(
+                nameGenerator,
+                perhapsLastName,
+                shouldFlat,
+                existingForElements,
+                currentYieldTerm,
+                nextQual
+              )
 
-          processMap(
-            elems,
-            maybeYieldTerm,
-            nameGenerator,
-            valueName,
-            termSelect.qual
-          )
-        }
-        result.getOrElse(List.empty, None)
+            processMap(
+              elems,
+              maybeYieldTerm,
+              nameGenerator,
+              valueName,
+              termSelect.qual
+            )
+          }
+          .getOrElse(List.empty, None)
 
       case termSelect: Term.Select
           if termSelect.name.value == "filter" || termSelect.name.value == "filterNot" ||
@@ -622,5 +608,5 @@ class FlatMapToForComprehensionCodeAction(
 }
 
 object FlatMapToForComprehensionCodeAction {
-  val flatMapToForComprehension = "Turn into for comprehension"
+  val flatMapToForComprehension = "Convert to for comprehension"
 }

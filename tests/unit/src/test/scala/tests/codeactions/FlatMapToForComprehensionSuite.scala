@@ -53,15 +53,16 @@ class FlatMapToForComprehensionSuite
        |        .map(c => c - 1)
        |        .map(5 + double(_, 7).toFloat.toInt / 8 + 6)
        |        .filter(d => d > 1)
-       |        .map(double(_, 5))
+       |        .m<<>>ap(double(_, 5))
        |        .map(curried(6) _ )
-       |        .m<<>>ap(curried(_)(9))
+       |        .map(curried(_)(9))
        |        .map(curried(3))
        |        .map( double(_, 4).toFloat.toDouble)
        |        .map( _.toInt.compare(3))
        |        .map(_ > 2)
        |        .map(!negate(_))
        |        .map( true && !negate(_) && false)
+       |        .sortBy(x => x)
        |
        |}
        |""".stripMargin,
@@ -104,6 +105,7 @@ class FlatMapToForComprehensionSuite
        |           true && !negate(generatedByMetals0) && false
        |         }
        |        }
+       |        .sortBy(x => x)
        |
        |}
        |""".stripMargin,

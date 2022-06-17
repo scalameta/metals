@@ -47,7 +47,7 @@ class Scala3CodeActionLspSuite
        | val res = {
        |  for {
        |    generatedByMetals0 <- List(1, 2, 3)
-       |  }  yield {
+       |  } yield {
        |    hello(using ctx)(generatedByMetals0)
        |  }
        | }
