@@ -526,11 +526,12 @@ class FlatMapToForComprehensionCodeAction(
       termApply: Term.Apply,
       nameGenerator: MetalsNames
   ): (List[Enumerator], Option[Term]) = {
-    val perhapsValueNameAndNextQual =
+    val perhapsValueNameAndNextQual = termApply.args.headOption.flatMap {
       processValueNameAndNextQual(
-        termApply.args.head,
+        _,
         nameGenerator
       )
+    }
 
     termApply.fun match {
       case termSelect: Term.Select

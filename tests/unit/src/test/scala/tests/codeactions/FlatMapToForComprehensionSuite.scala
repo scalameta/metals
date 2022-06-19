@@ -30,6 +30,49 @@ class FlatMapToForComprehensionSuite
   )
 
   check(
+    "empty-arguments-list-apply",
+    """|object A {
+       |    val first = 1
+       |    val second = 2
+       |    val third = 3
+       |    def goToLink(a: Int, b: Int, c: Int, d: Int): Option[Int] = if( a > 3) Some(d) else None
+       |
+       |    class B {
+       |      def generateList(): List[Int] = List(1, 2, 3)
+       |    }
+       |
+       |    val res3 = new B()
+       |        .generateList()
+       |        .fla<<>>tMap(goToLink(first, second, third, _))
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("flatMap")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val first = 1
+       |    val second = 2
+       |    val third = 3
+       |    def goToLink(a: Int, b: Int, c: Int, d: Int): Option[Int] = if( a > 3) Some(d) else None
+       |
+       |    class B {
+       |      def generateList(): List[Int] = List(1, 2, 3)
+       |    }
+       |
+       |    val res3 = {
+       |         for {
+       |           generatedByMetals0 <- new B().generateList()
+       |           generatedByMetals1 <- goToLink(first, second, third, generatedByMetals0)
+       |         } yield {
+       |           generatedByMetals1
+       |         }
+       |        }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1
+  )
+
+  check(
     "mixture-for-comprehension",
     """|object A {
        |    def double(x : Int, y: Int = 1) = y * x
