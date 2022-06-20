@@ -37,11 +37,7 @@ class FlatMapToForComprehensionCodeAction(
         trees
           .findLastEnclosingAt[Term.Apply](
             path,
-            range.getStart(),
-            {
-              case _: Term.Apply => true
-              case _ => false
-            }
+            range.getStart()
           )
       else
         None
