@@ -6,6 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 
+import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
 import tests.BaseCodeActionSuite
@@ -308,24 +309,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |  }
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|abstract class Mutable {
-           |  def foo: scala.collection.mutable.Set[Int]
-           |  def bar: scala.collection.immutable.Set[Int]
-           |}
-           |object Main {
-           |  new Mutable {
-           |
-           |    override def foo: collection.mutable.Set[Int] = ???
-           |
-           |    override def bar: Set[Int] = ???
-           |
-           |  }
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
@@ -895,7 +879,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty
-  ): Unit =
+  )(implicit loc: Location): Unit =
     test(name) {
       val edits = getAutoImplement(original)
       if (edits.isEmpty) fail("obtained no edits")

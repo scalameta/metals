@@ -362,19 +362,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |    def foo: mutable.Set[Int] = ${0:???}
        |  }
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|abstract class Mutable {
-           |  def foo: scala.collection.mutable.Set[Int]
-           |}
-           |object Main {
-           |  new Mutable {
-           |    def foo: collection.mutable.Set[Int] = ${0:???}
-           |  }
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEditLine(
@@ -495,17 +483,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Main extends Mutable {
        |  def foo: lang.StringBuilder = ${0:???}
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|abstract class Mutable {
-           |  def foo: java.lang.StringBuilder
-           |}
-           |class Main extends Mutable {
-           |  def foo: StringBuilder = ${0:???}
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEditLine(
@@ -1103,20 +1081,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Under extends Over {
        |  def inner: Outer.Inner = ${0:???}
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|trait Over {
-           |  object Outer {
-           |    class Inner
-           |  }
-           |  def inner: Outer.Inner
-           |}
-           |class Under extends Over {
-           |  def inner: Under#Outer.Inner = ${0:???}
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(

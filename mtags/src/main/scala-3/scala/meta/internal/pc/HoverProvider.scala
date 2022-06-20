@@ -67,7 +67,7 @@ object HoverProvider:
         case Nil =>
           ju.Optional.empty()
         case symbolTpes @ ((symbol, tpe) :: _) =>
-          val exprTpw = tpe.widenTermRefExpr
+          val exprTpw = tpe.widenTermRefExpr.dealias
           val printerContext =
             driver.compilationUnits.get(uri) match
               case Some(unit) =>

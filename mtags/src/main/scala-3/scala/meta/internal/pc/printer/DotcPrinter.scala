@@ -39,13 +39,37 @@ object DotcPrinter:
     def tpe(t: Type): String =
       toText(t).mkString(defaultWidth, false)
 
+    /* Overriden method because the RefinedPrinter will omit
+     * `lang` even if it's needed in case of conflicts.
+     *
+     * Modified from:
+     * https://github.com/lampepfl/dotty/blob/75d8eea1e943bbd2c605d8411c2d52d69974d6f3/compiler/src/dotty/tools/dotc/printing/RefinedPrinter.scala#L107-L123
+     */
+    override def toTextPrefix(tp: Type): Text = controlled {
+      tp match
+        case tp @ TermRef(pre, _) =>
+          val sym = tp.symbol
+          if sym.isPackageObject && !homogenizedView && !printDebug then
+            toTextPrefix(pre)
+          else printPrefix(tp)
+        case _ => super.toTextPrefix(tp)
+    }
+
+    /* Taken from PlainPrinter's `toTextPrefix` in order not to use super
+     * RefinedPrinter's `toTextPrefix` method.
+     */
+    private def printPrefix(tp: Type): Text = homogenize(tp) match
+      case NoPrefix => ""
+      case tp: SingletonType => toTextRef(tp) ~ "."
+      case tp => trimPrefix(toTextLocal(tp)) ~ "#"
+
     def fullName(sym: Symbol): String =
       fullNameString(sym)
   end Std
 
   /**
    * This one is used only for adding inferred type
-   * The difference with std is that in case of name clashe it prepends `_root_`
+   * The difference with std is that in case of name clash it prepends `_root_`
    */
   class ForInferredType(indexed: IndexedContext) extends Std(using indexed.ctx):
     override def toTextPrefix(tp: Type): Text = controlled {

@@ -258,4 +258,25 @@ class RangeHoverSuite extends BaseHoverSuite {
     """|Bar
        |inline transparent def foo(i: Int): Foo""".stripMargin.hoverRange
   )
+
+  check(
+    "dep-types".tag(IgnoreScala2),
+    """|trait A
+       |object A1 extends A
+       |
+       |trait Foo:
+       |  type Out
+       |  def out: Out
+       |
+       |def fooOut(f: Foo): f.Out = f.out
+       |
+       |object FooA1 extends Foo:
+       |  type Out = A1.type
+       |  def out = A1
+       |
+       |val x = <<%<%fooOut(FooA1)%>%>>
+       |""".stripMargin,
+    """|A1.type
+       |def fooOut(f: Foo): f.Out""".stripMargin.hoverRange
+  )
 }
