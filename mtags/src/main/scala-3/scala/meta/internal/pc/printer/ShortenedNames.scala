@@ -136,7 +136,7 @@ class ShortenedNames(val indexedContext: IndexedContext):
               designator.asInstanceOf[Symbol]
             else tpe.termSymbol
           val short = ShortName(sym)
-          if tryShortenName(name) then NoPrefix
+          if tryShortenName(short) then TermRef(NoPrefix, sym)
           else TermRef(loop(prefix, None), sym)
 
         case t @ ThisType(tyref) =>
