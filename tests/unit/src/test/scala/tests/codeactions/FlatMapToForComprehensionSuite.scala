@@ -218,27 +218,20 @@ class FlatMapToForComprehensionSuite
     selectedActionIndex = 1
   )
 
-//   writing checkNoAction does not work, since `RewriteBraces` action always shows up in this case.
-//   but writing it the way I have writtern also does not work, because the result has type errors.
-//
-//  check("double-replacement-placeHolder",
-//    """|object A{
-//       |def multiply(a: Int, b: Int) = a * b
-//       |val res = List(1, 2, 3).m<<>>ap(multiply(_, _))
-//      |}""".stripMargin,
-//    RewriteBracesParensCodeAction.toBraces("map"),
-//    """|object A{
-//       |def multiply(a: Int, b: Int) = a * b
-//       |val res = List(1, 2, 3).map{multiply(_, _)}
-//       |}
-//       |""".stripMargin,
-//      expectError = true
-//  )
-  // expectError = true did not cause the test to pass. the error is:
-//  -a/src/main/scala/a/A.scala:3:29: error: type mismatch;
-//  - found   : (Int, Int) => Int
-//  - required: Int => ?
-//  -val res = List(1, 2, 3).map{multiply(_, _)}
-//  -
+  check(
+    "double-replacement-placeHolder",
+    """|object A{
+       |def multiply(a: Int, b: Int) = a * b
+       |val res = List(1, 2, 3).m<<>>ap(multiply(_, _))
+       |}""".stripMargin,
+    RewriteBracesParensCodeAction.toBraces("map"),
+    """|object A{
+       |def multiply(a: Int, b: Int) = a * b
+       |val res = List(1, 2, 3).map{multiply(_, _)}
+       |}
+       |""".stripMargin,
+    expectError = true,
+    expectNoDiagnostics = false
+  )
 
 }

@@ -189,84 +189,65 @@ class FlatMapToForComprehensionCodeAction(
 
   }
 
-  private def replacePlaceHolder(
-      tree: Term,
-      newName: Term.Name,
-      allowedToGetInsideApply: Boolean
-  ): (Term, Int) =
-    tree match {
-      case Term.Apply(fun, args) if allowedToGetInsideApply =>
-        val (newFun, funReplacementTimes) =
-          replacePlaceHolder(fun, newName, allowedToGetInsideApply)
-        val (newArgs, argsReplacementTimes) =
-          args.map(replacePlaceHolder(_, newName, false)).unzip
-
-        val replacementTimes =
-          argsReplacementTimes.sum + funReplacementTimes
-
-        (Term.Apply(newFun, newArgs), replacementTimes)
-
-      case Term.Eta(expr) if allowedToGetInsideApply =>
-        (Term.Apply(expr, List(newName)), 1)
-
-      case Term.ApplyUnary(op, arg) if allowedToGetInsideApply =>
-        val (newArg, argReplacementTimes) =
-          replacePlaceHolder(arg, newName, allowedToGetInsideApply)
-        (Term.ApplyUnary(op, newArg), argReplacementTimes)
-
-      case Term.ApplyUsing(fun, args) if allowedToGetInsideApply =>
-        val (newFun, funReplacementTimes) =
-          replacePlaceHolder(fun, newName, allowedToGetInsideApply)
-        val (newArgs, argsReplacementTimes) =
-          args.map(replacePlaceHolder(_, newName, false)).unzip
-
-        val replacementTimes =
-          argsReplacementTimes.sum + funReplacementTimes
-
-        (Term.ApplyUsing(newFun, newArgs), replacementTimes)
-
-      case Term.ApplyInfix(lhs, op, targs, args) if allowedToGetInsideApply =>
-        val (newLHS, lhsReplacementTimes) =
-          replacePlaceHolder(lhs, newName, allowedToGetInsideApply)
-        val (newArgs, argsReplacementTimes) =
-          args
-            .map(replacePlaceHolder(_, newName, allowedToGetInsideApply))
-            .unzip
-
-        val replacementTimes =
-          lhsReplacementTimes + argsReplacementTimes.sum
-
-        (Term.ApplyInfix(newLHS, op, targs, newArgs), replacementTimes)
-
-      case Term.Select(qual, name) =>
-        val (newQual, qualReplacementTimes) =
-          replacePlaceHolder(qual, newName, allowedToGetInsideApply)
-        (
-          Term.Select(
-            newQual,
-            name
-          ),
-          qualReplacementTimes
-        )
-      case Term.Placeholder() => (newName, 1)
-      case other => (other, 0)
-    }
-
   private def replacePlaceHolderInTermWithNewName(
       term: Term,
       nameGenerator: MetalsNames
   ): Option[(String, Term)] = {
-    val newName =
-      nameGenerator.createNewName()
+    var replacementTimes = 0
 
-    val (newTerm, replacementTimes) =
-      replacePlaceHolder(term, Term.Name(newName), true)
-    (
-      if (replacementTimes == 1) Some((newName, newTerm))
-      else if (replacementTimes == 0)
-        Some((newName), Term.Apply(newTerm, List(Term.Name(newName))))
-      else None
-    )
+    def replacePlaceHolder(
+        tree: Term,
+        newName: Term.Name,
+        allowedToGetInsideApply: Boolean
+    ): Term =
+      tree match {
+        case Term.Apply(fun, args) if allowedToGetInsideApply =>
+          val newFun = replacePlaceHolder(fun, newName, allowedToGetInsideApply)
+          val newArgs = args.map(
+            replacePlaceHolder(_, newName, allowedToGetInsideApply = false)
+          )
+          Term.Apply(newFun, newArgs)
+
+        case Term.Eta(expr) if allowedToGetInsideApply =>
+          replacementTimes += 1
+          Term.Apply(expr, List(newName))
+
+        case Term.ApplyUnary(op, arg) if allowedToGetInsideApply =>
+          Term.ApplyUnary(
+            op,
+            replacePlaceHolder(arg, newName, allowedToGetInsideApply)
+          )
+
+        case Term.ApplyUsing(fun, args) if allowedToGetInsideApply =>
+          val newFun = replacePlaceHolder(fun, newName, allowedToGetInsideApply)
+          val newArgs = args.map(
+            replacePlaceHolder(_, newName, allowedToGetInsideApply = false)
+          )
+          Term.ApplyUsing(newFun, newArgs)
+
+        case Term.ApplyInfix(lhs, op, targs, args) if allowedToGetInsideApply =>
+          val newLHS =
+            replacePlaceHolder(lhs, newName, allowedToGetInsideApply)
+          val newArgs = args
+            .map(replacePlaceHolder(_, newName, allowedToGetInsideApply))
+          Term.ApplyInfix(newLHS, op, targs, newArgs)
+
+        case Term.Select(qual, name) =>
+          Term.Select(
+            replacePlaceHolder(qual, newName, allowedToGetInsideApply),
+            name
+          )
+
+        case Term.Placeholder() =>
+          replacementTimes += 1
+          newName
+        case other => other
+      }
+
+    val newName = nameGenerator.createNewName()
+    val newTerm = replacePlaceHolder(term, Term.Name(newName), true)
+    if (replacementTimes == 1) Some((newName, newTerm))
+    else None
   }
 
   private def processValueNameAndNextQual(
@@ -275,26 +256,20 @@ class FlatMapToForComprehensionCodeAction(
   ): Option[(String, Term)] = {
     tree match {
       case Term.Function(List(param), term) if param.name.value.isEmpty =>
-        val newName =
-          nameGenerator.createNewName()
+        val newName = nameGenerator.createNewName()
         Some((newName, term))
       case Term.Function(List(param), term) =>
         (Some((param.name.value, term)))
-
       case Term.AnonymousFunction(term) =>
         replacePlaceHolderInTermWithNewName(term, nameGenerator)
-      case term: Term // this is for cases when they are not wrapped inside
-          // Anonymous function due to a bug, such as for .map(curried(7) _ )
-          if term.is[Term.Apply] || term.is[Term.Eta]
-            || term.is[Term.ApplyUnary] || term.is[Term.ApplyUsing]
-            || term.is[Term.ApplyInfix] || term.is[Term.Name]
-            || term.is[Term.Select] =>
+      case term: Term.Eta =>
         replacePlaceHolderInTermWithNewName(term, nameGenerator)
       case Term.Block(List(function)) =>
         processValueNameAndNextQual(function, nameGenerator)
-      case _ =>
-        None
-
+      case term: Term =>
+        val newName = nameGenerator.createNewName()
+        Some((newName), Term.Apply(term, List(Term.Name(newName))))
+      case _ => None
     }
   }
 
