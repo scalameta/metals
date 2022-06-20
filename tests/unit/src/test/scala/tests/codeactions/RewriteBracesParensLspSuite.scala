@@ -33,8 +33,7 @@ class RewriteBracesParensLspSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("foreach")}
-        |${ConvertToNamedArguments.title("List(1,2).map")}
-        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
+        |${ConvertToNamedArguments.title("List(1,2).foreach")}""".stripMargin,
     """|object Main {
        |  var x = 0
        |  List(1,2).foreach { a => a }
