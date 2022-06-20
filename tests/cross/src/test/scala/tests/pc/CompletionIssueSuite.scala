@@ -1,14 +1,19 @@
 package tests.pc
 
+import coursierapi.Dependency
 import tests.BaseCompletionSuite
 
 class CompletionIssueSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
+  override protected def extraDependencies(
+      scalaVersion: String
+  ): Seq[Dependency] = {
+
+    Seq(Dependency.of("org.eclipse.lsp4j", "org.eclipse.lsp4j", "0.14.0"))
+  }
 
   check(
-    "mutate",
+    "mutate".tag(IgnoreScala3),
     """package a
       |class Foo@@
       |""".stripMargin,
@@ -16,7 +21,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   check(
-    "issue-569",
+    "issue-569".tag(IgnoreScala3),
     """package a
       |class Main {
       |  new Foo@@
@@ -26,7 +31,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   check(
-    "issue-749",
+    "issue-749".tag(IgnoreScala3),
     """package a
       |trait Observable[+A] {
       |  type Self[+T] <: Observable[T]
@@ -64,7 +69,21 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |object B {
        |  A.Nested.NestedLeaf
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package a
+                |
+                |import a.A.Nested.NestedLeaf
+                |object A {
+                |  object Nested{
+                |    object NestedLeaf
+                |  }
+                |}
+                |object B {
+                |  NestedLeaf
+                |}
+                |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -106,7 +125,30 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |object B {
        |  val allCountries = Sweden + France + USA + World.Countries.Norway
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package all
+           |import all.World.Countries.{
+           |  Sweden,
+           |  USA
+           |}
+           |import all.World.Countries.Norway
+           |
+           |object World {
+           |  object Countries{
+           |    object Sweden
+           |    object Norway
+           |    object France
+           |    object USA
+           |  }
+           |}
+           |import all.World.Countries.France
+           |object B {
+           |  val allCountries = Sweden + France + USA + Norway
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -144,7 +186,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|filter(p: Int => Boolean): Array[Int]
        |filterNot(p: Int => Boolean): Array[Int]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|filter(p: A => Boolean): Array[A]
+           |filter(pred: A => Boolean): C
+           |""".stripMargin
+    )
   )
 
   check(
@@ -160,7 +208,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|filter(p: Int => Boolean): Array[Int]
        |filterNot(p: Int => Boolean): Array[Int]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|filter(p: A => Boolean): Array[A]
+           |filter(pred: A => Boolean): C
+           |""".stripMargin
+    )
   )
 
   check(
@@ -176,7 +230,13 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|filter(p: Int => Boolean): Array[Int]
        |filterNot(p: Int => Boolean): Array[Int]
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|filter(p: A => Boolean): Array[A]
+           |filter(pred: A => Boolean): C
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -190,6 +250,36 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |  def method(arg: String): Unit = ()
       |}
       |import obj.method""".stripMargin
+  )
+
+  // The tests shows `x$1` but it's because the dependency is not indexed
+  checkEdit(
+    "default-java-override",
+    """|import org.eclipse.lsp4j.services.LanguageClient
+       |
+       |trait Client extends LanguageClient{
+       |  over@@
+       |}
+    """.stripMargin,
+    """|import org.eclipse.lsp4j.services.LanguageClient
+       |import java.util.concurrent.CompletableFuture
+       |import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+       |
+       |trait Client extends LanguageClient{
+       |  override def createProgress(x$1: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
+       |}
+       |""".stripMargin,
+    filter = (str) => str.contains("createProgress"),
+    compat = Map(
+      "3" -> """|import org.eclipse.lsp4j.services.LanguageClient
+                |import java.util.concurrent.CompletableFuture
+                |import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+                |
+                |trait Client extends LanguageClient{
+                |  override def createProgress(x$0: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
+                |}
+                |""".stripMargin
+    )
   )
 
   override val compatProcess: Map[String, String => String] = Map(

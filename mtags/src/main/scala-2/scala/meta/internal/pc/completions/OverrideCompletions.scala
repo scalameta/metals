@@ -2,6 +2,7 @@ package scala.meta.internal.pc.completions
 
 import scala.collection.immutable.Nil
 import scala.collection.mutable
+import scala.reflect.internal.Flags
 
 import scala.meta.internal.pc.AutoImportPosition
 import scala.meta.internal.pc.CompletionFuzzy
@@ -234,11 +235,15 @@ trait OverrideCompletions { this: MetalsGlobal =>
         if (sym.isLazy) "lazy "
         else ""
 
+      // don't show <defaultmethod>
+      val mask = sym.flagMask & ~Flags.JAVA_DEFAULTMETHOD
       val _modifs =
-        sym.flagString.replace(
-          sym.privateWithin.toString(),
-          sym.privateWithin.name.toString()
-        )
+        sym
+          .flagString(mask)
+          .replace(
+            sym.privateWithin.toString(),
+            sym.privateWithin.name.toString()
+          )
 
       val modifs =
         if (_modifs.isEmpty) ""
