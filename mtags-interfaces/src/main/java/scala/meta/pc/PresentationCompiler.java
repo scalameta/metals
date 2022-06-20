@@ -96,6 +96,11 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
 
     /**
+     * Return named arguments for the apply method that encloses the given position.
+     */
+    public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(OffsetParams params, List<Integer> argIndices);
+
+    /**
      * The text contents of the fiven file changed.
      */
     public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);

@@ -1,5 +1,6 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
@@ -87,6 +88,7 @@ class ImportMissingSymbolLspSuite
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
+        |${ConvertToNamedArguments.title("Future.successful")}
         |""".stripMargin,
     """|package a
        |
@@ -116,6 +118,7 @@ class ImportMissingSymbolLspSuite
         |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
         |${CreateNewSymbol.title("Instant")}
         |${CreateNewSymbol.title("ListBuffer")}
+        |${ConvertToNamedArguments.title("Future.successful")}
         |""".stripMargin,
     """|package a
        |
@@ -148,6 +151,7 @@ class ImportMissingSymbolLspSuite
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
         |${CreateNewSymbol.title("ListBuffer")}
+        |${ConvertToNamedArguments.title("Future.successful")}
         |""".stripMargin,
     """|package a
        |
@@ -180,6 +184,7 @@ class ImportMissingSymbolLspSuite
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
         |${CreateNewSymbol.title("ListBuffer")}
+        |${ConvertToNamedArguments.title("Future.successful")}
         |""".stripMargin,
     """|package a
        |
@@ -208,6 +213,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Instant")}
+        |${ConvertToNamedArguments.title("Future.successful")}
         |""".stripMargin,
     """|package a
        |

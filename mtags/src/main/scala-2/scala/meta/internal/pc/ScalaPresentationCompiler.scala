@@ -142,6 +142,20 @@ case class ScalaPresentationCompiler(
     }
   }
 
+  override def convertToNamedArguments(
+      params: OffsetParams,
+      argIndices: ju.List[Integer]
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
+    compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
+      new ConvertToNamedArgumentsProvider(
+        pc.compiler(),
+        params,
+        argIndices.asScala.map(_.toInt).toSet
+      ).convertToNamedArguments.asJava
+    }
+  }
+
   override def autoImports(
       name: String,
       params: OffsetParams

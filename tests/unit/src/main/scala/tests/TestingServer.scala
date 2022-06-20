@@ -1131,10 +1131,17 @@ final class TestingServer(
       query: String,
       expected: String,
       kind: List[String],
-      root: AbsolutePath = workspace
+      root: AbsolutePath = workspace,
+      filterAction: l.CodeAction => Boolean = _ => true
   )(implicit loc: munit.Location): Future[List[l.CodeAction]] =
     for {
-      (codeActions, codeActionString) <- codeAction(filename, query, root, kind)
+      (codeActions, codeActionString) <- codeAction(
+        filename,
+        query,
+        root,
+        kind,
+        filterAction
+      )
     } yield {
       Assertions.assertNoDiff(codeActionString, expected)
       codeActions
@@ -1161,7 +1168,8 @@ final class TestingServer(
       filename: String,
       query: String,
       root: AbsolutePath,
-      kind: List[String]
+      kind: List[String],
+      filterAction: l.CodeAction => Boolean
   ): Future[(List[l.CodeAction], String)] =
     for {
       (_, params) <- codeActionParams(
@@ -1173,10 +1181,13 @@ final class TestingServer(
           if (kind.nonEmpty) kind.asJava else null
         )
       )
-      codeActions <- server.codeAction(params).asScala
+      codeActions <- server
+        .codeAction(params)
+        .asScala
+        .map(_.asScala.filter(filterAction))
     } yield (
-      codeActions.asScala.toList,
-      codeActions.map(_.getTitle()).asScala.mkString("\n")
+      codeActions.toList,
+      codeActions.map(_.getTitle()).mkString("\n")
     )
 
   def assertHighlight(

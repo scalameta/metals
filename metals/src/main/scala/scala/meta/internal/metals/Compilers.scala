@@ -358,6 +358,22 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
+  def convertToNamedArguments(
+      position: TextDocumentPositionParams,
+      argIndices: ju.List[Integer],
+      token: CancelToken
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
+      pc.convertToNamedArguments(
+        CompilerOffsetParams.fromPos(pos, token),
+        argIndices
+      ).asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
+  }.getOrElse(Future.successful(Nil.asJava))
+
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken
