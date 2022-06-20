@@ -60,16 +60,6 @@ inThisBuild(
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
-    // forking options
-    javaOptions += {
-      import scala.collection.JavaConverters._
-      val props = System.getProperties
-      props
-        .stringPropertyNames()
-        .asScala
-        .map { configKey => s"-D$configKey=${props.getProperty(configKey)}" }
-        .mkString(" ")
-    },
     resolvers += Resolver.bintrayRepo("scalacenter", "releases")
   )
 )
