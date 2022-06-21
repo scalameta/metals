@@ -240,7 +240,12 @@ class MetalsTreeViewProvider(
               TreeViewNode.fromCommand(ServerCommands.CancelCompile, "cancel"),
               TreeViewNode.fromCommand(ServerCommands.CleanCompile, "clean"),
               TreeViewNode
-                .fromCommand(ServerCommands.RestartBuildServer, "debug-stop")
+                .fromCommand(ServerCommands.RestartBuildServer, "debug-stop"),
+              TreeViewNode
+                .fromCommand(
+                  ServerCommands.ResetNotifications,
+                  "notifications-clear"
+                )
             )
           case _ =>
             Array()

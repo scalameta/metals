@@ -380,6 +380,15 @@ object ServerCommands {
     "[string?], where string is a choice value."
   )
 
+  val ResetNotifications = new Command(
+    "reset-notifications",
+    "Reset notifications",
+    """|ResetNotifications command allows you to reset all the dismissed notifications.
+       |E.g. If you choose to dismiss build import forever, this command will make the notification show up again.
+       |
+       |""".stripMargin
+  )
+
   val NewScalaFile = new ListParametrizedCommand[String](
     "new-scala-file",
     "Create new scala file",
@@ -565,6 +574,7 @@ object ServerCommands {
       NewScalaProject,
       PresentationCompilerRestart,
       ResetChoicePopup,
+      ResetNotifications,
       RestartBuildServer,
       RunDoctor,
       RunScalafix,
