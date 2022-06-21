@@ -1939,6 +1939,11 @@ class MetalsLanguageServer(
             popupChoiceReset.interactiveReset()
         }).asJavaObject
 
+      case ServerCommands.ResetNotifications() =>
+        Future {
+          tables.dismissedNotifications.resetAll()
+        }.asJavaObject
+
       case ServerCommands.NewScalaFile(args) =>
         val directoryURI = args.lift(0).flatten.map(new URI(_))
         val name = args.lift(1).flatten

@@ -474,6 +474,10 @@ object MetalsEnrichments
       filename.endsWith(".zip")
     }
 
+    def canWrite: Boolean = {
+      path.toNIO.toFile().canWrite()
+    }
+
     /**
      * Reads file contents from editor buffer with fallback to disk.
      */

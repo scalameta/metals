@@ -195,6 +195,10 @@ final class BloopServers(
         )
         Future.successful(languageClient.metalsExecuteClientCommand(command))
 
+      case (item, _)
+          if item == Messages.BloopGlobalJsonFilePremodified.useGlobalFile =>
+        tables.dismissedNotifications.UpdateBloopJson.dismissForever()
+        Future.unit
       case _ => Future.unit
 
     }
@@ -310,6 +314,7 @@ final class BloopServers(
     val result =
       for {
         bloopPath <- bloopJsonPath
+        if bloopPath.canWrite
         (maybeBloopGlobalJsonJavaHome, maybeBloopGlobalJsonJvmProperties) =
           maybeLoadBloopGlobalJsonFile(bloopPath)
         bloopJsonUpdateCause <-
@@ -351,7 +356,8 @@ final class BloopServers(
     val lockFileTime = bloopLockFile
       .flatMap(file => Try(file.readText.toLong).toOption)
       .getOrElse(0L)
-    if (
+    if (tables.dismissedNotifications.UpdateBloopJson.isDismissed) Future.unit
+    else if (
       bloopJsonPath.exists(_.exists) && bloopLastModifiedTime > lockFileTime
     ) {
       // the global json file was previously modified by the user through other means;
