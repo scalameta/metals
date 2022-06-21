@@ -46,6 +46,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import ch.epfl.scala.{bsp4j => b}
+import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
@@ -751,7 +752,7 @@ object MetalsEnrichments
     def toLSP: l.Diagnostic =
       new l.Diagnostic(
         diag.getRange.toLSP,
-        fansi.Str(diag.getMessage).plainText,
+        fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
         diag.getSeverity.toLSP,
         if (diag.getSource == null) "scalac" else diag.getSource
         // We omit diag.getCode since Bloop's BSP implementation uses 'code' with different semantics
