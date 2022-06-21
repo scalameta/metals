@@ -829,6 +829,67 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "tab-indented1",
+    """|package a
+       |
+       |object A {
+       |	trait Base {
+       |		def foo(x: Int): Int
+       |		def bar(x: String): String
+       |	}
+       |	class <<Concrete>> extends Base {
+       |	}
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |	trait Base {
+       |		def foo(x: Int): Int
+       |		def bar(x: String): String
+       |	}
+       |	class Concrete extends Base {
+       |
+       |		override def foo(x: Int): Int = ???
+       |
+       |		override def bar(x: String): String = ???
+       |
+       |	}
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "tab-indented2",
+    """|package a
+       |
+       |object A {
+       |	trait Base {
+       |		def foo(x: Int): Int
+       |		def bar(x: String): String
+       |	}
+       |	class <<Concrete>> extends Base
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |	trait Base {
+       |		def foo(x: Int): Int
+       |		def bar(x: String): String
+       |	}
+       |	class Concrete extends Base {
+       |
+       |		override def foo(x: Int): Int = ???
+       |
+       |		override def bar(x: String): String = ???
+       |
+       |	}
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "braceless-basic".tag(IgnoreScala2),
     """|package a
        |
@@ -887,6 +948,32 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def foo(x: Int): Int = x
        |
        |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "tab-indented-braceless".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |	def foo(x: Int): Int
+       |	def bar(x: String): String
+       |
+       |class <<Concrete>> extends Base:
+       |	def foo(x: Int): Int = x
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |	def foo(x: Int): Int
+       |	def bar(x: String): String
+       |
+       |class Concrete extends Base:
+       |
+       |	override def bar(x: String): String = ???
+       |
+       |	def foo(x: Int): Int = x
+       |
        |""".stripMargin
   )
 

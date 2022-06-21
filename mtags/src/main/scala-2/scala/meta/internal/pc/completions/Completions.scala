@@ -748,12 +748,22 @@ trait Completions { this: MetalsGlobal =>
   // class Main {
   //   def foo<COMPLETE> // inferred indent is 2 spaces.
   // }
-  def inferIndent(lineStart: Int, text: String): Int = {
+  def inferIndent(lineStart: Int, text: String): (Int, Boolean) = {
     var i = 0
-    while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
+    var tabIndented = false
+    while (
+      lineStart + i < text.length && {
+        val char = text.charAt(lineStart + i)
+        if (char == '\t') {
+          tabIndented = true
+          true
+        } else
+          char == ' '
+      }
+    ) {
       i += 1
     }
-    i
+    (i, tabIndented)
   }
 
   // Returns the symbols that have been renamed in this scope.

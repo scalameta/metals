@@ -35,7 +35,8 @@ import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.{lsp4j as l}
 
 object OverrideCompletions:
-  private val DefaultIndent = 2
+  private def defaultIndent(tabIndent: Boolean) =
+    if tabIndent then 1 else 2
 
   /**
    * @param td A surrounded type definition being complete
@@ -200,7 +201,7 @@ object OverrideCompletions:
       // |  class FooImpl extends Foo {
       // |  }
       // ```
-      val necessaryIndent = inferIndent(
+      val (necessaryIndent, tabIndented) = inferIndent(
         source.lineToOffset(td.sourcePos.line),
         text
       )
@@ -214,17 +215,21 @@ object OverrideCompletions:
       // |        override def foo: Int = 1
       // |  }
       // ```
-      val numIndent =
+      val (numIndent, shouldTabIndent) =
         decls.headOption
           .map { decl =>
             inferIndent(source.lineToOffset(decl.sourcePos.line), text)
           }
-          .getOrElse(necessaryIndent + DefaultIndent)
-      val indent = " " * numIndent
+          .getOrElse({
+            val default = defaultIndent(tabIndented)
+            (necessaryIndent + default, tabIndented)
+          })
+      val indentChar = if shouldTabIndent then "\t" else " "
+      val indent = indentChar * numIndent
       val lastIndent =
         if (td.sourcePos.startLine == td.sourcePos.endLine) ||
           shouldCompleteBraces
-        then "\n" + " " * necessaryIndent
+        then "\n" + indentChar * necessaryIndent
         else ""
       (indent, indent, lastIndent)
     end calcIndent
@@ -428,10 +433,18 @@ object OverrideCompletions:
    *
    * @param lineOffset the offset position of the beginning of the line
    */
-  private def inferIndent(lineOffset: Int, text: String): Int =
+  private def inferIndent(lineOffset: Int, text: String): (Int, Boolean) =
     var i = 0
-    while lineOffset + i < text.length && text.charAt(lineOffset + i) == ' ' do
-      i += 1
-    i
+    var tabIndented = false
+    while lineOffset + i < text.length && {
+        val char = text.charAt(lineOffset + i)
+        if char == '\t' then
+          tabIndented = true
+          true
+        else char == ' '
+      }
+    do i += 1
+    (i, tabIndented)
+  end inferIndent
 
 end OverrideCompletions
