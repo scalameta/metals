@@ -101,12 +101,12 @@ class InsertInferredTypeLspSuite
   check(
     "lambda",
     """|object A{
-       |  val list = "123".map(c<<>>h => ch.toInt)
+       |  val list = "123".foreach(c<<>>h => ch.toInt)
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
         |""".stripMargin,
     """|object A{
-       |  val list = "123".map((ch: Char) => ch.toInt)
+       |  val list = "123".foreach((ch: Char) => ch.toInt)
        |}
        |""".stripMargin,
     filterAction = filterAction
@@ -115,12 +115,12 @@ class InsertInferredTypeLspSuite
   check(
     "lambda-brace",
     """|object A{
-       |  val list = "123".map{c<<>>h => ch.toInt}
+       |  val list = "123".foreach{c<<>>h => ch.toInt}
        |}""".stripMargin,
     s"""|${InsertInferredType.insertType}
         |""".stripMargin,
     """|object A{
-       |  val list = "123".map{ch: Char => ch.toInt}
+       |  val list = "123".foreach{ch: Char => ch.toInt}
        |}
        |""".stripMargin,
     filterAction = filterAction

@@ -5,7 +5,9 @@ import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
+import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 
@@ -26,6 +28,32 @@ class Scala3CodeActionLspSuite
        |  val al<<>>pha: Int = 123
        |}
        |""".stripMargin
+  )
+
+  check(
+    "for-comprehension-using",
+    """object A{
+      | class Context
+      | val ctx = new Context
+      | def hello(using ctx: Context)(i: Int): Int = i
+      | val res = List(1,2,3).ma<<>>p(hello(using ctx)(_))
+      |}""".stripMargin,
+    s"""${RewriteBracesParensCodeAction.toBraces("map")}
+       |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
+    """|object A{
+       | class Context
+       | val ctx = new Context
+       | def hello(using ctx: Context)(i: Int): Int = i
+       | val res = {
+       |  for {
+       |    generatedByMetals0 <- List(1, 2, 3)
+       |  } yield {
+       |    hello(using ctx)(generatedByMetals0)
+       |  }
+       | }
+       |}
+       |""".stripMargin,
+    1
   )
 
   check(

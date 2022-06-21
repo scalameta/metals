@@ -54,31 +54,33 @@ class ConvertPatternMatchLspSuite
     "with-placeholder-after-brace",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { _ <<>>match {
-       |    case 1 => {
-       |      x = 1
-       |      Nil
-       |    }
-       |    case 2 =>
-       |    {
-       |      x = 2; Nil
-       |    }
-       |    case 3 => x = 3; Nil
-       |  }}
+       |  List(1, 2).foreach {
+       |    _ <<>>match {
+       |      case 1 => {
+       |        x = 1
+       |        Nil
+       |      }
+       |     case 2 =>
+       |      {
+       |       x = 2; Nil
+       |      }
+       |      case 3 => x = 3; Nil
+       |   }
+       |  }
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
         |""".stripMargin,
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { 
+       |  List(1, 2).foreach {
        |    case 1 => {
        |      x = 1
        |      Nil
        |    }
        |    case 2 =>
        |    {
-       |      x = 2; Nil
+       |     x = 2; Nil
        |    }
        |    case 3 => x = 3; Nil
        |  }

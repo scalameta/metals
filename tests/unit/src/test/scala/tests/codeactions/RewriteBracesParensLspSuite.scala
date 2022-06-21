@@ -29,14 +29,14 @@ class RewriteBracesParensLspSuite
     "to-braces-2",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map ( a => <<>>a )
+       |  List(1,2).foreach ( a => <<>>a )
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
-        |${ConvertToNamedArguments.title("List(1,2).map")}""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("foreach")}
+        |${ConvertToNamedArguments.title("List(1,2).foreach")}""".stripMargin,
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { a => a }
+       |  List(1,2).foreach { a => a }
        |}
        |""".stripMargin
   )
@@ -45,17 +45,17 @@ class RewriteBracesParensLspSuite
     "to-braces-3",
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map(_ ma<<>>tch {
+       |  x.foreach(_ ma<<>>tch {
        |    case 1 => 0
        |    case _ => 1
        |  })
        |}
        |""".stripMargin,
-    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
-        |${ConvertToNamedArguments.title("x.map")}""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("foreach")}
+        |${ConvertToNamedArguments.title("x.foreach")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map{_ match {
+       |  x.foreach{_ match {
        |    case 1 => 0
        |    case _ => 1
        |  }}
@@ -83,13 +83,13 @@ class RewriteBracesParensLspSuite
     "to-parens-2",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { a => <<>>a }
+       |  List(1,2).foreach { a => <<>>a }
        |}
        |""".stripMargin,
-    RewriteBracesParensCodeAction.toParens("map"),
+    RewriteBracesParensCodeAction.toParens("foreach"),
     """|object Main {
        |  var x = 0
-       |  List(1,2).map ( a => a )
+       |  List(1,2).foreach ( a => a )
        |}
        |""".stripMargin
   )
@@ -98,17 +98,17 @@ class RewriteBracesParensLspSuite
     "to-parens-3",
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map{_ ma<<>>tch {
+       |  x.foreach{_ ma<<>>tch {
        |    case 1 => 0
        |    case _ => 1
        |  }}
        |}
        |""".stripMargin,
     s"""|${PatternMatchRefactor.convertPatternMatch}
-        |${RewriteBracesParensCodeAction.toParens("map")}""".stripMargin,
+        |${RewriteBracesParensCodeAction.toParens("foreach")}""".stripMargin,
     """|object Main {
        |  val x = List(1, 2, 3)
-       |  x.map(_ match {
+       |  x.foreach(_ match {
        |    case 1 => 0
        |    case _ => 1
        |  })
@@ -117,22 +117,14 @@ class RewriteBracesParensLspSuite
     selectedActionIndex = 1
   )
 
-  check(
+  checkNoAction(
     "to-parens-noop",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { a =>
+       |
+       |  List(1,2).foreach { a =>
        |    println(a)
        |    <<>>a 
-       |  }
-       |}
-       |""".stripMargin,
-    "",
-    """|object Main {
-       |  var x = 0
-       |  List(1,2).map { a =>
-       |    println(a)
-       |    a 
        |  }
        |}
        |""".stripMargin
