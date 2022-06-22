@@ -35,7 +35,7 @@ cs install ammonite
 amm ./bin/merged_prs.sc <tag1> <tag2> "<github_api_token>"
 ```
 
-It will need a basic github API token to run, which may be specified via
+It will need a [basic github API token](https://github.com/settings/tokens) (don't need any additional scopes) to run, which may be specified via
 environment variable `GITHUB_TOKEN` or via the last argument.
 
 The script will generate a new markdown file in `website/blog` filled with a
@@ -76,7 +76,7 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
   - Create the milestone or milestones corresponding to future releases. For
     example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.
 
-### Before official release
+### Before release announcement
 
 - Verify the Sonatype release:
 
@@ -97,10 +97,8 @@ Open the PR to the repo https://github.com/scalameta/metals/releases/new.
 
   - https://github.com/scalameta/metals-vscode:
     - generate metals website with `sbt docs/run`
-    - open `website/target/docs/editors/vscode.md` and copy everything from
-      "Requirements" over to the scalameta/metals-vscode README
-      - remove "Using latest SNAPSHOT" section, this table is only up-to-date on
-        the website
+    - open `website/target/docs/editors/vscode.md` and copy everything from "Requirements" over to the scalameta/metals-vscode README
+      - remove "Using latest SNAPSHOT" section, this table is only up-to-date on the website
     - check or update `enum` values of `fallbackScalaVersion` property in `package.json`.
       They should be the same as `V.supportedScalaVersions` in `build.sbt`
     - open a PR, feel free to merge after CI is green
