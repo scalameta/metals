@@ -29,14 +29,27 @@ object AutoImports:
     case Simple(sym: Symbol)
 
     /**
-     * Rename symbol owner and add renamed prefix to tpe symbol
-     * `Map -> (ju.Map, import java.{util => ju})`
+     * Rename symbol owner and add renamed prefix to tpe symbol.
+     * For example, `Reanmed(sym = <java.util.Map>, ownerRename = "ju")` represents
+     * complete `ju.Map` while auto import `import java.{util => ju}`.
+     * `toEdits` method convert `Renamed` to
+     * AutoImportEdits(
+     *  nameEdit = "ju.Map",
+     *  importEdit = "import java.{util => ju})"
+     * )
      */
     case Renamed(sym: Symbol, ownerRename: String)
 
     /**
      * Rename symbol itself, import only.
-     * `Map -> ("", import java.{util => ju})`
+     * For example, `SelfRenamed(sym = <java.util>, name = "ju")` represents
+     * auto import `import java.{util => ju}` without completing anything, unlike `Renamed`.
+     *
+     * `toEdits` method convert `SelfRenamed` to
+     * AutoImportEdits(
+     *  nameEdit = None,
+     *  importEdit = "import java.{util => ju})"
+     * )
      */
     case SelfRenamed(sym: Symbol, name: String)
 
