@@ -5,6 +5,7 @@ import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
+import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
 import scala.meta.internal.metals.codeactions.InsertInferredType
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
@@ -325,6 +326,61 @@ class Scala3CodeActionLspSuite
        |  class Concrete extends Base:
        |""".stripMargin,
     expectError = true,
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "given-object-creation",
+    """|package a
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given <<Foo>> with {}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given Foo with {
+       |
+       |  override def foo(x: Int): Int = ???
+       |
+       |  override def bar(x: String): String = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "given-object-with",
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given <<Foo>>
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given Foo with
+       |
+       |  override def foo(x: Int): Int = ???
+       |
+       |  override def bar(x: String): String = ???
+       |""".stripMargin,
     expectNoDiagnostics = false,
   )
 

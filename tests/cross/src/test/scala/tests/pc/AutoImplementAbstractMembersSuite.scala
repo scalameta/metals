@@ -1043,7 +1043,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  override def bar(x: String): String = ???
        |
        |  def foo(x: Int): Int = x
-       |""".stripMargin
+       |""".stripMargin,
   )
 
   checkEdit(
@@ -1064,12 +1064,36 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |given Foo with {
        |
-       |  override def foo(x: Int): Int = x
+       |  override def foo(x: Int): Int = ???
        |
        |  override def bar(x: String): String = ???
        |
        |}
-       |""".stripMargin
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "given-object-with".tag(IgnoreScala2),
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given <<Foo>>
+       |""".stripMargin,
+    """|package given
+       |
+       |trait Foo:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |given Foo with
+       |
+       |  override def foo(x: Int): Int = ???
+       |
+       |  override def bar(x: String): String = ???
+       |""".stripMargin,
   )
 
   def checkEdit(
