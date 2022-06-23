@@ -15,10 +15,14 @@ import dotty.tools.dotc.util.ParsedComment
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextEdit
 
 sealed trait CompletionValue:
   def label: String
+  def insertText: Option[String] = None
   def snippetSuffix: Option[String] = None
+  def additionalEdits: List[TextEdit] = Nil
+  def range: Option[Range] = None
 
   final def completionItemKind(using Context): CompletionItemKind =
     this match
@@ -26,7 +30,7 @@ sealed trait CompletionValue:
       case _: CompletionValue.NamedArg => CompletionItemKind.Field
       case _: CompletionValue.Override => CompletionItemKind.Method
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
-            CompletionValue.Scope) =>
+            CompletionValue.Scope | CompletionValue.Interpolator) =>
         val symbol = v.symbol
         if symbol.is(Package) || symbol.is(Module) then
           // No CompletionItemKind.Package (https://github.com/Microsoft/language-server-protocol/issues/155)
@@ -98,13 +102,22 @@ object CompletionValue:
   end Override
 
   case class NamedArg(label: String, tpe: Type) extends CompletionValue
-  case class Keyword(label: String, insertText: String) extends CompletionValue
+  case class Keyword(label: String, override val insertText: Option[String])
+      extends CompletionValue
+
+  case class Interpolator(
+      symbol: Symbol,
+      label: String,
+      override val insertText: Option[String],
+      override val additionalEdits: List[TextEdit],
+      override val range: Option[Range]
+  ) extends Symbolic
 
   def namedArg(label: String, sym: Symbol)(using Context): CompletionValue =
     NamedArg(label, sym.info.widenTermRefExpr)
 
   def keyword(label: String, insertText: String): CompletionValue =
-    Keyword(label, insertText)
+    Keyword(label, Some(insertText))
 
   def scope(label: String, sym: Symbol): CompletionValue =
     Scope(label, sym)

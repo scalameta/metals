@@ -23,6 +23,7 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.Range as LspRange
 
 class CompletionsProvider(
     search: SymbolSearch,
@@ -123,8 +124,10 @@ class CompletionsProvider(
           isEmptyLine(idx - 1, initial)
         else if isNewline then true
         else false
-
-    if isEmptyLine(offset, offset) then
+    // for s" $@@ " or s" ${@@ "
+    def isDollar = offset > 2 && (text.charAt(offset - 1) == '$' ||
+      text.charAt(offset - 1) == '{' && text.charAt(offset - 2) == '$')
+    if isEmptyLine(offset, offset) || isDollar then
       text.substring(0, offset) + "CURSOR" + text.substring(offset)
     else text
   end applyCompletionCursor
@@ -213,12 +216,10 @@ class CompletionsProvider(
         isFromWorkspace: Boolean = false,
         additionalEdits: List[TextEdit] = Nil,
         filterText: Option[String] = None,
-        start: Option[Int] = None
+        range: Option[LspRange] = None
     ): CompletionItem =
       val nameEdit = new TextEdit(
-        start
-          .map(s => completionPos.copy(start = s).toEditRange)
-          .getOrElse(editRange),
+        range.getOrElse(editRange),
         value
       )
       mkItem0(ident, nameEdit, isFromWorkspace, additionalEdits, filterText)
@@ -289,13 +290,20 @@ class CompletionsProvider(
           false,
           additionalEdits,
           Some(filterText),
-          Some(start)
+          Some(completionPos.copy(start = start).toEditRange)
         )
       case CompletionValue.NamedArg(label, _) =>
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
-      case CompletionValue.Keyword(label, text) => mkItem(label, text)
+      case CompletionValue.Keyword(label, text) =>
+        mkItem(label, text.getOrElse(label))
       case _ =>
-        mkItem(ident, ident.backticked + completionTextSuffix)
+        val insert = completion.insertText.getOrElse(ident.backticked)
+        mkItem(
+          ident,
+          insert + completionTextSuffix,
+          additionalEdits = completion.additionalEdits,
+          range = completion.range
+        )
     end match
   end completionItems
 end CompletionsProvider

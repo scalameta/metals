@@ -5,9 +5,6 @@ import tests.pc.CrossTestEnrichments._
 
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
-
   checkEdit(
     "string",
     """|object Main {
@@ -103,6 +100,29 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "not-escape-twice",
+    """|object Main {
+       |  val myName = ""
+       |  s"$myNam@@ $$"
+       |}
+       |""".stripMargin.triplequoted,
+    """|object Main {
+       |  val myName = ""
+       |  s"$myName$0 $$"
+       |}
+       |""".stripMargin.triplequoted,
+    filterText = "myName",
+    compat = Map(
+      "2" ->
+        """|object Main {
+           |  val myName = ""
+           |  s"$myName $$"
+           |}
+           |""".stripMargin
+    )
+  )
+
+  checkEdit(
     "escape-ident",
     """|object Main {
        |  val myName = ""
@@ -124,6 +144,46 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|myName: String
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "interpolator-in-object",
+    """|object Outer {
+       |  private def method = {
+       |    object Test {
+       |      val hello: String = "1"
+       |      s"$hello.toStri@@  $$"
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    """|object Outer {
+       |  private def method = {
+       |    object Test {
+       |      val hello: String = "1"
+       |      s"${hello.toString()$0}  $$"
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "interpolator-in-object-no-brace".tag(IgnoreScala2),
+    """|private def runExample =
+       |  val hello: String = "1"
+       |  s"$hello.to@@  "
+       |
+       |""".stripMargin,
+    """|object Outer {
+       |  private def method = {
+       |    object Test {
+       |      val hello: String = "1"
+       |      s"${hello.toString()$0}  $$"
+       |    }
+       |  }
+       |}
        |""".stripMargin
   )
 
@@ -327,7 +387,14 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "member2",
+    "member2".tag(
+      IgnoreScalaVersion(
+        "3.2.0-RC1",
+        "3.2.1-RC1-bin-20220623-5a8a61d-NIGHTLY",
+        "3.2.1-RC1-bin-20220624-28faa0f-NIGHTLY",
+        "3.2.1-RC1-bin-20220626-2c87994-NIGHTLY"
+      )
+    ),
     """|object Main {
        |  s"Hello $Main.toStr@@!"
        |}
@@ -362,6 +429,38 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|object Main {
        |  val `type` = ""
        |  s"Hello ${Main.`type`$0}!"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "member-multiple",
+    """|object Main {
+       |  val abc = ""
+       |  val dfg = ""
+       |  s"Hello $abc.toStrin@@ from ${dfg.toString()}!"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val abc = ""
+       |  val dfg = ""
+       |  s"Hello ${abc.toString()$0} from ${dfg.toString()}!"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "member-multiple2",
+    """|object Main {
+       |  val abc = ""
+       |  val dfg = ""
+       |  s"Hello $dfg $abc.toStrin@@ from ${dfg.toString()}!"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val abc = ""
+       |  val dfg = ""
+       |  s"Hello $dfg ${abc.toString()$0} from ${dfg.toString()}!"
        |}
        |""".stripMargin
   )

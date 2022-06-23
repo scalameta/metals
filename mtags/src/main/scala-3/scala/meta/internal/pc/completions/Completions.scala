@@ -59,6 +59,7 @@ class Completions(
       false
     case (_: Import) :: _ => false
     case _ :: (_: Import) :: _ => false
+    case (_: Ident) :: (_: SeqLiteral) :: _ => false
     case _ => true
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
@@ -127,7 +128,7 @@ class Completions(
       end match
     else None
 
-  private def completionsWithSuffix(
+  def completionsWithSuffix(
       sym: Symbol,
       label: String,
       toCompletionValue: (String, Symbol, Option[String]) => CompletionValue
@@ -237,7 +238,17 @@ class Completions(
           if Fuzzy.matches(td.symbol.name.decoded, filename) =>
         val values = FilenameCompletions.contribute(filename, td)
         (values, true)
-
+      case (lit @ Literal(Constant(_: String))) :: _ =>
+        val completions = InterpolatorCompletions.contribute(
+          pos,
+          completionPos,
+          indexedContext,
+          lit,
+          path,
+          this,
+          config.isCompletionSnippetsEnabled()
+        )
+        (completions, true)
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
       case Literal(Constant(null)) :: tl =>

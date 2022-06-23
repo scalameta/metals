@@ -94,6 +94,15 @@ object MtagsEnrichments extends CommonMtagsEnrichments:
         offsetToPos(pos.end)
       )
 
+    def withEnd(end: Int): SourcePosition =
+      pos.withSpan(pos.span.withEnd(end))
+
+    def withStart(end: Int): SourcePosition =
+      pos.withSpan(pos.span.withStart(end))
+
+    def focusAt(point: Int): SourcePosition =
+      pos.withSpan(pos.span.withPoint(point).focus)
+
     def toLocation: Option[l.Location] =
       for
         uri <- InteractiveDriver.toUriOption(pos.source)

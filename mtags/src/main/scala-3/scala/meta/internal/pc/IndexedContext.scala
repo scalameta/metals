@@ -89,11 +89,11 @@ object IndexedContext:
         .orElse(outer.findSymbol(name))
 
     def scopeSymbols: List[Symbol] =
-      val acc = List.newBuilder[Symbol]
+      val acc = Set.newBuilder[Symbol]
       (this :: outers).foreach { ref =>
         acc ++= ref.names.symbols.values.flatten
       }
-      acc.result
+      acc.result.toList
 
     def rename(sym: Symbol): Option[String] =
       names.renames
