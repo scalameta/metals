@@ -28,6 +28,7 @@ The current maintainers (people who can merge pull requests) are:
 - Chris Kipp - [`@ckipp01`](https://github.com/ckipp01)
 - Kamil Podsiadło - [`@kpodsiad`](https://github.com/kpodsiad)
 - Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
+- Rikito Taniguchi - [`@tanishiking`](https://github.com/tanishiking)
 - Tomasz Godzik - [`@tgodzik`](https://github.com/tgodzik)
 - Vadim Chelyshov - [`@dos65`](https://github.com/dos65)
 
