@@ -71,8 +71,6 @@ object AutoImports:
         Context
     ): Map[Symbol, String] =
       config.symbolPrefixes.asScala.flatMap { (from, to) =>
-        val fullName = from.stripSuffix("/").replace("/", ".")
-        // val pkg = requiredPackage(fullName)
         val pkg = SemanticdbSymbols.inverseSemanticdbSymbol(from)
         val rename = to.stripSuffix(".").stripSuffix("#")
         List(pkg, pkg.map(_.moduleClass)).flatten
