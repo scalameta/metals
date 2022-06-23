@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MemberOrdering
 import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.internal.semanticdb.Scala._
@@ -456,7 +457,7 @@ trait Completions { this: MetalsGlobal =>
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
         CasePatternCompletion(isTyped = true, c, m)
       case (lit @ Literal(Constant(_: String))) :: head :: _ =>
-        isPossibleInterpolatorSplice(pos, text) match {
+        InterpolationSplice(pos.point, pos.source.content, text) match {
           case Some(i) =>
             InterpolatorScopeCompletion(lit, pos, i, text)
           case _ =>

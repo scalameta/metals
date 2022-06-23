@@ -6,6 +6,7 @@ import scala.collection.immutable.Nil
 
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
@@ -160,58 +161,6 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
         cursor,
         text
       )
-    }
-  }
-
-  case class InterpolationSplice(
-      dollar: Int,
-      name: String,
-      needsBraces: Boolean
-  )
-
-  def isPossibleInterpolatorSplice(
-      pos: Position,
-      text: String
-  ): Option[InterpolationSplice] = {
-    val offset = pos.point
-    val chars = pos.source.content
-    var i = offset
-    while (
-      i > 0 && (chars(i) match { case '$' | '\n' => false; case _ => true })
-    ) {
-      i -= 1
-    }
-    val isCandidate = i > 0 &&
-      chars(i) == '$' && {
-        val start = chars(i + 1) match {
-          case '{' => i + 2
-          case _ => i + 1
-        }
-        start == offset || {
-          chars(start).isUnicodeIdentifierStart &&
-          (start + 1)
-            .until(offset)
-            .forall(j => chars(j).isUnicodeIdentifierPart)
-        }
-      }
-    if (isCandidate) {
-      val name = chars(i + 1) match {
-        case '{' => text.substring(i + 2, offset)
-        case _ => text.substring(i + 1, offset)
-      }
-      Some(
-        InterpolationSplice(
-          i,
-          name,
-          needsBraces = text.charAt(i + 1) == '{' ||
-            (text.charAt(offset) match {
-              case '"' => false // end of string literal
-              case ch => ch.isUnicodeIdentifierPart
-            })
-        )
-      )
-    } else {
-      None
     }
   }
 

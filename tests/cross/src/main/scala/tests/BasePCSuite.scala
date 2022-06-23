@@ -244,6 +244,9 @@ abstract class BasePCSuite extends BaseSuite {
     def apply(version: String): IgnoreScalaVersion = {
       IgnoreScalaVersion(_ == version)
     }
+    def apply(versions: String*): IgnoreScalaVersion = {
+      IgnoreScalaVersion(versions.toSet.apply(_))
+    }
 
     def for3LessThan(version: String): IgnoreScalaVersion = {
       val enableFrom = SemVer.Version.fromString(version)
