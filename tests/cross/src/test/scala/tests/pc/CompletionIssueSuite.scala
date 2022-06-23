@@ -271,14 +271,15 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = (str) => str.contains("createProgress"),
     compat = Map(
-      "3" -> """|import org.eclipse.lsp4j.services.LanguageClient
-                |import java.util.concurrent.CompletableFuture
-                |import org.eclipse.lsp4j.WorkDoneProgressCreateParams
-                |
-                |trait Client extends LanguageClient{
-                |  override def createProgress(x$0: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
-                |}
-                |""".stripMargin
+      "3" ->
+        """|import org.eclipse.lsp4j.services.LanguageClient
+           |import java.util.concurrent.CompletableFuture
+           |import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+           |
+           |trait Client extends LanguageClient{
+           |  override def createProgress(x$0: WorkDoneProgressCreateParams): CompletableFuture[Void] = ${0:???}
+           |}
+           |""".stripMargin
     )
   )
 

@@ -5,6 +5,7 @@ import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
+import scala.meta.internal.pc.printer.ShortenedNames.ShortName
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd.*
@@ -28,10 +29,29 @@ object AutoImports:
     case Simple(sym: Symbol)
 
     /**
-     * Rename symbol owner and add renamed prefix to tpe symbol
-     * `Map -> (ju.Map, import java.{util => ju})`
+     * Rename symbol owner and add renamed prefix to tpe symbol.
+     * For example, `Renamed(sym = <java.util.Map>, ownerRename = "ju")` represents
+     * complete `ju.Map` while auto import `import java.{util => ju}`.
+     * `toEdits` method convert `Renamed` to
+     * AutoImportEdits(
+     *  nameEdit = "ju.Map",
+     *  importEdit = "import java.{util => ju})"
+     * )
      */
     case Renamed(sym: Symbol, ownerRename: String)
+
+    /**
+     * Rename symbol itself, import only.
+     * For example, `SelfRenamed(sym = <java.util>, name = "ju")` represents
+     * auto import `import java.{util => ju}` without completing anything, unlike `Renamed`.
+     *
+     * `toEdits` method convert `SelfRenamed` to
+     * AutoImportEdits(
+     *  nameEdit = None,
+     *  importEdit = "import java.{util => ju})"
+     * )
+     */
+    case SelfRenamed(sym: Symbol, name: String)
 
     /**
      *  Import owner and add prefix to tpe symbol
@@ -46,6 +66,18 @@ object AutoImports:
     ): AutoImport =
       if sym.owner.showName == ownerRename then SpecifiedOwner(sym)
       else Renamed(sym, ownerRename)
+
+    def renameConfigMap(config: PresentationCompilerConfig)(using
+        Context
+    ): Map[Symbol, String] =
+      config.symbolPrefixes.asScala.flatMap { (from, to) =>
+        val pkg = SemanticdbSymbols.inverseSemanticdbSymbol(from)
+        val rename = to.stripSuffix(".").stripSuffix("#")
+        List(pkg, pkg.map(_.moduleClass)).flatten
+          .filter(_ != NoSymbol)
+          .map((_, rename))
+      }.toMap
+  end AutoImport
 
   /**
    * Returns AutoImportsGenerator
@@ -67,15 +99,7 @@ object AutoImports:
     import indexedContext.ctx
 
     val importPos = autoImportPosition(pos, text, tree)
-    val renameConfig: Map[Symbol, String] =
-      config.symbolPrefixes.asScala.flatMap { (from, to) =>
-        val fullName = from.stripSuffix("/").replace("/", ".")
-        val pkg = requiredPackage(fullName)
-        val rename = to.stripSuffix(".").stripSuffix("#")
-        List(pkg, pkg.moduleClass)
-          .filter(_ != NoSymbol)
-          .map((_, rename))
-      }.toMap
+    val renameConfig: Map[Symbol, String] = AutoImport.renameConfigMap(config)
 
     val renames =
       (sym: Symbol) =>
@@ -129,29 +153,43 @@ object AutoImports:
       editsForSymbol(symbol).map(_.edits)
 
     /**
+     * Construct auto imports for the given ShortName,
+     * if the shortName has different name with it's symbol name,
+     * generate renamed import. For example,
+     * `ShortName("ju", <java.util>)` => `import java.{util => ju}`.
+     */
+    def forShortName(shortName: ShortName): Option[List[l.TextEdit]] =
+      if shortName.isRename then Some(toEdits(shortName.asImport).edits)
+      else forSymbol(shortName.symbol)
+
+    /**
      * @param symbol A missing symbol to auto-import
      */
     def editsForSymbol(symbol: Symbol): Option[AutoImportEdits] =
-      inferAutoImport(symbol).map { ai =>
-        def mkImportEdit = importEdit(List(ai), importPosition)
-        ai match
-          case _: AutoImport.Simple =>
-            AutoImportEdits.importOnly(mkImportEdit)
-          case AutoImport.SpecifiedOwner(sym)
-              if indexedContext.lookupSym(sym.owner).exists =>
-            AutoImportEdits.nameOnly(specifyOwnerEdit(sym, sym.owner.showName))
-          case AutoImport.SpecifiedOwner(sym) =>
-            AutoImportEdits(
-              specifyOwnerEdit(sym, sym.owner.showName),
-              mkImportEdit
-            )
-          case AutoImport.Renamed(sym, ownerRename)
-              if indexedContext.hasRename(sym.owner, ownerRename) =>
-            AutoImportEdits.nameOnly(specifyOwnerEdit(sym, ownerRename))
-          case AutoImport.Renamed(sym, ownerRename) =>
-            AutoImportEdits(specifyOwnerEdit(sym, ownerRename), mkImportEdit)
-        end match
-      }
+      inferAutoImport(symbol).map { ai => toEdits(ai) }
+
+    private def toEdits(ai: AutoImport): AutoImportEdits =
+      def mkImportEdit = importEdit(List(ai), importPosition)
+      ai match
+        case _: AutoImport.Simple =>
+          AutoImportEdits.importOnly(mkImportEdit)
+        case AutoImport.SpecifiedOwner(sym)
+            if indexedContext.lookupSym(sym.owner).exists =>
+          AutoImportEdits.nameOnly(specifyOwnerEdit(sym, sym.owner.showName))
+        case AutoImport.SpecifiedOwner(sym) =>
+          AutoImportEdits(
+            specifyOwnerEdit(sym, sym.owner.showName),
+            mkImportEdit
+          )
+        case AutoImport.Renamed(sym, ownerRename)
+            if indexedContext.hasRename(sym.owner, ownerRename) =>
+          AutoImportEdits.nameOnly(specifyOwnerEdit(sym, ownerRename))
+        case AutoImport.Renamed(sym, ownerRename) =>
+          AutoImportEdits(specifyOwnerEdit(sym, ownerRename), mkImportEdit)
+        case AutoImport.SelfRenamed(_, _) =>
+          AutoImportEdits.importOnly(mkImportEdit)
+      end match
+    end toEdits
 
     private def inferAutoImport(symbol: Symbol): Option[AutoImport] =
       indexedContext.lookupSym(symbol) match
@@ -183,6 +221,8 @@ object AutoImports:
           case AutoImport.SpecifiedOwner(sym) => importName(sym.owner)
           case AutoImport.Renamed(sym, rename) =>
             s"${importName(sym.owner.owner)}.{${sym.owner.nameBackticked} => $rename}"
+          case AutoImport.SelfRenamed(sym, rename) =>
+            s"${importName(sym.owner)}.{${sym.nameBackticked} => $rename}"
         })
         .map(selector => s"${indent}import $selector")
         .mkString(topPadding, "\n", "\n")

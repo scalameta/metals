@@ -6,8 +6,11 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports
+import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
+import scala.meta.internal.pc.SemanticdbSymbols
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
@@ -18,12 +21,16 @@ import dotty.tools.dotc.core.Names
 import dotty.tools.dotc.core.Names.Designator
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Names.SimpleName
+import dotty.tools.dotc.core.Names.termName
 import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import org.eclipse.lsp4j.TextEdit
 
-class ShortenedNames(val indexedContext: IndexedContext):
+class ShortenedNames(
+    val indexedContext: IndexedContext,
+    renames: Map[Symbol, String] = Map.empty
+):
 
   import ShortenedNames.*
 
@@ -121,6 +128,9 @@ class ShortenedNames(val indexedContext: IndexedContext):
                 else TypeRef(loop(prefix, Some(short)), sym)
               case h :: tl =>
                 indexedContext.rename(h) match
+                  // case where the completing symbol is renamed in the context
+                  // for example, we have `import java.lang.{Boolean => JBoolean}` and
+                  // complete `java.lang.Boolean`. See `CompletionOverrideSuite`'s `rename'.
                   case Some(rename) =>
                     PrettyType(
                       (rename :: prev.map(_.name)).mkString(".")
@@ -128,7 +138,15 @@ class ShortenedNames(val indexedContext: IndexedContext):
                   case None =>
                     processOwners(sym, h :: prev, tl)
 
-          processOwners(sym, Nil, sym.ownersIterator.toList)
+          lazy val shortened =
+            processOwners(sym, Nil, sym.ownersIterator.toList)
+          renames.get(sym.owner) match
+            case Some(rename) =>
+              val short = ShortName(Names.termName(rename), sym.owner)
+              if tryShortenName(short) then
+                PrettyType(s"$rename.${sym.name.show}")
+              else shortened
+            case _ => shortened
 
         case TermRef(prefix, designator) =>
           val sym =
@@ -193,7 +211,11 @@ object ShortenedNames:
   case class ShortName(
       name: Name,
       symbol: Symbol
-  )
+  ):
+    def isRename(using Context): Boolean = symbol.name.show != name.show
+    def asImport(using Context): AutoImport =
+      AutoImport.SelfRenamed(symbol, name.show)
+
   object ShortName:
     def apply(sym: Symbol)(using ctx: Context): ShortName =
       ShortName(sym.name, sym)

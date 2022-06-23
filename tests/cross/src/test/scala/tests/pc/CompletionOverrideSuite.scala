@@ -401,17 +401,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |class Main extends JUtil {
        |  def foo: ju.List[Int] = ${0:???}
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|abstract class JUtil {
-           |  def foo: java.util.List[Int]
-           |}
-           |class Main extends JUtil {
-           |  def foo: java.util.List[Int] = ${0:???}
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
@@ -436,19 +426,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |  val java = 42
        |  def foo: ju.List[Int] = ${0:???}
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|package jutil
-           |abstract class JUtil {
-           |  def foo: java.util.List[Int]
-           |}
-           |class Main extends JUtil {
-           |  val java = 42
-           |  def foo: java.util.List[Int] = ${0:???}
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEditLine(

@@ -6,6 +6,7 @@ import java.{util as ju}
 import scala.collection.JavaConverters.*
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.AutoImports.AutoImport
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.OffsetParams
@@ -318,7 +319,7 @@ object OverrideCompletions:
       val edits = editsAndImports._1 :+ edit
       val imports = completion.shortenedNames
         .sortBy(nme => nme.name)
-        .flatMap(name => autoImports.forSymbol(name.symbol))
+        .flatMap(name => autoImports.forShortName(name))
         .flatten
         .toSet ++ editsAndImports._2
       (edits, imports)
@@ -342,10 +343,12 @@ object OverrideCompletions:
       config: PresentationCompilerConfig,
       shouldAddOverrideKwd: Boolean
   )(using Context): CompletionValue.Override =
+    val renames = AutoImport.renameConfigMap(config)
     val printer = MetalsPrinter.standard(
       indexedContext,
       search,
-      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Never
+      includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Never,
+      renames
     )
     val overrideKeyword: String =
       // if the overriding method is not an abstract member, add `override` keyword
