@@ -30,7 +30,7 @@ object AutoImports:
 
     /**
      * Rename symbol owner and add renamed prefix to tpe symbol.
-     * For example, `Reanmed(sym = <java.util.Map>, ownerRename = "ju")` represents
+     * For example, `Renamed(sym = <java.util.Map>, ownerRename = "ju")` represents
      * complete `ju.Map` while auto import `import java.{util => ju}`.
      * `toEdits` method convert `Renamed` to
      * AutoImportEdits(

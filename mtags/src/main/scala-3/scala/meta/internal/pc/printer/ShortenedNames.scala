@@ -136,18 +136,17 @@ class ShortenedNames(
                       (rename :: prev.map(_.name)).mkString(".")
                     )
                   case None =>
-                    renames.get(h) match
-                      case Some(rename) =>
-                        val short = ShortName(Names.termName(rename), h)
-                        if tryShortenName(short) then
-                          PrettyType(
-                            (rename :: prev.map(_.name)).mkString(".")
-                          )
-                        else processOwners(sym, h :: prev, tl)
-                      case None =>
-                        processOwners(sym, h :: prev, tl)
+                    processOwners(sym, h :: prev, tl)
 
-          processOwners(sym, Nil, sym.ownersIterator.toList)
+          lazy val shortened =
+            processOwners(sym, Nil, sym.ownersIterator.toList)
+          renames.get(sym.owner) match
+            case Some(rename) =>
+              val short = ShortName(Names.termName(rename), sym.owner)
+              if tryShortenName(short) then
+                PrettyType(s"$rename.${sym.name.show}")
+              else shortened
+            case _ => shortened
 
         case TermRef(prefix, designator) =>
           val sym =
