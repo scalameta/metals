@@ -51,3 +51,6 @@ website/.cache-loader
 
 project/metals.sbt
 coursier
+
+# Sourcegraph specific
+index.scip

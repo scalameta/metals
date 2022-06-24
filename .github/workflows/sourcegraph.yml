@@ -19,8 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: coursier/setup-action@v1.2.0-M2
-      - run: cs install --contrib lsif-java
-      - run: lsif-java index
+      - run: cs launch --contrib scip-java -- index
       - name: src lsif upload
         run: |
           mkdir -p bin
