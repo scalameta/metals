@@ -147,37 +147,24 @@ final case class Indexer(
     )
     tracked.foreach { _ =>
       statusBar().addMessage(
-        s"${clientConfig.icons.rocket}Indexing complete!"
+        s"${clientConfig.icons.rocket} Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {
-        logMemory(
-          "definition index",
-          definitionIndex
-        )
-        logMemory(
-          "references index",
-          referencesProvider().index
-        )
-        logMemory(
-          "workspace symbol index",
-          workspaceSymbols().inWorkspace
-        )
-        logMemory(
-          "classpath symbol index",
-          workspaceSymbols().inDependencies.packages
-        )
-        logMemory(
-          "build targets",
-          buildTargets
+        Memory.logMemory(
+          List(
+            ("definition index", definitionIndex),
+            ("references index", referencesProvider().index),
+            ("workspace symbol index", workspaceSymbols().inWorkspace),
+            ("build targets", buildTargets),
+            (
+              "classpath symbol index",
+              workspaceSymbols().inDependencies.packages
+            )
+          )
         )
       }
     }
     tracked
-  }
-
-  private def logMemory(name: String, index: Object): Unit = {
-    val footprint = Memory.footprint(name, index)
-    scribe.info(s"memory: $footprint")
   }
 
   private def indexWorkspace(check: () => Unit): Unit = {
