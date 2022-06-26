@@ -1,5 +1,5 @@
 package tests.codeactions
-
+import scala.meta.internal.metals.codeactions.AddingBracesCodeAction
 import scala.meta.internal.metals.codeactions.InsertInferredType
 
 import org.eclipse.lsp4j.CodeAction
@@ -23,6 +23,7 @@ class InsertInferredTypeLspSuite
        |}
        |""".stripMargin,
     s"""|${InsertInferredType.insertType}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|package a
        |
@@ -41,6 +42,7 @@ class InsertInferredTypeLspSuite
        |}
        |""".stripMargin,
     s"""|${InsertInferredType.insertType}
+        |${AddingBracesCodeAction.goBraceFul("def definition")}
         |""".stripMargin,
     """|package a
        |
@@ -132,6 +134,7 @@ class InsertInferredTypeLspSuite
        |  val (fir<<>>st, second) = (List(1), List(""))
        |}""".stripMargin,
     s"""|${InsertInferredType.insertTypeToPattern}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|object A{
        |  val (first: List[Int], second) = (List(1), List(""))
@@ -196,12 +199,21 @@ class InsertInferredTypeLspSuite
        |}""".stripMargin
   )
 
-  checkNoAction(
+  check(
     "existing-type",
     """|package a
        |
        |object A {
        |  val al<<>>pha: Int = 123
+       |}
+       |""".stripMargin,
+    s"""|
+        |${AddingBracesCodeAction.goBraceFul("val definition")}""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val alpha: Int ={ 123
+       |  }
        |}
        |""".stripMargin
   )
@@ -215,6 +227,7 @@ class InsertInferredTypeLspSuite
        |}
        |""".stripMargin,
     s"""|${InsertInferredType.insertType}
+        |${AddingBracesCodeAction.goBraceFul("var definition")}
         |""".stripMargin,
     """|package a
        |

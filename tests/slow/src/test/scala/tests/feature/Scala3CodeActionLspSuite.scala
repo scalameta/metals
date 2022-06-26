@@ -1,6 +1,7 @@
 package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.codeactions.AddingBracesCodeAction
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
@@ -20,12 +21,20 @@ class Scala3CodeActionLspSuite
 
   override protected val scalaVersion: String = BuildInfo.scala3
 
-  checkNoAction(
+  check(
     "val",
     """|package a
        |
        |object A {
        |  val al<<>>pha: Int = 123
+       |}
+       |""".stripMargin,
+    AddingBracesCodeAction.goBraceFul("val definition"),
+    """|package a
+       |
+       |object A {
+       |  val alpha: Int ={ 123
+       |  }
        |}
        |""".stripMargin
   )
@@ -39,7 +48,8 @@ class Scala3CodeActionLspSuite
       | val res = List(1,2,3).ma<<>>p(hello(using ctx)(_))
       |}""".stripMargin,
     s"""${RewriteBracesParensCodeAction.toBraces("map")}
-       |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}""".stripMargin,
+       |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+       |${AddingBracesCodeAction.goBraceFul("val definition")}""".stripMargin,
     """|object A{
        | class Context
        | val ctx = new Context
@@ -123,6 +133,7 @@ class Scala3CodeActionLspSuite
        |  val (fir<<>>st, second) = (List(1), List(""))
        |""".stripMargin,
     s"""|${InsertInferredType.insertTypeToPattern}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|package a
        |
@@ -140,6 +151,7 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${InsertInferredType.insertType}
+        |${AddingBracesCodeAction.goBraceFul("var definition")}
         |""".stripMargin,
     """|package a
        |

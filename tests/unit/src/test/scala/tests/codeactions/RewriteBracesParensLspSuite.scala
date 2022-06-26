@@ -1,5 +1,6 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.AddingBracesCodeAction
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
@@ -117,14 +118,29 @@ class RewriteBracesParensLspSuite
     selectedActionIndex = 1
   )
 
-  checkNoAction(
+  check(
     "to-parens-noop",
     """|object Main {
        |  var x = 0
        |
-       |  List(1,2).foreach { a =>
-       |    println(a)
-       |    <<>>a 
+       |  List(1,2).foreach {
+       |    a =>
+       |      a + 1
+       |      println(a)
+       |      <<>>a
+       |  }
+       |}
+       |""".stripMargin,
+    s"${AddingBracesCodeAction.goBraceFul("block")}",
+    """|object Main {
+       |  var x = 0
+       |
+       |  List(1,2).foreach {
+       |    a =>{
+       |      a + 1
+       |      println(a)
+       |      a
+       |    }
        |  }
        |}
        |""".stripMargin

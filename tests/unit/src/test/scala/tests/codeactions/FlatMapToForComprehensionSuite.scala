@@ -1,5 +1,6 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.AddingBracesCodeAction
 import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
@@ -15,6 +16,7 @@ class FlatMapToForComprehensionSuite
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("map")}
         |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|object A {
        |    val res3 = {
@@ -48,6 +50,7 @@ class FlatMapToForComprehensionSuite
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("flatMap")}
         |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|object A {
        |    val first = 1
@@ -111,6 +114,7 @@ class FlatMapToForComprehensionSuite
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("map")}
         |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|object A {
        |    def double(x : Int, y: Int = 1) = y * x
@@ -183,6 +187,7 @@ class FlatMapToForComprehensionSuite
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toBraces("flatMap")}
         |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}
         |""".stripMargin,
     """|object A {
        |    def double(x : Int, y: Int = 1) = y * x
@@ -224,7 +229,8 @@ class FlatMapToForComprehensionSuite
        |def multiply(a: Int, b: Int) = a * b
        |val res = List(1, 2, 3).m<<>>ap(multiply(_, _))
        |}""".stripMargin,
-    RewriteBracesParensCodeAction.toBraces("map"),
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${AddingBracesCodeAction.goBraceFul("val definition")}""".stripMargin,
     """|object A{
        |def multiply(a: Int, b: Int) = a * b
        |val res = List(1, 2, 3).map{multiply(_, _)}

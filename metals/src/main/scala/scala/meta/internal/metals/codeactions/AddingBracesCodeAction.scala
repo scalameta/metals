@@ -204,7 +204,7 @@ class AddingBracesCodeAction(
             .Try(
               blockHolder.tokens.tokens
                 .filter { token =>
-                  token.pos.start < blockEmbraceableStartPos && !token.text.isBlank
+                  token.pos.start < blockEmbraceableStartPos && !token.isWhiteSpaceOrComment
                 }
                 .maxBy(_.pos.start)
             )
