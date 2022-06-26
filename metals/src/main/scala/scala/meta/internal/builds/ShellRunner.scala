@@ -1,5 +1,7 @@
 package scala.meta.internal.builds
 
+import java.nio.charset.StandardCharsets
+
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Properties
@@ -30,6 +32,7 @@ class ShellRunner(
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
+
   override def cancel(): Unit = {
     cancelables.cancel()
   }
@@ -129,4 +132,82 @@ class ShellRunner(
     result.future
   }
 
+}
+
+object ShellRunner {
+
+  /**
+   * Note: if returning a [[Future]] is more suitable, all you
+   * need to do is to uncomment the commented code.
+   */
+  def quickRunWithShortStringResult(
+      //        commandRun: String,
+      args: List[String],
+      directory: AbsolutePath,
+      redirectErrorOutput: Boolean,
+      additionalEnv: Map[String, String] = Map.empty,
+      processOut: String => Unit = scribe.info(_),
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false,
+      maybeJavaHome: Option[String]
+
+      //       logInfo: Boolean = true
+  ):
+  // Future[
+  Option[String]
+  //  ]
+  = {
+    //   val elapsed = new Timer(time)
+
+    val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap
+    val ps = SystemProcess.run(
+      args,
+      directory,
+      redirectErrorOutput,
+      env,
+      Some(processOut),
+      Some(processErr),
+      propagateError
+    )
+    //    // NOTE(olafur): older versions of VS Code don't respect cancellation of
+    //    // window/showMessageRequest, meaning the "cancel build import" button
+    //    // stays forever in view even after successful build import. In newer
+    //    // VS Code versions the message is hidden after a delay.
+    //    val taskResponse =
+    //      languageClient.metalsSlowTask(
+    //        new MetalsSlowTaskParams(commandRun)
+    //      )
+
+    //    val result = Promise[Option[String]]
+    //    taskResponse.asScala.foreach { item =>
+    //      if (item.cancel) {
+    //        if (logInfo)
+    //          scribe.info(s"user cancelled $commandRun")
+    //        result.trySuccess(None)
+    //        ps.cancel
+    //      }
+    //    }
+
+    //   val processFuture = ps.complete
+
+    //    cancelables
+    //      .add(() => ps.cancel)
+    //      .add(() => taskResponse.cancel(false))
+
+    //    processFuture.map { code =>
+    //      taskResponse.cancel(false)
+    //      if (logInfo)
+    //        scribe.info(s"time: ran '$commandRun' in $elapsed")
+    //     result.trySuccess(code match {
+    //       case ExitCodes.Success =>
+    util
+      .Try(
+        new String(ps.inputStream.readAllBytes(), StandardCharsets.UTF_8)
+      )
+      .toOption
+    //        case _ => None
+    //      })
+    //    }
+    //    result.future
+  }
 }

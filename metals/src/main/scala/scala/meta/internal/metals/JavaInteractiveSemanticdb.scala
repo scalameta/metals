@@ -11,16 +11,13 @@ import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.process.SystemProcess
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigSyntax
 
 class JavaInteractiveSemanticdb(
     javac: AbsolutePath,
@@ -180,7 +177,8 @@ object JavaInteractiveSemanticdb {
   def create(
       javaHome: AbsolutePath,
       workspace: AbsolutePath,
-      buildTargets: BuildTargets
+      buildTargets: BuildTargets,
+      maybeJDKVersion: Option[JdkVersion]
   ): Option[JavaInteractiveSemanticdb] = {
 
     def pathToJavac(p: AbsolutePath): AbsolutePath = {
@@ -197,7 +195,9 @@ object JavaInteractiveSemanticdb {
 
     val javac = pathToJavac(jdkHome)
 
-    JdkVersion.getJavaVersionFromJavaHome(jdkHome) match {
+    maybeJDKVersion.orElse(
+      JdkVersion.getJavaVersionFromJDK8FallBack(jdkHome)
+    ) match {
       case Some(version) if javac.exists =>
         val pluginJars = Embedded.downloadSemanticdbJavac
         val instance = new JavaInteractiveSemanticdb(
@@ -227,38 +227,38 @@ case class JdkVersion(
 
 object JdkVersion {
 
-  def getJavaVersionFromJavaHome(
+  def maybeJdkVersionFromJavaHome(
+      maybeJavaHome: Option[AbsolutePath]
+  ): Option[JdkVersion] = {
+    //      Await.result(
+    //        shellRunner
+    //          .runWithShortStringResult(
+    maybeJavaHome.flatMap { javaHome =>
+      ShellRunner
+        .quickRunWithShortStringResult(
+          List("java", "-version"),
+          javaHome,
+          redirectErrorOutput = true,
+          maybeJavaHome = maybeJavaHome.map(_.toString())
+        )
+        //  .map(
+        .flatMap(
+          //   _.flatMap(
+          JdkVersion.parse
+          //    )
+        )
+    }
+    //      ,
+    //        10 nanos
+    //      )
+  }
+
+  def getJavaVersionFromJDK8FallBack(
       javaHome: AbsolutePath
   ): Option[JdkVersion] = {
-
-    def fromReleaseFile: Option[JdkVersion] = {
-      val releaseFile = javaHome.resolve("release")
-      if (releaseFile.exists) {
-        val properties = ConfigFactory.parseFile(
-          releaseFile.toFile,
-          ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES)
-        )
-        try {
-          val version = properties
-            .getString("JAVA_VERSION")
-            .stripPrefix("\"")
-            .stripSuffix("\"")
-          JdkVersion.parse(version)
-        } catch {
-          case NonFatal(e) =>
-            scribe.error("Failed to read jdk version from `release` file", e)
-            None
-        }
-      } else None
-    }
-
-    def jdk8Fallback: Option[JdkVersion] = {
-      val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
-      if (rtJar.exists) Some(JdkVersion(8))
-      else None
-    }
-
-    fromReleaseFile.orElse(jdk8Fallback)
+    val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
+    if (rtJar.exists) Some(JdkVersion(8))
+    else None
   }
 
   def parse(v: String): Option[JdkVersion] = {

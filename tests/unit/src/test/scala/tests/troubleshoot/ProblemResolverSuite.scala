@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
@@ -221,7 +222,8 @@ class ProblemResolverSuite extends FunSuite {
         new TestMtagsResolver,
         () => None,
         () => javaHome,
-        () => isTestExplorerProvider
+        () => isTestExplorerProvider,
+        JdkVersion.maybeJdkVersionFromJavaHome(javaHome.map(AbsolutePath(_)))
       )
 
       val target =

@@ -22,6 +22,7 @@ import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JavaTarget
+import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsHttpServer
@@ -54,7 +55,8 @@ final class Doctor(
     tables: Tables,
     clientConfig: ClientConfiguration,
     mtagsResolver: MtagsResolver,
-    javaHome: () => Option[String]
+    javaHome: () => Option[String],
+    maybeJDKVersion: Option[JdkVersion]
 )(implicit ec: ExecutionContext) {
   private val isVisible = new AtomicBoolean(false)
   private val hasProblems = new AtomicBoolean(false)
@@ -64,7 +66,8 @@ final class Doctor(
       mtagsResolver,
       currentBuildServer,
       javaHome,
-      () => clientConfig.isTestExplorerProvider()
+      () => clientConfig.isTestExplorerProvider(),
+      maybeJDKVersion
     )
 
   def onVisibilityDidChange(newState: Boolean): Unit = {
