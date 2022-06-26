@@ -1,6 +1,6 @@
 package scala.meta.internal.builds
 
-import java.nio.charset.StandardCharsets
+import java.util.Scanner
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -200,11 +200,10 @@ object ShellRunner {
     //        scribe.info(s"time: ran '$commandRun' in $elapsed")
     //     result.trySuccess(code match {
     //       case ExitCodes.Success =>
-    util
-      .Try(
-        new String(ps.inputStream.readAllBytes(), StandardCharsets.UTF_8)
-      )
-      .toOption
+
+    val scanner = new Scanner(ps.inputStream).useDelimiter("\\A")
+    if (scanner.hasNext) Some(scanner.next) else None
+
     //        case _ => None
     //      })
     //    }
