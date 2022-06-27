@@ -229,29 +229,22 @@ object JdkVersion {
 
   def maybeJdkVersionFromJavaHome(
       maybeJavaHome: Option[AbsolutePath]
-  ): Option[JdkVersion] = {
-    //      Await.result(
-    //        shellRunner
-    //          .runWithShortStringResult(
-    maybeJavaHome.flatMap { javaHome =>
-      ShellRunner
-        .quickRunWithShortStringResult(
-          List("java", "-version"),
-          javaHome,
-          redirectErrorOutput = true,
-          maybeJavaHome = maybeJavaHome.map(_.toString())
-        )
-        //  .map(
-        .flatMap(
-          //   _.flatMap(
-          JdkVersion.parse
-          //    )
-        )
-    }
-    //      ,
-    //        10 nanos
-    //      )
-  }
+  ): Option[JdkVersion] = JdkVersion.parse(System.getProperty("java.version"))
+
+//  {
+//    maybeJavaHome.flatMap { javaHome =>
+//      ShellRunner
+//        .runSync(
+//          List("java", "-version"),
+//          javaHome,
+//          redirectErrorOutput = true,
+//          maybeJavaHome = maybeJavaHome.map(_.toString())
+//        )
+//        .flatMap(
+//          JdkVersion.parse
+//        )
+//    }
+//  }
 
   def getJavaVersionFromJDK8FallBack(
       javaHome: AbsolutePath

@@ -136,12 +136,7 @@ class ShellRunner(
 
 object ShellRunner {
 
-  /**
-   * Note: if returning a [[Future]] is more suitable, all you
-   * need to do is to uncomment the commented code.
-   */
-  def quickRunWithShortStringResult(
-      //        commandRun: String,
+  def runSync(
       args: List[String],
       directory: AbsolutePath,
       redirectErrorOutput: Boolean,
@@ -150,15 +145,7 @@ object ShellRunner {
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       maybeJavaHome: Option[String]
-
-      //       logInfo: Boolean = true
-  ):
-  // Future[
-  Option[String]
-  //  ]
-  = {
-    //   val elapsed = new Timer(time)
-
+  ): Option[String] = {
     val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap
     val ps = SystemProcess.run(
       args,
@@ -169,44 +156,16 @@ object ShellRunner {
       Some(processErr),
       propagateError
     )
-    //    // NOTE(olafur): older versions of VS Code don't respect cancellation of
-    //    // window/showMessageRequest, meaning the "cancel build import" button
-    //    // stays forever in view even after successful build import. In newer
-    //    // VS Code versions the message is hidden after a delay.
-    //    val taskResponse =
-    //      languageClient.metalsSlowTask(
-    //        new MetalsSlowTaskParams(commandRun)
-    //      )
-
-    //    val result = Promise[Option[String]]
-    //    taskResponse.asScala.foreach { item =>
-    //      if (item.cancel) {
-    //        if (logInfo)
-    //          scribe.info(s"user cancelled $commandRun")
-    //        result.trySuccess(None)
-    //        ps.cancel
-    //      }
-    //    }
-
-    //   val processFuture = ps.complete
-
-    //    cancelables
-    //      .add(() => ps.cancel)
-    //      .add(() => taskResponse.cancel(false))
-
-    //    processFuture.map { code =>
-    //      taskResponse.cancel(false)
-    //      if (logInfo)
-    //        scribe.info(s"time: ran '$commandRun' in $elapsed")
-    //     result.trySuccess(code match {
-    //       case ExitCodes.Success =>
 
     val scanner = new Scanner(ps.inputStream).useDelimiter("\\A")
-    if (scanner.hasNext) Some(scanner.next) else None
+    if (scanner.hasNext) {
+      val result = scanner.next
+      pprint.log(
+        "System property java.version is " + System.getProperty("java.version")
+      )
+      pprint.log("the shell runner obtained java version as " + result)
+      Some(result)
+    } else None
 
-    //        case _ => None
-    //      })
-    //    }
-    //    result.future
   }
 }
