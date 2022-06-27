@@ -41,8 +41,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15248
-    "generic2".tag(IgnoreScala3),
+    "generic2".tag(IgnoreScalaVersion.for3LessThan("3.2.0-RC1")),
     """
       |case class Two[T](a: T, b: T)
       |object Main {
@@ -53,12 +52,17 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Any, Any)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|(a: T, b: T)
+           | ^^^^
+           |""".stripMargin
+    )
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15248
-    "generic3".tag(IgnoreScala3),
+    "generic3".tag(IgnoreScalaVersion.for3LessThan("3.2.0-RC1")),
     """
       |case class HKT[C[_], T](a: C[T])
       |object Main {
@@ -69,7 +73,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|(Any)
        | ^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|(a: C[T])
+           | ^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -298,8 +308,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15248
-    "pat6".tag(IgnoreScala3),
+    "pat6".tag(IgnoreScalaVersion.for3LessThan("3.2.0-RC1")),
     """
       |object OpenBrowserCommand {
       |  def unapply(command: String): Option[Option[Int]] = {
@@ -313,7 +322,13 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|(Option[A])
        | ^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|(Option[Int])
+           | ^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
