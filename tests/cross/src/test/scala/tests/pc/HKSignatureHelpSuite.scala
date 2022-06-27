@@ -7,14 +7,9 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
 
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val binaryVersion = createBinaryVersion(scalaVersion)
-    if (isScala3Version(scalaVersion)) { Seq.empty }
-    else {
-      Seq(Dependency.of("org.typelevel", s"cats-core_$binaryVersion", "2.0.0"))
-    }
-  }
+    Seq(Dependency.of("org.typelevel", s"cats-core_$binaryVersion", "2.8.0"))
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
+  }
 
   check(
     "foldmap",
@@ -26,7 +21,13 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|foldMap[A, B](fa: Option[A])(f: A => B)(implicit B: Monoid[B]): B
        |              ^^^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|foldMap[A, B](fa: Option[A])(f: A => B)(using B: cats.kernel.Monoid[B]): B
+           |              ^^^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
 }
