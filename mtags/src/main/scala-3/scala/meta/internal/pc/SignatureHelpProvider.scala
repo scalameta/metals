@@ -10,6 +10,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
+import dotty.tools.dotc.ast.Trees.AppliedTypeTree
+import dotty.tools.dotc.ast.Trees.TypeApply
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
@@ -22,6 +24,12 @@ import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.{lsp4j as l}
 
 object SignatureHelpProvider:
+
+  private val versionSupportsTypeParams =
+    SemVer.isCompatibleVersion(
+      "3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY",
+      BuildInfo.scalaCompilerVersion
+    )
 
   def signatureHelp(
       driver: InteractiveDriver,
@@ -59,15 +67,26 @@ object SignatureHelpProvider:
 
     }
 
+    /* Versions prior to 3.2.1 did not support type parameters
+     * so we need to skip them.
+     */
+    val adjustedParamN =
+      if versionSupportsTypeParams then paramN
+      else
+        val adjusted =
+          signatureInfos.lift(callableN).map(_.tparams.size).getOrElse(0)
+        paramN + adjusted
     new l.SignatureHelp(
       signatureInfos.map(signatureToSignatureInformation).asJava,
       callableN,
-      paramN
+      adjustedParamN
     )
   end signatureHelp
 
-  private def isTuple(tree: tpd.Tree)(using Context): Boolean =
-    ctx.definitions.isTupleClass(tree.symbol.owner.companionClass)
+  private def isValid(tree: tpd.Tree)(using Context): Boolean =
+    ctx.definitions.isTupleClass(
+      tree.symbol.owner.companionClass
+    ) || ctx.definitions.isFunctionType(tree.tpe)
 
   private def notCurrentApply(
       tree: tpd.Tree,
@@ -75,7 +94,11 @@ object SignatureHelpProvider:
   )(using Context): Boolean =
     tree match
       case unapply: tpd.UnApply =>
-        unapply.fun.span.contains(pos.span) || isTuple(unapply)
+        unapply.fun.span.contains(pos.span) || isValid(unapply)
+      case typeTree @ AppliedTypeTree(fun, _) =>
+        fun.span.contains(pos.span) || isValid(typeTree)
+      case typeApply @ TypeApply(fun, _) =>
+        fun.span.contains(pos.span) || isValid(typeApply)
       case appl: tpd.GenericApply =>
         /* find first apply that the cursor is located in arguments and not at function name
          * for example in:
@@ -128,15 +151,19 @@ object SignatureHelpProvider:
   private def signatureToSignatureInformation(
       signature: Signatures.Signature
   ): l.SignatureInformation =
+    val tparams = signature.tparams.map(Signatures.Param("", _))
     val paramInfoss =
-      signature.paramss.map(_.map(paramToParameterInformation))
-    val paramLists = signature.paramss
-      .map { paramList =>
-        val labels = paramList.map(_.show)
-        val prefix = if paramList.exists(_.isImplicit) then "using " else ""
-        labels.mkString(prefix, ", ", "")
-      }
-      .mkString("(", ")(", ")")
+      (tparams ::: signature.paramss.flatten).map(paramToParameterInformation)
+    val paramLists =
+      if signature.paramss.forall(_.isEmpty) && tparams.nonEmpty then ""
+      else
+        signature.paramss
+          .map { paramList =>
+            val labels = paramList.map(_.show)
+            val prefix = if paramList.exists(_.isImplicit) then "using " else ""
+            labels.mkString(prefix, ", ", "")
+          }
+          .mkString("(", ")(", ")")
     val tparamsLabel =
       if signature.tparams.isEmpty then ""
       else signature.tparams.mkString("[", ", ", "]")
@@ -144,7 +171,7 @@ object SignatureHelpProvider:
     val label = s"${signature.name}$tparamsLabel$paramLists$returnTypeLabel"
     val documentation = signature.doc.map(markupContent)
     val sig = new l.SignatureInformation(label)
-    sig.setParameters(paramInfoss.flatten.asJava)
+    sig.setParameters(paramInfoss.asJava)
     documentation.foreach(sig.setDocumentation(_))
     sig
   end signatureToSignatureInformation

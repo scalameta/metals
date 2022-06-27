@@ -226,8 +226,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
   )
 
   checkDoc(
-    // https://github.com/lampepfl/dotty/issues/15244
-    "curry4".tag(IgnoreScala3),
+    "curry4".tag(IgnoreScalaVersion.for3LessThan("3.2.0-RC1")),
     """
       |object a {
       |  def curry(a: Int, b: Int)(c: Int) = a

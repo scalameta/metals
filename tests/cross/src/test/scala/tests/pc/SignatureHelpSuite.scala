@@ -255,9 +255,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
   check(
     // https://github.com/lampepfl/dotty/issues/15244
-    "vararg".tag(
-      IgnoreScalaVersion.forLaterThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
-    ),
+    "vararg",
+    // .tag(
+    // IgnoreScalaVersion.forLaterThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
+    // ),
     """
       |object a {
       |  List(1, 2@@
@@ -274,8 +275,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15249
-    "tparam".tag(IgnoreScala3),
+    "tparam".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  identity[I@@]
@@ -287,8 +289,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    // https://github.com/lampepfl/dotty/issues/15249
-    "tparam2".tag(IgnoreScala3),
+    "tparam2".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  Option.empty[I@@]
@@ -300,7 +303,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "tparam3".tag(IgnoreScala3),
+    "tparam3".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  Option[I@@]
@@ -312,7 +317,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "tparam4".tag(IgnoreScala3),
+    "tparam4".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  Map.empty[I@@]
@@ -325,7 +332,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "2.11" ->
         """|empty[A, B]: Map[A,B]
            |      ^
-           |""".stripMargin
+           |""".stripMargin,
+      "3" -> """|empty[K, V]: Map[K, V]
+                |      ^
+                |""".stripMargin
     )
   )
 
@@ -694,7 +704,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "evidence".tag(IgnoreScala3),
+    "evidence".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  Array.empty[@@]
@@ -729,7 +741,9 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "type".tag(IgnoreScala3),
+    "type".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  val x: Map[Int, Stri@@ng]
@@ -737,11 +751,19 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin
+       | """.stripMargin,
+    compat = Map(
+      "3" ->
+        """|Map[K, V]: Map
+           |       ^
+           | """.stripMargin
+    )
   )
 
   check(
-    "type1".tag(IgnoreScala3),
+    "type1".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+    ),
     """
       |object a {
       |  val x: Map[Int, Stri@@]
@@ -749,7 +771,13 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin
+       | """.stripMargin,
+    compat = Map(
+      "3" ->
+        """|Map[K, V]: Map
+           |       ^
+           | """.stripMargin
+    )
   )
 
   check(
