@@ -85,6 +85,18 @@ class CompilerJobQueue(newExecutor: () => ThreadPoolExecutor) {
     }
   }
 
+  def reset(): Unit = {
+    state.get() match {
+      case curr @ State.Initialized(v) =>
+        if (state.compareAndSet(curr, State.Empty)) {
+          v.shutdown()
+        } else {
+          delay()
+        }
+      case _ =>
+    }
+  }
+
   private def delay(): Unit = Thread.sleep(50)
 
   override def toString(): String = s"CompilerJobQueue(${state.get})"

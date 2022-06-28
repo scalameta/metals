@@ -32,10 +32,14 @@ class Scala3CompilerAccess(
 
   def newReporter = new StoreReporter(null)
 
+  /**
+   * Handle the exception in order to make sure that
+   * we retry immediately. Otherwise, we will wait until
+   * the end of the timeout, which is 20s by default.
+   */
   protected def handleSharedCompilerException(
       t: Throwable
-  ): Option[String] =
-    throw t
+  ): Option[String] = None
 
   protected def ignoreException(t: Throwable): Boolean = false
 end Scala3CompilerAccess
