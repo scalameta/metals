@@ -236,20 +236,24 @@ object JdkVersion {
   ): Option[JdkVersion] = {
     maybeJavaHome.flatMap { javaHome =>
       fromReleaseFile(javaHome).orElse {
-        ShellRunner
-          .runSync(
-            List("java", "-version"),
-            javaHome,
-            redirectErrorOutput = true,
-            maybeJavaHome = maybeJavaHome.map(_.toString())
-          )
-          .flatMap { javaVersionResponse =>
-            "\\d+\\.\\d+\\.\\d+".r
-              .findFirstIn(javaVersionResponse)
-              .flatMap(JdkVersion.parse)
-          }
+        fromShell(javaHome)
       }
     }
+  }
+
+  def fromShell(javaHome: AbsolutePath): Option[JdkVersion] = {
+    ShellRunner
+      .runSync(
+        List("java", "-version"),
+        javaHome,
+        redirectErrorOutput = true,
+        maybeJavaHome = Some(javaHome.toString())
+      )
+      .flatMap { javaVersionResponse =>
+        "\\d+\\.\\d+\\.\\d+".r
+          .findFirstIn(javaVersionResponse)
+          .flatMap(JdkVersion.parse)
+      }
   }
 
   def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] = {
