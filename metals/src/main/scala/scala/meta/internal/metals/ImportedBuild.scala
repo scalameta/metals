@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
+import scala.build.bsp.WrappedSourcesParams
+import scala.build.bsp.WrappedSourcesResult
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -18,6 +20,7 @@ case class ImportedBuild(
     javacOptions: JavacOptionsResult,
     sources: SourcesResult,
     dependencySources: DependencySourcesResult,
+    wrappedSources: WrappedSourcesResult,
 ) {
   def ++(other: ImportedBuild): ImportedBuild = {
     val updatedBuildTargets = new WorkspaceBuildTargetsResult(
@@ -35,12 +38,16 @@ case class ImportedBuild(
     val updatedDependencySources = new DependencySourcesResult(
       (dependencySources.getItems.asScala ++ other.dependencySources.getItems.asScala).asJava
     )
+    val updatedWrappedSources = new WrappedSourcesResult(
+      (wrappedSources.getItems.asScala ++ other.wrappedSources.getItems.asScala).asJava
+    )
     ImportedBuild(
       updatedBuildTargets,
       updatedScalacOptions,
       updatedJavacOptions,
       updatedSources,
       updatedDependencySources,
+      updatedWrappedSources,
     )
   }
 
@@ -58,6 +65,7 @@ object ImportedBuild {
       new JavacOptionsResult(ju.Collections.emptyList()),
       new SourcesResult(ju.Collections.emptyList()),
       new DependencySourcesResult(ju.Collections.emptyList()),
+      new WrappedSourcesResult(ju.Collections.emptyList()),
     )
 
   def fromConnection(
@@ -76,6 +84,9 @@ object ImportedBuild {
       dependencySources <- conn.buildTargetDependencySources(
         new DependencySourcesParams(ids)
       )
+      wrappedSources <- conn.buildTargetWrappedSources(
+        new WrappedSourcesParams(ids)
+      )
     } yield {
       ImportedBuild(
         workspaceBuildTargets,
@@ -83,6 +94,7 @@ object ImportedBuild {
         javacOptions,
         sources,
         dependencySources,
+        wrappedSources,
       )
     }
 

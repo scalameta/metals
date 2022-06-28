@@ -10,6 +10,9 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.build.bsp.WrappedSourcesItem
+import scala.build.bsp.WrappedSourcesParams
+import scala.build.bsp.WrappedSourcesResult
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -42,6 +45,7 @@ class BuildServerConnection private (
     reconnectNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
     workspace: AbsolutePath,
+    supportsWrappedSources: Boolean,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -217,6 +221,18 @@ class BuildServerConnection private (
     }
   }
 
+  def buildTargetWrappedSources(
+      params: WrappedSourcesParams
+  ): Future[WrappedSourcesResult] = {
+    if (supportsWrappedSources)
+      // this calls https://github.com/VirtusLab/scala-cli/blob/6efbefb1d864c0ee36156f9ac8489d0e14ee54c4/modules/scala-cli-bsp/src/main/java/scala/build/bsp/ScalaScriptBuildServer.java#L7-L12
+      register(server => server.buildTargetWrappedSources(params)).asScala
+    else
+      Future.successful(
+        new WrappedSourcesResult(List.empty[WrappedSourcesItem].asJava)
+      )
+  }
+
   private val cancelled = new AtomicBoolean(false)
 
   override def cancel(): Unit = {
@@ -323,6 +339,7 @@ object BuildServerConnection {
       config: MetalsServerConfig,
       serverName: String,
       retry: Int = 5,
+      supportsWrappedSources: Option[Boolean] = None,
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -372,6 +389,7 @@ object BuildServerConnection {
           reconnectNotification,
           config,
           workspace,
+          supportsWrappedSources.getOrElse(connection.supportsWrappedSources),
         )
       }
       .recoverWith { case e: TimeoutException =>
@@ -458,6 +476,24 @@ object BuildServerConnection {
     )(implicit ec: ExecutionContext): Unit = {
       socketConnection.finishedPromise.future.foreach(_ => f())
     }
+
+    /**
+     * Whether we can call buildTargetWrappedSources through the BSP connection.
+     *
+     * As much as possible, we try to call buildTargetWrappedSources through BSP only when we know
+     * the build server supports it. Theoretically, we could try to call it, and catch the JSONRPC
+     * error saying that endpoint isn't supported, but some build servers (sbt) don't respond
+     * with an error in such a case, but rather… don't answer, and let the client timeout. Which
+     * makes sbt BSP support unusable here.
+     * We could also add a dedicated field for it in BuildServerCapabilities, but that requires
+     * updating the build server protocol itself, which I'd rather avoid at this point, as this
+     * feature is somewhat experimental.
+     * The only "dynamic" way I could find to advertize that capability is via a language ids
+     * field, so that's what we use here, with that "scala-sc" language.
+     */
+    def supportsWrappedSources: Boolean =
+      capabilities.getCompileProvider.getLanguageIds.asScala
+        .contains("scala-sc")
   }
 }
 

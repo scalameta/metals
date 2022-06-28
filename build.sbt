@@ -395,6 +395,8 @@ lazy val metals = project
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.3.3",
       "org.scala-lang.modules" %% "scala-xml" % "2.1.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
+      ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
+        .exclude("ch.epfl.scala", "bsp4j"),
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
