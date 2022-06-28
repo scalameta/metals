@@ -1,6 +1,7 @@
 package scala.meta.internal.tvp
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.URIMapper
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
@@ -148,13 +149,27 @@ class ClasspathTreeView[Value, Key](
 
   def fromUri(uri: String): NodeUri = {
     val stripped = uri.stripPrefix(s"$scheme:")
-    val separator = stripped.lastIndexOf("!/")
-    if (separator < 0) {
-      NodeUri(decode(stripped))
+    if (stripped.startsWith(s"${URIMapper.workspaceJarURI}/")) {
+      val remainder = stripped.stripPrefix(s"${URIMapper.workspaceJarURI}/")
+      val separator = remainder.indexOf('/')
+      if (separator < 0) {
+        NodeUri(decode(stripped))
+      } else {
+        val key = decode(
+          s"${URIMapper.workspaceJarURI}/${remainder.substring(0, separator)}"
+        )
+        val symbol = remainder.substring(separator + 1)
+        NodeUri(key, symbol)
+      }
     } else {
-      val key = decode(stripped.substring(0, separator))
-      val symbol = stripped.substring(separator + 2)
-      NodeUri(key, symbol)
+      val separator = stripped.lastIndexOf("!/")
+      if (separator < 0) {
+        NodeUri(decode(stripped))
+      } else {
+        val key = decode(stripped.substring(0, separator))
+        val symbol = stripped.substring(separator + 2)
+        NodeUri(key, symbol)
+      }
     }
   }
 
@@ -183,7 +198,7 @@ class ClasspathTreeView[Value, Key](
     def isDescendent(child: String): Boolean =
       if (isRoot) true
       else child.startsWith(symbol)
-    def toUri: String = s"$scheme:${encode(key)}!/$symbol"
+    def toUri: String = s"$scheme:${encode(key)}/$symbol"
     def parentChain: List[String] = {
       parent match {
         case None => toUri :: s"$scheme:" :: Nil

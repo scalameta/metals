@@ -122,6 +122,7 @@ The currently available settings for `InitializationOptions` are listed below.
       icons?: "vscode" | "octicons" | "atom" | "unicode";
       inputBoxProvider?: boolean;
       isVirtualDocumentSupported?: boolean;
+      isLibraryFileSystemSupported?: boolean;
       isExitOnShutdown?: boolean;
       isHttpEnabled?: boolean;
       openFilesOnRenameProvider?: boolean;
@@ -326,6 +327,25 @@ Possible values:
 - `off` (default): the `metals/inputBox` request is not supported. In this case,
   Metals tries to fallback to `window/showMessageRequest` when possible.
 - `on`: the `metals/inputBox` request is fully supported.
+
+##### `isVirtualDocumentSupported`
+
+Possible values:
+
+- `off` (default): virtual documents are not supported. In this case, Metals
+  saves generated files to disk e.g. decompiled class files or source jar files.
+- `on`: virtual documents are supported and Metals sends the content of the file
+  to the client rather than a URI reference to it.
+  It's up to the client to display that content as though it were a file.
+
+##### `isLibraryFileSystemSupported`
+
+Possible values:
+
+- `off` (default): library file system is not supported.
+- `on`: library file system is supported.  Metals sends the
+  `metals-library-filesystem-ready` command when the libraries have been registered 
+  and the library filesystem is ready to navigate.
 
 ##### `isExitOnShutdown`
 

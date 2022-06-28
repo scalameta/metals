@@ -22,9 +22,10 @@ private[debug] final class SetBreakpointsRequestHandler(
     new TrieMap[AbsolutePath, Set[String]]
 
   def apply(
-      sourcePath: AbsolutePath,
+      sourceUri: String,
       request: SetBreakpointsArguments,
   ): Iterable[SetBreakpointsArguments] = {
+    val sourcePath = sourceUri.toAbsolutePath
     /* Get symbol for each breakpoint location to figure out the
      * class file that we need to register the breakpoint for.
      */

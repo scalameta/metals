@@ -3,7 +3,6 @@ package scala.meta.internal.metals.debug
 import java.nio.file.Paths
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
@@ -42,22 +41,29 @@ private[debug] final case class ClientConfigurationAdapter(
     new Position(lspLine, breakpoint.getColumn())
   }
 
-  def toMetalsPath(path: String): AbsolutePath = {
+  def toMetalsURI(uriOrPath: String): String = {
     pathFormat match {
       // VS Code normally sends in path, which doesn't encode files from jars properly
       // so URIs are actually sent in this case instead
       case InitializeRequestArgumentsPathFormat.PATH
-          if !path.startsWith("file:") && !path.startsWith("jar:") =>
-        Paths.get(path).toUri.toString.toAbsolutePath
-      case _ => path.toAbsolutePath
+          if !uriOrPath.startsWith("file:") && !uriOrPath.startsWith(
+            "jar:"
+          ) && !uriOrPath.startsWith("metalsfs:") =>
+        Paths.get(uriOrPath).toUri.toString
+      case _ => uriOrPath
     }
   }
 
-  def adaptPathForClient(path: AbsolutePath): String = {
+  def adaptPathForClient(uriOrPath: String): String = {
     pathFormat match {
-      case InitializeRequestArgumentsPathFormat.PATH =>
-        if (path.isJarFileSystem) path.toURI.toString else path.toString
-      case InitializeRequestArgumentsPathFormat.URI => path.toURI.toString
+      case InitializeRequestArgumentsPathFormat.PATH
+          if uriOrPath.startsWith("file:") =>
+        uriOrPath.toAbsolutePath.toString
+      case InitializeRequestArgumentsPathFormat.PATH
+          if !uriOrPath
+            .startsWith("jar:") && !uriOrPath.startsWith("metalsfs:") =>
+        Paths.get(uriOrPath).toString
+      case _ => uriOrPath
     }
   }
 }

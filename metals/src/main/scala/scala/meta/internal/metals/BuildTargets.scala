@@ -93,6 +93,9 @@ final class BuildTargets() {
   def allJava: Iterator[JavaTarget] =
     data.fromIterators(_.allJava)
 
+  def allJDKs: Iterator[String] =
+    data.fromIterators(_.allJDKs).distinct
+
   def info(id: BuildTargetIdentifier): Option[BuildTarget] =
     data.fromOptions(_.info(id))
 

@@ -52,7 +52,7 @@ class ServerInitializeBench {
   def run(): Unit = {
     val path = AbsolutePath(workspace)
     val buffers = Buffers()
-    val client = new TestingClient(path, buffers)
+    val client = new TestingClient(path, () => null, buffers)
     MetalsLogger.updateDefaultFormat()
     val ec = ExecutionContext.fromExecutorService(ex)
     val server = new MetalsLanguageServer(ec, sh = sh)

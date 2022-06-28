@@ -34,6 +34,7 @@ import org.eclipse.{lsp4j => l}
 final class InteractiveSemanticdbs(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
+    uriMapper: URIMapper,
     charset: Charset,
     client: MetalsLanguageClient,
     tables: Tables,
@@ -79,7 +80,8 @@ final class InteractiveSemanticdbs(
     }
 
     // anything aside from `*.scala`, `*.sbt`, `*.sc`, `*.java` file
-    def isExcludedFile = !source.isScalaFilename && !source.isJavaFilename
+    def isExcludedFile =
+      !source.isScalaFilename && !source.isJavaFilename && !source.isClassfile
 
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
@@ -87,18 +89,22 @@ final class InteractiveSemanticdbs(
       val result = textDocumentCache.compute(
         source,
         (path, existingDoc) => {
-          val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
-          val sha = MD5.compute(text)
-          if (existingDoc == null || existingDoc.md5 != sha) {
-            Try(compile(path, text)) match {
-              case Success(doc) if doc != null =>
-                if (!source.isDependencySource(workspace))
-                  semanticdbIndexer().onChange(source, doc)
-                doc
-              case _ => null
-            }
-          } else
+          if (existingDoc != null && source.isJarFileSystem)
             existingDoc
+          else {
+            val text = unsavedContents.getOrElse(FileIO.slurp(source, charset))
+            val sha = MD5.compute(text)
+            if (existingDoc == null || existingDoc.md5 != sha) {
+              Try(compile(path, text)) match {
+                case Success(doc) if doc != null =>
+                  if (!source.isDependencySource(workspace))
+                    semanticdbIndexer().onChange(source, doc)
+                  doc
+                case _ => null
+              }
+            } else
+              existingDoc
+          }
         },
       )
       TextDocumentLookup.fromOption(source, Option(result))
@@ -130,8 +136,9 @@ final class InteractiveSemanticdbs(
    */
   def didFocus(path: AbsolutePath): Unit = {
     activeDocument.get().foreach { uri =>
+      val metalsURI = uriMapper.convertToMetalsFS(uri)
       client.publishDiagnostics(
-        new PublishDiagnosticsParams(uri, Collections.emptyList())
+        new PublishDiagnosticsParams(metalsURI, Collections.emptyList())
       )
     }
     if (path.isDependencySource(workspace)) {
@@ -150,8 +157,9 @@ final class InteractiveSemanticdbs(
         }
         if (diagnostics.nonEmpty) {
           statusBar.addMessage(partialNavigation(clientConfig.icons))
+          val metalsURI = uriMapper.convertToMetalsFS(uri)
           client.publishDiagnostics(
-            new PublishDiagnosticsParams(uri, diagnostics.asJava)
+            new PublishDiagnosticsParams(metalsURI, diagnostics.asJava)
           )
         }
       }
@@ -161,7 +169,7 @@ final class InteractiveSemanticdbs(
   }
 
   private def compile(source: AbsolutePath, text: String): s.TextDocument = {
-    if (source.isJavaFilename)
+    if (source.isJavaFilename || source.isClassfile)
       javaInteractiveSemanticdb.fold(s.TextDocument())(
         _.textDocument(source, text)
       )

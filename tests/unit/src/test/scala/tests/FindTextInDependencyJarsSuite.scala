@@ -90,7 +90,8 @@ class FindTextInDependencyJarsSuite
   ): Unit = {
     val rendered = locations
       .map { loc =>
-        val uri = URI.create(loc.getUri())
+        val localURI = server.convertToLocal(loc.getUri())
+        val uri = URI.create(localURI)
         val input = if (uri.getScheme() == "jar") {
           val jarPath = uri.toAbsolutePath
           val relativePath =

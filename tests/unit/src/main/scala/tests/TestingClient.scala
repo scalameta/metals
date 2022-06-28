@@ -56,8 +56,11 @@ import tests.TestOrderings._
  * - Can customize how to respond to window/showMessageRequest
  * - Aggregates published diagnostics and pretty-prints them as strings
  */
-class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
-    extends NoopLanguageClient {
+class TestingClient(
+    workspace: AbsolutePath,
+    server: () => TestingServer,
+    val buffers: Buffers,
+) extends NoopLanguageClient {
   // Customization of the window/showMessageRequest response
   var importBuildChanges: MessageActionItem = ImportBuildChanges.notNow
   var importBuild: MessageActionItem = ImportBuild.notNow
@@ -259,8 +262,19 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       null
     }
   override def telemetryEvent(`object`: Any): Unit = ()
+
+  private def getLocalPath(uri: String): AbsolutePath = {
+    // In reality the client would use URIs to reference data, not AbsolutePaths.
+    // If it needed the file contents it would use the LSP file system api to retrieve the data.
+    // Here we bypass that API and ask the server directly what the jar file should be and then access that directly.
+    // Clients that don't support LSP would use the readonly dir and wouldn't have to deal with these uri schemes
+    if (uri.startsWith("metalsfs:"))
+      server().convertToLocal(uri).toAbsolutePath
+    else uri.toAbsolutePath
+  }
+
   override def publishDiagnostics(params: PublishDiagnosticsParams): Unit = {
-    val path = params.getUri.toAbsolutePath
+    val path = getLocalPath(params.getUri)
     diagnostics(path) = params.getDiagnostics.asScala.toSeq
     diagnosticsCount
       .getOrElseUpdate(path, new AtomicInteger())
@@ -457,7 +471,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   def applyCodeAction(
       selectedActionIndex: Int,
       codeActions: List[CodeAction],
-      server: TestingServer,
   ): Future[Any] = {
     if (codeActions.nonEmpty) {
       if (selectedActionIndex >= codeActions.length) {
@@ -472,7 +485,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         applyWorkspaceEdit(edit)
       }
       if (command != null) {
-        server.executeCommandUnsafe(
+        server().executeCommandUnsafe(
           command.getCommand(),
           command.getArguments().asScala.toSeq,
         )

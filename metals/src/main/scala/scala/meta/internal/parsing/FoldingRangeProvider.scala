@@ -47,7 +47,7 @@ final class FoldingRangeProvider(
   ): util.List[FoldingRange] = {
     val result = for {
       code <- buffers.get(filePath)
-      if filePath.isJava
+      if filePath.isJava || filePath.isClassfile
     } yield {
       val extractor =
         new JavaFoldingRangeExtractor(code, foldOnlyLines.get())

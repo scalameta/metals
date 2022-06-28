@@ -94,7 +94,7 @@ abstract class BaseCodeActionLspSuite(
             .recover {
               case _: Throwable if expectError => Nil
             }
-        _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
+        _ <- client.applyCodeAction(selectedActionIndex, codeActions)
         _ <- server.didSave(newPath) { _ =>
           if (newPath != path)
             server.toPath(newPath).readText

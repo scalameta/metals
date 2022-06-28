@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.io.AbsolutePath
@@ -77,12 +78,17 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
       soughtMd5: String,
       charset: Charset,
   ): Option[String] = {
-    val text = FileIO.slurp(path, charset)
-    val md5 = MD5.compute(text)
-    if (soughtMd5 != md5) {
-      lookupText(path, soughtMd5)
-    } else {
-      Some(text)
+    val prints = fingerprints.get(path)
+    if (path.isJarFileSystem && prints != null && prints.size > 0)
+      Option(prints.peek()).map(_.text)
+    else {
+      val text = FileIO.slurp(path, charset)
+      val md5 = MD5.compute(text)
+      if (soughtMd5 != md5) {
+        lookupText(path, soughtMd5)
+      } else {
+        Some(text)
+      }
     }
   }
 

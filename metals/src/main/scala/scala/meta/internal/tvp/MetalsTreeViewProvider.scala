@@ -25,6 +25,7 @@ class MetalsTreeViewProvider(
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
+    uriMapper: URIMapper,
     compilations: () => TreeViewCompilations,
     definitionIndex: GlobalSymbolIndex,
     statistics: StatisticsConfig,
@@ -41,18 +42,27 @@ class MetalsTreeViewProvider(
   private val classpath = new ClasspathSymbols(
     isStatisticsEnabled = statistics.isTreeView
   )
-  val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
+  val libraries = new ClasspathTreeView[String, String](
     definitionIndex,
     Project,
     "libraries",
     "Libraries",
     identity,
-    _.toURI.toString(),
-    _.toAbsolutePath,
-    _.filename,
     _.toString,
-    () => buildTargets.allWorkspaceJars,
-    (path, symbol) => classpath.symbols(path, symbol),
+    _.toString,
+    _.toString.stripPrefix(s"${URIMapper.workspaceJarURI}/"),
+    _.toString,
+    () =>
+      buildTargets.allWorkspaceJars.map(path =>
+        uriMapper.convertToMetalsFS(path.toNIO.toUri.toString)
+      ),
+    (treeViewUri, symbol) => {
+      val localURI = uriMapper.convertToLocal(treeViewUri)
+      // root of jar URI needs to be specified as file:///xxx/name.jar
+      val uri =
+        localURI.replace(".jar!/", ".jar/").stripSuffix("/").stripPrefix("jar:")
+      classpath.symbols(uri.toAbsolutePath, symbol)
+    },
   )
 
   val projects = new ClasspathTreeView[BuildTarget, BuildTargetIdentifier](
@@ -61,7 +71,7 @@ class MetalsTreeViewProvider(
     "projects",
     "Projects",
     _.getId(),
-    _.getUri(),
+    targetId => s"${targetId.getUri}!",
     uri => new BuildTargetIdentifier(uri),
     _.getDisplayName(),
     _.baseDirectory,
@@ -218,7 +228,15 @@ class MetalsTreeViewProvider(
             )
           case Some(uri) =>
             if (libraries.matches(uri)) {
-              libraries.children(uri)
+              libraries
+                .children(uri)
+                .map(node => {
+                  val jarURI =
+                    s"jar:${node.nodeUri.stripPrefix(libraries.rootUri)}"
+                  val metalsFSURI =
+                    s"${libraries.rootUri}${uriMapper.convertToMetalsFS(jarURI)}"
+                  node.copy(nodeUri = metalsFSURI)
+                })
             } else if (projects.matches(uri)) {
               projects.children(uri)
             } else {
@@ -293,7 +311,11 @@ class MetalsTreeViewProvider(
           buildTargets
             .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
             .map { inferred =>
-              libraries.toUri(inferred.jar, inferred.symbol).parentChain
+              val metalsUri =
+                uriMapper.convertToMetalsFS(inferred.jar.toNIO.toUri.toString)
+              libraries
+                .toUri(metalsUri, inferred.symbol)
+                .parentChain
             }
         } else {
           buildTargets

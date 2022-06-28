@@ -149,6 +149,42 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val FileSystemStat = new ParametrizedCommand[String](
+    "filesystem-stat",
+    "Read Directory",
+    """|Return information about the uri. E.g. uri is a directory
+       |
+       |Virtual File Systems allow client to display filesystem data
+       |in the format that Metals dictates.
+       |e.g. jar library dependencies
+       |""".stripMargin,
+    "[uri], uri of the file or directory.",
+  )
+
+  val FileSystemReadDirectory = new ParametrizedCommand[String](
+    "filesystem-read-directory",
+    "Read Directory",
+    """|Return the contents of a virtual filesystem directory.
+       |
+       |Virtual File Systems allow client to display filesystem data
+       |in the format that Metals dictates.
+       |e.g. jar library dependencies
+       |""".stripMargin,
+    "[uri], uri of the directory.",
+  )
+
+  val FileSystemReadFile = new ParametrizedCommand[String](
+    "filesystem-read-file",
+    "Read File",
+    """|Return the contents of a virtual filesystem file.
+       |
+       |Virtual File Systems allow client to display filesystem data
+       |in the format that Metals dictates.
+       |e.g. jar library dependencies
+       |""".stripMargin,
+    "[uri], uri of the file.",
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",

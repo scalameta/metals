@@ -33,91 +33,130 @@ class JavaInteractiveSemanticdb(
 
   private val readonly = workspace.resolve(Directories.readonly)
 
-  def textDocument(source: AbsolutePath, text: String): s.TextDocument = {
-    val workDir = AbsolutePath(
-      Files.createTempDirectory("metals-javac-semanticdb")
-    )
-    val targetRoot = workDir.resolve("target")
-    Files.createDirectory(targetRoot.toNIO)
+  def textDocument(source: AbsolutePath, text: String): s.TextDocument =
+    if (
+      source.filename == "module-info.java" || source.filename == "module-info.class"
+    ) {
+      // can't run semanticdb on module-info files
+      s.TextDocument(
+        uri = source.toURI.toString(),
+        text = text,
+        md5 = MD5.compute(text),
+      )
+    } else {
+      val workDir = AbsolutePath(
+        Files.createTempDirectory("metals-javac-semanticdb")
+      )
+      val targetRoot = workDir.resolve("target")
+      Files.createDirectory(targetRoot.toNIO)
 
-    val localSource =
-      if (source.isLocalFileSystem(workspace)) {
-        source
-      } else {
-        val sourceRoot = workDir.resolve("source")
-        Files.createDirectory(sourceRoot.toNIO)
-        val localSource = sourceRoot.resolve(source.filename)
-        Files.write(localSource.toNIO, text.getBytes)
-        localSource
+      val localSource =
+        if (source.isLocalFileSystem(workspace) && source.isJavaFilename) {
+          source
+        } else {
+          val sourceRoot = workDir.resolve("source")
+          Files.createDirectory(sourceRoot.toNIO)
+          // cope with this file being a de-compiled class file. Java won't compile a source file with a `.class` ext
+          val localSource =
+            sourceRoot.resolve(
+              s"${source.filename.stripSuffix(".class").stripSuffix(".java")}.java"
+            )
+
+          Files.write(localSource.toNIO, text.getBytes)
+          localSource
+        }
+
+      val sourceRoot = localSource.parent
+      val buildTarget = buildTargets
+        .inferBuildTarget(source)
+        .orElse(
+          buildTargets.allScala
+            .find(buildTarget =>
+              source.isInside(
+                buildTarget.classDirectory.toAbsolutePath
+              ) || source.jarPath
+                .map(jar => buildTarget.fullClasspath.contains(jar.toNIO))
+                .getOrElse(false)
+            )
+            .map(_.id)
+        )
+        .orElse(
+          buildTargets.allJava
+            .find(buildTarget =>
+              source.isInside(
+                buildTarget.classDirectory.toAbsolutePath
+              ) || source.jarPath
+                .map(jar => buildTarget.fullClasspath.contains(jar.toNIO))
+                .getOrElse(false)
+            )
+            .map(_.id)
+        )
+      val targetClasspath = buildTarget
+        .flatMap(buildTargets.targetJarClasspath)
+        .getOrElse(Nil)
+        .map(_.toString)
+
+      val jigsawOptions =
+        addExportsFlags ++ patchModuleFlags(localSource, sourceRoot, source)
+      val mainOptions =
+        List(
+          javac.toString,
+          "-cp",
+          (pluginJars ++ targetClasspath).mkString(File.pathSeparator),
+          "-d",
+          targetRoot.toString,
+        )
+      val pluginOption =
+        s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot}"
+      val cmd =
+        mainOptions ::: jigsawOptions ::: pluginOption :: localSource.toString :: Nil
+
+      val stdout = List.newBuilder[String]
+      val ps = SystemProcess.run(
+        cmd,
+        workDir,
+        false,
+        Map.empty,
+        Some(outLine => stdout += outLine),
+        Some(errLine => stdout += errLine),
+      )
+
+      val future = ps.complete.recover { case NonFatal(e) =>
+        scribe.error(s"Running javac-semanticdb failed for $localSource", e)
+        1
       }
 
-    val sourceRoot = localSource.parent
-    val targetClasspath = buildTargets
-      .inferBuildTarget(source)
-      .flatMap(buildTargets.targetJarClasspath)
-      .getOrElse(Nil)
-      .map(_.toString)
+      val exitCode = Await.result(future, 10.seconds)
+      val semanticdbFile =
+        targetRoot
+          .resolve("META-INF")
+          .resolve("semanticdb")
+          .resolve(s"${localSource.filename}.semanticdb")
 
-    val jigsawOptions =
-      addExportsFlags ++ patchModuleFlags(localSource, sourceRoot, source)
-    val mainOptions =
-      List(
-        javac.toString,
-        "-cp",
-        (pluginJars ++ targetClasspath).mkString(File.pathSeparator),
-        "-d",
-        targetRoot.toString,
+      val doc = if (semanticdbFile.exists) {
+        FileIO
+          .readAllDocuments(semanticdbFile)
+          .headOption
+          .getOrElse(s.TextDocument())
+      } else {
+        val log = stdout.result()
+        if (exitCode != 0 || log.nonEmpty)
+          scribe.warn(
+            s"Running javac-semanticdb failed for ${source.toURI}\n${cmd
+                .mkString(" ")}\nOutput:\n${log.mkString("\n")}"
+          )
+        s.TextDocument()
+      }
+
+      val out = doc.copy(
+        uri = source.toURI.toString(),
+        text = text,
+        md5 = MD5.compute(text),
       )
-    val pluginOption =
-      s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot}"
-    val cmd =
-      mainOptions ::: jigsawOptions ::: pluginOption :: localSource.toString :: Nil
 
-    val stdout = List.newBuilder[String]
-    val ps = SystemProcess.run(
-      cmd,
-      workDir,
-      false,
-      Map.empty,
-      Some(outLine => stdout += outLine),
-      Some(errLine => stdout += errLine),
-    )
-
-    val future = ps.complete.recover { case NonFatal(e) =>
-      scribe.error(s"Running javac-semanticdb failed for $localSource", e)
-      1
+      workDir.deleteRecursively()
+      out
     }
-
-    val exitCode = Await.result(future, 10.seconds)
-    val semanticdbFile =
-      targetRoot
-        .resolve("META-INF")
-        .resolve("semanticdb")
-        .resolve(s"${localSource.filename}.semanticdb")
-
-    val doc = if (semanticdbFile.exists) {
-      FileIO
-        .readAllDocuments(semanticdbFile)
-        .headOption
-        .getOrElse(s.TextDocument())
-    } else {
-      val log = stdout.result()
-      if (exitCode != 0 || log.nonEmpty)
-        scribe.warn(
-          s"Running javac-semanticdb failed for ${source.toURI}. Output:\n${log.mkString("\n")}"
-        )
-      s.TextDocument()
-    }
-
-    val out = doc.copy(
-      uri = source.toURI.toString(),
-      text = text,
-      md5 = MD5.compute(text),
-    )
-
-    workDir.deleteRecursively()
-    out
-  }
 
   private def patchModuleFlags(
       source: AbsolutePath,

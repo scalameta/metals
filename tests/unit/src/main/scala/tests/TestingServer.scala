@@ -178,7 +178,8 @@ final case class TestingServer(
   ): String = {
     val infos = server.workspaceSymbol(query)
     infos.foreach(info => {
-      val path = info.getLocation().getUri().toAbsolutePath
+      val localUri = convertToLocal(info.getLocation().getUri())
+      val path = localUri.toAbsolutePath
       if (path.isJarFileSystem)
         virtualDocSources(path.toString.stripPrefix("/")) = path
     })
@@ -189,7 +190,8 @@ final case class TestingServer(
           else ""
         val filename =
           if (includeFilename) {
-            val path = Paths.get(URI.create(info.getLocation().getUri()))
+            val localUri = convertToLocal(info.getLocation().getUri())
+            val path = Paths.get(URI.create(localUri))
             s" ${path.getFileName()}"
           } else ""
         val container = Option(info.getContainerName()).getOrElse("")
@@ -613,7 +615,8 @@ final case class TestingServer(
   }
 
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
-    server.didFocus(toPath(filename).toURI.toString).asScala
+    val metalsUri = convertToMetalsFS(toPath(filename).toURI.toString)
+    server.didFocus(metalsUri).asScala
   }
 
   def windowStateDidChange(focused: Boolean): Unit = {
@@ -666,12 +669,13 @@ final case class TestingServer(
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val uri = abspath.toURI.toString
+    val metalsUri = convertToMetalsFS(uri)
     val extension = PathIO.extension(abspath.toNIO)
     val text = abspath.readText
     server
       .didOpen(
         new DidOpenTextDocumentParams(
-          new TextDocumentItem(uri, extension, 0, text)
+          new TextDocumentItem(metalsUri, extension, 0, text)
         )
       )
       .asScala
@@ -681,11 +685,12 @@ final case class TestingServer(
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)
     val uri = abspath.toURI.toString
+    val metalsUri = convertToMetalsFS(uri)
     Future.successful {
       server
         .didClose(
           new DidCloseTextDocumentParams(
-            new TextDocumentIdentifier(uri)
+            new TextDocumentIdentifier(metalsUri)
           )
         )
     }
@@ -1448,7 +1453,8 @@ final case class TestingServer(
         if (isSameFile) {
           s"L${location.getRange.getStart.getLine}"
         } else {
-          val path = location.getUri.toAbsolutePath
+          val localUri = convertToLocal(location.getUri)
+          val path = localUri.toAbsolutePath
           val filename = path.toNIO.getFileName
           if (path.isDependencySource(workspace)) filename.toString
           else s"$filename:${location.getRange.getStart.getLine}"
@@ -1589,8 +1595,12 @@ final case class TestingServer(
       expected: String,
   )(implicit loc: munit.Location): Unit = {
     val viewId: String = TreeViewProvider.Project
+    val metalsUri = if (uri.startsWith("libraries:file")) {
+      val jarURI = s"jar:${uri.stripPrefix("libraries:")}"
+      s"libraries:${convertToMetalsFS(jarURI)}"
+    } else uri
     val result =
-      server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes
+      server.treeView.children(TreeViewChildrenParams(viewId, metalsUri)).nodes
     val obtained = result
       .map { node =>
         val collapse =
@@ -1607,6 +1617,14 @@ final case class TestingServer(
       }
       .mkString("\n")
     Assertions.assertNoDiff(obtained, expected)
+  }
+
+  def convertToMetalsFS(uri: String): String = {
+    server.convertToMetalsFS(uri)
+  }
+
+  def convertToLocal(uri: String): String = {
+    server.convertToLocal(uri)
   }
 
   def findTextInDependencyJars(
