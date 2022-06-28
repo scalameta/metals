@@ -23,7 +23,8 @@ import scala.meta.pc.PresentationCompilerConfig
 abstract class CompilerAccess[Reporter, Compiler](
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
-    newCompiler: () => CompilerWrapper[Reporter, Compiler]
+    newCompiler: () => CompilerWrapper[Reporter, Compiler],
+    shouldResetJobQueue: Boolean
 )(implicit ec: ExecutionContextExecutor) {
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
@@ -214,14 +215,9 @@ abstract class CompilerAccess[Reporter, Compiler](
         { () =>
           if (!result.isDone()) {
             try {
-              val runsOnSameThread =
-                _compiler.presentationCompilerThread.isEmpty
+              if (shouldResetJobQueue) jobs.reset()
               result.cancel(false)
               shutdownCurrentCompiler()
-              /* If running inside the executor, we need to reset the job queue
-               * Otherwise it will block indefinetely in case of infinite loops.
-               */
-              if (runsOnSameThread) jobs.reset()
             } catch {
               case NonFatal(_) =>
               case other: Throwable =>

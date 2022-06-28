@@ -27,7 +27,11 @@ class Scala3CompilerAccess(
     extends CompilerAccess[StoreReporter, InteractiveDriver](
       config,
       sh,
-      newCompiler
+      newCompiler,
+      /* If running inside the executor, we need to reset the job queue
+       * Otherwise it will block indefinetely in case of infinite loops.
+       */
+      shouldResetJobQueue = true
     ):
 
   def newReporter = new StoreReporter(null)

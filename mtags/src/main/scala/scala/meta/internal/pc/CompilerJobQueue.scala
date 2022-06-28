@@ -92,6 +92,7 @@ class CompilerJobQueue(newExecutor: () => ThreadPoolExecutor) {
           v.shutdown()
         } else {
           delay()
+          reset()
         }
       case _ =>
     }
