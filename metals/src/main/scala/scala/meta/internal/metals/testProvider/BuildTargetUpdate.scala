@@ -4,6 +4,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import org.eclipse.{lsp4j => l}
+
 final case class BuildTargetUpdate(
     targetName: String,
     targetUri: String,
@@ -43,6 +44,12 @@ object TestExplorerEvent {
     def asRemove: RemoveTestSuite =
       RemoveTestSuite(fullyQualifiedClassName, className)
   }
+
+  final case class UpdateSuiteLocation(
+      fullyQualifiedClassName: String,
+      className: String,
+      location: l.Location
+  ) extends TestExplorerEvent("updateSuiteLocation")
 
   final case class AddTestCases(
       fullyQualifiedClassName: String,
