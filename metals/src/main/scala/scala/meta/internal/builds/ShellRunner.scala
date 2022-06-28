@@ -1,9 +1,10 @@
 package scala.meta.internal.builds
 
-import java.util.Scanner
-
+import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
@@ -141,26 +142,30 @@ object ShellRunner {
       directory: AbsolutePath,
       redirectErrorOutput: Boolean,
       additionalEnv: Map[String, String] = Map.empty,
-      processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       maybeJavaHome: Option[String]
   ): Option[String] = {
+
+    val sbOut = new StringBuilder()
     val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap
     val ps = SystemProcess.run(
       args,
       directory,
       redirectErrorOutput,
       env,
-      Some(processOut),
+      Some(s => {
+        sbOut.append(s)
+        sbOut.append(Properties.lineSeparator)
+      }),
       Some(processErr),
       propagateError
     )
 
-    val scanner = new Scanner(ps.inputStream).useDelimiter("\\A")
-    if (scanner.hasNext)
-      Some(scanner.next)
-    else None
+    val exit = Await.result(ps.complete, 10 second)
 
+    if (exit == 0) {
+      Some(sbOut.toString())
+    } else None
   }
 }
