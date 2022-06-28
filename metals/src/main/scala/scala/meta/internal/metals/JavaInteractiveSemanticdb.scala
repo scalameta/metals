@@ -268,7 +268,6 @@ object JdkVersion {
           .getString("JAVA_VERSION")
           .stripPrefix("\"")
           .stripSuffix("\"")
-        //   pprint.log("version from releaseFile is "+ version)
         JdkVersion.parse(version)
       } catch {
         case NonFatal(e) =>
