@@ -20,7 +20,7 @@ class Scala3CompilerWrapper(driver: InteractiveDriver)
     new ReporterAccess[StoreReporter]:
       def reporter = driver.currentCtx.reporter.asInstanceOf[StoreReporter]
 
-  override def askShutdown(): Unit = {}
+  override def askShutdown(): Unit = ()
 
   override def isAlive(): Boolean = false
 

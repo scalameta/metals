@@ -214,8 +214,14 @@ abstract class CompilerAccess[Reporter, Compiler](
         { () =>
           if (!result.isDone()) {
             try {
+              val runsOnSameThread =
+                _compiler.presentationCompilerThread.isEmpty
               result.cancel(false)
               shutdownCurrentCompiler()
+              /* If running inside the executor, we need to reset the job queue
+               * Otherwise it will block indefinetely in case of infinite loops.
+               */
+              if (runsOnSameThread) jobs.reset()
             } catch {
               case NonFatal(_) =>
               case other: Throwable =>
