@@ -19,6 +19,10 @@ import scala.meta.internal.process.SystemProcess
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.ConfigSyntax
+
 class JavaInteractiveSemanticdb(
     javac: AbsolutePath,
     jdkVersion: JdkVersion,
@@ -229,22 +233,47 @@ object JdkVersion {
 
   def maybeJdkVersionFromJavaHome(
       maybeJavaHome: Option[AbsolutePath]
-  ): Option[JdkVersion] = JdkVersion.parse(System.getProperty("java.version"))
+  ): Option[JdkVersion] = {
+    maybeJavaHome.flatMap { javaHome =>
+      fromReleaseFile(javaHome).orElse {
+        ShellRunner
+          .runSync(
+            List("java", "-version"),
+            javaHome,
+            redirectErrorOutput = true,
+            maybeJavaHome = maybeJavaHome.map(_.toString())
+          )
+          .flatMap { javaVersionResponse =>
+            "\\d+\\.\\d+\\.\\d+".r
+              .findFirstIn(javaVersionResponse)
+              .flatMap(JdkVersion.parse)
+          }
+      }
+    }
+  }
 
-//  {
-//    maybeJavaHome.flatMap { javaHome =>
-//      ShellRunner
-//        .runSync(
-//          List("java", "-version"),
-//          javaHome,
-//          redirectErrorOutput = true,
-//          maybeJavaHome = maybeJavaHome.map(_.toString())
-//        )
-//        .flatMap(
-//          JdkVersion.parse
-//        )
-//    }
-//  }
+  def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] = {
+    val releaseFile = javaHome.resolve("release")
+    if (releaseFile.exists) {
+      val properties = ConfigFactory.parseFile(
+        releaseFile.toFile,
+        ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES)
+      )
+      try {
+        val version = properties
+          .getString("JAVA_VERSION")
+          .stripPrefix("\"")
+          .stripSuffix("\"")
+        //   pprint.log("version from releaseFile is "+ version)
+        JdkVersion.parse(version)
+      } catch {
+        case NonFatal(e) =>
+          scribe.error("Failed to read jdk version from `release` file", e)
+          None
+      }
+    } else None
+
+  }
 
   def getJavaVersionFromJDK8FallBack(
       javaHome: AbsolutePath

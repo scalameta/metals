@@ -158,14 +158,9 @@ object ShellRunner {
     )
 
     val scanner = new Scanner(ps.inputStream).useDelimiter("\\A")
-    if (scanner.hasNext) {
-      val result = scanner.next
-      pprint.log(
-        "System property java.version is " + System.getProperty("java.version")
-      )
-      pprint.log("the shell runner obtained java version as " + result)
-      Some(result)
-    } else None
+    if (scanner.hasNext)
+      Some(scanner.next)
+    else None
 
   }
 }
