@@ -10,11 +10,9 @@ class JdkVersionSuite extends FunSuite {
   test("jdk-shell-version") {
     assertEquals(
       JdkVersion.fromShell(javaHome),
-      JdkVersion.fromReleaseFile(javaHome)
-    )
-    assertEquals(
-      JdkVersion.fromShell(javaHome),
-      JdkVersion.parse(System.getProperty("java.version"))
+      JdkVersion
+        .fromReleaseFile(javaHome)
+        .orElse(JdkVersion.parse(System.getProperty("java.version")))
     )
   }
 }
