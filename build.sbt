@@ -413,6 +413,7 @@ lazy val metals = project
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "ammoniteVersion" -> V.ammonite,
+      "scalaCliVersion" -> V.scalaCli,
       "organizeImportVersion" -> V.organizeImportRule,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
@@ -607,6 +608,7 @@ lazy val metalsDependencies = project
       "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
       "com.lihaoyi" % "mill-contrib-testng" % V.mill,
+      "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)
