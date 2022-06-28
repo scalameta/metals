@@ -47,7 +47,8 @@ class ScalaCompilerAccess(
     extends CompilerAccess[StoreReporter, MetalsGlobal](
       config,
       sh,
-      newCompiler
+      newCompiler,
+      shouldResetJobQueue = false
     ) {
 
   def newReporter = new StoreReporter
