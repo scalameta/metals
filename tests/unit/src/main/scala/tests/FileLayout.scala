@@ -13,7 +13,7 @@ object FileLayout {
     if (!layout.trim.isEmpty) {
       val lines = layout.replace("\r\n", "\n")
       lines
-        .split("(?=\n/)")
+        .split("(?=\n/[^/])")
         .map { row =>
           row.stripPrefix("\n").split("\n", 2).toList match {
             case path :: contents :: Nil =>
