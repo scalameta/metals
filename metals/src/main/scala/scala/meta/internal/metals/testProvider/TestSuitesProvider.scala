@@ -71,25 +71,22 @@ final class TestSuitesProvider(
    * 1. Test Explorer view can be opened and tree view is visible
    * 2. test suite's file can be opened and test cases are visible
    */
-  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
-    if (isEnabled && docs.documents.nonEmpty) {
-      val doc = docs.documents.headOption
-
-      val suiteLocationChanged =
-        if (index.contains(file))
-          doc.toList.flatMap { doc =>
+  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit =
+    docs.documents.headOption.foreach {
+      case doc if isEnabled =>
+        val suiteLocationChanged =
+          if (index.contains(file))
             getTestSuitesLocationUpdates(file, doc)
-          }
-        else Nil
+          else Nil
 
-      val buildTargetUpdates =
-        if (index.hasTestCasesGranularity(file))
-          getTestCasesForPath(file, doc)
-        else Nil
+        val buildTargetUpdates =
+          if (index.hasTestCasesGranularity(file))
+            getTestCasesForPath(file, Some(doc))
+          else Nil
 
-      updateClientIfNonEmpty(suiteLocationChanged ::: buildTargetUpdates)
+        updateClientIfNonEmpty(suiteLocationChanged ::: buildTargetUpdates)
+      case _ =>
     }
-  }
 
   override def onDelete(file: AbsolutePath): Unit = {
     val removed = index.remove(file)
@@ -157,12 +154,16 @@ final class TestSuitesProvider(
       )
       (entry.buildTarget, event)
     }
-    events.groupBy(_._1).toList.map { case (buildTarget, events) =>
-      BuildTargetUpdate(
-        buildTarget,
-        events.map(_._2)
-      )
-    }
+
+    events
+      .groupBy { case (target, _) => target }
+      .map { case (buildTarget, events) =>
+        BuildTargetUpdate(
+          buildTarget,
+          events.map { case (_, event) => event }
+        )
+      }
+      .toList
   }
 
   /**

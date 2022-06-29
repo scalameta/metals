@@ -521,7 +521,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   checkEvents(
-    "check-events",
+    "check-basic-events",
     s"""|/metals.json
         |{
         |  "app": {
@@ -537,8 +537,8 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |  def test1 = ()
         |}
         |""".stripMargin,
-    "app/src/main/scala/JunitTestSuite.scala",
-    () => {
+    file = "app/src/main/scala/JunitTestSuite.scala",
+    expected = () => {
       val fcqn = "JunitTestSuite"
       val className = "JunitTestSuite"
       val symbol = "_empty_/JunitTestSuite#"
@@ -571,6 +571,13 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     }
   )
 
+  /**
+   * Discovers all tests in project or test cases in file
+   *
+   * @param files list of files for which compilation will be triggered. It's
+   * @param expected list of expected build target updates
+   * @param uri URI of file for which test cases should be discovered
+   */
   def testDiscover(
       name: TestOptions,
       layout: String,
@@ -591,6 +598,12 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     }
   }
 
+  /**
+   * Check if Test Explorer returns particular events.
+   *
+   * @param file which should be compiled
+   * @param expected list of expected build target updates
+   */
   def checkEvents(
       name: TestOptions,
       layout: String,
