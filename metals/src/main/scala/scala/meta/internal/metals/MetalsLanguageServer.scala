@@ -67,6 +67,7 @@ import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
@@ -804,7 +805,6 @@ class MetalsLanguageServer(
             () => indexer.profiledIndexWorkspace(() => ()),
             () => workspace,
             () => focusedDocument,
-            () => buildTools,
             clientConfig.initialConfig,
             scalaVersionSelector,
           )
@@ -1108,26 +1108,30 @@ class MetalsLanguageServer(
         ()
       }
     } else {
-      if (path.isAmmoniteScript)
-        ammonite.maybeImport(path)
-
-      val compileAndLoad = buildServerPromise.future.flatMap { _ =>
-        Future.sequence(
-          List(
-            compilers.load(List(path)),
-            compilations.compileFile(path),
+      val triggeredImportOpt =
+        if (path.isAmmoniteScript && buildTargets.inverseSources(path).isEmpty)
+          maybeImportScript(path)
+        else
+          None
+      def load(): Future[Unit] = {
+        val compileAndLoad = buildServerPromise.future.flatMap { _ =>
+          Future.sequence(
+            List(
+              compilers.load(List(path)),
+              compilations.compileFile(path),
+            )
           )
-        )
+        }
+        Future
+          .sequence(
+            List(
+              compileAndLoad,
+              publishSynthetics,
+            )
+          )
+          .ignoreValue
       }
-      Future
-        .sequence(
-          List(
-            compileAndLoad,
-            publishSynthetics,
-          )
-        )
-        .ignoreValue
-        .asJava
+      triggeredImportOpt.getOrElse(load()).asJava
     }
   }
 
@@ -1994,6 +1998,30 @@ class MetalsLanguageServer(
         ammonite.start().asJavaObject
       case ServerCommands.StopAmmoniteBuildServer() =>
         ammonite.stop()
+
+      case ServerCommands.StartScalaCliServer() =>
+        val f = focusedDocument.map(_.parent) match {
+          case None => Future.unit
+          case Some(newDir) =>
+            val updated =
+              if (newDir.toNIO.startsWith(workspace.toNIO)) {
+                val relPath = workspace.toNIO.relativize(newDir.toNIO)
+                val segments =
+                  relPath.iterator().asScala.map(_.toString).toVector
+                val idx = segments.indexOf(".metals")
+                if (idx < 0) newDir
+                else
+                  AbsolutePath(
+                    segments.take(idx).foldLeft(workspace.toNIO)(_.resolve(_))
+                  )
+              } else newDir
+            if (scalaCli.roots.contains(updated)) Future.unit
+            else scalaCli.start(scalaCli.roots :+ updated)
+        }
+        f.asJavaObject
+      case ServerCommands.StopScalaCliServer() =>
+        scalaCli.stop()
+
       case ServerCommands.NewScalaProject() =>
         newProjectProvider.createNewProjectFromTemplate().asJavaObject
 
@@ -2315,16 +2343,34 @@ class MetalsLanguageServer(
       params: b.DidChangeBuildTarget
   ): Unit = {
     val (ammoniteChanges, otherChanges) =
-      params.getChanges.asScala.partition(
-        _.getTarget.getUri.isAmmoniteScript
-      )
+      params.getChanges.asScala.partition { change =>
+        val connOpt = buildTargets.buildServerOf(change.getTarget)
+        connOpt.nonEmpty && connOpt == ammonite.buildServer
+      }
+    val (scalaCliBuildChanges, otherChanges0) =
+      otherChanges.partition { change =>
+        val connOpt = buildTargets.buildServerOf(change.getTarget)
+        connOpt.nonEmpty && connOpt == scalaCli.buildServer
+      }
+
     if (ammoniteChanges.nonEmpty)
       ammonite.importBuild().onComplete {
         case Success(()) =>
         case Failure(exception) =>
           scribe.error("Error re-importing Ammonite build", exception)
       }
-    if (otherChanges.nonEmpty)
+
+    if (scalaCliBuildChanges.nonEmpty)
+      scalaCli
+        .importBuild()
+        .onComplete {
+          case Success(()) =>
+          case Failure(exception) =>
+            scribe
+              .error("Error re-importing Scala CLI build", exception)
+        }
+
+    if (otherChanges0.nonEmpty)
       quickConnectToBuildServer().onComplete {
         case Failure(e) =>
           scribe.warn("Error refreshing build", e)
@@ -2429,6 +2475,24 @@ class MetalsLanguageServer(
 
   private var lastImportedBuilds = List.empty[ImportedBuild]
 
+  val scalaCli: ScalaCli = register(
+    new ScalaCli(
+      () => compilers,
+      compilations,
+      () => statusBar,
+      buffers,
+      () => indexer.profiledIndexWorkspace(() => ()),
+      () => diagnostics,
+      () => workspace,
+      () => tables,
+      () => buildClient,
+      languageClient,
+      () => clientConfig.initialConfig,
+      () => userConfig,
+    )
+  )
+  buildTargets.addData(scalaCli.buildTargetsData)
+
   private val indexer = Indexer(
     () => workspaceReload,
     () => doctor,
@@ -2451,6 +2515,11 @@ class MetalsLanguageServer(
           "ammonite",
           ammonite.buildTargetsData,
           ammonite.lastImportedBuild,
+        ),
+        Indexer.BuildTool(
+          "scala-cli",
+          scalaCli.buildTargetsData,
+          scalaCli.lastImportedBuild,
         ),
       ),
     clientConfig,
@@ -2668,6 +2737,103 @@ class MetalsLanguageServer(
           }
         }
     } else Future.unit
+  }
+
+  private def isMillBuildSc(path: AbsolutePath): Boolean =
+    path.toNIO.getFileName.toString == "build.sc" &&
+      // for now, this only checks for build.sc, but this could be made more strict in the future
+      // (require ./mill or ./.mill-version)
+      buildTools.isMill
+
+  def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
+    val directory = path.parent
+    if (
+      ammonite.loaded(path) || scalaCli.loaded(directory) || isMillBuildSc(path)
+    )
+      None
+    else {
+      def doImportScalaCli(): Unit =
+        scalaCli.start(scalaCli.roots :+ directory).onComplete {
+          case Failure(e) =>
+            languageClient.showMessage(
+              Messages.ImportScalaScript.ImportFailed(path.toString)
+            )
+            scribe.warn(s"Error importing Scala CLI project $directory", e)
+          case Success(_) =>
+            languageClient.showMessage(
+              Messages.ImportScalaScript.ImportedScalaCli
+            )
+        }
+      def doImportAmmonite(): Unit =
+        ammonite.start(Some(path)).onComplete {
+          case Failure(e) =>
+            languageClient.showMessage(
+              Messages.ImportScalaScript.ImportFailed(path.toString)
+            )
+            scribe.warn(s"Error importing Ammonite script $path", e)
+          case Success(_) =>
+            languageClient.showMessage(
+              Messages.ImportScalaScript.ImportedAmmonite
+            )
+        }
+
+      val autoImportAmmonite =
+        tables.dismissedNotifications.AmmoniteImportAuto.isDismissed
+      val autoImportScalaCli =
+        tables.dismissedNotifications.ScalaCliImportAuto.isDismissed
+
+      def askAutoImport(notification: DismissedNotifications#Notification) =
+        languageClient
+          .showMessageRequest(Messages.ImportAllScripts.params())
+          .asScala
+          .onComplete {
+            case Failure(e) =>
+              scribe.warn("Error requesting automatic Scala scripts import", e)
+            case Success(null) =>
+              scribe.debug("Automatic Scala scripts import cancelled by user")
+            case Success(resp) =>
+              resp.getTitle match {
+                case Messages.ImportAllScripts.importAll =>
+                  notification.dismissForever()
+                case _ =>
+              }
+          }
+
+      val futureRes =
+        if (autoImportAmmonite) {
+          doImportAmmonite()
+          Future.unit
+        } else if (autoImportScalaCli) {
+          doImportScalaCli()
+          Future.unit
+        } else {
+          val futureResp = languageClient
+            .showMessageRequest(Messages.ImportScalaScript.params())
+            .asScala
+          futureResp.onComplete {
+            case Failure(e) =>
+              scribe.warn("Error requesting Scala script import", e)
+            case Success(null) =>
+              scribe.debug("Scala script import cancelled by user")
+            case Success(resp) =>
+              resp.getTitle match {
+                case Messages.ImportScalaScript.doImportAmmonite =>
+                  doImportAmmonite()
+                  askAutoImport(
+                    tables.dismissedNotifications.AmmoniteImportAuto
+                  )
+                case Messages.ImportScalaScript.doImportScalaCli =>
+                  doImportScalaCli()
+                  askAutoImport(
+                    tables.dismissedNotifications.ScalaCliImportAuto
+                  )
+                case _ =>
+              }
+          }
+          futureResp.ignoreValue
+        }
+      Some(futureRes)
+    }
   }
 
 }

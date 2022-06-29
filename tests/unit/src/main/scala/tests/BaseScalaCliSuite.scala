@@ -1,13 +1,20 @@
 package tests
 
 import java.io.File
+import java.nio.file.Files
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeoutException
 
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration._
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.scalacli.ScalaCli
 
+import ch.epfl.scala.bsp4j.MessageType
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.MessageActionItem
 
@@ -15,20 +22,85 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
     extends BaseLspSuite(s"scala-cli-$scalaVersion")
     with ScriptsAssertions {
 
+  private val scheduler = Executors.newSingleThreadScheduledExecutor()
+
+  private def timeout(
+      message: String,
+      duration: FiniteDuration,
+  ): Future[Unit] = {
+    val p = Promise[Unit]()
+    val r: Runnable = { () =>
+      p.failure(new TimeoutException(message))
+    }
+    scheduler.schedule(r, duration.length, duration.unit)
+    p.future
+  }
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    scheduler.shutdown()
+  }
+
   override def munitIgnore: Boolean =
     !isValidScalaVersionForEnv(scalaVersion)
 
+  private var importedPromise = Promise[Unit]()
+
   override def newServer(workspaceName: String): Unit = {
     super.newServer(workspaceName)
+    val previousShowMessageHandler = server.client.showMessageHandler
+    server.client.showMessageHandler = { params =>
+      if (params == Messages.ImportScalaScript.ImportedScalaCli)
+        importedPromise.success(())
+      else if (
+        params.getType == MessageType.ERROR && params.getMessage.startsWith(
+          "Error importing Scala CLI project "
+        )
+      )
+        importedPromise.failure(
+          new Exception(s"Error importing project: $params")
+        )
+      else
+        previousShowMessageHandler(params)
+    }
     val previousShowMessageRequestHandler =
       server.client.showMessageRequestHandler
     server.client.showMessageRequestHandler = { params =>
-      if (params == Messages.ImportAmmoniteScript.params())
-        Some(new MessageActionItem(Messages.ImportAmmoniteScript.dismiss))
+      def useBsp = Files.exists(
+        server.server.workspace.resolve(".bsp/scala-cli.json").toNIO
+      )
+      if (params == Messages.ImportScalaScript.params())
+        Some(
+          new MessageActionItem(
+            if (useBsp)
+              Messages.ImportScalaScript.dismiss
+            else
+              Messages.ImportScalaScript.doImportScalaCli
+          )
+        )
+      else if (params == Messages.ImportAllScripts.params())
+        Some(
+          new MessageActionItem(
+            if (useBsp)
+              Messages.ImportAllScripts.dismiss
+            else
+              Messages.ImportAllScripts.importAll
+          )
+        )
       else
         previousShowMessageRequestHandler(params)
     }
   }
+
+  private def manualLayout =
+    s"""/metals.json
+       |{
+       |  "a": {
+       |    "scalaVersion": "$scalaVersion"
+       |  }
+       |}
+       |
+       |""".stripMargin
 
   private def escape(s: String): String =
     s.replace("\\", "\\\\")
@@ -61,19 +133,40 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
        |
        |""".stripMargin
 
-  private def scalaCliInitialize(layout: String): Future[InitializeResult] =
-    initialize(bspLayout + layout)
-
-  test("simple file") {
-    simpleFileTest()
+  private def scalaCliInitialize(
+      useBsp: Boolean
+  )(layout: String): Future[InitializeResult] = {
+    if (!useBsp)
+      importedPromise = Promise[Unit]()
+    initialize(
+      (if (useBsp) bspLayout else manualLayout) + layout
+    )
   }
-  test("simple script") {
-    simpleScriptTest()
+
+  private def waitForImport(useBsp: Boolean): Future[Unit] =
+    if (useBsp) Future.successful(())
+    else
+      Future
+        .firstCompletedOf(
+          List(
+            importedPromise.future,
+            timeout("import timeout", 180.seconds),
+          )
+        )
+
+  for (useBsp <- Seq(true, false)) {
+    val message = if (useBsp) "BSP" else "manual"
+    test(s"simple file $message") {
+      simpleFileTest(useBsp)
+    }
+    test(s"simple script $message") {
+      simpleScriptTest(useBsp)
+    }
   }
 
-  def simpleFileTest(): Future[Unit] =
+  def simpleFileTest(useBsp: Boolean): Future[Unit] =
     for {
-      _ <- scalaCliInitialize(
+      _ <- scalaCliInitialize(useBsp)(
         s"""/MyTests.scala
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.9"
@@ -101,6 +194,10 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("MyTests.scala")
+      _ <- {
+        if (useBsp) Future.unit
+        else server.executeCommand(ServerCommands.StartScalaCliServer)
+      }
 
       // via Scala CLI-generated Semantic DB
       _ <- assertDefinitionAtLocation(
@@ -132,9 +229,9 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
 
     } yield ()
 
-  def simpleScriptTest(): Future[Unit] =
+  def simpleScriptTest(useBsp: Boolean): Future[Unit] =
     for {
-      _ <- scalaCliInitialize(
+      _ <- scalaCliInitialize(useBsp)(
         s"""/MyTests.sc
            |//> using scala "$scalaVersion"
            |//> using lib "com.lihaoyi::utest::0.7.9"
@@ -164,6 +261,8 @@ abstract class BaseScalaCliSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("MyTests.sc")
+
+      _ <- waitForImport(useBsp)
 
       // via Scala CLI-generated Semantic DB
       _ <- assertDefinitionAtLocation(
