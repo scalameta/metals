@@ -4,8 +4,6 @@ import tests.BaseCompletionSuite
 
 class CompletionScaladocSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
   check(
     "methoddef-label",
     """
@@ -316,6 +314,54 @@ class CompletionScaladocSuite extends BaseCompletionSuite {
        |    * $0
        |    */
        |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "extension".tag(IgnoreScala2),
+    """|extension (str: String)
+       |  /**@@
+       |  def foo(param1: Int): Int = ???
+       |""".stripMargin,
+    """|extension (str: String)
+       |  /**
+       |    * $0
+       |    *
+       |    * @param param1
+       |    * @return
+       |    */
+       |  def foo(param1: Int): Int = ???
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "anonymous-given".tag(IgnoreScala2),
+    """|/**@@
+       |def foo(param1: Int)(using String): Int = ???
+       |""".stripMargin,
+    """|/**
+       |  * $0
+       |  *
+       |  * @param param1
+       |  * @return
+       |  */
+       |def foo(param1: Int)(using String): Int = ???
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "named-given".tag(IgnoreScala2),
+    """|/**@@
+       |def foo(param1: Int)(using s: String): Int = ???
+       |""".stripMargin,
+    """|/**
+       |  * $0
+       |  *
+       |  * @param param1
+       |  * @param s
+       |  * @return
+       |  */
+       |def foo(param1: Int)(using s: String): Int = ???
        |""".stripMargin
   )
 }

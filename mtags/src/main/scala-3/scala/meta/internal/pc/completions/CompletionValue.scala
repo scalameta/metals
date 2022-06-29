@@ -28,6 +28,7 @@ sealed trait CompletionValue:
   final def completionItemKind(using Context): CompletionItemKind =
     this match
       case _: CompletionValue.Keyword => CompletionItemKind.Keyword
+      case _: CompletionValue.Document => CompletionItemKind.Snippet
       case _: CompletionValue.NamedArg => CompletionItemKind.Field
       case _: CompletionValue.Override => CompletionItemKind.Method
       case v: (CompletionValue.Compiler | CompletionValue.Workspace |
@@ -58,6 +59,7 @@ sealed trait CompletionValue:
         printer.completionSymbol(so.symbol)
       case CompletionValue.NamedArg(_, tpe) =>
         printer.tpe(tpe)
+      case CompletionValue.Document(_, _, desc) => desc
       case _: CompletionValue.Keyword => ""
 
   private def forSymOnly[A](f: Symbol => A, orElse: => A): A =
@@ -115,11 +117,21 @@ object CompletionValue:
       override val filterText: Option[String]
   ) extends Symbolic
 
+  case class Document(label: String, doc: String, description: String)
+      extends CompletionValue
+
   def namedArg(label: String, sym: Symbol)(using Context): CompletionValue =
     NamedArg(label, sym.info.widenTermRefExpr)
 
   def keyword(label: String, insertText: String): CompletionValue =
     Keyword(label, Some(insertText))
+
+  def document(
+      label: String,
+      insertText: String,
+      description: String
+  ): CompletionValue =
+    Document(label, insertText, description)
 
   def scope(label: String, sym: Symbol): CompletionValue =
     Scope(label, sym)

@@ -22,6 +22,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.Range as LspRange
 
@@ -32,7 +33,6 @@ class CompletionsProvider(
     config: PresentationCompilerConfig,
     buildTargetIdentifier: String
 ):
-
   def completions(): CompletionList =
     val uri = params.uri
 
@@ -60,6 +60,7 @@ class CompletionsProvider(
         val (completions, searchResult) =
           new Completions(
             pos,
+            params.text,
             ctx.fresh.setCompilationUnit(unit),
             search,
             buildTargetIdentifier,
@@ -100,11 +101,11 @@ class CompletionsProvider(
 
   /**
    * In case if completion comes from empty line like:
-   * ```
+   * {{{
    * class Foo:
    *   val a = 1
    *   @@
-   * ```
+   * }}}
    * it's required to modify actual code by addition Ident.
    *
    * Otherwise, completion poisition doesn't point at any tree
@@ -112,6 +113,15 @@ class CompletionsProvider(
    */
   private def applyCompletionCursor(params: OffsetParams): String =
     import params.*
+
+    val isStartMultilineComment =
+      val i = params.offset()
+      i >= 3 && (params.text().charAt(i - 1) match
+        case '*' =>
+          params.text().charAt(i - 2) == '*' &&
+          params.text().charAt(i - 3) == '/'
+        case _ => false
+      )
 
     @tailrec
     def isEmptyLine(idx: Int, initial: Int): Boolean =
@@ -127,7 +137,11 @@ class CompletionsProvider(
     // for s" $@@ " or s" ${@@ "
     def isDollar = offset > 2 && (text.charAt(offset - 1) == '$' ||
       text.charAt(offset - 1) == '{' && text.charAt(offset - 2) == '$')
-    if isEmptyLine(offset, offset) || isDollar then
+
+    if isStartMultilineComment then
+      // Insert potentially missing `*/` to avoid comment out all codes after the "/**".
+      text.substring(0, offset) + "*/" + text.substring(offset)
+    else if isEmptyLine(offset, offset) || isDollar then
       text.substring(0, offset) + "CURSOR" + text.substring(offset)
     else text
   end applyCompletionCursor
@@ -198,7 +212,9 @@ class CompletionsProvider(
               kind = completionItemDataKind
             ).toJson
           )
-        case _ => None
+        case _: CompletionValue.Document =>
+          item.setInsertTextMode(InsertTextMode.AsIs)
+        case _ =>
       end match
 
       item.setTags(completion.lspTags.asJava)
@@ -296,6 +312,8 @@ class CompletionsProvider(
         mkItem(ident, ident.replace("$", "$$")) // escape $ for snippet
       case CompletionValue.Keyword(label, text) =>
         mkItem(label, text.getOrElse(label))
+      case CompletionValue.Document(label, doc, desc) =>
+        mkItem(label, doc, filterText = Some(desc))
       case _ =>
         val insert = completion.insertText.getOrElse(ident.backticked)
         mkItem(

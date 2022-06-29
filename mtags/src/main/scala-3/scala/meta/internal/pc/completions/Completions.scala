@@ -36,6 +36,7 @@ import dotty.tools.dotc.util.SrcPos
 
 class Completions(
     pos: SourcePosition,
+    text: String,
     ctx: Context,
     search: SymbolSearch,
     buildTargetIdentifier: String,
@@ -175,6 +176,9 @@ class Completions(
       .stripSuffix(".scala")
 
     path match
+      case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
+        val values = ScaladocCompletions.contribute(pos, text, config)
+        (values, true)
       // class FooImpl extends Foo:
       //   def x|
       case (dd: (DefDef | ValDef)) :: (t: Template) :: (td: TypeDef) :: _
@@ -322,6 +326,7 @@ class Completions(
       def visit(head: CompletionValue): Boolean =
         val (id, include) =
           head match
+            case doc: CompletionValue.Document => (doc.label, true)
             case over: CompletionValue.Override => (over.label, true)
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
