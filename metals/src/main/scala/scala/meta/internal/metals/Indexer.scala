@@ -58,6 +58,7 @@ final case class Indexer(
     clientConfig: ClientConfiguration,
     definitionIndex: OnDemandSymbolIndex,
     referencesProvider: () => ReferenceProvider,
+    callHierarchyProvider: () => CallHierarchyProvider,
     workspaceSymbols: () => WorkspaceSymbolProvider,
     buildTargets: BuildTargets,
     interactiveSemanticdbs: () => InteractiveSemanticdbs,
@@ -157,6 +158,7 @@ final case class Indexer(
           List(
             ("definition index", definitionIndex),
             ("references index", referencesProvider().index),
+            ("call hierarchy index", callHierarchyProvider().index),
             ("workspace symbol index", workspaceSymbols().inWorkspace),
             ("build targets", buildTargets),
             (
