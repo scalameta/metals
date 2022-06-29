@@ -402,29 +402,46 @@ final class BloopServers(
     }
   }
 
+  private def updateBloopJavaHomeBeforeLaunch(
+      userConfiguration: UserConfiguration
+  ) = {
+    def metalsJavaHome =
+      userConfiguration.javaHome
+        .orElse(sys.env.get("JAVA_HOME"))
+        .orElse(sys.props.get("java.home"))
+    // we should set up Java before running Bloop in order to not restart it
+    bloopJsonPath match {
+      case Some(bloopPath) if !bloopPath.exists =>
+        // we want to use the same java version as Metals, so it's ok to use java.home
+        writeJVMPropertiesToBloopGlobalJsonFile(
+          userConfiguration.bloopJvmProperties.getOrElse(Nil),
+          metalsJavaHome
+        )
+      case Some(bloopPath) if bloopPath.exists =>
+        maybeLoadBloopGlobalJsonFile(bloopPath) match {
+          case (Some(javaHome), opts) =>
+            Try {
+              val homePath = AbsolutePath(Paths.get(javaHome))
+              // fix java home in case it changed
+              if (!homePath.exists)
+                writeJVMPropertiesToBloopGlobalJsonFile(
+                  opts,
+                  metalsJavaHome
+                )
+            }
+          case _ =>
+        }
+      case _ =>
+    }
+  }
+
   private def connectToLauncher(
       bloopVersion: String,
       bloopPort: Option[Int],
       userConfiguration: UserConfiguration
   ): Future[SocketConnection] = {
-    // we should set up Java before running Bloop in order to not restart it
-    bloopJsonPath match {
-      case Some(bloopPath) if !bloopPath.exists =>
-        // we want to use the same java version as Metals, so it's ok to use java.home
-        val metalsJavaHome =
-          userConfiguration.javaHome
-            .orElse(sys.env.get("JAVA_HOME"))
-            .orElse(sys.props.get("java.home"))
-            // We can't cache java for nix/guix, since the path might change
-            .filterNot(path =>
-              path.startsWith("/nix/store/") || path.startsWith("/gnu/store/")
-            )
-        writeJVMPropertiesToBloopGlobalJsonFile(
-          userConfiguration.bloopJvmProperties.getOrElse(Nil),
-          metalsJavaHome
-        )
-      case _ =>
-    }
+
+    updateBloopJavaHomeBeforeLaunch(userConfiguration)
     val launcherInOutPipe = Pipe.open()
     val launcherIn = new QuietInputStream(
       Channels.newInputStream(launcherInOutPipe.source()),
