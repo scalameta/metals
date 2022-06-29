@@ -412,7 +412,13 @@ final class BloopServers(
       case Some(bloopPath) if !bloopPath.exists =>
         // we want to use the same java version as Metals, so it's ok to use java.home
         val metalsJavaHome =
-          userConfiguration.javaHome.orElse(sys.props.get("java.home"))
+          userConfiguration.javaHome
+            .orElse(sys.env.get("JAVA_HOME"))
+            .orElse(sys.props.get("java.home"))
+            // We can't cache java for nix/guix, since the path might change
+            .filterNot(path =>
+              path.startsWith("/nix/store/") || path.startsWith("/gnu/store/")
+            )
         writeJVMPropertiesToBloopGlobalJsonFile(
           userConfiguration.bloopJvmProperties.getOrElse(Nil),
           metalsJavaHome
