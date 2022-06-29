@@ -275,6 +275,7 @@ class MetalsLanguageServer(
   private var syntheticsDecorator: SyntheticsDecorationProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
+  private var callHierarchyProvider: CallHierarchyProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
@@ -564,6 +565,15 @@ class MetalsLanguageServer(
           remote,
           trees,
           buildTargets,
+        )
+        callHierarchyProvider = new CallHierarchyProvider(
+          workspace,
+          semanticdbs,
+          buffers,
+          definitionProvider,
+          remote,
+          trees,
+          buildTargets
         )
         implementationProvider = new ImplementationProvider(
           semanticdbs,
@@ -880,6 +890,7 @@ class MetalsLanguageServer(
             List(".", "*").asJava,
           )
         )
+        capabilities.setCallHierarchyProvider(true)
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
@@ -1655,6 +1666,32 @@ class MetalsLanguageServer(
       compileAndLookForNewReferences(params, results)
     }
     results
+  }
+
+  @JsonRequest("textDocument/prepareCallHierarchy")
+  def prepareCallHierarchy(
+      params: CallHierarchyPrepareParams
+  ): CompletableFuture[util.List[CallHierarchyItem]] =
+    CancelTokens { _ =>
+      callHierarchyProvider.prepare(params).asJava
+    }
+
+  @JsonRequest("callHierarchy/incomingCalls")
+  def callHierarchyIncomingCalls(
+      params: CallHierarchyIncomingCallsParams
+  ): CompletableFuture[util.List[CallHierarchyIncomingCall]] =
+    CancelTokens { _ =>
+      callHierarchyProvider.incomingCalls(params).asJava
+    }
+
+  @JsonRequest("callHierarchy/outgoingCalls")
+  def callHierarchyOutgoingCalls(
+      params: CallHierarchyOutgoingCallsParams
+  ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] = {
+    CancelTokens.future { token =>
+      scribe.warn("callHierarchy/outgoingCalls is not supported.")
+      null
+    }
   }
 
   @JsonRequest("textDocument/completion")
@@ -2557,6 +2594,7 @@ class MetalsLanguageServer(
     clientConfig,
     definitionIndex,
     () => referencesProvider,
+    () => callHierarchyProvider,
     () => workspaceSymbols,
     buildTargets,
     () => interactiveSemanticdbs,
