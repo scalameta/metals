@@ -244,4 +244,64 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
     } yield ()
   }
 
+  // Testing one of each contributed dependency
+  test("contrib") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{"a":{"scalacOptions": ["-Wunused"] }}
+           |/.scalafix.conf
+           |rules = [
+           |  EmptyCollectionsUnified,
+           |  UseNamedParameters,
+           |  MissingFinal,
+           |  RemoveEmptyObject,
+           |  ZeroIndexToHead
+           |]
+           |
+           |/a/src/main/scala/Main.scala
+           |object RemoveMe
+           |object A {
+           |  case class Bar(i: Int)
+           |  def func(a: Int, b: Int, c: Int) = a + b + c 
+           |}
+           |object Main{
+           |  val used = List()
+           |  val used2 = List(1)
+           |  used2(0)
+           |  A.func(1, 2, 3)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      textParams =
+        new TextDocumentPositionParams(
+          new TextDocumentIdentifier(
+            workspace.resolve("a/src/main/scala/Main.scala").toURI.toString()
+          ),
+          new Position(0, 0)
+        )
+      _ <- server.executeCommand(
+        ServerCommands.RunScalafix,
+        textParams
+      )
+      contents = server.bufferContents("a/src/main/scala/Main.scala")
+      _ = assertNoDiff(
+        contents,
+        """|object A {
+           |  final case class Bar(i: Int)
+           |  def func(a: Int, b: Int, c: Int) = a + b + c 
+           |}
+           |object Main{
+           |  val used = List.empty
+           |  val used2 = List(1)
+           |  used2.head
+           |  A.func(a = 1, b = 2, c = 3)
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
