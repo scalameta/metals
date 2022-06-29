@@ -40,7 +40,10 @@ object TestGroups {
       "tests.classFinder.FindAllClassesSuite",
       "tests.codeactions.ExtractValueLspSuite", "tests.clients.CommandSuite",
       "tests.JavaInteractiveSemanticdbSuite", "tests.SemVerSuite",
-      "tests.codeactions.CompanionObjectSuite"),
+      "tests.codeactions.CompanionObjectSuite",
+      "tests.codeactions.FlatMapToForComprehensionSuite",
+      "tests.MtagsScala2Suite", "tests.UriEncoderDecoderSuite",
+      "tests.DidFocusWhileCompilingLspSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -92,7 +95,10 @@ object TestGroups {
       "tests.classFinder.ClassBreakpointSuite",
       "tests.classFinder.ClassNameResolverSuite", "tests.JavaDefinitionSuite",
       "tests.IdentifierComparatorSuite", "tests.parsing.JavaEditDistanceSuite",
-      "tests.PathTrieSuite")
+      "tests.PathTrieSuite", "tests.scalafix.ScalafixProviderLspSuite",
+      "tests.MtagsScala3Suite",
+      "tests.codeactions.ConvertToNamedArgumentsLspSuite",
+      "tests.testProvider.TestSuitesProviderSuite", "tests.MillVersionSuite")
   )
 
 }

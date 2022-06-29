@@ -595,6 +595,21 @@ def isInTestShard(name: String, logger: Logger): Boolean = {
   }
 }
 
+lazy val metalsDependencies = project
+  .in(file("target/.dependencies"))
+  .settings(
+    publish / skip := true,
+    libraryDependencies ++= List(
+      // The dependencies listed below are only listed so Scala Steward
+      // will pick them up and update them. They aren't actually used.
+      "com.lihaoyi" %% "ammonite-util" % V.ammonite,
+      "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
+      "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
+      "com.lihaoyi" % "mill-contrib-testng" % V.mill
+    )
+  )
+  .disablePlugins(ScalafixPlugin)
+
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
@@ -607,13 +622,7 @@ lazy val unit = project
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "org.scalameta" %% "munit" % V.munit,
-      // The dependencies listed below are only listed so Scala Steward
-      // will pick them up and update them. They aren't actually used.
-      "com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive (),
-      "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full intransitive (),
-      "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor intransitive (),
-      "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive ()
+      "org.scalameta" %% "munit" % V.munit
     ),
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties

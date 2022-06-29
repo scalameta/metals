@@ -351,7 +351,8 @@ case class ScalafixProvider(
       ScalafixRulesClasspathKey(
         scalaBinaryVersion,
         scalaVersion,
-        userConfig()
+        userConfig(),
+        rules
       )
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
@@ -365,8 +366,8 @@ case class ScalafixProvider(
         api.getClass.getClassLoader
       )
     } yield {
-      val scalacOptions: ju.List[String] = {
-        val list = new ju.ArrayList[String](2)
+      val scalacOptions = {
+        val list = new ju.ArrayList[String](3)
 
         if (scalaBinaryVersion == "2.13") list.add("-Wunused:imports")
         else list.add("-Ywarn-unused-import")
@@ -374,6 +375,8 @@ case class ScalafixProvider(
         if (!isScala3 && scalaTarget.scalac.getOptions().contains("-Xsource:3"))
           list.add("-Xsource:3")
 
+        // We always compile with synthetics:on but scalafix will fail if we don't set it here
+        list.add("-P:semanticdb:synthetics:on")
         list
       }
 
@@ -471,6 +474,7 @@ case class ScalafixProvider(
 }
 
 object ScalafixProvider {
+
   type ScalaBinaryVersion = String
   type ScalaVersion = String
 
@@ -483,11 +487,12 @@ object ScalafixProvider {
     def apply(
         scalaBinaryVersion: String,
         scalaVersion: String,
-        userConfig: UserConfiguration
+        userConfig: UserConfiguration,
+        rules: List[String]
     ): ScalafixRulesClasspathKey = {
       val rulesClasspath =
-        rulesDependencies(scalaVersion, scalaBinaryVersion, userConfig)
-      ScalafixRulesClasspathKey(scalaBinaryVersion, rulesClasspath.toSet)
+        rulesDependencies(scalaVersion, scalaBinaryVersion, userConfig, rules)
+      ScalafixRulesClasspathKey(scalaBinaryVersion, rulesClasspath)
     }
   }
   case class ScalafixRunException(msg: String) extends Exception(msg)
@@ -497,8 +502,9 @@ object ScalafixProvider {
   def rulesDependencies(
       scalaVersion: String,
       scalaBinaryVersion: String,
-      userConfig: UserConfiguration
-  ): List[Dependency] = {
+      userConfig: UserConfiguration,
+      rules: List[String]
+  ): Set[Dependency] = {
     val fromSettings = userConfig.scalafixRulesDependencies.flatMap {
       dependencyString =>
         Try {
@@ -514,13 +520,97 @@ object ScalafixProvider {
             Some(dep)
         }
     }
-    List(
+    val builtInRuleDeps = builtInRules(scalaBinaryVersion)
+
+    val allDeps = List(
       Dependency.of(
         "com.github.liancheng",
         s"organize-imports_$scalaBinaryVersion",
         BuildInfo.organizeImportVersion
       )
-    ) ++ fromSettings
-
+    ) ++ fromSettings ++ rules.flatMap(builtInRuleDeps.get)
+    // only get newest versions for each dependency
+    allDeps
+      .sortBy(_.getVersion())
+      .reverse
+      .distinctBy(dep => dep.getModule())
+      .toSet
   }
+
+  // Hygiene rules from https://scalacenter.github.io/scalafix/docs/rules/community-rules.html
+  private def builtInRules(binaryVersion: String) = {
+    val scaluzziDep = Dependency.of(
+      "com.github.vovapolu",
+      s"scaluzzi_$binaryVersion",
+      "latest.release"
+    )
+
+    val scalafixUnifiedDep = Dependency.of(
+      "com.github.xuwei-k",
+      s"scalafix-rules_$binaryVersion",
+      "latest.release"
+    )
+
+    val scalafixPixivRule = Dependency.of(
+      "net.pixiv",
+      s"scalafix-pixiv-rule_$binaryVersion",
+      "latest.release"
+    )
+
+    val depsList = List(
+      "EmptyCollectionsUnified" -> Dependency.of(
+        "io.github.ghostbuster91.scalafix-unified",
+        s"unified_$binaryVersion",
+        "latest.release"
+      ),
+      "UseNamedParameters" -> Dependency.of(
+        "com.github.jatcwang",
+        s"scalafix-named-params_$binaryVersion",
+        "latest.release"
+      ),
+      "MissingFinal" -> scaluzziDep,
+      "Disable" -> scaluzziDep,
+      "AddExplicitImplicitTypes" -> scalafixUnifiedDep,
+      "AddLambdaParamParentheses" -> scalafixUnifiedDep,
+      "CirceCodec" -> scalafixUnifiedDep,
+      "DirectoryAndPackageName" -> scalafixUnifiedDep,
+      "DuplicateWildcardImport" -> scalafixUnifiedDep,
+      "ExplicitImplicitTypes" -> scalafixUnifiedDep,
+      "FileNameConsistent" -> scalafixUnifiedDep,
+      "ImplicitValueClass" -> scalafixUnifiedDep,
+      "KindProjector" -> scalafixUnifiedDep,
+      "LambdaParamParentheses" -> scalafixUnifiedDep,
+      "NoElse" -> scalafixUnifiedDep,
+      "ObjectSelfType" -> scalafixUnifiedDep,
+      "RemoveEmptyObject" -> scalafixUnifiedDep,
+      "RemovePureEff" -> scalafixUnifiedDep,
+      "RemoveSamePackageImport" -> scalafixUnifiedDep,
+      "ReplaceSymbolLiterals" -> scalafixUnifiedDep,
+      "Scala3ImportRewrite" -> scalafixUnifiedDep,
+      "Scala3ImportWarn" -> scalafixUnifiedDep,
+      "Scala3Placeholder" -> scalafixUnifiedDep,
+      "ScalaApp" -> scalafixUnifiedDep,
+      "ScalazEitherInfix" -> scalafixUnifiedDep,
+      "SimplifyForYield" -> scalafixUnifiedDep,
+      "ThrowableToNonFatal" -> scalafixUnifiedDep,
+      "UnnecessaryCase" -> scalafixUnifiedDep,
+      "UnnecessaryMatch" -> scalafixUnifiedDep,
+      "UnnecessarySort" -> scalafixUnifiedDep,
+      "UnnecessarySortRewriteConfig" -> scalafixUnifiedDep,
+      "UnnecessarySortRewrite" -> scalafixUnifiedDep,
+      "UnusedConstructorParams" -> scalafixUnifiedDep,
+      "UnusedTypeParams" -> scalafixUnifiedDep,
+      "UnnecessarySemicolon" -> scalafixPixivRule,
+      "ZeroIndexToHead" -> scalafixPixivRule,
+      "CheckIsEmpty" -> scalafixPixivRule,
+      "NonCaseException" -> scalafixPixivRule,
+      "UnifyEmptyList" -> scalafixPixivRule,
+      "SingleConditionMatch" -> scalafixPixivRule
+    )
+    val depsMaps = depsList.toMap
+    // make sure there are no duplicate rules
+    assert(depsMaps.size == depsList.size, "Found duplicate scalafix rules")
+    depsMaps
+  }
+
 }
