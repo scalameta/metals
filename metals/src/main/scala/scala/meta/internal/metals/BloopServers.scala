@@ -233,16 +233,6 @@ final class BloopServers(
 
   }
 
-  private def getBloopFilePath(fileName: String): Option[AbsolutePath] = {
-    sys.props.get("user.home").map { home =>
-      AbsolutePath(
-        Paths
-          .get(home)
-          .resolve(s".bloop/$fileName")
-      )
-    }
-  }
-
   private def maybeLoadBloopGlobalJsonFile(
       bloopGlobalJsonFilePath: AbsolutePath
   ): (Option[String], List[String]) = {
@@ -412,6 +402,9 @@ final class BloopServers(
     // we should set up Java before running Bloop in order to not restart it
     bloopJsonPath match {
       case Some(bloopPath) if !bloopPath.exists =>
+        metalsJavaHome.foreach { newHome =>
+          scribe.info(s"Setting up current java home $newHome in $bloopPath")
+        }
         // we want to use the same java version as Metals, so it's ok to use java.home
         writeJVMPropertiesToBloopGlobalJsonFile(
           userConfiguration.bloopJvmProperties.getOrElse(Nil),
@@ -423,11 +416,26 @@ final class BloopServers(
             Try {
               val homePath = AbsolutePath(Paths.get(javaHome))
               // fix java home in case it changed
-              if (!homePath.exists)
+              if (!homePath.exists) {
+                scribe.info(
+                  s"Detected non existing java path in $bloopPath file"
+                )
                 writeJVMPropertiesToBloopGlobalJsonFile(
                   opts,
                   metalsJavaHome
                 )
+                metalsJavaHome.foreach { newHome =>
+                  scribe.info(
+                    s"Replacing it with java home at $newHome"
+                  )
+                }
+              } else {
+                scribe.info(s"Bloop uses $javaHome defined at $bloopPath")
+                if (opts.nonEmpty)
+                  scribe.info(
+                    s"Bloop currently uses settings: ${opts.mkString(",")}"
+                  )
+              }
             }
           case _ =>
         }
@@ -522,4 +530,14 @@ object BloopJsonUpdateCause extends Enumeration {
 
 object BloopServers {
   val name = "Bloop"
+
+  def getBloopFilePath(fileName: String): Option[AbsolutePath] = {
+    sys.props.get("user.home").map { home =>
+      AbsolutePath(
+        Paths
+          .get(home)
+          .resolve(s".bloop/$fileName")
+      )
+    }
+  }
 }
