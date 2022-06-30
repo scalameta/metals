@@ -128,7 +128,7 @@ object OverrideCompletions:
       config: PresentationCompilerConfig
   ): ju.List[l.TextEdit] =
     object FindTypeDef:
-      def unapply(path: List[Tree]): Option[TypeDef] = path match
+      def unapply(path: List[Tree])(using Context): Option[TypeDef] = path match
         case (td: TypeDef) :: _ => Some(td)
         // new Iterable[Int] {}
         case (_: Ident) :: _ :: (_: Template) :: (td: TypeDef) :: _ =>
@@ -138,7 +138,11 @@ object OverrideCompletions:
           Some(td)
         case (_: Ident) :: (_: New) :: (_: Select) :: (_: Apply) :: (_: Template) :: (td: TypeDef) :: _ =>
           Some(td)
+        case (dd: DefDef) :: (_: Template) :: (td: TypeDef) :: _
+            if dd.symbol.isConstructor =>
+          Some(td)
         case _ => None
+    end FindTypeDef
 
     val uri = params.uri
     val ctx = driver.currentCtx
@@ -158,14 +162,14 @@ object OverrideCompletions:
     )
     import indexedContext.ctx
 
-    val autoImportsGen = AutoImports.generator(
+    lazy val autoImportsGen = AutoImports.generator(
       pos,
       params.text,
       unit.tpdTree,
       indexedContext,
       config
     )
-    val implementAll = implementAllFor(
+    lazy val implementAll = implementAllFor(
       indexedContext,
       params.text,
       search,
@@ -262,6 +266,7 @@ object OverrideCompletions:
       val decls = td.tpe.decls.toList
         .filter(sym =>
           !sym.isPrimaryConstructor &&
+            !sym.isTypeParam &&
             !sym.is(ParamAccessor) && // `num` of `class Foo(num: int)`
             sym.span.exists
         )
@@ -352,7 +357,7 @@ object OverrideCompletions:
     )
     val overrideKeyword: String =
       // if the overriding method is not an abstract member, add `override` keyword
-      if !sym.isOneOf(Deferred) || shouldAddOverrideKwd
+      if (!sym.isOneOf(Deferred) || shouldAddOverrideKwd) && !sym.is(Extension)
       then "override "
       else ""
 

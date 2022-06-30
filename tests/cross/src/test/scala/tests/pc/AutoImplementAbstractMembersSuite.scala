@@ -45,6 +45,36 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "classdef-tparam",
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class <<Concrete>>[T] extends Base
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class Concrete[T] extends Base {
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |    override def bar(x: String): String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "empty-lines-between-members",
     """|package a
        |
@@ -932,6 +962,62 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |	def foo(x: Int): Int = x
        |
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "extension-methods".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |    def bar: String
+       |
+       |class <<Concrete>> extends Base
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |    def bar: String
+       |
+       |class Concrete extends Base {
+       |
+       |  exntesion (x: T) def foo: Int = ???
+       |
+       |  extension (x: T) def bar: Int = ???
+       |
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "extension-methods-tparam".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base[T]:
+       |  extension (x: T)
+       |    def foo: Int
+       |    def bar: String
+       |
+       |class <<Concrete>>[T] extends Base[Int]
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base[T]:
+       |  extension (x: T)
+       |    def foo: Int
+       |    def bar: String
+       |
+       |class Concrete[T] extends Base[Int] {
+       |
+       |  extension (x: Int) def foo: Int = ???
+       |
+       |  extension (x: Int) def bar: String = ???
+       |
+       |}
        |""".stripMargin
   )
 
