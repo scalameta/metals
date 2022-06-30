@@ -43,7 +43,7 @@ object TestGroups {
       "tests.codeactions.CompanionObjectSuite",
       "tests.codeactions.FlatMapToForComprehensionSuite",
       "tests.MtagsScala2Suite", "tests.UriEncoderDecoderSuite",
-      "tests.DidFocusWhileCompilingLspSuite"),
+      "tests.DidFocusWhileCompilingLspSuite", "tests.BloopJavaHomeLspSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
