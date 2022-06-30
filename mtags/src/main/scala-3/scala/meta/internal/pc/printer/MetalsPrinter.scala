@@ -132,7 +132,8 @@ class MetalsPrinter(
   def defaultMethodSignature(
       gsym: Symbol,
       gtpe: Type,
-      onlyMethodParams: Boolean = false
+      onlyMethodParams: Boolean = false,
+      additionalMods: List[String] = Nil
   ): String =
     val namess = gtpe.paramNamess
     val infoss = gtpe.paramInfoss
@@ -212,19 +213,23 @@ class MetalsPrinter(
           else ""
         flags.flagStrings(privateWithin).mkString(" ") + " "
       else ""
+    val mods =
+      if additionalMods.isEmpty then flagString
+      else additionalMods.mkString(" ") + " " + flagString
 
     if onlyMethodParams then paramssSignature
     else
       // For Scala2 compatibility, show "this" instead of <init> for constructor
       val name = if gsym.isConstructor then StdNames.nme.this_ else gsym.name
       extensionSignatureString +
-        s"${flagString}def $name" +
+        s"${mods}def $name" +
         paramssSignature
   end defaultMethodSignature
 
   def defaultValueSignature(
       gsym: Symbol,
-      gtpe: Type
+      gtpe: Type,
+      additionalMods: List[String] = Nil
   ): String =
     val flags = (gsym.flags & methodFlags)
     val flagString =
@@ -234,8 +239,11 @@ class MetalsPrinter(
           else ""
         flags.flagStrings(privateWithin).mkString(" ") + " "
       else ""
+    val mods =
+      if additionalMods.isEmpty then flagString
+      else additionalMods.mkString(" ") + " " + flagString
     val prefix = if gsym.is(Mutable) then "var" else "val"
-    s"${flagString}$prefix ${gsym.name.show}: ${tpe(gtpe)}"
+    s"${mods}$prefix ${gsym.name.show}: ${tpe(gtpe)}"
   end defaultValueSignature
 
   /*

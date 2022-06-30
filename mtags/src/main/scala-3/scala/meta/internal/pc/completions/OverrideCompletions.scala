@@ -357,19 +357,15 @@ object OverrideCompletions:
     )
     val overrideKeyword: String =
       // if the overriding method is not an abstract member, add `override` keyword
-      if (!sym.isOneOf(Deferred) || shouldAddOverrideKwd) && !sym.is(Extension)
-      then "override "
+      if !sym.isOneOf(Deferred) || shouldAddOverrideKwd
+      then "override"
       else ""
 
-    val asciOverrideDef: String =
-      if sym.is(Abstract) then ""
-      else overrideKeyword
-
-    val overrideDef: String = config.overrideDefFormat() match
+    val overrideDefLabel: String = config.overrideDefFormat() match
       case OverrideDefFormat.Unicode =>
-        if sym.is(Abstract) then "🔼 "
+        if sym.is(Deferred) then "🔼 "
         else "⏫ "
-      case _ => asciOverrideDef
+      case _ => ""
 
     val signature =
       // `iterator` method in `new Iterable[Int] { def iterato@@ }`
@@ -378,16 +374,25 @@ object OverrideCompletions:
       if sym.is(Method) then
         printer.defaultMethodSignature(
           sym.symbol,
-          seenFrom
+          seenFrom,
+          additionalMods =
+            if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil
         )
-      else printer.defaultValueSignature(sym.symbol, seenFrom)
+      else
+        printer.defaultValueSignature(
+          sym.symbol,
+          seenFrom,
+          additionalMods =
+            if overrideKeyword.nonEmpty then List(overrideKeyword) else Nil
+        )
+    end signature
 
-    val label = overrideDef + signature
+    val label = s"$overrideDefLabel$signature"
     val stub =
       if config.isCompletionSnippetsEnabled && shouldMoveCursor then "${0:???}"
       else "???"
-    val value = s"${overrideKeyword}${signature} = $stub"
-    val filterText = s"$overrideKeyword$signature"
+    val value = s"$signature = $stub"
+    val filterText = signature
     CompletionValue.Override(
       label,
       value,

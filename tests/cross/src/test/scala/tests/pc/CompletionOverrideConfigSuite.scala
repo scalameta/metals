@@ -96,8 +96,8 @@ class CompletionOverrideConfigSuite extends BaseCompletionSuite {
       |""".stripMargin,
     compat = Map(
       "3" ->
-        """|⏫ def numberAbstract: Int
-           |⏫ def number: Int
+        """|🔼 def numberAbstract: Int
+           |⏫ override def number: Int
            |""".stripMargin
     )
   )
