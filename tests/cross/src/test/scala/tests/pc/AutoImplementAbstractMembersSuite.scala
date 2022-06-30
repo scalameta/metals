@@ -985,9 +985,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |class Concrete extends Base {
        |
-       |  exntesion (x: T) def foo: Int = ???
+       |  extension (x: Int) override def foo: Int = ???
        |
-       |  extension (x: T) def bar: Int = ???
+       |  extension (x: Int) override def bar: String = ???
        |
        |}
        |""".stripMargin
@@ -1013,9 +1013,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |
        |class Concrete[T] extends Base[Int] {
        |
-       |  extension (x: Int) def foo: Int = ???
+       |  extension (x: Int) override def foo: Int = ???
        |
-       |  extension (x: Int) def bar: String = ???
+       |  extension (x: Int) override def bar: String = ???
        |
        |}
        |""".stripMargin

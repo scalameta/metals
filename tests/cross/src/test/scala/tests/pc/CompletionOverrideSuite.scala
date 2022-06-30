@@ -1088,4 +1088,49 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     filter = (str) => str.contains("def")
   )
 
+  checkEdit(
+    "extension-override".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  over@@
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  extension (x: Int) override def foo: Int = ${0:???}
+       |""".stripMargin,
+    filter = (str) => str.contains("foo")
+  )
+
+  checkEdit(
+    "extension".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  def fo@@
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |  extension (x: Int)
+       |    def foo: Int
+       |
+       |class Concrete extends Base:
+       |  extension (x: Int) def foo: Int = ${0:???}
+       |""".stripMargin
+  )
+
 }
