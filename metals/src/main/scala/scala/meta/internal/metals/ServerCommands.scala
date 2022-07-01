@@ -560,6 +560,7 @@ object ServerCommands {
       CancelCompile,
       CascadeCompile,
       CleanCompile,
+      ConvertToNamedArguments,
       CopyWorksheetOutput,
       DiscoverTestSuites,
       ExtractMemberDefinition,
