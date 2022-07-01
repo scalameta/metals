@@ -1688,9 +1688,8 @@ class MetalsLanguageServer(
   def callHierarchyOutgoingCalls(
       params: CallHierarchyOutgoingCallsParams
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] = {
-    CancelTokens.future { token =>
-      scribe.warn("callHierarchy/outgoingCalls is not supported.")
-      null
+    CancelTokens { _ =>
+      callHierarchyProvider.outgoingCalls(params).asJava
     }
   }
 

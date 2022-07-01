@@ -94,20 +94,27 @@ final case class CallHierarchyProvider(
 
   case class CallHierarchyItemInfo(displayName: String, symbol: String)
 
+  private def findDefinition(from: Tree): Option[Tree] = from match {
+    case definition @ (_: Defn.Def | _: Defn.Val | _: Defn.Var) =>
+      Some(definition)
+    case other =>
+      other.parent.flatMap(p => findDefinition(p))
+  }
+
   private def symbolOccurenceToCallHierarchyItem(
       source: AbsolutePath,
       doc: TextDocument,
-      occurence: SymbolOccurrence
+      occurence: SymbolOccurrence,
+      range: l.Range
   ): Option[CallHierarchyItem] = {
     val info = doc.symbols.find(_.symbol == occurence.symbol).get
     if (info.isMethod) {
-      val range = occurence.toLocation(source.toURI.toString()).getRange()
       val chi = new CallHierarchyItem(
         info.displayName,
         SymbolKind.Method,
         source.toURI.toString,
         range,
-        range
+        occurence.toLocation(source.toURI.toString).getRange
       )
       chi.setData(CallHierarchyItemInfo(info.displayName, info.symbol))
       Some(chi)
@@ -122,7 +129,21 @@ final case class CallHierarchyProvider(
         val results: List[ResolvedSymbolOccurrence] =
           definition.positionOccurrences(source, params.getPosition, doc)
         results.flatMap { result =>
-          symbolOccurenceToCallHierarchyItem(source, doc, result.occurrence.get)
+          for {
+            occurence <- result.occurrence
+            range <- occurence.range
+            tree <- trees.findLastEnclosingAt(source, range.toLSP.getStart)
+            definition <- findDefinition(tree)
+            chi <- symbolOccurenceToCallHierarchyItem(
+              source,
+              doc,
+              result.occurrence.get,
+              definition.pos.toLSP
+            )
+          } yield chi
+        // trees.findLastEnclosingAt(source,)
+        // val range = fintrees.findLastEnclosingAt(source, result.occurrence.get.range.get.toLSP.getStart)
+        // symbolOccurenceToCallHierarchyItem(source, doc, result.occurrence.get, range)
         }
       case None =>
         Nil
@@ -134,11 +155,12 @@ final case class CallHierarchyProvider(
       doc: TextDocument,
       root: Tree,
       info: CallHierarchyItemInfo
-  ): List[(SymbolOccurrence, List[l.Range])] = {
+  ): List[(SymbolOccurrence, l.Range, List[l.Range])] = {
     def search(
         tree: Tree,
-        parent: Option[Term.Name]
-    ): List[(SymbolOccurrence, l.Range)] = tree match {
+        parent: Option[Term.Name],
+        parentRange: Option[l.Range]
+    ): List[(SymbolOccurrence, l.Range, l.Range)] = tree match {
       case name: Term.Name
           if parent.isDefined && name.value == info.displayName && definition
             .positionOccurrences(source, name.pos.toLSP.getStart, doc)
@@ -149,10 +171,10 @@ final case class CallHierarchyProvider(
         definition
           .positionOccurrences(source, parent.get.pos.toLSP.getStart, doc)
           .flatMap(_.occurrence)
-          .map(occurence => (occurence, name.pos.toLSP))
+          .map(occurence => (occurence, name.pos.toLSP, parentRange.get))
       case method: Defn.Def =>
         method.children.flatMap { child =>
-          search(child, Some(method.name))
+          search(child, Some(method.name), Some(method.pos.toLSP))
         }
       case function: Term.Function =>
         function.children.flatMap { child =>
@@ -169,16 +191,16 @@ final case class CallHierarchyProvider(
               }
             case _ => None
           }
-          search(child, name)
+          search(child, name, function.parent.map(_.pos.toLSP))
         }
       case other =>
         other.children.flatMap { child =>
-          search(child, parent)
+          search(child, parent, parentRange)
         }
     }
-    search(root, None)
+    search(root, None, None)
       .groupBy(_._1)
-      .map { case (k, v) => (k, v.map(_._2)) }
+      .map { case (k, v) => (k, v.head._3, v.map(_._2)) }
       .toList
   }
 
@@ -205,12 +227,89 @@ final case class CallHierarchyProvider(
             )
           )
           .getOrElse(Nil)
-        results.flatMap { case (occurence, ranges) =>
-          symbolOccurenceToCallHierarchyItem(source, doc, occurence).map(chi =>
-            new CallHierarchyIncomingCall(
-              chi,
-              ranges.asJava
+        results.flatMap { case (occurence, range, ranges) =>
+          symbolOccurenceToCallHierarchyItem(source, doc, occurence, range).map(
+            chi =>
+              new CallHierarchyIncomingCall(
+                chi,
+                ranges.asJava
+              )
+          )
+        }
+      case None =>
+        Nil
+    }
+  }
+
+  private def findOutgoingCalls(
+      source: AbsolutePath,
+      doc: TextDocument,
+      root: Tree,
+      info: CallHierarchyItemInfo
+  ) = {
+    def search(tree: Tree): List[(SymbolOccurrence, l.Range, l.Range)] =
+      tree match {
+        case name: Term.Name =>
+          (for {
+            occurence <- definition
+              .positionOccurrence(source, name.pos.toLSP.getStart, doc)
+              .occurrence
+            symInfo <- doc.symbols.find(_.symbol == occurence.symbol)
+            definitionOccurence <- doc.occurrences.find(occ =>
+              occ.symbol == occurence.symbol && occ.role == Role.DEFINITION
             )
+            definitionRange <- definitionOccurence.range
+            definitionName <- trees.findLastEnclosingAt(
+              source,
+              definitionRange.toLSP.getStart
+            )
+            definition <- findDefinition(definitionName)
+            if symInfo.isMethod && info.symbol != symInfo.symbol
+          } yield (
+            definitionOccurence,
+            name.pos.toLSP,
+            definition.pos.toLSP
+          )).toList
+        case other =>
+          other.children.flatMap(search)
+      }
+    search(root)
+      .groupBy(_._1)
+      .map { case (k, v) => (k, v.head._3, v.map(_._2)) }
+      .toList
+  }
+
+  def outgoingCalls(
+      params: CallHierarchyOutgoingCallsParams
+  ): List[CallHierarchyOutgoingCall] = {
+    val source = params.getItem.getUri.toAbsolutePath
+
+    val info = params.getItem.getData.asInstanceOf[JsonObject]
+
+    semanticdbs.textDocument(source).documentIncludingStale match {
+      case Some(doc) =>
+        val results = trees
+          .findLastEnclosingAt(source, params.getItem.getRange.getStart)
+          .map(root =>
+            findOutgoingCalls(
+              source,
+              doc,
+              root,
+              CallHierarchyItemInfo(
+                info.get(("displayName")).getAsString(),
+                info.get("symbol").getAsString()
+              )
+            )
+          )
+          .getOrElse(Nil)
+
+        results.flatMap { case (occurence, range, ranges) =>
+          symbolOccurenceToCallHierarchyItem(source, doc, occurence, range).map(
+            chi =>
+              new CallHierarchyOutgoingCall(
+                chi,
+                ranges.asJava
+              )
           )
         }
       case None =>
