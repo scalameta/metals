@@ -5,15 +5,18 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.CodeAction
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class ConvertToNamedArguments(trees: Trees) extends CodeAction {
+class ConvertToNamedArguments(trees: Trees, buildTargets: BuildTargets)
+    extends CodeAction {
 
   import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
@@ -41,39 +44,47 @@ class ConvertToNamedArguments(trees: Trees) extends CodeAction {
   ): Future[Seq[l.CodeAction]] = {
 
     val path = params.getTextDocument().getUri().toAbsolutePath
-    val range = params.getRange()
+    val isScala3 = buildTargets
+      .scalaVersion(path)
+      .map(ScalaVersions.isScala3Version)
+      .getOrElse(false)
+    if (isScala3) Future.successful(Nil)
+    else {
 
-    val maybeApply = for {
-      term <- trees.findLastEnclosingAt[Term.Apply](
-        path,
-        range.getStart(),
-        term => !term.fun.pos.encloses(range)
-      )
-      apply <- firstApplyWithUnnamedArgs(Some(term))
-    } yield apply
+      val range = params.getRange()
 
-    maybeApply
-      .map { apply =>
-        {
-          val codeAction = new l.CodeAction(title(apply.app.fun.syntax))
-          codeAction.setKind(l.CodeActionKind.RefactorRewrite)
-          val position = new l.TextDocumentPositionParams(
-            params.getTextDocument(),
-            new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn)
-          )
-          codeAction.setCommand(
-            ServerCommands.ConvertToNamedArguments.toLSP(
-              ServerCommands
-                .ConvertToNamedArgsRequest(
-                  position,
-                  apply.argIndices.map(new Integer(_)).asJava
-                )
+      val maybeApply = for {
+        term <- trees.findLastEnclosingAt[Term.Apply](
+          path,
+          range.getStart(),
+          term => !term.fun.pos.encloses(range)
+        )
+        apply <- firstApplyWithUnnamedArgs(Some(term))
+      } yield apply
+
+      maybeApply
+        .map { apply =>
+          {
+            val codeAction = new l.CodeAction(title(apply.app.fun.syntax))
+            codeAction.setKind(l.CodeActionKind.RefactorRewrite)
+            val position = new l.TextDocumentPositionParams(
+              params.getTextDocument(),
+              new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn)
             )
-          )
-          Future.successful(Seq(codeAction))
+            codeAction.setCommand(
+              ServerCommands.ConvertToNamedArguments.toLSP(
+                ServerCommands
+                  .ConvertToNamedArgsRequest(
+                    position,
+                    apply.argIndices.map(new Integer(_)).asJava
+                  )
+              )
+            )
+            Future.successful(Seq(codeAction))
+          }
         }
-      }
-      .getOrElse(Future.successful(Nil))
+        .getOrElse(Future.successful(Nil))
+    }
   }
 }
 
