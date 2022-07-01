@@ -276,7 +276,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "tparam".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
@@ -290,7 +290,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "tparam2".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
@@ -304,7 +304,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "tparam3".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
@@ -318,7 +318,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "tparam4".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
@@ -705,7 +705,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "evidence".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
@@ -742,7 +742,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "type".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
@@ -762,7 +762,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "type1".tag(
-      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220628-65a86ae-NIGHTLY")
+      IgnoreScalaVersion.for3LessThan("3.2.1-RC1-bin-20220629-b0671c0-NIGHTLY")
     ),
     """
       |object a {
