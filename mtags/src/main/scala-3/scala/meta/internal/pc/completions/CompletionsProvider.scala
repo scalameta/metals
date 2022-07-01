@@ -289,7 +289,7 @@ class CompletionsProvider(
           value,
           false,
           additionalEdits,
-          Some(filterText),
+          filterText,
           Some(completionPos.copy(start = start).toEditRange)
         )
       case CompletionValue.NamedArg(label, _) =>
@@ -302,7 +302,8 @@ class CompletionsProvider(
           ident,
           insert + completionTextSuffix,
           additionalEdits = completion.additionalEdits,
-          range = completion.range
+          range = completion.range,
+          filterText = completion.filterText
         )
     end match
   end completionItems

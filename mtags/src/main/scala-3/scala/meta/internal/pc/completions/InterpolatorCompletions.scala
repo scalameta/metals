@@ -143,7 +143,9 @@ object InterpolatorCompletions:
               label,
               Some(newText(name, suffix, identOrSelect)),
               Nil,
-              Some(cursor.withStart(identOrSelect.span.start).toLSP)
+              Some(cursor.withStart(identOrSelect.span.start).toLSP),
+              // Needed for VS Code which will not show the completion otherwise
+              Some(identOrSelect.show + "." + label)
             )
         )
     }.flatten
@@ -237,7 +239,8 @@ object InterpolatorCompletions:
               label,
               Some(newText(name, suffix)),
               additionalEdits(),
-              Some(nameRange)
+              Some(nameRange),
+              None
             )
         )
     }.flatten
