@@ -169,24 +169,6 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  checkEdit(
-    "interpolator-in-object-no-brace".tag(IgnoreScala2),
-    """|private def runExample =
-       |  val hello: String = "1"
-       |  s"$hello.to@@  "
-       |
-       |""".stripMargin,
-    """|object Outer {
-       |  private def method = {
-       |    object Test {
-       |      val hello: String = "1"
-       |      s"${hello.toString()$0}  $$"
-       |    }
-       |  }
-       |}
-       |""".stripMargin
-  )
-
   check(
     "negative",
     """|object Main {
@@ -521,7 +503,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|member: String
        |""".stripMargin,
-    filterText = "member"
+    filter = s => s.contains("member")
   )
 
   checkEditLine(

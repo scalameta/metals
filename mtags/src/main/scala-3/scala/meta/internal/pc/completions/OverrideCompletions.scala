@@ -385,7 +385,7 @@ object OverrideCompletions:
       value,
       sym.symbol,
       printer.shortenedNames,
-      filterText,
+      Some(filterText),
       start
     )
   end toCompletionValue

@@ -23,6 +23,7 @@ sealed trait CompletionValue:
   def snippetSuffix: Option[String] = None
   def additionalEdits: List[TextEdit] = Nil
   def range: Option[Range] = None
+  def filterText: Option[String] = None
 
   final def completionItemKind(using Context): CompletionItemKind =
     this match
@@ -96,7 +97,7 @@ object CompletionValue:
       value: String,
       symbol: Symbol,
       shortenedNames: List[ShortName],
-      filterText: String,
+      override val filterText: Option[String],
       start: Int
   ) extends Symbolic:
   end Override
@@ -110,7 +111,8 @@ object CompletionValue:
       label: String,
       override val insertText: Option[String],
       override val additionalEdits: List[TextEdit],
-      override val range: Option[Range]
+      override val range: Option[Range],
+      override val filterText: Option[String]
   ) extends Symbolic
 
   def namedArg(label: String, sym: Symbol)(using Context): CompletionValue =
