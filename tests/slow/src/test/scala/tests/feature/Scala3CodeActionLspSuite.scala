@@ -1,7 +1,6 @@
 package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
@@ -160,7 +159,6 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title("method2")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -183,7 +181,6 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title("method2")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -204,7 +201,6 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title("method2")}
         |""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
@@ -227,7 +223,6 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title("method2")}
         |""".stripMargin,
     """|object Main:
        |  def method2(i: Int) = ???
@@ -251,7 +246,6 @@ class Scala3CodeActionLspSuite
        |
        |""".stripMargin,
     s"""|${ExtractValueCodeAction.title}
-        |${ConvertToNamedArguments.title("method2")}
         |""".stripMargin,
     """|def method2(i: Int) = {
        |  val a = 1
