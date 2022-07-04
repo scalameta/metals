@@ -162,6 +162,17 @@ code action to implement all the members at once.
 
 Great work by [tanishiking](https://github.com/tanishiking).
 
+## [Scala 3] Add snippet completions.
+
+Previously, whenever users accepted method completions the only inserted text
+would be the name of the method. With snippets we can now add additional `()`
+with cursor ending in or after the parenthesis depending on whether the method
+accepts parameters.
+
+![snippets](https://i.imgur.com/QEbPSTd.gif)
+
+For editors that do not support snippets the previous behaviour is preserved.
+
 ## [Scala 3] Add file name completions
 
 A file name completion feature has been available only in the Scala 2 project,
