@@ -1,8 +1,8 @@
 ---
 author: Tomasz Godzik
 title: Metals v0.11.7 - Aluminium
-authorURL: https://twitter.com/<login>
-authorImageURL: https://github.com/<login>.png
+authorURL: https://twitter.com/TomekGodzik
+authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v0.11.7, which brings a large
@@ -257,7 +257,7 @@ $ git shortlog -sn --no-merges v0.11.6..v0.11.7
 
 ## Merged PRs
 
-## [v0.11.7](https://github.com/scalameta/metals/tree/v0.11.7) (2022-06-30)
+## [v0.11.7](https://github.com/scalameta/metals/tree/v0.11.7) (2022-07-04)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.11.6...v0.11.7)
 
