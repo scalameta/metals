@@ -5,6 +5,7 @@ import scala.util.Try
 
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 /**
@@ -87,6 +88,10 @@ final case class MetalsServerConfig(
     bloopPort: Option[Int] = Option(System.getProperty("metals.bloop-port"))
       .filter(_.forall(Character.isDigit(_)))
       .map(_.toInt),
+    bloopDirectory: Option[AbsolutePath] =
+      Option(System.getProperty("metals.bloop-dir"))
+        .filter(_.trim.nonEmpty)
+        .map(AbsolutePath(_)),
     macOsMaxWatchRoots: Int =
       Option(System.getProperty("metals.macos-max-watch-roots"))
         .filter(_.forall(Character.isDigit(_)))
