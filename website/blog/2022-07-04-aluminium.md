@@ -192,9 +192,9 @@ your code on breakpoints in the Scala 3 code.
 ![debug](https://i.imgur.com/jYs7QdM.gif)
 
 It was added in the previous 0.11.6 version of Metals, however it was still not
-working correctly enough to promote it. Now it should be Please report any
-issues you find to
-[scala-debug-adapter](https://github.com/scalacenter/scala-debug-adapter).
+working correctly enough to promote it. Currently, it should be working
+correctly in most cases, so please do test it out and report any issues you find
+to [scala-debug-adapter](https://github.com/scalacenter/scala-debug-adapter).
 
 ## [Scala 2] Add ConvertToNamedArguments code action
 
