@@ -433,7 +433,7 @@ lazy val metals = project
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher-core" % V.bloop,
+      "ch.epfl.scala" %% "bloop-rifle" % V.bloop,
       // for LSP
       V.lsp4j,
       // for DAP
