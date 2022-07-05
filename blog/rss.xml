@@ -66,9 +66,9 @@ however it was still missing for Scala 3. Thanks to the main work by
 <a href="https://github.com/tdudzik" target="_blank" rel="noopener noreferrer">tdudzik</a> and later finishing touches and multiple
 bug fixes by <a href="https://github.com/adpi2" target="_blank" rel="noopener noreferrer">adpi2</a> it is now possible to to evaluate
 your code on breakpoints in the Scala 3 code.</p><p><img src="https://i.imgur.com/jYs7QdM.gif" alt="debug"></p><p>It was added in the previous 0.11.6 version of Metals, however it was still not
-working correctly enough to promote it. Now it should be Please report any
-issues you find to
-<a href="https://github.com/scalacenter/scala-debug-adapter" target="_blank" rel="noopener noreferrer">scala-debug-adapter</a>.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="scala-2-add-converttonamedarguments-code-action">[Scala 2]<!-- --> Add ConvertToNamedArguments code action<a class="hash-link" href="#scala-2-add-converttonamedarguments-code-action" title="Direct link to heading">​</a></h2><p>Metals 0.11.7 allows users to use a new code action that can convert all
+working correctly enough to promote it. Currently, it should be working
+correctly in most cases, so please do test it out and report any issues you find
+to <a href="https://github.com/scalacenter/scala-debug-adapter" target="_blank" rel="noopener noreferrer">scala-debug-adapter</a>.</p><h2 class="anchor anchorWithStickyNavbar_mojV" id="scala-2-add-converttonamedarguments-code-action">[Scala 2]<!-- --> Add ConvertToNamedArguments code action<a class="hash-link" href="#scala-2-add-converttonamedarguments-code-action" title="Direct link to heading">​</a></h2><p>Metals 0.11.7 allows users to use a new code action that can convert all
 arguments to named arguments, which is only available on Scala 2 for the time
 being.</p><p>The new code action will work on method calls with multiple arguments, where<br>
 <!-- -->it's sometimes hard to tell which arguments match which parameters at a glance.
