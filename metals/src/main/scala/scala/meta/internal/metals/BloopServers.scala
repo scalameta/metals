@@ -1,19 +1,27 @@
 package scala.meta.internal.metals
 
-import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.IOException
 import java.io.OutputStream
-import java.io.PrintStream
-import java.nio.channels.Channels
-import java.nio.channels.Pipe
-import java.nio.charset.StandardCharsets
+import java.lang.management.ManagementFactory
+import java.net.ConnectException
+import java.net.Socket
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.PosixFilePermissions
+import java.util.concurrent.ScheduledExecutorService
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
+import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
@@ -21,9 +29,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
-import bloop.bloopgun.BloopgunCli
-import bloop.bloopgun.core.Shell
-import bloop.launcher.LauncherMain
+import bloop.rifle.BloopRifle
+import bloop.rifle.BloopRifleConfig
+import bloop.rifle.BloopRifleLogger
+import bloop.rifle.BspConnection
+import bloop.rifle.BspConnectionAddress
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
 
 /**
@@ -44,6 +55,8 @@ final class BloopServers(
     tables: Tables,
     config: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
+    sh: ScheduledExecutorService,
+    projectRoot: () => AbsolutePath,
 )(implicit ec: ExecutionContextExecutorService) {
 
   import BloopServers._
@@ -59,15 +72,8 @@ final class BloopServers(
   private def metalsJavaHome = sys.props.get("java.home")
 
   def shutdownServer(): Boolean = {
-    val dummyIn = new ByteArrayInputStream(new Array(0))
-    val cli = new BloopgunCli(
-      BuildInfo.bloopVersion,
-      dummyIn,
-      System.out,
-      System.err,
-      Shell.default,
-    )
-    val result = cli.run(Array("exit")) == 0
+    val retCode = BloopRifle.exit(bloopConfig, workspace().toNIO, bloopLogger)
+    val result = retCode == 0
     if (!result) {
       scribe.warn("There were issues stopping the Bloop server.")
       scribe.warn(
@@ -78,20 +84,18 @@ final class BloopServers(
   }
 
   def newServer(
-      projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       userConfiguration: UserConfiguration,
       bspStatusOpt: Option[ConnectionBspStatus],
   ): Future[BuildServerConnection] = {
-    val bloopVersion = userConfiguration.currentBloopVersion
+    val bloopVersionOpt = userConfiguration.bloopVersion
     BuildServerConnection
       .fromSockets(
-        projectRoot,
         bspTraceRoot,
+        projectRoot(),
         client,
         languageClient,
-        () =>
-          connectToLauncher(bloopVersion, config.bloopPort, userConfiguration),
+        () => connect(bloopVersionOpt, userConfiguration),
         tables.dismissedNotifications.ReconnectBsp,
         tables.dismissedNotifications.RequestTimeout,
         config,
@@ -280,6 +284,11 @@ final class BloopServers(
     }
   }
 
+  private def metalsJavaHome(userConfiguration: UserConfiguration) =
+    userConfiguration.javaHome
+      .orElse(sys.env.get("JAVA_HOME"))
+      .orElse(sys.props.get("java.home"))
+
   private def updateBloopJavaHomeBeforeLaunch(
       userConfiguration: UserConfiguration
   ) = {
@@ -294,7 +303,7 @@ final class BloopServers(
         // we want to use the same java version as Metals, so it's ok to use java.home
         writeJVMPropertiesToBloopGlobalJsonFile(
           userConfiguration.bloopJvmProperties.getOrElse(Nil),
-          metalsJavaHome,
+          metalsJavaHome0,
         )
       case Some(OverrideWithMetalsJavaHome(javaHome, oldJavaHome, opts)) =>
         scribe.info(
@@ -332,82 +341,179 @@ final class BloopServers(
       case _ => None
     }
 
-  private def connectToLauncher(
-      bloopVersion: String,
-      bloopPort: Option[Int],
+  private lazy val bloopLogger: BloopRifleLogger = new BloopRifleLogger {
+    def info(msg: => String): Unit = scribe.info(msg)
+    def debug(msg: => String, ex: Throwable): Unit = scribe.debug(msg, ex)
+    def error(msg: => String): Unit = scribe.error(msg)
+    def error(msg: => String, ex: Throwable): Unit = scribe.error(msg, ex)
+
+    private def loggingOutputStream(log: String => Unit): OutputStream = {
+      new OutputStream {
+        private val buf = new ByteArrayOutputStream
+        private val lock = new Object
+        private def check(): Unit = {
+          lock.synchronized {
+            val b = buf.toByteArray
+            val s = new String(b)
+            val idx = s.lastIndexOf("\n")
+            if (idx >= 0) {
+              s.take(idx + 1).split("\r?\n").foreach(log)
+              buf.reset()
+              buf.write(s.drop(idx + 1).getBytes)
+            }
+          }
+        }
+        def write(b: Int) =
+          lock.synchronized {
+            buf.write(b)
+            if (b == '\n')
+              check()
+          }
+        override def write(b: Array[Byte]) =
+          lock.synchronized {
+            buf.write(b)
+            if (b.exists(_ == '\n')) check()
+          }
+        override def write(b: Array[Byte], off: Int, len: Int) =
+          lock.synchronized {
+            buf.write(b, off, len)
+            if (b.iterator.drop(off).take(len).exists(_ == '\n')) check()
+          }
+      }
+    }
+    def bloopBspStdout = Some(loggingOutputStream(scribe.debug(_)))
+    def bloopBspStderr = Some(loggingOutputStream(scribe.info(_)))
+    def bloopCliInheritStdout = false
+    def bloopCliInheritStderr = false
+  }
+
+  private lazy val bloopConfig = {
+
+    val addr = BloopRifleConfig.Address.DomainSocket(
+      config.bloopDirectory
+        .orElse(getBloopFilePath("daemon"))
+        .getOrElse(sys.error("user.home not set"))
+        .toNIO
+    )
+
+    BloopRifleConfig
+      .default(addr, fetchBloop _, workspace().toNIO.toFile)
+      .copy(
+        bspSocketOrPort = Some { () =>
+          val pid =
+            ManagementFactory.getRuntimeMXBean.getName.takeWhile(_ != '@').toInt
+          val dir = getBloopFilePath("bsp")
+            .getOrElse(sys.error("user.home not set"))
+            .toNIO
+          if (!Files.exists(dir)) {
+            Files.createDirectories(dir.getParent)
+            if (Properties.isWin)
+              Files.createDirectory(dir)
+            else
+              Files.createDirectory(
+                dir,
+                PosixFilePermissions
+                  .asFileAttribute(PosixFilePermissions.fromString("rwx------")),
+              )
+          }
+          val socketPath = dir.resolve(s"proc-$pid")
+          if (Files.exists(socketPath))
+            Files.delete(socketPath)
+          BspConnectionAddress.UnixDomainSocket(socketPath.toFile)
+        },
+        bspStdout = bloopLogger.bloopBspStdout,
+        bspStderr = bloopLogger.bloopBspStderr,
+      )
+  }
+
+  private def connect(
+      bloopVersionOpt: Option[String],
       userConfiguration: UserConfiguration,
   ): Future[SocketConnection] = {
 
     updateBloopJavaHomeBeforeLaunch(userConfiguration)
-    val launcherInOutPipe = Pipe.open()
-    val launcherIn = new QuietInputStream(
-      Channels.newInputStream(launcherInOutPipe.source()),
-      "Bloop InputStream",
-    )
-    val clientOut = new ClosableOutputStream(
-      Channels.newOutputStream(launcherInOutPipe.sink()),
-      "Bloop OutputStream",
-    )
 
-    val clientInOutPipe = Pipe.open()
-    val clientIn = Channels.newInputStream(clientInOutPipe.source())
-    val launcherOut = Channels.newOutputStream(clientInOutPipe.sink())
+    val maybeStartBloop = {
 
-    val serverStarted = Promise[Unit]()
-    val bloopLogs = new OutputStream {
-      private lazy val b = new StringBuilder
+      val running = BloopRifle.check(bloopConfig, bloopLogger)
 
-      override def write(byte: Int): Unit = byte.toChar match {
-        case c => b.append(c)
+      if (running) {
+        scribe.info("Found a Bloop server running")
+        Future.unit
+      } else {
+        scribe.info("No running Bloop server found, starting one.")
+        val ext = if (Properties.isWin) ".exe" else ""
+        val metalsJavaHomeOpt = metalsJavaHome(userConfiguration)
+        val javaCommand = metalsJavaHomeOpt match {
+          case Some(metalsJavaHome) =>
+            Paths.get(metalsJavaHome).resolve(s"bin/java$ext").toString
+          case None => "java"
+        }
+        val version = bloopVersionOpt.getOrElse(defaultBloopVersion)
+        BloopRifle.startServer(
+          bloopConfig,
+          sh,
+          bloopLogger,
+          version,
+          javaCommand,
+        )
       }
-
-      def logs = b.result.linesIterator
     }
 
-    val launcher =
-      new LauncherMain(
-        launcherIn,
-        launcherOut,
-        new PrintStream(bloopLogs, true),
-        StandardCharsets.UTF_8,
-        Shell.default,
-        userNailgunHost = None,
-        userNailgunPort = bloopPort,
-        serverStarted,
+    def openConnection(
+        conn: BspConnection,
+        period: FiniteDuration,
+        timeout: FiniteDuration,
+    ): Socket = {
+
+      @tailrec
+      def create(stopAt: Long): Socket = {
+        val maybeSocket =
+          try Right(conn.openSocket(period, timeout))
+          catch {
+            case e: ConnectException => Left(e)
+          }
+        maybeSocket match {
+          case Right(socket) => socket
+          case Left(e) =>
+            if (System.currentTimeMillis() >= stopAt)
+              throw new IOException(s"Can't connect to ${conn.address}", e)
+            else {
+              Thread.sleep(period.toMillis)
+              create(stopAt)
+            }
+        }
+      }
+
+      create(System.currentTimeMillis() + timeout.toMillis)
+    }
+
+    def openBspConn = Future {
+
+      val conn = BloopRifle.bsp(
+        bloopConfig,
+        workspace().toNIO,
+        bloopLogger,
       )
 
-    val finished = Promise[Unit]()
-    val job = ec.submit(new Runnable {
-      override def run(): Unit = {
-        launcher.runLauncher(
-          bloopVersion,
-          skipBspConnection = false,
-          Nil,
-        )
-        finished.success(())
-      }
-    })
+      val finished = Promise[Unit]()
+      conn.closed.ignoreValue.onComplete(finished.tryComplete)
 
-    serverStarted.future
-      .map { _ =>
-        SocketConnection(
-          name,
-          clientOut,
-          clientIn,
-          List(
-            Cancelable { () =>
-              clientOut.flush()
-              clientOut.close()
-            },
-            Cancelable(() => job.cancel(true)),
-          ),
-          finished,
-        )
-      }
-      .recover { case t: Throwable =>
-        bloopLogs.logs.foreach(scribe.error(_))
-        throw t
-      }
+      val socket = openConnection(conn, bloopConfig.period, bloopConfig.timeout)
+
+      SocketConnection(
+        name,
+        new ClosableOutputStream(socket.getOutputStream, "Bloop OutputStream"),
+        new QuietInputStream(socket.getInputStream, "Bloop InputStream"),
+        Nil,
+        finished,
+      )
+    }
+
+    for {
+      _ <- maybeStartBloop
+      conn <- openBspConn
+    } yield conn
   }
 }
 
@@ -432,4 +538,41 @@ object BloopServers {
       opts: List[String],
   ) extends BloopJavaHome
   object WriteMetalsJavaHome extends BloopJavaHome
+  
+  def fetchBloop(version: String): Either[Throwable, (Seq[File], Boolean)] = {
+
+    val (org, name) = BloopRifleConfig.defaultModule.split(":", -1) match {
+      case Array(org0, name0) => (org0, name0)
+      case Array(org0, "", name0) =>
+        val sbv =
+          if (BloopRifleConfig.defaultScalaVersion.startsWith("2."))
+            BloopRifleConfig.defaultScalaVersion
+              .split('.')
+              .take(2)
+              .mkString(".")
+          else
+            BloopRifleConfig.defaultScalaVersion.split('.').head
+        (org0, name0 + "_" + sbv)
+      case _ =>
+        sys.error(
+          s"Malformed default Bloop module '${BloopRifleConfig.defaultModule}'"
+        )
+    }
+
+    try {
+      val cp = coursierapi.Fetch
+        .create()
+        .addDependencies(coursierapi.Dependency.of(org, name, version))
+        .fetch()
+        .asScala
+        .toVector
+      val isScalaCliBloop = true
+      Right((cp, isScalaCliBloop))
+    } catch {
+      case NonFatal(t) =>
+        Left(t)
+    }
+  }
+
+  def defaultBloopVersion = BloopRifleConfig.defaultVersion
 }
