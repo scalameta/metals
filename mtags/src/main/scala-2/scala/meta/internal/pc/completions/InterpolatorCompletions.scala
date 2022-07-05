@@ -54,7 +54,8 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       metalsTypeMembers(ident.pos).collect {
         case m if CompletionFuzzy.matches(query, m.sym.name) =>
           val edit = new l.TextEdit(pos, newText(m.sym))
-          val filterText = m.sym.getterName.decoded
+          // for VS Code we need to include the entire `ident.member`
+          val filterText = ident.name.decoded + "." + m.sym.getterName.decoded
           new TextEditMember(filterText, edit, m.sym)
       }
     }
