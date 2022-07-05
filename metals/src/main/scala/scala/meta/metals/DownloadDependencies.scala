@@ -3,13 +3,13 @@ package scala.meta.metals
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.logging.MetalsLogger
 
-import bloop.launcher.Launcher
 import coursierapi.Dependency
 
 object DownloadDependencies {
@@ -39,9 +39,6 @@ object DownloadDependencies {
       downloadBloop()
 
     allPaths.distinct.foreach(println)
-
-    // NOTE(olafur): important, Bloop comes last because it does System.exit()
-    tryLAunchBloop()
   }
 
   def downloadScala(): Seq[Path] = {
@@ -106,36 +103,12 @@ object DownloadDependencies {
   }
 
   def downloadBloop(): Seq[Path] = {
-    scribe.info("Downloading bloop")
-
-    // Try to donwload all artifacts needed for Bloop
-    Embedded.downloadDependency(
-      Dependency.of(
-        "ch.epfl.scala",
-        s"bloop-config_" + metalsBinaryVersion,
-        BuildInfo.bloopConfigVersion,
-      ),
-      scalaVersion = Some(BuildInfo.scala213),
-    ) ++ Embedded.downloadDependency(
-      Dependency.of(
-        "ch.epfl.scala",
-        s"bloop-launcher-core_" + metalsBinaryVersion,
-        BuildInfo.bloopVersion,
-      ),
-      scalaVersion = Some(BuildInfo.scala213),
-    ) ++ Embedded.downloadDependency(
-      Dependency.of(
-        "ch.epfl.scala",
-        s"bloop-frontend_2.12",
-        BuildInfo.bloopVersion,
-      ),
-      scalaVersion = Some(BuildInfo.scala213),
-    )
-
-  }
-
-  def tryLAunchBloop(): Unit = {
-    // NOTE(olafur): this starts a daemon process for the Bloop server.
-    Launcher.main(Array("--skip-bsp-connection", BuildInfo.bloopVersion))
+    val version = BloopServers.defaultBloopVersion
+    scribe.info(s"Downloading Bloop $version")
+    BloopServers.fetchBloop(version) match {
+      case Left(ex) =>
+        throw new Exception(s"Could not pre-download Bloop $version", ex)
+      case Right((files, _)) => files.map(_.toPath)
+    }
   }
 }

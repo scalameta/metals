@@ -425,6 +425,8 @@ class MetalsLspService(
     languageClient,
     tables,
     clientConfig.initialConfig,
+    sh,
+    () => workspace,
   )
 
   private val bspServers: BspServers = new BspServers(

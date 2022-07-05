@@ -79,7 +79,7 @@ class BspConnector(
           scribe.info("No build server found")
           Future.successful(None)
         case ResolvedBloop =>
-          bloopServers.newServer(workspace, userConfiguration).map(Some(_))
+          bloopServers.newServer(userConfiguration).map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           SbtBuildTool.writeSbtMetalsPlugins(workspace)
