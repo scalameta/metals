@@ -61,9 +61,21 @@ final class SyntheticsDecorationProvider(
     def set(doc: TextDocument): Unit = document.set(doc)
   }
 
-  def publishSynthetics(path: AbsolutePath): Future[Unit] = Future {
-    val decorations = syntheticDecorations(path)
-    publish(path, decorations)
+  /**
+   * Publish synthetic decorations for path.
+   * @param path path of the file to publish synthetic decorations for
+   * @param isRefresh we don't want to send anything if all flags are disabled unless
+   * it's a refresh, in which case we might want to remove decorations.
+   */
+  def publishSynthetics(
+      path: AbsolutePath,
+      isRefresh: Boolean = false
+  ): Future[Unit] = Future {
+    if (isRefresh && !areSyntheticsEnabled) publish(path, Nil)
+    else if (areSyntheticsEnabled) {
+      val decorations = syntheticDecorations(path)
+      publish(path, decorations)
+    }
   }
 
   override def onDelete(path: AbsolutePath): Unit = ()
@@ -76,6 +88,7 @@ final class SyntheticsDecorationProvider(
     for {
       focused <- focusedDocument()
       if path == focused || !clientConfig.isDidFocusProvider()
+      if areSyntheticsEnabled
       textDoc <- enrichWithText(textDocument.documents.headOption, path)
     } {
       publish(path, decorations(path, textDoc))
@@ -84,7 +97,7 @@ final class SyntheticsDecorationProvider(
 
   def refresh(): Future[Unit] = {
     focusedDocument() match {
-      case Some(doc) => publishSynthetics(doc)
+      case Some(doc) => publishSynthetics(doc, isRefresh = true)
       case None => Future.unit
     }
   }
@@ -93,7 +106,7 @@ final class SyntheticsDecorationProvider(
       params: HoverExtParams,
       pcHover: Option[l.Hover]
   ): Option[l.Hover] =
-    if (isSyntheticsEnabled) {
+    if (areSyntheticsEnabled) {
       val path = params.textDocument.getUri().toAbsolutePath
       val position = params.getPosition
       val line = position.getLine()
@@ -174,7 +187,7 @@ final class SyntheticsDecorationProvider(
   private def publish(
       path: AbsolutePath,
       decorations: Seq[DecorationOptions]
-  ): Unit = if (decorations.nonEmpty) {
+  ): Unit = {
     val params =
       new PublishDecorationsParams(
         path.toURI.toString(),
@@ -185,7 +198,7 @@ final class SyntheticsDecorationProvider(
     client.metalsPublishDecorations(params)
   }
 
-  private def isSyntheticsEnabled: Boolean = {
+  private def areSyntheticsEnabled: Boolean = {
     userConfig().showImplicitArguments || userConfig().showInferredType || userConfig().showImplicitConversionsAndClasses
   }
 
