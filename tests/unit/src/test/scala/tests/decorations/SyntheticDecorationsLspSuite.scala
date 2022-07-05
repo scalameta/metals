@@ -227,6 +227,27 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |}
            |""".stripMargin
       )
+      // no decorations should show up with everything set to false
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": false,
+          |  "show-implicit-conversions-and-classes": false,
+          |  "show-inferred-type": false
+          |}
+          |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|object Main{
+           |  def hello()(implicit name: String) = {
+           |    println(s"Hello $name!")
+           |  }
+           |  implicit val andy : String = "Andy"
+           |  hello()
+           |  ("1" + "2").map(c => c.toDouble)
+           |}
+           |""".stripMargin
+      )
     } yield ()
   }
 
