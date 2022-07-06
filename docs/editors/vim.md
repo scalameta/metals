@@ -81,6 +81,10 @@ mandatory though as your client should be able to fully be configured via
 `InitializationOptions`. You can read more about his
 [here](https://scalameta.org/metals/blog/2020/07/23/configuring-a-client#initializationoptions).
 
+```scala mdoc:scalafix
+
+```
+
 ## Getting help
 
 There is an active community using Vim and Metals. Apart from [creating an
