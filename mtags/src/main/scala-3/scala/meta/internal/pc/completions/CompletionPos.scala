@@ -56,6 +56,28 @@ object CompletionPos:
   end infer
 
   /**
+   * Infer the indentation by counting the number of spaces in the given line.
+   *
+   * @param lineOffset the offset position of the beginning of the line
+   */
+  private[completions] def inferIndent(
+      lineOffset: Int,
+      text: String
+  ): (Int, Boolean) =
+    var i = 0
+    var tabIndented = false
+    while lineOffset + i < text.length && {
+        val char = text.charAt(lineOffset + i)
+        if char == '\t' then
+          tabIndented = true
+          true
+        else char == ' '
+      }
+    do i += 1
+    (i, tabIndented)
+  end inferIndent
+
+  /**
    * Returns the start offset of the identifier starting as the given offset position.
    */
   private def inferIdentStart(

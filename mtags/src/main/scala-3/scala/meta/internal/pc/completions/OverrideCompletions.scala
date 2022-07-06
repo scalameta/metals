@@ -206,7 +206,7 @@ object OverrideCompletions:
       // |  class FooImpl extends Foo {
       // |  }
       // ```
-      val (necessaryIndent, tabIndented) = inferIndent(
+      val (necessaryIndent, tabIndented) = CompletionPos.inferIndent(
         source.lineToOffset(td.sourcePos.line),
         text
       )
@@ -223,7 +223,10 @@ object OverrideCompletions:
       val (numIndent, shouldTabIndent) =
         decls.headOption
           .map { decl =>
-            inferIndent(source.lineToOffset(decl.sourcePos.line), text)
+            CompletionPos.inferIndent(
+              source.lineToOffset(decl.sourcePos.line),
+              text
+            )
           }
           .getOrElse({
             val default = defaultIndent(tabIndented)
@@ -440,24 +443,5 @@ object OverrideCompletions:
       else text.indexOf("{", start)
     if offset > 0 && offset < td.span.end then Some(offset)
     else None
-
-  /**
-   * Infer the indentation by counting the number of spaces in the given line.
-   *
-   * @param lineOffset the offset position of the beginning of the line
-   */
-  private def inferIndent(lineOffset: Int, text: String): (Int, Boolean) =
-    var i = 0
-    var tabIndented = false
-    while lineOffset + i < text.length && {
-        val char = text.charAt(lineOffset + i)
-        if char == '\t' then
-          tabIndented = true
-          true
-        else char == ' '
-      }
-    do i += 1
-    (i, tabIndented)
-  end inferIndent
 
 end OverrideCompletions
