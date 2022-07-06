@@ -99,6 +99,47 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
       |}""".stripMargin
   )
 
+  check(
+    "local-var",
+    """
+      |object Test {
+      |  def met() = {
+      |    class T1(var <<abc>>: Int) {
+      |      <<ab@@c>> = 4
+      |      def m2: Int = <<abc>> + 2
+      |    }
+      |  }
+      |}""".stripMargin
+  )
+  check(
+    "local-assign",
+    """
+      |object Test {
+      |  def met() = {
+      |    class T1(var <<abc>>: Int) {
+      |      <<abc>> = 4
+      |      def m2: Int = <<ab@@c>> + 2
+      |    }
+      |  }
+      |}""".stripMargin
+  )
+  check(
+    "local-class",
+    """
+      |object Test {
+      |  def met() = {
+      |    class T1(var abc: Int) {
+      |       class T2(var <<ab@@c>>: Int) {
+      |          <<abc>> = 4
+      |          def m3: Int = <<abc>> + 2
+      |      }
+      |      abc = 4
+      |      def m2: Int = abc + 2
+      |    }
+      |  }
+      |}""".stripMargin
+  )
+
   def check(name: TestOptions, testCase: String)(implicit
       loc: Location
   ): Unit = {
