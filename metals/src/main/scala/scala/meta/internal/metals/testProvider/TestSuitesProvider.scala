@@ -32,6 +32,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
+import org.eclipse.{lsp4j => l}
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -62,21 +63,30 @@ final class TestSuitesProvider(
     }
 
   /**
-   * Update test cases for given path.
-   * Only consider 'relevant' files which have had already discovered test suite.
+   * For test suites located in a given path,
+   * update their location (range) and their children (test cases).
+   *
+   * For children, only consider 'relevant' files which have already discovered children.
    * Metals have to update them because they can be visible to the user via:
    * 1. Test Explorer view can be opened and tree view is visible
    * 2. test suite's file can be opened and test cases are visible
    */
-  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
-    if (isEnabled && index.hasTestCasesGranularity(file)) {
-      if (docs.documents.nonEmpty) {
-        val doc = docs.documents.headOption
-        val buildTargetUpdates = getTestCasesForPath(file, doc)
-        updateClientIfNonEmpty(buildTargetUpdates)
-      }
+  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit =
+    docs.documents.headOption.foreach {
+      case doc if isEnabled =>
+        val suiteLocationChanged =
+          if (index.contains(file))
+            getTestSuitesLocationUpdates(file, doc)
+          else Nil
+
+        val buildTargetUpdates =
+          if (index.hasTestCasesGranularity(file))
+            getTestCasesForPath(file, Some(doc))
+          else Nil
+
+        updateClientIfNonEmpty(suiteLocationChanged ::: buildTargetUpdates)
+      case _ =>
     }
-  }
 
   override def onDelete(file: AbsolutePath): Unit = {
     val removed = index.remove(file)
@@ -123,6 +133,38 @@ final class TestSuitesProvider(
         ClientCommands.UpdateTestExplorer.toExecuteCommandParams(updates: _*)
       client.metalsExecuteClientCommand(params)
     }
+
+  private def getTestSuitesLocationUpdates(
+      path: AbsolutePath,
+      doc: TextDocument
+  ): List[BuildTargetUpdate] = {
+    val events = for {
+      metadata <- index.getMetadata(path).toList
+      entry <- metadata.entries
+      symbol <- doc.symbols.find(si =>
+        si.symbol == entry.suiteInfo.symbol.value
+      )
+      loc: l.Location <- doc.toLocation(path.toURI, symbol.symbol)
+      if loc != entry.testClass.location
+    } yield {
+      val event = UpdateSuiteLocation(
+        entry.suiteInfo.fullyQualifiedName.value,
+        entry.suiteInfo.className.value,
+        loc
+      )
+      (entry.buildTarget, event)
+    }
+
+    events
+      .groupBy { case (target, _) => target }
+      .map { case (buildTarget, events) =>
+        BuildTargetUpdate(
+          buildTarget,
+          events.map { case (_, event) => event }
+        )
+      }
+      .toList
+  }
 
   /**
    * Retrieves all cached test suites.
@@ -194,9 +236,9 @@ final class TestSuitesProvider(
           if (testCases.nonEmpty) {
             index.setHasTestCasesGranularity(path)
             val event = AddTestCases(
-              suite.fullyQualifiedName.value,
-              suite.className.value,
-              testCases.asJava
+              fullyQualifiedClassName = suite.fullyQualifiedName.value,
+              className = suite.className.value,
+              testCases = testCases.asJava
             )
             Some(event)
           } else None
@@ -236,6 +278,11 @@ final class TestSuitesProvider(
     val deletedSuites = removeStaleTestSuites(symbolsPerTarget)
     val addedEntries = getTestEntries(symbolsPerTarget)
 
+    // update cached suites with currently discovered
+    addedEntries.foreach { case (_, entries) =>
+      entries.foreach(index.put(_))
+    }
+
     val addedTestCases = addedEntries.mapValues {
       _.flatMap { entry =>
         val canResolve = entry.suiteInfo.framework.canResolveChildren
@@ -250,10 +297,6 @@ final class TestSuitesProvider(
     val buildTargetUpdates =
       getBuildTargetUpdates(deletedSuites, addedSuites, addedTestCases)
 
-    // update cached suites with currently discovered
-    addedEntries.foreach { case (_, entries) =>
-      entries.foreach(index.put(_))
-    }
     updateClientIfNonEmpty(buildTargetUpdates)
   }
 

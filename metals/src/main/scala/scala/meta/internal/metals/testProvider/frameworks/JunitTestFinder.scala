@@ -36,7 +36,7 @@ class JunitTestFinder {
       .collect {
         case symbol if isValid(symbol) =>
           doc
-            .toLocation(uri.toString, symbol.symbol)
+            .toLocation(uri, symbol.symbol)
             .map(location => TestCaseEntry(symbol.displayName, location))
       }
       .flatten

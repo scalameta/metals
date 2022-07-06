@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.io.IOException
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -674,6 +675,9 @@ object MetalsEnrichments
         localOccurrence.symbol == symbol
       }
     }
+
+    def toLocation(uri: URI, symbol: String): Option[l.Location] =
+      toLocation(uri.toString, symbol)
 
     def toLocation(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences

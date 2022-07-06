@@ -209,6 +209,7 @@ object ClientCommands {
       |export type TestExplorerEvent =
       | RemoveTestSuite
       | AddTestSuite
+      | UpdateSuiteLocation
       | AddTestCases;
       |
       |export interface RemoveTestSuite {
@@ -224,6 +225,13 @@ object ClientCommands {
       |  symbol: string;
       |  location: Location;
       |  canResolveChildren: boolean;
+      |}
+      |
+      |export interface AddTestCases {
+      |  kind: "updateSuiteLocation";
+      |  fullyQualifiedClassName: FullyQualifiedClassName;
+      |  className: ClassName;
+      |  location: Location;
       |}
       |
       |export interface AddTestCases {
