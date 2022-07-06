@@ -11,13 +11,20 @@ final class Completer(expression: String) extends Stoppage.Handler {
 
   override def apply(stoppage: Stoppage): DebugStep = {
     val frameId = stoppage.frame.info.getId
-    val column = expression.indexOf("@@")
+    val cursorOffset = expression.indexOf("@@")
+    val column = cursorOffset - expression
+      .substring(0, cursorOffset)
+      .lastIndexWhere(_ == '\n')
+    val line =
+      expression.substring(0, expression.indexOf("@@")).count(_ == '\n') + 1
     require(column >= 0, "Expression needs @@ for testing completions")
-    require(
-      !expression.contains('\n'),
-      "Only single line expression are supported currently",
+    Complete(
+      expression.replace("@@", ""),
+      frameId,
+      response = _,
+      line,
+      column + 1,
     )
-    Complete(expression.replace("@@", ""), frameId, response = _, 1, column + 1)
   }
 
   override def shutdown: Future[Unit] = Future.successful(())

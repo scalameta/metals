@@ -117,6 +117,69 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "multiline",
+    expression = """|val a = 123
+                    |a.toStri@@""".stripMargin,
+    expectedCompletions = """|toBinaryString: String
+                             |toHexString: String
+                             |toOctalString: String
+                             |toString(): String
+                             |""".stripMargin,
+    expectedEdit = """|val a = 123
+                      |a.toBinaryString""".stripMargin,
+    topLines = Some(4),
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  case class Preceding(num: Int)
+       |
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  assertCompletion(
+    "multiline-longer",
+    expression = """|val a = 123
+                    |val b = 111
+                    |val c = 111
+                    |val d = 111
+                    |a.toStri@@
+                    |1 + 234""".stripMargin,
+    expectedCompletions = """|toBinaryString: String
+                             |toHexString: String
+                             |toOctalString: String
+                             |toString(): String
+                             |""".stripMargin,
+    expectedEdit = """|val a = 123
+                      |val b = 111
+                      |val c = 111
+                      |val d = 111
+                      |a.toBinaryString
+                      |1 + 234
+                      |""".stripMargin,
+    topLines = Some(4),
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  case class Preceding(num: Int)
+       |
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,
