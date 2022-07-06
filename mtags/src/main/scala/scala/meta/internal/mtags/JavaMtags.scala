@@ -20,34 +20,7 @@ import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 
-object JavaMtags {
-  def index(input: Input.VirtualFile): MtagsIndexer =
-    new JavaMtags(input)
-}
-class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
-  val builder = new JavaProjectBuilder()
-  override def language: Language = Language.JAVA
-
-  override def input: Input.VirtualFile = virtualFile
-
-  override def indexRoot(): Unit = {
-    try {
-      val source = builder.addSource(new StringReader(input.value))
-      if (source.getPackage != null) {
-        source.getPackageName.split("\\.").foreach { p =>
-          pkg(
-            p,
-            toRangePosition(source.getPackage.lineNumber, p)
-          )
-        }
-      }
-      source.getClasses.asScala.foreach(visitClass)
-    } catch {
-      case _: ParseException | _: NullPointerException =>
-      // Parse errors are ignored because the Java source files we process
-      // are not written by the user so there is nothing they can do about it.
-    }
-  }
+trait JavaMtagsIndexer extends MtagsIndexer {
 
   /**
    * Computes the start/end offsets from a name in a line number.
@@ -76,6 +49,38 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       line,
       columnAndLength._1 + columnAndLength._2
     )
+  }
+}
+
+object JavaMtags {
+  def index(input: Input.VirtualFile): MtagsIndexer = {
+    new JavaMtags(input)
+  }
+}
+class JavaMtags(virtualFile: Input.VirtualFile) extends JavaMtagsIndexer {
+  self =>
+  val builder = new JavaProjectBuilder()
+  override def language: Language = Language.JAVA
+
+  override def input: Input.VirtualFile = virtualFile
+
+  override def indexRoot(): Unit = {
+    try {
+      val source = builder.addSource(new StringReader(input.value))
+      if (source.getPackage != null) {
+        source.getPackageName.split("\\.").foreach { p =>
+          pkg(
+            p,
+            toRangePosition(source.getPackage.lineNumber, p)
+          )
+        }
+      }
+      source.getClasses.asScala.foreach(visitClass)
+    } catch {
+      case _: ParseException | _: NullPointerException =>
+      // Parse errors are ignored because the Java source files we process
+      // are not written by the user so there is nothing they can do about it.
+    }
   }
 
   def visitMembers[T <: JavaMember](fields: java.util.List[T]): Unit =

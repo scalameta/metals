@@ -77,8 +77,22 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
+  def mtagsJavaIndex(): Unit = {
+    javaDependencySources.inputs.foreach { input =>
+      Mtags.index(input, dialects.Scala213)
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelsScalaIndex(): Unit = {
     scalaDependencySources.inputs.foreach { input => Mtags.toplevels(input) }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def toplevelsJavaIndex(): Unit = {
+    javaDependencySources.inputs.foreach { input => Mtags.toplevels(input) }
   }
 
   @Benchmark

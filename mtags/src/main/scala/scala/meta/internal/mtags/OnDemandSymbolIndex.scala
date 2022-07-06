@@ -29,10 +29,13 @@ final class OnDemandSymbolIndex(
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
   var indexedSources = 0L
+
   def close(): Unit = {
     dialectBuckets.values.foreach(_.close())
   }
+
   private val onErrorOption = onError.andThen(_ => None)
+
   private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket = {
     dialectBuckets.getOrElseUpdate(
       dialect,

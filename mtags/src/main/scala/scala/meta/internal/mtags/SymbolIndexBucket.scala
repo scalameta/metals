@@ -5,6 +5,7 @@ import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.util.Properties
 
 import scala.meta.Dialect
@@ -12,6 +13,8 @@ import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.SymbolIndexBucket.loadFromSourceJars
+import scala.meta.internal.mtags.SymbolIndexBucket.sourceJars
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
@@ -36,7 +39,6 @@ final case class SymbolLocation(
 class SymbolIndexBucket(
     toplevels: TrieMap[String, Set[AbsolutePath]],
     definitions: TrieMap[String, Set[SymbolLocation]],
-    sourceJars: ClasspathLoader,
     toIndexSource: AbsolutePath => AbsolutePath = identity,
     mtags: Mtags,
     dialect: Dialect
@@ -61,7 +63,7 @@ class SymbolIndexBucket(
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
-            case source if source.isScala =>
+            case source if source.isScala || source.isJava =>
               addSourceFile(source, None).map(sym => (sym, source))
             case _ =>
               List.empty
@@ -162,15 +164,17 @@ class SymbolIndexBucket(
         case Some(files) =>
           files.foreach(addMtagsSourceFile)
         case _ =>
-          loadFromSourceJars(trivialPaths(toplevel))
-            .orElse(loadFromSourceJars(modulePaths(toplevel)))
+          loadFromSourceJars(toplevel.value)
             .foreach(_.foreach(addMtagsSourceFile))
+
       }
     }
     if (!definitions.contains(symbol.value)) {
       // Fallback 2: guess related symbols from the enclosing class.
       DefinitionAlternatives(symbol)
-        .flatMap(alternative => query0(querySymbol, alternative))
+        .flatMap { alternative =>
+          query0(querySymbol, alternative)
+        }
     } else {
       definitions
         .get(symbol.value)
@@ -201,9 +205,8 @@ class SymbolIndexBucket(
       case _ =>
         s.TextDocuments(Nil)
     }
-    if (docs.documents.nonEmpty) {
+    if (docs.documents.nonEmpty)
       addTextDocuments(file, docs)
-    }
   }
 
   // Records all global symbol definitions.
@@ -211,16 +214,42 @@ class SymbolIndexBucket(
       file: AbsolutePath,
       docs: s.TextDocuments
   ): Unit = {
+
     docs.documents.foreach { document =>
       document.occurrences.foreach { occ =>
         if (occ.symbol.isGlobal && occ.role.isDefinition) {
           val acc = definitions.getOrElse(occ.symbol, Set.empty)
+
           definitions.put(occ.symbol, acc + SymbolLocation(file, occ.range))
         } else {
           // do nothing, we only care about global symbol definitions.
         }
       }
     }
+  }
+
+}
+
+object SymbolIndexBucket {
+
+  val sourceJars = new ClasspathLoader()
+
+  def empty(
+      dialect: Dialect,
+      mtags: Mtags,
+      toIndexSource: AbsolutePath => AbsolutePath
+  ): SymbolIndexBucket =
+    new SymbolIndexBucket(
+      TrieMap.empty,
+      TrieMap.empty,
+      toIndexSource,
+      mtags,
+      dialect
+    )
+
+  def loadFromSourceJars(symbolValue: String): Option[List[AbsolutePath]] = {
+    loadFromSourceJars(trivialPaths(symbolValue))
+      .orElse(loadFromSourceJars(modulePaths(symbolValue)))
   }
 
   // Returns the first path that resolves to a file.
@@ -241,17 +270,17 @@ class SymbolIndexBucket(
   // Input:  scala/collection/immutable/List#
   // Output: scala/collection/immutable/List.scala
   //         scala/collection/immutable/List.java
-  private def trivialPaths(toplevel: Symbol): List[String] = {
-    val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
+  private def trivialPaths(toplevelValue: String): List[String] = {
+    val noExtension = toplevelValue.stripSuffix(".").stripSuffix("#")
     List(
       noExtension + ".scala",
       noExtension + ".java"
     )
   }
 
-  private def modulePaths(toplevel: Symbol): List[String] = {
+  private def modulePaths(toplevelValue: String): List[String] = {
     if (Properties.isJavaAtLeast("9")) {
-      val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
+      val noExtension = toplevelValue.stripSuffix(".").stripSuffix("#")
       val javaSymbol = noExtension.replace("/", ".")
       for {
         cls <- sourceJars.loadClass(javaSymbol).toList
@@ -271,21 +300,4 @@ class SymbolIndexBucket(
       Nil
     }
   }
-}
-
-object SymbolIndexBucket {
-
-  def empty(
-      dialect: Dialect,
-      mtags: Mtags,
-      toIndexSource: AbsolutePath => AbsolutePath
-  ): SymbolIndexBucket =
-    new SymbolIndexBucket(
-      TrieMap.empty,
-      TrieMap.empty,
-      new ClasspathLoader(),
-      toIndexSource,
-      mtags,
-      dialect
-    )
 }

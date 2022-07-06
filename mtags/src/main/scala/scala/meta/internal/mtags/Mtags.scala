@@ -18,13 +18,24 @@ final class Mtags {
   ): List[String] = {
     val language = input.toLanguage
     if (language.isJava) {
-      // NOTE(olafur): this is incorrect in the following cases:
-      // - the source file has multiple top-level classes, in which case we
-      //   don't index the package private classes.
-      // - if the path is not relative to the source directory, in which case
-      //   the produced symbol is incorrect.
-      val toplevelClass = input.path.stripPrefix("/").stripSuffix(".java") + "#"
-      List(toplevelClass)
+      addLines(language, input.text)
+      val mtags =
+        new JavaTopLevels(input)
+
+      val result: List[String] = mtags
+        .index()
+        .occurrences
+        .iterator
+        .filterNot(_.symbol.isPackage)
+        .map(_.symbol)
+        .toList
+
+      if (
+        result.flatMap(SymbolIndexBucket.loadFromSourceJars).flatten.isEmpty
+      ) {
+        result
+      } else List.empty
+
     } else if (language.isScala) {
       addLines(language, input.text)
       val mtags =
@@ -102,6 +113,7 @@ object Mtags {
       input: Input.VirtualFile,
       dialect: Dialect = dialects.Scala213
   ): List[String] = {
+
     new Mtags().toplevels(input, dialect)
   }
 
