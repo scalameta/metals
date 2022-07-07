@@ -4,6 +4,8 @@ import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.printer.DotcPrinter.ForInferredType
 import scala.meta.internal.pc.printer.ShortenedNames.PrettyType
 
+import dotty.tools.dotc.core.Constants
+import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
@@ -11,6 +13,7 @@ import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.printing.RefinedPrinter
+import dotty.tools.dotc.printing.Texts.Closed
 import dotty.tools.dotc.printing.Texts.Text
 
 /**
@@ -67,6 +70,24 @@ object DotcPrinter:
     def fullName(sym: Symbol): String =
       fullNameString(sym)
 
+    override protected def toTextRefinement(rt: RefinedType): Closed =
+      rt.refinedInfo match
+        case TypeBounds(lo, hi) if lo == hi =>
+          val tsym = rt.parent.member(rt.refinedName).symbol
+          if tsym.exists then
+            ("type " ~ simpleNameString(tsym) ~ " = " ~ toText(hi)).close
+          else super.toTextRefinement(rt)
+        case tp: TypeRef =>
+          ("val " ~ nameString(rt.refinedName) ~ ": " ~ toText(tp)).close
+        case tp: ExprType =>
+          ("def " ~ nameString(rt.refinedName) ~ ": " ~ toText(
+            tp.resType
+          )).close
+        case tp: MethodType =>
+          ("def " ~ nameString(rt.refinedName) ~ toText(tp)).close
+        case _ =>
+          super.toTextRefinement(rt)
+
     override def toText(tp: Type): Text =
       // Override the behavior for `AppliedType` because
       // `toText` in RefinedPrinter doesn't pretty print AppliedType
@@ -76,6 +97,8 @@ object DotcPrinter:
       // completing `def function: Int <none> String = ${0:???}`
       // instead of `def function: f.Function[Int, String] = ${0:???}`
       tp match
+        case c: ConstantType =>
+          toText(c.value)
         case tp: AppliedType =>
           tp.tycon match
             case p: PrettyType =>
