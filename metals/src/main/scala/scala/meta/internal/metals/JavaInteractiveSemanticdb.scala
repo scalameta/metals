@@ -244,7 +244,7 @@ object JdkVersion {
   def fromShell(javaHome: AbsolutePath): Option[JdkVersion] = {
     ShellRunner
       .runSync(
-        List("java", "-version"),
+        List(s"$javaHome/bin/java", "-version"),
         javaHome,
         redirectErrorOutput = true,
         maybeJavaHome = Some(javaHome.toString())
