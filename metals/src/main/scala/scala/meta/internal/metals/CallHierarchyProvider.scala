@@ -1,26 +1,19 @@
 package scala.meta.internal.metals
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-
-import scala.collection.concurrent.TrieMap
-
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.SymbolOccurrence.Role
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.{semanticdb => s}
 
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.remotels.RemoteLanguageServer
 
 import scala.meta.io.AbsolutePath
-
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import com.google.common.hash.BloomFilter
-import com.google.common.hash.Funnels
 
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
@@ -34,69 +27,39 @@ import scala.meta.Tree
 import scala.meta.Defn
 import scala.meta.Term
 import scala.meta.Pat
-import com.google.gson.JsonObject
+import scala.meta.Ctor
+import scala.meta.Name
+import scala.meta.Type
+import com.google.gson.JsonElement
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
     semanticdbs: Semanticdbs,
     buffers: Buffers,
     definition: DefinitionProvider,
+    references: ReferenceProvider,
     remote: RemoteLanguageServer,
     trees: Trees,
     buildTargets: BuildTargets
 ) extends SemanticdbFeatureProvider {
 
-  private var referencedPackages: BloomFilter[CharSequence] =
-    BloomFilters.create(10000)
+  override def reset(): Unit = ()
 
-  case class IndexEntry(
-      id: BuildTargetIdentifier,
-      bloom: BloomFilter[CharSequence]
-  )
-  val index: TrieMap[Path, IndexEntry] = TrieMap.empty
+  override def onDelete(file: AbsolutePath): Unit = ()
 
-  override def reset(): Unit = {
-    index.clear()
-  }
-
-  override def onDelete(file: AbsolutePath): Unit = {
-    index.remove(file.toNIO)
-  }
-
-  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
-    buildTargets.inverseSources(file).map { id =>
-      val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
-      val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
-      val bloom = BloomFilter.create(
-        Funnels.stringFunnel(StandardCharsets.UTF_8),
-        Integer.valueOf((count + syntheticsCount) * 2),
-        0.01
-      )
-
-      val entry = IndexEntry(id, bloom)
-      index(file.toNIO) = entry
-      docs.documents.foreach { d =>
-        d.occurrences.foreach { o =>
-          if (o.symbol.endsWith("/")) {
-            referencedPackages.put(o.symbol)
-          }
-          bloom.put(o.symbol)
-        }
-        d.synthetics.foreach { synthetic =>
-          Synthetics.foreachSymbol(synthetic) { sym =>
-            bloom.put(sym)
-            Synthetics.Continue
-          }
-        }
-      }
-    }
-  }
+  override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = ()
 
   case class CallHierarchyItemInfo(displayName: String, symbol: String)
 
   private def findDefinition(from: Tree): Option[Tree] = from match {
-    case definition @ (_: Defn.Def | _: Defn.Val | _: Defn.Var) =>
+    case definition @ (_: Defn.Def | _: Defn.Val | _: Defn.Var |
+        _: Ctor.Secondary) =>
       Some(definition)
+    case name: Type.Name =>
+      for {
+        parent <- name.parent
+        ctor <- parent.children.find(_.is[Ctor.Primary])
+      } yield ctor
     case other =>
       other.parent.flatMap(p => findDefinition(p))
   }
@@ -108,17 +71,53 @@ final case class CallHierarchyProvider(
       range: l.Range
   ): Option[CallHierarchyItem] = {
     val info = doc.symbols.find(_.symbol == occurence.symbol).get
-    if (info.isMethod) {
-      val chi = new CallHierarchyItem(
-        info.displayName,
-        SymbolKind.Method,
-        source.toURI.toString,
-        range,
-        occurence.toLocation(source.toURI.toString).getRange
-      )
-      chi.setData(CallHierarchyItemInfo(info.displayName, info.symbol))
-      Some(chi)
-    } else None
+
+    val chi = info.kind match {
+      case SymbolInformation.Kind.METHOD =>
+        Some(
+          new CallHierarchyItem(
+            info.displayName,
+            SymbolKind.Method,
+            source.toURI.toString,
+            range,
+            occurence.toLocation(source.toURI.toString).getRange
+          )
+        )
+      case SymbolInformation.Kind.CONSTRUCTOR | SymbolInformation.Kind.CLASS =>
+        Some(
+          new CallHierarchyItem(
+            info.displayName,
+            SymbolKind.Constructor,
+            source.toURI.toString,
+            range,
+            occurence.toLocation(source.toURI.toString).getRange
+          )
+        )
+      case _ =>
+        None
+    }
+    val symbol =
+      if (info.isClass)
+        info.signature
+          .asInstanceOf[s.ClassSignature]
+          .declarations
+          .flatMap(_.symlinks.find(_.endsWith("`<init>`().")))
+          .getOrElse(info.symbol)
+      else info.symbol
+
+    val displayName =
+      if (info.isConstructor && info.displayName == "<init>")
+        info.symbol.slice(
+          info.symbol.lastIndexOf("/") + 1,
+          info.symbol.lastIndexOf("#")
+        )
+      else info.displayName
+
+    chi.foreach(item => {
+      item.setData(CallHierarchyItemInfo(displayName, symbol))
+      item.setName(displayName)
+    })
+    chi
   }
 
   def prepare(params: CallHierarchyPrepareParams): List[CallHierarchyItem] = {
@@ -141,9 +140,6 @@ final case class CallHierarchyProvider(
               definition.pos.toLSP
             )
           } yield chi
-        // trees.findLastEnclosingAt(source,)
-        // val range = fintrees.findLastEnclosingAt(source, result.occurrence.get.range.get.toLSP.getStart)
-        // symbolOccurenceToCallHierarchyItem(source, doc, result.occurrence.get, range)
         }
       case None =>
         Nil
@@ -156,25 +152,45 @@ final case class CallHierarchyProvider(
       root: Tree,
       info: CallHierarchyItemInfo
   ): List[(SymbolOccurrence, l.Range, List[l.Range])] = {
+
     def search(
         tree: Tree,
-        parent: Option[Term.Name],
+        parent: Option[Name],
         parentRange: Option[l.Range]
     ): List[(SymbolOccurrence, l.Range, l.Range)] = tree match {
-      case name: Term.Name
-          if parent.isDefined && name.value == info.displayName && definition
-            .positionOccurrences(source, name.pos.toLSP.getStart, doc)
-            .flatMap(_.occurrence)
-            .exists(occ =>
-              occ.symbol == info.symbol && occ.role == Role.REFERENCE
-            ) =>
-        definition
-          .positionOccurrences(source, parent.get.pos.toLSP.getStart, doc)
-          .flatMap(_.occurrence)
-          .map(occurence => (occurence, name.pos.toLSP, parentRange.get))
+      case name: Name =>
+        val occurences = definition
+          .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
+          .flatMap(_.occurrence.filter(_.role == Role.REFERENCE))
+
+        parent match {
+          case Some(parent)
+              if occurences.exists(occ =>
+                occ.symbol == info.symbol ||
+                  (parent.is[Term.Apply] && info.symbol
+                    .startsWith(occ.symbol.dropRight(1)))
+              ) =>
+            definition
+              .positionOccurrences(source, parent.pos.toLSP.getStart, doc)
+              .flatMap(_.occurrence)
+              .map(occurence => (occurence, name.pos.toLSP, parentRange.get))
+          case _ =>
+            name.children.flatMap { child =>
+              search(child, parent, parentRange)
+            }
+        }
+
       case method: Defn.Def =>
         method.children.flatMap { child =>
           search(child, Some(method.name), Some(method.pos.toLSP))
+        }
+      case constructor: Ctor.Secondary =>
+        constructor.children.flatMap { child =>
+          search(
+            child,
+            Some(constructor.name: Name),
+            Some(constructor.pos.toLSP)
+          )
         }
       case function: Term.Function =>
         function.children.flatMap { child =>
@@ -209,7 +225,10 @@ final case class CallHierarchyProvider(
   ): List[CallHierarchyIncomingCall] = {
     val source = params.getItem.getUri.toAbsolutePath
 
-    val info = params.getItem.getData.asInstanceOf[JsonObject]
+    val info = params.getItem.getData
+      .asInstanceOf[JsonElement]
+      .as[CallHierarchyItemInfo]
+      .get
 
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -220,10 +239,7 @@ final case class CallHierarchyProvider(
               source,
               doc,
               root,
-              CallHierarchyItemInfo(
-                info.get(("displayName")).getAsString(),
-                info.get("symbol").getAsString()
-              )
+              info
             )
           )
           .getOrElse(Nil)
@@ -264,7 +280,7 @@ final case class CallHierarchyProvider(
               definitionRange.toLSP.getStart
             )
             definition <- findDefinition(definitionName)
-            if symInfo.isMethod && info.symbol != symInfo.symbol
+            if (symInfo.isMethod || symInfo.isConstructor) && info.symbol != symInfo.symbol
           } yield (
             definitionOccurence,
             name.pos.toLSP,
@@ -284,7 +300,10 @@ final case class CallHierarchyProvider(
   ): List[CallHierarchyOutgoingCall] = {
     val source = params.getItem.getUri.toAbsolutePath
 
-    val info = params.getItem.getData.asInstanceOf[JsonObject]
+    val info = params.getItem.getData
+      .asInstanceOf[JsonElement]
+      .as[CallHierarchyItemInfo]
+      .get
 
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -295,10 +314,7 @@ final case class CallHierarchyProvider(
               source,
               doc,
               root,
-              CallHierarchyItemInfo(
-                info.get(("displayName")).getAsString(),
-                info.get("symbol").getAsString()
-              )
+              info
             )
           )
           .getOrElse(Nil)
