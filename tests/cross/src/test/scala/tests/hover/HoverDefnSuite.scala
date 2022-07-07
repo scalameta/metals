@@ -222,7 +222,7 @@ class HoverDefnSuite extends BaseHoverSuite {
     compat = Map(
       "2.12" -> "",
       "3" -> """|Int
-                |val x: (1 : Int)""".stripMargin.hover
+                |val x: 1""".stripMargin.hover
     )
   )
 
@@ -232,7 +232,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |  <<val @@x : 1 | 2 = 1>>
       |}
       |""".stripMargin,
-    "val x: (1 : Int) | (2 : Int)".hover
+    "val x: 1 | 2".hover
   )
 
 }

@@ -511,6 +511,107 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "literal-types1".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
+    """|object O {
+       |  val a: Some[1] = Some(1)
+       |  val <<b>> = a
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  val a: Some[1] = Some(1)
+       |  val b: Some[1] = a
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "refined-types",
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |    type G
+       |  }
+       |
+       |  val <<c>> = new Foo { type T = Int; type G = Long}
+       |}
+       |""".stripMargin,
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |    type G
+       |  }
+       |
+       |  val c: Foo{type T = Int; type G = Long} = new Foo { type T = Int; type G = Long}
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "refined-types2",
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |  val c = new Foo { type T = Int }
+       |  val <<d>> = c
+       |}
+       |""".stripMargin,
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |  val c = new Foo { type T = Int }
+       |  val d: Foo{type T = Int} = c
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "refined-types3",
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |
+       |  val <<c>> = new Foo { type T = Int }
+       |}
+       |""".stripMargin,
+    """|object O{
+       |  trait Foo {
+       |    type T
+       |  }
+       |
+       |  val c: Foo{type T = Int} = new Foo { type T = Int }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "refined-types4".tag(IgnoreScala2),
+    """|trait Foo extends Selectable {
+       |  type T
+       |}
+       |
+       |val <<c>> = new Foo {
+       |  type T = Int
+       |  val x = 0
+       |  def y = 0
+       |  var z = 0
+       |}
+       |""".stripMargin,
+    """|trait Foo extends Selectable {
+       |  type T
+       |}
+       |
+       |val c: Foo{type T = Int; val x: Int; def y: Int; val z: Int; def z_=(x$1: Int): Unit} = new Foo {
+       |  type T = Int
+       |  val x = 0
+       |  def y = 0
+       |  var z = 0
+       |}
+       |""".stripMargin
+  )
   def checkEdit(
       name: TestOptions,
       original: String,

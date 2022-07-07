@@ -184,6 +184,8 @@ class ShortenedNames(
           AppliedType(loop(tycon, None), args.map(a => loop(a, None)))
         case TypeBounds(lo, hi) =>
           TypeBounds(loop(lo, None), loop(hi, None))
+        case RefinedType(parent, names, infos) =>
+          RefinedType(loop(parent, None), names, loop(infos, None))
         case ExprType(res) =>
           ExprType(loop(res, None))
         case AnnotatedType(parent, annot) =>
