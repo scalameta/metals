@@ -180,3 +180,7 @@ features by accessing `Preferences > Package Settings > LSP > Servers > LSP-meta
 
 ```scala mdoc:worksheet
 ```
+
+```scala mdoc:scalafix
+
+```

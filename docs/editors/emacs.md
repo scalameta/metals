@@ -253,3 +253,7 @@ usage with Emacs.
 
 ```scala mdoc:worksheet
 ```
+
+```scala mdoc:scalafix
+
+```

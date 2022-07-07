@@ -275,6 +275,10 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 
 ```
 
+```scala mdoc:scalafix:vscode
+
+```
+
 ## Searching a symbol in the workspace
 Metals provides an alternative command to the native "Go to symbol in workspace..." command, in order to work around some VS Code limitations (see [this issue](https://github.com/microsoft/vscode/issues/98125) for more context) and provide richer search capabilities.
 
