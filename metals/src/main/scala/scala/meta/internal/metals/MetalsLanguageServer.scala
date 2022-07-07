@@ -571,6 +571,7 @@ class MetalsLanguageServer(
           semanticdbs,
           buffers,
           definitionProvider,
+          referencesProvider,
           remote,
           trees,
           buildTargets
@@ -2593,7 +2594,6 @@ class MetalsLanguageServer(
     clientConfig,
     definitionIndex,
     () => referencesProvider,
-    () => callHierarchyProvider,
     () => workspaceSymbols,
     buildTargets,
     () => interactiveSemanticdbs,
