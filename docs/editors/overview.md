@@ -381,11 +381,11 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 Test Explorer is a feature that allows editors to display tests as a separate
 tree representation of tests. Although it was implemented in order to use Visual
 Studio Code's
-[Testing API](https://code.visualstudio.com/api/extension-guides/testing). Test
+[Testing API](https://code.visualstudio.com/api/extension-guides/testing). The Test
 Explorer API is editor agnostic and can be used by other editors than just VS
 Code. ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
-Work on Test Explorer is still on progress and the feature has some known
+Work on the Test Explorer is still in progress and the feature has some known
 limitations:
 
 - Test Explorer is able to discover single test cases only for JUnit4 test
