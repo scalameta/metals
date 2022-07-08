@@ -836,6 +836,9 @@ class MetalsLanguageServer(
         setupJna()
         initializeParams = Option(params)
         updateWorkspaceDirectory(params)
+
+        // load fingerprints from last execution
+        fingerprints.addAll(tables.fingerprints.load())
         val capabilities = new ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new ExecuteCommandOptions(
@@ -1006,6 +1009,7 @@ class MetalsLanguageServer(
     if (shutdownPromise.compareAndSet(null, promise)) {
       scribe.info("shutting down Metals")
       try {
+        tables.fingerprints.save(fingerprints.getAllFingerprints())
         cancel()
       } catch {
         case NonFatal(e) =>

@@ -12,13 +12,34 @@ import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.io.AbsolutePath
 
 final class MutableMd5Fingerprints extends Md5Fingerprints {
-  private case class Fingerprint(text: String, md5: String)
   private val fingerprints =
     new ConcurrentHashMap[AbsolutePath, ConcurrentLinkedQueue[Fingerprint]]()
+
+  def getAllFingerprints(): Map[AbsolutePath, List[Fingerprint]] = {
+    fingerprints.asScala.toMap.map { case (path, queue) =>
+      path -> queue.asScala.toList
+    }
+  }
+
+  def addAll(fingerprints: Map[AbsolutePath, List[Fingerprint]]): Unit = {
+    fingerprints.foreach { case (path, fingerprints) =>
+      fingerprints.foreach { fingerprint =>
+        add(path, fingerprint)
+      }
+    }
+  }
+
   def add(
       path: AbsolutePath,
       text: String,
       md5: Option[String] = None
+  ): Unit = {
+    add(path, Fingerprint(text, md5.getOrElse(MD5.compute(text))))
+  }
+
+  private def add(
+      path: AbsolutePath,
+      fingerprint: Fingerprint
   ): Unit = {
     val value = fingerprints.computeIfAbsent(
       path,
@@ -26,7 +47,7 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
         new ConcurrentLinkedQueue()
       }
     )
-    value.add(Fingerprint(text, md5.getOrElse(MD5.compute(text))))
+    value.add(fingerprint)
   }
 
   override def lookupText(path: AbsolutePath, md5: String): Option[String] = {
@@ -67,3 +88,5 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
 
   override def toString: String = s"Md5FingerprintProvider($fingerprints)"
 }
+
+case class Fingerprint(text: String, md5: String)
