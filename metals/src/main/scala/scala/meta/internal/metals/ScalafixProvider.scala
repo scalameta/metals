@@ -48,31 +48,38 @@ case class ScalafixProvider(
   // Warms up the Scalafix instance so that the first organize imports request responds faster.
   def load(): Unit = {
     if (!Testing.isEnabled) {
+      val tmp = workspace
+        .resolve(Directories.tmp)
+        .resolve(s"Main${Random.nextLong()}.scala")
       try {
         val targets =
           buildTargets.allScala.toList.groupBy(_.scalaVersion).flatMap {
             case (_, targets) => targets.headOption
           }
-        val tmp = workspace
-          .resolve(Directories.tmp)
-          .resolve(s"Main${Random.nextLong()}.scala")
         val contents = "object Main{}\n"
         tmp.writeText(contents)
-        for (target <- targets)
-          scalafixEvaluate(
-            tmp,
-            target,
-            contents,
-            produceSemanticdb = true,
-            List(organizeImportRuleName)
-          )
-
-        tmp.delete()
+        val testEvaluation =
+          for (target <- targets)
+            yield scalafixEvaluate(
+              tmp,
+              target,
+              contents,
+              produceSemanticdb = true,
+              List(organizeImportRuleName)
+            )
+        val evaluatedCorrectly = testEvaluation.forall {
+          case Success(evaluation) => evaluation.isSuccessful()
+          case _ => false
+        }
+        if (!evaluatedCorrectly) scribe.debug("Could not warm up Scalafix")
       } catch {
         case e: Throwable =>
           scribe.debug(
-            s"Scalafix issue while warming up due to issue: ${e.getMessage()}"
+            s"Scalafix issue while warming up due to issue: ${e.getMessage()}",
+            e
           )
+      } finally {
+        if (tmp.exists) tmp.delete()
       }
     }
   }

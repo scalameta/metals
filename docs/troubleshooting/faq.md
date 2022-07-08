@@ -9,6 +9,12 @@ either hard to explain in the context of the docs or there just isn't a good
 enough place to stick it. This is an attempt to document some of the most common
 questions that we see related to Metals.
 
+## How do I get more debugging information?
+
+If you are using VS Code add `-Dmetals.loglevel=debug` to the
+`metals.serverProperties` setting, otherwise just add that property as an
+additional parameter for starting Metals server.
+
 ## I'm using Scala 2.13.x but doctor shows me `*-build` and `*-build-build` at 2.12.x
 
 ![build-build-doctor](https://i.imgur.com/mgnRXse.png)
