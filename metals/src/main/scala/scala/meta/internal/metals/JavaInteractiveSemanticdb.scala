@@ -275,14 +275,6 @@ object JdkVersion {
 
   }
 
-//  def getJavaVersionFromJDK8FallBack(
-//      javaHome: AbsolutePath
-//  ): Option[JdkVersion] = {
-//    val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
-//    if (rtJar.exists) Some(JdkVersion(8))
-//    else None
-//  }
-
   def parse(v: String): Option[JdkVersion] = {
     val numbers = v
       .split('-')
