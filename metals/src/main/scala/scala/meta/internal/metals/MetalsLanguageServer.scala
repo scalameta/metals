@@ -389,15 +389,24 @@ class MetalsLanguageServer(
           workspace,
           fingerprints
         )
-        val javaInteractiveSemanticdb = {
-          val optJavaHome =
-            (userConfig.javaHome orElse JdkSources.defaultJavaHome)
-              .map(AbsolutePath(_))
 
-          optJavaHome.flatMap(
-            JavaInteractiveSemanticdb.create(_, workspace, buildTargets)
-          )
-        }
+        val optJavaHome =
+          (userConfig.javaHome orElse JdkSources.defaultJavaHome)
+            .map(AbsolutePath(_))
+        val maybeJdkVersion: Option[JdkVersion] =
+          JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
+        val javaInteractiveSemanticdb =
+          for {
+            javaHome <- optJavaHome
+            jdkVersion <- maybeJdkVersion
+            javaSemanticDb <- JavaInteractiveSemanticdb.create(
+              javaHome,
+              workspace,
+              buildTargets,
+              jdkVersion
+            )
+          } yield javaSemanticDb
+
         interactiveSemanticdbs = register(
           new InteractiveSemanticdbs(
             workspace,
@@ -727,7 +736,8 @@ class MetalsLanguageServer(
           tables,
           clientConfig,
           mtagsResolver,
-          () => userConfig.javaHome
+          () => userConfig.javaHome,
+          maybeJdkVersion
         )
 
         fileDecoderProvider = new FileDecoderProvider(

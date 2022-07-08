@@ -11,6 +11,7 @@ import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
@@ -180,7 +181,8 @@ object JavaInteractiveSemanticdb {
   def create(
       javaHome: AbsolutePath,
       workspace: AbsolutePath,
-      buildTargets: BuildTargets
+      buildTargets: BuildTargets,
+      jdkVersion: JdkVersion
   ): Option[JavaInteractiveSemanticdb] = {
 
     def pathToJavac(p: AbsolutePath): AbsolutePath = {
@@ -197,22 +199,21 @@ object JavaInteractiveSemanticdb {
 
     val javac = pathToJavac(jdkHome)
 
-    JdkVersion.getJavaVersionFromJavaHome(jdkHome) match {
-      case Some(version) if javac.exists =>
-        val pluginJars = Embedded.downloadSemanticdbJavac
-        val instance = new JavaInteractiveSemanticdb(
-          javac,
-          version,
-          pluginJars,
-          workspace,
-          buildTargets
-        )
-        Some(instance)
-      case value =>
-        scribe.warn(
-          s"Can't instantiate JavaInteractiveSemanticdb (version: ${value}, jdkHome: ${jdkHome}, javac exists: ${javac.exists})"
-        )
-        None
+    if (javac.exists) {
+      val pluginJars = Embedded.downloadSemanticdbJavac
+      val instance = new JavaInteractiveSemanticdb(
+        javac,
+        jdkVersion,
+        pluginJars,
+        workspace,
+        buildTargets
+      )
+      Some(instance)
+    } else {
+      scribe.warn(
+        s"Can't instantiate JavaInteractiveSemanticdb (version: ${jdkVersion}, jdkHome: ${jdkHome}, javac exists: ${javac.exists})"
+      )
+      None
     }
   }
 
@@ -227,38 +228,51 @@ case class JdkVersion(
 
 object JdkVersion {
 
-  def getJavaVersionFromJavaHome(
-      javaHome: AbsolutePath
+  def maybeJdkVersionFromJavaHome(
+      maybeJavaHome: Option[AbsolutePath]
   ): Option[JdkVersion] = {
-
-    def fromReleaseFile: Option[JdkVersion] = {
-      val releaseFile = javaHome.resolve("release")
-      if (releaseFile.exists) {
-        val properties = ConfigFactory.parseFile(
-          releaseFile.toFile,
-          ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES)
-        )
-        try {
-          val version = properties
-            .getString("JAVA_VERSION")
-            .stripPrefix("\"")
-            .stripSuffix("\"")
-          JdkVersion.parse(version)
-        } catch {
-          case NonFatal(e) =>
-            scribe.error("Failed to read jdk version from `release` file", e)
-            None
-        }
-      } else None
+    maybeJavaHome.flatMap { javaHome =>
+      fromReleaseFile(javaHome).orElse {
+        fromShell(javaHome)
+      }
     }
+  }
 
-    def jdk8Fallback: Option[JdkVersion] = {
-      val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
-      if (rtJar.exists) Some(JdkVersion(8))
-      else None
-    }
+  def fromShell(javaHome: AbsolutePath): Option[JdkVersion] = {
+    ShellRunner
+      .runSync(
+        List(javaHome.resolve("bin/java").toString, "-version"),
+        javaHome,
+        redirectErrorOutput = true,
+        maybeJavaHome = Some(javaHome.toString())
+      )
+      .flatMap { javaVersionResponse =>
+        "\\d+\\.\\d+\\.\\d+".r
+          .findFirstIn(javaVersionResponse)
+          .flatMap(JdkVersion.parse)
+      }
+  }
 
-    fromReleaseFile.orElse(jdk8Fallback)
+  def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] = {
+    val releaseFile = javaHome.resolve("release")
+    if (releaseFile.exists) {
+      val properties = ConfigFactory.parseFile(
+        releaseFile.toFile,
+        ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES)
+      )
+      try {
+        val version = properties
+          .getString("JAVA_VERSION")
+          .stripPrefix("\"")
+          .stripSuffix("\"")
+        JdkVersion.parse(version)
+      } catch {
+        case NonFatal(e) =>
+          scribe.error("Failed to read jdk version from `release` file", e)
+          None
+      }
+    } else None
+
   }
 
   def parse(v: String): Option[JdkVersion] = {

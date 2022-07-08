@@ -21,7 +21,8 @@ class ProblemResolver(
     mtagsResolver: MtagsResolver,
     currentBuildServer: () => Option[BspSession],
     javaHome: () => Option[String],
-    isTestExplorerProvider: () => Boolean
+    isTestExplorerProvider: () => Boolean,
+    maybeJDKVersion: Option[JdkVersion]
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
@@ -324,7 +325,7 @@ class ProblemResolver(
         target <- scalaTarget
         javaHome <- target.jvmHome
         version <-
-          JdkVersion.getJavaVersionFromJavaHome(javaHome.toAbsolutePath)
+          maybeJDKVersion
       } yield version
 
     val releaseVersion = javaTarget.releaseVersion.flatMap(JdkVersion.parse)

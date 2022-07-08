@@ -1,7 +1,10 @@
 package scala.meta.internal.builds
 
+import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
@@ -30,6 +33,7 @@ class ShellRunner(
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
+
   override def cancel(): Unit = {
     cancelables.cancel()
   }
@@ -129,4 +133,39 @@ class ShellRunner(
     result.future
   }
 
+}
+
+object ShellRunner {
+
+  def runSync(
+      args: List[String],
+      directory: AbsolutePath,
+      redirectErrorOutput: Boolean,
+      additionalEnv: Map[String, String] = Map.empty,
+      processErr: String => Unit = scribe.error(_),
+      propagateError: Boolean = false,
+      maybeJavaHome: Option[String]
+  ): Option[String] = {
+
+    val sbOut = new StringBuilder()
+    val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap
+    val ps = SystemProcess.run(
+      args,
+      directory,
+      redirectErrorOutput,
+      env,
+      Some(s => {
+        sbOut.append(s)
+        sbOut.append(Properties.lineSeparator)
+      }),
+      Some(processErr),
+      propagateError
+    )
+
+    val exit = Await.result(ps.complete, 10 second)
+
+    if (exit == 0) {
+      Some(sbOut.toString())
+    } else None
+  }
 }
