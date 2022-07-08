@@ -256,6 +256,15 @@ abstract class BasePCSuite extends BaseSuite {
       }
     }
 
+    def forRangeUntil(from: String, until: String): IgnoreScalaVersion = {
+      val fromV = SemVer.Version.fromString(from)
+      val untilV = SemVer.Version.fromString(until)
+      IgnoreScalaVersion { v =>
+        val semver = SemVer.Version.fromString(v)
+        semver < untilV && semver >= fromV
+      }
+    }
+
     def forLessThan(version: String): IgnoreScalaVersion = {
       val enableFrom = SemVer.Version.fromString(version)
       IgnoreScalaVersion { v =>

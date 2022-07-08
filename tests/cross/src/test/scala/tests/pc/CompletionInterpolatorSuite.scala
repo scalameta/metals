@@ -369,14 +369,13 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "member2".tag(
-      IgnoreScalaVersion(
-        "3.2.0-RC1",
-        "3.2.1-RC1-bin-20220623-5a8a61d-NIGHTLY",
-        "3.2.1-RC1-bin-20220624-28faa0f-NIGHTLY",
-        "3.2.1-RC1-bin-20220626-2c87994-NIGHTLY"
-      )
-    ),
+    "member2"
+      .tag(
+        IgnoreScalaVersion.forRangeUntil(
+          "3.2.0-RC1",
+          "3.2.1"
+        )
+      ),
     """|object Main {
        |  s"Hello $Main.toStr@@!"
        |}
