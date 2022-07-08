@@ -395,17 +395,18 @@ class MetalsLanguageServer(
             .map(AbsolutePath(_))
         val maybeJdkVersion: Option[JdkVersion] =
           JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
-        val javaInteractiveSemanticdb = {
-
-          optJavaHome.flatMap(
-            JavaInteractiveSemanticdb.create(
-              _,
+        val javaInteractiveSemanticdb =
+          for {
+            javaHome <- optJavaHome
+            jdkVersion <- maybeJdkVersion
+            javaSemanticDb <- JavaInteractiveSemanticdb.create(
+              javaHome,
               workspace,
               buildTargets,
-              maybeJdkVersion
+              jdkVersion
             )
-          )
-        }
+          } yield javaSemanticDb
+
         interactiveSemanticdbs = register(
           new InteractiveSemanticdbs(
             workspace,

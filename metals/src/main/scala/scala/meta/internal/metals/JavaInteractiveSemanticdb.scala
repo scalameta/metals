@@ -182,7 +182,7 @@ object JavaInteractiveSemanticdb {
       javaHome: AbsolutePath,
       workspace: AbsolutePath,
       buildTargets: BuildTargets,
-      maybeJDKVersion: Option[JdkVersion]
+      jdkVersion: JdkVersion
   ): Option[JavaInteractiveSemanticdb] = {
 
     def pathToJavac(p: AbsolutePath): AbsolutePath = {
@@ -199,24 +199,21 @@ object JavaInteractiveSemanticdb {
 
     val javac = pathToJavac(jdkHome)
 
-    maybeJDKVersion.orElse(
-      JdkVersion.getJavaVersionFromJDK8FallBack(jdkHome)
-    ) match {
-      case Some(version) if javac.exists =>
-        val pluginJars = Embedded.downloadSemanticdbJavac
-        val instance = new JavaInteractiveSemanticdb(
-          javac,
-          version,
-          pluginJars,
-          workspace,
-          buildTargets
-        )
-        Some(instance)
-      case value =>
-        scribe.warn(
-          s"Can't instantiate JavaInteractiveSemanticdb (version: ${value}, jdkHome: ${jdkHome}, javac exists: ${javac.exists})"
-        )
-        None
+    if (javac.exists) {
+      val pluginJars = Embedded.downloadSemanticdbJavac
+      val instance = new JavaInteractiveSemanticdb(
+        javac,
+        jdkVersion,
+        pluginJars,
+        workspace,
+        buildTargets
+      )
+      Some(instance)
+    } else {
+      scribe.warn(
+        s"Can't instantiate JavaInteractiveSemanticdb (version: ${jdkVersion}, jdkHome: ${jdkHome}, javac exists: ${javac.exists})"
+      )
+      None
     }
   }
 
@@ -278,13 +275,13 @@ object JdkVersion {
 
   }
 
-  def getJavaVersionFromJDK8FallBack(
-      javaHome: AbsolutePath
-  ): Option[JdkVersion] = {
-    val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
-    if (rtJar.exists) Some(JdkVersion(8))
-    else None
-  }
+//  def getJavaVersionFromJDK8FallBack(
+//      javaHome: AbsolutePath
+//  ): Option[JdkVersion] = {
+//    val rtJar = javaHome.resolve("jre").resolve("lib").resolve("rt.jar")
+//    if (rtJar.exists) Some(JdkVersion(8))
+//    else None
+//  }
 
   def parse(v: String): Option[JdkVersion] = {
     val numbers = v

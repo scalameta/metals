@@ -223,7 +223,9 @@ class ProblemResolverSuite extends FunSuite {
         () => None,
         () => javaHome,
         () => isTestExplorerProvider,
-        JdkVersion.maybeJdkVersionFromJavaHome(Some(AbsolutePath(System.getProperty("java.home"))))
+        JdkVersion.maybeJdkVersionFromJavaHome(
+          Some(AbsolutePath(System.getProperty("java.home")))
+        )
       )
 
       val target =
