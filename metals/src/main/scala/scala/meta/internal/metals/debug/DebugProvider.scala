@@ -357,18 +357,15 @@ class DebugProvider(
    * session to not actually work, but fail silently.
    */
   def ensureNoWorkspaceErrors(
-      params: DebugSessionParams
-  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+      buildTargets: Seq[BuildTargetIdentifier]
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    val hasErrors = buildTargets.exists { target =>
+      buildClient.buildHasErrors(target)
+    }
     val result =
-      if (
-        params.getTargets().asScala.toList.exists { target =>
-          buildClient.buildHasErrors(target)
-        }
-      ) {
-        Future.failed(WorkspaceErrorsException)
-      } else {
-        Future.successful(params)
-      }
+      if (hasErrors) Future.failed(WorkspaceErrorsException)
+      else Future.unit
+
     result.failed.foreach(reportErrors)
     result
   }
@@ -554,26 +551,35 @@ class DebugProvider(
    */
   def resolveTestSelectionParams(
       request: ScalaTestSuitesDebugRequest
-  ): Future[b.DebugSessionParams] = {
-    buildTargets.info(request.target) match {
-      case Some(buildTarget) =>
-        val debugSession =
-          if (supportsTestSelection())
-            new b.DebugSessionParams(
-              singletonList(buildTarget.getId),
-              DebugProvider.ScalaTestSelection,
-              request.requestData.toJson
-            )
-          else
-            new b.DebugSessionParams(
-              singletonList(buildTarget.getId),
-              b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-              request.requestData.suites.map(_.className).toJson
-            )
-        Future.successful(debugSession)
-      case None =>
-        Future.failed(BuildTargetNotFoundException(request.target.getUri))
-    }
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    val makeDebugSession = () =>
+      buildTargets.info(request.target) match {
+        case Some(buildTarget) =>
+          val debugSession =
+            if (supportsTestSelection())
+              new b.DebugSessionParams(
+                singletonList(buildTarget.getId),
+                DebugProvider.ScalaTestSelection,
+                request.requestData.toJson
+              )
+            else
+              new b.DebugSessionParams(
+                singletonList(buildTarget.getId),
+                b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+                request.requestData.suites.map(_.className).toJson
+              )
+          Future.successful(debugSession)
+        case None =>
+          val error = BuildTargetNotFoundException(request.target.getUri)
+          reportErrors(error)
+          Future.failed(error)
+      }
+
+    for {
+      _ <- compilations.compileTarget(request.target)
+      _ <- ensureNoWorkspaceErrors(List(request.target))
+      result <- makeDebugSession()
+    } yield result
   }
 
   private val reportErrors: PartialFunction[Throwable, Unit] = {
