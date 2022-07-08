@@ -1,6 +1,7 @@
 package tests.feature
 
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -41,4 +42,43 @@ class ImportMissingSymbolCrossLspSuite
       )
     } yield ()
   }
+
+  test("scala3-extension-import-from-deps") {
+    val path = "b/src/main/scala/x/B.scala"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a":{"scalaVersion" : "${V.scala3}"},
+            |  "b":{
+            |    "scalaVersion" : "${V.scala3}",
+            |    "dependsOn": ["a"]
+            |  }
+            |}
+            |/a/src/main/scala/example/A.scala
+            |package example
+            |object IntEnrichment:
+            |  extension (num: Int)
+            |    def incr = num + 1
+            |/$path
+            |package x
+            |def main =
+            |  println(1.incr)
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      _ <- server.assertCodeAction(
+        path,
+        s"""|package x
+            |def main =
+            |  println(1.<<incr>>)
+            |""".stripMargin,
+        s"""|${ImportMissingSymbol.title("incr", "example.IntEnrichment")}
+            |${ExtractValueCodeAction.title}
+            |""".stripMargin,
+        Nil,
+      )
+    } yield ()
+  }
+
 }
