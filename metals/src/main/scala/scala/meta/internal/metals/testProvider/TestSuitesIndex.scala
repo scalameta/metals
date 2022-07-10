@@ -1,9 +1,7 @@
 package scala.meta.internal.metals.testProvider
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
 
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
@@ -11,8 +9,7 @@ import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.bsp4j.JavacOptionsItem
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import org.eclipse.{lsp4j => l}
 
 final case class FullyQualifiedName(value: String) extends AnyVal
 final case class ClassName(value: String) extends AnyVal
@@ -22,40 +19,11 @@ private[testProvider] final case class SymbolsPerTarget private (
     testSymbols: TrieMap[
       BuildTargetClasses.Symbol,
       BuildTargetClasses.TestSymbolInfo
-    ],
-    private val classpath: List[String]
-) {
-  def hasJunitOnClasspath: Boolean =
-    classpath.exists { item =>
-      // need to check organization also because
-      // munit brings dependency on 'org/scalameta/junit-interface'
-      item.contains("com/github/sbt/junit-interface") ||
-      item.contains("com/novocode/junit-interface")
-    }
-}
-object SymbolsPerTarget {
-  def apply(
-      target: BuildTarget,
-      testSymbols: TrieMap[
-        BuildTargetClasses.Symbol,
-        BuildTargetClasses.TestSymbolInfo
-      ],
-      scalac: Option[ScalacOptionsItem],
-      javac: Option[JavacOptionsItem]
-  ): SymbolsPerTarget = {
-    SymbolsPerTarget(
-      target,
-      testSymbols,
-      scalac
-        .map(_.getClasspath())
-        .orElse(javac.map(_.getClasspath()))
-        .map(_.asScala.toList)
-        .getOrElse(Nil)
-    )
-  }
-}
+    ]
+)
 
 private[testProvider] final case class TestFileMetadata(
+    md5: String,
     entries: List[TestEntry],
     hasTestCasesGranularity: Boolean
 )
@@ -63,16 +31,29 @@ private[testProvider] final case class TestFileMetadata(
 private[testProvider] final case class TestEntry(
     buildTarget: BuildTarget,
     path: AbsolutePath,
-    suiteInfo: TestSuiteInfo,
-    testClass: AddTestSuite
+    suiteDetails: TestSuiteDetails
 )
 
-private[testProvider] final case class TestSuiteInfo(
+private[testProvider] final case class TestSuiteDetails(
     fullyQualifiedName: FullyQualifiedName,
     framework: TestFramework,
     className: ClassName,
-    symbol: mtags.Symbol
-)
+    symbol: mtags.Symbol,
+    location: l.Location
+) {
+  def asAddEvent: TestExplorerEvent = AddTestSuite(
+    fullyQualifiedClassName = fullyQualifiedName.value,
+    className = className.value,
+    symbol = symbol.value,
+    location = location,
+    canResolveChildren = framework.canResolveChildren
+  )
+
+  def asRemoveEvent: TestExplorerEvent = RemoveTestSuite(
+    fullyQualifiedClassName = fullyQualifiedName.value,
+    className = className.value
+  )
+}
 
 private[testProvider] final class TestSuitesIndex {
 
@@ -93,13 +74,13 @@ private[testProvider] final class TestSuitesIndex {
     ]()
   private val fileToMetadata = TrieMap[AbsolutePath, TestFileMetadata]()
 
-  def allSuites: Iterable[(BuildTarget, Iterable[TestEntry])] =
-    cachedTestSuites.mapValues(_.values).toIterable
+  def allSuites: Vector[(BuildTarget, Iterable[TestEntry])] =
+    cachedTestSuites.mapValues(_.values).toVector
 
   def put(
       entry: TestEntry
   ): Unit = {
-    val fullyQualifiedName = entry.suiteInfo.fullyQualifiedName
+    val fullyQualifiedName = entry.suiteDetails.fullyQualifiedName
     cachedTestSuites.get(entry.buildTarget) match {
       case Some(suites) =>
         suites.put(fullyQualifiedName, entry)
@@ -113,38 +94,33 @@ private[testProvider] final class TestSuitesIndex {
         val updated = metadata.copy(entries = entry :: metadata.entries)
         fileToMetadata.put(entry.path, updated)
       case None =>
-        val metadata = TestFileMetadata(List(entry), false)
+        val metadata = TestFileMetadata("", List(entry), false)
         fileToMetadata.put(entry.path, metadata)
     }
   }
 
-  def setHasTestCasesGranularity(path: AbsolutePath): Unit =
+  def updateFileMetadata(path: AbsolutePath, md5: String): Unit =
     fileToMetadata.get(path).foreach { metadata =>
-      val updated = metadata.copy(hasTestCasesGranularity = true)
+      val updated = metadata.copy(hasTestCasesGranularity = true, md5 = md5)
       fileToMetadata.update(path, updated)
     }
 
   def contains(path: AbsolutePath): Boolean = fileToMetadata.contains(path)
 
-  def hasTestCasesGranularity(path: AbsolutePath): Boolean =
-    fileToMetadata.get(path).map(_.hasTestCasesGranularity).getOrElse(false)
+  /**
+   * Determine if test cases should be updated for a given file after compilation
+   * @param path - file path
+   * @param md5 - md5 of updated file
+   */
+  def shouldBeUpdated(path: AbsolutePath, md5: String): Boolean =
+    fileToMetadata
+      .get(path)
+      .exists { metadata =>
+        metadata.hasTestCasesGranularity && md5 != metadata.md5
+      }
 
   def getMetadata(path: AbsolutePath): Option[TestFileMetadata] =
     fileToMetadata.get(path)
-
-  def getTestEntry(
-      buildTarget: BuildTarget,
-      name: FullyQualifiedName
-  ): Option[TestEntry] =
-    for {
-      suites <- cachedTestSuites.get(buildTarget)
-      entry <- suites.get(name)
-    } yield entry
-
-  def getSuites(
-      buildTarget: BuildTarget
-  ): mutable.Map[FullyQualifiedName, TestEntry] =
-    cachedTestSuites.get(buildTarget).getOrElse(mutable.Map.empty)
 
   def getSuiteNames(
       buildTarget: BuildTarget
@@ -162,7 +138,7 @@ private[testProvider] final class TestSuitesIndex {
       fileToMetadata.get(entry.path).foreach { metadata =>
         val filtered =
           metadata.entries
-            .filter(_.testClass.fullyQualifiedClassName != suiteName.value)
+            .filter(_.suiteDetails.fullyQualifiedName.value != suiteName.value)
         if (filtered.isEmpty)
           fileToMetadata.remove(entry.path)
         else
@@ -177,7 +153,7 @@ private[testProvider] final class TestSuitesIndex {
       metadata <- fileToMetadata.remove(path).toList
       entry <- metadata.entries
     } yield {
-      remove(entry.buildTarget, entry.suiteInfo.fullyQualifiedName)
+      remove(entry.buildTarget, entry.suiteDetails.fullyQualifiedName)
       entry
     }
   }
