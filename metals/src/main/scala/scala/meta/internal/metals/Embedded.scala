@@ -206,7 +206,7 @@ object Embedded {
       BuildInfo.metalsVersion
     )
 
-  private def almondDependency(scalaVersion: String): Dependency =     
+  private def almondDependency(scalaVersion: String): Dependency =
     Dependency.of(
       "sh.almond",
       s"scala-kernel_$scalaVersion",
@@ -258,7 +258,7 @@ object Embedded {
       classfiers = Seq("sources")
     )
 
-  def downloadAlmond(scalaVersion: String) : List[Path] = 
+  def downloadAlmond(scalaVersion: String): List[Path] =
     downloadDependency(
       almondDependency(scalaVersion),
       Some(scalaVersion)

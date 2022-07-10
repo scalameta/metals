@@ -115,12 +115,12 @@ object V {
 
   val quickPublishScalaVersions =
     Set(
-      //scala211,
-      //sbtScala,
+      // scala211,
+      // sbtScala,
       scala212,
-      //ammonite212Version,
+      // ammonite212Version,
       scala213,
-      //ammonite213Version,
+      // ammonite213Version,
       scala3
     ).toList
 }

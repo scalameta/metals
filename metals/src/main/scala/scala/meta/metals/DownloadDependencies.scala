@@ -31,7 +31,7 @@ object DownloadDependencies {
     downloadMtags()
     downloadSemanticDBScalac()
     downloadSemanticDBJavac()
-    downloadScala()    
+    downloadScala()
     // NOTE(olafur): important, Bloop comes last because it does System.exit()
     downloadBloop()
   }
