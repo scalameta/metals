@@ -12,6 +12,7 @@ object V {
   val ammonite213Version = "2.13.7"
 
   val ammonite = "2.5.4"
+  val almond = "0.13.0"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.2"
   val bloopNightly = bloop
@@ -114,12 +115,12 @@ object V {
 
   val quickPublishScalaVersions =
     Set(
-      scala211,
-      sbtScala,
+      //scala211,
+      //sbtScala,
       scala212,
-      ammonite212Version,
+      //ammonite212Version,
       scala213,
-      ammonite213Version,
+      //ammonite213Version,
       scala3
     ).toList
 }

@@ -25,12 +25,13 @@ object DownloadDependencies {
    */
   def main(args: Array[String]): Unit = {
     MetalsLogger.updateDefaultFormat()
+    downloadAlmond()
     downloadMdoc()
     downloadScalafmt()
     downloadMtags()
     downloadSemanticDBScalac()
     downloadSemanticDBJavac()
-    downloadScala()
+    downloadScala()    
     // NOTE(olafur): important, Bloop comes last because it does System.exit()
     downloadBloop()
   }
@@ -74,6 +75,13 @@ object DownloadDependencies {
     scribe.info("Downloading mtags")
     BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
       Embedded.downloadMtags(scalaVersion)
+    }
+  }
+
+  def downloadAlmond(): Unit = {
+    scribe.info("Downloading almond (for notebook support)")
+    BuildInfo.nonDeprecatedScalaVersions.foreach { scalaVersion =>
+      Embedded.downloadAlmond(scalaVersion)
     }
   }
 

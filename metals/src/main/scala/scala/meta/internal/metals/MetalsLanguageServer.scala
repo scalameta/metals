@@ -363,6 +363,7 @@ class MetalsLanguageServer(
         scribe.info(
           s"Started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace' $clientInfo."
         )
+        scribe.info(" I changed metals!")
         clientConfig.update(params)
 
         foldingRangeProvider.setFoldOnlyLines(Option(params).foldOnlyLines)

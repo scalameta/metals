@@ -206,6 +206,13 @@ object Embedded {
       BuildInfo.metalsVersion
     )
 
+  private def almondDependency(scalaVersion: String): Dependency =     
+    Dependency.of(
+      "sh.almond",
+      s"scala-kernel_$scalaVersion",
+      BuildInfo.almondVersion
+    )
+
   private def mdocDependency(
       scalaBinaryVersion: String
   ): Dependency = {
@@ -249,6 +256,12 @@ object Embedded {
       scala3Dependency(scalaVersion),
       Some(scalaVersion),
       classfiers = Seq("sources")
+    )
+
+  def downloadAlmond(scalaVersion: String) : List[Path] = 
+    downloadDependency(
+      almondDependency(scalaVersion),
+      Some(scalaVersion)
     )
 
   def downloadSemanticdbScalac(scalaVersion: String): List[Path] =
