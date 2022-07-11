@@ -4,10 +4,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 
@@ -78,6 +78,9 @@ final class DocumentHighlightProvider(
     }
   }
 
+  /**
+   * Set of all local symbols declared in the same scope as `symbol`
+   */
   private def findLocalsInScope(
       symbol: String,
       doc: TextDocument
@@ -100,6 +103,9 @@ final class DocumentHighlightProvider(
     }
   }
 
+  /**
+   * Set of all alternatives symbols for local var `info` (var declared in local class)
+   */
   private def localVarAlternatives(
       info: SymbolInformation,
       doc: TextDocument
@@ -107,8 +113,8 @@ final class DocumentHighlightProvider(
     val setterSuffix = "_="
     val symbolName = info.displayName.stripSuffix(setterSuffix)
 
-    val locals: Set[String] = findLocalsInScope(info.symbol, doc)
-    val localAlternatives: Seq[String] = doc.symbols
+    val locals = findLocalsInScope(info.symbol, doc)
+    val localAlternatives = doc.symbols
       .filter(sym => locals.contains(sym.symbol))
       .filter(_.displayName.stripSuffix(setterSuffix) == symbolName)
       .map(_.symbol)

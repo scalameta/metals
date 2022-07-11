@@ -104,9 +104,13 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
     """
       |object Test {
       |  def met() = {
-      |    class T1(var <<abc>>: Int) {
-      |      <<ab@@c>> = 4
-      |      def m2: Int = <<abc>> + 2
+      |    class T1(var abc: Int) {
+      |       class T2(var <<abc>>: Int) {
+      |          <<ab@@c>> = 4
+      |          def m3: Int = <<abc>> + 2
+      |      }
+      |      abc = 4
+      |      def m2: Int = abc + 2
       |    }
       |  }
       |}""".stripMargin
@@ -116,9 +120,13 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
     """
       |object Test {
       |  def met() = {
-      |    class T1(var <<abc>>: Int) {
-      |      <<abc>> = 4
-      |      def m2: Int = <<ab@@c>> + 2
+      |    class T1(var abc: Int) {
+      |       class T2(var <<abc>>: Int) {
+      |          <<a@@bc>> = 4
+      |          def m3: Int = <<abc>> + 2
+      |      }
+      |      abc = 4
+      |      def m2: Int = abc + 2
       |    }
       |  }
       |}""".stripMargin
