@@ -263,14 +263,23 @@ final case class CallHierarchyProvider(
       root: Tree,
       info: CallHierarchyItemInfo
   ) = {
+
     def search(tree: Tree): List[(SymbolOccurrence, l.Range, l.Range)] =
       tree match {
-        case name: Term.Name =>
+        case name: Name =>
           (for {
-            occurence <- definition
-              .positionOccurrence(source, name.pos.toLSP.getStart, doc)
-              .occurrence
-            symInfo <- doc.symbols.find(_.symbol == occurence.symbol)
+            (occurence, symInfo) <- definition
+              .positionOccurrences(source, name.pos.toLSP.getEnd, doc)
+              .flatMap(_.occurrence.collect {
+                case symOcc @ SymbolOccurrence(_, symbol, role)
+                    if role == Role.REFERENCE =>
+                  doc.symbols
+                    .find(symInfo =>
+                      symInfo.symbol == symbol && (symInfo.isConstructor || symInfo.isMethod)
+                    )
+                    .map(symInfo => (symOcc, symInfo))
+              }.flatten)
+              .headOption
             definitionOccurence <- doc.occurrences.find(occ =>
               occ.symbol == occurence.symbol && occ.role == Role.DEFINITION
             )
@@ -280,7 +289,7 @@ final case class CallHierarchyProvider(
               definitionRange.toLSP.getStart
             )
             definition <- findDefinition(definitionName)
-            if (symInfo.isMethod || symInfo.isConstructor) && info.symbol != symInfo.symbol
+            if info.symbol != symInfo.symbol
           } yield (
             definitionOccurence,
             name.pos.toLSP,
